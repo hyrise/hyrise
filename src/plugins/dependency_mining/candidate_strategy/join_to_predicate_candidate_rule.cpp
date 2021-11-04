@@ -23,12 +23,7 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
   }
 
   // determine if we need to check both inputs
-  /*std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-  inputs.emplace_back(join_node->right_input());
-  if (join_node->join_mode == JoinMode::Inner) {
-    inputs.emplace_back(join_node->left_input());
-  }*/
-  const auto inputs_to_visit = _get_nodes_to_visit(join_node, required_expressions_by_node);
+  const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
 
   const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
   if (!predicate) return {};
@@ -53,7 +48,6 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
           case LQPNodeType::Validate:
             return LQPVisitation::VisitInputs;
           case LQPNodeType::StoredTable:
-          case LQPNodeType::StaticTable:
             return LQPVisitation::DoNotVisitInputs;
           case LQPNodeType::Predicate: {
             const auto& predicate_node = static_cast<const PredicateNode&>(*node);

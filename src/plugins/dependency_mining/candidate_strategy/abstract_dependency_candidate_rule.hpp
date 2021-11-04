@@ -14,7 +14,7 @@ class AbstractDependencyCandidateRule {
   const LQPNodeType target_node_type;
 
  protected:
-  std::vector<std::shared_ptr<const AbstractLQPNode>> _get_nodes_to_visit(const std::shared_ptr<const JoinNode> join_node, const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) const;
+  std::vector<std::shared_ptr<const AbstractLQPNode>> _inputs_to_visit(const std::shared_ptr<const JoinNode>& join_node, const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) const;
 };
 
 }  // namespace opossum

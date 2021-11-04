@@ -62,9 +62,9 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/candidate_strategy/join_to_semi_candidate_rule.hpp
     dependency_mining/pqp_analyzer.cpp
     dependency_mining/pqp_analyzer.hpp
+    dependency_mining/dependency_usage_config.hpp
     dependency_mining/util.cpp
     dependency_mining/util.hpp
-    dependency_mining/gather_required_expressions.hpp
     dependency_mining/validation_strategy/abstract_dependency_validation_rule.cpp
     dependency_mining/validation_strategy/abstract_dependency_validation_rule.hpp
     dependency_mining/validation_strategy/fd_validation_rule.cpp

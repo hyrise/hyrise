@@ -22,10 +22,6 @@ class ColumnPruningRule : public AbstractRule {
  public:
   std::string name() const override;
 
-  constexpr static bool ENABLE_JOIN_TO_SEMI = false;
-  constexpr static bool ENABLE_JOIN_TO_PREDICATE = true;
-  constexpr static bool ENABLE_JOIN_ELIMINATION = false;
-
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };

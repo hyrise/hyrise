@@ -17,17 +17,10 @@ class PQPAnalyzer {
 
   void run();
 
-  // switches for mining specific optimizations
-  constexpr static bool ENABLE_GROUPBY_REDUCTION = false;
-  constexpr static bool ENABLE_JOIN_TO_SEMI = true;
-  constexpr static bool ENABLE_JOIN_TO_PREDICATE = true;
-  constexpr static bool ENABLE_JOIN_ELIMINATION = false;
-
  private:
   void _add_if_new(DependencyCandidate& candidate);
   const std::shared_ptr<DependencyCandidateQueue>& _queue;
-  std::vector<DependencyCandidate> _known_candidates;
-  //std::unordered_set<DependencyCandidate> _known_candidates;
+  std::unordered_set<DependencyCandidate> _known_candidates;
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _rules;
 };
 

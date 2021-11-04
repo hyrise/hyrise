@@ -7,12 +7,9 @@
 
 /* Dependency Mining / Optimization doc
  *
- *  for enabling specific optimizations: - check switches at lib/optimizer/strategy/column_pruning_rule.hpp for Join2Semi and Join2Predciate
- *                                       - consider commenting out DependentGroupByReductionRule at lib/optimizer/optimizer.cpp L57
- *  for mining dependencies for specific optimizations: - check switches at plugins/dependency_mining/pqp_analyzer.hpp
+ *  for enabling specific optimizations and dependency mining: - check switches at plugins/dependency_mining/dependency_usage_config.hpp
  *  when mining plugins/to turn off all optimizations: - comment out benchmarklib/abstract_table_generator.cpp L188 _add_constraints(table_info_by_name);
  *      --> otherwise, UCC mining will notice that dependency is already set and do early-out
- *  extra TPC-DS queries are shipped at <project_root>/tpcds_extra_queries
  *  plugin is loaded by using CLI option --dep_mining_plugin <plugin_path>
  */
 namespace opossum {

@@ -36,33 +36,21 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     if (table_column_id == INVALID_TABLE_COLUMN_ID) return {};
     table_columns.emplace(table_column_id.table_name, std::move(table_column_id));
   }
-  std::cout << join_node->description() << std::endl;
+  // std::cout << join_node->description() << std::endl;
 
   std::vector<DependencyCandidate> candidates;
-
-  const auto inputs_to_visit = _get_nodes_to_visit(join_node, required_expressions_by_node);
+  const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
   // check for given inputs
   for (const auto& input_node : inputs_to_visit) {
     // find StoredTableNode, ensure that the table is not modified
-    std::shared_ptr<StoredTableNode> actual_input;
     std::string determinant_name;
     bool abort = false;
-    bool found_input = false;
+    // _inputs_to_visit() ensured that the input has 1 required column expression
+    const auto& determinant = resolve_column_expression(*required_expressions_by_node.at(input_node).begin());
     visit_lqp(input_node, [&](const auto& node) {
       if (abort) return LQPVisitation::DoNotVisitInputs;
       switch (node->type) {
-        case LQPNodeType::StoredTable: {
-          const auto& stored_table_node = static_cast<const StoredTableNode&>(*node);
-          if (table_columns.find(stored_table_node.table_name) == table_columns.cend()) {
-            return LQPVisitation::DoNotVisitInputs;
-          }
-          if (found_input) {
-            abort = true;
-            return LQPVisitation::DoNotVisitInputs;
-          }
-          found_input = true;
-          determinant_name = stored_table_node.table_name;
-        }
+        case LQPNodeType::StoredTable:
           return LQPVisitation::DoNotVisitInputs;
         case LQPNodeType::Validate:
           return LQPVisitation::VisitInputs;
@@ -81,12 +69,10 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
       }
     });
 
-    if (abort || !found_input) continue;
-
-    const auto& determinant = table_columns[determinant_name];
+    if (abort) continue;
     candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{}, DependencyType::Unique, priority);
     for (const auto& [table_name, table_column] : table_columns) {
-      if (table_name == determinant_name) continue;
+      if (table_name == determinant.table_name) continue;
       candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{table_column}, DependencyType::Inclusion,
                               priority);
     }
