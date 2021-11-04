@@ -18,6 +18,11 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
+std::string ExpressionReductionRule::name() const {
+  static const auto name = std::string{"ExpressionReductionRule"};
+  return name;
+}
+
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
@@ -285,8 +290,11 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     auto sum_it = std::find_if(sums.begin(), sums.end(), finder);
     auto count_it = std::find_if(counts.begin(), counts.end(), finder);
     if (sum_it != sums.end() && count_it != counts.end()) {
-      // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list
-      // The cast will become unnecessary once #1799 is fixed
+      // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list.
+      // Notes on casting:
+      //  As stated in expression_common_type, the division of integer types will result in an integer result as well.
+      //  Since COUNT results are always of type integer, the calculated average depends on the data type of SUM,
+      //  which can be floating type or integer. To guarantee correct results, we thus cast to type double.
       replacements[avg_expression_ptr] = div_(cast_(sum_it->get(), DataType::Double), count_it->get());
     }
   }

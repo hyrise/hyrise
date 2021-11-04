@@ -27,6 +27,7 @@
 #include "expression_functors.hpp"
 #include "hyrise.hpp"
 #include "like_matcher.hpp"
+#include "lossy_cast.hpp"
 #include "operators/abstract_operator.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
@@ -227,6 +228,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::evaluate_expressi
       Fail(
           "Can't evaluate an expressions still containing placeholders. Are you trying to execute a PreparedPlan "
           "without instantiating it first?");
+
+    case ExpressionType::Interval:
+      Fail("IntervalExpression should have been resolved by SQLTranslator");
   }
 
   // Store the result in the cache
@@ -664,6 +668,13 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_case_ex
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_expression(
     const CastExpression& cast_expression) {
+  Assert(cast_expression.data_type() != DataType::Null, "Cast as NULL is undefined");
+  resolve_data_type(cast_expression.data_type(), [](auto type) {
+    using CastDataType = typename decltype(type)::type;
+    if constexpr (!std::is_same_v<Result, CastDataType>) {
+      Fail("Cast data types are ambiguous");
+    }
+  });
   /**
    * Implements SQL's CAST with the following semantics
    *    Float/Double -> Int/Long:           Value gets floor()ed
@@ -679,35 +690,23 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
     using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
 
     const auto result_size = _result_size(argument_result.size());
-
     values.resize(result_size);
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
       const auto& argument_value = argument_result.value(chunk_offset);
 
-      // NOLINTNEXTLINE(bugprone-branch-clone)
-      if constexpr (std::is_same_v<Result, NullValue> || std::is_same_v<ArgumentDataType, NullValue>) {
-        // "<Something> to Null" cast. Do nothing, this is handled by the `nulls` vector
-      } else if constexpr (std::is_same_v<Result, pmr_string>) {
-        // "<Something> to String" cast. Sould never fail, thus boost::lexical_cast (which throws on error) is fine
-        values[chunk_offset] = boost::lexical_cast<Result>(argument_value);
-      } else {
-        if constexpr (std::is_same_v<ArgumentDataType, pmr_string>) {
-          // "String to Numeric" cast
-          // Same as in SQLite, an illegal conversion (e.g. CAST("Hello" AS INT)) yields zero
-          // Does NOT use boost::lexical_cast() as that would throw on error - and we do not do the
-          // exception-as-flow-control thing.
-          if (!boost::conversion::try_lexical_convert(argument_value, values[chunk_offset])) {
-            values[chunk_offset] = 0;
-          }
-        } else {
-          // "Numeric to Numeric" cast. Use static_cast<> as boost::conversion::try_lexical_convert() would fail for
-          // CAST(5.5 AS INT)
-          values[chunk_offset] = static_cast<Result>(argument_value);
+      // "NULL to <Something>" cast is handled by the `nulls` vector
+      if constexpr (!std::is_same_v<ArgumentDataType, NullValue>) {
+        try {
+          values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+        } catch (boost::bad_lexical_cast&) {
+          std::stringstream error_message;
+          error_message << "Cannot cast '" << argument_value << "' as "
+                        << magic_enum::enum_name(cast_expression.data_type());
+          Fail(error_message.str());
         }
       }
     }
-
     nulls = argument_result.nulls;
   });
 
@@ -975,7 +974,7 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     row_pqp->set_parameters(parameters);
   }
 
-  const auto tasks = OperatorTask::make_tasks_from_operator(row_pqp);
+  const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
@@ -1612,5 +1611,15 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
 
   return results;
 }
+
+// We explicitly instantiate these template functions because (at least) clang-12 does not instantiate them for us.
+template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::evaluate_expression_to_result<pmr_string>(
+    const AbstractExpression& expression);
+template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
+    const AbstractExpression& expression);
 
 }  // namespace opossum

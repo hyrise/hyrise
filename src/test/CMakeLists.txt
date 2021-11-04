@@ -202,9 +202,9 @@ set(
     lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
-    lib/storage/vector_compression/simd_bp128/simd_bp128_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
+    lib/utils/date_utils_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp

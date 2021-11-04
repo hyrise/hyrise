@@ -40,8 +40,8 @@ const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predic
 
 std::string AbstractJoinOperator::description(DescriptionMode description_mode) const {
   const auto column_name = [&](const auto from_left, const auto column_id) {
-    const auto executed = from_left ? _left_input->executed() : _right_input->executed();
-    if (executed) {
+    const auto state = from_left ? _left_input->state() : _right_input->state();
+    if (state == OperatorState::ExecutedAndAvailable) {
       const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
       // If input table is still available, use name from there
       if (input_table) return input_table->column_name(column_id);
@@ -57,21 +57,20 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     return "Column #"s + std::to_string(column_id);
   };
 
-  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
-  stream << AbstractOperator::description(description_mode) << separator << "(" << _mode << " Join where "
-         << column_name(true, _primary_predicate.column_ids.first) << " " << _primary_predicate.predicate_condition
-         << " " << column_name(false, _primary_predicate.column_ids.second);
+  stream << AbstractOperator::description(description_mode) << " (" << _mode << ")" << separator;
+  stream << column_name(true, _primary_predicate.column_ids.first) << " ";
+  stream << _primary_predicate.predicate_condition << " ";
+  stream << column_name(false, _primary_predicate.column_ids.second);
 
-  // add information about secondary join predicates
+  // Add information about secondary join predicates
   for (const auto& secondary_predicate : _secondary_predicates) {
-    stream << " AND " << column_name(true, secondary_predicate.column_ids.first) << " "
-           << secondary_predicate.predicate_condition << " "
-           << column_name(false, secondary_predicate.column_ids.second);
+    stream << separator << "AND ";
+    stream << column_name(true, secondary_predicate.column_ids.first) << " ";
+    stream << secondary_predicate.predicate_condition << " ";
+    stream << column_name(false, secondary_predicate.column_ids.second);
   }
-
-  stream << ")";
 
   return stream.str();
 }

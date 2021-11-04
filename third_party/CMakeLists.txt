@@ -8,45 +8,6 @@ endif()
 # unity builds for this folder, even if the user manually activated it.
 set(CMAKE_UNITY_BUILD "OFF")
 
-# Build google benchmark
-add_library(
-    benchmark
-
-    STATIC
-
-    benchmark_fix/dummy.cc
-    benchmark/src/benchmark.cc
-    benchmark/src/benchmark_api_internal.cc
-    benchmark/src/benchmark_name.cc
-    benchmark/src/benchmark_register.cc
-    benchmark/src/benchmark_runner.cc
-    benchmark/src/colorprint.cc
-    benchmark/src/commandlineflags.cc
-    benchmark/src/complexity.cc
-    benchmark/src/console_reporter.cc
-    benchmark/src/counter.cc
-    benchmark/src/csv_reporter.cc
-    benchmark/src/json_reporter.cc
-    benchmark/src/reporter.cc
-    benchmark/src/sleep.cc
-    benchmark/src/statistics.cc
-    benchmark/src/string_util.cc
-    benchmark/src/sysinfo.cc
-    benchmark/src/timers.cc
-)
-
-target_compile_options(
-    benchmark
-    PRIVATE
-    -O3 -std=c++11 -DHAVE_STD_REGEX -DNDEBUG
-)
-
-target_include_directories(
-    benchmark
-    PRIVATE
-    benchmark/include
-)
-
 # Build sql-parser
 add_library(
     sqlparser
@@ -75,11 +36,13 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif()
 
 # Add Libraries with their own build setup
+SET(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
+add_subdirectory(benchmark)
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
-add_subdirectory(tpch-dbgen)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(tpch-dbgen)
 
 ## Build lz4
 set(LZ4_LIBRARY_DIR lz4/lib)
@@ -179,6 +142,17 @@ target_include_directories(
 )
 
 target_compile_options(zstd PRIVATE -fPIC)
+
+add_library(compact_vector INTERFACE)
+target_include_directories(compact_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include)
+target_sources(compact_vector
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/compact_iterator.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/compact_vector.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/const_iterator_traits.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/parallel_iterator_traits.hpp
+  INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include/prefetch_iterator_traits.hpp
+)
+target_compile_options(compact_vector INTERFACE -Wno-cast-qual -Wno-old-style-cast -Wno-shorten-64-to-32 -Wno-shadow -Wno-reserved-id-macro -Wno-atomic-implicit-seq-cst)
 
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)

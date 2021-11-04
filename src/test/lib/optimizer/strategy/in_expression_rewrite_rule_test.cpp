@@ -16,13 +16,22 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
     // col_a has 1000 entries across 200 values linearly distributed between 1 and 200
     node = create_mock_node_with_statistics(
-        MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}}, 1000,
+        MockNode::ColumnDefinitions{{DataType::Int, "col_a"}, {DataType::Float, "col_b"}, {DataType::String, "col_c"}},
+        1000,
         {{GenericHistogram<int32_t>::with_single_bin(1, 200, 1000, 200),
-          GenericHistogram<float>::with_single_bin(1.0f, 50.0f, 100, 10)}});
+          GenericHistogram<float>::with_single_bin(1.0f, 50.0f, 100, 10),
+          GenericHistogram<pmr_string>::with_single_bin("a", "z", 1, 1000)}});
     col_a = node->get_column("col_a");
     col_b = node->get_column("col_b");
+    col_c = node->get_column("col_c");
+
+    many_row_node =
+        create_mock_node_with_statistics(MockNode::ColumnDefinitions{{DataType::Int, "col_large"}}, 10'000'000,
+                                         {GenericHistogram<int32_t>::with_single_bin(1, 10'000'000, 1, 10'000'000)});
+    col_large = many_row_node->get_column("col_large");
 
     single_element_in_expression = in_(col_a, list_(1));
+    two_element_functional_in_expression = in_(substr_(col_c, 1, 5), list_("85669", "86197"));
     five_element_in_expression = in_(col_a, list_(1, 2, 3, 4, 5));
     five_element_not_in_expression = not_in_(col_a, list_(1, 2, 3, 4, 5));
     duplicate_element_in_expression = in_(col_a, list_(1, 2, 1));
@@ -34,12 +43,54 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     for (auto i = 0; i < 100; ++i) hundred_elements.emplace_back(value_(i));
     hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col_a,
                                                                    std::make_shared<ListExpression>(hundred_elements));
+    hundred_element_in_expression_large_input = std::make_shared<InExpression>(
+        PredicateCondition::In, col_large, std::make_shared<ListExpression>(hundred_elements));
   }
 
  public:
-  std::shared_ptr<MockNode> node;
-  std::shared_ptr<AbstractExpression> col_a, col_b, single_element_in_expression, five_element_in_expression,
-      five_element_not_in_expression, hundred_element_in_expression, duplicate_element_in_expression,
+  // Can't use EXPECT_LQP_EQ for disjunction rewrites for multiple elements, because ExpressionUnorderedSet produces
+  // a non-deterministic order of predicates
+  bool check_disjunction(std::shared_ptr<AbstractLQPNode> result_lqp, std::vector<int> expected_values) {
+    auto values_found_in_predicates = std::vector<int>{};
+
+    // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
+    // values_found_in_predicates
+    const auto verify_predicate_node = [&](const auto& node) {
+      EXPECT_EQ(node->type, LQPNodeType::Predicate);
+      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
+      EXPECT_TRUE(predicate_node);
+      auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
+      EXPECT_TRUE(predicate);
+      EXPECT_EQ(predicate->left_operand(), col_a);
+      EXPECT_EQ(predicate->right_operand()->type, ExpressionType::Value);
+      values_found_in_predicates.emplace_back(
+          boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
+    };
+
+    for (auto union_node_idx = size_t{0}; union_node_idx < expected_values.size() - 1; ++union_node_idx) {
+      EXPECT_EQ(result_lqp->type, LQPNodeType::Union);
+      auto union_node = std::dynamic_pointer_cast<UnionNode>(result_lqp);
+      EXPECT_TRUE(union_node);
+      EXPECT_EQ(union_node->set_operation_mode, SetOperationMode::All);
+
+      verify_predicate_node(union_node->right_input());
+
+      result_lqp = union_node->left_input();
+    }
+    // After checking expected_values.size() - 1 union nodes, the last node has predicates on both sides
+    verify_predicate_node(result_lqp);
+
+    std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
+
+    if (values_found_in_predicates == expected_values) return true;
+
+    return false;
+  }
+
+  std::shared_ptr<MockNode> node, many_row_node;
+  std::shared_ptr<AbstractExpression> col_a, col_b, col_c, col_large, single_element_in_expression,
+      two_element_functional_in_expression, five_element_in_expression, five_element_not_in_expression,
+      hundred_element_in_expression, hundred_element_in_expression_large_input, duplicate_element_in_expression,
       different_types_on_left_and_right_side_expression, different_types_on_right_side_expression, null_in_expression;
 };
 
@@ -88,40 +139,7 @@ TEST_F(InExpressionRewriteRuleTest, DisjunctionStrategy) {
     const auto input_lqp = PredicateNode::make(five_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
 
-    // Can't use EXPECT_LQP_EQ here, because ExpressionUnorderedSet produces a non-deterministic order of predicates
-    auto values_found_in_predicates = std::vector<int>{};
-
-    // Checks that a given node is a predicate of the form `col_a = x` where x is an int and will be added to
-    // values_found_in_predicates
-    const auto verify_predicate_node = [&](const auto& node) {
-      ASSERT_EQ(node->type, LQPNodeType::Predicate);
-      auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
-      ASSERT_TRUE(predicate_node);
-      auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
-      ASSERT_TRUE(predicate);
-      EXPECT_EQ(predicate->left_operand(), col_a);
-      ASSERT_EQ(predicate->right_operand()->type, ExpressionType::Value);
-      values_found_in_predicates.emplace_back(
-          boost::get<int>(dynamic_cast<ValueExpression&>(*predicate->right_operand()).value));
-    };
-
-    auto current_node = result_lqp;
-    for (auto union_node_idx = 0; union_node_idx < 4; ++union_node_idx) {
-      ASSERT_EQ(current_node->type, LQPNodeType::Union);
-      auto union_node = std::dynamic_pointer_cast<UnionNode>(current_node);
-      ASSERT_TRUE(union_node);
-      EXPECT_EQ(union_node->set_operation_mode, SetOperationMode::All);
-
-      verify_predicate_node(union_node->right_input());
-
-      current_node = union_node->left_input();
-    }
-    // After checking four union nodes, the last node has predicates on both sides
-    verify_predicate_node(current_node);
-
-    std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
-    const auto expected_values = std::vector<int>{1, 2, 3, 4, 5};
-    EXPECT_EQ(values_found_in_predicates, expected_values);
+    EXPECT_TRUE(check_disjunction(result_lqp, {1, 2, 3, 4, 5}));
   }
 
   {
@@ -305,6 +323,23 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 
   {
+    // Join for 100 elements even if table is large
+    const auto input_lqp = PredicateNode::make(hundred_element_in_expression_large_input, many_row_node);
+    const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+    const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+    for (auto i = 0; i < 100; ++i) table->append({i});
+    const auto static_table_node = StaticTableNode::make(table);
+    const auto right_col = lqp_column_(static_table_node, ColumnID{0});
+    const auto expected_lqp =
+        JoinNode::make(JoinMode::Semi, equals_(col_large, right_col), many_row_node, static_table_node);
+
+    EXPECT_LQP_EQ(result_lqp, expected_lqp);
+    EXPECT_TABLE_EQ_UNORDERED(static_cast<StaticTableNode&>(*result_lqp->right_input()).table, table);
+  }
+
+  {
     // Disjunction for two elements, even if one is NULL
     const auto input_lqp = PredicateNode::make(null_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
@@ -315,6 +350,22 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
         PredicateNode::make(equals_(col_a, 1), node));
     // clang-format on
     EXPECT_LQP_EQ(result_lqp, expected_lqp);
+  }
+
+  {
+    // Disjunction for five elements, if table is large
+    const auto input_lqp = PredicateNode::make(five_element_in_expression, many_row_node);
+    const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+    EXPECT_TRUE(check_disjunction(result_lqp, {1, 2, 3, 4, 5}));
+  }
+
+  {
+    // ExpressionEvaluator, despite table is large and elements below threshold if FunctionExpression contained
+    const auto input_lqp = PredicateNode::make(two_element_functional_in_expression, many_row_node);
+    const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
+
+    EXPECT_EQ(result_lqp, input_lqp);
   }
 }
 
