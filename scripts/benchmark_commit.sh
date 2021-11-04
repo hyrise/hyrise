@@ -43,12 +43,12 @@ fi
 
 
 build_system='ninja'
-plugin_path='/home/Daniel.Lindner/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so'
+plugin_path="$(pwd)/lib/libhyriseDependencyMiningPlugin.so"
 
 # Create the result folder if necessary
 mkdir benchmark_midterm 2>/dev/null || true
-
 build_folder=$(pwd)
+
 
 # Checkout and build from scratch, tracking the compile time
 git checkout "dey4ss/thesis"

@@ -557,7 +557,7 @@ void try_join_to_semi_rewrite(
   if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
 
   bool flipped_inputs = false;
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI) {
+  if (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI) {
     // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
     if (!left_input_is_used &&
         join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
@@ -587,7 +587,7 @@ void try_join_to_semi_rewrite(
   if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
     return;
   }
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE) {
+  if (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE) {
     if (!left_input_is_used) {
       const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
       //std::cout << 556 << std::endl;
@@ -610,7 +610,7 @@ void try_join_to_semi_rewrite(
       //std::cout << 565 << std::endl;
     }
   }
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
+  if (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
     if (!left_input_is_used) {
       const auto unused_input_side = flipped_inputs ? LQPInputSide::Right : LQPInputSide::Left;
       //std::cout << 571 << std::endl;

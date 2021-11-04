@@ -232,13 +232,18 @@ void recursively_gather_required_expressions(
 namespace opossum {
 
 PQPAnalyzer::PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue) : _queue(queue) {
-  if constexpr (DependencyUsageConfig::ENABLE_GROUPBY_REDUCTION)
+  if constexpr (DependencyUsageConfig::ENABLE_GROUPBY_REDUCTION) {
     add_rule(std::make_unique<DependentGroupByCandidateRule>());
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI) add_rule(std::make_unique<JoinToSemiCandidateRule>());
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE)
+  }
+  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI) {
+    add_rule(std::make_unique<JoinToSemiCandidateRule>());
+  }
+  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE) {
     add_rule(std::make_unique<JoinToPredicateCandidateRule>());
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION)
+  }
+  if constexpr (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
     add_rule(std::make_unique<JoinEliminationCandidateRule>());
+  }
 }
 
 void PQPAnalyzer::run() {

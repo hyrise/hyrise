@@ -125,7 +125,7 @@ void BenchmarkRunner::run() {
   if (_config.dependency_mining_plugin_path) {
     _mine_dependencies();
   } else {
-    std::cout << "DependencyMiningPlugin not loaded because no path provided. See README.md for details." << std::endl;
+    std::cout << "- DependencyMiningPlugin not loaded because no path provided. See README.md for details." << std::endl;
   }
 
   switch (_config.benchmark_mode) {
@@ -626,7 +626,9 @@ void BenchmarkRunner::_mine_dependencies() {
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
   _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
-  Hyrise::get().plugin_manager.load_plugin(*(_config.dependency_mining_plugin_path));
+  const auto& plugin_path = *(_config.dependency_mining_plugin_path);
+  std::cout << "- Load DependencyMiningPlugin from " << plugin_path << std::endl;
+  Hyrise::get().plugin_manager.load_plugin(plugin_path);
 }
 
 }  // namespace opossum
