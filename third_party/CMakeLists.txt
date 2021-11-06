@@ -9,18 +9,27 @@ endif()
 set(CMAKE_UNITY_BUILD "OFF")
 
 # Build sql-parser
+set(PARSER_DIR sql-parser)
+
 add_library(
     sqlparser
 
-    sql-parser/src/parser/bison_parser.cpp
-    sql-parser/src/parser/flex_lexer.cpp
-    sql-parser/src/sql/Expr.cpp
-    sql-parser/src/sql/PrepareStatement.cpp
-    sql-parser/src/sql/SQLStatement.cpp
-    sql-parser/src/sql/statements.cpp
-    sql-parser/src/SQLParser.cpp
-    sql-parser/src/SQLParserResult.cpp
-    sql-parser/src/util/sqlhelper.cpp
+    ${PARSER_DIR}/src/parser/bison_parser.cpp
+    ${PARSER_DIR}/src/parser/flex_lexer.cpp
+    ${PARSER_DIR}/src/sql/Expr.cpp
+    ${PARSER_DIR}/src/sql/PrepareStatement.cpp
+    ${PARSER_DIR}/src/sql/SQLStatement.cpp
+    ${PARSER_DIR}/src/sql/statements.cpp
+    ${PARSER_DIR}/src/SQLParser.cpp
+    ${PARSER_DIR}/src/SQLParserResult.cpp
+    ${PARSER_DIR}/src/util/sqlhelper.cpp
+)
+
+target_include_directories(
+    sqlparser
+
+    INTERFACE
+    ${PARSER_DIR}/src
 )
 
 target_compile_options(
@@ -40,6 +49,7 @@ SET(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building i
 add_subdirectory(benchmark)
 add_subdirectory(googletest)
 add_subdirectory(libpqxx)
+add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
 add_subdirectory(tpch-dbgen)
@@ -134,7 +144,7 @@ add_library (zstd
 target_include_directories(
     zstd
 
-    PRIVATE
+    PUBLIC
     ${ZSTD_LIBRARY_DIR}
     ${ZSTD_LIBRARY_DIR}/common
     ${ZSTD_LIBRARY_DIR}/compress
