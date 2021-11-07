@@ -714,6 +714,34 @@ set_source_files_properties(
     SKIP_PRECOMPILE_HEADERS TRUE
 )
 
+target_include_directories(
+    hyrise_impl
+
+    PUBLIC
+    ${PROJECT_SOURCE_DIR}/src/benchmarklib/
+    ${PROJECT_SOURCE_DIR}/src/lib/
+    ${PROJECT_SOURCE_DIR}/src/plugins/
+
+    ${Boost_INCLUDE_DIRS}
+)
+
+# Include these libraries as system libraries to silence some warnings caused by -Weverything
+target_include_directories(
+    hyrise_impl
+
+    SYSTEM
+
+    PUBLIC
+    ${TBB_INCLUDE_DIR}
+    ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
+    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
+    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
+    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
+    ${PROJECT_SOURCE_DIR}/third_party/json
+    ${PROJECT_SOURCE_DIR}/third_party/lz4
+    ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
+)
+
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 
@@ -777,3 +805,11 @@ add_custom_target(resourceLink
         )
 
 add_dependencies(hyrise resourceLink)
+
+# TODO(Marcel) remove below
+get_target_property(LIB_HYRISE_INCLUDES hyrise_impl INCLUDE_DIRECTORIES)
+
+# Construct the compiler string for the include directories.
+foreach(dir ${LIB_HYRISE_INCLUDES})
+    message("${dir} ")
+endforeach()
