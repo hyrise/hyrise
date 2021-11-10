@@ -216,12 +216,16 @@ void recursively_gather_required_expressions(
     // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
     // needs
     auto& required_expressions_for_input = required_expressions_by_node[input];
+    const auto& expressions_provided_by_input = input->output_expressions();
     for (const auto& required_expression : required_expressions) {
       // Add the columns needed here (and above) if they come from the input node. Reasons why this might NOT be the
       // case are: (1) The expression is calculated in this node (and is thus not available in the input node), or
       // (2) we have two input nodes (i.e., a join) and the expressions comes from the other side.
-      if (input->find_column_id(*required_expression)) {
-        required_expressions_for_input.emplace(required_expression);
+      for (auto column_id = ColumnID{0}; column_id < expressions_provided_by_input.size(); ++column_id) {
+        if (*expressions_provided_by_input[column_id] == *required_expression) {
+          required_expressions_for_input.emplace(required_expression);
+          break;
+        }
       }
     }
 
