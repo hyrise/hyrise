@@ -83,16 +83,11 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
       max_load_factor ? static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count *
                                                                       sizeof(std::pair<T, HistogramCountType>)))
                       : 1'048'576;
-  // std::byte buffer[buffer_size];
-  auto buffer = std::make_unique<std::byte[]>(buffer_size);
-
-  // if (!pool) {
-  //   // In case we are not able to estimate the cardinality, we use a memory pool of 1 MiB.
-  //   pool = std::make_unique<std::pmr::monotonic_buffer_resource>(1'048'576);
-  // }
-
-  auto monotonic_resource = std::pmr::monotonic_buffer_resource{buffer.get(), buffer_size};
+  auto buffer = std::vector<std::byte>{};
+  buffer.reserve(buffer_size);
+  auto monotonic_resource = std::pmr::monotonic_buffer_resource{buffer.data(), buffer.capacity()};
   auto monotonic_allocator = std::pmr::polymorphic_allocator<std::pair<T, HistogramCountType>>{&monotonic_resource};
+
   ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count, monotonic_allocator};
   if (max_load_factor) {
     // Only use non-default load factor of robin_map for cases where we have sufficient information.
