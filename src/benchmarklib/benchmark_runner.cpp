@@ -125,7 +125,8 @@ void BenchmarkRunner::run() {
   if (_config.dependency_mining_plugin_path) {
     _mine_dependencies();
   } else {
-    std::cout << "- DependencyMiningPlugin not loaded because no path provided. See README.md for details." << std::endl;
+    std::cout << "- DependencyMiningPlugin not loaded because no path provided. See README.md for details."
+              << std::endl;
   }
 
   switch (_config.benchmark_mode) {

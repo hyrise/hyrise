@@ -37,9 +37,8 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     join_column_ids.emplace(table_column_id.table_name, std::move(table_column_id));
   }
 
-  std::vector<DependencyCandidate> candidates;
-
   // check for given inputs
+  std::vector<DependencyCandidate> candidates;
   for (const auto& input : inputs_to_visit) {
     std::vector<DependencyCandidate> my_candidates;
     bool abort = false;
@@ -91,16 +90,19 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
           return LQPVisitation::DoNotVisitInputs;
       }
     });
-    if (!abort) {
-      candidates.insert(candidates.end(), std::make_move_iterator(my_candidates.begin()),
-                        std::make_move_iterator(my_candidates.end()));
-      // add join column as UCC candidate
-      if (join_node->join_mode == JoinMode::Inner) {
-        my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]}, TableColumnIDs{},
-                                   DependencyType::Unique, priority);
-      }
+
+    if (abort || my_candidates.empty()) continue;
+
+    // add join column as UCC candidate
+    if (join_node->join_mode == JoinMode::Inner) {
+      my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]}, TableColumnIDs{},
+                                 DependencyType::Unique, priority);
     }
+
+    candidates.insert(candidates.end(), std::make_move_iterator(my_candidates.begin()),
+                      std::make_move_iterator(my_candidates.end()));
   }
+
   return candidates;
 }
 

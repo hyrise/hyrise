@@ -15,7 +15,8 @@ using TimePoint = std::chrono::high_resolution_clock::time_point;
 struct ValidationState {
   enum class State { NotStarted, Running, Over };
 
-  explicit ValidationState(const bool no_limits, const int64_t init_max_validations = 0, const bool use_time_for_validation = false, const Duration init_max_duration = Duration{});
+  explicit ValidationState(const bool no_limits, const int64_t init_max_validations = 0,
+                           const bool use_time_for_validation = false, const Duration init_max_duration = Duration{});
   ValidationState& operator=(const ValidationState& other);
 
   bool keep_running();
@@ -32,7 +33,6 @@ struct ValidationState {
   int64_t max_validations;
   bool use_time;
   Duration max_duration;
-
 };
 
 }  // namespace opossum

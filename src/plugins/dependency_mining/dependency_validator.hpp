@@ -4,14 +4,15 @@
 #include <mutex>
 
 #include "util.hpp"
-#include "validation_strategy/abstract_dependency_validation_rule.hpp"
 #include "validation_state.hpp"
+#include "validation_strategy/abstract_dependency_validation_rule.hpp"
 
 namespace opossum {
 
 class DependencyValidator {
  public:
-  DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id, const std::shared_ptr<ValidationState>& validation_state);
+  DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id,
+                      const std::shared_ptr<ValidationState>& validation_state);
 
  protected:
   friend class DependencyMiningPlugin;

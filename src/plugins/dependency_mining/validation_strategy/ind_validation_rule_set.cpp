@@ -1,4 +1,4 @@
-#include "ind_validation_rule.hpp"
+#include "ind_validation_rule_set.hpp"
 
 #include "hyrise.hpp"
 #include "operators/aggregate_hash.hpp"
@@ -12,9 +12,9 @@
 
 namespace opossum {
 
-INDValidationRule::INDValidationRule() : AbstractDependencyValidationRule(DependencyType::Inclusion) {}
+INDValidationRuleSet::INDValidationRuleSet() : AbstractDependencyValidationRule(DependencyType::Inclusion) {}
 
-std::shared_ptr<ValidationResult> INDValidationRule::_on_validate(const DependencyCandidate& candidate) const {
+std::shared_ptr<ValidationResult> INDValidationRuleSet::_on_validate(const DependencyCandidate& candidate) const {
   Assert(candidate.determinants.size() == 1, "Invalid determinants for IND");
   Assert(candidate.dependents.size() == 1, "Invalid dependents for IND");
 
@@ -97,63 +97,62 @@ std::shared_ptr<ValidationResult> INDValidationRule::_on_validate(const Dependen
 
   if (!is_valid) return INVALID_VALIDATION_RESULT;
 
-  const auto prune_columns = [](const auto& table, const auto needed_column_id) {
-    std::vector<ColumnID> pruned_columns;
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-      if (column_id != needed_column_id) pruned_columns.emplace_back(column_id);
+  bool is_bidirect = false;
+
+  resolve_data_type(dep_column_type, [&](auto type) {
+    using ColumnDataType = typename decltype(type)::type;
+    const auto collect_dictionaries = [](const auto& table, const auto column_id) {
+      Assert(table && table->type() == TableType::Data, "Expected Data table");
+      std::vector<std::shared_ptr<const pmr_vector<ColumnDataType>>> dictionaries;
+      dictionaries.reserve(table->chunk_count());
+      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+        const auto& chunk = table->get_chunk(chunk_id);
+        if (!chunk) continue;
+        const auto& segment = chunk->get_segment(column_id);
+        if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(segment)) {
+          dictionaries.emplace_back(dictionary_segment->dictionary());
+        } else {
+          Fail("Could not resolve dictionary segment");
+        }
+      }
+      return dictionaries;
+    };
+
+    const auto& determinant_dictionaries = collect_dictionaries(determinant_table, determinant.column_id);
+    const auto& dependent_dictionaries = collect_dictionaries(dependent_table, dependent.column_id);
+
+    const auto add_values = [](auto& set, auto& dictionaries) {
+      size_t max_dict_size{0};
+      for (const auto& dictionary : dictionaries) {
+        max_dict_size = std::max(max_dict_size, dictionary->size());
+      }
+
+      set.reserve(max_dict_size);
+      for (const auto& dictionary : dictionaries) {
+        set.insert(dictionary->cbegin(), dictionary->cend());
+      }
+    };
+
+    std::unordered_set<ColumnDataType> determinant_values;
+    std::unordered_set<ColumnDataType> dependent_values;
+    add_values(determinant_values, determinant_dictionaries);
+    add_values(dependent_values, dependent_dictionaries);
+
+    if (determinant_values.size() < dependent_values.size()) {
+      is_valid = false;
+      return;
     }
-    return pruned_columns;
-  };
-  const auto determinant_pruned_columns = prune_columns(determinant_table, determinant.column_id);
-  const auto dependent_pruned_columns = prune_columns(dependent_table, dependent.column_id);
-  const auto determinant_get_table =
-      std::make_shared<GetTable>(determinant.table_name, std::vector<ChunkID>{}, determinant_pruned_columns);
-  const auto dependent_get_table =
-      std::make_shared<GetTable>(dependent.table_name, std::vector<ChunkID>{}, dependent_pruned_columns);
-  const auto group_by_column = std::vector<ColumnID>{ColumnID{0}};
-  const auto determinant_aggregate = std::make_shared<AggregateHash>(
-      determinant_get_table, std::vector<std::shared_ptr<AggregateExpression>>{}, group_by_column);
-  const auto dependent_aggregate = std::make_shared<AggregateHash>(
-      dependent_get_table, std::vector<std::shared_ptr<AggregateExpression>>{}, group_by_column);
-
-  determinant_get_table->execute();
-  dependent_get_table->execute();
-  determinant_aggregate->execute();
-  dependent_aggregate->execute();
-  if (determinant_aggregate->get_output()->row_count() < dependent_aggregate->get_output()->row_count())
-    return INVALID_VALIDATION_RESULT;
-
-  const auto sort_definition = std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}}};
-  const auto determinant_sort = std::make_shared<Sort>(determinant_aggregate, sort_definition);
-  const auto dependent_sort = std::make_shared<Sort>(dependent_aggregate, sort_definition);
-
-  determinant_sort->execute();
-  dependent_sort->execute();
-  const auto determinant_rows = determinant_sort->get_output()->get_rows();
-  const auto dependent_rows = dependent_sort->get_output()->get_rows();
-  determinant_sort->clear_output();
-  dependent_sort->clear_output();
-
-  auto dependent_iter = dependent_rows.cbegin();
-  auto determinant_iter = determinant_rows.cbegin();
-  bool is_bidirect = true;
-  while (dependent_iter != dependent_rows.cend() && determinant_iter != determinant_rows.cend()) {
-    if ((*dependent_iter)[0] == (*determinant_iter)[0]) {
-      ++determinant_iter;
-      ++dependent_iter;
-      continue;
+    for (const auto& element : dependent_values) {
+      if (!determinant_values.contains(element)) {
+        is_valid = false;
+        return;
+      }
     }
-    if ((*dependent_iter)[0] > (*determinant_iter)[0]) {
-      ++determinant_iter;
-      is_bidirect = false;
-      continue;
+    if (determinant_values.size() == dependent_values.size()) {
+      is_bidirect = true;
     }
-    // std::cout << "        i(i) " << timer.lap_formatted() << std::endl;
-    std::cout << "dep " << (*dependent_iter)[0] << "    det " << (*determinant_iter)[0] << std::endl;
-    return INVALID_VALIDATION_RESULT;
-  }
-  // std::cout << "        i(ii) " << timer.lap_formatted() << std::endl;
-  if (dependent_iter != dependent_rows.cend()) return INVALID_VALIDATION_RESULT;
+  });
+  if (!is_valid) return INVALID_VALIDATION_RESULT;
 
   const auto result = std::make_shared<ValidationResult>(DependencyValidationStatus::Valid);
   const auto table_inclusion_constraint =

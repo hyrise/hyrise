@@ -4,7 +4,12 @@
 
 namespace opossum {
 
-ValidationState::ValidationState(const bool no_limits, const int64_t init_max_validations, const bool use_time_for_validation, const opossum::Duration init_max_duration) : allow_all(no_limits), max_validations(init_max_validations), use_time(use_time_for_validation), max_duration(init_max_duration) {}
+ValidationState::ValidationState(const bool no_limits, const int64_t init_max_validations,
+                                 const bool use_time_for_validation, const opossum::Duration init_max_duration)
+    : allow_all(no_limits),
+      max_validations(init_max_validations),
+      use_time(use_time_for_validation),
+      max_duration(init_max_duration) {}
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
 ValidationState& ValidationState::operator=(const ValidationState& other) {

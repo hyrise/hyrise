@@ -6,12 +6,14 @@
 #include "utils/timer.hpp"
 #include "validation_strategy/fd_validation_rule.hpp"
 #include "validation_strategy/ind_validation_rule.hpp"
+#include "validation_strategy/ind_validation_rule_set.hpp"
 #include "validation_strategy/od_validation_rule.hpp"
 #include "validation_strategy/ucc_validation_rule.hpp"
 
 namespace opossum {
 
-DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id, const std::shared_ptr<ValidationState>& validation_state)
+DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandidateQueue>& queue, size_t id,
+                                         const std::shared_ptr<ValidationState>& validation_state)
     : _queue(queue), _id(id), _validation_state(validation_state) {
   add_rule(std::make_unique<ODValidationRule>());
   add_rule(std::make_unique<UCCValidationRule>());

@@ -244,6 +244,7 @@ bool try_join_to_scan_rewrite(
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
+  //std::cout << "try join2pred " << unused_input->description() << std::endl;
 
   // early out if input is required by another node or join column is not unique
   if (unused_input->output_count() > 1) return false;
@@ -442,12 +443,12 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
   //std::cout << 438 << std::endl;
   //std::cout << "\ntry rewrite " << join->description() << " with IND" << std::endl;
   auto unused_input = join->input(unused_side);
-  // std::cout << " try_eliminate_join " << unused_input->description() << std::endl;
+  //std::cout << " try_eliminate_join " << unused_input->description() << std::endl;
 
   if (unused_input->output_count() > 1) return;
-  //std::cout << 441 << std::endl;
+  //std::cout << 449 << std::endl;
   if (!unused_input->has_matching_unique_constraint(equals_predicate_expressions_unused_side)) return;
-  //std::cout << 443 << std::endl;
+  //std::cout << 451 << std::endl;
   bool abort = false;
   visit_lqp(unused_input, [&unused_input, &abort](auto& node) {
     switch (node->type) {
@@ -458,7 +459,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
       }
         return LQPVisitation::DoNotVisitInputs;
       default: {
-        // std::cout << " abort " << node->description() << std::endl;
+        //std::cout << " abort " << node->description() << std::endl;
         abort = true;
       }
         return LQPVisitation::DoNotVisitInputs;
@@ -466,10 +467,10 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
   });
 
   if (abort || unused_input->type != LQPNodeType::StoredTable) return;
-  //std::cout << 445 << std::endl;
-  // std::cout << " 466 " << unused_input->description() << std::endl;
+  //std::cout << 470 << std::endl;
+  //std::cout << " 471 " << unused_input->description() << std::endl;
   const auto& stored_table_node = static_cast<StoredTableNode&>(*unused_input);
-  //std::cout << 447 << std::endl;
+  //std::cout << 473 << std::endl;
   const auto used_side = unused_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto used_input = join->input(used_side);
   const auto used_side_join_expression = *(equals_predicate_expressions_used_side.begin());
@@ -478,7 +479,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
   const auto unused_side_join_column_expression = static_pointer_cast<LQPColumnExpression>(unused_side_join_expression);
   const auto unused_side_table_name = stored_table_node.table_name;
   const auto unused_side_column_id = unused_side_join_column_expression->original_column_id;
-  //std::cout << 456 << std::endl;
+  //std::cout << 482 << std::endl;
   //std::cout << "    used: " << resolve_column_expression(used_side_join_expression).table_name << "    unused: " << unused_side_table_name << std::endl;
   for (const auto& ind : used_input->inclusion_dependencies()) {
     //std::cout << "    try: " << ind << std::endl;
@@ -486,13 +487,13 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
     const auto& determinant = ind.determinants.at(0);
     const auto& dependent = ind.dependents.at(0);
     if (*dependent != *used_side_join_column_expression) continue;
-    //std::cout << 462 << std::endl;
+    //std::cout << 490 << std::endl;
     if (determinant.table_name == unused_side_table_name && determinant.column_id == unused_side_column_id) {
       // std::cout << "rewrite " << join->description() << "    with " << ind << std::endl;
       join->set_left_input(used_input);
       join->set_right_input(nullptr);
       lqp_remove_node(join);
-      // std::cout << "rewrote JoinElimination" << std::endl;
+      //std::cout << "rewrote JoinElimination" << std::endl;
       //std::cout << 467 << std::endl;
       return;
     }
@@ -595,7 +596,7 @@ void try_join_to_semi_rewrite(
       // Addidtionally, the join is not in the LQP anymore.
       if (try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
                                    used_input_side, required_expressions_by_node)) {
-        //std::cout << "rewrote " << join_node->description() << " to predicate (i)" << std::endl;
+        std::cout << "rewrote " << join_node->description() << " to predicate (i)" << std::endl;
         return;
       }
       //std::cout << 559 << std::endl;
@@ -604,7 +605,7 @@ void try_join_to_semi_rewrite(
       //std::cout << 562 << std::endl;
       if (try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
                                    LQPInputSide::Left, required_expressions_by_node)) {
-        //std::cout << "rewrote " << join_node->description() << " to predicate (ii)" << std::endl;
+        std::cout << "rewrote " << join_node->description() << " to predicate (ii)" << std::endl;
         return;
       }
       //std::cout << 565 << std::endl;
