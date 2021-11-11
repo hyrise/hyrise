@@ -79,11 +79,11 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
     }
   }
 
-  const auto buffer_size = max_load_factor ?
-                           static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count *
-                                               sizeof(std::pair<T, HistogramCountType>))) :
-                           1'048'576;
- // std::byte buffer[buffer_size];
+  const auto buffer_size =
+      max_load_factor ? static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count *
+                                                                      sizeof(std::pair<T, HistogramCountType>)))
+                      : 1'048'576;
+  // std::byte buffer[buffer_size];
   auto buffer = std::make_unique<std::byte[]>(buffer_size);
 
   // if (!pool) {
