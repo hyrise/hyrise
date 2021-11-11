@@ -52,6 +52,7 @@ class JoinHash : public AbstractJoinOperator {
     size_t radix_bits{0};
     // Initially, the left input is the build side and the right side is the probe side.
     bool left_input_is_build_side{true};
+    std::string radix_blooming{};
   };
 
  protected:

@@ -1,5 +1,10 @@
 #include "join_hash.hpp"
 
+
+
+#include <bitset>
+
+
 #include <cmath>
 #include <memory>
 #include <numeric>
@@ -81,7 +86,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   if ((build_side_size + probe_side_size) < 10'000) {
     // Rough estimate for early exists. We assume the worst case of a rather small L2 cache of 128 KB and a string
     // column with 24 bytes per entry. This means we can keep 5'000 rows in the L2 cache.
-    std::cout << "build and probe: " << build_side_size << " & " << probe_side_size << ". Mode: " << mode << std::endl;
+    // std::cout << "build and probe: " << build_side_size << " & " << probe_side_size << ". Mode: " << mode << std::endl;
     return size_t{0};
   }
   /*
@@ -142,10 +147,18 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   }
 
   const auto cluster_count = std::max(1.0, aggregated_size_build_side / l2_cache_max_usable);
-  auto cc = static_cast<size_t>(std::round(std::log2(cluster_count)));
-  std::cout << "build and probe: " << build_side_size << " & " << probe_side_size << ". Mode: " << mode << ". Cluster count: " << cluster_count << ". Bit count: " << cc << std::endl;
-  return cc;
-  //return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
+  
+  // For very large probe table, we can end up with a few radix bits (and thus few output chunks). If the probe side is
+  // too large, we limit potential parallelization in the join as well as the following operators due to the few huge
+  // chunks. To counter these cases, we try to limit the output partitions to a maximum size.
+  constexpr auto MAX_OUTPUT_CHUNK_SIZE = size_t{Chunk::DEFAULT_SIZE * 10};  // chosen rather arbitrarily
+  const auto radix_bits = static_cast<size_t>(std::round(std::log2(cluster_count)));
+  if ((probe_side_size / static_cast<size_t>(std::pow(2, radix_bits))) > MAX_OUTPUT_CHUNK_SIZE) {
+    return static_cast<size_t>(std::ceil(std::log2(std::ceil(probe_side_size / MAX_OUTPUT_CHUNK_SIZE))));
+  }
+
+  // std::cout << "build and probe: " << build_side_size << " & " << probe_side_size << ". Mode: " << mode << ". Cluster count: " << cluster_count << ". Bit count: " << cc << std::endl;
+  return radix_bits;
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
@@ -155,7 +168,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash doesn't support these parameters");
 
-  std::cout << *this << std::endl;
+  // std::cout << *this << std::endl;
 
   std::shared_ptr<const Table> build_input_table;
   std::shared_ptr<const Table> probe_input_table;
@@ -297,7 +310,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
   std::shared_ptr<Table> _output_table;
 
-  const size_t _radix_bits;
+  size_t _radix_bits;
 
   // Determine correct type for hashing
   using HashedType = typename JoinHashTraits<BuildColumnType, ProbeColumnType>::HashType;
@@ -411,6 +424,58 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       materialize_build_side(probe_side_bloom_filter);
       _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
     }
+    
+
+    if (_radix_bits > 0) {    
+      auto build_side_size_after_bloom_filtering = size_t{0};
+      for (const auto& bin : histograms_build_column) {
+        for (const auto& rows_in_radix : bin) {
+          build_side_size_after_bloom_filtering += rows_in_radix;
+        }
+      }
+
+      auto probe_side_size_after_bloom_filtering = size_t{0};
+      for (const auto& bin : histograms_probe_column) {
+        for (const auto& rows_in_radix : bin) {
+          probe_side_size_after_bloom_filtering += rows_in_radix;
+        }
+      }
+
+      auto after_bloom_filtering_radix_bit_count = _join_hash.calculate_radix_bits<BuildColumnType>(build_side_size_after_bloom_filtering,
+                                                                  probe_side_size_after_bloom_filtering, _mode);
+
+      std::stringstream ss;
+      ss << "Build side (radix bits " << _radix_bits << "): "
+         << (static_cast<double>(build_side_size_after_bloom_filtering) / static_cast<double>(_build_input_table->row_count()))
+         << " for " << _build_input_table->row_count() << " rows, probe side: "
+         << (static_cast<double>(probe_side_size_after_bloom_filtering) / static_cast<double>(_probe_input_table->row_count()))
+         << " for " << _probe_input_table->row_count() << " rows";
+      _performance.radix_blooming = ss.str();
+      std::cout << "\tBLOOOOOOOOOOOOOOOOOOOOMING: \n\t\t" << ss.str() << std::endl;
+      if (_radix_bits != after_bloom_filtering_radix_bit_count) {
+        std::cout << "\t\tRadix changed: " << _radix_bits << "->" << after_bloom_filtering_radix_bit_count << std::endl;
+        std::cout << _join_hash << std::endl;
+      }
+
+      const size_t new_radix_mask = static_cast<uint32_t>(pow(2, _radix_bits) - 1);
+      for (auto histogram_id = size_t{0}; histogram_id < histograms_build_column.size(); ++histogram_id) {
+        const auto& chunk_histogram = histograms_build_column[histogram_id];
+        std::cout << "ChunkID: " << histogram_id << std::endl;
+        auto radix = size_t{0};
+        for (const auto bin : chunk_histogram) {
+          std::bitset<8> x(radix);
+          if ((radix & new_radix_mask) == radix) {
+            // std::cout << "We need to include "
+            std::cout << "\tradix " << x << ": " << bin << std::endl;
+          }
+          std::cout << "\tradix " << x << ": " << bin << std::endl;
+          ++radix;
+        }
+      }
+
+      // _radix_bits = after_bloom_filtering_radix_bit_count;
+      // histograms_probe_column
+    }
 
     /**
      * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
@@ -426,10 +491,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         // radix partition the build table
         if (keep_nulls_build_column) {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, true>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+              materialized_build_column, histograms_build_column, _radix_bits, probe_side_bloom_filter);
         } else {
           radix_build_column = partition_by_radix<BuildColumnType, HashedType, false>(
-              materialized_build_column, histograms_build_column, _radix_bits);
+              materialized_build_column, histograms_build_column, _radix_bits, probe_side_bloom_filter);
         }
 
         // After the data in materialized_build_column has been partitioned, it is not needed anymore.
@@ -691,6 +756,7 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
   const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
   stream << separator << "Radix bits: " << radix_bits << ".";
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
+  stream << separator << "Radix Blooming: " << radix_blooming;
 }
 
 }  // namespace opossum
