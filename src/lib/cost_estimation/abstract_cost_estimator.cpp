@@ -79,7 +79,7 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
   }
 
   // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been
-  // visited. If any node in it has already has been visited, and we'd use the cache entry anyway, costs would get
+  // visited. If any node in it has already been visited, and we'd use the cache entry anyway, costs would get
   // counted twice
   auto subplan_already_visited = false;
   auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
