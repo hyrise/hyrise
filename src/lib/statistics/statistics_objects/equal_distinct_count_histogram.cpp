@@ -2,7 +2,6 @@
 
 #include <cmath>
 #include <memory>
-#include <memory_resource>
 #include <numeric>
 #include <string>
 #include <utility>
@@ -25,7 +24,7 @@ using namespace opossum;  // NOLINT
 // where hashing is somewhat expensive.
 template <typename T>
 using ValueDistributionMap = tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                                            std::pmr::polymorphic_allocator<std::pair<T, HistogramCountType>>,
+                                            std::allocator<std::pair<T, HistogramCountType>>,
                                             std::is_same_v<std::decay_t<T>, pmr_string>>;
 
 template <typename T>
@@ -57,11 +56,8 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   // consumption (as we can avoid pre-sizes all maps with the table size, which is often by far too large).
 
   // Use a defensive default in case we cannot get a better estimate (i.e., no dictionary-encoded data).
-  auto estimated_distinct_value_count = size_t{1'024};
-
+  auto estimated_distinct_value_count = std::min(table.row_count(), size_t{1'024});
   auto max_load_factor = std::optional<float>{};
-  // To use a monotonic buffer pool, which can be advantegous for string maps.
-  auto pool = std::unique_ptr<std::pmr::monotonic_buffer_resource>{};
   const auto chunk_count = table.chunk_count();
 
   // Meta tables do not have chunks, we thus need to check for having a chunk count larger zero.
@@ -75,25 +71,10 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
       // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
       // resize will happen.
       max_load_factor = 0.9f;
-      pool = std::make_unique<std::pmr::monotonic_buffer_resource>();
     }
   }
 
-  const auto buffer_size = max_load_factor ?
-                           static_cast<size_t>(1.2 * static_cast<double>(estimated_distinct_value_count *
-                                               sizeof(std::pair<T, HistogramCountType>))) :
-                           1'048'576;
-  auto buffer = std::byte[buffer_size];
-
-
-  // if (!pool) {
-  //   // In case we are not able to estimate the cardinality, we use a memory pool of 1 MiB.
-  //   pool = std::make_unique<std::pmr::monotonic_buffer_resource>(1'048'576);
-  // }
-
-  auto monotonic_resource = std::pmr::monotonic_buffer_resource>{buffer.data(), buffer_size};
-  auto monotonic_allocator = std::pmr::polymorphic_allocator<std::pair<T, HistogramCountType>>{&monotonic_resource};
-  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count, monotonic_allocator};
+  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count};
   if (max_load_factor) {
     // Only use non-default load factor of robin_map for cases where we have sufficient information.
     value_distribution_map.max_load_factor(*max_load_factor);
