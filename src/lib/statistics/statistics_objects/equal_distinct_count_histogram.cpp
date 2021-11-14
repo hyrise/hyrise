@@ -56,7 +56,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   // consumption (as we can avoid pre-sizes all maps with the table size, which is often by far too large).
 
   // Use a defensive default in case we cannot get a better estimate (i.e., no dictionary-encoded data).
-  auto estimated_distinct_value_count = std::min(table.row_count(), size_t{1'024});
+  auto estimated_distinct_value_count = std::min(table.row_count(), uint64_t{1'024});
   auto max_load_factor = std::optional<float>{};
   const auto chunk_count = table.chunk_count();
 
@@ -67,7 +67,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
             dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
       estimated_distinct_value_count = std::max(
           table.row_count(),
-          static_cast<size_t>(1.1 * static_cast<double>(chunk_count * dictionary_segment->unique_values_count())));
+          static_cast<uint64_t>(1.1 * static_cast<double>(chunk_count * dictionary_segment->unique_values_count())));
       // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
       // resize will happen.
       max_load_factor = 0.9f;
