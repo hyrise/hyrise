@@ -174,12 +174,38 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     return LQPVisitation::VisitInputs;
   });
 
+  if (removal_candidates.empty()) return;
+
   /**
    * Phase 2: Remove semi join reductions
    */
   for (const auto& removal_candidate : removal_candidates) {
     if (removal_blockers.contains(removal_candidate)) continue;
+
+    // (1) Estimate plan costs with Semi Reduction
+    const auto cost_estimator1 = cost_estimator->new_instance();
+    const auto plan_cost = cost_estimator1->estimate_plan_cost(lqp_root);
+
+    // (2) Remove Semi Reduction node, but store information to revert this change.
+    const auto outputs = removal_candidate->outputs();
+    const auto input_sides = removal_candidate->get_input_sides();
+    const auto left_input = removal_candidate->left_input();
+    const auto right_input = removal_candidate->right_input();
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
+
+    // (3) Estimate plan costs without Semi Reduction
+    const auto cost_estimator2 = cost_estimator->new_instance();
+    const auto plan_cost_without_semi_reduction = cost_estimator2->estimate_plan_cost(lqp_root);
+
+    // (4) Re-add semi join reduction, if it reduces plan costs.
+    if (plan_cost_without_semi_reduction < plan_cost) {
+      removal_candidate->set_left_input(left_input);
+      removal_candidate->set_right_input(right_input);
+      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
+      }
+    }
   }
 }
+
 }  // namespace opossum
