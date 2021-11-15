@@ -27,7 +27,7 @@ thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
 }  // namespace
 
 // The sleep time was determined experimentally
-static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
+static constexpr auto WORKER_SLEEP_TIME = std::chrono::milliseconds(1000);
 
 namespace opossum {
 
@@ -60,6 +60,7 @@ void Worker::operator()() {
 }
 
 void Worker::_work() {
+  std::printf("W %d: _work()\n", _id);
   // If execute_next has been called, run that task first, otherwise try to retrieve a task from the queue.
   auto task = std::shared_ptr<AbstractTask>{};
   if (_next_task) {
@@ -89,8 +90,11 @@ void Worker::_work() {
     // own queue or returns after timer exceeded (whatever occurs first).
     if (!work_stealing_successful) {
       {
+        std::printf("W %d: obtain lock\n", _id);
         std::unique_lock<std::mutex> unique_lock(_queue->lock);
+        std::printf("W %d: wait\n", _id);
         _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
+        std::printf("W %d: slept\n", _id);
       }
       return;
     }
