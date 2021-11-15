@@ -90,6 +90,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   // method of identifying plan reuse in the optimizer. However, when we tried this, we found that reuse was close to
   // impossible to implement correctly in the presence of self-joins.
   auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  auto corresponding_join_by_semi_reduction =
+      std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>{};
   auto removal_blockers =
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
@@ -161,7 +163,9 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       }
 
       // If JoinNode does not correspond to semi_reduction_node, add a removal blocker and abort the upwards traversal.
-      if (!is_corresponding_join) {
+      if (is_corresponding_join) {
+        corresponding_join_by_semi_reduction.emplace(node, upper_node);
+      } else {
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
@@ -182,9 +186,12 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   for (const auto& removal_candidate : removal_candidates) {
     if (removal_blockers.contains(removal_candidate)) continue;
 
+    const auto& corresponding_join_node = corresponding_join_by_semi_reduction.at(removal_candidate);
+    Assert(corresponding_join_node, "Expected corresponding join node for given Semi Reduction.");
+
     // (1) Estimate plan costs with Semi Reduction
     const auto cost_estimator1 = cost_estimator->new_instance();
-    const auto plan_cost = cost_estimator1->estimate_plan_cost(lqp_root);
+    const auto plan_cost = cost_estimator1->estimate_plan_cost(corresponding_join_node);
 
     // (2) Remove Semi Reduction node, but store information to revert this change.
     const auto outputs = removal_candidate->outputs();
@@ -195,7 +202,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
     // (3) Estimate plan costs without Semi Reduction
     const auto cost_estimator2 = cost_estimator->new_instance();
-    const auto plan_cost_without_semi_reduction = cost_estimator2->estimate_plan_cost(lqp_root);
+    const auto plan_cost_without_semi_reduction = cost_estimator2->estimate_plan_cost(corresponding_join_node);
 
     // (4) Re-add semi join reduction, if it reduces plan costs.
     if (plan_cost_without_semi_reduction < plan_cost) {
