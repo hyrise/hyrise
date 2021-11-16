@@ -24,7 +24,8 @@ class BenchmarkConfig {
                   const std::optional<std::string>& init_output_file_path, const bool init_enable_scheduler,
                   const uint32_t init_cores, const uint32_t init_data_preparation_cores, const uint32_t init_clients,
                   const bool init_enable_visualization, const bool init_verify, const bool init_cache_binary_tables,
-                  const bool init_metrics, const std::optional<std::string>& init_dependency_mining_plugin_path);
+                  const bool init_metrics, const std::optional<std::string>& init_dependency_mining_plugin_path,
+                  const std::optional<std::string>& init_dependency_config_path);
 
   static BenchmarkConfig get_default_config();
 
@@ -45,6 +46,7 @@ class BenchmarkConfig {
   bool cache_binary_tables = false;  // Defaults to false for internal use, but the CLI sets it to true by default
   bool metrics = false;
   std::optional<std::string> dependency_mining_plugin_path = std::nullopt;
+  std::optional<std::string> dependency_config_path = std::nullopt;
 
  private:
   BenchmarkConfig() = default;

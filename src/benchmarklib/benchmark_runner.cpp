@@ -36,6 +36,15 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
+  if (config.dependency_config_path) {
+    std::cout << "- Loading dependency usage config from " << *config.dependency_config_path << std::endl;
+    Hyrise::get().dependency_usage_config = process_dependency_config_file(*config.dependency_config_path);
+  } else {
+    std::cout << "- No dependency usage config provided, use default config (all off) " << std::endl;
+    Hyrise::get().dependency_usage_config = std::make_shared<DependencyUsageConfig>();
+  }
+  std::cout << "- " << *Hyrise::get().dependency_usage_config;
+
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     Hyrise::get().topology.use_default_topology(config.cores);
@@ -509,6 +518,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dep_mining_plugin", "The path for the DependencyMiningPlugin", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("dep_config", "The path for the DependencyUsageConfig", cxxopts::value<std::string>()->default_value("")) // NOLINT
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
     ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0")); // NOLINT
   // clang-format on

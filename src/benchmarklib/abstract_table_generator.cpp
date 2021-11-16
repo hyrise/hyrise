@@ -1,6 +1,5 @@
 #include "abstract_table_generator.hpp"
 
-#include "../plugins/dependency_mining/dependency_usage_config.hpp"
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
@@ -195,7 +194,8 @@ void AbstractTableGenerator::generate_and_store() {
   /**
    * Add constraints if defined by the benchmark
    */
-  if constexpr (DependencyUsageConfig::ALLOW_PRESET_CONSTRAINTS) {
+  Assert(Hyrise::get().dependency_usage_config, "No DependencyUsageConfig set");
+  if (Hyrise::get().dependency_usage_config->allow_preset_constraints) {
     _add_constraints(table_info_by_name);
   }
 

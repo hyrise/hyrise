@@ -4,7 +4,6 @@
 #include "candidate_strategy/join_elimination_candidate_rule.hpp"
 #include "candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "candidate_strategy/join_to_semi_candidate_rule.hpp"
-#include "dependency_usage_config.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
@@ -232,16 +231,17 @@ void recursively_gather_required_expressions(
 namespace opossum {
 
 PQPAnalyzer::PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue) : _queue(queue) {
-  if constexpr (DependencyUsageConfig::ENABLE_GROUPBY_REDUCTION) {
+  Assert(Hyrise::get().dependency_usage_config, "No DependencyUsageConfig set");
+  if (Hyrise::get().dependency_usage_config->enable_groupby_reduction) {
     add_rule(std::make_unique<DependentGroupByCandidateRule>());
   }
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI) {
+  if (Hyrise::get().dependency_usage_config->enable_join_to_semi) {
     add_rule(std::make_unique<JoinToSemiCandidateRule>());
   }
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE) {
+  if (Hyrise::get().dependency_usage_config->enable_join_to_predicate) {
     add_rule(std::make_unique<JoinToPredicateCandidateRule>());
   }
-  if constexpr (DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
+  if (Hyrise::get().dependency_usage_config->enable_join_elimination) {
     add_rule(std::make_unique<JoinEliminationCandidateRule>());
   }
 }
@@ -272,8 +272,9 @@ void PQPAnalyzer::run() {
 
     std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet> required_expressions_by_node;
     std::unordered_map<std::shared_ptr<const AbstractLQPNode>, size_t> outputs_visited_by_node;
-    if (DependencyUsageConfig::ENABLE_JOIN_TO_SEMI || DependencyUsageConfig::ENABLE_JOIN_TO_PREDICATE ||
-        DependencyUsageConfig::ENABLE_JOIN_ELIMINATION) {
+    if (Hyrise::get().dependency_usage_config->enable_join_to_semi ||
+        Hyrise::get().dependency_usage_config->enable_join_to_predicate ||
+        Hyrise::get().dependency_usage_config->enable_join_elimination) {
       // Add top-level columns that need to be included as they are the actual output
       const auto output_expressions = lqp_root->output_expressions();
       required_expressions_by_node[lqp_root].insert(output_expressions.cbegin(), output_expressions.cend());

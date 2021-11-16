@@ -73,7 +73,9 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
 
     if (abort) continue;
     candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{}, DependencyType::Unique, priority);
+    // std::cout << "ucc candidate " << determinant << std::endl;
     for (const auto& [table_name, table_column] : table_columns) {
+      // std::cout << "ind candidate " << table_column << std::endl;
       if (table_name == determinant.table_name) continue;
       candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{table_column}, DependencyType::Inclusion,
                               priority);

@@ -40,9 +40,9 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include
     ${PROJECT_SOURCE_DIR}/third_party/robin-map/include
     ${PROJECT_SOURCE_DIR}/third_party/uninitialized_vector/
+    ${PROJECT_SOURCE_DIR}/third_party/nlohmann_json/single_include
 )
 
-# target_link_libraries_system(robin_map)
 
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseDependencyMiningPlugin SRCS
@@ -62,7 +62,6 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/candidate_strategy/join_to_semi_candidate_rule.hpp
     dependency_mining/pqp_analyzer.cpp
     dependency_mining/pqp_analyzer.hpp
-    dependency_mining/dependency_usage_config.hpp
     dependency_mining/util.cpp
     dependency_mining/util.hpp
     dependency_mining/validation_state.cpp
