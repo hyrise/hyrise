@@ -7,6 +7,15 @@ import json
 from subprocess import Popen
 
 
+class DependencyUsageConfig:
+    def __init__(self, groupby_reduction, join_to_semi, join_to_predicate, join_elimination, preset_constraints=False):
+        self.groupby_reduction = groupby_reduction
+        self.join_to_semi = join_to_semi
+        self.join_to_predicate = join_to_predicate
+        self.join_elimination = join_elimination
+        self.preset_constraints = preset_constraints
+
+
 def parse_args():
     ap = argparse.ArgumentParser(description="Creates plots from a benchmark output file")
 
@@ -17,15 +26,21 @@ def parse_args():
         action="store_true",
         help="Delete cached tables",
     )
+    ap.add_argument(
+        "--build_dir",
+        type=str,
+        default="cmake-build-release",
+        help="Build directory",
+    )
     return ap.parse_args()
 
 
-def main(output_path, force_delete):
+def main(output_path, force_delete, build_dir):
     pwd = os.getcwd()
-    if not pwd.endswith("hyrise"):
-        print("Did you call the script from project root?")
+    build_dir_path = os.path.abspath(build_dir)
+    if not os.path.isdir(build_dir_path):
+        print(f"Could not find build directory {build_dir_path}\nDid you call the script from project root?")
         return
-    build_dir = os.path.join(pwd, "cmake-build-release")
     config_file = "dependency_config.json"
     dep_mining_plugin_path = os.path.join(build_dir, "lib", "libhyriseDependencyMiningPlugin.so")
     config_path = os.path.join(build_dir, config_file)
@@ -34,16 +49,16 @@ def main(output_path, force_delete):
         os.makedirs(output_path)
 
     configs = {
-        "all_off": [False for _ in range(4)],
-        "only_dgr": [True, False, False, False],
-        "only_jts": [False, True, False, False],
-        "only_join2pred": [False, False, True, False],
-        "only_join_elim": [False, False, False, True],
-        "all_on": [True for _ in range(4)],
-        "dgr_jts_join2pred": [True, True, True, False],
+        "all_off": DependencyUsageConfig(False, False, False, False),
+        "only_dgr": DependencyUsageConfig(True, False, False, False),
+        "only_jts": DependencyUsageConfig(False, True, False, False),
+        "only_join2pred": DependencyUsageConfig(False, False, True, False),
+        "only_join_elim": DependencyUsageConfig(False, False, False, True),
+        "all_on": DependencyUsageConfig(True, True, True, True),
+        "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
     }
 
-    if (force_delete):
+    if force_delete:
         print("Clear cached tables")
         cached_table_dirs = ["imdb_data", "tpch_cached_tables", "tpcds_cached_tables"]
         cached_dir_prefix = ".."
@@ -54,29 +69,23 @@ def main(output_path, force_delete):
             shutil.rmtree(cached_table_path)
 
     print("Build executables")
-    os.chdir(build_dir)
+    os.chdir(build_dir_path)
     all_benchmark_string = " ".join(benchmarks)
     build_command = f"ninja {all_benchmark_string} hyriseDependencyMiningPlugin"
     with Popen(build_command, shell=True) as p:
         p.wait()
-    os.chdir("..")
+    os.chdir(pwd)
 
     for config_name, config in configs.items():
         print(f"\n{'=' * 20}\n{config_name.upper()}\n{'=' * 20}")
-        assert len(config) == 4
-        config_contents = dict()
-        config_contents["groupby_reduction"] = config[0]
-        config_contents["join_to_semi"] = config[1]
-        config_contents["join_to_predicate"] = config[2]
-        config_contents["join_elimination"] = config[3]
-        config_contents["preset_constraints"] = False
+        print(vars(config))
 
         with open(config_path, "w") as f:
-            json.dump(config_contents, f, indent=4)
+            json.dump(vars(config), f, indent=4)
 
         for benchmark in benchmarks:
             print(f"\nRunning {benchmark} for {config_name}..")
-            benchmark_path = os.path.join(build_dir, benchmark)
+            benchmark_path = os.path.join(build_dir_path, benchmark)
             results_path = os.path.join(output_path, f"{benchmark}_{config_name}.json")
             log_path = os.path.join(output_path, f"{benchmark}_{config_name}.log")
 
@@ -90,4 +99,4 @@ def main(output_path, force_delete):
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.output_path, args.force_delete)
+    main(args.output_path, args.force_delete, args.build_dir)
