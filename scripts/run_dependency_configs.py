@@ -51,7 +51,7 @@ def main(output_path, force_delete, build_dir, commit):
         print(f"Could not find build directory {build_dir}\nDid you call the script from project root?")
         return
     config_file = "dependency_config.json"
-    dep_mining_plugin_path = os.path.join(build_dir, "lib", "libhyriseDependencyMiningPlugin.so")
+    dep_mining_plugin_path = os.path.join(os.path.abspath(build_dir), "lib", "libhyriseDependencyMiningPlugin.so")
     config_path = os.path.join(build_dir, config_file)
     benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
     if not os.path.isdir(output_path):
