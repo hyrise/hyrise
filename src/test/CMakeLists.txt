@@ -204,8 +204,8 @@ set(
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/date_utils_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
+    lib/utils/date_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/load_table_test.cpp
@@ -229,10 +229,10 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
-    utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/constraint_test_utils.hpp
 )
 
 set (
@@ -294,3 +294,46 @@ add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
 target_link_libraries_system(hyriseSystemTest pqxx_static)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)
+
+# Get all propreties that cmake supports
+if(NOT CMAKE_PROPERTY_LIST)
+    execute_process(COMMAND cmake --help-property-list OUTPUT_VARIABLE CMAKE_PROPERTY_LIST)
+    
+    # Convert command output into a CMake list
+    string(REGEX REPLACE ";" "\\\\;" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
+    string(REGEX REPLACE "\n" ";" CMAKE_PROPERTY_LIST "${CMAKE_PROPERTY_LIST}")
+endif()
+    
+function(print_properties)
+    message("CMAKE_PROPERTY_LIST = ${CMAKE_PROPERTY_LIST}")
+endfunction()
+    
+function(print_target_properties target)
+    if(NOT TARGET ${target})
+      message(STATUS "There is no target named '${target}'")
+      return()
+    endif()
+
+    foreach(property ${CMAKE_PROPERTY_LIST})
+        string(REPLACE "<CONFIG>" "${CMAKE_BUILD_TYPE}" property ${property})
+
+        # Fix https://stackoverflow.com/questions/32197663/how-can-i-remove-the-the-location-property-may-not-be-read-from-target-error-i
+        if(property STREQUAL "LOCATION" OR property MATCHES "^LOCATION_" OR property MATCHES "_LOCATION$")
+            continue()
+        endif()
+
+        get_property(was_set TARGET ${target} PROPERTY ${property} SET)
+        if(was_set)
+            get_target_property(value ${target} ${property})
+            message("${target} ${property} = ${value}")
+        endif()
+    endforeach()
+endfunction()
+
+message("=====hyriseTest")
+print_target_properties(hyriseTest)
+#message("=====hyrise_impl ")
+#print_target_properties(hyrise_impl)
+message("=====hyrise")
+print_target_properties(hyrise)
+message("=====")

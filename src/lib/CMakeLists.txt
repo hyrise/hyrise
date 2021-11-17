@@ -784,9 +784,10 @@ add_dependencies(hyrise_impl AlwaysCheckGit)
 
 # This is a wrapper around hyrise_impl that forces the compiler to emit all symbols
 add_library(hyrise INTERFACE)
-# Forward all include directories from hyrise_impl
 
-target_include_directories(hyrise INTERFACE $<TARGET_PROPERTY:hyrise_impl,INCLUDE_DIRECTORIES>)
+# Forward all include directories from hyrise_impl
+get_property(HYRISE_IMPL_INF_INCLUDE_DIRS TARGET hyrise_impl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+target_include_directories(hyrise INTERFACE ${HYRISE_IMPL_INF_INCLUDE_DIRS})
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
@@ -802,14 +803,6 @@ target_link_libraries(hyrise INTERFACE hyrise_impl)
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
         COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
-        )
+)
 
 add_dependencies(hyrise resourceLink)
-
-# TODO(Marcel) remove below
-get_target_property(LIB_HYRISE_INCLUDES hyrise_impl INCLUDE_DIRECTORIES)
-
-# Construct the compiler string for the include directories.
-foreach(dir ${LIB_HYRISE_INCLUDES})
-    message("${dir} ")
-endforeach()
