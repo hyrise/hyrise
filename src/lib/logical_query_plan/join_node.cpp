@@ -253,7 +253,7 @@ std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
   // TO DO transitive ODs:
   // A.a -> A.b, B.a -> B.b
   // Join on A.b = B.a yields new dependency A.a -> B.b
-  //if (_retrieved_inds) return _inclusion_dependencies;
+  // if (_retrieved_inds) return _inclusion_dependencies;
 
   auto left_dependencies = left_input()->inclusion_dependencies();
   auto right_dependencies = right_input()->inclusion_dependencies();

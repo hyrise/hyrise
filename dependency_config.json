@@ -1,0 +1,7 @@
+{
+    "groupby_reduction": false,
+    "join_to_semi": false,
+    "join_to_predicate": false,
+    "join_elimination": false,
+    "preset_constraints": false
+}

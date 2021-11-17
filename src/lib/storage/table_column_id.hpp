@@ -20,7 +20,7 @@ struct TableColumnID {
   size_t hash() const;
 };
 
-const static TableColumnID INVALID_TABLE_COLUMN_ID = TableColumnID{"", INVALID_COLUMN_ID};
+static const TableColumnID INVALID_TABLE_COLUMN_ID = TableColumnID{"", INVALID_COLUMN_ID};
 
 using TableColumnIDs = std::vector<TableColumnID>;
 

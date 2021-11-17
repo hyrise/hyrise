@@ -10,8 +10,7 @@ namespace opossum {
 class PQPAnalyzer {
  protected:
   friend class DependencyMiningPlugin;
-
-  PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue);
+  explicit PQPAnalyzer(const std::shared_ptr<DependencyCandidateQueue>& queue);
 
   void add_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule);
 

@@ -24,7 +24,7 @@ namespace opossum {
 
 class DependencyMiningPlugin : public AbstractPlugin {
  public:
-  explicit DependencyMiningPlugin();
+  DependencyMiningPlugin();
   std::string description() const final;
 
   void start() final;

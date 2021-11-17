@@ -20,7 +20,6 @@ void DependencyMiningPlugin::start() {
   const bool use_time = is_limited ? MAX_VALIDATION_CANDIDATES < 0 : false;
   const auto validation_state =
       std::make_shared<ValidationState>(!is_limited, MAX_VALIDATION_CANDIDATES, use_time, MAX_VALIDATION_TIME);
-  //std::cout << "use time: " << (use_time ? "true" : "false") << "\tis_limited: " << (is_limited ? "true" : "false") << std::endl;
   for (size_t validator_id{0}; validator_id < NUM_VALIDATORS; ++validator_id) {
     validator_threads.emplace_back(
         [&](size_t i) {

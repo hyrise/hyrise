@@ -7,7 +7,7 @@ namespace opossum {
 
 class AbstractDependencyCandidateRule {
  public:
-  AbstractDependencyCandidateRule(const LQPNodeType node_type);
+  explicit AbstractDependencyCandidateRule(const LQPNodeType node_type);
   virtual ~AbstractDependencyCandidateRule() = default;
   virtual std::vector<DependencyCandidate> apply_to_node(
       const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority,

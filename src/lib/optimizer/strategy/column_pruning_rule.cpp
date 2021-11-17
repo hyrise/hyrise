@@ -243,7 +243,7 @@ bool try_join_to_scan_rewrite(
   const auto used_input = join->input(used_side);
   const auto unused_side = used_side == LQPInputSide::Left ? LQPInputSide::Right : LQPInputSide::Left;
   const auto unused_input = join->input(unused_side);
-  //std::cout << "try join2pred " << unused_input->description() << std::endl;
+  // std::cout << "try join2pred " << unused_input->description() << std::endl;
 
   // early out if input is required by another node or join column is not unique
   if (unused_input->output_count() > 1) return false;
@@ -369,7 +369,7 @@ bool try_join_to_scan_rewrite(
               const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
               const auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
               replace_node(join, predicate_node, join_column_expression);
-              //std::cout << "rewrote Join2Pred (i)" << std::endl;
+              // std::cout << "rewrote Join2Pred (i)" << std::endl;
             });
           }
         }
@@ -423,7 +423,7 @@ bool try_join_to_scan_rewrite(
                 const auto predicate_node =
                     PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
                 replace_node(join, predicate_node, join_column_expression);
-                //std::cout << "rewrote Join2Pred (ii)" << std::endl;
+                // std::cout << "rewrote Join2Pred (ii)" << std::endl;
               });
             }
           }
@@ -439,10 +439,10 @@ bool try_join_to_scan_rewrite(
 void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
                         ExpressionUnorderedSet& equals_predicate_expressions_used_side,
                         ExpressionUnorderedSet& equals_predicate_expressions_unused_side, LQPInputSide unused_side) {
-  //std::cout << 438 << std::endl;
+  // std::cout << 438 << std::endl;
   // std::cout << "try rewrite " << join->description() << " with IND" << std::endl;
   auto unused_input = join->input(unused_side);
-  //std::cout << " try_eliminate_join " << unused_input->description() << std::endl;
+  // std::cout << " try_eliminate_join " << unused_input->description() << std::endl;
 
   if (unused_input->output_count() > 1) return;
   // std::cout << 449 << std::endl;
@@ -466,7 +466,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
   });
 
   if (abort || unused_input->type != LQPNodeType::StoredTable) return;
-  //std::cout << 470 << std::endl;
+  // std::cout << 470 << std::endl;
   // std::cout << " 471 " << unused_input->description() << std::endl;
   const auto& stored_table_node = static_cast<StoredTableNode&>(*unused_input);
   // std::cout << 473 << std::endl;
@@ -479,7 +479,8 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
   const auto unused_side_table_name = stored_table_node.table_name;
   const auto unused_side_column_id = unused_side_join_column_expression->original_column_id;
   // std::cout << 482 << std::endl;
-  // std::cout << "    used: " << resolve_column_expression(used_side_join_expression).table_name << "    unused: " << unused_side_table_name << std::endl;
+  // std::cout << "    used: " << resolve_column_expression(used_side_join_expression).table_name << "    unused: "
+  //           << unused_side_table_name << std::endl;
   for (const auto& ind : used_input->inclusion_dependencies()) {
     // std::cout << "    try: " << ind << std::endl;
     if (ind.determinants.size() != 1 || ind.dependents.size() != 1) continue;
@@ -493,7 +494,7 @@ void try_eliminate_join(const std::shared_ptr<JoinNode>& join,
       join->set_right_input(nullptr);
       lqp_remove_node(join);
       // std::cout << "rewrote JoinElimination    " << join->description() << std::endl;
-      //std::cout << 467 << std::endl;
+      // std::cout << 467 << std::endl;
       return;
     }
   }
@@ -510,7 +511,7 @@ void try_join_to_semi_rewrite(
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
   if (join_node->join_mode != JoinMode::Inner) return;
-  //std::cout << join_node->description() << std::endl;
+  // std::cout << join_node->description() << std::endl;
 
   // Check whether the left/right inputs are actually needed by following operators
   auto left_input_is_used = false;
@@ -567,22 +568,22 @@ void try_join_to_semi_rewrite(
       join_node->set_left_input(join_node->right_input());
       join_node->set_right_input(temp);
       flipped_inputs = true;
-      //std::cout << "rewrote Join2Semi (i)" << std::endl;
-      //std::cout << "rewrite " << join_node->description() << " with ";
-      //for (const auto& e : equals_predicate_expressions_left) {
+      // std::cout << "rewrote Join2Semi (i)" << std::endl;
+      // std::cout << "rewrite " << join_node->description() << " with ";
+      // for (const auto& e : equals_predicate_expressions_left) {
       //  std::cout << " " << e->description();
-      //}
-      //std::cout << std::endl;
+      // }
+      // std::cout << std::endl;
     }
     if (!right_input_is_used &&
         join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
       join_node->join_mode = JoinMode::Semi;
-      //std::cout << "rewrote Join2Semi (ii)" << std::endl;
-      //std::cout << "rewrite " << join_node->description() << " with ";
-      //for (const auto& e : equals_predicate_expressions_right) {
+      // std::cout << "rewrote Join2Semi (ii)" << std::endl;
+      // std::cout << "rewrite " << join_node->description() << " with ";
+      // for (const auto& e : equals_predicate_expressions_right) {
       //  std::cout << " " << e->description();
-      //}
-      //std::cout << std::endl;
+      // }
+      // std::cout << std::endl;
     }
   }
   if (equals_predicate_expressions_left.size() != 1 || equals_predicate_expressions_right.size() != 1) {
@@ -591,39 +592,39 @@ void try_join_to_semi_rewrite(
   if (Hyrise::get().dependency_usage_config->enable_join_to_predicate) {
     if (!left_input_is_used) {
       const auto used_input_side = flipped_inputs ? LQPInputSide::Left : LQPInputSide::Right;
-      //std::cout << 556 << std::endl;
+      // std::cout << 556 << std::endl;
       // If join is rewritten to scan, there has been a predicate before, and we cannot eliminate it with INDs.
       // Addidtionally, the join is not in the LQP anymore.
       if (try_join_to_scan_rewrite(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
                                    used_input_side, required_expressions_by_node)) {
-        //std::cout << "rewrote " << join_node->description() << " to predicate (i)" << std::endl;
+        // std::cout << "rewrote " << join_node->description() << " to predicate (i)" << std::endl;
         return;
       }
-      //std::cout << 559 << std::endl;
+      // std::cout << 559 << std::endl;
     }
     if (!right_input_is_used) {
-      //std::cout << 562 << std::endl;
+      // std::cout << 562 << std::endl;
       if (try_join_to_scan_rewrite(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
                                    LQPInputSide::Left, required_expressions_by_node)) {
-        //std::cout << "rewrote " << join_node->description() << " to predicate (ii)" << std::endl;
+        // std::cout << "rewrote " << join_node->description() << " to predicate (ii)" << std::endl;
         return;
       }
-      //std::cout << 565 << std::endl;
+      // std::cout << 565 << std::endl;
     }
   }
   if (Hyrise::get().dependency_usage_config->enable_join_elimination) {
     if (!left_input_is_used) {
       const auto unused_input_side = flipped_inputs ? LQPInputSide::Right : LQPInputSide::Left;
-      //std::cout << 571 << std::endl;
+      // std::cout << 571 << std::endl;
       try_eliminate_join(join_node, equals_predicate_expressions_right, equals_predicate_expressions_left,
                          unused_input_side);
-      //std::cout << 574 << std::endl;
+      // std::cout << 574 << std::endl;
     }
     if (!right_input_is_used) {
-      //std::cout << 577 << std::endl;
+      // std::cout << 577 << std::endl;
       try_eliminate_join(join_node, equals_predicate_expressions_left, equals_predicate_expressions_right,
                          LQPInputSide::Right);
-      //std::cout << 580 << std::endl;
+      // std::cout << 580 << std::endl;
     }
   }
 }

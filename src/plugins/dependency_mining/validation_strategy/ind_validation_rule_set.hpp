@@ -9,7 +9,7 @@ class INDValidationRuleSet : public AbstractDependencyValidationRule {
   INDValidationRuleSet();
 
  protected:
-  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final override;
+  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final;
 };
 
 }  // namespace opossum

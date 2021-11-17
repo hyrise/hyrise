@@ -7,11 +7,10 @@
 namespace opossum {
 
 void assign(bool& value, const nlohmann::json& json_object, const std::string& key) {
-  if (json_object.find(key) != json_object.end()) {
-    value = json_object.at(key);
-  } else {
-    Fail("Did not find '" + key + "' in dependency usage config");
-  }
+  const auto& json_value = json_object.find(key);
+  Assert(json_value != json_object.end(), "Did not find '" + key + "' in dependency usage config");
+  Assert(json_value->is_boolean(), "Dependency usage config has invalid value for'" + key + "'");
+  value = *json_value;
 }
 
 std::shared_ptr<DependencyUsageConfig> process_dependency_config_file(const std::string& file_path) {
@@ -25,9 +24,9 @@ std::shared_ptr<DependencyUsageConfig> process_dependency_config_file(const std:
 
 void DependencyUsageConfig::output_to_stream(std::ostream& stream) const {
   const auto str = [](const auto value) { return value ? "on" : "off"; };
-  stream << "DependencyUsageConfig: dgr  " << str(enable_groupby_reduction) << ", join2semi "
-         << str(enable_join_to_semi) << ", join2pred " << str(enable_join_to_predicate) << ", join_elimination "
-         << str(enable_join_elimination) << ", set constraints " << str(allow_preset_constraints) << std::endl;
+  stream << "DependencyUsageConfig: groupby reduction " << str(enable_groupby_reduction) << ", join to semi "
+         << str(enable_join_to_semi) << ", join to predicate " << str(enable_join_to_predicate) << ", join elimination "
+         << str(enable_join_elimination) << ", preset constraints " << str(allow_preset_constraints) << std::endl;
 }
 
 void from_json(const nlohmann::json& json, DependencyUsageConfig& config) {

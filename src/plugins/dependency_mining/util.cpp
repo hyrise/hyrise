@@ -52,7 +52,9 @@ std::ostream& operator<<(std::ostream& stream, const DependencyCandidate& depend
 }  // namespace opossum
 
 namespace std {
+
 size_t hash<opossum::DependencyCandidate>::operator()(const opossum::DependencyCandidate& dependency_candidate) const {
   return dependency_candidate.hash();
-};
+}
+
 }  // namespace std

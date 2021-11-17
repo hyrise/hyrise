@@ -42,7 +42,7 @@ std::ostream& operator<<(std::ostream& stream, const TableColumnID& table_column
 }
 
 TableColumnID resolve_column_expression(const std::shared_ptr<const AbstractExpression>& column_expression) {
-  //Assert(column_expression, "Got nullptr");
+  // Assert(column_expression, "Got nullptr");
   Assert(column_expression->type == ExpressionType::LQPColumn,
          "Expected LQPColumnExpression, got " + std::string{magic_enum::enum_name(column_expression->type)});
   const auto& lqp_column_expression = static_cast<const LQPColumnExpression&>(*column_expression);

@@ -15,10 +15,13 @@ class DependencyUsageConfig:
         self.join_elimination = join_elimination
         self.preset_constraints = preset_constraints
 
+    def to_json(self, file_path):
+        with open(file_path, "w") as f:
+            json.dump(vars(self), f, indent=4)
+
 
 def parse_args():
-    ap = argparse.ArgumentParser(description="Creates plots from a benchmark output file")
-
+    ap = argparse.ArgumentParser(description="Runs benchmarks for pre-defined dependency usage configurations")
     ap.add_argument("output_path", type=str, help="Path to output directory")
     ap.add_argument(
         "--force-delete",
@@ -37,9 +40,8 @@ def parse_args():
 
 def main(output_path, force_delete, build_dir):
     pwd = os.getcwd()
-    build_dir_path = os.path.abspath(build_dir)
-    if not os.path.isdir(build_dir_path):
-        print(f"Could not find build directory {build_dir_path}\nDid you call the script from project root?")
+    if not os.path.isdir(build_dir):
+        print(f"Could not find build directory {build_dir}\nDid you call the script from project root?")
         return
     config_file = "dependency_config.json"
     dep_mining_plugin_path = os.path.join(build_dir, "lib", "libhyriseDependencyMiningPlugin.so")
@@ -69,7 +71,7 @@ def main(output_path, force_delete, build_dir):
             shutil.rmtree(cached_table_path)
 
     print("Build executables")
-    os.chdir(build_dir_path)
+    os.chdir(build_dir)
     all_benchmark_string = " ".join(benchmarks)
     build_command = f"ninja {all_benchmark_string} hyriseDependencyMiningPlugin"
     with Popen(build_command, shell=True) as p:
@@ -78,18 +80,17 @@ def main(output_path, force_delete, build_dir):
 
     for config_name, config in configs.items():
         print(f"\n{'=' * 20}\n{config_name.upper()}\n{'=' * 20}")
-        print(vars(config))
-
-        with open(config_path, "w") as f:
-            json.dump(vars(config), f, indent=4)
+        config.to_json(config_path)
 
         for benchmark in benchmarks:
             print(f"\nRunning {benchmark} for {config_name}..")
-            benchmark_path = os.path.join(build_dir_path, benchmark)
+            benchmark_path = os.path.join(build_dir, benchmark)
             results_path = os.path.join(output_path, f"{benchmark}_{config_name}.json")
             log_path = os.path.join(output_path, f"{benchmark}_{config_name}.log")
-
-            exec_command = f"({benchmark_path} -r 100 -w 1 -o {results_path} --dep_mining_plugin {dep_mining_plugin_path} --dep_config {config_path} 2>&1 ) | tee {log_path}"
+            exec_command = (
+                f"({benchmark_path} -r 100 -w 1 -o {results_path} --dep_mining_plugin "
+                + f"{dep_mining_plugin_path} --dep_config {config_path} 2>&1 ) | tee {log_path}"
+            )
 
             with Popen(exec_command, shell=True) as p:
                 p.wait()

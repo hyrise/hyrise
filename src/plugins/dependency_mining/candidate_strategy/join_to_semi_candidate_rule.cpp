@@ -23,7 +23,8 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
   std::vector<DependencyCandidate> candidates;
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
   for (const auto& input : inputs_to_visit) {
-    // _inputs_to_visit() ensured that (i) the input has 1 required column (i.e., join column) and the column is not used later
+    // _inputs_to_visit() ensured that (i) the input has 1 required column (i.e., join column) and
+    // (ii) the column is not used later
     const auto join_column_id = resolve_column_expression(*required_expressions_by_node.at(input).begin());
     if (join_column_id == INVALID_TABLE_COLUMN_ID) continue;
     candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
