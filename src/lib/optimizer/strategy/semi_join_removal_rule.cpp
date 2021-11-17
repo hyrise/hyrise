@@ -16,6 +16,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
+  // TODO: Maybe also consider the predicate multiplier defined by the cost model
+
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
   if (binary_predicate) {
     /**
@@ -92,6 +94,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   auto corresponding_join_by_semi_reduction =
       std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>{};
+  auto corresponding_join_input_side_by_semi_reduction =
+      std::unordered_map<std::shared_ptr<AbstractLQPNode>, LQPInputSide>{};
   auto removal_blockers =
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
@@ -153,21 +157,18 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // covered by this removal rule yet.
       const auto semi_join_is_left_input = upper_join_node.right_input() == semi_reduction_node.right_input();
       const auto semi_join_is_right_input = upper_join_node.left_input() == semi_reduction_node.right_input();
-      bool is_corresponding_join = false;
       if (semi_join_is_left_input || semi_join_is_right_input) {
         // Check whether the semi join reduction predicate matches one of the predicates of the upper join
         if (std::any_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
                         [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
-          is_corresponding_join = true;
+          corresponding_join_by_semi_reduction.emplace(node, upper_node);
+          const auto join_input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
+          corresponding_join_input_side_by_semi_reduction.emplace(node, join_input_side);
+        } else {
+          // If JoinNode does not correspond to semi_reduction_node, add a removal blocker and abort the upwards traversal.
+          removal_blockers.emplace(node);
+          return LQPUpwardVisitation::DoNotVisitOutputs;
         }
-      }
-
-      // If JoinNode does not correspond to semi_reduction_node, add a removal blocker and abort the upwards traversal.
-      if (is_corresponding_join) {
-        corresponding_join_by_semi_reduction.emplace(node, upper_node);
-      } else {
-        removal_blockers.emplace(node);
-        return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
       removal_candidates.emplace(node);
@@ -189,29 +190,39 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto& corresponding_join_node = corresponding_join_by_semi_reduction.at(removal_candidate);
     Assert(corresponding_join_node, "Expected corresponding join node for given Semi Reduction.");
 
-    // (1) Estimate selectivity with Semi Reduction
-//    const auto cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
-//    const auto cardinality_in = cardinality_estimator->estimate_cardinality(corresponding_join_node);
+    // (1) Estimate selectivity of Semi Reduction
+    auto semi_reduction_selectivity = 1.0f;
+    const auto cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+    const auto cardinality_in = cardinality_estimator->estimate_cardinality(removal_candidate->left_input());
+    const auto semi_reduction_cardinality_out = cardinality_estimator->estimate_cardinality(removal_candidate);
+    if (cardinality_in > 100.0f) {
+      semi_reduction_selectivity = semi_reduction_cardinality_out / cardinality_in;
+    }
 
     // (2) Remove Semi Reduction node, but store information to revert this change.
-//    const auto outputs = removal_candidate->outputs();
-//    const auto input_sides = removal_candidate->get_input_sides();
-//    const auto left_input = removal_candidate->left_input();
-//    const auto right_input = removal_candidate->right_input();
+    const auto outputs = removal_candidate->outputs();
+    const auto input_sides = removal_candidate->get_input_sides();
+    const auto left_input = removal_candidate->left_input();
+    const auto right_input = removal_candidate->right_input();
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
 
-    // (3) Estimate plan costs without Semi Reduction
-//    const auto cost_estimator2 = cost_estimator->new_instance();
-//    const auto plan_cost_without_semi_reduction = cost_estimator2->estimate_plan_cost(corresponding_join_node);
+    // (3) Estimate ...
+    if (semi_reduction_selectivity >= 1.0f) continue;
+    const auto corresponding_join_input_side = corresponding_join_input_side_by_semi_reduction.at(removal_candidate);
+    const auto cardinality_estimator2 = cost_estimator->cardinality_estimator->new_instance();
+    const auto cardinality_out =
+        cardinality_estimator->estimate_cardinality(corresponding_join_node->input(corresponding_join_input_side));
+    const auto other_predicates_selectivity = cardinality_out / cardinality_in;
 
-    // (4) Re-add semi join reduction, if it reduces plan costs.
-//    if (plan_cost_without_semi_reduction < plan_cost) {
-//      removal_candidate->set_left_input(left_input);
-//      removal_candidate->set_right_input(right_input);
-//      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-//        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
-//      }
-//    }
+    // (4) Re-add semi join reduction, if ...
+    if (semi_reduction_selectivity < other_predicates_selectivity) {
+      std::cout << "  -> Re-added semi-join reduction."
+      removal_candidate->set_left_input(left_input);
+      removal_candidate->set_right_input(right_input);
+      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
+      }
+    }
   }
 }
 
