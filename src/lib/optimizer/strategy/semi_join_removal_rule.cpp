@@ -211,7 +211,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto corresponding_join_input_side = corresponding_join_input_side_by_semi_reduction.at(removal_candidate);
     const auto cardinality_estimator2 = cost_estimator->cardinality_estimator->new_instance();
     const auto cardinality_out =
-        cardinality_estimator->estimate_cardinality(corresponding_join_node->input(corresponding_join_input_side));
+        cardinality_estimator2->estimate_cardinality(corresponding_join_node->input(corresponding_join_input_side));
     const auto other_predicates_selectivity = cardinality_out / cardinality_in;
 
     // (4) Re-add semi join reduction, if ...
