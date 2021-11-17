@@ -189,29 +189,29 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto& corresponding_join_node = corresponding_join_by_semi_reduction.at(removal_candidate);
     Assert(corresponding_join_node, "Expected corresponding join node for given Semi Reduction.");
 
-    // (1) Estimate plan costs with Semi Reduction
-    const auto cost_estimator1 = cost_estimator->new_instance();
-    const auto plan_cost = cost_estimator1->estimate_plan_cost(corresponding_join_node);
+    // (1) Estimate selectivity with Semi Reduction
+//    const auto cardinality_estimator = cost_estimator->cardinality_estimator->new_instance();
+//    const auto cardinality_in = cardinality_estimator->estimate_cardinality(corresponding_join_node);
 
     // (2) Remove Semi Reduction node, but store information to revert this change.
-    const auto outputs = removal_candidate->outputs();
-    const auto input_sides = removal_candidate->get_input_sides();
-    const auto left_input = removal_candidate->left_input();
-    const auto right_input = removal_candidate->right_input();
+//    const auto outputs = removal_candidate->outputs();
+//    const auto input_sides = removal_candidate->get_input_sides();
+//    const auto left_input = removal_candidate->left_input();
+//    const auto right_input = removal_candidate->right_input();
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
 
     // (3) Estimate plan costs without Semi Reduction
-    const auto cost_estimator2 = cost_estimator->new_instance();
-    const auto plan_cost_without_semi_reduction = cost_estimator2->estimate_plan_cost(corresponding_join_node);
+//    const auto cost_estimator2 = cost_estimator->new_instance();
+//    const auto plan_cost_without_semi_reduction = cost_estimator2->estimate_plan_cost(corresponding_join_node);
 
     // (4) Re-add semi join reduction, if it reduces plan costs.
-    if (plan_cost_without_semi_reduction < plan_cost) {
-      removal_candidate->set_left_input(left_input);
-      removal_candidate->set_right_input(right_input);
-      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
-      }
-    }
+//    if (plan_cost_without_semi_reduction < plan_cost) {
+//      removal_candidate->set_left_input(left_input);
+//      removal_candidate->set_right_input(right_input);
+//      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+//        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
+//      }
+//    }
   }
 }
 
