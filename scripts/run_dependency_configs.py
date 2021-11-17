@@ -4,7 +4,7 @@ import argparse
 import os
 import shutil
 import json
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 
 class DependencyUsageConfig:
@@ -35,10 +35,17 @@ def parse_args():
         default="cmake-build-release",
         help="Build directory",
     )
+    ap.add_argument(
+        "--commit",
+        "-c",
+        type=str,
+        default=None,
+        help="Dedicated commit",
+    )
     return ap.parse_args()
 
 
-def main(output_path, force_delete, build_dir):
+def main(output_path, force_delete, build_dir, commit):
     pwd = os.getcwd()
     if not os.path.isdir(build_dir):
         print(f"Could not find build directory {build_dir}\nDid you call the script from project root?")
@@ -70,6 +77,14 @@ def main(output_path, force_delete, build_dir):
                 continue
             shutil.rmtree(cached_table_path)
 
+    if commit:
+        print(f"Checkout {commit}")
+        with Popen(f"git rev-parse {commit} | head -n 1", shell=True, stdout=PIPE) as p:
+            p.wait()
+            commit_ref = p.stdout.read().decode().strip()
+        with Popen(f"git checkout {commit_ref}", shell=True) as p:
+            p.wait()
+
     print("Build executables")
     os.chdir(build_dir)
     all_benchmark_string = " ".join(benchmarks)
@@ -100,4 +115,4 @@ def main(output_path, force_delete, build_dir):
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.output_path, args.force_delete, args.build_dir)
+    main(args.output_path, args.force_delete, args.build_dir, args.commit)
