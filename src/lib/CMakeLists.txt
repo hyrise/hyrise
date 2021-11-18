@@ -681,7 +681,6 @@ if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
     endforeach()
 endif()
 
-#[[
 # Generate header file in order to define probes needed for dtrace
 set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
 add_custom_command (
@@ -694,7 +693,6 @@ add_custom_target (
     DEPENDS ${PROVIDER_FILE}
 )
 set(SOURCES ${SOURCES} ${PROVIDER_FILE})
-]]
 
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
 if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
@@ -705,7 +703,7 @@ else()
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
 
-#add_dependencies(hyrise_impl generate-provider-hpp)
+add_dependencies(hyrise_impl generate-provider-hpp)
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
