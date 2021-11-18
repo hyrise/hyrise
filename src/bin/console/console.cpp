@@ -1089,7 +1089,6 @@ int main(int argc, char** argv) {
     console.out(dependency_config_info.str());
   }
 
-
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details
   while (sigsetjmp(jmp_env, 1) != 0) {

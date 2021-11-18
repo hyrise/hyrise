@@ -18,7 +18,7 @@ DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandida
   add_rule(std::make_unique<ODValidationRule>());
   add_rule(std::make_unique<UCCValidationRule>());
   add_rule(std::make_unique<FDValidationRule>());
-  add_rule(std::make_unique<INDValidationRule>());
+  add_rule(std::make_unique<INDValidationRuleSet>());
 }
 
 void DependencyValidator::start() {

@@ -39,21 +39,31 @@ std::shared_ptr<ValidationResult> INDValidationRuleSet::_on_validate(const Depen
   if (dep_column_type != det_column_type) return INVALID_VALIDATION_RESULT;
   bool is_valid = true;
 
-  const auto& determinant_statistics = determinant_table->table_statistics();
-  const auto& dependent_statistics = dependent_table->table_statistics();
-  if (determinant_statistics && dependent_statistics) {
+  const auto& determinant_table_statistics = determinant_table->table_statistics();
+  const auto& dependent_table_statistics = dependent_table->table_statistics();
+  if (determinant_table_statistics && dependent_table_statistics) {
     resolve_data_type(dep_column_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      const auto min_max_value = [](const auto& table_statistics, const auto column_id) {
+      const auto get_column_statistics = [](const auto& table_statistics, const auto column_id) {
         const auto& column_statistics = table_statistics->column_statistics;
         const auto& attribute_statistics =
             static_cast<AttributeStatistics<ColumnDataType>&>(*column_statistics.at(column_id));
         const auto& histogram = attribute_statistics.histogram;
-        return std::make_pair(histogram->bin_minimum(BinID{0}), histogram->bin_maximum(histogram->bin_count() - 1));
+        return ColumnStatistics{histogram->bin_minimum(BinID{0}), histogram->bin_maximum(histogram->bin_count() - 1),
+                                histogram->total_count()};
       };
-      const auto [determinant_min, determinant_max] = min_max_value(determinant_statistics, determinant.column_id);
-      const auto [dependent_min, dependent_max] = min_max_value(dependent_statistics, dependent.column_id);
-      if (dependent_min < determinant_min || dependent_max > determinant_max) {
+      const auto determinant_statistics = get_column_statistics(determinant_table_statistics, determinant.column_id);
+      const auto dependent_statistics = get_column_statistics(dependent_table_statistics, dependent.column_id);
+
+      // We use INDs to eliminate Joins. If dependent table has NULL values, they will not match.
+      // Thus, we use NULL != NULL semantics
+      if (static_cast<float>(dependent_table->row_count()) - dependent_statistics.not_null_value_count >= 1) {
+        is_valid = false;
+        return;
+      }
+      // invalid if domain of dependent larger than domain of determinant
+      if (dependent_statistics.min_value < determinant_statistics.min_value ||
+          dependent_statistics.max_value > determinant_statistics.max_value) {
         is_valid = false;
       }
     });
@@ -153,6 +163,11 @@ std::shared_ptr<ValidationResult> INDValidationRuleSet::_on_validate(const Depen
     }
   });
   if (!is_valid) return INVALID_VALIDATION_RESULT;
+
+  // even if all dictionary values of dependent are present in determinant, dependent can have NULL values
+  // without table statistics, we don't know...
+  // with table statistics, we checked this at the beginning
+  if (!(determinant_table_statistics || dependent_table_statistics)) return UNCERTAIN_VALIDATION_RESULT;
 
   const auto result = std::make_shared<ValidationResult>(DependencyValidationStatus::Valid);
   const auto table_inclusion_constraint =
