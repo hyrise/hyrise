@@ -251,7 +251,7 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
   // The group-by columns form a new candidate key / unique constraint from which we should derive a trivial FD.
-  _mock_node->set_key_constraints({});
+  _mock_node->set_key_constraints(TableKeyConstraints());
   _mock_node->set_non_trivial_functional_dependencies({});
 
   const auto& fds = _aggregate_node->functional_dependencies();
