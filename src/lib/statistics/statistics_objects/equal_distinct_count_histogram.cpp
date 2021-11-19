@@ -50,36 +50,9 @@ template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
-  // Since this function can be the main bottleneck for loading data in the benchmarks, we put some effort in
-  // optimizing it. For once, we try to get the distinct count in case we have dictionary-encoded data in place. This
-  // allows us to pre-size the robin_map which helps a lot with performance (no resizes for large maps) and memory
-  // consumption (as we can avoid pre-sizes all maps with the table size, which is often by far too large).
-
-  // Use a defensive default in case we cannot get a better estimate (i.e., no dictionary-encoded data).
-  auto estimated_distinct_value_count = std::min(table.row_count(), uint64_t{1'024});
-  auto max_load_factor = std::optional<float>{};
   const auto chunk_count = table.chunk_count();
-
-  // Meta tables do not have chunks, we thus need to check for having a chunk count larger zero.
-  if (chunk_count > 0 && table.get_chunk(ChunkID{0})) {
-    // Check if first chunk is dictionary-encoded.
-    if (const auto* dictionary_segment =
-            dynamic_cast<const BaseDictionarySegment*>(&*table.get_chunk(ChunkID{0})->get_segment(column_id))) {
-      estimated_distinct_value_count = std::max(
-          table.row_count(),
-          static_cast<uint64_t>(1.1 * static_cast<double>(chunk_count * dictionary_segment->unique_values_count())));
-      // For rather accurate distinct count estimates, the max_load_factor is upped as we are rather sure than no
-      // resize will happen.
-      max_load_factor = 0.9f;
-    }
-  }
-
+  const auto estimated_distinct_value_count = std::min(table.row_count(), uint64_t{1'024});
   ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count};
-  if (max_load_factor) {
-    // Only use non-default load factor of robin_map for cases where we have sufficient information.
-    value_distribution_map.max_load_factor(*max_load_factor);
-  }
-
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
     if (!chunk) continue;
@@ -89,7 +62,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  value_distribution_map.clear();
+  value_distribution_map.clear(); // Maps can be large and sorting slow. Free space early.
   boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
                        [&](const auto& l, const auto& r) { return l.first < r.first; });
 
