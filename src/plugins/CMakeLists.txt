@@ -78,6 +78,8 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/validation_strategy/od_validation_rule.hpp
     dependency_mining/validation_strategy/ucc_validation_rule.cpp
     dependency_mining/validation_strategy/ucc_validation_rule.hpp
+    dependency_mining/validation_strategy/ucc_validation_rule_set.cpp
+    dependency_mining/validation_strategy/ucc_validation_rule_set.hpp
 )
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)

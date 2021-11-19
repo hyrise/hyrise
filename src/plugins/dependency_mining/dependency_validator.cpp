@@ -9,6 +9,7 @@
 #include "validation_strategy/ind_validation_rule_set.hpp"
 #include "validation_strategy/od_validation_rule.hpp"
 #include "validation_strategy/ucc_validation_rule.hpp"
+#include "validation_strategy/ucc_validation_rule_set.hpp"
 
 namespace opossum {
 
@@ -34,7 +35,9 @@ void DependencyValidator::start() {
     Timer candidate_timer;
     std::stringstream my_out;
     my_out << "[" << _id << "] Check candidate: " << candidate << std::endl;
-    const auto validate_result = _rules[candidate.type]->validate(candidate);
+    const auto& rule = _rules[candidate.type];
+    Assert(rule, "No validation rule for " + std::string{magic_enum::enum_name(candidate.type)});
+    const auto validate_result = rule->validate(candidate);
     // During validation, the time budget might have been consumed.
     // To stay fair, we discard the discovered results and stop.
     // We do not use keep_running(), as this increases the number of performed validations,
