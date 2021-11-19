@@ -14,10 +14,10 @@ endif()
 
 if (${ENABLE_NUMA_SUPPORT})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
-    MESSAGE(STATUS "Building with NUMA support")
+    message(STATUS "Building with NUMA support")
 else()
     add_definitions(-DHYRISE_NUMA_SUPPORT=0)
-    MESSAGE(STATUS "Building without NUMA support")
+    message(STATUS "Building without NUMA support")
 endif()
 
 # Enable coverage if requested - this is only operating on Hyrise's source (src/) so we don't check coverage of

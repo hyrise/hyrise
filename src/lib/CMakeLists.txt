@@ -648,6 +648,7 @@ set(
 
 set(
     LIBRARIES
+
     compact_vector
     lz4
     magic_enum
@@ -658,7 +659,6 @@ set(
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
     ${Boost_DATE_TIME_LIBRARY}
-    ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
     # Additional libraries added with target_link_libraries_system below
@@ -725,23 +725,6 @@ target_include_directories(
     ${Boost_INCLUDE_DIRS}
 )
 
-# Include these libraries as system libraries to silence some warnings caused by -Weverything
-target_include_directories(
-    hyrise_impl
-
-    SYSTEM
-
-    PUBLIC
-    ${TBB_INCLUDE_DIR}
-    ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
-    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
-    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
-    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
-    ${PROJECT_SOURCE_DIR}/third_party/json
-    ${PROJECT_SOURCE_DIR}/third_party/lz4
-    ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
-)
-
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 
@@ -756,8 +739,17 @@ if(NOT APPLE)
     target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
-target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
-target_link_libraries_system(hyrise_impl robin_map)
+target_link_libraries_system(
+    hyrise_impl
+
+    cxxopts
+    cpp-btree
+    nlohmann_json::nlohmann_json
+    robin_map
+    tbb
+    flat-hash-map
+)
+
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
@@ -786,8 +778,8 @@ add_dependencies(hyrise_impl AlwaysCheckGit)
 add_library(hyrise INTERFACE)
 
 # Forward all include directories from hyrise_impl
-get_property(HYRISE_IMPL_INF_INCLUDE_DIRS TARGET hyrise_impl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
-target_include_directories(hyrise INTERFACE ${HYRISE_IMPL_INF_INCLUDE_DIRS})
+#get_property(HYRISE_IMPL_INF_INCLUDE_DIRS TARGET hyrise_impl PROPERTY INTERFACE_INCLUDE_DIRECTORIES)
+#target_include_directories(hyrise INTERFACE ${HYRISE_IMPL_INF_INCLUDE_DIRS})
 
 # -force_load/--whole-archive are necessary to include all symbols so that dynamically loaded plugins can use them
 if (APPLE)
