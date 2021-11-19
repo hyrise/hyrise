@@ -742,12 +742,12 @@ endif()
 target_link_libraries_system(
     hyrise_impl
 
-    cxxopts
     cpp-btree
+    cxxopts
+    flat-hash-map
     nlohmann_json::nlohmann_json
     robin_map
     tbb
-    flat-hash-map
 )
 
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
