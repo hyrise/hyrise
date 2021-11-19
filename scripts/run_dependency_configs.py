@@ -67,6 +67,8 @@ def main(output_path, force_delete, build_dir, commit):
         "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
     }
 
+    scale_factors = [0.01, 1, 10, 20, 50, 100]
+
     if force_delete:
         print("Clear cached tables")
         cached_table_dirs = ["imdb_data", "tpch_cached_tables", "tpcds_cached_tables"]
@@ -98,20 +100,30 @@ def main(output_path, force_delete, build_dir, commit):
         config.to_json(config_path)
 
         for benchmark in benchmarks:
-            print(f"\nRunning {benchmark} for {config_name}..")
             benchmark_path = os.path.join(build_dir, benchmark)
-            results_path = os.path.join(output_path, f"{benchmark}_{config_name}.json")
-            log_path = os.path.join(output_path, f"{benchmark}_{config_name}.log")
-            exec_command = (
-                f"({benchmark_path} -r 100 -w 1 -o {results_path} --dep_mining_plugin "
-                + f"{dep_mining_plugin_path} --dep_config {config_path} 2>&1 ) | tee {log_path}"
-            )
 
-            with Popen(exec_command, shell=True) as p:
-                p.wait()
+            for scale_factor in scale_factors:
+                if benchmark != "hyriseBenchmarkTPCH" and scale_factor == 0.01:
+                    continue
+                if benchmark == "hyriseBenchmarkJoinOrder" and scale_factor != 10:
+                    continue
+
+                print(f"\nRunning {benchmark} for {config_name} with SF {scale_factor}..")
+                sf_flag = f"-s {scale_factor}" if benchmark != "hyriseBenchmarkJoinOrder" else ""
+                sf_printable = str(scale_factor).replace(".", "")
+                sf_extension = f"_s-{sf_printable}" if benchmark != "hyriseBenchmarkJoinOrder" else ""
+                base_file_name = f"{benchmark}_{config_name}{sf_extension}"
+                results_path = os.path.join(output_path, f"{base_file_name}.json")
+                log_path = os.path.join(output_path, f"{base_file_name}.log")
+                exec_command = (
+                    f"({benchmark_path} -r 100 -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
+                    + f"{dep_mining_plugin_path} --dep_config {config_path} 2>&1 ) | tee {log_path}"
+                )
+
+                with Popen(exec_command, shell=True) as p:
+                    p.wait()
 
         os.remove(config_path)
-
 
 if __name__ == "__main__":
     args = parse_args()

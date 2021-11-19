@@ -17,7 +17,7 @@ DependencyValidator::DependencyValidator(const std::shared_ptr<DependencyCandida
                                          const std::shared_ptr<ValidationState>& validation_state)
     : _queue(queue), _id(id), _validation_state(validation_state) {
   add_rule(std::make_unique<ODValidationRule>());
-  add_rule(std::make_unique<UCCValidationRule>());
+  add_rule(std::make_unique<UCCValidationRuleSet>());
   add_rule(std::make_unique<FDValidationRule>());
   add_rule(std::make_unique<INDValidationRuleSet>());
 }
