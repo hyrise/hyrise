@@ -41,6 +41,7 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler='/usr/local/opt/llvm/bin/'
 fi
 
+echo "launcher: ${launcher}"
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
