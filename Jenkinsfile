@@ -249,7 +249,7 @@ try {
           //       Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
           //     }
           //   }
-          } clangDebugCoverage: {
+          // }, clangDebugCoverage: {
             stage("clang-debug-coverage") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "./scripts/coverage.sh --generate_badge=true"
@@ -272,7 +272,7 @@ try {
                 Utils.markStageSkippedForConditional("clangDebugCoverage")
               }
             }
-          }
+          // }
 
           // parallel memcheckReleaseTest: {
           //   stage("memcheckReleaseTest") {
