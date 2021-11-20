@@ -98,7 +98,7 @@ try {
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
             mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
             wait"
-          },
+          }
 
           // parallel clangDebug: {
           //   stage("clang-debug") {
@@ -249,7 +249,7 @@ try {
           //       Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
           //     }
           //   }
-          clangDebugCoverage: {
+          }, clangDebugCoverage: {
             stage("clang-debug-coverage") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "./scripts/coverage.sh --generate_badge=true"
