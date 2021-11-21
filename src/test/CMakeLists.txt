@@ -262,7 +262,7 @@ set(
 
 # This warning does not play well with SCOPED_TRACE
 add_compile_options(-Wno-used-but-marked-unused)
-add
+
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
 
