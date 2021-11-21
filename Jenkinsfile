@@ -335,64 +335,64 @@ try {
     }
   }
 
-  // parallel clangDebugMacX64: {
-  //   node('mac') {
-  //     stage("clangDebugMacX64") {
-  //       if (env.BRANCH_NAME == 'master' || full_ci) {
-  //         try {
-  //           checkout scm
+  parallel clangDebugMacX64: {
+    node('mac') {
+      stage("clangDebugMacX64") {
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          try {
+            checkout scm
 
-  //           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-  //           sh "git submodule update --init --recursive --jobs 4 --depth=1"
+            // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
+            sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-  //           sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
-  //           sh "cd clang-debug && make -j8"
-  //           sh "./clang-debug/hyriseTest"
-  //           sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
-  //           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
-  //           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
-  //           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
-  //         } finally {
-  //           sh "ls -A1 | xargs rm -rf"
-  //         }
-  //       } else {
-  //         Utils.markStageSkippedForConditional("clangDebugMacX64")
-  //       }
-  //     }
-  //   }
-  // }, clangReleaseMacArm: {
-  //   // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
-  //   node('mac-arm') {
-  //     stage("clangReleaseMacArm") {
-  //       if (env.BRANCH_NAME == 'master' || full_ci) {
-  //         try {
-  //           checkout scm          
+            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
+            sh "cd clang-debug && make -j8"
+            sh "./clang-debug/hyriseTest"
+            sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-debug"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-debug"
+          } finally {
+            sh "ls -A1 | xargs rm -rf"
+          }
+        } else {
+          Utils.markStageSkippedForConditional("clangDebugMacX64")
+        }
+      }
+    }
+  }, clangReleaseMacArm: {
+    // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
+    node('mac-arm') {
+      stage("clangReleaseMacArm") {
+        if (env.BRANCH_NAME == 'master' || full_ci) {
+          try {
+            checkout scm          
             
-  //           // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
-  //           sh "git submodule update --init --recursive --jobs 4 --depth=1"
+            // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
+            sh "git submodule update --init --recursive --jobs 4 --depth=1"
             
-  //           // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-  //           sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang++ .."
-  //           sh "cd clang-release && make -j8"
+            // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang++ .."
+            sh "cd clang-release && make -j8"
 
-  //           // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
-  //           // executes x86 binaries on arm.
-  //           sh "file ./clang-release/hyriseTest | grep arm64"
+            // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
+            // executes x86 binaries on arm.
+            sh "file ./clang-release/hyriseTest | grep arm64"
 
-  //           sh "./clang-release/hyriseTest"
-  //           sh "./clang-release/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
-  //           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
-  //           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
-  //           sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
-  //         } finally {
-  //           sh "ls -A1 | xargs rm -rf"
-  //         }
-  //       } else {
-  //         Utils.markStageSkippedForConditional("clangReleaseMacArm")
-  //       }
-  //     }
-  //   }
-  // }
+            sh "./clang-release/hyriseTest"
+            sh "./clang-release/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-release"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseServer_test.py clang-release"
+            sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseBenchmarkFileBased_test.py clang-release"
+          } finally {
+            sh "ls -A1 | xargs rm -rf"
+          }
+        } else {
+          Utils.markStageSkippedForConditional("clangReleaseMacArm")
+        }
+      }
+    }
+  }
 
   node {
     stage("Notify") {
