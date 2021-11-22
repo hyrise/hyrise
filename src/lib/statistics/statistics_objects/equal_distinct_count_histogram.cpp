@@ -50,9 +50,8 @@ template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
+  ValueDistributionMap<T> value_distribution_map{};
   const auto chunk_count = table.chunk_count();
-  const auto estimated_distinct_value_count = std::min(table.row_count(), uint64_t{1'024});
-  ValueDistributionMap<T> value_distribution_map{estimated_distinct_value_count};
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
     if (!chunk) continue;
@@ -62,7 +61,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  value_distribution_map.clear(); // Maps can be large and sorting slow. Free space early.
+  value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
   boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
                        [&](const auto& l, const auto& r) { return l.first < r.first; });
 
