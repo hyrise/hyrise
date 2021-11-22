@@ -8,7 +8,9 @@
 
 namespace opossum {
 
-TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
+TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {
+  // is_empty.clear();
+}
 
 bool TaskQueue::empty() const {
   for (const auto& queue : _queues) {
@@ -28,6 +30,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
   task->set_node_id(_node_id);
   _queues[priority].push(task);
 
+  // is_empty.clear(std::memory_order_relaxed);
   new_task.notify_one();
 }
 
