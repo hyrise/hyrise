@@ -16,6 +16,8 @@ class DependencyMiningConfig {
   // When set to 0, dependencies will not be mined. Values < 0 are not permitted.
   uint8_t num_validators = 1;
   // When set to a negative value, do not restrict candidates.
+  // When set to 0, dependencies will not be mined.
+  // Restricting by candidates will be favored over time constraints (no combination, ignore time constraints).
   int64_t max_validation_candidates = -1;
   // When set to a negative value, do not restrict validation time.
   std::chrono::high_resolution_clock::duration max_validation_time = std::chrono::seconds{-1};

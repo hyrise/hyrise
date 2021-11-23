@@ -6,6 +6,22 @@ import shutil
 import json
 from subprocess import Popen, PIPE
 
+# Just holds the global state (**yeah**) of the benchmarks to run
+class ExperimentSetup:
+    def __init__(self):
+        self.benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
+        self.configs = {
+            "all_off": DependencyUsageConfig(False, False, False, False),
+            "only_dgr": DependencyUsageConfig(True, False, False, False),
+            "only_jts": DependencyUsageConfig(False, True, False, False),
+            "only_join2pred": DependencyUsageConfig(False, False, True, False),
+            "only_join_elim": DependencyUsageConfig(False, False, False, True),
+            "all_on": DependencyUsageConfig(True, True, True, True),
+            "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
+        }
+        self.scale_factors = [0.01, 1, 10, 100]
+        self.mining_configs = [MiningConfig.default_config()]
+
 
 class DependencyUsageConfig:
     def __init__(self, groupby_reduction, join_to_semi, join_to_predicate, join_elimination, preset_constraints=False):
@@ -89,23 +105,9 @@ def main(output_path, force_delete, build_dir, commit):
     config_path = os.path.join(build_dir, config_file)
     mining_config_file = "mining_config.json"
     mining_config_path = os.path.join(build_dir, mining_config_file)
-    benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
+    setup = ExperimentSetup()
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
-
-    configs = {
-        "all_off": DependencyUsageConfig(False, False, False, False),
-        "only_dgr": DependencyUsageConfig(True, False, False, False),
-        "only_jts": DependencyUsageConfig(False, True, False, False),
-        "only_join2pred": DependencyUsageConfig(False, False, True, False),
-        "only_join_elim": DependencyUsageConfig(False, False, False, True),
-        "all_on": DependencyUsageConfig(True, True, True, True),
-        "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
-    }
-
-    scale_factors = [0.01, 1, 10, 100]
-
-    mining_configs = [MiningConfig.default_config()]
 
     if force_delete:
         print("Clear cached tables")
@@ -127,20 +129,20 @@ def main(output_path, force_delete, build_dir, commit):
 
     print("Build executables")
     os.chdir(build_dir)
-    all_benchmark_string = " ".join(benchmarks)
+    all_benchmark_string = " ".join(setup.benchmarks)
     build_command = f"ninja {all_benchmark_string} hyriseDependencyMiningPlugin"
     with Popen(build_command, shell=True) as p:
         p.wait()
     os.chdir(pwd)
 
-    for config_name, config in configs.items():
+    for config_name, config in setup.configs.items():
         print(f"\n{'=' * 20}\n{config_name.upper()}\n{'=' * 20}")
         config.to_json(config_path)
 
-        for benchmark in benchmarks:
+        for benchmark in setup.benchmarks:
             benchmark_path = os.path.join(build_dir, benchmark)
 
-            for scale_factor in scale_factors:
+            for scale_factor in setup.scale_factors:
                 if benchmark != "hyriseBenchmarkTPCH" and scale_factor == 0.01:
                     continue
                 if benchmark == "hyriseBenchmarkJoinOrder" and scale_factor != 10:
@@ -149,8 +151,9 @@ def main(output_path, force_delete, build_dir, commit):
                 sf_flag = f"-s {scale_factor}" if benchmark != "hyriseBenchmarkJoinOrder" else ""
                 sf_printable = str(scale_factor).replace(".", "")
                 sf_extension = f"_s-{sf_printable}" if benchmark != "hyriseBenchmarkJoinOrder" else ""
+                run_time = max(round(scale_factor * 6), 60)
 
-                for mining_config in mining_configs:
+                for mining_config in setup.mining_configs:
                     is_default_config = mining_config.is_default_config()
                     if not is_default_config:
                         mining_config.to_json(mining_config_path)
@@ -165,7 +168,7 @@ def main(output_path, force_delete, build_dir, commit):
                     log_path = os.path.join(output_path, f"{base_file_name}.log")
                     results_path = os.path.join(output_path, f"{base_file_name}.json")
                     exec_command = (
-                        f"({benchmark_path} -r 100 -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
+                        f"({benchmark_path} -r 100 -t {run_time} -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
                         + f"{dep_mining_plugin_path} --dep_config {config_path} {mining_flag} 2>&1 ) | tee {log_path}"
                     )
 
