@@ -20,6 +20,40 @@ class DependencyUsageConfig:
             json.dump(vars(self), f, indent=4)
 
 
+class MiningConfig:
+    def __init__(self, num_validators=1, max_validation_candidates=-1, max_validation_time=-1):
+        self.num_validators = num_validators
+        self.max_validation_candidates = max_validation_candidates
+        self.max_validation_time = max_validation_time
+
+    def __eq__(self, other):
+        return vars(self) == vars(other)
+
+    @staticmethod
+    def default_config():
+        return MiningConfig()
+
+    def is_default_config(self):
+        return self == MiningConfig.default_config()
+
+    def file_extension(self):
+        default_config = MiningConfig.default_config()
+        if self == default_config:
+            return ""
+        extension = ""
+        if self.num_validators != default_config.num_validators:
+            extension += f"_{self.num_validators}-validators"
+        if self.max_validation_candidates != default_config.max_validation_candidates:
+            extension += f"_max-cand-{self.max_validation_candidates}"
+        if self.max_validation_time != default_config.max_validation_time:
+            extension += f"_max-time-{self.max_validation_time}"
+        return extension
+
+    def to_json(self, file_path):
+        with open(file_path, "w") as f:
+            json.dump(vars(self), f, indent=4)
+
+
 def parse_args():
     ap = argparse.ArgumentParser(description="Runs benchmarks for pre-defined dependency usage configurations")
     ap.add_argument("output_path", type=str, help="Path to output directory")
@@ -50,9 +84,11 @@ def main(output_path, force_delete, build_dir, commit):
     if not os.path.isdir(build_dir):
         print(f"Could not find build directory {build_dir}\nDid you call the script from project root?")
         return
-    config_file = "dependency_config.json"
     dep_mining_plugin_path = os.path.join(os.path.abspath(build_dir), "lib", "libhyriseDependencyMiningPlugin.so")
+    config_file = "dependency_config.json"
     config_path = os.path.join(build_dir, config_file)
+    mining_config_file = "mining_config.json"
+    mining_config_path = os.path.join(build_dir, mining_config_file)
     benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
     if not os.path.isdir(output_path):
         os.makedirs(output_path)
@@ -67,7 +103,9 @@ def main(output_path, force_delete, build_dir, commit):
         "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
     }
 
-    scale_factors = [0.01, 1, 10, 20, 50, 100]
+    scale_factors = [0.01, 1, 10, 100]
+
+    mining_configs = [MiningConfig.default_config()]
 
     if force_delete:
         print("Clear cached tables")
@@ -108,22 +146,35 @@ def main(output_path, force_delete, build_dir, commit):
                 if benchmark == "hyriseBenchmarkJoinOrder" and scale_factor != 10:
                     continue
 
-                print(f"\nRunning {benchmark} for {config_name} with SF {scale_factor}..")
                 sf_flag = f"-s {scale_factor}" if benchmark != "hyriseBenchmarkJoinOrder" else ""
                 sf_printable = str(scale_factor).replace(".", "")
                 sf_extension = f"_s-{sf_printable}" if benchmark != "hyriseBenchmarkJoinOrder" else ""
-                base_file_name = f"{benchmark}_{config_name}{sf_extension}"
-                results_path = os.path.join(output_path, f"{base_file_name}.json")
-                log_path = os.path.join(output_path, f"{base_file_name}.log")
-                exec_command = (
-                    f"({benchmark_path} -r 100 -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
-                    + f"{dep_mining_plugin_path} --dep_config {config_path} 2>&1 ) | tee {log_path}"
-                )
 
-                with Popen(exec_command, shell=True) as p:
-                    p.wait()
+                for mining_config in mining_configs:
+                    is_default_config = mining_config.is_default_config()
+                    if not is_default_config:
+                        mining_config.to_json(mining_config_path)
+                        mining_flag = f"--mining_config {mining_config_path}"
+                        mining_title = f" and {mining_config.file_extension()}"
+                    else:
+                        mining_flag = ""
+                        mining_title = ""
 
+                    print(f"\nRunning {benchmark} for {config_name} with SF {scale_factor}{mining_title}..")
+                    base_file_name = f"{benchmark}_{config_name}{sf_extension}{mining_config.file_extension()}"
+                    log_path = os.path.join(output_path, f"{base_file_name}.log")
+                    results_path = os.path.join(output_path, f"{base_file_name}.json")
+                    exec_command = (
+                        f"({benchmark_path} -r 100 -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
+                        + f"{dep_mining_plugin_path} --dep_config {config_path} {mining_flag} 2>&1 ) | tee {log_path}"
+                    )
+
+                    with Popen(exec_command, shell=True) as p:
+                        p.wait()
+                    if not is_default_config:
+                        os.remove(mining_config_path)
         os.remove(config_path)
+
 
 if __name__ == "__main__":
     args = parse_args()
