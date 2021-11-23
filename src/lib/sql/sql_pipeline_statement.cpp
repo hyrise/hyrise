@@ -83,7 +83,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   auto parsed_sql = get_parsed_sql_statement();
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  const auto started = std::chrono::steady_clock::now();
 
   SQLTranslator sql_translator{_use_mvcc};
 
@@ -95,7 +95,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   _unoptimized_logical_plan = lqp_roots.front();
 
-  const auto done = std::chrono::high_resolution_clock::now();
+  const auto done = std::chrono::steady_clock::now();
   _metrics->sql_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   return _unoptimized_logical_plan;
@@ -130,7 +130,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto unoptimized_lqp = get_unoptimized_logical_plan();
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  const auto started = std::chrono::steady_clock::now();
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
@@ -141,7 +141,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
 
-  const auto done = std::chrono::high_resolution_clock::now();
+  const auto done = std::chrono::steady_clock::now();
   _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
@@ -164,7 +164,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   // Stores when the actual compilation started/ended
-  auto started = std::chrono::high_resolution_clock::now();
+  auto started = std::chrono::steady_clock::now();
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
@@ -186,11 +186,11 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     const auto& lqp = get_optimized_logical_plan();
 
     // Reset time to exclude previous pipeline steps
-    started = std::chrono::high_resolution_clock::now();
+    started = std::chrono::steady_clock::now();
     _physical_plan = LQPTranslator{}.translate_node(lqp);
   }
 
-  done = std::chrono::high_resolution_clock::now();
+  done = std::chrono::steady_clock::now();
 
   if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
 
@@ -267,7 +267,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   const auto& tasks = get_tasks();
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  const auto started = std::chrono::steady_clock::now();
 
   DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
                 reinterpret_cast<uintptr_t>(this));
@@ -289,7 +289,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
            "Transaction should either be still active or have been auto-committed by now");
   }
 
-  const auto done = std::chrono::high_resolution_clock::now();
+  const auto done = std::chrono::steady_clock::now();
   _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
 
   // Get result table, if it was not a transaction statement

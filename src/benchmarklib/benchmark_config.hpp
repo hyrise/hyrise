@@ -13,8 +13,8 @@ namespace opossum {
  */
 enum class BenchmarkMode { Ordered, Shuffled };
 
-using Duration = std::chrono::high_resolution_clock::duration;
-using TimePoint = std::chrono::high_resolution_clock::time_point;
+using Duration = std::chrono::steady_clock::duration;
+using TimePoint = std::chrono::steady_clock::time_point;
 
 class BenchmarkConfig {
  public:
