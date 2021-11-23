@@ -28,7 +28,8 @@ thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
 }  // namespace
 
 // The sleep time was determined experimentally
-static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
+static constexpr auto WORKER_SLEEP_TIME_INCREASE = std::chrono::microseconds(100);
+static constexpr auto MAX_WORKER_SLEEP_TIME = std::chrono::microseconds(100'000);
 
 namespace opossum {
 
@@ -91,17 +92,20 @@ void Worker::_work() {
     if (!work_stealing_successful) {
       ++_no_task_count;
       if (_no_task_count > 15) {
+        //std::printf("T%d: mutex\n", _id);
         std::unique_lock<std::mutex> unique_lock(_queue->lock);
-        _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
+        _queue->new_task.wait_for(unique_lock, std::max(MAX_WORKER_SLEEP_TIME, _sleep_time));
+	_sleep_time += WORKER_SLEEP_TIME_INCREASE;
         return;
       }
-      // const auto loop_count = 1 << _no_task_count;
-      // for (auto loop_id = int{0}; loop_id < loop_count; ++loop_id) {
-        // if (!_queue->is_empty.test(std::memory_order_relaxed)) {
-        //   return;
-        // }
-        // _mm_pause();
-      // }
+      const auto loop_count = 1 << _no_task_count;
+      //std::printf("T%d: loop_count %d\n", _id, loop_count);
+      for (auto loop_id = int{0}; loop_id < loop_count; ++loop_id) {
+        if (!_queue->is_empty.load(std::memory_order_relaxed)) {
+          return;
+        }
+        _mm_pause();
+      }
       return;
     }
   }
@@ -112,8 +116,9 @@ void Worker::_work() {
     return;
   }
 
-  _no_task_count = 0;
   task->execute();
+  _no_task_count = 0;
+  _sleep_time = std::chrono::microseconds{100};
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished

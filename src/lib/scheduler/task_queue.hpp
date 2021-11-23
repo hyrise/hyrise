@@ -48,7 +48,8 @@ class TaskQueue {
    */
   std::mutex lock;
 
-  // std::atomic_flag is_empty;
+  // TODO(anybody): switch to atomic_flag once it's fully supported by all Hyrise-supported compilers.
+  std::atomic<bool> is_empty{true};
 
  private:
   NodeID _node_id;
