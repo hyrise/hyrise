@@ -1,5 +1,6 @@
 #include "worker.hpp"
 
+// #include <emmintrin.h>
 #include <pthread.h>
 #include <sched.h>
 #include <unistd.h>
@@ -88,10 +89,19 @@ void Worker::_work() {
     // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
     // own queue or returns after timer exceeded (whatever occurs first).
     if (!work_stealing_successful) {
-      {
+      ++_no_task_count;
+      if (_no_task_count > 15) {
         std::unique_lock<std::mutex> unique_lock(_queue->lock);
         _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
+        return;
       }
+      // const auto loop_count = 1 << _no_task_count;
+      // for (auto loop_id = int{0}; loop_id < loop_count; ++loop_id) {
+        // if (!_queue->is_empty.test(std::memory_order_relaxed)) {
+        //   return;
+        // }
+        // _mm_pause();
+      // }
       return;
     }
   }
@@ -102,6 +112,7 @@ void Worker::_work() {
     return;
   }
 
+  _no_task_count = 0;
   task->execute();
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the

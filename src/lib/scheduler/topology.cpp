@@ -173,7 +173,7 @@ std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
     stream << "Available CPUs / nodes were filtered by externally set CPU affinity (e.g., numactl)." << std::endl;
   }
   for (size_t node_idx = 0; node_idx < topology.nodes().size(); ++node_idx) {
-    stream << "Node #" << node_idx << " - ";
+    // stream << "Node #" << node_idx << " - ";
     stream << topology.nodes()[node_idx];
     stream << std::endl;
   }
