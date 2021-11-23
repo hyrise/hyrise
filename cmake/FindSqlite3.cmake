@@ -23,3 +23,7 @@ ELSE ()
     MESSAGE(STATUS "WARNING: sqlite3 library not found.")
     MESSAGE(STATUS "Try: 'sudo yum install libsqlite3-dev' (or sudo apt-get install libsqlite3-dev)")
 ENDIF ()
+
+add_library(sqlite3 INTERFACE)
+target_include_directories(sqlite3 INTERFACE ${SQLITE3_INCLUDE_DIR})
+target_link_libraries(sqlite3 INTERFACE ${SQLITE3_LIBRARY})

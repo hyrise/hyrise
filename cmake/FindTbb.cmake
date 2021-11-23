@@ -16,3 +16,7 @@ ELSE ()
     SET(TBB_FOUND FALSE)
     MESSAGE(STATUS "WARNING: tbb library not found.")
 ENDIF ()
+
+add_library(tbb INTERFACE)
+target_include_directories(tbb INTERFACE ${TBB_INCLUDE_DIR})
+target_link_libraries(tbb INTERFACE ${TBB_LIBRARY})
