@@ -9,6 +9,8 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
+    dependency_mining_config.cpp
+    dependency_mining_config.hpp
     dependency_usage_config.cpp
     dependency_usage_config.hpp
     cache/abstract_cache.hpp

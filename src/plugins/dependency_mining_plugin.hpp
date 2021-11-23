@@ -9,16 +9,22 @@
 
 /* Dependency Mining / Optimization doc
  *
- *  for enabling specific optimizations and dependency mining:
- *      - check switches at plugins/dependency_mining/dependency_usage_config.hpp
+ *  for enabling specific optimizations and dependency mining for them:
+ *      - check switches at src/dependency_usage_config.hpp for default values
+ *      - provide a JSON file with own values via CLI option --dep_config <usage_config_path>
+ *      - an exemplary file can be found at <root_dir>/dependency_config.json
  *  when mining plugins/to turn off all optimizations:
- *      - turn ALLOW_PRESET_CONSTRAINTS off
+ *      - turn set preset_constraints to false in the config file
  *      - otherwise, UCC mining will notice that dependency is already set and do early-out
  *      - additionally, there could be dependencies that are set but not mined
  *  to mine dependencies, load plugin
  *      - using CLI option --dep_mining_plugin <plugin_path>
- *      - <plugin _path> is the absolute path to the plugin library
+ *      - <plugin_path> is the absolute path to the plugin library
  *      - i.e., <build_dir>/lib/libhyriseDependencyMiningPlugin.[so|dylib]
+ *      - to restrict mining:
+ *          - check switches at src/dependency_mining_config.hpp for default values
+ *          - provide a JSON file with own values via CLI option --mining_config <mining_config_path>
+ *          - an exemplary file can be found at <root_dir>/mining_config.json
  */
 namespace opossum {
 
@@ -30,10 +36,6 @@ class DependencyMiningPlugin : public AbstractPlugin {
   void start() final;
 
   void stop() final;
-
-  constexpr static size_t NUM_VALIDATORS = 1;
-  constexpr static int64_t MAX_VALIDATION_CANDIDATES = -1;
-  constexpr static std::chrono::high_resolution_clock::duration MAX_VALIDATION_TIME = std::chrono::seconds{-1};
 
  protected:
   std::shared_ptr<DependencyCandidateQueue> _queue;
