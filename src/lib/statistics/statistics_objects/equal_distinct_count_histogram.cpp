@@ -50,7 +50,7 @@ template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
-  ValueDistributionMap<T> value_distribution_map{};
+  auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
