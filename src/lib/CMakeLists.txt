@@ -714,17 +714,6 @@ set_source_files_properties(
     SKIP_PRECOMPILE_HEADERS TRUE
 )
 
-target_include_directories(
-    hyrise_impl
-
-    PUBLIC
-    ${PROJECT_SOURCE_DIR}/src/benchmarklib/
-    ${PROJECT_SOURCE_DIR}/src/lib/
-    ${PROJECT_SOURCE_DIR}/src/plugins/
-
-    ${Boost_INCLUDE_DIRS}
-)
-
 # -rdynamic tells the linker to export the library's symbols so that plugins can use them.
 target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 

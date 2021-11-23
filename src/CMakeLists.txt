@@ -14,10 +14,10 @@ endif()
 
 if (${ENABLE_NUMA_SUPPORT})
     add_definitions(-DHYRISE_NUMA_SUPPORT=1)
-    message(STATUS "Building with NUMA support")
+    MESSAGE(STATUS "Building with NUMA support")
 else()
     add_definitions(-DHYRISE_NUMA_SUPPORT=0)
-    message(STATUS "Building without NUMA support")
+    MESSAGE(STATUS "Building without NUMA support")
 endif()
 
 # Enable coverage if requested - this is only operating on Hyrise's source (src/) so we don't check coverage of
@@ -61,6 +61,14 @@ else()
 endif()
 
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
+
+include_directories(
+    ${PROJECT_SOURCE_DIR}/src/benchmarklib/
+    ${PROJECT_SOURCE_DIR}/src/lib/
+    ${PROJECT_SOURCE_DIR}/src/plugins/
+
+    ${Boost_INCLUDE_DIRS}
+)
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
