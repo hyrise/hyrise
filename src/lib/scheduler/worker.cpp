@@ -28,8 +28,9 @@ thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
 }  // namespace
 
 // The sleep time was determined experimentally
-static constexpr auto WORKER_SLEEP_TIME_INCREASE = std::chrono::microseconds(100);
-static constexpr auto MAX_WORKER_SLEEP_TIME = std::chrono::microseconds(100'000);
+static constexpr auto WORKER_SLEEP_TIME_INCREASE = std::chrono::microseconds{100};
+static constexpr auto WORKER_SLEEP_TIME_MAX = std::chrono::microseconds{500'000};
+static constexpr auto WORKER_SLEEP_TIME_MINMAX = std::chrono::microseconds{500};
 
 namespace opossum {
 
@@ -41,6 +42,15 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_i
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
+
+  // We use an increasing value to have a few workers eager workers that regularly check all queues, while all other
+  // workers are less eager and more efficient with the CPU. This is more relevant for the hyriseServer than it is for
+  // the benchmark binaries.
+  // If we have more than 8 workers, all workers with an ID > 8 are using the maximum sleep time.
+  const auto diff = static_cast<double>((WORKER_SLEEP_TIME_MAX - WORKER_SLEEP_TIME_MINMAX).count());
+  const auto factor = static_cast<double>(1 << std::min(8u, _id));
+  _max_sleep_time = std::chrono::microseconds{static_cast<size_t>(static_cast<double>(WORKER_SLEEP_TIME_MINMAX.count()) + ((1.0 - (1.0 / factor)) * diff))};
+  //std::cout << "id: " << _id << " - factor: " << factor << " and " << _max_sleep_time.count() << " (" << diff << ")" << std::endl;
 }
 
 WorkerID Worker::id() const { return _id; }
@@ -94,7 +104,7 @@ void Worker::_work() {
       if (_no_task_count > 15) {
         //std::printf("T%d: mutex\n", _id);
         std::unique_lock<std::mutex> unique_lock(_queue->lock);
-        _queue->new_task.wait_for(unique_lock, std::max(MAX_WORKER_SLEEP_TIME, _sleep_time));
+        _queue->new_task.wait_for(unique_lock, std::max(_sleep_time, _max_sleep_time));
 	_sleep_time += WORKER_SLEEP_TIME_INCREASE;
         return;
       }

@@ -16,7 +16,6 @@
 namespace opossum {
 
 NodeQueueScheduler::NodeQueueScheduler() {
-  _worker_id_allocator = std::make_shared<UidAllocator>();
   NUM_GROUPS = Hyrise::get().topology.num_cpus() * 2;
 }
 
@@ -30,6 +29,8 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
+
+  _worker_id_allocator = std::make_shared<UidAllocator>();
 
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _queues.reserve(Hyrise::get().topology.nodes().size());

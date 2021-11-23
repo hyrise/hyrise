@@ -70,8 +70,10 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   std::vector<int> _random{};
   size_t _next_random{0};
   size_t _no_task_count{0};
-  std::chrono::microseconds _sleep_time{100};
 
+  static inline constexpr auto WORKER_SLEEP_TIME_INITIAL = std::chrono::microseconds(100);
+  std::chrono::microseconds _sleep_time{WORKER_SLEEP_TIME_INITIAL};
+  std::chrono::microseconds _max_sleep_time{1000}; // written in constructor
 };
 
 }  // namespace opossum
