@@ -14,9 +14,10 @@
  *      - provide a JSON file with own values via CLI option --dep_config <usage_config_path>
  *      - an exemplary file can be found at <root_dir>/dependency_config.json
  *  when mining plugins/to turn off all optimizations:
- *      - turn set preset_constraints to false in the config file
- *      - otherwise, UCC mining will notice that dependency is already set and do early-out
- *      - additionally, there could be dependencies that are set but not mined
+ *      - set "preset_constraints" to false in the config file
+ *      - otherwise,
+ *          - some candidates might not be generated
+ *          - UCC mining will notice that dependency is already set and do early-out
  *  to mine dependencies, load plugin
  *      - using CLI option --dep_mining_plugin <plugin_path>
  *      - <plugin_path> is the absolute path to the plugin library

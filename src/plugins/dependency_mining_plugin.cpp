@@ -18,11 +18,9 @@ void DependencyMiningPlugin::start() {
   std::vector<std::thread> validator_threads;
   Assert(Hyrise::get().mining_config, "No dependency mining config found");
   const auto& mining_config = Hyrise::get().mining_config;
-  const bool is_limited =
-      mining_config->max_validation_candidates >= 0 || mining_config->max_validation_time >= std::chrono::seconds{0};
-  const bool use_time = is_limited ? mining_config->max_validation_candidates < 0 : false;
-  const auto validation_state = std::make_shared<ValidationState>(!is_limited, mining_config->max_validation_candidates,
-                                                                  use_time, mining_config->max_validation_time);
+
+  const auto validation_state =
+      std::make_shared<ValidationState>(mining_config->max_validation_candidates, mining_config->max_validation_time);
   for (size_t validator_id{0}; validator_id < mining_config->num_validators; ++validator_id) {
     validator_threads.emplace_back(
         [&](size_t i) {

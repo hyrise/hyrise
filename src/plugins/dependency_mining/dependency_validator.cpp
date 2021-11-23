@@ -50,7 +50,7 @@ void DependencyValidator::start() {
     }
     my_out << "    " << magic_enum::enum_name(validate_result->status) << "    " << candidate_timer.lap_formatted()
            << std::endl;
-    std::cout << my_out.rdbuf();
+    std::cout << my_out.str();
   }
   std::cout << "DependencyValidator " + std::to_string(_id) + " finished in " + timer.lap_formatted() + "\n";
 }
