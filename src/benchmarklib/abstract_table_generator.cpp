@@ -39,6 +39,7 @@ void AbstractTableGenerator::generate_and_store() {
   // time, we execute these data preparation steps in a multi-threaded way. We store the current scheduler here in case
   // a single-threaded scheduler is used. After data preparation, we switch back to the initially used scheduler.
   const auto initial_scheduler = Hyrise::get().scheduler();
+  std::cout << "set topology for data preparation" << std::endl;
   Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
@@ -337,6 +338,7 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   // Set scheduler back to previously used scheduler.
+  std::cout << "set back to initial scheduler" << std::endl;
   Hyrise::get().topology.use_default_topology(_benchmark_config->cores);
   Hyrise::get().set_scheduler(initial_scheduler);
 }

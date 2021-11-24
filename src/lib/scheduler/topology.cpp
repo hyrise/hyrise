@@ -56,6 +56,7 @@ void Topology::_init_default_topology(uint32_t max_num_cores) {
 }
 
 void Topology::_init_numa_topology(uint32_t max_num_cores) {
+  std::cout << "INIT NUMA" << std::endl;
 #if !HYRISE_NUMA_SUPPORT
   _init_fake_numa_topology(max_num_cores);
 #else

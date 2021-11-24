@@ -48,6 +48,7 @@ void NodeQueueScheduler::begin() {
   for (auto& worker : _workers) {
     worker->start();
   }
+  std::cout << "num workers: " << _workers.size() << std::endl;
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
