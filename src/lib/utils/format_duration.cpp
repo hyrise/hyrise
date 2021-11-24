@@ -11,8 +11,8 @@ namespace opossum {
 
 std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
   constexpr auto TIME_UNIT_ORDER =
-      hana::to_tuple(hana::tuple_t<std::chrono::minutes, std::chrono::seconds, std::chrono::milliseconds,
-                                   std::chrono::microseconds, std::chrono::nanoseconds>);
+      boost::hana::to_tuple(boost::hana::tuple_t<std::chrono::minutes, std::chrono::seconds, std::chrono::milliseconds,
+                                                 std::chrono::microseconds, std::chrono::nanoseconds>);
   const std::vector<std::string> unit_strings = {" min", " s", " ms", " µs", " ns"};
 
   std::chrono::nanoseconds remaining_nanoseconds = total_nanoseconds;
@@ -27,18 +27,18 @@ std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
   });
 
   std::stringstream stream;
-  for (auto unit_iterator = uint8_t{0}; unit_iterator < unit_strings.size(); ++unit_iterator) {
+  for (size_t unit_iterator{0}; unit_iterator < unit_strings.size(); ++unit_iterator) {
     const auto& floor_value = floor_durations.at(unit_iterator);
-    const auto is_last_elem = unit_iterator == unit_strings.size() - 1;
-    if (floor_value > 0 || is_last_elem) {
+    const auto is_last_element = unit_iterator == unit_strings.size() - 1;
+    if (floor_value > 0 || is_last_element) {
       stream << floor_value << unit_strings.at(unit_iterator);
-      if (!is_last_elem) {
+      if (!is_last_element) {
         stream << " " << round_durations.at(unit_iterator + 1) << unit_strings.at(unit_iterator + 1);
       }
-      return stream.str();
+      break;
     }
   }
-  Fail("Could not match any time unit");
+  return stream.str();
 }
 
 }  // namespace opossum

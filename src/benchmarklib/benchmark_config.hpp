@@ -14,6 +14,7 @@ namespace opossum {
 enum class BenchmarkMode { Ordered, Shuffled };
 
 using Duration = std::chrono::nanoseconds;
+// steady_clock guarantees that the clock is not adjusted while benchmarking
 using TimePoint = std::chrono::steady_clock::time_point;
 
 class BenchmarkConfig {

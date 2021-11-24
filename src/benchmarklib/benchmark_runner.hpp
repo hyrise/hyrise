@@ -91,7 +91,7 @@ class BenchmarkRunner : public Noncopyable {
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
-  std::chrono::steady_clock::time_point _benchmark_start;
+  TimePoint _benchmark_start;
   std::chrono::system_clock::time_point _benchmark_wall_clock_start;
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can

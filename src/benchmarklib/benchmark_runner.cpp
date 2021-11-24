@@ -86,8 +86,7 @@ void BenchmarkRunner::run() {
   auto system_utilization_tracker = std::thread{[&] {
     if (!track_system_utilization) return;
 
-    // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
-    // supported.
+    // Start tracking the system utilization
     SQLPipelineBuilder{
         "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
         "meta_system_utilization"}
@@ -265,8 +264,8 @@ void BenchmarkRunner::_benchmark_ordered() {
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
     result.duration = _state.benchmark_duration;
-    const auto duration_of_all_runs_ns = static_cast<float>(_state.benchmark_duration.count());
-    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
+    // We don't use a cast to chrono::duration::seconds here as we would lose precision.
+    const auto duration_seconds = static_cast<float>(_state.benchmark_duration.count()) / 1'000'000'000.f;
     const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
 
     // Compute mean by using accumulators
@@ -414,8 +413,8 @@ void BenchmarkRunner::write_report_to_file() const {
     // comparable.
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? total_duration : result.duration;
-    const auto reported_item_duration_ns = static_cast<double>(reported_item_duration.count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
+    // We don't use a cast to chrono::duration::seconds here as we would lose precision.
+    const auto duration_seconds = static_cast<double>(reported_item_duration.count()) / 1'000'000'000.0;
     const auto items_per_second =
         duration_seconds > 0 ? (static_cast<double>(result.successful_runs.size()) / duration_seconds) : 0;
 
@@ -435,6 +434,9 @@ void BenchmarkRunner::write_report_to_file() const {
 
   nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
 
+  // To get timestamps relative to the benchmark start, we substract the benchmark start timepoint.
+  // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.
+  // Because the system_clock can be readjusted anytime, the timestamps could be slightly out of line.
   const auto benchmark_start_ns = std::chrono::nanoseconds{_benchmark_wall_clock_start.time_since_epoch()}.count();
   auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
                                " AS \"timestamp\", log_level, reporter, message FROM meta_log");
