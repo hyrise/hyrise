@@ -67,7 +67,7 @@ def main(output_path, force_delete, build_dir, commit):
         "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
     }
 
-    scale_factors = [0.01, 1, 10, 20, 50, 100]
+    scale_factors = [1, 10, 100]
 
     if force_delete:
         print("Clear cached tables")
@@ -115,8 +115,9 @@ def main(output_path, force_delete, build_dir, commit):
                 base_file_name = f"{benchmark}_{config_name}{sf_extension}"
                 results_path = os.path.join(output_path, f"{base_file_name}.json")
                 log_path = os.path.join(output_path, f"{base_file_name}.log")
+                run_time = max(60, scale_factor * 6)
                 exec_command = (
-                    f"({benchmark_path} -r 100 -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
+                    f"({benchmark_path} -r 100 -w 1 {sf_flag} -t {run_time} -o {results_path} --dep_mining_plugin "
                     + f"{dep_mining_plugin_path} --dep_config {config_path} 2>&1 ) | tee {log_path}"
                 )
 
@@ -124,6 +125,7 @@ def main(output_path, force_delete, build_dir, commit):
                     p.wait()
 
         os.remove(config_path)
+    print(n_r)
 
 if __name__ == "__main__":
     args = parse_args()
