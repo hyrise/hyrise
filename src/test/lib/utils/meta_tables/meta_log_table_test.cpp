@@ -32,8 +32,7 @@ TEST_F(MetaLogTest, TableGeneration) {
                              {"reporter", DataType::String, false},  {"message", DataType::String, false}};
   EXPECT_EQ(meta_log_table->column_definitions(), column_definitions);
 
-  const auto timestamp_ns =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  const auto timestamp_ns = std::chrono::nanoseconds{std::chrono::system_clock::now().time_since_epoch()}.count();
 
   const auto meta_table = generate_meta_table();
   EXPECT_EQ(meta_table->row_count(), 1);

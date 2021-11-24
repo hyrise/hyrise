@@ -96,7 +96,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
   _unoptimized_logical_plan = lqp_roots.front();
 
   const auto done = std::chrono::steady_clock::now();
-  _metrics->sql_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->sql_translation_duration = done - started;
 
   return _unoptimized_logical_plan;
 }
@@ -142,7 +142,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
 
   const auto done = std::chrono::steady_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
@@ -199,7 +199,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
-  _metrics->lqp_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->lqp_translation_duration = done - started;
 
   return _physical_plan;
 }
@@ -290,7 +290,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   }
 
   const auto done = std::chrono::steady_clock::now();
-  _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->plan_execution_duration = done - started;
 
   // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {

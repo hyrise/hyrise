@@ -1,46 +1,44 @@
 #include "format_duration.hpp"
 
-#include <cmath>
 #include <sstream>
+
+#include <boost/hana/for_each.hpp>
+#include <boost/hana/tuple.hpp>
 
 #include "utils/assert.hpp"
 
 namespace opossum {
 
-using namespace std::chrono_literals;  // NOLINT
-
 std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
+  constexpr auto TIME_UNIT_ORDER =
+      hana::to_tuple(hana::tuple_t<std::chrono::minutes, std::chrono::seconds, std::chrono::milliseconds,
+                                   std::chrono::microseconds, std::chrono::nanoseconds>);
+  const std::vector<std::string> unit_strings = {" min", " s", " ms", " µs", " ns"};
+
+  std::chrono::nanoseconds remaining_nanoseconds = total_nanoseconds;
+  std::vector<uint64_t> floor_durations;
+  std::vector<uint64_t> round_durations;
+  boost::hana::for_each(TIME_UNIT_ORDER, [&](const auto join_operator_t) {
+    using DurationType = typename decltype(join_operator_t)::type;
+    auto floor_value = std::chrono::floor<DurationType>(total_nanoseconds);
+    floor_durations.emplace_back(floor_value.count());
+    round_durations.emplace_back(std::chrono::round<DurationType>(remaining_nanoseconds).count());
+    remaining_nanoseconds -= floor_value;
+  });
+
   std::stringstream stream;
-  const auto minutes = std::chrono::floor<std::chrono::minutes>(total_nanoseconds);
-  if (minutes > 0min) {
-    stream << minutes.count() << " min "
-           << std::chrono::round<std::chrono::seconds>(total_nanoseconds - minutes).count() << " s";
-    return stream.str();
+  for (auto unit_iterator = uint8_t{0}; unit_iterator < unit_strings.size(); ++unit_iterator) {
+    const auto& floor_value = floor_durations.at(unit_iterator);
+    const auto is_last_elem = unit_iterator == unit_strings.size() - 1;
+    if (floor_value > 0 || is_last_elem) {
+      stream << floor_value << unit_strings.at(unit_iterator);
+      if (!is_last_elem) {
+        stream << " " << round_durations.at(unit_iterator + 1) << unit_strings.at(unit_iterator + 1);
+      }
+      return stream.str();
+    }
   }
-
-  const auto seconds = std::chrono::floor<std::chrono::seconds>(total_nanoseconds);
-  if (seconds > 0s) {
-    stream << seconds.count() << " s "
-           << std::chrono::round<std::chrono::milliseconds>(total_nanoseconds - seconds).count() << " ms";
-    return stream.str();
-  }
-
-  const auto milliseconds = std::chrono::floor<std::chrono::milliseconds>(total_nanoseconds);
-  if (milliseconds > 0ms) {
-    stream << milliseconds.count() << " ms "
-           << std::chrono::round<std::chrono::microseconds>(total_nanoseconds - milliseconds).count() << " µs";
-    return stream.str();
-  }
-
-  const auto microseconds = std::chrono::floor<std::chrono::microseconds>(nanoseconds_remaining);
-  if (microseconds > 0us) {
-    stream << microseconds.count() << " µs " << std::chrono::nanoseconds{total_nanoseconds - milliseconds}.count()
-           << " ns";
-    return stream.str();
-  }
-
-  stream << total_nanoseconds.count() << " ns";
-  return stream.str();
+  Fail("Could not match any time unit");
 }
 
 }  // namespace opossum
