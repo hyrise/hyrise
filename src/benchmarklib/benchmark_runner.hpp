@@ -91,7 +91,9 @@ class BenchmarkRunner : public Noncopyable {
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
+  // This is a steady_clock timestamp. steady_clock guarantees that the clock is not adjusted while benchmarking.
   TimePoint _benchmark_start;
+  // We need the system_clock here to transform log entries to be relative to the benchmark start.
   std::chrono::system_clock::time_point _benchmark_wall_clock_start;
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
