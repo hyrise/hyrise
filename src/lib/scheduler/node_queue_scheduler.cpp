@@ -1,4 +1,6 @@
 #include "node_queue_scheduler.hpp"
+
+#include <algorithm>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -15,7 +17,10 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
+NodeQueueScheduler::NodeQueueScheduler() {
+  _worker_id_allocator = std::make_shared<UidAllocator>();
+  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 2;
+}
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
@@ -90,6 +95,7 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
+  //std::cout << "Scheduling on node " << preferred_node_id << std::endl;
   /**
    * Add task to the queue of the preferred node if it is ready for execution.
    */
@@ -107,8 +113,16 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     if (worker) {
       preferred_node_id = worker->queue()->node_id();
     } else {
+      std::stringstream ss; 
       // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
+      ss << "Size of queues: ";
+      for (auto i = size_t{0}; i < _queues.size(); ++i) {
+        auto& q = _queues[i];
+        ss << "(" << i << ": " << q->size(static_cast<uint32_t>(priority)) << ") - ";
+      }
+      preferred_node_id = NodeID{std::distance(_queues.cbegin(), std::min_element(_queues.cbegin(), _queues.cend(), [&](const auto& lhs, const auto& rhs) { return lhs->size(static_cast<uint32_t>(priority)) < rhs->size(static_cast<uint32_t>(priority)); }))};
       preferred_node_id = NodeID{0};
+      ss << " --- Using node %zu\n" << static_cast<size_t>(preferred_node_id) << "\n";
     }
   }
 

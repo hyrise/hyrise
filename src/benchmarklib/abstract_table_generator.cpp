@@ -376,6 +376,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
     const std::string& cache_directory) {
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
+  std::mutex table_insert_mutex;
   const auto table_files = list_directory(cache_directory);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(table_files.size());
@@ -388,6 +389,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
       table_info.table = BinaryParser::parse(table_file);
       table_info.loaded_from_binary = true;
       table_info.binary_file_path = table_file;
+
+      const std::lock_guard<std::mutex> lock(table_insert_mutex);
       table_info_by_name[table_name] = table_info;
 
       std::printf("-  Loaded table '%s' from cached binary %s (%s)\n", table_name.string().c_str(),

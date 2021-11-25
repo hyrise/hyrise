@@ -165,7 +165,7 @@ TEST_F(SchedulerTest, Grouping) {
   // We expect NUM_GROUPS chains of tasks to be created. As tasks are added to the chains by calling
   // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called. This
   // results in [40 30 20 10 0 41 31 21 11 1 ...]
-  const auto num_groups = NodeQueueScheduler::NUM_GROUPS;
+  const auto num_groups = 10;
   EXPECT_EQ(TASK_COUNT % num_groups, 0);
   auto expected_output = std::vector<size_t>{};
   for (auto group = 0; group < num_groups; ++group) {

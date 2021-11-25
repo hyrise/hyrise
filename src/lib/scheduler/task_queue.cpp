@@ -1,5 +1,6 @@
 #include "task_queue.hpp"
 
+
 #include <memory>
 #include <utility>
 
@@ -53,6 +54,10 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
     }
   }
   return nullptr;
+}
+
+size_t TaskQueue::size(const uint32_t priority) {
+  return _queues[priority].unsafe_size();
 }
 
 }  // namespace opossum
