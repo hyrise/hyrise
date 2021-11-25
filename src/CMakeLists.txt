@@ -72,6 +72,11 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/plugins/
 )
 
+if (NUMA_FOUND)
+    # Add libnuma sources for NUMA systems only
+    include_directories(${NUMA_INCLUDE_DIR})
+endif()
+
 # Include these libraries as system libraries to silence some warnings caused by -Weverything
 include_directories(
     SYSTEM
