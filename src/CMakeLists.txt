@@ -70,6 +70,8 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugins/
+
+    ${NUMA_INCLUDE_DIR}
 )
 
 # Include these libraries as system libraries to silence some warnings caused by -Weverything
