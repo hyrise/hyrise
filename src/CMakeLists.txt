@@ -70,9 +70,12 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugins/
-
-    ${NUMA_INCLUDE_DIR}
 )
+
+if (NUMA_FOUND)
+    # Add libnuma sources for NUMA systems only
+    include_directories(${NUMA_INCLUDE_DIR})
+endif()
 
 # Include these libraries as system libraries to silence some warnings caused by -Weverything
 include_directories(
