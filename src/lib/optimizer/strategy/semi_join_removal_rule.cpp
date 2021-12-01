@@ -171,6 +171,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto semi_join_is_left_input = upper_join_node.right_input() == semi_reduction_node.right_input();
       const auto semi_join_is_right_input = upper_join_node.left_input() == semi_reduction_node.right_input();
       if (semi_join_is_left_input || semi_join_is_right_input) {
+        Assert(semi_join_is_left_input != semi_join_is_right_input, "Semi join must be either left or right input.");
         // Check whether the semi join reduction predicate matches one of the predicates of the upper join
         if (std::any_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
                         [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
@@ -221,7 +222,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto& corresponding_join_node = corresponding_join_by_semi_reduction.at(removal_candidate);
     Assert(corresponding_join_node, "Expected corresponding join node for given Semi Reduction.");
     const auto corresponding_join_input_side = corresponding_join_input_side_by_semi_reduction.at(removal_candidate);
-    Assert(corresponding_join_input_side, "Expected corresponding join node input side for given Semi Reduction.");
+
     const auto cardinality_estimator2 = cost_estimator->cardinality_estimator->new_instance();
     const auto cardinality_out =
         cardinality_estimator2->estimate_cardinality(corresponding_join_node->input(corresponding_join_input_side));
