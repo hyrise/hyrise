@@ -84,6 +84,17 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
+TEST_F(UnionNodeTest, InvalidInputExpressions) {
+  // Equality of input expressions should only be enured in debug builds
+  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto my_union_node = UnionNode::make(SetOperationMode::Positions);
+  my_union_node->set_left_input(_mock_node1);
+  my_union_node->set_right_input(_mock_node2);
+
+  EXPECT_THROW(my_union_node->output_expressions(), std::logic_error);
+}
+
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});

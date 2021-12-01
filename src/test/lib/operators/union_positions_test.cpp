@@ -20,6 +20,7 @@ class UnionPositionsTest : public BaseTest {
   void SetUp() override {
     _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", 3);
     Hyrise::get().storage_manager.add_table("10_ints", _table_10_ints);
+    Hyrise::get().storage_manager.add_table("10_ints_copy", _table_10_ints);
 
     _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 3);
     Hyrise::get().storage_manager.add_table("int_float4", _table_int_float4);
@@ -55,7 +56,7 @@ TEST_F(UnionPositionsTest, SelfUnionSimple) {
   ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 4u);
   ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 4u);
 
-  auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_a_op);
+  auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
   union_unique_op->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(table_scan_a_op->get_output(), union_unique_op->get_output());
@@ -305,6 +306,66 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
   EXPECT_TABLE_EQ_UNORDERED(set_union_op->get_output(),
                             load_table("resources/test_data/tbl/union_positions_multiple_shuffled_pos_list.tbl"));
+}
+
+TEST_F(UnionPositionsTest, DifferentTables) {
+  /**
+   * Ensure that we get an error if we want to union different tables with different column definitions in debug builds
+   */
+  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto get_table_op_a = std::make_shared<GetTable>("int_int");
+  get_table_op_a->never_clear_output();
+
+  auto get_table_op_b = std::make_shared<GetTable>("int_float4");
+  get_table_op_b->never_clear_output();
+
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op_a, greater_than_(_int_column_0_non_nullable, 24));
+  table_scan_a_op->never_clear_output();
+
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op_b, greater_than_(_int_column_0_non_nullable, 24));
+  table_scan_b_op->never_clear_output();
+
+  execute_all({get_table_op_a, get_table_op_b, table_scan_a_op, table_scan_b_op});
+
+  /**
+   * Just an early check we're actually getting some results here
+   */
+  ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 3u);
+  ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 6u);
+
+  auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
+  EXPECT_THROW(union_unique_op->execute(), std::logic_error);
+}
+
+TEST_F(UnionPositionsTest, SameColumnsDifferentTables) {
+  /**
+   * Ensure that we get an error if we want to union different tables with equal column definitions in debug builds
+   */
+  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
+
+  auto get_table_op_a = std::make_shared<GetTable>("10_ints");
+  get_table_op_a->never_clear_output();
+
+  auto get_table_op_b = std::make_shared<GetTable>("10_ints_copy");
+  get_table_op_b->never_clear_output();
+
+  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op_a, greater_than_(_int_column_0_non_nullable, 24));
+  table_scan_a_op->never_clear_output();
+
+  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op_b, greater_than_(_int_column_0_non_nullable, 24));
+  table_scan_b_op->never_clear_output();
+
+  execute_all({get_table_op_a, get_table_op_b, table_scan_a_op, table_scan_b_op});
+
+  /**
+   * Just an early check we're actually getting some results here
+   */
+  ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 4u);
+  ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 4u);
+
+  auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
+  EXPECT_THROW(union_unique_op->execute(), std::logic_error);
 }
 
 }  // namespace opossum
