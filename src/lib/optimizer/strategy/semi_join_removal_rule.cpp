@@ -180,7 +180,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
         }
       }
       // If JoinNode does not correspond to semi_reduction_node, add a removal blocker and abort the upwards traversal.
-      if (!corresponding_join_by_semi_reduction.at(node)) {
+      if (!corresponding_join_by_semi_reduction.contains(node)) {
         removal_blockers.emplace(node);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
