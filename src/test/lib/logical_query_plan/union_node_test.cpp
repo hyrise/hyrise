@@ -85,7 +85,7 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
 TEST_F(UnionNodeTest, InvalidInputExpressions) {
-  // Equality of input expressions should only be enured in debug builds
+  // Equality of input nodes' expressions should only be ensured in debug builds
   if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto my_union_node = UnionNode::make(SetOperationMode::Positions);
