@@ -45,6 +45,15 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
   std::cout << "- " << *Hyrise::get().dependency_usage_config;
 
+  if (config.mining_config_path) {
+    std::cout << "- Loading dependency mining config from " << *config.mining_config_path << std::endl;
+    Hyrise::get().mining_config = process_dependency_mining_config_file(*config.mining_config_path);
+  } else {
+    std::cout << "- No dependency mining config provided, use default config" << std::endl;
+    Hyrise::get().mining_config = std::make_shared<DependencyMiningConfig>();
+  }
+  std::cout << "- " << *Hyrise::get().mining_config;
+
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     Hyrise::get().topology.use_default_topology(config.cores);
@@ -519,6 +528,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dep_mining_plugin", "The path for the DependencyMiningPlugin", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("dep_config", "The path for the DependencyUsageConfig", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("mining_config", "The path for the DependencyMiningConfig", cxxopts::value<std::string>()->default_value("")) // NOLINT
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
     ("data_preparation_cores", "Specify the number of cores used by the scheduler for data preparation, i.e., sorting and encoding tables and generating table statistics. 0 means all available cores.", cxxopts::value<uint32_t>()->default_value("0")); // NOLINT
   // clang-format on

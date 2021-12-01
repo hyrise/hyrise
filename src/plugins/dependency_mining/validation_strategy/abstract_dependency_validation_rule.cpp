@@ -64,7 +64,6 @@ bool AbstractDependencyValidationRule::_is_known(const std::string& table_name,
     default:
       Fail("Unknown TableConstraintType, this shouldn't happen.");
   }
-
 }
 
 std::pair<std::string, std::shared_ptr<AbstractTableConstraint>>

@@ -147,6 +147,11 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   if (!dependency_config_path_str.empty()) {
     dependency_config_path = dependency_config_path_str;
   }
+  std::optional<std::string> mining_config_path;
+  const auto mining_config_path_str = parse_result["mining_config"].as<std::string>();
+  if (!mining_config_path_str.empty()) {
+    mining_config_path = mining_config_path_str;
+  }
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
@@ -164,7 +169,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          cache_binary_tables,
                          metrics,
                          dependency_mining_plugin_path,
-                         dependency_config_path};
+                         dependency_config_path,
+                         mining_config_path};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {
