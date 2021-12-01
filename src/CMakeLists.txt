@@ -80,9 +80,6 @@ endif()
 # Include these libraries as system libraries to silence some warnings caused by -Weverything
 include_directories(
     SYSTEM
-    ${Boost_INCLUDE_DIRS}
-    ${TBB_INCLUDE_DIR}
-    ${SQLITE3_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
