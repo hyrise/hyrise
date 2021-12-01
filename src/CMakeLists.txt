@@ -72,10 +72,17 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/plugins/
 )
 
+if (NUMA_FOUND)
+    # Add libnuma sources for NUMA systems only
+    include_directories(${NUMA_INCLUDE_DIR})
+endif()
+
 # Include these libraries as system libraries to silence some warnings caused by -Weverything
 include_directories(
     SYSTEM
+    ${Boost_INCLUDE_DIRS}
     ${TBB_INCLUDE_DIR}
+    ${SQLITE3_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
