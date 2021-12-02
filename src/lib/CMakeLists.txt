@@ -726,11 +726,14 @@ target_link_libraries_system(
 
     boost
     nlohmann_json::nlohmann_json
-    numa
     robin_map
     sqlite3
     tbb
 )
+
+if (NUMA_FOUND)
+    target_link_libraries_system(hyrise_impl numa)
+endif()
 
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
