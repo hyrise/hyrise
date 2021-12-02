@@ -732,7 +732,7 @@ target_link_libraries_system(
 )
 
 if (NUMA_FOUND)
-    target_link_libraries_system(hyrise_impl numa)
+    target_link_libraries(hyrise_impl numa)
 endif()
 
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
