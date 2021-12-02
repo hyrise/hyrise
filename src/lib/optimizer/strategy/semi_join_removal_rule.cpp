@@ -211,22 +211,22 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     }
 
     // (2) Remove Semi Reduction node, but store information to revert this change.
-    const auto outputs = removal_candidate->outputs();
-    const auto input_sides = removal_candidate->get_input_sides();
-    const auto left_input = removal_candidate->left_input();
-    const auto right_input = removal_candidate->right_input();
+//    const auto outputs = removal_candidate->outputs();
+//    const auto input_sides = removal_candidate->get_input_sides();
+//    const auto left_input = removal_candidate->left_input();
+//    const auto right_input = removal_candidate->right_input();
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
     if (semi_reduction_selectivity >= 1.0f) continue;
 
     // (3) Estimate ...
-    const auto& corresponding_join_node = corresponding_join_by_semi_reduction.at(removal_candidate);
-    Assert(corresponding_join_node, "Expected corresponding join node for given Semi Reduction.");
-    const auto corresponding_join_input_side = corresponding_join_input_side_by_semi_reduction.at(removal_candidate);
-
-    const auto cardinality_estimator2 = cost_estimator->cardinality_estimator->new_instance();
-    const auto cardinality_out =
-        cardinality_estimator2->estimate_cardinality(corresponding_join_node->input(corresponding_join_input_side));
-    const auto other_predicates_selectivity = cardinality_out / cardinality_in;
+//    const auto& corresponding_join_node = corresponding_join_by_semi_reduction.at(removal_candidate);
+//    Assert(corresponding_join_node, "Expected corresponding join node for given Semi Reduction.");
+//    const auto corresponding_join_input_side = corresponding_join_input_side_by_semi_reduction.at(removal_candidate);
+//
+//    const auto cardinality_estimator2 = cost_estimator->cardinality_estimator->new_instance();
+//    const auto cardinality_out =
+//        cardinality_estimator2->estimate_cardinality(corresponding_join_node->input(corresponding_join_input_side));
+//    const auto other_predicates_selectivity = cardinality_out / cardinality_in;
 
     // (4) Re-add semi join reduction, if ...
 //    if (semi_reduction_selectivity < other_predicates_selectivity) {
