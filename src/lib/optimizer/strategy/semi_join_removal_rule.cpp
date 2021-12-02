@@ -229,13 +229,13 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     const auto other_predicates_selectivity = cardinality_out / cardinality_in;
 
     // (4) Re-add semi join reduction, if ...
-    if (semi_reduction_selectivity < other_predicates_selectivity) {
-      removal_candidate->set_left_input(left_input);
-      removal_candidate->set_right_input(right_input);
-      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
-        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
-      }
-    }
+//    if (semi_reduction_selectivity < other_predicates_selectivity) {
+//      removal_candidate->set_left_input(left_input);
+//      removal_candidate->set_right_input(right_input);
+//      for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+//        outputs[output_idx]->set_input(input_sides[output_idx], removal_candidate);
+//      }
+//    }
   }
 }
 
