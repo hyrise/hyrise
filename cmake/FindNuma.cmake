@@ -18,3 +18,7 @@ ELSE ()
     MESSAGE(STATUS "WARNING: Numa library not found.")
     MESSAGE(STATUS "Try: 'sudo yum install numactl numactl-devel' (or sudo apt-get install libnuma libnuma-dev)")
 ENDIF ()
+
+add_library(numa INTERFACE)
+target_include_directories(numa INTERFACE ${NUMA_INCLUDE_DIR})
+target_link_libraries(numa INTERFACE ${NUMA_LIBRARY})

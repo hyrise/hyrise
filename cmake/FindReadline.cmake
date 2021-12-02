@@ -18,3 +18,7 @@ ELSE ()
     MESSAGE(STATUS "WARNING: readline library not found.")
     MESSAGE(STATUS "Try: 'sudo yum install libreadline-dev' (or sudo apt-get install libreadline-dev)")
 ENDIF ()
+
+add_library(readline INTERFACE)
+target_include_directories(readline INTERFACE ${READLINE_INCLUDE_DIR})
+target_link_libraries(readline INTERFACE ${READLINE_LIBRARY})
