@@ -63,11 +63,6 @@ endif()
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 
 include_directories(
-# TODO(Marcel) remove, debug purpose only
-    ${Boost_INCLUDE_DIRS}
-    ${TBB_INCLUDE_DIR}
-    ${SQLITE3_INCLUDE_DIR}
-#
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
     ${PROJECT_SOURCE_DIR}/third_party/magic_enum/include

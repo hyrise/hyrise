@@ -15,7 +15,7 @@ function(add_plugin)
     add_dependencies(${PARSED_ARGS_NAME} hyrise)
 
     include_directories(${CMAKE_BINARY_DIR})  # For provider.hpp
-    target_link_libraries(${PARSED_ARGS_NAME} hyrise)
+    target_link_libraries(${PARSED_ARGS_NAME} hyrise_impl)
 
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
