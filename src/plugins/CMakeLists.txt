@@ -12,23 +12,13 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
-    add_dependencies(${PARSED_ARGS_NAME} hyrise)
-
-    target_include_directories(
+    # For provider.hpp
+    target_include_directories(${PARSED_ARGS_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+    target_link_libraries_system(
         ${PARSED_ARGS_NAME}
 
-        PRIVATE
-        ${CMAKE_BINARY_DIR} # For provider.hpp
-    )
-
-    # linking to the hyrise target results in a crash of a coverage build
-    target_include_directories(
-        ${PARSED_ARGS_NAME}
-
-        SYSTEM
-        PRIVATE
-        ${Boost_INCLUDE_DIRS}
-        ${TBB_INCLUDE_DIR}
+        tbb
+        boost
     )
 
     foreach(dep ${PARSED_ARGS_DEPS})
@@ -38,7 +28,7 @@ function(add_plugin)
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
+            target_link_libraries(${PARSED_ARGS_NAME} PRIVATE "-undefined dynamic_lookup")
         endif()
     endif()
 endfunction(add_plugin)
