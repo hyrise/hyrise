@@ -91,7 +91,6 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c
     ${ZSTD_LIBRARY_DIR}/common/xxhash.h
     ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
-    ${ZSTD_LIBRARY_DIR}/common/zstd_errors.h
     ${ZSTD_LIBRARY_DIR}/common/zstd_internal.h
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/hist.c
@@ -131,7 +130,6 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
-    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.h
     ${ZSTD_LIBRARY_DIR}/zstd.h
 )
 
