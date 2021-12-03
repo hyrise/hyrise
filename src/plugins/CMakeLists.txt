@@ -14,8 +14,22 @@ function(add_plugin)
 
     add_dependencies(${PARSED_ARGS_NAME} hyrise)
 
-    include_directories(${CMAKE_BINARY_DIR})  # For provider.hpp
-    target_link_libraries(${PARSED_ARGS_NAME} hyrise_impl)
+    target_include_directories(
+        ${PARSED_ARGS_NAME}
+
+        PRIVATE
+        ${CMAKE_BINARY_DIR} # For provider.hpp
+    )
+
+    # linking to the hyrise target results in a crash of a coverage build
+    target_include_directories(
+        ${PARSED_ARGS_NAME}
+
+        SYSTEM
+        PRIVATE
+        ${Boost_INCLUDE_DIRS}
+        ${TBB_INCLUDE_DIR}
+    )
 
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
