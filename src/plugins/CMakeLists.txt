@@ -18,7 +18,7 @@ function(add_plugin)
         ${PARSED_ARGS_NAME}
 
         tbb
-        boost
+        ${BOOST_LIBS}
     )
 
     foreach(dep ${PARSED_ARGS_DEPS})

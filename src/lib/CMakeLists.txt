@@ -724,7 +724,7 @@ endif()
 target_link_libraries_system(
     hyrise_impl
 
-    boost
+    ${BOOST_LIBS}
     nlohmann_json::nlohmann_json
     robin_map
     SQLite::SQLite3
