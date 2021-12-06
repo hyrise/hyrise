@@ -5,13 +5,8 @@
 #  NUMA_FOUND       : True if found.
 
 add_library(numa INTERFACE)
-
-find_path(NUMA_INCLUDE_DIR NAME numa.h
-    HINTS $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include)
-
-find_library(NUMA_LIBRARY NAME numa
-    HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib
-    )
+find_path(NUMA_INCLUDE_DIR NAME numa.h)
+find_library(NUMA_LIBRARY NAME numa)
 
 if (NUMA_INCLUDE_DIR AND NUMA_LIBRARY)
     set(NUMA_FOUND TRUE)
@@ -21,5 +16,5 @@ if (NUMA_INCLUDE_DIR AND NUMA_LIBRARY)
 else ()
     set(NUMA_FOUND FALSE)
     message(STATUS "WARNING: Numa library not found.")
-    message(STATUS "Try: 'sudo yum install numactl numactl-devel' (or sudo apt-get install libnuma libnuma-dev)")
+    message(STATUS "Try: 'sudo apt-get install libnuma libnuma-dev'")
 endif ()

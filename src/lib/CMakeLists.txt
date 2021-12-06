@@ -727,7 +727,7 @@ target_link_libraries_system(
     boost
     nlohmann_json::nlohmann_json
     robin_map
-    sqlite3
+    SQLite::SQLite3
     tbb
 )
 
