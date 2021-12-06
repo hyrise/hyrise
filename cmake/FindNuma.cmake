@@ -5,8 +5,12 @@
 #  NUMA_FOUND       : True if found.
 
 add_library(numa INTERFACE)
-find_path(NUMA_INCLUDE_DIR NAME numa.h)
-find_library(NUMA_LIBRARY NAME numa)
+
+find_path(NUMA_INCLUDE_DIR NAME numa.h
+    HINTS $ENV{HOME}/local/include /opt/local/include /usr/local/include /usr/include)
+
+find_library(NUMA_LIBRARY NAME numa
+    HINTS $ENV{HOME}/local/lib64 $ENV{HOME}/local/lib /usr/local/lib64 /usr/local/lib /opt/local/lib64 /opt/local/lib /usr/lib64 /usr/lib)
 
 if (NUMA_INCLUDE_DIR AND NUMA_LIBRARY)
     set(NUMA_FOUND TRUE)

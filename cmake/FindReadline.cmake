@@ -5,8 +5,12 @@
 #  READLINE_FOUND       : True if found.
 
 add_library(readline INTERFACE)
+
 find_path(READLINE_INCLUDE_DIR NAME readline/readline.h)
-find_library(READLINE_LIBRARY NAME readline)
+    HINTS /usr/local/opt/ /opt/homebrew/opt/)
+
+find_library(READLINE_LIBRARY NAME readline
+    HINTS /usr/local/opt/ /opt/homebrew/opt/)
 
 if (READLINE_INCLUDE_DIR AND READLINE_LIBRARY)
     set(READLINE_FOUND TRUE)
