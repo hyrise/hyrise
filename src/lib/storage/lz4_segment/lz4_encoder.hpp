@@ -1,6 +1,6 @@
 #pragma once
 
-#include <lib/dictBuilder/zdict.h>
+#include <lib/zdict.h>
 #include <lz4hc.h>
 
 #include <algorithm>
@@ -236,7 +236,8 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
     const auto input_size = values.size();
     auto dictionary = pmr_vector<char>{allocator};
     if (input_size > _block_size) {
-      dictionary = _train_dictionary(values, string_samples_lengths);
+      // Temporarily disabled as we segfault with JOB data.
+      //dictionary = _train_dictionary(values, string_samples_lengths);
     }
 
     /**
