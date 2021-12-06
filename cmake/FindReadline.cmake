@@ -6,7 +6,7 @@
 
 add_library(readline INTERFACE)
 
-find_path(READLINE_INCLUDE_DIR NAME readline/readline.h)
+find_path(READLINE_INCLUDE_DIR NAME readline/readline.h
     HINTS /usr/local/opt/ /opt/homebrew/opt/)
 
 find_library(READLINE_LIBRARY NAME readline
