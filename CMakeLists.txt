@@ -117,6 +117,7 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
 # Dependencies
+set(DEFAULT_LIB_DIRS $ENV{HOME}/local /opt/local /usr/local /usr)
 find_package(Numa QUIET)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)

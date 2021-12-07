@@ -7,12 +7,12 @@
 add_library(tbb INTERFACE)
 
 find_path(TBB_INCLUDE_DIR NAME tbb/tbb.h
-    HINTS $ENV{HOME}/local /opt/local /usr/local /usr
+    HINTS ${DEFAULT_LIB_DIRS}
     PATH_SUFFIXES include
 )
 
 find_library(TBB_LIBRARY NAME tbb
-    HINTS $ENV{HOME}/local /usr/local /opt/local /usr
+    HINTS ${DEFAULT_LIB_DIRS}
     PATH_SUFFIXES lib lib64
 )
 

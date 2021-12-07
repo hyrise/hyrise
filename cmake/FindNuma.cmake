@@ -7,12 +7,12 @@
 add_library(numa INTERFACE)
 
 find_path(NUMA_INCLUDE_DIR NAME numa.h
-    HINTS $ENV{HOME}/local /opt/local /usr/local /usr
+    HINTS ${DEFAULT_LIB_DIRS}
     PATH_SUFFIXES include
 )
 
 find_library(NUMA_LIBRARY NAME numa
-    HINTS $ENV{HOME}/local /usr/local /opt/local /usr
+    HINTS ${DEFAULT_LIB_DIRS}
     PATH_SUFFIXES lib lib64
 )
 
