@@ -7,12 +7,12 @@
 add_library(numa INTERFACE)
 
 find_path(NUMA_INCLUDE_DIR NAME numa.h
-    HINTS ${DEFAULT_LIB_DIRS}
+    PATHS ${DEFAULT_LIB_DIRS}
     PATH_SUFFIXES include
 )
 
 find_library(NUMA_LIBRARY NAME numa
-    HINTS ${DEFAULT_LIB_DIRS}
+    PATHS ${DEFAULT_LIB_DIRS}
     PATH_SUFFIXES lib lib64
 )
 
