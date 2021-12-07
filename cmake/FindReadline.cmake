@@ -7,12 +7,12 @@
 add_library(readline INTERFACE)
 
 find_path(READLINE_INCLUDE_DIR NAME readline/readline.h
-    HINTS /usr/local/opt/readline /opt/homebrew/opt/readline $ENV{HOME}/local /opt/local /usr/local /usr
+    HINTS /opt/homebrew/opt/readline $ENV{HOME}/local /opt/local /usr/local /usr
     PATH_SUFFIXES include
 )
 
 find_library(READLINE_LIBRARY NAME readline
-    HINTS /usr/local/opt/readline /opt/homebrew/opt/readline $ENV{HOME}/local /usr/local /opt/local /usr
+    HINTS /opt/homebrew/opt/readline $ENV{HOME}/local /usr/local /opt/local /usr
     PATH_SUFFIXES lib lib64
 )
 
