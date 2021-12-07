@@ -11,7 +11,6 @@ find_path(READLINE_INCLUDE_DIR NAME readline/readline.h
     PATH_SUFFIXES include
 )
 
-
 find_library(READLINE_LIBRARY NAME readline
     HINTS /usr/local/opt/readline /opt/homebrew/opt/readline $ENV{HOME}/local /usr/local /opt/local /usr
     PATH_SUFFIXES lib lib64
