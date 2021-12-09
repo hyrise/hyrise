@@ -159,12 +159,15 @@ std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependen
 }
 
 std::vector<OrderDependency> AggregateNode::order_dependencies() {
-  if (_retrieved_ods) return _order_dependencies;
-  auto forward_ods = left_input()->order_dependencies();
-  remove_invalid_ods(shared_from_this(), forward_ods);
-  _order_dependencies = forward_ods;
-  _retrieved_ods = true;
-  return _order_dependencies;
+  auto order_dependencies = left_input()->order_dependencies();
+  remove_invalid_ods(shared_from_this(), order_dependencies);
+  return order_dependencies;
+}
+
+std::vector<InclusionDependency> AggregateNode::inclusion_dependencies() {
+  auto inclusion_dependencies = left_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), inclusion_dependencies);
+  return inclusion_dependencies;
 }
 
 size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }

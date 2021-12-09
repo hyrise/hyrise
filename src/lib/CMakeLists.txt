@@ -9,6 +9,10 @@ set(
     all_parameter_variant.hpp
     all_type_variant.cpp
     all_type_variant.hpp
+    dependency_mining_config.cpp
+    dependency_mining_config.hpp
+    dependency_usage_config.cpp
+    dependency_usage_config.hpp
     cache/abstract_cache.hpp
     cache/gdfs_cache.hpp
     concurrency/commit_context.cpp
@@ -61,6 +65,8 @@ set(
     expression/function_expression.hpp
     expression/in_expression.cpp
     expression/in_expression.hpp
+    expression/interval_expression.cpp
+    expression/interval_expression.hpp
     expression/is_null_expression.cpp
     expression/is_null_expression.hpp
     expression/list_expression.cpp
@@ -128,6 +134,8 @@ set(
     logical_query_plan/export_node.hpp
     logical_query_plan/functional_dependency.cpp
     logical_query_plan/functional_dependency.hpp
+    logical_query_plan/inclusion_dependency.cpp
+    logical_query_plan/inclusion_dependency.hpp
     logical_query_plan/order_dependency.cpp
     logical_query_plan/order_dependency.hpp
     logical_query_plan/import_node.cpp
@@ -431,6 +439,10 @@ set(
     storage/base_value_segment.hpp
     storage/abstract_table_constraint.cpp
     storage/abstract_table_constraint.hpp
+    storage/table_column_id.cpp
+    storage/table_column_id.hpp
+    storage/table_inclusion_constraint.cpp
+    storage/table_inclusion_constraint.hpp
     storage/table_key_constraint.cpp
     storage/table_key_constraint.hpp
     storage/table_order_constraint.cpp
@@ -572,6 +584,8 @@ set(
     utils/column_ids_after_pruning.cpp
     utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
+    utils/date_utils.cpp
+    utils/date_utils.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
@@ -660,6 +674,7 @@ set(
     ${Boost_CONTAINER_LIBRARY}
     ${Boost_SYSTEM_LIBRARY}
     ${Boost_THREAD_LIBRARY}
+    ${Boost_DATE_TIME_LIBRARY}
     ${TBB_LIBRARY}
     ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}

@@ -74,6 +74,18 @@ std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_depende
   return non_trivial_fds;
 }
 
+std::vector<OrderDependency> ProjectionNode::order_dependencies() {
+  auto ods = left_input()->order_dependencies();
+  remove_invalid_ods(shared_from_this(), ods);
+  return ods;
+}
+
+std::vector<InclusionDependency> ProjectionNode::inclusion_dependencies() {
+  auto inds = left_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), inds);
+  return inds;
+}
+
 std::shared_ptr<AbstractLQPNode> ProjectionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return make(expressions_copy_and_adapt_to_different_lqp(node_expressions, node_mapping));
 }

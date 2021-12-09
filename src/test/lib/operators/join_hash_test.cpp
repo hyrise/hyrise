@@ -79,17 +79,15 @@ TEST_F(OperatorsJoinHashTest, DescriptionAndName) {
                                  std::vector<OperatorJoinPredicate>{secondary_predicate}, 4);
 
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinHash (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: Unspecified");
+            "JoinHash (Inner) Column #0 = Column #0 AND Column #0 != Column #0");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: Unspecified");
+            "JoinHash (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0");
   EXPECT_EQ(join_operator_with_radix->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: 4");
+            "JoinHash (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0");
 
   dummy_input->execute();
-  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinHash (Inner Join where a = a AND a != a) Radix bits: Unspecified");
-  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where a = a AND a != a) Radix bits: Unspecified");
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "JoinHash (Inner) a = a AND a != a");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "JoinHash (Inner)\na = a\nAND a != a");
 
   EXPECT_EQ(join_operator->name(), "JoinHash");
 }

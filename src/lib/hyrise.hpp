@@ -3,6 +3,8 @@
 #include <boost/container/pmr/memory_resource.hpp>
 
 #include "concurrency/transaction_manager.hpp"
+#include "dependency_mining_config.hpp"
+#include "dependency_usage_config.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
 #include "scheduler/topology.hpp"
 #include "sql/sql_plan_cache.hpp"
@@ -52,6 +54,9 @@ class Hyrise : public Singleton<Hyrise> {
   // nullptr themselves. If both default_{l/p}qp_cache and _{l/p}qp_cache are nullptr, no plan caching is used.
   std::shared_ptr<SQLPhysicalPlanCache> default_pqp_cache;
   std::shared_ptr<SQLLogicalPlanCache> default_lqp_cache;
+
+  std::shared_ptr<DependencyUsageConfig> dependency_usage_config;
+  std::shared_ptr<DependencyMiningConfig> mining_config;
 
   // The BenchmarkRunner is available here so that non-benchmark components can add information to the benchmark
   // result JSON.

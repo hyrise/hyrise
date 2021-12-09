@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 #include "dependency_mining/dependency_validator.hpp"
 #include "dependency_mining/pqp_analyzer.hpp"
 #include "dependency_mining/util.hpp"
@@ -7,27 +9,34 @@
 
 /* Dependency Mining / Optimization doc
  *
- *  for enabling specific optimizations: - check switches at lib/optimizer/strategy/column_pruning_rule.hpp for Join2Semi and Join2Predciate
- *                                       - consider commenting out DependentGroupByReductionRule at lib/optimizer/optimizer.cpp L57
- *  for mining dependencies for specific optimizations: - check switches at plugins/dependency_mining/pqp_analyzer.hpp
- *  when mining plugins/to turn off all optimizations: - comment out benchmarklib/abstract_table_generator.cpp L188 _add_constraints(table_info_by_name);
- *      --> otherwise, UCC mining will notice that dependency is already set and do early-out
- *  extra TPC-DS queries are shipped at <project_root>/tpcds_extra_queries
- *  plugin is loaded by using CLI option --dep_mining_plugin <plugin_path>
+ *  for enabling specific optimizations and dependency mining for them:
+ *      - check switches at src/dependency_usage_config.hpp for default values
+ *      - provide a JSON file with own values via CLI option --dep_config <usage_config_path>
+ *      - an exemplary file can be found at <root_dir>/dependency_config.json
+ *  when mining plugins/to turn off all optimizations:
+ *      - set "preset_constraints" to false in the config file
+ *      - otherwise,
+ *          - some candidates might not be generated
+ *          - UCC mining will notice that dependency is already set and do early-out
+ *  to mine dependencies, load plugin
+ *      - using CLI option --dep_mining_plugin <plugin_path>
+ *      - <plugin_path> is the absolute path to the plugin library
+ *      - i.e., <build_dir>/lib/libhyriseDependencyMiningPlugin.[so|dylib]
+ *      - to restrict mining:
+ *          - check switches at src/dependency_mining_config.hpp for default values
+ *          - provide a JSON file with own values via CLI option --mining_config <mining_config_path>
+ *          - an exemplary file can be found at <root_dir>/mining_config.json
  */
 namespace opossum {
 
 class DependencyMiningPlugin : public AbstractPlugin {
  public:
-  explicit DependencyMiningPlugin();
+  DependencyMiningPlugin();
   std::string description() const final;
 
   void start() final;
 
   void stop() final;
-
-  constexpr static size_t NUM_VALIDATORS = 1;
-  constexpr static bool DO_VALIDATE = true;
 
  protected:
   std::shared_ptr<DependencyCandidateQueue> _queue;

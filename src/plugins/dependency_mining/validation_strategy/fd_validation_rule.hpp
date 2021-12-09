@@ -9,7 +9,7 @@ class FDValidationRule : public AbstractDependencyValidationRule {
   FDValidationRule();
 
  protected:
-  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final override;
+  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final;
   const std::unique_ptr<AbstractDependencyValidationRule> _ucc_rule;
 };
 

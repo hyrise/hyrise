@@ -10,7 +10,7 @@ class UCCValidationRule : public AbstractDependencyValidationRule {
   UCCValidationRule();
 
  protected:
-  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final override;
+  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final;
 
   template <typename AggregateKey>
   KeysPerChunk<AggregateKey> _partition_by_groupby_keys(const std::shared_ptr<const Table>& input_table,

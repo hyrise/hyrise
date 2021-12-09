@@ -10,7 +10,7 @@ class ODValidationRule : public AbstractDependencyValidationRule {
   constexpr static uint64_t SAMPLE_ROW_COUNT = 100;
 
  protected:
-  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final override;
+  std::shared_ptr<ValidationResult> _on_validate(const DependencyCandidate& candidate) const final;
 };
 
 }  // namespace opossum

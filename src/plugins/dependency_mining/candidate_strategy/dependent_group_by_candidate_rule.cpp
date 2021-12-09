@@ -8,7 +8,9 @@ DependentGroupByCandidateRule::DependentGroupByCandidateRule()
     : AbstractDependencyCandidateRule(LQPNodeType::Aggregate) {}
 
 std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority,
+    const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
+        required_expressions_by_node) const {
   const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
   const auto num_group_by_columns = aggregate_node->aggregate_expressions_begin_idx;
   if (num_group_by_columns < 2) {

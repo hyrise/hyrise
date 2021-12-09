@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-enum class TableConstraintType { Key, Order };
+enum class TableConstraintType { Key, Order, Inclusion };
 
 /**
  * Abstract container class for the definition of table constraints based on a set of column ids.

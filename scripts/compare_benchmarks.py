@@ -12,6 +12,15 @@ from scipy.stats import ttest_ind
 p_value_significance_threshold = 0.001
 min_iterations = 10
 min_runtime_ns = 59 * 1000 * 1000 * 1000
+min_iterations_disabling_min_runtime = 100
+
+max_lost = 0
+max_gain = 0
+num_lost = 0
+num_gain = 0
+
+# threshold for latency gain/loss to be considered (>=)
+confidence_threshold = 5
 
 
 def format_diff(diff):
@@ -46,7 +55,13 @@ def calculate_and_format_p_value(old_durations, new_durations):
 
     old_runtime = sum(runtime for runtime in old_durations)
     new_runtime = sum(runtime for runtime in new_durations)
-    if old_runtime < min_runtime_ns or new_runtime < min_runtime_ns:
+
+    # The results for a query are considered to be statistically not significant if the runtime is too short. However,
+    # if the item has been executed > `min_iterations_disabling_min_runtime` times, it is considered significant.
+    if (old_runtime < min_runtime_ns or new_runtime < min_runtime_ns) and (
+        len(old_durations) < min_iterations_disabling_min_runtime
+        or len(new_durations) < min_iterations_disabling_min_runtime
+    ):
         is_significant = False
         return "(run time too short)"
     elif len(old_durations) < min_iterations or len(new_durations) < min_iterations:
@@ -178,6 +193,14 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     # Check for duration==0 to avoid div/0
     if float(old_avg_successful_duration) > 0.0:
         diff_duration = float(new_avg_successful_duration / old_avg_successful_duration)
+        change = int(format_diff(diff_duration).replace("%", ""))
+        max_lost = min(change, max_lost)
+        max_gain = max(change, max_gain)
+        if abs(change) >= confidence_threshold:
+            if change < 0:
+                num_lost += 1
+            elif change > 0:
+                num_gain += 1
     else:
         diff_duration = float("nan")
 
@@ -347,9 +370,9 @@ if github_format:
         + "```diff\n"
     )
     for line in table_string.splitlines():
-        if (green_control_sequence + "+" in line) or ("| Sum " in line and green_control_sequence in line):
+        if green_control_sequence in line:
             table_string_reformatted += "+"
-        elif (red_control_sequence + "-" in line) or ("| Sum " in line and red_control_sequence in line):
+        elif red_control_sequence in line:
             table_string_reformatted += "-"
         else:
             table_string_reformatted += " "
@@ -361,3 +384,12 @@ else:
     table_string = create_context_overview(old_data, new_data, github_format) + "\n\n" + table_string
 
 print(table_string)
+print()
+print("loss --> latency now lower, gain --> latency now higher")
+print(f"baseline:    {round(total_runtime_old / 10**9, 1)}s")
+print(f"abs. change: {round((total_runtime_new - total_runtime_old) / 10**9, 1)}s")
+print(f"rel.change:  {round(((total_runtime_new / total_runtime_old) - 1) * 100)}%")
+print(f"max loss:  {max_lost}%")
+print(f"max gain:  {max_gain}%")
+print(f"# losses >= {confidence_threshold}%:  {num_lost}")
+print(f"# gains >= {confidence_threshold}%:  {num_gain}")

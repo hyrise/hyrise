@@ -6,6 +6,7 @@
 #include "cost_estimation/cost_estimator_logical.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_subquery_expression.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "strategy/between_composition_rule.hpp"
@@ -54,7 +55,10 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // Run Group-By Reduction after the JoinOrderingRule ran. The actual join order is not important, but the matching
   // of cross joins with predicates that is done by that rule is needed to create some of the functional dependencies
   // (FDs) used by the DependentGroupByReductionRule.
-  optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+  Assert(Hyrise::get().dependency_usage_config, "No DependencyUsageConfig set");
+  if (Hyrise::get().dependency_usage_config->enable_groupby_reduction) {
+    optimizer->add_rule(std::make_unique<DependentGroupByReductionRule>());
+  }
 
   optimizer->add_rule(std::make_unique<BetweenCompositionRule>());
 

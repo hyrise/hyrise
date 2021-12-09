@@ -1,8 +1,8 @@
 #pragma once
 
-#include "abstract_table_constraint.hpp"
-
 #include <tbb/concurrent_vector.h>
+
+#include "abstract_table_constraint.hpp"
 
 namespace opossum {
 

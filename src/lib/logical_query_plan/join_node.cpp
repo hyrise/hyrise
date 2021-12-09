@@ -57,17 +57,16 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
    */
 
   const auto& left_expressions = left_input()->output_expressions();
-  const auto& right_expressions = right_input()->output_expressions();
-
   const auto output_both_inputs =
       join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
+  if (!output_both_inputs) return left_expressions;
 
+  const auto& right_expressions = right_input()->output_expressions();
   auto output_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  output_expressions.resize(left_expressions.size() + (output_both_inputs ? right_expressions.size() : 0));
+  output_expressions.resize(left_expressions.size() + right_expressions.size());
 
   auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), output_expressions.begin());
-
-  if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+  std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
   return output_expressions;
 }
@@ -231,7 +230,6 @@ std::vector<OrderDependency> JoinNode::order_dependencies() {
   // TO DO transitive ODs:
   // A.a -> A.b, B.a -> B.b
   // Join on A.b = B.a yields new dependency A.a -> B.b
-  if (_retrieved_ods) return _order_dependencies;
 
   auto left_dependencies = left_input()->order_dependencies();
   auto right_dependencies = right_input()->order_dependencies();
@@ -239,16 +237,39 @@ std::vector<OrderDependency> JoinNode::order_dependencies() {
   remove_invalid_ods(shared_from_this(), right_dependencies);
 
   // make sure not to have anything twice on self joins
-  _order_dependencies = left_dependencies;
+  auto order_dependencies = left_dependencies;
   for (const auto& right_od : right_dependencies) {
     bool is_known = false;
     for (const auto& left_od : left_dependencies) {
       is_known = is_known || right_od == left_od;
     }
-    if (!is_known) _order_dependencies.emplace_back(right_od);
+    if (!is_known) order_dependencies.emplace_back(right_od);
   }
-  _retrieved_ods = true;
-  return _order_dependencies;
+  return order_dependencies;
+}
+
+std::vector<InclusionDependency> JoinNode::inclusion_dependencies() {
+  // even if tuples are discarded or multiplied, ODs still hold
+  // TO DO transitive ODs:
+  // A.a -> A.b, B.a -> B.b
+  // Join on A.b = B.a yields new dependency A.a -> B.b
+  // if (_retrieved_inds) return _inclusion_dependencies;
+
+  auto left_dependencies = left_input()->inclusion_dependencies();
+  auto right_dependencies = right_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), left_dependencies);
+  remove_invalid_inds(shared_from_this(), right_dependencies);
+
+  // make sure not to have anything twice on self joins
+  auto inclusion_dependencies = left_dependencies;
+  for (const auto& right_ind : right_dependencies) {
+    bool is_known = false;
+    for (const auto& left_ind : left_dependencies) {
+      is_known = is_known || right_ind == left_ind;
+    }
+    if (!is_known) inclusion_dependencies.emplace_back(right_ind);
+  }
+  return inclusion_dependencies;
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }

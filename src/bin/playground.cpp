@@ -47,14 +47,16 @@ int main() {
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   auto lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
-  //auto table_generator = std::make_unique<TPCDSTableGenerator>(10, std::make_shared<config>);
-  //table_generator->generate_and_store();
-  //const auto inv_table = Hyrise::get().storage_manager.get_table("inventory");
-  //std::cout << inv_table->last_chunk()->size() << std::endl;
+  // auto table_generator = std::make_unique<TPCDSTableGenerator>(10, std::make_shared<config>);
+  // table_generator->generate_and_store();
+  // const auto inv_table = Hyrise::get().storage_manager.get_table("inventory");
+  // std::cout << inv_table->last_chunk()->size() << std::endl;
 
   std::vector<std::chrono::nanoseconds> runtimes;
   runtimes.reserve(num_repetitions);
-  //const std::string query = "SELECT mk.movie_id FROM keyword AS k, movie_keyword AS mk WHERE k.keyword IS NOT NULL AND k.keyword IN ('murder', 'murder-in-title', 'blood', 'violence') AND k.id = mk.keyword_id";
+  // const std::string query = "SELECT mk.movie_id FROM keyword AS k, movie_keyword AS mk WHERE k.keyword IS NOT"
+  //                           "NULL AND k.keyword IN ('murder', 'murder-in-title', 'blood', 'violence')"
+  //                           "AND k.id = mk.keyword_id";
   const std::string query =
       "SELECT cs_item_sk FROM   catalog_sales, customer_demographics WHERE cs_bill_cdemo_sk = cd_demo_sk  AND "
       "cd_gender = 'F'  AND cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
@@ -65,9 +67,10 @@ int main() {
   for (size_t current_repetition = 0; current_repetition <= num_repetitions; ++current_repetition) {
     auto pipeline = SQLPipelineBuilder{query}.with_pqp_cache(pqp_cache).with_lqp_cache(lqp_cache).create_pipeline();
     pipeline.get_result_table();
-    //const auto pqps = pipeline.get_physical_plans();
+    // const auto pqps = pipeline.get_physical_plans();
     const auto metrics = pipeline.metrics();
-    //std::cout << metrics << std::endl << format_duration(metrics.statement_metrics.at(0)->plan_execution_duration) << std::endl;
+    // std::cout << metrics << std::endl << format_duration(metrics.statement_metrics.at(0)->plan_execution_duration)
+    //           << std::endl;
     if (current_repetition == 0) {
       std::cout << metrics << std::endl;
       continue;
@@ -152,7 +155,7 @@ int main() {
     new_table->append(row);
   }
 
-  //const auto new_table_mutable = std::const_pointer_cast<Table>(new_table);
+  // const auto new_table_mutable = std::const_pointer_cast<Table>(new_table);
   new_table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(new_table);
   const auto new_table_name = measurement_table + "_new";
@@ -160,7 +163,9 @@ int main() {
             << new_table->row_count() << " rows" << std::endl;
   Hyrise::get().storage_manager.add_table(new_table_name, new_table);
 
-  //const std::string query2 = query + " UNION ALL SELECT cs_item_sk FROM   catalog_sales, " + new_table_name + " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
+  // const std::string query2 = query + " UNION ALL SELECT cs_item_sk FROM   catalog_sales, "
+  //                           + new_table_name + " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND"
+  //                           "cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
   const std::string query2 = "SELECT cs_item_sk FROM   catalog_sales, " + new_table_name +
                              " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  "
                              "AND cd_education_status = 'Secondary' and catalog_sales.cs_bill_cdemo_sk BETWEEN 0 AND " +

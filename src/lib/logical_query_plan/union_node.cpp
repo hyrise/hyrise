@@ -19,9 +19,11 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
-  Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
-         "Input Expressions must match");
-  return left_input()->output_expressions();
+  const auto& left_expressions = left_input()->output_expressions();
+  if (set_operation_mode != SetOperationMode::Positions) {
+    Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match");
+  }
+  return left_expressions;
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
@@ -97,7 +99,6 @@ std::vector<OrderDependency> UnionNode::order_dependencies() {
   // TO DO transitive ODs:
   // A.a -> A.b, B.a -> B.b
   // Join on A.b = B.a yields new dependency A.a -> B.b
-  if (_retrieved_ods) return _order_dependencies;
 
   auto left_dependencies = left_input()->order_dependencies();
   auto right_dependencies = right_input()->order_dependencies();
@@ -105,14 +106,31 @@ std::vector<OrderDependency> UnionNode::order_dependencies() {
   remove_invalid_ods(shared_from_this(), right_dependencies);
 
   // intersect
-  std::vector<OrderDependency> _order_dependencies;
+  std::vector<OrderDependency> order_dependencies;
   for (const auto& right_od : right_dependencies) {
     for (const auto& left_od : left_dependencies) {
-      if (right_od == left_od) _order_dependencies.emplace_back(right_od);
+      if (right_od == left_od) order_dependencies.emplace_back(right_od);
     }
   }
-  _retrieved_ods = true;
-  return _order_dependencies;
+
+  return order_dependencies;
+}
+
+std::vector<InclusionDependency> UnionNode::inclusion_dependencies() {
+  auto left_dependencies = left_input()->inclusion_dependencies();
+  auto right_dependencies = right_input()->inclusion_dependencies();
+  remove_invalid_inds(shared_from_this(), left_dependencies);
+  remove_invalid_inds(shared_from_this(), right_dependencies);
+
+  // intersect
+  std::vector<InclusionDependency> inclusion_dependencies;
+  for (const auto& right_ind : right_dependencies) {
+    for (const auto& left_ind : left_dependencies) {
+      if (right_ind == left_ind) inclusion_dependencies.emplace_back(right_ind);
+    }
+  }
+
+  return inclusion_dependencies;
 }
 
 size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }

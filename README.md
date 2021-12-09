@@ -6,7 +6,7 @@
 
 The relevant binary targets are `hyriseBenchmarkJoinOrder`, `hyriseBenchmarkTPCDS`, `hyriseBenchmarkTPCH` for the benchmarks and `hyriseDependencyMiningPlugin` for the plugin. For general build instructions, consider the detailed instructions below. We adjusted the Hyrise BenchmarkRunner to load the plugin if its path is provided as a command line parameter, e.g., `./cmake-build-release/hyriseBenchmarkTPCDS -r 1 --dep_mining_plugin /home/ExampleUser/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so`
 
-Further instructions on how to configure and use the plugin for dependency discovery can be found in [dependency_mining_plugin.hpp](https://github.com/hyrise/hyrise/blob/bensk1/workload_driven_data_dependency_discovery/src/plugins/dependency_mining_plugin.hpp).
+Further instructions on how to configure and use the plugin for dependency discovery can be found in [dependency_mining_plugin.hpp](src/plugins/dependency_mining_plugin.hpp).
 
 
 # Welcome to Hyrise

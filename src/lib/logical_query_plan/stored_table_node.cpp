@@ -124,10 +124,9 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
 }
 
 std::vector<OrderDependency> StoredTableNode::order_dependencies() {
-  if (_retrieved_ods) return _order_dependencies;
-
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_order_constraints = table->soft_order_constraints();
+  std::vector<OrderDependency> order_dependencies;
 
   for (const TableOrderConstraint& table_order_constraint : table_order_constraints) {
     // Discard order constraints that involve pruned column id(s).
@@ -150,7 +149,7 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
     determinant_expressions.reserve(determinant_column_ids.size());
     dependent_expressions.reserve(dependent_column_ids.size());
 
-    for (const auto determinant_column_id : determinant_column_ids) {
+    for (const auto& determinant_column_id : determinant_column_ids) {
       for (const auto& output_expression : output_ex) {
         const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
         if (!column_expression || *column_expression->original_node.lock() != *this) {
@@ -163,7 +162,7 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
       }
     }
 
-    for (const auto dependent_column_id : dependent_column_ids) {
+    for (const auto& dependent_column_id : dependent_column_ids) {
       for (const auto& output_expression : output_ex) {
         const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
         if (!column_expression || *column_expression->original_node.lock() != *this) {
@@ -177,11 +176,54 @@ std::vector<OrderDependency> StoredTableNode::order_dependencies() {
     }
 
     // Create OrderDependency
-    _order_dependencies.emplace_back(OrderDependency{determinant_expressions, dependent_expressions});
+    order_dependencies.emplace_back(OrderDependency{determinant_expressions, dependent_expressions});
   }
-  _retrieved_ods = true;
 
-  return _order_dependencies;
+  return order_dependencies;
+}
+
+std::vector<InclusionDependency> StoredTableNode::inclusion_dependencies() {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_inclusion_constraints = table->soft_inclusion_constraints();
+  std::vector<InclusionDependency> inclusion_dependencies;
+
+  for (const auto& table_inclusion_constraint : table_inclusion_constraints) {
+    // Discard inclusion constraints that involve pruned column id(s).
+    const auto& dependent_column_ids = table_inclusion_constraint.dependents();
+    const auto& determinant_column_id_pairs = table_inclusion_constraint.determinants();
+    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
+                    [&dependent_column_ids](const auto& pruned_column_id) {
+                      return std::find(dependent_column_ids.begin(), dependent_column_ids.end(), pruned_column_id) !=
+                             dependent_column_ids.end();
+                    })) {
+      continue;
+    }
+
+    // Search for expressions representing the IND's ColumnIDs
+    const auto& output_ex = output_expressions();
+    ExpressionList dependent_expressions;
+    dependent_expressions.reserve(dependent_column_ids.size());
+
+    for (const auto& dependent_column_id : dependent_column_ids) {
+      for (const auto& output_expression : output_ex) {
+        const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+        if (!column_expression || *column_expression->original_node.lock() != *this) {
+          std::cout << "Error fetching ColumnExpression on creating OrderDependency." << std::endl;
+          continue;
+        }
+        if (dependent_column_id == column_expression->original_column_id) {
+          dependent_expressions.emplace_back(column_expression);
+        }
+      }
+    }
+
+    // Create InclusionDependency
+    // The existence of determinant tables and column ids has been checked by table
+    const auto ind = InclusionDependency{determinant_column_id_pairs, dependent_expressions};
+    inclusion_dependencies.emplace_back(ind);
+  }
+
+  return inclusion_dependencies;
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {

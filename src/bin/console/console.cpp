@@ -137,6 +137,13 @@ Console::Console()
   Hyrise::get().default_pqp_cache = _pqp_cache;
   Hyrise::get().default_lqp_cache = _lqp_cache;
 
+  // Set Dependency Usage Config (allow master behavior)
+  const auto dependency_usage_config = std::make_shared<DependencyUsageConfig>();
+  dependency_usage_config->enable_groupby_reduction = true;
+  dependency_usage_config->enable_join_to_semi = true;
+  dependency_usage_config->allow_preset_constraints = true;
+  Hyrise::get().dependency_usage_config = dependency_usage_config;
+
   // Register default commands to Console
   register_command("exit", std::bind(&Console::_exit, this, std::placeholders::_1));
   register_command("quit", std::bind(&Console::_exit, this, std::placeholders::_1));
@@ -1054,6 +1061,9 @@ int main(int argc, char** argv) {
 
   // Execute .sql script if specified
   if (argc == 2) {
+    std::stringstream dependency_config_info;
+    dependency_config_info << "Using " << *opossum::Hyrise::get().dependency_usage_config << "\n";
+    console.out(dependency_config_info.str());
     return_code = console.execute_script(std::string(argv[1]));
     // Terminate Console if an error occured during script execution
     if (return_code == Return::Error) {
@@ -1073,6 +1083,10 @@ int main(int argc, char** argv) {
       console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
     }
     console.out(" build.\n\n");
+
+    std::stringstream dependency_config_info;
+    dependency_config_info << "Using " << *opossum::Hyrise::get().dependency_usage_config << "\n";
+    console.out(dependency_config_info.str());
   }
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)

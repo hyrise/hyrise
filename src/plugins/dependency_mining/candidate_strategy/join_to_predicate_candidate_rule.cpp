@@ -11,9 +11,11 @@ namespace opossum {
 JoinToPredicateCandidateRule::JoinToPredicateCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority) const {
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority,
+    const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
+        required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
-  if (!(join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::Inner)) {
+  if (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Semi) {
     return {};
   }
 
@@ -22,87 +24,85 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     return {};
   }
 
-  // determine if we need to check both inputsa
-  std::vector<std::shared_ptr<AbstractLQPNode>> inputs;
-  inputs.emplace_back(join_node->right_input());
-  if (join_node->join_mode == JoinMode::Inner) {
-    inputs.emplace_back(join_node->left_input());
-  }
+  // determine if we need to check both inputs
+  const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
 
-  const auto& predicate = std::static_pointer_cast<AbstractPredicateExpression>(predicates[0]);
-  const auto& predicate_arguments = predicate->arguments;
-  std::vector<DependencyCandidate> candidates;
+  const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
+  if (!predicate) return {};
+  std::unordered_map<std::string, TableColumnID> join_column_ids;
+  for (const auto& expression : {predicate->left_operand(), predicate->right_operand()}) {
+    if (expression->type != ExpressionType::LQPColumn) return {};
+    auto table_column_id = resolve_column_expression(expression);
+    if (table_column_id == INVALID_TABLE_COLUMN_ID) return {};
+    join_column_ids.emplace(table_column_id.table_name, std::move(table_column_id));
+  }
 
   // check for given inputs
-  for (const auto& input : inputs) {
-    for (const auto& expression : predicate_arguments) {
-      if (!expression_evaluable_on_lqp(expression, *input) || expression->type != ExpressionType::LQPColumn) {
-        continue;
-      }
-      const auto join_column = static_pointer_cast<LQPColumnExpression>(expression);
-      const auto join_column_id = resolve_column_expression(expression);
-      if (join_column_id == INVALID_TABLE_COLUMN_ID) {
-        continue;
-      }
-
-      std::vector<DependencyCandidate> my_candidates;
-      // add join column as UCC candidate
-      if (join_node->join_mode == JoinMode::Inner) {
-        my_candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
-      }
-
-      bool abort = false;
-      visit_lqp(input, [&](const auto& node) {
-        switch (node->type) {
-          case LQPNodeType::Validate:
-            return LQPVisitation::VisitInputs;
-          case LQPNodeType::StoredTable:
-          case LQPNodeType::StaticTable:
-            return LQPVisitation::DoNotVisitInputs;
-          case LQPNodeType::Predicate: {
-            const auto predicate_node = static_pointer_cast<PredicateNode>(node);
-            const auto scan_predicate = predicate_node->predicate();
-            const auto predicate_expression = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
-            if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
-              const auto scan_inputs = predicate_expression->arguments;
-              for (const auto& scan_input : scan_inputs) {
-                if (scan_input->type == ExpressionType::LQPColumn) {
-                  const auto scan_column_id = resolve_column_expression(scan_input);
-                  if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
-                    continue;
-                  }
-                  my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{}, DependencyType::Unique,
-                                             priority);
+  std::vector<DependencyCandidate> candidates;
+  for (const auto& input : inputs_to_visit) {
+    std::vector<DependencyCandidate> my_candidates;
+    bool abort = false;
+    std::string candidate_table;
+    visit_lqp(input, [&](const auto& node) {
+      switch (node->type) {
+        case LQPNodeType::Validate:
+          return LQPVisitation::VisitInputs;
+        case LQPNodeType::StoredTable:
+          return LQPVisitation::DoNotVisitInputs;
+        case LQPNodeType::Predicate: {
+          const auto& predicate_node = static_cast<const PredicateNode&>(*node);
+          const auto scan_predicate = predicate_node.predicate();
+          const auto predicate_expression = static_pointer_cast<AbstractPredicateExpression>(scan_predicate);
+          if (predicate_expression->predicate_condition == PredicateCondition::Equals) {
+            const auto scan_inputs = predicate_expression->arguments;
+            for (const auto& scan_input : scan_inputs) {
+              if (scan_input->type == ExpressionType::LQPColumn) {
+                const auto scan_column_id = resolve_column_expression(scan_input);
+                if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
+                  continue;
                 }
-              }
-            }
-            if (is_between_predicate_condition(predicate_expression->predicate_condition)) {
-              const auto scan_inputs = predicate_expression->arguments;
-              for (const auto& scan_input : scan_inputs) {
-                if (scan_input->type == ExpressionType::LQPColumn) {
-                  const auto scan_column_id = resolve_column_expression(scan_input);
-                  if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
-                    continue;
-                  }
-                  my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{join_column_id},
-                                             DependencyType::Order, priority);
-                }
+                candidate_table = scan_column_id.table_name;
+                my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{}, DependencyType::Unique,
+                                           priority);
               }
             }
           }
-            return LQPVisitation::VisitInputs;
-          default: {
-            abort = true;
+          if (is_between_predicate_condition(predicate_expression->predicate_condition)) {
+            const auto scan_inputs = predicate_expression->arguments;
+            for (const auto& scan_input : scan_inputs) {
+              if (scan_input->type == ExpressionType::LQPColumn) {
+                const auto scan_column_id = resolve_column_expression(scan_input);
+                if (scan_column_id == INVALID_TABLE_COLUMN_ID) {
+                  continue;
+                }
+                candidate_table = scan_column_id.table_name;
+                my_candidates.emplace_back(TableColumnIDs{scan_column_id},
+                                           TableColumnIDs{join_column_ids[candidate_table]}, DependencyType::Order,
+                                           priority);
+              }
+            }
           }
-            return LQPVisitation::DoNotVisitInputs;
         }
-      });
-      if (!abort) {
-        candidates.insert(candidates.end(), std::make_move_iterator(my_candidates.begin()),
-                          std::make_move_iterator(my_candidates.end()));
+          return LQPVisitation::VisitInputs;
+        default: {
+          abort = true;
+        }
+          return LQPVisitation::DoNotVisitInputs;
       }
+    });
+
+    if (abort || my_candidates.empty()) continue;
+
+    // add join column as UCC candidate
+    if (join_node->join_mode == JoinMode::Inner) {
+      my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]}, TableColumnIDs{},
+                                 DependencyType::Unique, priority);
     }
+
+    candidates.insert(candidates.end(), std::make_move_iterator(my_candidates.begin()),
+                      std::make_move_iterator(my_candidates.end()));
   }
+
   return candidates;
 }
 

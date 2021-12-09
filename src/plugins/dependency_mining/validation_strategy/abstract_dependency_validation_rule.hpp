@@ -8,19 +8,19 @@ namespace opossum {
 enum class DependencyValidationStatus { Valid, Invalid, Uncertain };
 
 struct ValidationResult {
-  ValidationResult(const DependencyValidationStatus init_status) : status(init_status) {}
+  explicit ValidationResult(const DependencyValidationStatus init_status) : status(init_status) {}
   DependencyValidationStatus status;
   std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractTableConstraint>>> constraints;
 };
 
-const static std::shared_ptr<ValidationResult>& UNCERTAIN_VALIDATION_RESULT =
+static const std::shared_ptr<ValidationResult>& UNCERTAIN_VALIDATION_RESULT =
     std::make_shared<ValidationResult>(DependencyValidationStatus::Uncertain);
-const static std::shared_ptr<ValidationResult>& INVALID_VALIDATION_RESULT =
+static const std::shared_ptr<ValidationResult>& INVALID_VALIDATION_RESULT =
     std::make_shared<ValidationResult>(DependencyValidationStatus::Invalid);
 
 class AbstractDependencyValidationRule {
  public:
-  AbstractDependencyValidationRule(const DependencyType type);
+  explicit AbstractDependencyValidationRule(const DependencyType type);
   virtual ~AbstractDependencyValidationRule() = default;
 
   // we assume not to get candidates multiple times here

@@ -34,13 +34,15 @@ bool OrderDependency::operator==(const OrderDependency& other) const {
 bool OrderDependency::operator!=(const OrderDependency& other) const { return !(other == *this); }
 
 size_t OrderDependency::hash() const {
-  size_t hash = 0;
+  auto hash = determinants.size();
   for (const auto& expression : determinants) {
-    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
-    hash = hash ^ expression->hash();
+    boost::hash_combine(hash, expression->hash());
   }
-
-  return boost::hash_value(hash - determinants.size());
+  boost::hash_combine(hash, dependents.size());
+  for (const auto& expression : dependents) {
+    boost::hash_combine(hash, expression->hash());
+  }
+  return hash;
 }
 
 std::ostream& operator<<(std::ostream& stream, const OrderDependency& expression) {

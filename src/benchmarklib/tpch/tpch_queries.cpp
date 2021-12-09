@@ -28,7 +28,7 @@ namespace {
  *      l_returnflag, l_linestatus
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -128,7 +128,7 @@ const char* const tpch_query_3 =
  * ORDER BY o_orderpriority;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -169,7 +169,7 @@ const char* const tpch_query_4 =
  *      revenue DESC;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -193,7 +193,7 @@ const char* const tpch_query_5 =
  * AND L_DISCOUNT BETWEEN [DISCOUNT] - 0.01 AND [DISCOUNT] + 0.01 AND L_QUANTITY < [QUANTITY]
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  *  2. ".06 + 0.01" is less than "0.07" in sqlite, but >= "0.07" in hyrise.
@@ -235,10 +235,10 @@ const char* const tpch_query_6 =
  * ORDER BY supp_nation, cust_nation, l_year;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
- *  2. Extract is not supported
+ *  2. SQLite does not support extract
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
  */
 const char* const tpch_query_7 =
@@ -317,7 +317,7 @@ const char* const tpch_query_7 =
  * ORDER BY o_year;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *  2. Extract is not supported
  *    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
@@ -411,7 +411,7 @@ const char* const tpch_query_9 =
  * The limit is not part of the printed query but hidden in the specification text.
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -484,7 +484,7 @@ const char* const tpch_query_11 =
  * ORDER BY l_shipmode;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -539,7 +539,7 @@ const char* const tpch_query_13 =
  *    AND l_shipdate < date '[DATE]' + interval '1' month;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -575,7 +575,7 @@ const char* const tpch_query_14 =
  *
  * Changes:
  *  1. "revenue[STREAM_ID]" renamed to "revenue_view"
- *  2. dates are not supported
+ *  2. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -746,7 +746,7 @@ const char* const tpch_query_19 =
  * ORDER BY s_name;
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
  */
@@ -792,7 +792,7 @@ const char* const tpch_query_20 =
  * The limit is not part of the printed query but hidden in the specification text.
  *
  * Changes:
- *  1. dates are not supported
+ *  1. SQLite does not support dates and intervals
  *    a. use strings as data type for now
  *    b. pre-calculate date operation
 

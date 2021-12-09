@@ -24,6 +24,10 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   // Returns non-trivial FDs from the left input node that remain valid.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
+  std::vector<OrderDependency> order_dependencies() override;
+
+  std::vector<InclusionDependency> inclusion_dependencies() override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;

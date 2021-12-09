@@ -14,6 +14,7 @@
 #include "extract_expression.hpp"
 #include "function_expression.hpp"
 #include "in_expression.hpp"
+#include "interval_expression.hpp"
 #include "is_null_expression.hpp"
 #include "list_expression.hpp"
 #include "logical_expression.hpp"
@@ -47,7 +48,7 @@
  *     const auto case_a_eq_1234 = std::make_shared<CaseExpression>(a_eq_1234, int_float_a_expression, null_value);
  *     const auto case_a_eq_123 = std::make_shared<CaseExpression>(a_eq_123, int_float_b_expression, case_a_eq_1234);
  *
- *  ...and I think that's beautiful.
+ * ...and I think that's beautiful.
  */
 
 namespace opossum {
@@ -241,6 +242,8 @@ template <typename Argument>
 std::shared_ptr<CastExpression> cast_(const Argument& argument, const DataType data_type) {
   return std::make_shared<CastExpression>(to_expression(argument), data_type);
 }
+
+std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const DatetimeComponent unit);
 
 }  // namespace expression_functional
 

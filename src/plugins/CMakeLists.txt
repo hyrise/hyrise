@@ -40,9 +40,9 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/compact_vector/include
     ${PROJECT_SOURCE_DIR}/third_party/robin-map/include
     ${PROJECT_SOURCE_DIR}/third_party/uninitialized_vector/
+    ${PROJECT_SOURCE_DIR}/third_party/nlohmann_json/single_include
 )
 
-# target_link_libraries_system(robin_map)
 
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
 add_plugin(NAME hyriseDependencyMiningPlugin SRCS
@@ -54,6 +54,8 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/candidate_strategy/abstract_dependency_candidate_rule.hpp
     dependency_mining/candidate_strategy/dependent_group_by_candidate_rule.cpp
     dependency_mining/candidate_strategy/dependent_group_by_candidate_rule.hpp
+    dependency_mining/candidate_strategy/join_elimination_candidate_rule.cpp
+    dependency_mining/candidate_strategy/join_elimination_candidate_rule.hpp
     dependency_mining/candidate_strategy/join_to_predicate_candidate_rule.cpp
     dependency_mining/candidate_strategy/join_to_predicate_candidate_rule.hpp
     dependency_mining/candidate_strategy/join_to_semi_candidate_rule.cpp
@@ -62,16 +64,22 @@ add_plugin(NAME hyriseDependencyMiningPlugin SRCS
     dependency_mining/pqp_analyzer.hpp
     dependency_mining/util.cpp
     dependency_mining/util.hpp
+    dependency_mining/validation_state.cpp
+    dependency_mining/validation_state.hpp
     dependency_mining/validation_strategy/abstract_dependency_validation_rule.cpp
     dependency_mining/validation_strategy/abstract_dependency_validation_rule.hpp
     dependency_mining/validation_strategy/fd_validation_rule.cpp
     dependency_mining/validation_strategy/fd_validation_rule.hpp
     dependency_mining/validation_strategy/ind_validation_rule.cpp
     dependency_mining/validation_strategy/ind_validation_rule.hpp
+    dependency_mining/validation_strategy/ind_validation_rule_set.cpp
+    dependency_mining/validation_strategy/ind_validation_rule_set.hpp
     dependency_mining/validation_strategy/od_validation_rule.cpp
     dependency_mining/validation_strategy/od_validation_rule.hpp
     dependency_mining/validation_strategy/ucc_validation_rule.cpp
     dependency_mining/validation_strategy/ucc_validation_rule.hpp
+    dependency_mining/validation_strategy/ucc_validation_rule_set.cpp
+    dependency_mining/validation_strategy/ucc_validation_rule_set.hpp
 )
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
