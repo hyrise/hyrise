@@ -4,7 +4,7 @@
 
 # Workload-driven, Lazy Discovery of Data Dependencies for Query Optimization
 
-Hereby, we provide provides the code and the version of Hyrise that was used for the experiments of the paper *Workload-driven, Lazy Discovery of Data Dependencies for Query Optimization*. For general build instructions, consider the detailed instructions below. The experiments are executed with the *normal* Hyrise Benchmark binaries: We adjusted the Hyrise BenchmarkRunner for including the dependency experiments. An explanation of the related command line parameters and configurations can be found in [dependency_mining_plugin.hpp](src/plugins/dependency_mining_plugin.hpp). The relevant binary targets are `hyriseBenchmarkJoinOrder`, `hyriseBenchmarkTPCDS`, `hyriseBenchmarkTPCH` for the benchmarks and `hyriseDependencyMiningPlugin` for the dependency plugin.
+Hereby, we provide the code and the version of Hyrise that was used for the experiments of the paper *Workload-driven, Lazy Discovery of Data Dependencies for Query Optimization*. For general build instructions, consider the detailed instructions below. The experiments are executed with the *normal* Hyrise Benchmark binaries: We adjusted the Hyrise BenchmarkRunner for including the dependency experiments. An explanation of the related command line parameters and configurations can be found in [dependency_mining_plugin.hpp](src/plugins/dependency_mining_plugin.hpp). The relevant binary targets are `hyriseBenchmarkJoinOrder`, `hyriseBenchmarkTPCDS`, `hyriseBenchmarkTPCH` for the benchmarks and `hyriseDependencyMiningPlugin` for the dependency plugin.
 
 For further questions, do not hesitate to contact the paper's authors.
 
