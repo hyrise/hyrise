@@ -2,11 +2,11 @@
 [![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
 [![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
-# Workload-driven discovery and utilization of data dependencies
+# Workload-driven, Lazy Discovery of Data Dependencies for Query Optimization
 
-The relevant binary targets are `hyriseBenchmarkJoinOrder`, `hyriseBenchmarkTPCDS`, `hyriseBenchmarkTPCH` for the benchmarks and `hyriseDependencyMiningPlugin` for the plugin. For general build instructions, consider the detailed instructions below. We adjusted the Hyrise BenchmarkRunner to load the plugin if its path is provided as a command line parameter, e.g., `./cmake-build-release/hyriseBenchmarkTPCDS -r 1 --dep_mining_plugin /home/ExampleUser/hyrise/cmake-build-release/lib/libhyriseDependencyMiningPlugin.so`
+Hereby, we provide provides the code and the version of Hyrise that was used for the experiments of the paper *Workload-driven, Lazy Discovery of Data Dependencies for Query Optimization*. For general build instructions, consider the detailed instructions below. The experiments are executed with the *normal* Hyrise Benchmark binaries: We adjusted the Hyrise BenchmarkRunner for including the dependency experiments. An explanation of the related command line parameters and configurations can be found in [dependency_mining_plugin.hpp](src/plugins/dependency_mining_plugin.hpp). The relevant binary targets are `hyriseBenchmarkJoinOrder`, `hyriseBenchmarkTPCDS`, `hyriseBenchmarkTPCH` for the benchmarks and `hyriseDependencyMiningPlugin` for the dependency plugin.
 
-Further instructions on how to configure and use the plugin for dependency discovery can be found in [dependency_mining_plugin.hpp](src/plugins/dependency_mining_plugin.hpp).
+For further questions, do not hesitate to contact the paper's authors.
 
 
 # Welcome to Hyrise
