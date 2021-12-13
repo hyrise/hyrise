@@ -125,6 +125,7 @@ find_package(Curses REQUIRED)
 find_package(SQLite3 REQUIRED)
 find_package(Boost REQUIRED COMPONENTS container date_time)
 
+add_definitions(-DBOOST_THREAD_VERSION=5)
 set(BOOST_LIBS Boost::container Boost::date_time)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
