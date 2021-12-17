@@ -65,16 +65,16 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   }
 
   template <typename T>
-  std::tuple<pmr_vector<unsigned char>, pmr_vector<uint64_t>, fsst_decoder_t> _compress_values(
+  std::tuple<pmr_vector<unsigned char>, pmr_vector<size_t>, fsst_decoder_t> _compress_values(
       pmr_vector<T>& values, const PolymorphicAllocator<T>& allocator) {
     // Return variables.
     auto compressed_values = pmr_vector<unsigned char>{allocator};
-    auto compressed_value_lengths = pmr_vector<uint64_t>{};
+    auto compressed_value_lengths = pmr_vector<size_t>{};
     fsst_decoder_t decoder;
 
     if (values.size() != 0) {
       // Temporary data structures keeping char pointers and their lengths.
-      std::vector<uint64_t> row_lengths;
+      std::vector<size_t> row_lengths;
       std::vector<unsigned char*> row_pointers;
       row_lengths.reserve(values.size());
       row_pointers.reserve(values.size());
@@ -110,7 +110,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   }
 
   template <typename T>
-  pmr_vector<uint32_t> _create_offsets(const pmr_vector<uint64_t>& compressed_value_lengths,
+  pmr_vector<uint32_t> _create_offsets(const pmr_vector<size_t>& compressed_value_lengths,
                                        const PolymorphicAllocator<T>& allocator) {
     const auto compressed_values_size = compressed_value_lengths.size();
     auto offsets = pmr_vector<uint32_t>{allocator};
@@ -118,7 +118,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     // Calculate global offset based on compressed value lengths.
     offsets[0] = 0;
-    auto aggregated_offset_sum = uint64_t{0};
+    auto aggregated_offset_sum = size_t{0};
     for (auto index = size_t{1}; index <= compressed_values_size; ++index) {
       aggregated_offset_sum += compressed_value_lengths[index - 1];
       offsets[index] = aggregated_offset_sum;
