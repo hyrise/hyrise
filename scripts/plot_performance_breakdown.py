@@ -72,8 +72,11 @@ benchmark_df = pd.DataFrame(
 total_time = benchmark_df.iloc[:, 1:].apply(lambda x: x.sum(), axis=1)
 
 # Normalize data from nanoseconds to percentage of total cost
-benchmark_df.iloc[:, 1:] = benchmark_df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
+# benchmark_df.iloc[:, 1:] = benchmark_df.iloc[:, 1:].apply(lambda x: x / x.sum(), axis=1)
 print(benchmark_df)
+
+benchmark_df.to_csv("out.csv", index=False)
+exit(0)
 
 plt.figure()
 ax = benchmark_df.plot.bar(x="Benchmark", stacked=True)
