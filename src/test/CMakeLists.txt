@@ -256,7 +256,7 @@ set(
     LIBRARIES
     gtest
     gmock
-    sqlite3
+    SQLite::SQLite3
     hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 

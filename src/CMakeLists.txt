@@ -66,8 +66,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugins/
-
-    ${Boost_INCLUDE_DIRS}
 )
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")

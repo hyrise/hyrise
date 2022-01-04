@@ -11,10 +11,14 @@ function(add_plugin)
     endif(NOT PARSED_ARGS_NAME)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
-    add_dependencies(${PARSED_ARGS_NAME} hyrise)
-    include_directories(${CMAKE_BINARY_DIR})  # For provider.hpp
-    target_link_libraries(${PARSED_ARGS_NAME} hyrise)
-    # target_include_directories(${PARSED_ARGS_NAME} PRIVATE ${CMAKE_BINARY_DIR})  # For provider.hpp
+    # For provider.hpp
+    target_include_directories(${PARSED_ARGS_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+    target_link_libraries_system(
+        ${PARSED_ARGS_NAME}
+
+        tbb
+        ${BOOST_LIBS}
+    )
 
     foreach(dep ${PARSED_ARGS_DEPS})
         add_dependencies(${PARSED_ARGS_NAME} ${dep})
@@ -24,7 +28,7 @@ function(add_plugin)
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
+            target_link_libraries(${PARSED_ARGS_NAME} PRIVATE "-undefined dynamic_lookup")
         endif()
     endif()
 endfunction(add_plugin)

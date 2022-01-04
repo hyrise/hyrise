@@ -655,12 +655,6 @@ set(
     sqlparser
     uninitialized_vector
     zstd
-    ${Boost_CONTAINER_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_DATE_TIME_LIBRARY}
-    ${TBB_LIBRARY}
-    ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
     # Additional libraries added with target_link_libraries_system below
 )
@@ -732,12 +726,19 @@ endif()
 target_link_libraries_system(
     hyrise_impl
 
+    ${BOOST_LIBS}
     cpp-btree
     cxxopts
     flat-hash-map
     nlohmann_json::nlohmann_json
     robin_map
+    SQLite::SQLite3
+    tbb
 )
+
+if (NUMA_FOUND)
+    target_link_libraries(hyrise_impl PUBLIC numa)
+endif()
 
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
