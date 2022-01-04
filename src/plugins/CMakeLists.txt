@@ -21,8 +21,7 @@ function(add_plugin)
     )
 
     foreach(dep ${PARSED_ARGS_DEPS})
-        add_dependencies(${PARSED_ARGS_NAME} ${dep})
-        target_link_libraries(${PARSED_ARGS_NAME} ${dep})
+        target_link_libraries(${PARSED_ARGS_NAME} PRIVATE ${dep})
     endforeach(dep)
 
     # Prevent the linker under macOS from complaining about undefined methods
@@ -33,8 +32,8 @@ function(add_plugin)
     endif()
 endfunction(add_plugin)
 
-add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp DEPS gtest)
-add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
+add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp DEPS sqlparser magic_enum gtest)
+add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS sqlparser)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
 

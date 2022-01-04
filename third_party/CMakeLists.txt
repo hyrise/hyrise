@@ -8,7 +8,7 @@ endif()
 # unity builds for this folder, even if the user manually activated it.
 set(CMAKE_UNITY_BUILD "OFF")
 
-# Add Libraries with their own build setup
+# Add Libraries with their own build setups
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
 add_subdirectory(benchmark)
 add_subdirectory(googletest)
