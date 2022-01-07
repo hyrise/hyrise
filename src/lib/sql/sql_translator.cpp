@@ -1263,6 +1263,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create(const hsql::Cr
       return _translate_create_table(create_statement);
     case hsql::CreateType::kCreateTableFromTbl:
       FailInput("CREATE TABLE FROM is not yet supported");
+    case hsql::CreateType::kCreateIndex:
+      FailInput("CREATE INDEX is not yet supported");
   }
   Fail("Invalid enum value");
 }
@@ -1309,11 +1311,22 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
       // TODO(anybody) SQLParser is missing support for Hyrise's other types
       switch (parser_column_definition->type.data_type) {
+        case hsql::DataType::SMALLINT:
+          std::cout << "WARNING: Implicitly converting SMALLINT to INT";
+          [[fallthrough]];
         case hsql::DataType::INT:
           column_definition.data_type = DataType::Int;
           break;
         case hsql::DataType::LONG:
           column_definition.data_type = DataType::Long;
+          break;
+        case hsql::DataType::DECIMAL:
+          std::cout << "WARNING: Implicitly converting DECIMAL to FLOAT";
+          column_definition.data_type = DataType::Float;
+          break;
+        case hsql::DataType::REAL:
+          std::cout << "WARNING: Implicitly converting REAL to FLOAT";
+          column_definition.data_type = DataType::Float;
           break;
         case hsql::DataType::FLOAT:
           column_definition.data_type = DataType::Float;
@@ -1322,14 +1335,29 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           column_definition.data_type = DataType::Double;
           break;
         case hsql::DataType::CHAR:
+          std::cout << "WARNING: Ignoring the length of CHAR as Hyrise has no way of working with it";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::VARCHAR:
+          std::cout << "WARNING: Ignoring the length of VARCHAR as Hyrise has no way of working with it";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::TEXT:
-          // Ignoring the length of CHAR and VARCHAR columns for now as Hyrise has no way of working with these
+          std::cout << "WARNING: Ignoring the length of TEXT as Hyrise has no way of working with it";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::DATE:
+          std::cout << "WARNING: Parsing DATE to string since date and time data types are not supported yet";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::DATETIME:
-          Fail("Date(time) types are not supported yet");
+          std::cout << "WARNING: Parsing DATETIME to string since date and time data types are not supported yet";
+          column_definition.data_type = DataType::String;
+          break;
+        case hsql::DataType::TIME:
+          std::cout << "WARNING: Parsing DATETIME to string since date and time data types are not supported yet";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
