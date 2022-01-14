@@ -15,7 +15,7 @@
 
 
 /********
-   HACK
+   HACK to get avoid linking problems as the server does not contain all the required code.
  ********/
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
   }
 
   /********
-     HACK
+     HACK (see above)
    ********/
   if (parsed_options.count("help") && parsed_options.count("benchmark_data")) {
     auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
