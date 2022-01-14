@@ -2352,22 +2352,28 @@ TEST_F(SQLTranslatorTest, DropViewIfExists) {
 
 TEST_F(SQLTranslatorTest, CreateTable) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "CREATE TABLE a_table (a_smallint SMALLINT, a_int INTEGER, a_long LONG, a_decimal DECIMAL(5,2), a_real REAL, "
-      "a_float FLOAT, a_double DOUBLE NULL, a_varchar VARCHAR(10) NOT NULL, a_char_varying CHARACTER VARYING(10), "
-      "a_data DATE, a_time TIME, a_datetime DATETIME)");
+      "CREATE TABLE a_table ("
+      "  a_smallint SMALLINT,"
+      "  a_int INTEGER,"
+      "  a_long LONG,"
+      "  a_decimal DECIMAL(5,2),"
+      "  a_real REAL,"
+      "  a_float FLOAT,"
+      "  a_double DOUBLE NULL,"
+      "  a_varchar VARCHAR(10) NOT NULL,"
+      "  a_char_varying CHARACTER VARYING(10),"
+      "  a_date DATE,"
+      "  a_time TIME,"
+      "  a_datetime DATETIME"
+      ")");
 
-  const auto column_definitions = TableColumnDefinitions{{"a_smallint", DataType::Int, false},
-                                                         {"a_int", DataType::Int, false},
-                                                         {"a_long", DataType::Long, false},
-                                                         {"a_decimal", DataType::Float, false},
-                                                         {"a_real", DataType::Float, false},
-                                                         {"a_float", DataType::Float, false},
-                                                         {"a_double", DataType::Double, true},
-                                                         {"a_varchar", DataType::String, false},
-                                                         {"a_character_varying", DataType::String, false},
-                                                         {"a_date", DataType::String, false},
-                                                         {"a_time", DataType::String, false},
-                                                         {"a_datetime", DataType::String, false}};
+  const auto column_definitions =
+      TableColumnDefinitions{{"a_smallint", DataType::Int, false},        {"a_int", DataType::Int, false},
+                             {"a_long", DataType::Long, false},           {"a_decimal", DataType::Float, false},
+                             {"a_real", DataType::Float, false},          {"a_float", DataType::Float, false},
+                             {"a_double", DataType::Double, true},        {"a_varchar", DataType::String, false},
+                             {"a_char_varying", DataType::String, false}, {"a_date", DataType::String, false},
+                             {"a_time", DataType::String, false},         {"a_datetime", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
@@ -2377,22 +2383,28 @@ TEST_F(SQLTranslatorTest, CreateTable) {
 
 TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
-      "CREATE TABLE IF NOT EXISTS a_table (a_smallint SMALLINT, a_int INTEGER, a_long LONG, a_decimal DECIMAL(5,2), "
-      "a_real REAL, a_float FLOAT, a_double DOUBLE NULL, a_varchar VARCHAR(10) NOT NULL, a_char_varying CHARACTER "
-      "VARYING(10), a_data DATE, a_time TIME, a_datetime DATETIME)");
+      "CREATE TABLE IF NOT EXISTS a_table ("
+      "  a_smallint SMALLINT,"
+      "  a_int INTEGER,"
+      "  a_long LONG,"
+      "  a_decimal DECIMAL(5,2),"
+      "  a_real REAL,"
+      "  a_float FLOAT,"
+      "  a_double DOUBLE NULL,"
+      "  a_varchar VARCHAR(10) NOT NULL,"
+      "  a_char_varying CHARACTER VARYING(10),"
+      "  a_date DATE,"
+      "  a_time TIME,"
+      "  a_datetime DATETIME"
+      ")");
 
-  const auto column_definitions = TableColumnDefinitions{{"a_smallint", DataType::Int, false},
-                                                         {"a_int", DataType::Int, false},
-                                                         {"a_long", DataType::Long, false},
-                                                         {"a_decimal", DataType::Float, false},
-                                                         {"a_real", DataType::Float, false},
-                                                         {"a_float", DataType::Float, false},
-                                                         {"a_double", DataType::Double, true},
-                                                         {"a_varchar", DataType::String, false},
-                                                         {"a_character_varying", DataType::String, false},
-                                                         {"a_date", DataType::String, false},
-                                                         {"a_time", DataType::String, false},
-                                                         {"a_datetime", DataType::String, false}};
+  const auto column_definitions =
+      TableColumnDefinitions{{"a_smallint", DataType::Int, false},        {"a_int", DataType::Int, false},
+                             {"a_long", DataType::Long, false},           {"a_decimal", DataType::Float, false},
+                             {"a_real", DataType::Float, false},          {"a_float", DataType::Float, false},
+                             {"a_double", DataType::Double, true},        {"a_varchar", DataType::String, false},
+                             {"a_char_varying", DataType::String, false}, {"a_date", DataType::String, false},
+                             {"a_time", DataType::String, false},         {"a_datetime", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", true, static_table_node);
