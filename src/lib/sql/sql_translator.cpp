@@ -1355,7 +1355,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::TIME:
-          std::cout << "WARNING: Parsing DATETIME to string since date and time data types are not supported yet\n";
+          std::cout << "WARNING: Parsing TIME to string since date and time data types are not supported yet\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::UNKNOWN:
