@@ -1335,27 +1335,27 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           column_definition.data_type = DataType::Double;
           break;
         case hsql::DataType::CHAR:
-          std::cout << "WARNING: Ignoring the length of CHAR as Hyrise has no way of working with it\n";
+          std::cout << "WARNING: Ignoring the length of CHAR. Hyrise's strings are not length-limited\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::VARCHAR:
-          std::cout << "WARNING: Ignoring the length of VARCHAR as Hyrise has no way of working with it\n";
+          std::cout << "WARNING: Ignoring the length of VARCHAR. Hyrise's strings are not length-limited\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::TEXT:
-          std::cout << "WARNING: Ignoring the length of TEXT as Hyrise has no way of working with it\n";
+          std::cout << "WARNING: Ignoring the length of TEXT. Hyrise's strings are not length-limited\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::DATE:
-          std::cout << "WARNING: Parsing DATE to string since date and time data types are not supported yet\n";
+          std::cout << "WARNING: Parsing DATE to string since date and time data types are not yet supported\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::DATETIME:
-          std::cout << "WARNING: Parsing DATETIME to string since date and time data types are not supported yet\n";
+          std::cout << "WARNING: Parsing DATETIME to string since date and time data types are not yet supported\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::TIME:
-          std::cout << "WARNING: Parsing TIME to string since date and time data types are not supported yet\n";
+          std::cout << "WARNING: Parsing TIME to string since date and time data types are not yet supported\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::UNKNOWN:
