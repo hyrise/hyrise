@@ -1343,7 +1343,6 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::TEXT:
-          std::cout << "WARNING: Ignoring the length of TEXT. Hyrise's strings are not length-limited\n";
           column_definition.data_type = DataType::String;
           break;
         case hsql::DataType::DATE:
