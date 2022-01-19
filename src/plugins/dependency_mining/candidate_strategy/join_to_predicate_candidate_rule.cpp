@@ -24,6 +24,10 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     return {};
   }
 
+  // the table could be (massively) pruned by rewriting the join to a scan, increasing the usefulness
+  // yet, factor 3 is arbitrarily chosen
+  const auto my_priority = 3 * priority;
+
   // determine if we need to check both inputs
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
 
@@ -63,7 +67,7 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
                 }
                 candidate_table = scan_column_id.table_name;
                 my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{}, DependencyType::Unique,
-                                           priority);
+                                           my_priority);
               }
             }
           }
@@ -78,7 +82,7 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
                 candidate_table = scan_column_id.table_name;
                 my_candidates.emplace_back(TableColumnIDs{scan_column_id},
                                            TableColumnIDs{join_column_ids[candidate_table]}, DependencyType::Order,
-                                           priority);
+                                           my_priority);
               }
             }
           }

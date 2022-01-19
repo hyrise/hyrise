@@ -20,6 +20,11 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
   const auto& predicates = join_node->join_predicates();
   if (predicates.size() != 1) return {};
 
+  // Factor 0.5 for join to semi join rewrite is arbitrarily chosen
+  // In most cases, semi joins are faster, but actual, there is a join done
+  // We might even lose performance (reductions that are not added anymore)
+  const auto my_priority = static_cast<size_t>(std::lround(0.5 * static_cast<double>(priority)));
+
   std::vector<DependencyCandidate> candidates;
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
   for (const auto& input : inputs_to_visit) {
@@ -27,7 +32,7 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
     // (ii) the column is not used later
     const auto join_column_id = resolve_column_expression(*required_expressions_by_node.at(input).begin());
     if (join_column_id == INVALID_TABLE_COLUMN_ID) continue;
-    candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, priority);
+    candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, my_priority);
   }
 
   return candidates;

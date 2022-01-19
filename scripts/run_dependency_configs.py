@@ -12,15 +12,19 @@ class ExperimentSetup:
         self.benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
         self.configs = {
             "all_off": DependencyUsageConfig(False, False, False, False),
-            "only_dgr": DependencyUsageConfig(True, False, False, False),
-            "only_jts": DependencyUsageConfig(False, True, False, False),
-            "only_join2pred": DependencyUsageConfig(False, False, True, False),
-            "only_join_elim": DependencyUsageConfig(False, False, False, True),
+            #"only_dgr": DependencyUsageConfig(True, False, False, False),
+            #"only_jts": DependencyUsageConfig(False, True, False, False),
+            #"only_join2pred": DependencyUsageConfig(False, False, True, False),
+            #"only_join_elim": DependencyUsageConfig(False, False, False, True),
             "all_on": DependencyUsageConfig(True, True, True, True),
             "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
         }
-        self.scale_factors = [0.01, 1, 10, 100]
-        self.mining_configs = [MiningConfig.default_config()]
+        # self.scale_factors = [0.01, 1, 10, 20, 50, 100]
+        self.scale_factors = [10]
+        num_candidates = [1, 3, 5, 10, 20, MiningConfig.default_config().max_validation_candidates]
+        # self.mining_configs = [MiningConfig.default_config()]
+        self.mining_configs = [MiningConfig(max_validation_candidates=n) for n in num_candidates]
+
 
 
 class DependencyUsageConfig:
@@ -30,6 +34,12 @@ class DependencyUsageConfig:
         self.join_to_predicate = join_to_predicate
         self.join_elimination = join_elimination
         self.preset_constraints = preset_constraints
+
+    def __eq__(self, other):
+        return vars(self) == vars(other)
+
+    def allows_nothing(self):
+        return self == DependencyUsageConfig(False, False, False, False)
 
     def to_json(self, file_path):
         with open(file_path, "w") as f:
@@ -155,6 +165,10 @@ def main(output_path, force_delete, build_dir, commit):
 
                 for mining_config in setup.mining_configs:
                     is_default_config = mining_config.is_default_config()
+
+                    if config.allows_nothing() and not is_default_config:
+                        continue
+
                     if not is_default_config:
                         mining_config.to_json(mining_config_path)
                         mining_flag = f"--mining_config {mining_config_path}"
@@ -163,7 +177,7 @@ def main(output_path, force_delete, build_dir, commit):
                         mining_flag = ""
                         mining_title = ""
 
-                    print(f"\nRunning {benchmark} for {config_name} with SF {scale_factor}{mining_title}..")
+                    print(f"\nRunning {benchmark} for {config_name} with SF {scale_factor}{mining_title}...")
                     base_file_name = f"{benchmark}_{config_name}{sf_extension}{mining_config.file_extension()}"
                     log_path = os.path.join(output_path, f"{base_file_name}.log")
                     results_path = os.path.join(output_path, f"{base_file_name}.json")
@@ -177,7 +191,6 @@ def main(output_path, force_delete, build_dir, commit):
                     if not is_default_config:
                         os.remove(mining_config_path)
         os.remove(config_path)
-    print(n_r)
 
 
 if __name__ == "__main__":

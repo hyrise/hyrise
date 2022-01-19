@@ -16,6 +16,8 @@ std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
   if (num_group_by_columns < 2) {
     return {};
   }
+
+
   const auto& node_expressions = aggregate_node->node_expressions;
   // split columns by table to ease validation later on
   TableColumnIDs columns;
@@ -32,10 +34,15 @@ std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
     return {};
   }
 
+  // We still need to perform all aggregations, but omit grouping all columns but one
+  // Let's assume hashing/grouping takes half the execution time, then we safe 0.5 * exec. time * frac omitted columns
+  const auto omit_column_ratio = 1.0 - (1.0 / static_cast<double>(num_group_by_columns));
+  const auto my_priority = static_cast<size_t>(std::lround(0.5 * omit_column_ratio * static_cast<double>(priority)));
+
   std::vector<DependencyCandidate> candidates;
   // for now, use UCC candidates instead of FD candidates
   for (const auto& column : columns) {
-    candidates.emplace_back(TableColumnIDs{column}, TableColumnIDs{}, DependencyType::Unique, priority);
+    candidates.emplace_back(TableColumnIDs{column}, TableColumnIDs{}, DependencyType::Unique, my_priority);
   }
   return candidates;
 }

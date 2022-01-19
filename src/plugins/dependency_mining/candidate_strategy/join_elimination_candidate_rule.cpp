@@ -77,6 +77,7 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     for (const auto& [table_name, table_column] : table_columns) {
       // std::cout << "ind candidate " << table_column << std::endl;
       if (table_name == determinant.table_name) continue;
+      // priority stays the same: we simply remove the join
       candidates.emplace_back(TableColumnIDs{determinant}, TableColumnIDs{table_column}, DependencyType::Inclusion,
                               priority);
     }
