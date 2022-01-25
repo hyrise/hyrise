@@ -9,7 +9,8 @@ DependentGroupByCandidateRule::DependentGroupByCandidateRule()
     : AbstractDependencyCandidateRule(LQPNodeType::Aggregate) {}
 
 std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const std::shared_ptr<const AbstractOperator>& op, const size_t priority,
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const std::shared_ptr<const AbstractOperator>& op,
+    const size_t priority,
     const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
         required_expressions_by_node) const {
   const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
@@ -17,7 +18,6 @@ std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
   if (num_group_by_columns < 2) {
     return {};
   }
-
 
   const auto& node_expressions = aggregate_node->node_expressions;
   // split columns by table to ease validation later on
@@ -39,8 +39,10 @@ std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
   // We assume each grouped column takes the same time, and any() aggregates are for free
   // --> saving = grouping time * frac omitted columns
   const auto omit_column_ratio = 1.0 - (1.0 / static_cast<double>(num_group_by_columns));
-  const auto& performance_data = dynamic_cast<OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*(op->performance_data));
-  const auto group_duration = performance_data.get_step_runtime(AggregateHash::OperatorSteps::GroupByKeyPartitioning).count();
+  const auto& performance_data =
+      dynamic_cast<OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*(op->performance_data));
+  const auto group_duration =
+      performance_data.get_step_runtime(AggregateHash::OperatorSteps::GroupByKeyPartitioning).count();
   const auto my_priority = static_cast<size_t>(std::lround(omit_column_ratio * static_cast<double>(group_duration)));
 
   std::vector<DependencyCandidate> candidates;

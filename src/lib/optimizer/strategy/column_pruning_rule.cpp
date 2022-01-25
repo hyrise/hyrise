@@ -282,20 +282,33 @@ bool try_join_to_scan_rewrite(
     return false;
   }
 
-  const auto execute_subplan = [](auto& sub_plan_root, const auto scan_column_id, const auto value_column_id) {
+  const auto execute_subplan = [](auto& sub_plan_root, const auto& value_column) {
     sub_plan_root->clear_outputs();
 
-    // prune columns
-    visit_lqp(sub_plan_root, [&](const auto& node) {
-      if (node->type == LQPNodeType::StoredTable) {
-        std::vector<ColumnID> pruned_column_ids;
-        const auto stored_table_node = static_pointer_cast<StoredTableNode>(node);
-        const auto num_columns = Hyrise::get().storage_manager.get_table(stored_table_node->table_name)->column_count();
-        for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
-          if (column_id != scan_column_id && column_id != value_column_id) {
-            pruned_column_ids.emplace_back(column_id);
-          }
+    auto projection = ProjectionNode::make(expression_vector(value_column), sub_plan_root);
+
+    auto required_expressions = ExpressionUnorderedSet{};
+    required_expressions.emplace(value_column);
+
+    // prune all but join and scan columns
+    visit_lqp(projection, [&](const auto& node) {
+      if (node->type == LQPNodeType::Predicate) {
+        // add scan column to required expressions
+        for (const auto& expression : node->node_expressions) {
+          gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->output_expressions(),
+                                                                  required_expressions);
         }
+      } else if (node->type == LQPNodeType::StoredTable) {
+        auto pruned_column_ids = std::vector<ColumnID>{};
+        for (const auto& expression : node->output_expressions()) {
+          if (required_expressions.find(expression) != required_expressions.end()) {
+            continue;
+          }
+          const auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
+          pruned_column_ids.emplace_back(column_expression->original_column_id);
+        }
+        // prune columns
+        const auto stored_table_node = static_pointer_cast<StoredTableNode>(node);
         stored_table_node->set_pruned_column_ids(pruned_column_ids);
       }
       return LQPVisitation::VisitInputs;
@@ -303,7 +316,7 @@ bool try_join_to_scan_rewrite(
 
     // prune chunks
     auto chunk_pruning_rule = ChunkPruningRule{};
-    const auto sub_root = LogicalPlanRootNode::make(std::move(sub_plan_root));
+    const auto sub_root = LogicalPlanRootNode::make(std::move(projection));
     chunk_pruning_rule.apply_to_plan(sub_root);
     auto optimized_sub = sub_root->left_input();
     sub_root->set_left_input(nullptr);
@@ -331,7 +344,6 @@ bool try_join_to_scan_rewrite(
   };
 
   const auto join_column_expression = static_pointer_cast<LQPColumnExpression>(join_expression);
-  const auto target_column_id = join_column_expression->original_column_id;
 
   bool executed = false;
   for (const auto& scan : scans) {
@@ -345,10 +357,8 @@ bool try_join_to_scan_rewrite(
           auto ref_expressions = ExpressionUnorderedSet{expression};
           if (scan->has_matching_unique_constraint(ref_expressions)) {
             executed = true;
-            const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
-            const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
-            const auto value_column_id = target_column_id < filter_column_id ? ColumnID{0} : ColumnID{1};
-            const auto target_column_type = tab->column_definitions().at(value_column_id).data_type;
+            const auto tab = execute_subplan(unused_input, join_column_expression);
+            const auto target_column_type = tab->column_definitions().begin()->data_type;
             resolve_data_type(target_column_type, [&](auto type) {
               using ColumnDataType = typename decltype(type)::type;
               const auto num_chunks = tab->chunk_count();
@@ -359,7 +369,7 @@ bool try_join_to_scan_rewrite(
                 if (!chunk) {
                   continue;
                 }
-                const auto segment = chunk->get_segment(value_column_id);
+                const auto segment = chunk->get_segment(ColumnID{0});
                 segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
                   Assert(!is_init, "did not expect multiple values");
                   val = pos.value();
@@ -369,15 +379,60 @@ bool try_join_to_scan_rewrite(
               const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
               const auto predicate_node = PredicateNode::make(equals_(scan_column_expression, val));
               replace_node(join, predicate_node, join_column_expression);
-              // std::cout << "rewrote Join2Pred (i)" << std::endl;
+              // std::cout << "rewrote Join2Pred (i) " << join->description() << " with " << expression->as_column_name() << std::endl;
             });
+          } else {
+            //std::cout << __LINE__ << std::endl;
+            const auto& order_dependencies = unused_input->order_dependencies();
+            for (const auto& od : order_dependencies) {
+              // skip larger ODs
+              if (od.determinants.size() != 1 || od.dependents.size() != 1) {
+                //std::cout << __LINE__ << std::endl;
+                continue;
+              }
+              if (*od.determinants[0] == *join_expression && *od.dependents[0] == *expression) {
+                executed = true;
+                const auto tab = execute_subplan(unused_input, join_column_expression);
+                const auto target_column_type = tab->column_definitions().begin()->data_type;
+                resolve_data_type(target_column_type, [&](auto type) {
+                  using ColumnDataType = typename decltype(type)::type;
+                  const auto num_chunks = tab->chunk_count();
+                  ColumnDataType min_val{};
+                  ColumnDataType max_val{};
+                  bool is_init = false;
+                  for (auto chunk_id = ChunkID{0}; chunk_id < num_chunks; ++chunk_id) {
+                    const auto chunk = tab->get_chunk(chunk_id);
+                    if (!chunk) {
+                      continue;
+                    }
+                    const auto segment = chunk->get_segment(ColumnID{0});
+                    segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
+                      const auto current_value = pos.value();
+                      if (!is_init) {
+                        min_val = current_value;
+                        max_val = current_value;
+                        is_init = true;
+                      } else {
+                        min_val = std::min(min_val, current_value);
+                        max_val = std::max(max_val, current_value);
+                      }
+                    });
+                  }
+                  const auto scan_column_expression = *equals_predicate_expressions_used_side.begin();
+                  const auto predicate_node =
+                      PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
+                  replace_node(join, predicate_node, join_column_expression);
+                  // std::cout << "rewrote Join2Pred (iii) " << join->description() << " with " << expression->as_column_name() << std::endl;
+                });
+              }
+            }
           }
         }
         return ExpressionVisitation::VisitArguments;
       });
     }
     if (is_between_predicate_condition(predicate_expression->predicate_condition)) {
-      const auto order_dependencies = unused_input->order_dependencies();
+      const auto& order_dependencies = unused_input->order_dependencies();
       if (order_dependencies.empty()) {
         return false;
       }
@@ -389,12 +444,10 @@ bool try_join_to_scan_rewrite(
             if (od.determinants.size() != 1 || od.dependents.size() != 1) {
               continue;
             }
-            if (*od.determinants[0] == *expression && *od.dependents[0] == *join_expression) {
+            if (*od.determinants[0] == *join_expression && *od.dependents[0] == *expression) {
               executed = true;
-              const auto filter_column_id = static_pointer_cast<LQPColumnExpression>(expression)->original_column_id;
-              const auto tab = execute_subplan(unused_input, filter_column_id, target_column_id);
-              const auto value_column_id = target_column_id < filter_column_id ? ColumnID{0} : ColumnID{1};
-              const auto target_column_type = tab->column_definitions().at(value_column_id).data_type;
+              const auto tab = execute_subplan(unused_input, join_column_expression);
+              const auto target_column_type = tab->column_definitions().begin()->data_type;
               resolve_data_type(target_column_type, [&](auto type) {
                 using ColumnDataType = typename decltype(type)::type;
                 const auto num_chunks = tab->chunk_count();
@@ -406,7 +459,7 @@ bool try_join_to_scan_rewrite(
                   if (!chunk) {
                     continue;
                   }
-                  const auto segment = chunk->get_segment(value_column_id);
+                  const auto segment = chunk->get_segment(ColumnID{0});
                   segment_iterate<ColumnDataType>(*segment, [&](const auto& pos) {
                     const auto current_value = pos.value();
                     if (!is_init) {
@@ -423,7 +476,7 @@ bool try_join_to_scan_rewrite(
                 const auto predicate_node =
                     PredicateNode::make(between_inclusive_(scan_column_expression, min_val, max_val));
                 replace_node(join, predicate_node, join_column_expression);
-                // std::cout << "rewrote Join2Pred (ii)" << std::endl;
+                // std::cout << "rewrote Join2Pred (ii) " << join->description() << " with " << expression->as_column_name() << std::endl;
               });
             }
           }

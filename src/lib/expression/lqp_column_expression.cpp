@@ -41,7 +41,7 @@ std::string LQPColumnExpression::description(const DescriptionMode mode) const {
     case LQPNodeType::StoredTable: {
       const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(original_node_locked);
       const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
-      output << stored_table_node->table_name << "." << table->column_name(original_column_id);
+      output << table->column_name(original_column_id);
       return output.str();
     }
 

@@ -11,7 +11,8 @@ namespace opossum {
 JoinToPredicateCandidateRule::JoinToPredicateCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const std::shared_ptr<const AbstractOperator>& op, const size_t priority,
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const std::shared_ptr<const AbstractOperator>& op,
+    const size_t priority,
     const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
         required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
@@ -68,10 +69,11 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
                 candidate_table = scan_column_id.table_name;
                 my_candidates.emplace_back(TableColumnIDs{scan_column_id}, TableColumnIDs{}, DependencyType::Unique,
                                            my_priority);
+                my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]},
+                                           TableColumnIDs{scan_column_id}, DependencyType::Order, my_priority);
               }
             }
-          }
-          if (is_between_predicate_condition(predicate_expression->predicate_condition)) {
+          } else if (is_between_predicate_condition(predicate_expression->predicate_condition)) {
             const auto scan_inputs = predicate_expression->arguments;
             for (const auto& scan_input : scan_inputs) {
               if (scan_input->type == ExpressionType::LQPColumn) {
@@ -80,9 +82,8 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
                   continue;
                 }
                 candidate_table = scan_column_id.table_name;
-                my_candidates.emplace_back(TableColumnIDs{scan_column_id},
-                                           TableColumnIDs{join_column_ids[candidate_table]}, DependencyType::Order,
-                                           my_priority);
+                my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]},
+                                           TableColumnIDs{scan_column_id}, DependencyType::Order, my_priority);
               }
             }
           }
