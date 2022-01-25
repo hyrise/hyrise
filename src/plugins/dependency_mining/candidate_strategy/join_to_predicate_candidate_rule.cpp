@@ -11,7 +11,7 @@ namespace opossum {
 JoinToPredicateCandidateRule::JoinToPredicateCandidateRule() : AbstractDependencyCandidateRule(LQPNodeType::Join) {}
 
 std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority,
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const std::shared_ptr<const AbstractOperator>& op, const size_t priority,
     const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
         required_expressions_by_node) const {
   const auto join_node = static_pointer_cast<const JoinNode>(lqp_node);
@@ -100,7 +100,7 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
     // add join column as UCC candidate
     if (join_node->join_mode == JoinMode::Inner) {
       my_candidates.emplace_back(TableColumnIDs{join_column_ids[candidate_table]}, TableColumnIDs{},
-                                 DependencyType::Unique, priority);
+                                 DependencyType::Unique, my_priority);
     }
 
     candidates.insert(candidates.end(), std::make_move_iterator(my_candidates.begin()),

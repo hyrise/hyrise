@@ -290,7 +290,7 @@ void PQPAnalyzer::run() {
 
       const auto& current_rules = _rules[lqp_node->type];
       for (const auto& rule : current_rules) {
-        auto candidates = rule->apply_to_node(lqp_node, prio, required_expressions_by_node);
+        auto candidates = rule->apply_to_node(lqp_node, op, prio, required_expressions_by_node);
         for (auto& candidate : candidates) {
           _add_if_new(candidate);
         }

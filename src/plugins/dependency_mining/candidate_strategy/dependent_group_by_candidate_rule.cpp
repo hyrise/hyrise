@@ -1,6 +1,7 @@
 #include "dependent_group_by_candidate_rule.hpp"
 
 #include "logical_query_plan/aggregate_node.hpp"
+#include "operators/aggregate_hash.hpp"
 
 namespace opossum {
 
@@ -8,7 +9,7 @@ DependentGroupByCandidateRule::DependentGroupByCandidateRule()
     : AbstractDependencyCandidateRule(LQPNodeType::Aggregate) {}
 
 std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
-    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const size_t priority,
+    const std::shared_ptr<const AbstractLQPNode>& lqp_node, const std::shared_ptr<const AbstractOperator>& op, const size_t priority,
     const std::unordered_map<std::shared_ptr<const AbstractLQPNode>, ExpressionUnorderedSet>&
         required_expressions_by_node) const {
   const auto aggregate_node = static_pointer_cast<const AggregateNode>(lqp_node);
@@ -35,9 +36,12 @@ std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
   }
 
   // We still need to perform all aggregations, but omit grouping all columns but one
-  // Let's assume hashing/grouping takes half the execution time, then we safe 0.5 * exec. time * frac omitted columns
+  // We assume each grouped column takes the same time, and any() aggregates are for free
+  // --> saving = grouping time * frac omitted columns
   const auto omit_column_ratio = 1.0 - (1.0 / static_cast<double>(num_group_by_columns));
-  const auto my_priority = static_cast<size_t>(std::lround(0.5 * omit_column_ratio * static_cast<double>(priority)));
+  const auto& performance_data = dynamic_cast<OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*(op->performance_data));
+  const auto group_duration = performance_data.get_step_runtime(AggregateHash::OperatorSteps::GroupByKeyPartitioning).count();
+  const auto my_priority = static_cast<size_t>(std::lround(omit_column_ratio * static_cast<double>(group_duration)));
 
   std::vector<DependencyCandidate> candidates;
   // for now, use UCC candidates instead of FD candidates
