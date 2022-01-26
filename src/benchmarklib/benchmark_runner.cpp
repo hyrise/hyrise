@@ -264,16 +264,16 @@ void BenchmarkRunner::_benchmark_ordered() {
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
     result.duration = _state.benchmark_duration;
-    // duration::seconds uses integer precision, but we need a floating point value
-    const auto duration_seconds = std::chrono::duration<float>{_state.benchmark_duration}.count();
-    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
+    const auto duration_seconds = std::chrono::duration<double>{_state.benchmark_duration}.count();
+    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // Compute mean by using accumulators
     boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
         accumulator;
     for (const auto& entry : result.successful_runs) {
-      // For readability and to be consistent with compare_benchmarks.py SQL queries should be in milliseconds
-      // duration::milliseconds uses integer precision, but we need a floating point value
+      // For readability and to be consistent with compare_benchmarks.py, query latencies should be in milliseconds.
+      // chrono::milliseconds uses an integer precision duration type, but we need a floating-point value.
       accumulator(std::chrono::duration<double, std::milli>{entry.duration}.count());
     }
     const auto mean_in_milliseconds = boost::accumulators::mean(accumulator);
@@ -413,7 +413,7 @@ void BenchmarkRunner::write_report_to_file() const {
     // comparable.
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? total_duration : result.duration;
-    // duration::seconds uses integer precision, but we need a floating point value
+    // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
     const auto duration_seconds = std::chrono::duration<double>(reported_item_duration).count();
     const auto items_per_second =
         duration_seconds > 0 ? (static_cast<double>(result.successful_runs.size()) / duration_seconds) : 0;
