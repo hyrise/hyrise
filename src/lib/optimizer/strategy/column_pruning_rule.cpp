@@ -382,12 +382,10 @@ bool try_join_to_scan_rewrite(
               // std::cout << "rewrote Join2Pred (i) " << join->description() << " with " << expression->as_column_name() << std::endl;
             });
           } else {
-            //std::cout << __LINE__ << std::endl;
             const auto& order_dependencies = unused_input->order_dependencies();
             for (const auto& od : order_dependencies) {
               // skip larger ODs
               if (od.determinants.size() != 1 || od.dependents.size() != 1) {
-                //std::cout << __LINE__ << std::endl;
                 continue;
               }
               if (*od.determinants[0] == *join_expression && *od.dependents[0] == *expression) {
@@ -621,8 +619,8 @@ void try_join_to_semi_rewrite(
       join_node->set_left_input(join_node->right_input());
       join_node->set_right_input(temp);
       flipped_inputs = true;
-      // std::cout << "rewrote Join2Semi (i)" << std::endl;
-      // std::cout << "rewrite " << join_node->description() << " with ";
+      join_node->comment = "Join2Semi";
+      // std::cout << "rewrote Join2Semi (i) " << join_node->description() << " with ";
       // for (const auto& e : equals_predicate_expressions_left) {
       //  std::cout << " " << e->description();
       // }
@@ -631,11 +629,11 @@ void try_join_to_semi_rewrite(
     if (!right_input_is_used &&
         join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
       join_node->join_mode = JoinMode::Semi;
-      // std::cout << "rewrote Join2Semi (ii)" << std::endl;
-      // std::cout << "rewrite " << join_node->description() << " with ";
+      join_node->comment = "Join2Semi";
+      // std::cout << "rewrote Join2Semi (ii) " << join_node->description() << " with ";
       // for (const auto& e : equals_predicate_expressions_right) {
       //  std::cout << " " << e->description();
-      // }
+      //
       // std::cout << std::endl;
     }
   }
