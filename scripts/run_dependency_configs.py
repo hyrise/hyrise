@@ -12,18 +12,18 @@ class ExperimentSetup:
         self.benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
         self.configs = {
             "all_off": DependencyUsageConfig(False, False, False, False),
-            # "only_dgr": DependencyUsageConfig(True, False, False, False),
-            # "only_jts": DependencyUsageConfig(False, True, False, False),
-            # "only_join2pred": DependencyUsageConfig(False, False, True, False),
-            # "only_join_elim": DependencyUsageConfig(False, False, False, True),
+            "only_dgr": DependencyUsageConfig(True, False, False, False),
+            "only_jts": DependencyUsageConfig(False, True, False, False),
+            "only_join2pred": DependencyUsageConfig(False, False, True, False),
+            "only_join_elim": DependencyUsageConfig(False, False, False, True),
             "all_on": DependencyUsageConfig(True, True, True, True),
             "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
         }
-        # self.scale_factors = [0.01, 1, 10, 20, 50, 100]
-        self.scale_factors = [10]
+        self.scale_factors = [0.01, 1, 10, 20, 50, 100]
+        # self.scale_factors = [10]
         num_candidates = [1, 3, 5, 10, 20, MiningConfig.default_config().max_validation_candidates]
-        # self.mining_configs = [MiningConfig.default_config()]
-        self.mining_configs = [MiningConfig(max_validation_candidates=n) for n in num_candidates]
+        self.mining_configs = [MiningConfig.default_config()]
+        #self.mining_configs = [MiningConfig(max_validation_candidates=n) for n in num_candidates]
 
 
 class DependencyUsageConfig:
