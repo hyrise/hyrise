@@ -310,32 +310,15 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
 TEST_F(UnionPositionsTest, DifferentTables) {
   /**
-   * Ensure that we get an error if we want to union different tables with different column definitions in debug builds
+   * Ensure that we get an error if we want to union different tables with different column definitions
    */
-  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto get_table_op_a = std::make_shared<GetTable>("int_int");
-  get_table_op_a->never_clear_output();
+  auto table_wrapper_a = std::make_shared<TableWrapper>(_table_10_ints);
+  auto table_wrapper_b = std::make_shared<TableWrapper>(_table_int_float4);
+  execute_all({table_wrapper_a, table_wrapper_b});
+  auto union_positions_op = std::make_shared<UnionPositions>(table_wrapper_a, table_wrapper_b);
 
-  auto get_table_op_b = std::make_shared<GetTable>("int_float4");
-  get_table_op_b->never_clear_output();
-
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op_a, greater_than_(_int_column_0_non_nullable, 24));
-  table_scan_a_op->never_clear_output();
-
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op_b, greater_than_(_int_column_0_non_nullable, 24));
-  table_scan_b_op->never_clear_output();
-
-  execute_all({get_table_op_a, get_table_op_b, table_scan_a_op, table_scan_b_op});
-
-  /**
-   * Just an early check we're actually getting some results here
-   */
-  ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 3u);
-  ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 6u);
-
-  auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
-  EXPECT_THROW(union_unique_op->execute(), std::logic_error);
+  EXPECT_THROW(union_positions_op->execute(), std::logic_error);
 }
 
 TEST_F(UnionPositionsTest, SameColumnsDifferentTables) {
@@ -344,28 +327,15 @@ TEST_F(UnionPositionsTest, SameColumnsDifferentTables) {
    */
   if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto get_table_op_a = std::make_shared<GetTable>("10_ints");
-  get_table_op_a->never_clear_output();
+  auto get_table_a_op = std::make_shared<GetTable>("10_ints");
+  get_table_a_op->never_clear_output();
 
-  auto get_table_op_b = std::make_shared<GetTable>("10_ints_copy");
-  get_table_op_b->never_clear_output();
+  auto get_table_b_op = std::make_shared<GetTable>("10_ints_copy");
+  get_table_b_op->never_clear_output();
+  execute_all({get_table_a_op, get_table_b_op});
 
-  auto table_scan_a_op = std::make_shared<TableScan>(get_table_op_a, greater_than_(_int_column_0_non_nullable, 24));
-  table_scan_a_op->never_clear_output();
-
-  auto table_scan_b_op = std::make_shared<TableScan>(get_table_op_b, greater_than_(_int_column_0_non_nullable, 24));
-  table_scan_b_op->never_clear_output();
-
-  execute_all({get_table_op_a, get_table_op_b, table_scan_a_op, table_scan_b_op});
-
-  /**
-   * Just an early check we're actually getting some results here
-   */
-  ASSERT_EQ(table_scan_a_op->get_output()->row_count(), 4u);
-  ASSERT_EQ(table_scan_b_op->get_output()->row_count(), 4u);
-
-  auto union_unique_op = std::make_shared<UnionPositions>(table_scan_a_op, table_scan_b_op);
-  EXPECT_THROW(union_unique_op->execute(), std::logic_error);
+  auto union_positions_op = std::make_shared<UnionPositions>(get_table_a_op, get_table_b_op);
+  EXPECT_THROW(union_positions_op->execute(), std::logic_error);
 }
 
 }  // namespace opossum

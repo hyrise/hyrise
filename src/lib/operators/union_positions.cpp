@@ -209,8 +209,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 }
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
-  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-              "Input tables don't have the same layout");
+  Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
+         "Input tables don't have the same layout");
 
   // Later code relies on input tables containing columns. This is guaranteed by the AbstractOperator.
 

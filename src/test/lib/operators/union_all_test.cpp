@@ -78,8 +78,6 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
 }
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnDefinitions) {
-  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
-
   auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, _table_wrapper_c);
 
   EXPECT_THROW(union_all->execute(), std::logic_error);
