@@ -2,8 +2,6 @@
 
 #include <atomic>
 
-#include <boost/date_time/gregorian/gregorian.hpp>
-
 #include "abstract_benchmark_item_runner.hpp"
 #include "tpch_constants.hpp"
 
@@ -33,9 +31,6 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
 
   // Runs the PREPARE queries if _use_prepared_statements is set, otherwise does nothing
   void _prepare_queries() const;
-
-  // Adds (or subtracts) specified number of months and days
-  static std::string _calculate_date(boost::gregorian::date date, int months, int days = 0);
 
   // Returns an SQL query with random parameters for a given (zero-indexed) benchmark item (i.e., 0 -> TPC-H 1)
   std::string _build_query(const BenchmarkItemID item_id);

@@ -70,14 +70,11 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugins/
-
-    ${Boost_INCLUDE_DIRS}
 )
 
 # Include these libraries as system libraries to silence some warnings caused by -Weverything
 include_directories(
     SYSTEM
-    ${TBB_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
     ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
     ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include

@@ -56,9 +56,9 @@ We support a number of benchmarks out of the box. This makes it easy to generate
 | ---------- | ------------------------------------------------------------------------------------------------------------------------ |
 | TPC-DS     | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpcds) |
 | TPC-H      | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch)  |
+| Join Order | [Query Plans](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/job)   |
 | JCC-H      | Call the hyriseBenchmarkTPCH binary with the -j flag.                                                                    | 
 | TPC-C      | In development, no proper optimization done yet                                                                          |
-| Join Order |                                                                                                                          |
 
 # Getting started
 
@@ -74,6 +74,8 @@ The install script was tested under macOS Big Sur (10.16) and Ubuntu 20.10 (apt-
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
+
+**Note about LLVM 13 and TBB 2021:** Hyrise can currently not be built with LLVM 13. We hope to get LLVM 13 running soon. For TBB, please use a `2020*` version until https://github.com/oneapi-src/oneTBB/issues/378 is resolved. On MacOS with brew, LLVM 12 and TBB 2020 can be installed as follows: `brew install tbb@2020 && brew install llvm@12`
 
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 

@@ -244,27 +244,44 @@ class AbstractVisualizer {
 
   std::string _wrap_label(const std::string& label) {
     if (label.length() <= MAX_LABEL_WIDTH) return label;
+    std::stringstream label_stream;
 
-    // Split by word so we don't break a line in the middle of a word
-    std::vector<std::string> label_words;
-    boost::split(label_words, label, boost::is_any_of(" "));
-
-    std::stringstream wrapped_label;
-    auto current_line_length = 0;
-
-    for (const auto& word : label_words) {
-      auto word_length = word.length() + 1;  // include whitespace
-
-      if (current_line_length + word_length > MAX_LABEL_WIDTH) {
-        wrapped_label << "\\n";
-        current_line_length = 0u;
+    // 1. Split label into lines
+    auto lines = std::vector<std::string>();
+    boost::split(lines, label, boost::is_any_of("\n"));
+    const auto line_count = lines.size();
+    for (auto line_idx = size_t{0}; line_idx < line_count; ++line_idx) {
+      if (line_idx > 0) label_stream << '\n';
+      const auto& line = lines[line_idx];
+      if (line.length() <= MAX_LABEL_WIDTH) {
+        label_stream << line;
+        continue;
       }
+      // 2. Split line into words, so we don't break a line in the middle of a word
+      auto line_words = std::vector<std::string>();
+      boost::split(line_words, line, boost::is_any_of(" "));
+      auto line_length = size_t{0};
+      auto word_idx = size_t{0};
+      while (true) {
+        label_stream << line_words.at(word_idx);
+        line_length += line_words.at(word_idx).length();
 
-      wrapped_label << word << ' ';
-      current_line_length += word_length;
+        // Exit on last word
+        if (word_idx == line_words.size() - 1) break;
+
+        line_length++;  // include whitespace
+        word_idx++;
+        auto next_line_length = line_length + line_words.at(word_idx).length();
+        if (next_line_length <= MAX_LABEL_WIDTH) {
+          label_stream << ' ';
+        } else {
+          label_stream << '\n';
+          line_length = 0;
+        }
+      }
     }
 
-    return wrapped_label.str();
+    return label_stream.str();
   }
 
   std::string _random_color() {

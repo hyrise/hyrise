@@ -620,13 +620,16 @@ TEST_F(CardinalityEstimatorTest, PredicateIn) {
 TEST_F(CardinalityEstimatorTest, PredicateTwoOnDifferentColumns) {
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(greater_than_(a_a, 50),  // s=0.5
-    PredicateNode::make(less_than_equals_(a_b, 75),  // s=0.55
-      node_a));
+  // 50% of rows in histogram, which itself covers 100% of rows in the table, leads to a selectivity of 0.5 * 1 = 0.5
+  PredicateNode::make(greater_than_(a_a, 50),
+    // 55% of rows in histogram, which itself covers 70% of rows in the table,
+    // leads to a selectivity of 0.55*0.7 = 0.385
+    PredicateNode::make(less_than_equals_(a_b, 75),
+    node_a));
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 27.5f);
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 55.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp), 19.25f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()), 38.5f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp->left_input()->left_input()), 100.0f);
 }
 
@@ -767,7 +770,7 @@ TEST_F(CardinalityEstimatorTest, PredicateWithMissingStatistics) {
     node_e);
   // clang-format on
 
-  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_a), 50.0f);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_a), 5.0f);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(input_lqp_b), 100.0f);
 
   const auto estimated_statistics_a = estimator.estimate_statistics(input_lqp_a);
