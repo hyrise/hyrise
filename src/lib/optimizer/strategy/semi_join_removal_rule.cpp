@@ -119,10 +119,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
-      if (upper_node->output_count() > 1) {
-        std::cout << "Node has several outputs: " << upper_node->description() << std::endl;
-      }
-
       // Start with the output(s) of the removal candidate
       if (upper_node == removal_candidate) return LQPUpwardVisitation::VisitOutputs;
 
@@ -151,8 +147,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
       if (upper_join_node != *semi_reduction_node.get_corresponding_join_node()) {
         removal_blockers.emplace(removal_candidate);
-      } else {
-        std::cout << "Found corresponding join" << std::endl;
       }
 
       return LQPUpwardVisitation::DoNotVisitOutputs;
@@ -168,7 +162,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
     removed_reductions_count++;
   }
-  std::cout << "Removed semi join reductions: " << removed_reductions_count << std::endl;
 }
 
 }  // namespace opossum
