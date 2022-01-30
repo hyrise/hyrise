@@ -119,8 +119,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
-      if (upper_node.output_count() > 1) {
-        std::cout << "Node has several outputs: " << upper_node.description() << std::endl;
+      if (upper_node->output_count() > 1) {
+        std::cout << "Node has several outputs: " << upper_node->description() << std::endl;
       }
 
       // Start with the output(s) of the removal candidate
