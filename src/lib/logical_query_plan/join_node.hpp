@@ -58,14 +58,20 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_reducer() const;
 
   /**
+   * TODO..
+   */
+  std::shared_ptr<JoinNode> get_corresponding_join_node() const;
+
+  /**
    * This function should be called by the SemiJoinReductionRule only.
    */
-  void mark_as_reducer();
+  void mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_node);
 
   JoinMode join_mode;
 
  protected:
   bool _is_reducer = false;
+  std::weak_ptr<JoinNode> _corresponding_join_node;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param

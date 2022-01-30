@@ -236,12 +236,26 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
-void JoinNode::mark_as_reducer() {
-  DebugAssert(join_mode == JoinMode::Semi, "Only semi joins can be marked as reducer join nodes.");
+void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_node) {
+  Assert(corresponding_join_node, "Corresponding JoinNode must be provided.");
+  Assert(!_is_reducer, "Function is meant to be called once only.");
+  DebugAssert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
+  DebugAssert(join_predicates().size() == 1, "Semi join reductions are expected to have one join predicate only.");
+  DebugAssert(
+      std::any_of(corresponding_join_node->join_predicates().begin(), corresponding_join_node->join_predicates().end(),
+                  [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
+      "Did not find matching join predicate in given corresponding JoinNode.");
   _is_reducer = true;
+  _corresponding_join_node = std::weak_ptr<JoinNode>(corresponding_join_node);
 }
 
 bool JoinNode::is_reducer() const { return _is_reducer; }
+
+std::shared_ptr<JoinNode> JoinNode::get_corresponding_join_node() const {
+  if (!_is_reducer) return nullptr;
+  Assert(!_corresponding_join_node.expired(), "Reference to corresponding JoinNode is lost.");
+  return _corresponding_join_node.lock();
+}
 
 size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
 
@@ -249,7 +263,11 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
   if (!join_predicates().empty()) {
     return JoinNode::make(join_mode, expressions_copy_and_adapt_to_different_lqp(join_predicates(), node_mapping));
   } else {
-    return JoinNode::make(join_mode);
+    auto copied_join_node = JoinNode::make(join_mode);
+    if (_is_reducer) {
+      copied_join_node->mark_as_reducer_of(get_corresponding_join_node());
+    }
+    return copied_join_node;
   }
 }
 

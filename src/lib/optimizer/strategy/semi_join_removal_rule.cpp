@@ -118,9 +118,11 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    */
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
-    const auto semi_reduction_predicate = semi_reduction_node.join_predicates().at(0);
-
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
+      if (upper_node.output_count() > 1) {
+        std::cout << "Node has several outputs: " << upper_node.description() << std::endl;
+      }
+
       // Start with the output(s) of the removal candidate
       if (upper_node == removal_candidate) return LQPUpwardVisitation::VisitOutputs;
 
@@ -144,36 +146,17 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
       // Skip all other nodes, except for joins.
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
-      const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
-      // Check whether JoinNode corresponds to semi join reduction:
-      //  In most cases, the right side of the semi join reduction is one of the inputs of the original join. In rare
-      //  cases, this is not true (see try_deeper_reducer_node in semi_join_reduction_rule.cpp). Those cases are not
-      //  covered by this removal rule yet.
-      const auto semi_join_is_left_input = upper_join_node.right_input() == semi_reduction_node.right_input();
-      const auto semi_join_is_right_input = upper_join_node.left_input() == semi_reduction_node.right_input();
 
-      if (semi_join_is_left_input || semi_join_is_right_input) {
-        Assert(semi_join_is_left_input != semi_join_is_right_input, "Semi join must be either left or right input.");
-        // Check whether the semi join reduction predicate matches one of the predicates of the upper join
-        if (std::any_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
-                        [&](const auto predicate) { return *predicate == *semi_reduction_predicate; })) {
-          // Abort upwards traversal.... TODO...
-          corresponding_join_by_semi_reduction.emplace(removal_candidate, upper_node);
-          return LQPUpwardVisitation::DoNotVisitOutputs;
-        }
+      // Add Removal Blocker, if it is not the corresponding join.
+      const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
+      if (upper_join_node != *semi_reduction_node.get_corresponding_join_node()) {
+        removal_blockers.emplace(removal_candidate);
+      } else {
+        std::cout << "Found corresponding join" << std::endl;
       }
 
-      // Removal Blocker: JoinNode, since it does not correspond to the semi join reduction.
-      //  TODO...
-      removal_blockers.emplace(removal_candidate);
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
-
-    // If we do not find a corresponding JoinNode, it is not safe to remove the semi join reduction.
-    if (!corresponding_join_by_semi_reduction.contains(removal_candidate)) {
-      removal_blockers.emplace(removal_candidate);
-      std::cout << "Did not find corresponding JoinNode node for " << semi_reduction_node.description() << std::endl;
-    }
   }
 
   /**
