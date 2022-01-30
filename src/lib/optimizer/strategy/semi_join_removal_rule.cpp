@@ -103,109 +103,95 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
   auto corresponding_join_by_semi_reduction =
       std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>{};
-  auto corresponding_join_input_side_by_semi_reduction =
-      std::unordered_map<std::shared_ptr<AbstractLQPNode>, LQPInputSide>{};
 
   /**
-   * Phase 1: Find semi join reductions & Determine removal blockers.
+   * Phase 1: Collect semi join reductions
+   *            TODO rename rule if we continue to look at semi join reductions only
    */
   visit_lqp(lqp_root, [&](const auto& node) {
-    // Check if the current node is a semi join reduction
     if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
     const auto& join_node = static_cast<const JoinNode&>(*node);
+    // Check if the current node is a semi join reduction and ... TODO
+    if (join_node.is_reducer() && join_node.output_count() == 1) {
+      Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
+      removal_candidates.emplace(node);
+    }
+    return LQPVisitation::VisitInputs;
+  });
 
-    // todo rename rule if we continue to look at semi join reductions only
-    if (!join_node.is_reducer()) return LQPVisitation::VisitInputs;
-    Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
+  /**
+   * Phase 2: Find corresponding JoinNode & Determine removal blockers.
+   */
+  for (const auto& removal_candidate : removal_candidates) {
+    const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
+    const auto semi_reduction_predicate = semi_reduction_node.join_predicates().at(0);
 
-    const auto& semi_reduction_node = static_cast<const JoinNode&>(*node);
-    const auto semi_join_predicate = semi_reduction_node.join_predicates().at(0);
+    visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
+      // Start with the output(s) of the removal candidate
+      if (upper_node == removal_candidate) return LQPUpwardVisitation::VisitOutputs;
 
-    /**
-     * Phase 2: Traverse upwards until finding the JoinNode that corresponds to semi_reduction_node.
-     *          Add removal blocker in case of expensive nodes and predicates that benefit from semi_reduction_node.
-     */
-    visit_lqp_upwards(node, [&](const auto& upper_node) {  // todo maybe pass semi_reduction_node instead of node
-      /**
-       * ToDo Benchmark this:
-       */
-//      if (upper_node.output_count() > 1) {
-//        removal_blockers.emplace(node);
-//        return LQPUpwardVisitation::DoNotVisitOutputs;
-//      }
-
-      // Skip the semi node found before, i.e., start with its output
-      if (node == upper_node) return LQPUpwardVisitation::VisitOutputs;
-
-      /**
-       * Removal Blocker: AggregateNode
-       *  The estimation for aggregate and column/column scans is bad, so whenever one of these occurs between the semi
-       *  join reduction and the original join, do not remove the semi join reduction (i.e., abort the search for an
-       *  upper node).
-       */
+      // Removal Blocker: AggregateNode
+      //  The estimation for aggregate and column/column scans is bad, so whenever one of these occurs between the semi
+      //  join reduction and the original join, do not remove the semi join reduction (i.e., abort the search for an
+      //  upper node).
       if (upper_node->type == LQPNodeType::Aggregate) {
-        removal_blockers.emplace(node);
+        removal_blockers.emplace(removal_candidate);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
-      /**
-       * Removal Blocker: Expensive PredicateNode
-       */
+      // Removal Blocker: PredicateNode, unless it is not expensive.
       if (upper_node->type == LQPNodeType::Predicate) {
         const auto& upper_predicate_node = static_cast<const PredicateNode&>(*upper_node);
-
         if (is_expensive_predicate(upper_predicate_node.predicate())) {
-          removal_blockers.emplace(node);
+          removal_blockers.emplace(removal_candidate);
           return LQPUpwardVisitation::DoNotVisitOutputs;
         }
       }
 
-      // Skip all other nodes, except for Joins.
+      // Skip all other nodes, except for joins.
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
-
-      /**
-       * JoinNode
-       *  a) Corresponding Join
-       *      In most cases, the right side of the semi join reduction is one of the inputs of the original join. In rare
-       *      cases, this is not true (see try_deeper_reducer_node in semi_join_reduction_rule.cpp). Those cases are not
-       *      covered by this removal rule yet.
-       *  b) Removal Blocker
-       */
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
+      // Check whether JoinNode corresponds to semi join reduction:
+      //  In most cases, the right side of the semi join reduction is one of the inputs of the original join. In rare
+      //  cases, this is not true (see try_deeper_reducer_node in semi_join_reduction_rule.cpp). Those cases are not
+      //  covered by this removal rule yet.
       const auto semi_join_is_left_input = upper_join_node.right_input() == semi_reduction_node.right_input();
       const auto semi_join_is_right_input = upper_join_node.left_input() == semi_reduction_node.right_input();
+
       if (semi_join_is_left_input || semi_join_is_right_input) {
         Assert(semi_join_is_left_input != semi_join_is_right_input, "Semi join must be either left or right input.");
         // Check whether the semi join reduction predicate matches one of the predicates of the upper join
         if (std::any_of(upper_join_node.join_predicates().begin(), upper_join_node.join_predicates().end(),
-                        [&](const auto predicate) { return *predicate == *semi_join_predicate; })) {
-          corresponding_join_by_semi_reduction.emplace(node, upper_node);
-          const auto join_input_side = semi_join_is_left_input ? LQPInputSide::Left : LQPInputSide::Right;
-          corresponding_join_input_side_by_semi_reduction.emplace(node, join_input_side);
+                        [&](const auto predicate) { return *predicate == *semi_reduction_predicate; })) {
+          // Abort upwards traversal.... TODO...
+          corresponding_join_by_semi_reduction.emplace(removal_candidate, upper_node);
+          return LQPUpwardVisitation::DoNotVisitOutputs;
         }
       }
-      // If JoinNode does not correspond to semi_reduction_node, add a removal blocker and abort the upwards traversal.
-      if (!corresponding_join_by_semi_reduction.contains(node)) {
-        removal_blockers.emplace(node);
-        return LQPUpwardVisitation::DoNotVisitOutputs;
-      }
 
-      removal_candidates.emplace(node);
+      // Removal Blocker: JoinNode, since it does not correspond to the semi join reduction.
+      //  TODO...
+      removal_blockers.emplace(removal_candidate);
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
 
-    return LQPVisitation::VisitInputs;
-  });
-
-  if (removal_candidates.empty()) return;
+    // If we do not find a corresponding JoinNode, it is not safe to remove the semi join reduction.
+    if (!corresponding_join_by_semi_reduction.contains(removal_candidate)) {
+      removal_blockers.emplace(removal_candidate);
+      std::cout << "Did not find corresponding JoinNode node for " << semi_reduction_node.description() << std::endl;
+    }
+  }
 
   /**
-   * Phase 3: Remove semi join reductions
+   * Phase 3: Remove semi join reduction nodes
    */
+  size_t removed_reductions_count = 0;
   for (const auto& removal_candidate : removal_candidates) {
     if (removal_blockers.contains(removal_candidate)) continue;
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
+    removed_reductions_count++;
   }
+  std::cout << "Removed semi join reductions: " << removed_reductions_count << std::endl;
 }
 
 }  // namespace opossum
