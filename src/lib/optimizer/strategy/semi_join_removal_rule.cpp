@@ -15,42 +15,36 @@
 namespace {
 using namespace opossum;  // NOLINT
 
+/**
+ * TODO.. Doc
+ * @param predicate
+ * @return
+ * TODO: Maybe also consider the predicate multiplier defined by the cost model
+ */
 bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
-  // TODO: Maybe also consider the predicate multiplier defined by the cost model
-
   const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
   if (binary_predicate) {
-    /**
-     * ColumnVsColumn
-     */
+    // ColumnVsColumn
     if (binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
         binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
       return true;
     }
 
-    /**
-     * LIKE
-     */
+    // LIKE
     if (binary_predicate->predicate_condition == PredicateCondition::Like ||
         binary_predicate->predicate_condition == PredicateCondition::NotLike) {
       return true;
     }
   }
 
-  /**
-   * IS NULL
-   */
+  // IS NULL
   if (std::dynamic_pointer_cast<IsNullExpression>(predicate)) return true;
 
-  /**
-   * IN List(...)
-   */
+  // IN List(...)
   const auto in_predicate = std::dynamic_pointer_cast<InExpression>(predicate);
   if (in_predicate && std::dynamic_pointer_cast<ListExpression>(in_predicate->set())) return true;
 
-  /**
-   * Correlated Subqueries
-   */
+  // Correlated Subqueries
   auto predicate_contains_correlated_subquery = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
     if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
