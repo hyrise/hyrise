@@ -9,7 +9,7 @@ endif()
 set(CMAKE_UNITY_BUILD "OFF")
 
 # Some third-party libraries already define proper CMake library targets. We can simply add those targets with
-# `add_subdirectory(<lib>)`. For libraries without such definitions, we manually build the library targets.
+# `add_subdirectory(<lib-directory>)`. For libraries without such definitions, we manually build the library targets.
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
 add_subdirectory(benchmark)
 add_subdirectory(googletest)
