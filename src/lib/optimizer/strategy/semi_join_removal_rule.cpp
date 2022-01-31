@@ -24,7 +24,7 @@ bool is_value_operand(const std::shared_ptr<AbstractExpression> operand) {
     return static_cast<const CastExpression&>(*operand).argument()->type == ExpressionType::Value;
   }
   return false;
-};
+}
 
 /**
  * TODO.. Doc
