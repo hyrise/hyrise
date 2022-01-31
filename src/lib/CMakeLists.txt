@@ -648,8 +648,10 @@ set(
 
 set(
     LIBRARIES
+
     compact_vector
     lz4
+    magic_enum
     sqlparser
     uninitialized_vector
     zstd
@@ -725,6 +727,9 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    cpp-btree
+    cxxopts
+    flat-hash-map
     nlohmann_json::nlohmann_json
     robin_map
     SQLite::SQLite3
@@ -778,6 +783,6 @@ target_link_libraries(hyrise INTERFACE hyrise_impl)
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
         COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
-        )
+)
 
 add_dependencies(hyrise resourceLink)
