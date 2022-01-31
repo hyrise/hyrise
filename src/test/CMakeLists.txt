@@ -139,6 +139,7 @@ set(
     lib/optimizer/strategy/predicate_reordering_rule_test.cpp
     lib/optimizer/strategy/predicate_split_up_rule_test.cpp
     lib/optimizer/strategy/semi_join_reduction_rule_test.cpp
+    lib/optimizer/strategy/semi_join_reduction_removal_rule_test.cpp
     lib/optimizer/strategy/stored_table_column_alignment_rule_test.cpp
     lib/optimizer/strategy/strategy_base_test.cpp
     lib/optimizer/strategy/strategy_base_test.hpp
