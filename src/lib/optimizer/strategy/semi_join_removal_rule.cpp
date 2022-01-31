@@ -1,7 +1,9 @@
 #include "semi_join_removal_rule.hpp"
 
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
+#include "expression/cast_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/in_expression.hpp"
 #include "expression/is_null_expression.hpp"
@@ -15,6 +17,15 @@
 namespace {
 using namespace opossum;  // NOLINT
 
+bool is_value_operand(const std::shared_ptr<AbstractExpression> operand) {
+  if (operand->type == ExpressionType::Value) {
+    return true;
+  } else if (operand->type == ExpressionType::Cast) {
+    return static_cast<const CastExpression&>(*operand).argument()->type == ExpressionType::Value;
+  }
+  return false;
+};
+
 /**
  * TODO.. Doc
  * @param predicate
@@ -22,42 +33,29 @@ using namespace opossum;  // NOLINT
  * TODO: Maybe also consider the predicate multiplier defined by the cost model
  */
 bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate) {
-  const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-  if (binary_predicate) {
-    // ColumnVsColumn
-    if (binary_predicate->left_operand()->type == ExpressionType::LQPColumn &&
-        binary_predicate->right_operand()->type == ExpressionType::LQPColumn) {
-      return true;
-    }
-
-    // LIKE
+  if (const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate)) {
+    // LIKE predicates
     if (binary_predicate->predicate_condition == PredicateCondition::Like ||
         binary_predicate->predicate_condition == PredicateCondition::NotLike) {
       return true;
     }
+    // Value-based vs. Non-Value-based predicates
+    //  The existence of at least one value operand leads to the efficient ColumnVsValue-TableScanImpl in PQPs.
+    //  All other binary predicates require the more expensive ColumnVsColumn- or ExpressionEvaluator-TableScanImpls.
+    return !is_value_operand(binary_predicate->left_operand()) && !is_value_operand(binary_predicate->right_operand());
   }
 
-  // IS NULL
-  if (std::dynamic_pointer_cast<IsNullExpression>(predicate)) return true;
+  // TODO Enable & Benchmark
+  //  if (const auto between_predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
+  //    // The ColumnBetween-TableScanImpl is chosen when lower and upper bound are specified as values. Otherwise, the
+  // expensive ExpressionEvaluator-TableScanImpl is required for evaluation.
+  //    return !(is_value_operand(between_predicate->lower_bound()) && is_value_operand(between_predicate->upper_bound()));
+  //  }
 
-  // IN List(...)
-  const auto in_predicate = std::dynamic_pointer_cast<InExpression>(predicate);
-  if (in_predicate && std::dynamic_pointer_cast<ListExpression>(in_predicate->set())) return true;
+  // TODO Benchmark
+  // if (std::dynamic_pointer_cast<IsNullExpression>(predicate)) return false;
 
-  // Correlated Subqueries
-  auto predicate_contains_correlated_subquery = false;
-  visit_expression(predicate, [&](const auto& sub_expression) {
-    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-        subquery_expression && subquery_expression->is_correlated()) {
-      predicate_contains_correlated_subquery = true;
-      return ExpressionVisitation::DoNotVisitArguments;
-    } else {
-      return ExpressionVisitation::VisitArguments;
-    }
-  });
-  if (predicate_contains_correlated_subquery) return true;
-
-  return false;
+  return true;
 }
 
 }  // namespace
