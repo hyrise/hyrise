@@ -68,6 +68,11 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/plugins/
 )
 
+include_directories(
+    SYSTEM
+    ${PROJECT_SOURCE_DIR}/third_party/fsst
+)
+
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
     message(STATUS "clang-tidy enabled")
