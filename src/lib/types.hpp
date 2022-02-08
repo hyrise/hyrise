@@ -240,6 +240,8 @@ enum class AutoCommit : bool { Yes = true, No = false };
 
 enum class LogLevel { Debug, Info, Warning };
 
+enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
+
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
 // reduce the compile time at the cost of the runtime performance. Examples are iterators, which are replaced by
 // AnySegmentIterators that use virtual method calls.

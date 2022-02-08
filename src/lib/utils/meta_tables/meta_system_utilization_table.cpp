@@ -73,7 +73,7 @@ MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() 
 */
 uint64_t MetaSystemUtilizationTable::_get_total_time() {
   auto time = std::chrono::steady_clock::now().time_since_epoch();
-  return std::chrono::duration_cast<std::chrono::nanoseconds>(time).count();
+  return std::chrono::nanoseconds{time}.count();
 }
 
 /**
