@@ -6,7 +6,7 @@
 namespace opossum {
 
 /**
- * Starts a std::chrono::high_resolution_clock base timer on construction and returns and resets measurement when
+ * Starts a std::chrono::steady_clock base timer on construction and returns and resets measurement when
  * lap() is called.
  */
 class Timer final {
@@ -24,7 +24,7 @@ class Timer final {
   std::string lap_formatted();
 
  private:
-  std::chrono::high_resolution_clock::time_point _begin;
+  std::chrono::steady_clock::time_point _begin;
 };
 
 }  // namespace opossum

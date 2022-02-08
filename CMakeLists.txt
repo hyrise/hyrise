@@ -117,14 +117,16 @@ set(CMAKE_SHARED_LINKER_FLAGS_DEBUG "${CMAKE_SHARED_LINKER_FLAGS_DEBUG} -O0")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -O0")
 
 # Dependencies
+set(DEFAULT_LIB_DIRS $ENV{HOME}/local /opt/local /usr/local /usr)
 find_package(Numa QUIET)
 find_package(Tbb REQUIRED)
 find_package(Readline REQUIRED)
 find_package(Curses REQUIRED)
-find_package(Sqlite3 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS container system date_time)
+find_package(SQLite3 REQUIRED)
+find_package(Boost REQUIRED COMPONENTS container date_time)
 
 add_definitions(-DBOOST_THREAD_VERSION=5)
+set(BOOST_LIBS Boost::container Boost::date_time)
 
 # If we are building Hyrise for the CI server, we want to make sure that all optional features are available and can be tested
 if(CI_BUILD)

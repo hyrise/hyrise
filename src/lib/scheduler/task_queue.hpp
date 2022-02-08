@@ -43,6 +43,8 @@ class TaskQueue {
    */
   std::condition_variable new_task;
 
+  size_t size(const uint32_t priority);
+
   /**
    * Mutex accessed by workers in order to notify them using condition variable
    */

@@ -656,18 +656,14 @@ set(
 
 set(
     LIBRARIES
+
     compact_vector
-    lz4
     fsst
+    lz4
+    magic_enum
     sqlparser
     uninitialized_vector
     zstd
-    ${Boost_CONTAINER_LIBRARY}
-    ${Boost_SYSTEM_LIBRARY}
-    ${Boost_THREAD_LIBRARY}
-    ${Boost_DATE_TIME_LIBRARY}
-    ${TBB_LIBRARY}
-    ${SQLITE3_LIBRARY}
     ${CMAKE_DL_LIBS}
     # Additional libraries added with target_link_libraries_system below
 )
@@ -736,8 +732,23 @@ if(NOT APPLE)
     target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
-target_link_libraries_system(hyrise_impl nlohmann_json::nlohmann_json)
-target_link_libraries_system(hyrise_impl robin_map)
+target_link_libraries_system(
+    hyrise_impl
+
+    ${BOOST_LIBS}
+    cpp-btree
+    cxxopts
+    flat-hash-map
+    nlohmann_json::nlohmann_json
+    robin_map
+    SQLite::SQLite3
+    tbb
+)
+
+if (NUMA_FOUND)
+    target_link_libraries(hyrise_impl PUBLIC numa)
+endif()
+
 target_include_directories(hyrise_impl PUBLIC ${CMAKE_BINARY_DIR})
 
 # Precompile the most expensive headers. Only add headers here if you know what you are doing, as this has the potential
@@ -781,6 +792,6 @@ target_link_libraries(hyrise INTERFACE hyrise_impl)
 # add a link to the resources/ directory at the root of the build directory).
 add_custom_target(resourceLink
         COMMAND ln -fs ${CMAKE_BINARY_DIR}/../resources ${CMAKE_BINARY_DIR}/
-        )
+)
 
 add_dependencies(hyrise resourceLink)
