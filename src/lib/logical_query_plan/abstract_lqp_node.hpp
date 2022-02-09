@@ -152,6 +152,29 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   bool has_output_expressions(const ExpressionUnorderedSet& expressions) const;
 
+  enum class ExpressionIteration { Continue, Break };
+
+  /**
+   * Calls the passed @param visitor on each of the output expressions.
+   * The visitor returns `ExpressionIteration`, indicating whether the remaining expressions should be visited
+   * as well.
+   * Prefer this method over multiple calls of `find_column_id()` or `get_column_id`, as it computes the output
+   * expressions only once.
+   *
+   * @tparam Visitor      Functor called with ColumnID and the expression as a param.
+   *                      Returns `ExpressionIteration`
+   */
+  template <typename Visitor>
+  void iterate_output_expressions(Visitor visitor) const {
+    const auto& output_expressions = this->output_expressions();
+    const auto output_expression_count = output_expressions.size();
+    for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+      if (visitor(column_id, output_expressions[column_id]) == ExpressionIteration::Break) {
+        break;
+      }
+    }
+  }
+
   /**
    * @return whether the output column at @param column_id is nullable
    */

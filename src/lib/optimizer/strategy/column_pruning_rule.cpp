@@ -122,6 +122,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // be already computed; if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
+      const auto& input_expressions = node->left_input()->output_expressions();
       for (const auto& expression : node->node_expressions) {
         if (node->type == LQPNodeType::Projection && !expressions_required_by_consumers.contains(expression)) {
           // An expression produced by a ProjectionNode that is not required by anyone upstream is useless. We should
@@ -129,7 +130,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           continue;
         }
 
-        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->output_expressions(),
+        gather_expressions_not_computed_by_expression_evaluator(expression, input_expressions,
                                                                 locally_required_expressions);
       }
     } break;
@@ -216,18 +217,18 @@ void recursively_gather_required_expressions(
     // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
     // needs
     auto& required_expressions_for_input = required_expressions_by_node[input];
-    const auto& expressions_provided_by_input = input->output_expressions();
-    for (const auto& required_expression : required_expressions) {
-      // Add the columns needed here (and above) if they come from the input node. Reasons why this might NOT be the
-      // case are: (1) The expression is calculated in this node (and is thus not available in the input node), or
-      // (2) we have two input nodes (i.e., a join) and the expressions comes from the other side.
-      for (auto column_id = ColumnID{0}; column_id < expressions_provided_by_input.size(); ++column_id) {
-        if (*expressions_provided_by_input[column_id] == *required_expression) {
+    input->iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
+      for (const auto& required_expression : required_expressions) {
+        // Add the columns needed here (and above) if they come from the input node. Reasons why this might NOT be the
+        // case are: (1) The expression is calculated in this node (and is thus not available in the input node), or
+        // (2) we have two input nodes (i.e., a join) and the expressions comes from the other side.
+        if (*output_expression == *required_expression) {
           required_expressions_for_input.emplace(required_expression);
           break;
         }
       }
-    }
+      return AbstractLQPNode::ExpressionIteration::Continue;
+    });
 
     recursively_gather_required_expressions(input, required_expressions_by_node, outputs_visited_by_node);
   }
@@ -362,7 +363,8 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       case LQPNodeType::StoredTable: {
         // Prune all unused columns from a StoredTableNode
         auto pruned_column_ids = std::vector<ColumnID>{};
-        for (const auto& expression : node->output_expressions()) {
+        const auto& node_output_expressions = node->output_expressions();
+        for (const auto& expression : node_output_expressions) {
           if (required_expressions.find(expression) != required_expressions.end()) {
             continue;
           }
@@ -371,7 +373,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
           pruned_column_ids.emplace_back(column_expression->original_column_id);
         }
 
-        if (pruned_column_ids.size() == node->output_expressions().size()) {
+        if (pruned_column_ids.size() == node_output_expressions.size()) {
           // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
           // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
           // column from the pruning list. It does not matter which column it is.

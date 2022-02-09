@@ -465,6 +465,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   if (fds.empty()) return;
   const auto& output_expressions = lqp->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
+  const auto output_expression_count = output_expressions.size();
 
   // Adjust FDs: Remove dependents that are not part of the node's output expressions
   auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
@@ -476,7 +477,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
 
   // Remove invalid or unnecessary FDs
   fds.erase(std::remove_if(fds.begin(), fds.end(),
-                           [&lqp, &output_expressions_set](auto& fd) {
+                           [&](auto& fd) {
                              // If there are no dependents left, we can discard the FD altogether
                              if (fd.dependents.empty()) return true;
 
@@ -486,9 +487,14 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                               *  b) are nullable
                               */
                              for (const auto& fd_determinant_expression : fd.determinants) {
-                               if (!output_expressions_set.contains(fd_determinant_expression) ||
-                                   lqp->is_column_nullable(lqp->get_column_id(*fd_determinant_expression))) {
+                               if (!output_expressions_set.contains(fd_determinant_expression)) {
                                  return true;
+                               }
+                               for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+                                 if (*output_expressions[column_id] == *fd_determinant_expression &&
+                                     lqp->is_column_nullable(column_id)) {
+                                   return true;
+                                 }
                                }
                              }
                              return false;

@@ -15,21 +15,20 @@ using namespace opossum::expression_functional;  // NOLINT
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {
-  auto value = AllParameterVariant{};
-
   if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression)) {
-    value = value_expression->value;
-  } else if (const auto column_id = node.find_column_id(expression)) {
-    value = *column_id;
-  } else if (const auto* const parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
-    value = parameter_expression->parameter_id;
-  } else if (const auto* const placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
-    value = placeholder_expression->parameter_id;
-  } else {
-    return std::nullopt;
+    return value_expression->value;
+  }
+  if (const auto column_id = node.find_column_id(expression)) {
+    return *column_id;
+  }
+  if (const auto* const parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
+    return parameter_expression->parameter_id;
+  }
+  if (const auto* const placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
+    return placeholder_expression->parameter_id;
   }
 
-  return value;
+  return std::nullopt;
 }
 
 }  // namespace

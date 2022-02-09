@@ -54,9 +54,10 @@ std::string LQPSubqueryExpression::description(const DescriptionMode mode) const
 }
 
 DataType LQPSubqueryExpression::data_type() const {
-  Assert(lqp->output_expressions().size() == 1,
+  const auto& output_expressions = lqp->output_expressions();
+  Assert(output_expressions.size() == 1,
          "Can only determine the DataType of SubqueryExpressions that return exactly one column");
-  return lqp->output_expressions()[0]->data_type();
+  return output_expressions[0]->data_type();
 }
 
 bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode&) const {

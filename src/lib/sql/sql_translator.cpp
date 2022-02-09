@@ -133,10 +133,24 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
   const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
   if (!binary_predicate_expression) return false;
 
-  const auto left_in_left = left_input.find_column_id(*binary_predicate_expression->left_operand());
-  const auto right_in_right = right_input.find_column_id(*binary_predicate_expression->right_operand());
-  const auto right_in_left = left_input.find_column_id(*binary_predicate_expression->right_operand());
-  const auto left_in_right = right_input.find_column_id(*binary_predicate_expression->left_operand());
+  std::optional<ColumnID> left_in_left, left_in_right, right_in_left, right_in_right;
+  left_input.iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
+    if (*output_expression == *binary_predicate_expression->left_operand()) {
+      left_in_left = column_id;
+    } else if (*output_expression == *binary_predicate_expression->right_operand()) {
+      right_in_left = column_id;
+    }
+    return AbstractLQPNode::ExpressionIteration::Continue;
+  });
+
+  right_input.iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
+    if (*output_expression == *binary_predicate_expression->left_operand()) {
+      left_in_right = column_id;
+    } else if (*output_expression == *binary_predicate_expression->right_operand()) {
+      right_in_right = column_id;
+    }
+    return AbstractLQPNode::ExpressionIteration::Continue;
+  });
 
   return (left_in_left && right_in_right) || (right_in_left && left_in_right);
 }
@@ -1060,9 +1074,16 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   if (is_aggregate) {
     // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates
     if (!pre_aggregate_expressions.empty()) {
+      const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available =
-          std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
-                      [&](const auto& expression) { return !_current_lqp->find_column_id(*expression); });
+          std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(), [&](const auto& expression) {
+            for (const auto& output_expression : output_expressions) {
+              if (*expression == *output_expression) {
+                return false;
+              }
+            }
+            return true;
+          });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);

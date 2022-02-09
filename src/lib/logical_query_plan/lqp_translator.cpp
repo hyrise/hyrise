@@ -273,12 +273,20 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
   const auto input_node = alias_node->left_input();
   const auto input_operator = translate_node(input_node);
 
+  const auto& output_expressions = alias_node->output_expressions();
+  const auto output_expression_count = output_expressions.size();
   auto column_ids = std::vector<ColumnID>();
-  column_ids.reserve(alias_node->output_expressions().size());
+  column_ids.resize(output_expression_count);
 
-  for (const auto& expression : alias_node->output_expressions()) {
-    column_ids.emplace_back(input_node->get_column_id(*expression));
-  }
+  input_node->iterate_output_expressions([&](const auto column_id, const auto& input_expression) {
+    for (auto expression_id = ColumnID{0}; expression_id < output_expression_count; ++expression_id) {
+      const auto& expression = output_expressions[expression_id];
+      if (*expression == *input_expression) {
+        column_ids[expression_id] = column_id;
+      }
+    }
+    return AbstractLQPNode::ExpressionIteration::Continue;
+  });
 
   return std::make_shared<AliasOperator>(input_operator, column_ids, alias_node->aliases);
 }
@@ -399,17 +407,27 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   // Create GroupByColumns from the GroupBy expressions. For now, we expect all GroupBy expressions to be already
   // present, i.e., we do not calculate them on the fly.
   std::vector<ColumnID> group_by_column_ids;
-  group_by_column_ids.reserve(aggregate_node->node_expressions.size() -
-                              aggregate_node->aggregate_expressions_begin_idx);
+  group_by_column_ids.resize(aggregate_node->aggregate_expressions_begin_idx);
+
+  auto found_groupby_columns = ExpressionUnorderedSet{};
+  node->left_input()->iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
+    for (auto expression_idx = size_t{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
+         ++expression_idx) {
+      const auto& expression = aggregate_node->node_expressions[expression_idx];
+      if (*output_expression == *expression) {
+        group_by_column_ids[expression_idx] = column_id;
+        found_groupby_columns.emplace(expression);
+      }
+    }
+    return AbstractLQPNode::ExpressionIteration::Continue;
+  });
 
   for (auto expression_idx = size_t{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
        ++expression_idx) {
     const auto& expression = aggregate_node->node_expressions[expression_idx];
-    const auto column_id = node->left_input()->find_column_id(*expression);
-    Assert(column_id, "GroupBy expression '"s + expression->as_column_name() + "' not available as column");
-    group_by_column_ids.emplace_back(*column_id);
+    Assert(found_groupby_columns.contains(expression),
+           "GroupBy expression '"s + expression->as_column_name() + "' not available as column");
   }
-
   return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
 }
 
@@ -566,16 +584,19 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
     * Resolve Expressions to PQPColumnExpressions referencing columns from the input Operator. After this, no
     * LQPColumnExpressions remain in the pqp_expression and it is a valid PQP expression.
     */
+  const auto& output_expressions = node->output_expressions();
+  const auto& output_expression_count = output_expressions.size();
   visit_expression(pqp_expression, [&](auto& expression) {
     // Try to resolve the Expression to a column from the input node
-    const auto column_id = node->find_column_id(*expression);
-    if (column_id) {
-      const auto referenced_expression = node->output_expressions()[*column_id];
-      expression =
-          std::make_shared<PQPColumnExpression>(*column_id, referenced_expression->data_type(),
-                                                node->is_column_nullable(node->get_column_id(*referenced_expression)),
-                                                referenced_expression->as_column_name());
-      return ExpressionVisitation::DoNotVisitArguments;
+    for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+      const auto& output_expression = output_expressions[column_id];
+      if (*expression == *output_expression) {
+        expression = std::make_shared<PQPColumnExpression>(column_id, expression->data_type(),
+                                                           node->is_column_nullable(column_id),
+                                                           output_expression->as_column_name());
+
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
     }
 
     // Resolve COUNT(*)
@@ -611,12 +632,18 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};
-      subquery_parameters.reserve(subquery_expression->parameter_count());
+      subquery_parameters.resize(subquery_expression->parameter_count());
 
-      for (auto parameter_idx = size_t{0}; parameter_idx < subquery_expression->parameter_count(); ++parameter_idx) {
-        const auto parameter_column_id = node->get_column_id(*subquery_expression->parameter_expression(parameter_idx));
-        subquery_parameters.emplace_back(subquery_expression->parameter_ids[parameter_idx], parameter_column_id);
-      }
+      const auto parameter_count = subquery_expression->parameter_count();
+      node->iterate_output_expressions([&](const auto column_id, const auto& expression) {
+        for (auto parameter_idx = size_t{0}; parameter_idx < parameter_count; ++parameter_idx) {
+          const auto& parameter_expression = subquery_expression->parameter_expression(parameter_idx);
+          if (*parameter_expression == *expression) {
+            subquery_parameters[parameter_idx] = {subquery_expression->parameter_ids[parameter_idx], column_id};
+          }
+        }
+        return AbstractLQPNode::ExpressionIteration::Continue;
+      });
 
       // Only specify a type for the Subquery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
