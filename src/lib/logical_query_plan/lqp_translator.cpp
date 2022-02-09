@@ -635,15 +635,16 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       subquery_parameters.resize(subquery_expression->parameter_count());
 
       const auto parameter_count = subquery_expression->parameter_count();
-      node->iterate_output_expressions([&](const auto column_id, const auto& expression) {
+
+      for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+        const auto& expression = output_expressions[column_id];
         for (auto parameter_idx = size_t{0}; parameter_idx < parameter_count; ++parameter_idx) {
           const auto& parameter_expression = subquery_expression->parameter_expression(parameter_idx);
           if (*parameter_expression == *expression) {
             subquery_parameters[parameter_idx] = {subquery_expression->parameter_ids[parameter_idx], column_id};
           }
         }
-        return AbstractLQPNode::ExpressionIteration::Continue;
-      });
+      }
 
       // Only specify a type for the Subquery if it has exactly one column. Otherwise the DataType of the Expression
       // is undefined and obtaining it will result in a runtime error.
