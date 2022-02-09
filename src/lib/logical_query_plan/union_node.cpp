@@ -20,6 +20,11 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
   const auto& left_expressions = left_input()->output_expressions();
+  /**
+   * Asserting matching table schemas leads to multiple fetches of a subplan's output expressions.
+   * Though this does not have performance implications now, they may arise in the future.
+   * In this case, consider relaxing the check by using `DebugAssert`.
+   */
   Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match");
   return left_expressions;
 }
