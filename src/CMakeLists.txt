@@ -39,7 +39,7 @@ endif()
 
 # Global flags and include directories
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
 # Hotfix for boost bug (https://github.com/boostorg/asio/issues/312):
 add_compile_options(-DBOOST_ASIO_DISABLE_CONCEPTS)
