@@ -25,7 +25,6 @@
 | sqlite3                   | >= 3             |    All   |                                    No |
 | systemtap                 | any              |    Linux |                                    No |
 | systemtap-sdt-dev         | any              |    Linux |                                    No |
-| tbb/libtbb-dev            | any              |    All   |                                    No |
 | valgrind                  | any              |    All   |            Yes, memory checking in CI |
 
 
