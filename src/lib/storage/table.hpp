@@ -234,10 +234,8 @@ class Table : private Noncopyable {
    *
    * With C++20 we will get std::atomic<std::shared_ptr<T>>, which allows us to omit the std::atomic_load() and
    * std::atomic_store() function calls.
-   *
-   * For the zero_allocator, see the implementation of Table::append_chunk.
    */
-  tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
+  tbb::concurrent_vector<std::shared_ptr<Chunk>> _chunks;
 
   TableKeyConstraints _table_key_constraints;
 

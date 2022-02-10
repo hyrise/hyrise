@@ -11,13 +11,17 @@ set(CMAKE_UNITY_BUILD "OFF")
 # Some third-party libraries already define proper CMake library targets. We can simply add those targets with
 # `add_subdirectory(<lib-directory>)`. For libraries without such definitions, we manually build the library targets.
 set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
-add_subdirectory(benchmark)
-add_subdirectory(googletest)
-add_subdirectory(libpqxx)
-add_subdirectory(magic_enum)
-add_subdirectory(nlohmann_json)
-add_subdirectory(robin-map)
-add_subdirectory(tpch-dbgen)
+
+# Command with directory as parameter # Used library targets
+#-------------------------------------#-----------------------------
+add_subdirectory(benchmark)           # benchmark
+add_subdirectory(googletest)          # gtest, gmock
+add_subdirectory(libpqxx)             # pqxx_static
+add_subdirectory(magic_enum)          # magic_enum
+add_subdirectory(nlohmann_json)       # nlohmann_json::nlohmann_json
+add_subdirectory(robin-map)           # robin_map
+add_subdirectory(tpch-dbgen)          # tpch_dbgen
+add_subdirectory(oneTBB)              # TBB::tbb
 
 # Build sql-parser library
 set(PARSER_DIR sql-parser)
