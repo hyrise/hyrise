@@ -133,25 +133,23 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
   const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
   if (!binary_predicate_expression) return false;
 
-  std::optional<ColumnID> left_in_left, left_in_right, right_in_left, right_in_right;
-  left_input.iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
-    if (*output_expression == *binary_predicate_expression->left_operand()) {
-      left_in_left = column_id;
-    } else if (*output_expression == *binary_predicate_expression->right_operand()) {
-      right_in_left = column_id;
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+  const auto find_predicate_in_input = [&](const auto& input) {
+    auto left_argument_found = false;
+    auto right_argument_found = false;
 
-  right_input.iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
-    if (*output_expression == *binary_predicate_expression->left_operand()) {
-      left_in_right = column_id;
-    } else if (*output_expression == *binary_predicate_expression->right_operand()) {
-      right_in_right = column_id;
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+    input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
+      if (*expression == *binary_predicate_expression->left_operand()) {
+        left_argument_found = true;
+      } else if (*expression == *binary_predicate_expression->right_operand()) {
+        right_argument_found = true;
+      }
+      return AbstractLQPNode::ExpressionIteration::Continue;
+    });
+    return std::make_pair(left_argument_found, right_argument_found);
+  };
 
+  const auto [left_in_left, right_in_left] = find_predicate_in_input(left_input);
+  const auto [left_in_right, right_in_right] = find_predicate_in_input(right_input);
   return (left_in_left && right_in_right) || (right_in_left && left_in_right);
 }
 }  // namespace

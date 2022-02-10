@@ -28,24 +28,23 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
   // It is possible that a join with left input A and right input B has a join predicate in the form of B.x = A.x. To
   // avoid having the join implementations handle such situations we check if the predicate sides match. If not, the
   // column IDs and the predicates are flipped.
-  std::optional<ColumnID> left_in_left, left_in_right, right_in_left, right_in_right;
-  left_input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
-    if (*expression == *abstract_predicate_expression->arguments[0]) {
-      left_in_left = column_id;
-    } else if (*expression == *abstract_predicate_expression->arguments[1]) {
-      right_in_left = column_id;
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+  const auto find_predicate_in_input = [&](const auto& input) {
+    std::optional<ColumnID> left_column_id{};
+    std::optional<ColumnID> right_column_id{};
 
-  right_input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
-    if (*expression == *abstract_predicate_expression->arguments[0]) {
-      left_in_right = column_id;
-    } else if (*expression == *abstract_predicate_expression->arguments[1]) {
-      right_in_right = column_id;
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+    input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
+      if (*expression == *abstract_predicate_expression->arguments[0]) {
+        left_column_id = column_id;
+      } else if (*expression == *abstract_predicate_expression->arguments[1]) {
+        right_column_id = column_id;
+      }
+      return AbstractLQPNode::ExpressionIteration::Continue;
+    });
+    return std::make_pair(left_column_id, right_column_id);
+  };
+
+  const auto [left_in_left, right_in_left] = find_predicate_in_input(left_input);
+  const auto [left_in_right, right_in_right] = find_predicate_in_input(right_input);
 
   const auto predicate_condition = abstract_predicate_expression->predicate_condition;
   if (left_in_left && right_in_right) {
