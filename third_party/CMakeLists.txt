@@ -26,7 +26,7 @@ add_subdirectory(oneTBB)              # tbb
 target_compile_options(
     tbb
     PRIVATE
-    -std=c++17
+    -std=c++1z
 )
 
 # Build sql-parser library
