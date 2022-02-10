@@ -1,0 +1,254 @@
+{
+    "default": {
+        "encoding": "Dictionary"
+    },
+    "custom": {
+        "customer": {
+            "c_custkey": {
+                "encoding": "Unencoded"
+            },
+            "c_name": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            },
+            "c_address": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            },
+            "c_nationkey": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "c_phone": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            },
+            "c_acctbal": {
+                "encoding": "Unencoded"
+            },
+            "c_mktsegment": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "c_comment": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            }
+        },
+        "lineitem": {
+            "l_orderkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Fixed-width integer"
+            },
+            "l_partkey": {
+                "encoding": "Unencoded"
+            },
+            "l_suppkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Bit-packing"
+            },
+            "l_linenumber": {
+                "encoding": "LZ4"
+            },
+            "l_quantity": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "l_extendedprice": {
+                "encoding": "Unencoded"
+            },
+            "l_discount": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "l_tax": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "l_returnflag": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "l_linestatus": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "l_shipdate": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Fixed-width integer"
+            },
+            "l_commitdate": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "l_receiptdate": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "l_shipinstruct": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "l_shipmode": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "l_comment": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            }
+        },
+        "nation": {
+            "n_nationkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Bit-packing"
+            },
+            "n_name": {
+                "encoding": "Unencoded"
+            },
+            "n_regionkey": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "n_comment": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            }
+        },
+        "orders": {
+            "o_orderkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Fixed-width integer"
+            },
+            "o_custkey": {
+                "encoding": "Unencoded"
+            },
+            "o_orderstatus": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "o_totalprice": {
+                "encoding": "Unencoded"
+            },
+            "o_orderdate": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Fixed-width integer"
+            },
+            "o_orderpriority": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "o_clerk": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "o_shippriority": {
+                "encoding": "FrameOfReference",
+                "compression": "Bit-packing"
+            },
+            "o_comment": {
+                "encoding": "LZ4"
+            }
+        },
+        "part": {
+            "p_partkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Bit-packing"
+            },
+            "p_name": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Fixed-width integer"
+            },
+            "p_mfgr": {
+                "encoding": "Dictionary",
+                "compression": "Bit-packing"
+            },
+            "p_brand": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "p_type": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "p_size": {
+                "encoding": "FrameOfReference",
+                "compression": "Fixed-width integer"
+            },
+            "p_container": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "p_retailsize": {
+                "encoding": "LZ4"
+            },
+            "p_comment": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            }
+        },
+        "partsupp": {
+            "ps_partkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Fixed-width integer"
+            },
+            "ps_suppkey": {
+                "encoding": "Unencoded"
+            },
+            "ps_availqty": {
+                "encoding": "FrameOfReference",
+                "compression": "Bit-packing"
+            },
+            "ps_supplycost": {
+                "encoding": "Unencoded"
+            },
+            "ps_comment": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            }
+        },
+        "region": {
+            "r_regionkey": {
+                "encoding": "FrameOfReference",
+                "compression": "Bit-packing"
+            },
+            "r_name": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Bit-packing"
+            },
+            "r_comment": {
+                "encoding": "FixedStringDictionary",
+                "compression": "Fixed-width integer"
+            }
+        },
+        "supplier": {
+            "s_suppkey": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "s_name": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            },
+            "s_address": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            },
+            "s_nationkey": {
+                "encoding": "Dictionary",
+                "compression": "Fixed-width integer"
+            },
+            "s_phone": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            },
+            "s_acctbal": {
+                "encoding": "Unencoded"
+            },
+            "s_comment": {
+                "encoding": "FSST",
+                "compression": "Bit-packing"
+            }
+        }
+    }
+}
