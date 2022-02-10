@@ -21,7 +21,7 @@ add_subdirectory(magic_enum)          # magic_enum
 add_subdirectory(nlohmann_json)       # nlohmann_json::nlohmann_json
 add_subdirectory(robin-map)           # robin_map
 add_subdirectory(tpch-dbgen)          # tpch_dbgen
-add_subdirectory(oneTBB)              # TBB::tbb
+add_subdirectory(oneTBB/src/tbb)      # tbb
 
 
 target_compile_options(
