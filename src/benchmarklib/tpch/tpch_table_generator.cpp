@@ -145,17 +145,21 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
 
   // The `* 4` part is defined in the TPC-H specification.
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                customer_count};
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
+                                customer_count, BenchmarkTableEncoder("customer", _benchmark_config->encoding_config)};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count,
+                             BenchmarkTableEncoder("orders", _benchmark_config->encoding_config)};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                order_count * 4};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
+                                order_count * 4, BenchmarkTableEncoder("lineitem", _benchmark_config->encoding_config)};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names,
+                            part_count, BenchmarkTableEncoder("part", _benchmark_config->encoding_config)};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                part_count * 4};
+                                part_count * 4, BenchmarkTableEncoder("partsupp", _benchmark_config->encoding_config)};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                supplier_count};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+                                supplier_count, BenchmarkTableEncoder("supplier", _benchmark_config->encoding_config)};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names,
+                              nation_count, BenchmarkTableEncoder("nation", _benchmark_config->encoding_config)};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names,
+                              region_count, BenchmarkTableEncoder("region", _benchmark_config->encoding_config)};
 
   /**
    * CUSTOMER

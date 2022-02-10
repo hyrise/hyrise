@@ -48,20 +48,26 @@ void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDist
 }
 
 template <typename T>
-std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
+std::pair<bool, std::vector<std::pair<T, HistogramCountType>>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
   auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
 
+  auto covers_entire_column{false};
+
   // Create set of chunks to process for histogram creation. For large data sets, we sample the chunks. Note, with the
-  // current EquiDistinctCountHistograms, this approach has severe draw backs as this histogram assume complete knowledge
-  // and estimates unknown values with a cardinality of 0.0.
+  // current EquiDistinctCountHistograms, this approach has severe draw backs as this histogram assume complete
+  // knowledge. We limit the number of chunks to process to 9000, which roughly the number of chunks for SF 100, which
+  // results in roughly 250 GB of peak memory usage during histogram creation.
+  // Note: this is just a quick fixed value for measurements on a 512 GB server. Not recommended for general usage.
   auto chunks_to_process = std::vector<ChunkID>{};
-  if (chunk_count <= 100) {
+  if (chunk_count <= 9'000) {
+    covers_entire_column = true;
     chunks_to_process = std::vector<ChunkID>(chunk_count);
     std::iota(std::begin(chunks_to_process), std::end(chunks_to_process), ChunkID{0});
   } else {
+    covers_entire_column = false;
     const auto chunks_to_process_count = std::max(100u, std::min(1'000u, 4 + chunk_count / 10)); // 4 to always include first and last two chunks
 
     std::random_device rd;
@@ -89,7 +95,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
                        [&](const auto& l, const auto& r) { return l.first < r.first; });
 
-  return value_distribution;
+  return {covers_entire_column, value_distribution};
 }
 }  // namespace
 
@@ -100,13 +106,15 @@ EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin
                                                             std::vector<HistogramCountType>&& bin_heights,
                                                             const HistogramCountType distinct_count_per_bin,
                                                             const BinID bin_count_with_extra_value,
+                                                            const bool covers_entire_column, 
                                                             const HistogramDomain<T>& domain)
     : AbstractHistogram<T>(domain),
       _bin_minima(std::move(bin_minima)),
       _bin_maxima(std::move(bin_maxima)),
       _bin_heights(std::move(bin_heights)),
       _distinct_count_per_bin(distinct_count_per_bin),
-      _bin_count_with_extra_value(bin_count_with_extra_value) {
+      _bin_count_with_extra_value(bin_count_with_extra_value),
+      _covers_entire_column(covers_entire_column) {
   Assert(_bin_minima.size() == _bin_maxima.size(), "Must have the same number of lower as upper bin edges.");
   Assert(_bin_minima.size() == _bin_heights.size(), "Must have the same number of edges and heights.");
   Assert(_distinct_count_per_bin > 0, "Cannot have bins with no distinct values.");
@@ -124,7 +132,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     const Table& table, const ColumnID column_id, const BinID max_bin_count, const HistogramDomain<T>& domain) {
   Assert(max_bin_count > 0, "max_bin_count must be greater than zero ");
 
-  const auto value_distribution = value_distribution_from_column(table, column_id, domain);
+  const auto [covers_entire_column, value_distribution] = value_distribution_from_column(table, column_id, domain);
 
   if (value_distribution.empty()) {
     return nullptr;
@@ -170,7 +178,7 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(
       std::move(bin_minima), std::move(bin_maxima), std::move(bin_heights),
-      static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value);
+      static_cast<HistogramCountType>(distinct_count_per_bin), bin_count_with_extra_value, covers_entire_column);
 }
 
 template <typename T>
@@ -187,12 +195,17 @@ std::shared_ptr<AbstractHistogram<T>> EqualDistinctCountHistogram<T>::clone() co
 
   return std::make_shared<EqualDistinctCountHistogram<T>>(std::move(bin_minima_copy), std::move(bin_maxima_copy),
                                                           std::move(bin_heights_copy), _distinct_count_per_bin,
-                                                          _bin_count_with_extra_value);
+                                                          _bin_count_with_extra_value, _covers_entire_column);
 }
 
 template <typename T>
 BinID EqualDistinctCountHistogram<T>::bin_count() const {
   return _bin_heights.size();
+}
+
+template <typename T>
+bool EqualDistinctCountHistogram<T>::histogram_covers_entire_column() const {
+  return _covers_entire_column;
 }
 
 template <typename T>

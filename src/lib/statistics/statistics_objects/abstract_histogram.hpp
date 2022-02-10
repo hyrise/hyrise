@@ -224,6 +224,8 @@ class AbstractHistogram : public AbstractStatisticsObject {
    */
   float bin_ratio_between(const BinID bin_id, const T& value, const T& value2) const;
 
+  bool histogram_covers_entire_column() const { return false; }
+
  protected:
   // Call after constructor of the derived histogram has finished to check whether the bins are valid
   // (e.g. do not overlap).

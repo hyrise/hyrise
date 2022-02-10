@@ -304,7 +304,8 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
     value = _domain.string_to_domain(*value);
   }
 
-  if (does_not_contain(predicate_condition, variant_value, variant_value2)) {
+  if (histogram_covers_entire_column() && does_not_contain(predicate_condition, variant_value, variant_value2)) {
+    std::cout << "certain that we can prune" << std::endl;
     return {Cardinality{0}, 0.0f};
   }
 

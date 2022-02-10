@@ -26,7 +26,7 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
                               std::vector<HistogramCountType>&& bin_heights,
                               const HistogramCountType distinct_count_per_bin, const BinID bin_count_with_extra_value,
-                              const HistogramDomain<T>& domain = {});
+                              const bool covers_entire_column, const HistogramDomain<T>& domain = {});
 
   /**
    * Create an EqualDistinctCountHistogram for a column (spanning all Segments) of a Table
@@ -58,6 +58,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   BinID _bin_for_value(const T& value) const override;
   BinID _next_bin_for_value(const T& value) const override;
 
+  bool histogram_covers_entire_column() const;
+
  private:
   /**
    * We use multiple vectors rather than a vector of structs for ease-of-use with STL library functions.
@@ -81,6 +83,8 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   // Aggregated counts over all bins, to avoid redundant computation
   HistogramCountType _total_count;
   HistogramCountType _total_distinct_count;
+
+  bool _covers_entire_column = false;
 };
 
 }  // namespace opossum

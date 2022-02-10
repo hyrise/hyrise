@@ -10,7 +10,11 @@
 #include <boost/hana/tuple.hpp>
 #include <boost/hana/zip_with.hpp>
 
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
+#include "benchmark_table_encoder.hpp"
 #include "types.hpp"
 
 namespace opossum {
@@ -108,8 +112,8 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const ChunkOffset estimated_rows = 0)
-      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
+               const ChunkOffset estimated_rows = 0, const std::optional<BenchmarkTableEncoder> benchmark_table_encoder = std::nullopt)
+      : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0}, _benchmark_table_encoder{benchmark_table_encoder} {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
     // Iterate over the column types/names and create the columns.
@@ -200,6 +204,10 @@ class TableBuilder {
   // _table->row_count() only counts completed chunks but we want the total number of rows added to this table builder
   size_t _row_count;
 
+  std::optional<BenchmarkTableEncoder> _benchmark_table_encoder;
+
+  std::vector<std::shared_ptr<AbstractTask>> _encoding_job{};  // Vector since the scheduler interface expects a vector.
+
   boost::hana::tuple<pmr_vector<table_builder::get_value_type<DataTypes>>...> _value_vectors;
   boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>
       _null_value_vectors;
@@ -237,6 +245,26 @@ class TableBuilder {
     auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
 
     _table->append_chunk(segments, mvcc_data);
+    if (_benchmark_table_encoder) {
+      // Just a tiny bit of parallelism. The benchmark table encoder does not support encoding only a particular chunk,
+      // which we would need here.
+
+      _table->last_chunk()->finalize();
+      // const auto initial_size = _table->last_chunk()->memory_usage(MemoryUsageCalculationMode::Full);
+      Hyrise::get().scheduler()->schedule_and_wait_for_tasks(_encoding_job);
+      _encoding_job.clear();
+      const auto encoding_job = [&] () {
+        std::ostream discarding_stream(0);  // https://stackoverflow.com/questions/7818371/printing-to-nowhere-with-ostream
+        _benchmark_table_encoder->encode(_table, discarding_stream);
+      };
+      _encoding_job.emplace_back(std::make_shared<JobTask>(encoding_job));
+      Hyrise::get().scheduler()->schedule_tasks(_encoding_job);
+
+      // _benchmark_table_encoder->encode(_table, std::cout);
+      // const auto encoded_size = _table->last_chunk()->memory_usage(MemoryUsageCalculationMode::Full);
+      // const auto size_reduction_percentage = (1.0 - (static_cast<double>(encoded_size) / static_cast<double>(initial_size))) * 100.0;
+      // std::cout << "Successfully encoded chunk. Encoded size is " << encoded_size / 1000 / 1000 << " MB (" << size_reduction_percentage << " % smaller)" << std::endl;
+    }
   }
 };
 

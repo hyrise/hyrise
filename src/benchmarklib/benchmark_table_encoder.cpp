@@ -56,15 +56,21 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 
 namespace opossum {
 
-bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
-                                   const EncodingConfig& encoding_config) {
+BenchmarkTableEncoder::BenchmarkTableEncoder(const std::string& table_name,
+                                             const EncodingConfig& encoding_config)
+                                             : _table_name{table_name}, _encoding_config{encoding_config} {}
+
+bool BenchmarkTableEncoder::encode(const std::shared_ptr<Table>& table, std::ostream& out) {
+  // TODO(Martin): provide a chunk-based method, which can be used by the TableBuilder instead of trying to re-encode
+  // the entire table over and over again.
+
   /**
    * 1. Build the ChunkEncodingSpec, i.e. the Encoding to be used
    */
-  const auto& type_mapping = encoding_config.type_encoding_mapping;
-  const auto& custom_mapping = encoding_config.custom_encoding_mapping;
+  const auto& type_mapping = _encoding_config.type_encoding_mapping;
+  const auto& custom_mapping = _encoding_config.custom_encoding_mapping;
 
-  const auto& column_mapping_it = custom_mapping.find(table_name);
+  const auto& column_mapping_it = custom_mapping.find(_table_name);
   const auto table_has_custom_encoding = column_mapping_it != custom_mapping.end();
 
   ChunkEncodingSpec chunk_encoding_spec;
@@ -93,13 +99,13 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
 
     // No column-specific or type-specific encoding was specified.
     // Use default if it is compatible with the column type or leave column Unencoded if it is not.
-    if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
-      chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
+    if (encoding_supports_data_type(_encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
+      chunk_encoding_spec.push_back(_encoding_config.default_encoding_spec);
     } else {
-      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      std::cout << column_data_type << " cannot be encoded as ";
-      std::cout << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      std::cout << "left Unencoded." << std::endl;
+      out << " - Column '" << _table_name << "." << table->column_name(column_id) << "' of type ";
+      out << column_data_type << " cannot be encoded as ";
+      out << _encoding_config.default_encoding_spec.encoding_type << " and is ";
+      out << "left Unencoded." << std::endl;
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
   }

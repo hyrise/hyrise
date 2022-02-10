@@ -113,16 +113,15 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     if (worker) {
       preferred_node_id = worker->queue()->node_id();
     } else {
-      std::stringstream ss; 
-      // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
-      ss << "Size of queues: ";
-      for (auto i = size_t{0}; i < _queues.size(); ++i) {
-        auto& q = _queues[i];
-        ss << "(" << i << ": " << q->size(static_cast<uint32_t>(priority)) << ") - ";
-      }
+      // std::stringstream ss; 
+      // ss << "Size of queues: ";
+      // for (auto i = size_t{0}; i < _queues.size(); ++i) {
+      //   auto& q = _queues[i];
+      //   ss << "(" << i << ": " << q->size(static_cast<uint32_t>(priority)) << ") - ";
+      // }
       preferred_node_id = NodeID{std::distance(_queues.cbegin(), std::min_element(_queues.cbegin(), _queues.cend(), [&](const auto& lhs, const auto& rhs) { return lhs->size(static_cast<uint32_t>(priority)) < rhs->size(static_cast<uint32_t>(priority)); }))};
-      preferred_node_id = NodeID{0};
-      ss << " --- Using node %zu\n" << static_cast<size_t>(preferred_node_id) << "\n";
+      // preferred_node_id = NodeID{0};
+      // ss << " --- Using node %zu\n" << static_cast<size_t>(preferred_node_id) << "\n";
     }
   }
 

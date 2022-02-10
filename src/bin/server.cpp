@@ -4,6 +4,7 @@
 #include <boost/lexical_cast.hpp>
 
 #include "benchmark_config.hpp"
+#include "encoding_config.hpp"
 #include "cli_config_parser.hpp"
 #include "server/server.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
@@ -25,7 +26,7 @@
 
 namespace {
 
-void generate_benchmark_data(std::string argument_string) {
+void generate_benchmark_data(std::string argument_string, std::shared_ptr<opossum::BenchmarkConfig> config) {
   // Remove unnecessary white spaces
   boost::trim_if(argument_string, boost::is_any_of(":"));
 
@@ -45,10 +46,8 @@ void generate_benchmark_data(std::string argument_string) {
   Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
-  auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
   config->cache_binary_tables = true;
   if (benchmark_name == "tpcc") {
-    config->cache_binary_tables = false;  // Not yet supported for TPC-C
     opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpcds") {
     opossum::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
@@ -74,6 +73,7 @@ cxxopts::Options get_server_cli_options() {
                        "TPC-DS, and TPC-H. The sizing factor determines the scale factor in TPC-DS and TPC-H, and the "
                        "warehouse count in TPC-C.", cxxopts::value<std::string>()) // NOLINT
     ("execution_info", "Send execution information after statement execution", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("e,encoding", "Specify Chunk encoding as a JSON config file.", cxxopts::value<std::string>())  // NOLINT
     ;  // NOLINT
   // clang-format on
 
@@ -110,7 +110,16 @@ int main(int argc, char* argv[]) {
     * change the modify the config object as needed.
     */
   if (parsed_options.count("benchmark_data")) {
-    generate_benchmark_data(parsed_options["benchmark_data"].as<std::string>());
+    auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
+    if (parsed_options.count("encoding")) {
+      const auto encoding_type_str = parsed_options["encoding"].as<std::string>();
+      Assert(boost::algorithm::ends_with(encoding_type_str, ".json"), "Patched server only supports JSON encoding configuration files.");
+      std::cout << "Encoding is custom from '" << encoding_type_str << "'." << std::endl;
+
+      const auto encoding_config = opossum::CLIConfigParser::parse_encoding_config(encoding_type_str);      
+      config->encoding_config = encoding_config;
+    }
+    generate_benchmark_data(parsed_options["benchmark_data"].as<std::string>(), config);
   }
 
   const auto execution_info = parsed_options["execution_info"].as<bool>();
