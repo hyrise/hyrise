@@ -339,24 +339,25 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
     }
   }
 
-  //{
-  //  auto scoped_lock = acquire_append_mutex();
+  {
+    auto scoped_lock = acquire_append_mutex();
 
-  for (const auto& existing_constraint : _table_key_constraints) {
-    // if constraint is known, do nothing
-    if (existing_constraint == table_key_constraint) return;
-    // Ensure that no other PRIMARY KEY is defined
-    Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
-               table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
-           "Another primary key already exists for this table.");
+    for (const auto& existing_constraint : _table_key_constraints) {
+      // if constraint is known, do nothing
+      if (existing_constraint == table_key_constraint) return;
+      // Ensure that no other PRIMARY KEY is defined
+      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
+             "Another primary key already exists for this table.");
 
-    // Ensure there is only one key constraint per column set.
-    Assert(table_key_constraint.columns() != existing_constraint.columns(),
-           "Another key constraint for the same column set has already been defined.");
+      // Ensure there is only one key constraint per column set.
+      Assert(table_key_constraint.columns() != existing_constraint.columns(),
+             "Another key constraint for the same column set has already been defined.");
+    }
+
+    _table_key_constraints.push_back(table_key_constraint);
   }
-
-  _table_key_constraints.push_back(table_key_constraint);
-  //}
+  std::cout << "added " << magic_enum::enum_name(table_key_constraint.key_type()) << " constraint" << std::endl;
 }
 
 const TableOrderConstraints& Table::soft_order_constraints() const { return _table_order_constraints; }
@@ -377,13 +378,14 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
     // Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
   }
 
-  //{
-  //  auto scoped_lock = acquire_append_mutex();
-  for (const auto& existing_constraint : _table_order_constraints) {
-    if (existing_constraint == table_order_constraint) return;
+  {
+    auto scoped_lock = acquire_append_mutex();
+    for (const auto& existing_constraint : _table_order_constraints) {
+      if (existing_constraint == table_order_constraint) return;
+    }
+    _table_order_constraints.push_back(table_order_constraint);
   }
-  _table_order_constraints.push_back(table_order_constraint);
-  //}
+  std::cout << "added Order constraint" << std::endl;
 }
 
 const TableInclusionConstraints& Table::soft_inclusion_constraints() const { return _table_inclusion_constraints; }
@@ -406,13 +408,14 @@ void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_
     // Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with OC.");
   }
 
-  //{
-  //  auto scoped_lock = acquire_append_mutex();
-  for (const auto& existing_constraint : _table_inclusion_constraints) {
-    if (existing_constraint == table_inclusion_constraint) return;
+  {
+    auto scoped_lock = acquire_append_mutex();
+    for (const auto& existing_constraint : _table_inclusion_constraints) {
+      if (existing_constraint == table_inclusion_constraint) return;
+    }
+    _table_inclusion_constraints.emplace_back(table_inclusion_constraint);
   }
-  _table_inclusion_constraints.emplace_back(table_inclusion_constraint);
-  //}
+  std::cout << "add Inclusion constraint" << std::endl;
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }

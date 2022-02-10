@@ -29,12 +29,14 @@ void DependencyMiningPlugin::start() {
         },
         validator_id);
   }
-  for (auto& thread : validator_threads) { thread.join(); }
+  for (auto& thread : validator_threads) {
+    thread.join();
+  }
   std::cout << "Clear Cache" << std::endl;
   Timer clear_cache_timer;
   Hyrise::get().default_pqp_cache->clear();
   Hyrise::get().default_lqp_cache->clear();
-  std::cout << "Cleared Cache in" << clear_cache_timer.lap_formatted() << std::endl;
+  std::cout << "Cleared Cache in " << clear_cache_timer.lap_formatted() << std::endl;
   std::cout << "DependencyMiningPlugin finished in " << timer.lap_formatted() << std::endl;
 }
 

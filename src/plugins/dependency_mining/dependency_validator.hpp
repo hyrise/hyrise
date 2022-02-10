@@ -23,7 +23,7 @@ class DependencyValidator {
  private:
   void _add_constraints(const std::string& table_name,
                         const std::vector<std::shared_ptr<AbstractTableConstraint>>& constraints) const;
-  const std::shared_ptr<DependencyCandidateQueue>& _queue;
+  const std::shared_ptr<DependencyCandidateQueue> _queue;
   std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _rules;
   std::atomic_bool _running = false;
   const size_t _id;

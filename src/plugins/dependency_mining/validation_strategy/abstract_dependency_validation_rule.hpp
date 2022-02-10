@@ -1,5 +1,7 @@
 #pragma once
 
+// #include <memory>
+
 #include "dependency_mining/util.hpp"
 #include "storage/abstract_table_constraint.hpp"
 
@@ -7,15 +9,17 @@ namespace opossum {
 
 enum class DependencyValidationStatus { Valid, Invalid, Uncertain };
 
-struct ValidationResult {
-  explicit ValidationResult(const DependencyValidationStatus init_status) : status(init_status) {}
+class ValidationResult {
+ public:
+  explicit ValidationResult(const DependencyValidationStatus init_status) : status{init_status} {}
+  ~ValidationResult() = default;
   DependencyValidationStatus status;
   std::unordered_map<std::string, std::vector<std::shared_ptr<AbstractTableConstraint>>> constraints;
 };
 
-static const std::shared_ptr<ValidationResult>& UNCERTAIN_VALIDATION_RESULT =
+static const std::shared_ptr<ValidationResult> UNCERTAIN_VALIDATION_RESULT =
     std::make_shared<ValidationResult>(DependencyValidationStatus::Uncertain);
-static const std::shared_ptr<ValidationResult>& INVALID_VALIDATION_RESULT =
+static const std::shared_ptr<ValidationResult> INVALID_VALIDATION_RESULT =
     std::make_shared<ValidationResult>(DependencyValidationStatus::Invalid);
 
 class AbstractDependencyValidationRule {

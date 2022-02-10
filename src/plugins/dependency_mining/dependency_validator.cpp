@@ -7,9 +7,11 @@
 #include "validation_strategy/fd_validation_rule.hpp"
 #include "validation_strategy/ind_validation_rule.hpp"
 #include "validation_strategy/ind_validation_rule_set.hpp"
+#include "validation_strategy/ind_validation_rule_spider.hpp"
 #include "validation_strategy/od_validation_rule.hpp"
 #include "validation_strategy/ucc_validation_rule.hpp"
 #include "validation_strategy/ucc_validation_rule_set.hpp"
+#include "validation_strategy/ucc_validation_rule_spider.hpp"
 
 namespace opossum {
 
@@ -34,17 +36,23 @@ void DependencyValidator::start() {
     }
     Timer candidate_timer;
     std::stringstream my_out;
+    // std::cout  << "try " << candidate << std::endl;
     my_out << "[" << _id << "] Check candidate: " << candidate << std::endl;
     const auto& rule = _rules[candidate.type];
     Assert(rule, "No validation rule for " + std::string{magic_enum::enum_name(candidate.type)});
+    // std::cout  << __LINE__ << " dependency_validator" << std::endl;
     const auto validate_result = rule->validate(candidate);
     // During validation, the time budget might have been consumed.
     // To stay fair, we discard the discovered results and stop.
     // We do not use keep_running(), as this increases the number of performed validations,
     // which has been done in the loop head.
+    // std::cout  << __LINE__ << " dependency_validator" << std::endl;
     if (!_validation_state->time_left()) break;
+    // std::cout  << __LINE__ << " dependency_validator" << std::endl;
     if (validate_result->status == DependencyValidationStatus::Valid) {
+      // std::cout  << __LINE__ << " dependency_validator" << std::endl;
       for (const auto& [table_name, constraints] : validate_result->constraints) {
+        // std::cout  << __LINE__ << " dependency_validator " << table_name << std::endl;
         _add_constraints(table_name, constraints);
       }
     }
@@ -63,18 +71,34 @@ void DependencyValidator::add_rule(std::unique_ptr<AbstractDependencyValidationR
 
 void DependencyValidator::_add_constraints(
     const std::string& table_name, const std::vector<std::shared_ptr<AbstractTableConstraint>>& constraints) const {
+  // std::cout  << __LINE__ << " dependency_validator" << std::endl;
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  // std::cout  << __LINE__ << " dependency_validator" << std::endl;
   for (const auto& constraint : constraints) {
+    // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+    Assert(constraint, "no constraint");
     switch (constraint->type()) {
-      case TableConstraintType::Key:
-        table->add_soft_key_constraint(dynamic_cast<const TableKeyConstraint&>(*constraint));
-        break;
-      case TableConstraintType::Order:
-        table->add_soft_order_constraint(dynamic_cast<const TableOrderConstraint&>(*constraint));
-        break;
-      case TableConstraintType::Inclusion:
-        table->add_soft_inclusion_constraint(dynamic_cast<const TableInclusionConstraint&>(*constraint));
-        break;
+      case TableConstraintType::Key: {
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+        const auto& key_constraint = dynamic_cast<const TableKeyConstraint&>(*constraint);
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+        table->add_soft_key_constraint(key_constraint);
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+      } break;
+      case TableConstraintType::Order: {
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+        const auto& order_constraint = dynamic_cast<const TableOrderConstraint&>(*constraint);
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+        table->add_soft_order_constraint(order_constraint);
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+      } break;
+      case TableConstraintType::Inclusion: {
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+        const auto& inclusion_constraint = dynamic_cast<const TableInclusionConstraint&>(*constraint);
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+        table->add_soft_inclusion_constraint(inclusion_constraint);
+        // std::cout  << __LINE__ << " dependency_validator" << std::endl;
+      } break;
     }
   }
 }

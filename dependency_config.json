@@ -1,7 +1,7 @@
 {
-    "groupby_reduction": false,
-    "join_to_semi": false,
+    "groupby_reduction": true,
+    "join_to_semi": true,
     "join_to_predicate": true,
-    "join_elimination": false,
+    "join_elimination": true,
     "preset_constraints": false
 }

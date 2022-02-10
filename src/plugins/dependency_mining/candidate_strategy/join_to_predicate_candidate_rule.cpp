@@ -27,7 +27,8 @@ std::vector<DependencyCandidate> JoinToPredicateCandidateRule::apply_to_node(
 
   // the table could be (massively) pruned by rewriting the join to a scan, increasing the usefulness
   // yet, factor 3 is arbitrarily chosen
-  const auto my_priority = 3 * priority;
+  // const auto my_priority = 3 * priority;
+  const auto my_priority = priority;
 
   // determine if we need to check both inputs
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);

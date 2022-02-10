@@ -24,7 +24,8 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
   // Factor 0.5 for join to semi join rewrite is arbitrarily chosen
   // In most cases, semi joins are faster, but actual, there is a join done
   // We might even lose performance (reductions that are not added anymore)
-  const auto my_priority = static_cast<size_t>(std::lround(0.5 * static_cast<double>(priority)));
+  // const auto my_priority = static_cast<size_t>(std::lround(0.5 * static_cast<double>(priority)));
+  const auto my_priority = priority;
 
   std::vector<DependencyCandidate> candidates;
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);

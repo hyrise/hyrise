@@ -38,12 +38,14 @@ std::vector<DependencyCandidate> DependentGroupByCandidateRule::apply_to_node(
   // We still need to perform all aggregations, but omit grouping all columns but one
   // We assume each grouped column takes the same time, and any() aggregates are for free
   // --> saving = grouping time * frac omitted columns
-  const auto omit_column_ratio = 1.0 - (1.0 / static_cast<double>(num_group_by_columns));
+  /*const auto omit_column_ratio = 1.0 - (1.0 / static_cast<double>(num_group_by_columns));
   const auto& performance_data =
       dynamic_cast<OperatorPerformanceData<AggregateHash::OperatorSteps>&>(*(op->performance_data));
   const auto group_duration =
       performance_data.get_step_runtime(AggregateHash::OperatorSteps::GroupByKeyPartitioning).count();
   const auto my_priority = static_cast<size_t>(std::lround(omit_column_ratio * static_cast<double>(group_duration)));
+  */
+  const auto my_priority = priority;
 
   std::vector<DependencyCandidate> candidates;
   // for now, use UCC candidates instead of FD candidates

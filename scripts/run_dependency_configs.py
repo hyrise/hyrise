@@ -9,21 +9,24 @@ from subprocess import Popen, PIPE
 # Just holds the global state (**yeah**) of the benchmarks to run
 class ExperimentSetup:
     def __init__(self):
+        self.benchmarks = ["hyriseBenchmarkTPCDS"]
         self.benchmarks = ["hyriseBenchmarkTPCH", "hyriseBenchmarkTPCDS", "hyriseBenchmarkJoinOrder"]
         self.configs = {
-            "all_off": DependencyUsageConfig(False, False, False, False),
-            "only_dgr": DependencyUsageConfig(True, False, False, False),
-            "only_jts": DependencyUsageConfig(False, True, False, False),
-            "only_join2pred": DependencyUsageConfig(False, False, True, False),
-            "only_join_elim": DependencyUsageConfig(False, False, False, True),
+            # "all_off": DependencyUsageConfig(False, False, False, False),
+            # "only_dgr": DependencyUsageConfig(True, False, False, False),
+            # "only_jts": DependencyUsageConfig(False, True, False, False),
+            # "only_join2pred": DependencyUsageConfig(False, False, True, False),
+            # "only_join_elim": DependencyUsageConfig(False, False, False, True),
             "all_on": DependencyUsageConfig(True, True, True, True),
-            "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
+            # "dgr_jts_join2pred": DependencyUsageConfig(True, True, True, False),
         }
         self.scale_factors = [0.01, 1, 10, 20, 50, 100]
-        # self.scale_factors = [10]
-        num_candidates = [1, 3, 5, 10, 20, MiningConfig.default_config().max_validation_candidates]
+        self.scale_factors = [10]
+        num_candidates = [1, 2, 3, 4, 5, 7, 10, 15, 20, 40, 60, 80, MiningConfig.default_config().max_validation_candidates]
+        num_threads = list(range(2, 11))
+        self.mining_configs = [MiningConfig(max_validation_candidates=n) for n in num_candidates]
+        self.mining_configs = [MiningConfig(num_validators=n) for n in num_threads]
         self.mining_configs = [MiningConfig.default_config()]
-        #self.mining_configs = [MiningConfig(max_validation_candidates=n) for n in num_candidates]
 
 
 class DependencyUsageConfig:
@@ -89,6 +92,12 @@ def parse_args():
         help="Delete cached tables",
     )
     ap.add_argument(
+        "--mining-only",
+        "-m",
+        action="store_true",
+        help="Do not acually run benchmarks",
+    )
+    ap.add_argument(
         "--build_dir",
         type=str,
         default="cmake-build-release",
@@ -104,7 +113,7 @@ def parse_args():
     return ap.parse_args()
 
 
-def main(output_path, force_delete, build_dir, commit):
+def main(output_path, force_delete, build_dir, commit, no_runs):
     pwd = os.getcwd()
     if not os.path.isdir(build_dir):
         print(f"Could not find build directory {build_dir}\nDid you call the script from project root?")
@@ -168,6 +177,9 @@ def main(output_path, force_delete, build_dir, commit):
                     if config.allows_nothing() and not is_default_config:
                         continue
 
+                    if mining_config.max_validation_candidates > 20 and benchmark != "hyriseBenchmarkTPCDS":
+                        continue
+
                     if not is_default_config:
                         mining_config.to_json(mining_config_path)
                         mining_flag = f"--mining_config {mining_config_path}"
@@ -180,11 +192,15 @@ def main(output_path, force_delete, build_dir, commit):
                     base_file_name = f"{benchmark}_{config_name}{sf_extension}{mining_config.file_extension()}"
                     log_path = os.path.join(output_path, f"{base_file_name}.log")
                     results_path = os.path.join(output_path, f"{base_file_name}.json")
+                    plugin_flag = "" if config.allows_nothing() else f"--dep_mining_plugin {dep_mining_plugin_path}"
+                    runs = 0 if no_runs else 100
+                    warmup_flag = "-w 1" if runs > 0 else ""
+                    output_flag = f"-o {results_path}" if runs > 0 else ""
                     exec_command = (
-                        f"({benchmark_path} -r 100 -t {run_time} -w 1 {sf_flag} -o {results_path} --dep_mining_plugin "
-                        + f"{dep_mining_plugin_path} --dep_config {config_path} {mining_flag} 2>&1 ) | tee {log_path}"
+                        f"({benchmark_path} -r {runs} -t {run_time} {warmup_flag} {sf_flag} {output_flag} {plugin_flag} "
+                        + f"--dep_config {config_path} {mining_flag} 2>&1 ) | tee {log_path}"
                     )
-
+                    # print(exec_command)
                     with Popen(exec_command, shell=True) as p:
                         p.wait()
                     if not is_default_config:
@@ -194,4 +210,4 @@ def main(output_path, force_delete, build_dir, commit):
 
 if __name__ == "__main__":
     args = parse_args()
-    main(args.output_path, args.force_delete, args.build_dir, args.commit)
+    main(args.output_path, args.force_delete, args.build_dir, args.commit, args.mining_only)
