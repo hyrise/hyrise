@@ -58,4 +58,4 @@
 	url = https://github.com/facebook/zstd.git
 [submodule "third_party/oneTBB"]
 	path = third_party/oneTBB
-	url = git@github.com:oneapi-src/oneTBB.git
+	url = https://github.com/oneapi-src/oneTBB.git
