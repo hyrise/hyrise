@@ -21,15 +21,13 @@ add_subdirectory(magic_enum)          # magic_enum
 add_subdirectory(nlohmann_json)       # nlohmann_json::nlohmann_json
 add_subdirectory(robin-map)           # robin_map
 add_subdirectory(tpch-dbgen)          # tpch_dbgen
-add_subdirectory(oneTBB/src/tbb)      # tbb
-
+add_subdirectory(oneTBB)              # tbb
 
 target_compile_options(
     tbb
     PRIVATE
     -std=c++17
 )
-
 
 # Build sql-parser library
 set(PARSER_DIR sql-parser)
