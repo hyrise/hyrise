@@ -75,7 +75,7 @@ hash_md5 = hashlib.md5()
 url = urllib.request.urlopen(LOCATION)
 
 meta = url.info()
-file_size = int(meta["Content-Length"])
+file_size = int(meta["X-Dropbox-Content-Length"])
 
 file = open(FILE_NAME, "wb")
 
