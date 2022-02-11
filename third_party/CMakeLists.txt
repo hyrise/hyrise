@@ -23,11 +23,11 @@ add_subdirectory(robin-map)           # robin_map
 add_subdirectory(tpch-dbgen)          # tpch_dbgen
 add_subdirectory(oneTBB)              # tbb
 
-target_compile_options(
-    tbb
-    PRIVATE
-    -std=c++1z
-)
+#target_compile_options(
+#    tbb
+#    PRIVATE
+#    -std=c++1z
+#)
 
 # Build sql-parser library
 set(PARSER_DIR sql-parser)
