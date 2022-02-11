@@ -553,7 +553,6 @@ set(
     tasks/chunk_compression_task.cpp
     tasks/chunk_compression_task.hpp
     type_comparison.hpp
-    tbb_fix.hpp
     types.cpp
     types.hpp
     uid_allocator.hpp
