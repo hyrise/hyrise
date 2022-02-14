@@ -63,7 +63,7 @@ class StorageManager : public Noncopyable {
  protected:
   StorageManager() = default;
   friend class Hyrise;
-  
+
   // We preallocate maps to prevent costly re-allocation.
   static constexpr size_t INITIAL_MAP_SIZE = 128;
 
