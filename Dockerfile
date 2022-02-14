@@ -2,7 +2,7 @@
 # You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:21.04
+FROM ubuntu:21.10
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -18,8 +18,8 @@ RUN apt-get update \
         cmake \
         curl \
         dos2unix \
-        g++-10 \
-        gcc-10 \
+        g++-11 \
+        gcc-11 \
         gcovr \
         git \
         graphviz \
