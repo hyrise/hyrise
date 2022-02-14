@@ -1,13 +1,6 @@
 #pragma once
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wall"
 #include <btree_map.h>
-#pragma clang diagnostic pop
-#elif __GNUC__
-#pragma GCC system_header
-#include <btree_map.h>
-#endif
 
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
@@ -64,7 +57,8 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   size_t _heap_bytes_used;
 };
 
-template<> void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string&);
+template <>
+void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string&);
 
 EXPLICITLY_DECLARE_DATA_TYPES(BTreeIndexImpl);
 

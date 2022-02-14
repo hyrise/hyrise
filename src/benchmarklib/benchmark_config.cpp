@@ -8,8 +8,9 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
                                  const Duration& init_warmup_duration,
                                  const std::optional<std::string>& init_output_file_path,
                                  const bool init_enable_scheduler, const uint32_t init_cores,
-                                 const uint32_t init_clients, const bool init_enable_visualization,
-                                 const bool init_verify, const bool init_cache_binary_tables, const bool init_metrics)
+                                 const uint32_t init_data_preparation_cores, const uint32_t init_clients,
+                                 const bool init_enable_visualization, const bool init_verify,
+                                 const bool init_cache_binary_tables, const bool init_metrics)
     : benchmark_mode(init_benchmark_mode),
       chunk_size(init_chunk_size),
       encoding_config(init_encoding_config),
@@ -20,6 +21,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       output_file_path(init_output_file_path),
       enable_scheduler(init_enable_scheduler),
       cores(init_cores),
+      data_preparation_cores(init_data_preparation_cores),
       clients(init_clients),
       enable_visualization(init_enable_visualization),
       verify(init_verify),
