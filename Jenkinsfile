@@ -97,7 +97,7 @@ try {
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}  -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}    .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}    .. &\
-            mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9} -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++ -lc++abi" .. &\
+            mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9} -DCMAKE_CXX_FLAGS="-stdlib=libc++" .. &\
             mkdir gcc-9-debug && cd gcc-9-debug &&                                                       ${cmake} ${debug}          ${gcc9} .. &\
             wait"
           }
