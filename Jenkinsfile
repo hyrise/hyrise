@@ -68,7 +68,7 @@ try {
             sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
-            unity = '-DCMAKE_UNITY_BUILD=ON'
+            unity = '-DCMAKE_UNITY_BUILD=OFF'
  
             // TODO(Martin): update comment
             // We use clang 9 as the lowest supported compiler version and also run Jenkins with the most recent clang
