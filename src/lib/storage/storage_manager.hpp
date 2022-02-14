@@ -13,13 +13,6 @@
 #include "prepared_plan.hpp"
 #include "types.hpp"
 
-namespace {
-  // We preallocate maps to prevent costly re-allocation.
-  static constexpr size_t INITIAL_MAP_SIZE = 128;
-}  // namespace
-
-namespace opossum {
-
 class Table;
 class AbstractLQPNode;
 
@@ -64,6 +57,10 @@ class StorageManager : public Noncopyable {
 
   // For debugging purposes mostly, dump all tables as csv
   void export_all_tables_as_csv(const std::string& path);
+
+  // We preallocate maps to prevent costly re-allocation.
+  // TODO(Martin): public or private? Clang >=13 complains about reserved identifiers.
+  static constexpr size_t INITIAL_MAP_SIZE = 128;
 
  protected:
   StorageManager() = default;

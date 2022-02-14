@@ -73,7 +73,7 @@ try {
             // TODO(Martin): update comment
             // We use clang 9 as the lowest supported compiler version and also run Jenkins with the most recent clang
             // that comes with Ubuntu 21.04 (i.e., clang 12). For GCC, we use version 10 and version causes problems
-            // GoogleTest. If you want to upgrade compiler versions, please update install_dependencies.sh,
+            // GoogleTest (see #2402). If you want to upgrade compiler versions, please update install_dependencies.sh,
             // DEPENDENCIES.md, and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12'
             clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
