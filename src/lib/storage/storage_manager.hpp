@@ -13,6 +13,8 @@
 #include "prepared_plan.hpp"
 #include "types.hpp"
 
+namespace opossum {
+
 class Table;
 class AbstractLQPNode;
 
