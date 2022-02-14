@@ -2,7 +2,7 @@
 # You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -10,16 +10,18 @@ RUN apt-get update \
         bash-completion \
         bc \
         clang-9 \
-        clang-12 \
+        clang-13 \
         clang-format-9 \
-        clang-format-12 \
+        clang-format-13 \
         clang-tidy-9 \
-        clang-tidy-12 \
+        clang-tidy-13 \
         cmake \
         curl \
         dos2unix \
-        g++-10 \
-        gcc-10 \
+        g++-9 \
+        g++-11 \
+        gcc-9 \
+        gcc-11 \
         gcovr \
         git \
         graphviz \
@@ -47,6 +49,6 @@ RUN apt-get update \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-3.8 /usr/bin/llvm-symbolizer \
-    && pip3 install scipy pandas matplotlib # preload large Python packages with Docker (installs numpy, pandas, ...)
+    && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
 
 ENV OPOSSUM_HEADLESS_SETUP=true

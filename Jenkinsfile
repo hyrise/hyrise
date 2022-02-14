@@ -55,7 +55,7 @@ try {
   
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
+      def oppossumCI = docker.image('hyrise/opossum-ci:22.04');
       oppossumCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
@@ -68,19 +68,16 @@ try {
             sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
-	    // Note on unity. As discussed in #2402, GCC and Google Test don't work together in some cases when unity builds
-            // used.
-            // TODO(anyone): Check if unity can be re-enabled for GCC debug build with Google Test update or new GCC version.
-            unity = '-DCMAKE_UNITY_BUILD=ON'
  
-            // TODO(Martin): update comment
-            // We use clang 9 as the lowest supported compiler version and also run Jenkins with the most recent clang
-            // that comes with Ubuntu 21.04 (i.e., clang 12). For GCC, we use version 10 and version causes problems
-            // GoogleTest (see #2402). If you want to upgrade compiler versions, please update install_dependencies.sh,
-            // DEPENDENCIES.md, and the documentation (README, Wiki).
-            clang = '-DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12'
+            // With Hyrise, we usually aim for the most recent compiler versions and do not invest a lot of work to
+            // support older versions. The oldest compiler versions that work without any further adaptions are clang 9
+            // and GCC 9. Thus, we execute at least debug runs for them.
+            // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
+            // the documentation (README, Wiki).
+            clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
-            gcc = '-DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10'
+            gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+            gcc9 = '-DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
@@ -89,19 +86,19 @@ try {
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
             // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
 
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang} .. && make -j libjemalloc-build"
 
             // Configure the rest in parallel
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   ${unity} -DENABLE_CLANG_TIDY=ON .. &\
-            mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
-            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
-            mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            .. &\
-            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
-            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
-            mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}  -DENABLE_CLANG_TIDY=ON .. &\
+            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}  -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+            mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}  -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}  -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
+            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}  .. &\
+            mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}  -DENABLE_THREAD_SANITIZATION=ON .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}    .. &\
+            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}    .. &\
+            mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9} .. &\
+            mkdir gcc-9-debug && cd gcc-9-debug &&                                                       ${cmake} ${debug}          ${gcc9} .. &\
             wait"
           }
 
@@ -119,6 +116,11 @@ try {
             stage("gcc-debug") {
               sh "cd gcc-debug && make all -j \$(( \$(nproc) / 4))"
               sh "cd gcc-debug && ./hyriseTest"
+            }
+          }, gcc9Debug: {
+            stage("gcc-9-debug") {
+              sh "cd gcc-9-debug && make all -j \$(( \$(nproc) / 4))"
+              sh "cd gcc-9-debug && ./hyriseTest"
             }
           }, lint: {
             stage("Linting") {
@@ -175,15 +177,6 @@ try {
                 sh "./clang-debug/hyriseSystemTest clang-debug/run-shuffled --gtest_repeat=2 --gtest_shuffle"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugRunShuffled")
-              }
-            }
-          }, clangDebugUnityODR: {
-            stage("clang-debug-unity-odr") {
-              if (env.BRANCH_NAME == 'master' || full_ci) {
-                // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-                sh "cd clang-debug-unity-odr && make all -j \$(( \$(nproc) / 3))"
-              } else {
-                Utils.markStageSkippedForConditional("clangDebugUnityODR")
               }
             }
           }, clangDebugTidy: {
@@ -350,7 +343,7 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
+            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/13.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/13.0.0/bin/clang++ .."
             sh "cd clang-debug && make -j8"
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
@@ -377,7 +370,7 @@ try {
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
             
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/13.0.0_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/13.0.0_1/bin/clang++ .."
             sh "cd clang-release && make -j8"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
