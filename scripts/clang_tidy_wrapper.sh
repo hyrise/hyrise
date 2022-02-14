@@ -17,6 +17,6 @@ else
 	if [ -x /usr/local/bin/brew ]; then
 		exec $(brew --prefix llvm)/bin/clang-tidy $file $@
 	else
-		exec clang-tidy-10 $file $@
+		exec clang-tidy-13 $file $@
 	fi
 fi
