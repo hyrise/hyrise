@@ -55,7 +55,7 @@ try {
   
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
+      def oppossumCI = docker.image('hyrise/opossum-ci:21.04');
       oppossumCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
@@ -74,7 +74,7 @@ try {
             // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
             // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
             // DEPENDENCIES.md, clang_tidy_wrapper.sh, and the documentation (README, Wiki).
-            clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+            clang = '-DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14'
             clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
