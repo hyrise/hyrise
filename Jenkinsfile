@@ -71,10 +71,11 @@ try {
             unity = '-DCMAKE_UNITY_BUILD=ON'
  
             // TODO(Martin): update comment
-            // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
-            // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
-            // DEPENDENCIES.md, clang_tidy_wrapper.sh, and the documentation (README, Wiki).
-            clang = '-DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14'
+            // We use clang 9 as the lowest supported compiler version and also run Jenkins with the most recent clang
+            // that comes with Ubuntu 21.04 (i.e., clang 12). For GCC, we use version 10 and version causes problems
+            // GoogleTest. If you want to upgrade compiler versions, please update install_dependencies.sh,
+            // DEPENDENCIES.md, and the documentation (README, Wiki).
+            clang = '-DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12'
             clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 

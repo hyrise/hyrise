@@ -10,11 +10,11 @@ RUN apt-get update \
         bash-completion \
         bc \
         clang-9 \
-        clang-14 \
+        clang-12 \
         clang-format-9 \
-        clang-format-14 \
+        clang-format-12 \
         clang-tidy-9 \
-        clang-tidy-14 \
+        clang-tidy-12 \
         cmake \
         curl \
         dos2unix \
