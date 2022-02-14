@@ -1,14 +1,5 @@
 #pragma once
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wall"
-#include <tbb_fix.hpp>
-#pragma clang diagnostic pop
-#elif __GNUC__
-#pragma GCC system_header
-#include <tbb_fix.hpp>
-#endif
-
 #include <tbb/concurrent_vector.h>
 
 #include <cstdint>
