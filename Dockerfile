@@ -2,7 +2,7 @@
 # You need to build and push it manually, see the wiki for details:
 # https://github.com/hyrise/hyrise/wiki/Docker-Image
 
-FROM ubuntu:20.04
+FROM ubuntu:21.04
 ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get update \
     && apt-get install -y \
@@ -10,20 +10,20 @@ RUN apt-get update \
         bash-completion \
         bc \
         clang-9 \
-        clang-10 \
+        clang-14 \
         clang-format-9 \
-        clang-format-10 \
+        clang-format-14 \
         clang-tidy-9 \
-        clang-tidy-10 \
+        clang-tidy-14 \
         cmake \
         curl \
         dos2unix \
-        g++-9 \
-        gcc-9 \
+        g++-10 \
+        gcc-10 \
         gcovr \
         git \
         graphviz \
-        libboost1.71-all-dev \
+        libboost-all-dev \
         libhwloc-dev \
         libncurses5-dev \
         libnuma-dev \

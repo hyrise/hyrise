@@ -10,7 +10,7 @@
 | coreutils                 | any              |    Mac   |                         Yes (scripts) |
 | cmake                     | >= 3.9           |    All   |                                    No |
 | dos2unix                  | any              |    All   |                         Yes (linting) |
-| gcc                       | >= 9.1           |    All   | Yes, if clang installed, not for OS X |
+| gcc                       | >= 10.0          |    All   | Yes, if clang installed, not for OS X |
 | gcovr                     | >= 3.2           |    All   |                        Yes (coverage) |
 | graphviz                  | any              |    All   |             Yes (query visualization) |
 | libnuma-dev               | any              |    Linux |                            Yes (numa) |
@@ -20,7 +20,7 @@
 | parallel                  | any              |    All   |                                   Yes |
 | pexpect                   | >= 4             |    All   |                     Yes (tests in CI) |
 | postgresql-server-dev-all | >= 154           |    Linux |                                    No |
-| python                    | 3                |    All   |         Yes (linting and tests in CI) |
+| python                    | >= 3.6           |    All   |         Yes (linting and tests in CI) |
 | readline                  | >= 7             |    All   |                                    No |
 | sqlite3                   | >= 3             |    All   |                                    No |
 | systemtap                 | any              |    Linux |                                    No |
