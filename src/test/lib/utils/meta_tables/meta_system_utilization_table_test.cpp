@@ -33,13 +33,10 @@ TEST_F(MetaSystemUtilizationTest, CPUAffinity) {
   memcpy(&cpu_set, &default_cpu_set, sizeof(cpu_set));
 
   for (uint32_t cpu_index = 0; cpu_index < CPU_SETSIZE; ++cpu_index) {
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wreserved-identifier"
     if (CPU_ISSET(cpu_index, &default_cpu_set)) {
       CPU_CLR(cpu_index, &cpu_set);
       break;
     }
-    #pragma clang diagnostic pop
   }
 
   // Altering the CPU set of this worker thread should not alter the number on cpus for hyrise
