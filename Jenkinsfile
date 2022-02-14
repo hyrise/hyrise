@@ -69,11 +69,12 @@ try {
 
             cmake = 'cmake -DCI_BUILD=ON'
             unity = '-DCMAKE_UNITY_BUILD=ON'
-
+ 
+            // TODO(Martin): update comment
             // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
             // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
             // DEPENDENCIES.md, clang_tidy_wrapper.sh, and the documentation (README, Wiki).
-            clang = '-DCMAKE_C_COMPILER=clang-14 -DCMAKE_CXX_COMPILER=clang++-14'
+            clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
             clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
             gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
 
