@@ -208,7 +208,10 @@ void Worker::_set_affinity() {
 #if HYRISE_NUMA_SUPPORT
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
+  #pragma clang diagnostic push
+  #pragma clang diagnostic ignored "-Wreserved-identifier"
   CPU_SET(_cpu_id, &cpuset);
+  #pragma clang diagnostic pop
   auto rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
   if (rc != 0) {
     // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the DB
