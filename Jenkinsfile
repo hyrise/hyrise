@@ -55,7 +55,7 @@ try {
   
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def oppossumCI = docker.image('hyrise/opossum-ci:21.10');
+      def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
       oppossumCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
@@ -68,7 +68,10 @@ try {
             sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
-            unity = '-DCMAKE_UNITY_BUILD=OFF'
+	    // Note on unity. As discussed in #2402, GCC and Google Test don't work together in some cases when unity builds
+            // used.
+            // TODO(anyone): Check if unity can be re-enabled for GCC debug build with Google Test update or new GCC version.
+            unity = '-DCMAKE_UNITY_BUILD=ON'
  
             // TODO(Martin): update comment
             // We use clang 9 as the lowest supported compiler version and also run Jenkins with the most recent clang
@@ -77,7 +80,7 @@ try {
             // DEPENDENCIES.md, and the documentation (README, Wiki).
             clang = '-DCMAKE_C_COMPILER=clang-12 -DCMAKE_CXX_COMPILER=clang++-12'
             clang9 = '-DCMAKE_C_COMPILER=clang-9 -DCMAKE_CXX_COMPILER=clang++-9'
-            gcc = '-DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11'
+            gcc = '-DCMAKE_C_COMPILER=gcc-10 -DCMAKE_CXX_COMPILER=g++-10'
 
             debug = '-DCMAKE_BUILD_TYPE=Debug'
             release = '-DCMAKE_BUILD_TYPE=Release'
@@ -96,7 +99,7 @@ try {
             mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
             mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
             wait"
