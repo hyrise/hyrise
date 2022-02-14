@@ -60,6 +60,13 @@ else()
     message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CLANG_VERSION_MAJOR STREQUAL "13")
+	message("DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
+        add_compile_options(-Wno-reserved-identifier)
+    endif()
+endif()
+
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 
 include_directories(
