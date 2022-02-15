@@ -119,7 +119,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
       //   auto& q = _queues[i];
       //   ss << "(" << i << ": " << q->size(static_cast<uint32_t>(priority)) << ") - ";
       // }
-      preferred_node_id = NodeID{std::distance(_queues.cbegin(), std::min_element(_queues.cbegin(), _queues.cend(), [&](const auto& lhs, const auto& rhs) { return lhs->size(static_cast<uint32_t>(priority)) < rhs->size(static_cast<uint32_t>(priority)); }))};
+      preferred_node_id = NodeID{static_cast<uint32_t>(std::distance(_queues.cbegin(), std::min_element(_queues.cbegin(), _queues.cend(), [&](const auto& lhs, const auto& rhs) { return lhs->size(static_cast<uint32_t>(priority)) < rhs->size(static_cast<uint32_t>(priority)); })))};
       // preferred_node_id = NodeID{0};
       // ss << " --- Using node %zu\n" << static_cast<size_t>(preferred_node_id) << "\n";
     }
