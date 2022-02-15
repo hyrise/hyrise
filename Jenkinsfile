@@ -336,6 +336,7 @@ try {
   // }
   debug = '-DCMAKE_BUILD_TYPE=Debug'
   release = '-DCMAKE_BUILD_TYPE=Release'
+  unity = '-DCMAKE_UNITY_BUILD=ON'
   parallel clangDebugMacX64: {
     node('mac') {
       stage("clangDebugMacX64") {
@@ -346,7 +347,7 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@12/12.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@12/12.0.1_1/bin/clang++ .."
+            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@12/12.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@12/12.0.1_1/bin/clang++ .."
             sh "cd clang-debug && make -j8"
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
