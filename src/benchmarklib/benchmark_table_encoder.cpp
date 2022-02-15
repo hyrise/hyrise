@@ -56,7 +56,7 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 
 namespace opossum {
 
-BenchmarkTableEncoder::BenchmarkTableEncoder(const std::string& table_name,
+BenchmarkTableEncoder::BenchmarkTableEncoder(const std::string table_name,
                                              const EncodingConfig& encoding_config)
                                              : _table_name{table_name}, _encoding_config{encoding_config} {}
 

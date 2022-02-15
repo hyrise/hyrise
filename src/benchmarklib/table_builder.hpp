@@ -143,6 +143,7 @@ class TableBuilder {
       _emit_chunk();
     }
 
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(_encoding_job);
     return _table;
   }
 
