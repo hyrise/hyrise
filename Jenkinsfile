@@ -89,8 +89,8 @@ try {
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang} .. && make -j libjemalloc-build"
 
             // Configure the rest in parallel
-            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   -DENABLE_CLANG_TIDY=ON .. &\
-            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
+            sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   -DENABLE_CLANG_TIDY=ON -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON .. &\
+            mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}   -DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON .. &\
             mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}   -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}   -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   .. &\
