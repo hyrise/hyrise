@@ -337,79 +337,79 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     const auto end_offset_it = cached_block.cbegin() + block_end_offset;
 
     return std::pair{pmr_string{start_offset_it, end_offset_it}, start_block};
-  } else {
-    /**
-     * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
-     * stream.
-     */
-    std::stringstream result_string;
-
-    // These are the character offsets that need to be read in every block.
-    size_t block_start_offset = start_offset % _block_size;
-    size_t block_end_offset = _block_size;
-
-    /**
-     * This is true if there is a block cached and it is one of the blocks that has to be accessed to decompress the
-     * current element.
-     * If it is true there are two cases:
-     * 1) The first block that has to be accesses is cached. This is trivial and afterwards the data can be overwritten.
-     * 2) The cached block is not the first but a later block. In that case, the cached block is copied. The original
-     * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
-     * is used.
-     */
-    const auto use_caching =
-        cached_block_index && *cached_block_index >= start_block && *cached_block_index <= end_offset;
-
-    /**
-     * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
-     * passed char array and the last decompressed block will be cached afterwards.
-     */
-    auto cached_block_copy = std::vector<char>{};
-    if (use_caching && *cached_block_index != start_block) {
-      cached_block_copy = std::vector<char>{cached_block};
-    }
-
-    /**
-     * Store the index of the last decompressed block. The blocks are decompressed into the cache buffer. If the cached
-     * block is the last block the string, it is copied and used. As a result, the cache contains the last decompressed
-     * block (i.e., the block before the cached block).
-     * In that case, this index equals end_block - 1. Otherwise, it will equal end_block.
-     */
-    auto new_cached_block_index = size_t{0u};
-
-    for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
-      // Only decompress the current block if it's not cached.
-      if (!(use_caching && block_index == *cached_block_index)) {
-        _decompress_block_to_bytes(block_index, cached_block);
-        new_cached_block_index = block_index;
-      }
-
-      // Set the offset for the end of the string.
-      if (block_index == end_block) {
-        block_end_offset = end_offset % _block_size;
-      }
-
-      /**
-       * Extract the string from the current block via the offsets and append it to the result string stream.
-       * If the cached block is not the start block, the data is retrieved from the copy.
-       */
-      pmr_string partial_result;
-      if (use_caching && block_index == *cached_block_index && block_index != start_block) {
-        const auto start_offset_it = cached_block_copy.cbegin() + block_start_offset;
-        const auto end_offset_it = cached_block_copy.cbegin() + block_end_offset;
-        partial_result = pmr_string{start_offset_it, end_offset_it};
-      } else {
-        const auto start_offset_it = cached_block.cbegin() + block_start_offset;
-        const auto end_offset_it = cached_block.cbegin() + block_end_offset;
-        partial_result = pmr_string{start_offset_it, end_offset_it};
-      }
-      result_string << partial_result;
-
-      // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
-      block_start_offset = 0u;
-    }
-    return std::pair{pmr_string{result_string.str()}, new_cached_block_index};
   }
+
+  /**
+   * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
+   * stream.
+   */
+  std::stringstream result_string;
+
+  // These are the character offsets that need to be read in every block.
+  size_t block_start_offset = start_offset % _block_size;
+  size_t block_end_offset = _block_size;
+
+  /**
+   * This is true if there is a block cached and it is one of the blocks that has to be accessed to decompress the
+   * current element.
+   * If it is true there are two cases:
+   * 1) The first block that has to be accesses is cached. This is trivial and afterwards the data can be overwritten.
+   * 2) The cached block is not the first but a later block. In that case, the cached block is copied. The original
+   * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
+   * is used.
+   */
+  const auto use_caching =
+      cached_block_index && *cached_block_index >= start_block && *cached_block_index <= end_offset;
+
+  /**
+   * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
+   * passed char array and the last decompressed block will be cached afterwards.
+   */
+  auto cached_block_copy = std::vector<char>{};
+  if (use_caching && *cached_block_index != start_block) {
+    cached_block_copy = std::vector<char>{cached_block};
+  }
+
+  /**
+   * Store the index of the last decompressed block. The blocks are decompressed into the cache buffer. If the cached
+   * block is the last block the string, it is copied and used. As a result, the cache contains the last decompressed
+   * block (i.e., the block before the cached block).
+   * In that case, this index equals end_block - 1. Otherwise, it will equal end_block.
+   */
+  auto new_cached_block_index = size_t{0u};
+
+  for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
+    // Only decompress the current block if it's not cached.
+    if (!(use_caching && block_index == *cached_block_index)) {
+      _decompress_block_to_bytes(block_index, cached_block);
+      new_cached_block_index = block_index;
+    }
+
+    // Set the offset for the end of the string.
+    if (block_index == end_block) {
+      block_end_offset = end_offset % _block_size;
+    }
+
+    /**
+     * Extract the string from the current block via the offsets and append it to the result string stream.
+     * If the cached block is not the start block, the data is retrieved from the copy.
+     */
+    pmr_string partial_result;
+    if (use_caching && block_index == *cached_block_index && block_index != start_block) {
+      const auto start_offset_it = cached_block_copy.cbegin() + block_start_offset;
+      const auto end_offset_it = cached_block_copy.cbegin() + block_end_offset;
+      partial_result = pmr_string{start_offset_it, end_offset_it};
+    } else {
+      const auto start_offset_it = cached_block.cbegin() + block_start_offset;
+      const auto end_offset_it = cached_block.cbegin() + block_end_offset;
+      partial_result = pmr_string{start_offset_it, end_offset_it};
+    }
+    result_string << partial_result;
+
+    // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
+    block_start_offset = 0u;
+  }
+  return std::pair{pmr_string{result_string.str()}, new_cached_block_index};
 }
 
 template <typename T>
