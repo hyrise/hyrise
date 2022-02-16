@@ -147,10 +147,10 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
                                                      if (!updated_column_id) {
                                                        // Indexed column was pruned - remove index from statistics
                                                        return true;
-                                                     } else {
-                                                       // Update column id
-                                                       original_column_id = *updated_column_id;
                                                      }
+
+                                                     // Update column id
+                                                     original_column_id = *updated_column_id;
                                                    }
                                                    return false;
                                                  }),

@@ -53,7 +53,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       auto target_iter = target_values.begin() + target_begin_offset;
 
       // Copy values and null values
-      for (auto index = ChunkOffset(0); index < length; index++) {
+      for (auto index = ChunkOffset{0}; index < length; index++) {
         *target_iter = source_iter->value();
 
         if (source_iter->is_null()) {

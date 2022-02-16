@@ -83,9 +83,9 @@ size_t AbstractLQPNode::hash() const {
       boost::hash_combine(hash, node->type);
       boost::hash_combine(hash, node->_on_shallow_hash());
       return LQPVisitation::VisitInputs;
-    } else {
-      return LQPVisitation::DoNotVisitInputs;
     }
+
+    return LQPVisitation::DoNotVisitInputs;
   });
 
   return hash;
@@ -153,9 +153,9 @@ LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNo
     return LQPInputSide::Left;
   } else if (output->_inputs[1].get() == this) {
     return LQPInputSide::Right;
-  } else {
-    Fail("Specified output node is not actually an output node of this node.");
   }
+
+  Fail("Specified output node is not actually an output node of this node.");
 }
 
 std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
@@ -317,10 +317,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_depend
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->non_trivial_functional_dependencies();
-  } else {
-    // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
-    return {};
   }
+
+  // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
+  return {};
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {

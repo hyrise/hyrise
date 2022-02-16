@@ -40,15 +40,15 @@ void TransactionManager::_register_transaction(const CommitID snapshot_commit_id
 void TransactionManager::_deregister_transaction(const CommitID snapshot_commit_id) {
   std::lock_guard<std::mutex> lock(_active_snapshot_commit_ids_mutex);
 
-  auto it = std::find(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end(), snapshot_commit_id);
+  auto iter = std::find(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end(), snapshot_commit_id);
 
-  if (it != _active_snapshot_commit_ids.end()) {
-    _active_snapshot_commit_ids.erase(it);
+  if (iter != _active_snapshot_commit_ids.end()) {
+    _active_snapshot_commit_ids.erase(iter);
     return;
   }
 
   Assert(
-      it == _active_snapshot_commit_ids.end(),
+      iter == _active_snapshot_commit_ids.end(),
       "Could not find snapshot_commit_id in TransactionManager's _active_snapshot_commit_ids. Therefore, the removal "
       "failed and the function should not have been called.");
 }
@@ -60,8 +60,8 @@ std::optional<CommitID> TransactionManager::get_lowest_active_snapshot_commit_id
     return std::nullopt;
   }
 
-  auto it = std::min_element(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end());
-  return *it;
+  auto iter = std::min_element(_active_snapshot_commit_ids.begin(), _active_snapshot_commit_ids.end());
+  return *iter;
 }
 
 /**

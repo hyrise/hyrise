@@ -75,9 +75,9 @@ void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
     if (replacement_iter != mapping.end()) {
       sub_expression = replacement_iter->second;
       return ExpressionVisitation::DoNotVisitArguments;
-    } else {
-      return ExpressionVisitation::VisitArguments;
     }
+
+    return ExpressionVisitation::VisitArguments;
   });
 }
 
@@ -233,15 +233,13 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
         correlated_parameter_expression->set_value(value_iter->second);
       }
       return ExpressionVisitation::DoNotVisitArguments;
-
     } else if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
                pqp_subquery_expression) {
       pqp_subquery_expression->pqp->set_parameters(parameters);
       return ExpressionVisitation::DoNotVisitArguments;
-
-    } else {
-      return ExpressionVisitation::VisitArguments;
     }
+
+    return ExpressionVisitation::VisitArguments;
   });
 }
 
@@ -324,6 +322,7 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     });
     return result;
   }
+
   return std::nullopt;
 }
 
