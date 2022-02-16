@@ -146,6 +146,7 @@ AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<ColumnID>& groupby_column_ids)
     : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
+  // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list
   _has_aggregate_functions =
       !_aggregates.empty() && !std::all_of(_aggregates.begin(), _aggregates.end(), [](const auto aggregate_expression) {
         return aggregate_expression->aggregate_function == AggregateFunction::Any;

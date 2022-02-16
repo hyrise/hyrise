@@ -58,7 +58,7 @@ pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const siz
 template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<BoolAsByteType> readable_bools(count);
-  file.read(reinterpret_cast<char*>(readable_bools.data()), readable_bools.size() * sizeof(BoolAsByteType));
+  file.read(reinterpret_cast<char*>(readable_bools.data()), static_cast<std::streamsize>(readable_bools.size()) * sizeof(BoolAsByteType));
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
@@ -227,12 +227,12 @@ std::shared_ptr<FrameOfReferenceSegment<T>> BinaryParser::_import_frame_of_refer
                                                                                              ChunkOffset row_count) {
   const auto compressed_vector_type_id = _read_value<CompressedVectorTypeID>(file);
   const auto block_count = _read_value<uint32_t>(file);
-  const auto block_minima = pmr_vector<T>(_read_values<T>(file, block_count));
+  const auto block_minima = _read_values<T>(file, block_count);
 
   const auto null_values_stored = _read_value<BoolAsByteType>(file);
   std::optional<pmr_vector<bool>> null_values;
   if (null_values_stored) {
-    null_values = pmr_vector<bool>(_read_values<bool>(file, row_count));
+    null_values = _read_values<bool>(file, row_count);
   }
 
   auto offset_values = _import_offset_value_vector(file, row_count, compressed_vector_type_id);
@@ -253,19 +253,19 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 
   pmr_vector<pmr_vector<char>> lz4_blocks(block_count);
   for (uint32_t block_index = 0; block_index < block_count; ++block_index) {
-    lz4_blocks[block_index] = pmr_vector<char>(_read_values<char>(file, lz4_block_sizes[block_index]));
+    lz4_blocks[block_index] = _read_values<char>(file, lz4_block_sizes[block_index]);
   }
 
   const auto null_values_size = _read_value<uint32_t>(file);
   std::optional<pmr_vector<bool>> null_values;
   if (null_values_size != 0) {
-    null_values = pmr_vector<bool>(_read_values<bool>(file, null_values_size));
+    null_values = _read_values<bool>(file, null_values_size);
   } else {
     null_values = std::nullopt;
   }
 
   const auto dictionary_size = _read_value<uint32_t>(file);
-  auto dictionary = pmr_vector<char>(_read_values<char>(file, dictionary_size));
+  auto dictionary = _read_values<char>(file, dictionary_size);
 
   const auto string_offsets_size = _read_value<uint32_t>(file);
 
@@ -274,15 +274,15 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
                                            std::move(string_offsets), block_size, last_block_size, compressed_size,
                                            num_elements);
-  } else {
-    if (std::is_same<T, pmr_string>::value) {
-      return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-                                             nullptr, block_size, last_block_size, compressed_size, num_elements);
-    } else {
-      return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-                                             block_size, last_block_size, compressed_size, num_elements);
-    }
   }
+
+  if (std::is_same<T, pmr_string>::value) {
+    return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
+					   nullptr, block_size, last_block_size, compressed_size, num_elements);
+  }
+
+  return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
+					 block_size, last_block_size, compressed_size, num_elements);
 }
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
@@ -324,7 +324,7 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
   pmr_vector<char> values(string_length * count);
-  file.read(values.data(), values.size());
+  file.read(values.data(), static_cast<std::streamsize>(values.size()));
   return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
 

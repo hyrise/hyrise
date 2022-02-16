@@ -219,11 +219,11 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
   if (column_is_from_left_input) {
     return left_input()->is_column_nullable(column_id);
-  } else {
-    ColumnID right_column_id =
-        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
-    return right_input()->is_column_nullable(right_column_id);
   }
+
+  ColumnID right_column_id =
+  static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
+  return right_input()->is_column_nullable(right_column_id);
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
@@ -233,9 +233,9 @@ size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode);
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (!join_predicates().empty()) {
     return JoinNode::make(join_mode, expressions_copy_and_adapt_to_different_lqp(join_predicates(), node_mapping));
-  } else {
-    return JoinNode::make(join_mode);
   }
+
+  return JoinNode::make(join_mode);
 }
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
