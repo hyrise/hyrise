@@ -68,6 +68,7 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/plugins/
 
     # TODO(Martin): ask Marcel for the best way to include fsst
+    SYSTEM
     ${PROJECT_SOURCE_DIR}/third_party/fsst
 )
 
