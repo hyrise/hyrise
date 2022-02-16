@@ -182,7 +182,7 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
 
     // "shrink_to_fit" to the total size of the compressed strings.
     auto aggregated_offset_sum = offsets.back();
-    compressed_values.resize(aggregated_offset_sum + compressed_value_lenghts.back());
+    compressed_values.resize(aggregated_offset_sum + compressed_value_lengths.back());
 
     // Create reference offsets and substract them from offsets
     // in order to achieve larger vector compression rates.
