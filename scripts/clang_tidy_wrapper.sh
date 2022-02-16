@@ -10,7 +10,7 @@ shift  # Remove the file from $@
 file_relative_to_source=${file//$cmake_source_dir/}             # Remove the source dir from $file
 file_relative_to_source=${file_relative_to_source/..\/src/src}  # Remove `../src`, which gets added by Ninja
 
-if grep "$file_relative_to_source" $cmake_source_dir/.clang-tidy-ignore > /dev/null; then
+if grep -- "$file_relative_to_source" $cmake_source_dir/.clang-tidy-ignore > /dev/null; then
 	echo "clang-tidy: Ignoring $file_relative_to_source"
 	exit 0
 else
