@@ -8,8 +8,7 @@
 
 namespace opossum {
 
-TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {
-}
+TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
 
 bool TaskQueue::empty() const {
   for (const auto& queue : _queues) {
@@ -29,8 +28,6 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
   task->set_node_id(_node_id);
   _queues[priority].push(task);
 
-  // First notify the spinning tasks (might still have relevant data cached), then wake others.
-  is_empty.store(false, std::memory_order_relaxed);
   new_task.notify_one();
 }
 
@@ -41,9 +38,6 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
       return task;
     }
   }
-  // Signaling an empty queue here instead of within loop. We do not need to keep track of all priority queues, but the
-  // flag is set one pull() later than it could be set.
-  is_empty.store(true, std::memory_order_relaxed);
   return nullptr;
 }
 

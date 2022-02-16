@@ -48,9 +48,6 @@ class TaskQueue {
    */
   std::mutex lock;
 
-  // TODO(anybody): switch to atomic_flag once it's fully supported by all Hyrise-supported compilers.
-  std::atomic<bool> is_empty{true};
-
  private:
   NodeID _node_id;
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
