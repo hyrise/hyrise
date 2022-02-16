@@ -414,7 +414,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
 
 template <typename T>
 T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
-  auto decompressed_block = std::vector<char>{_block_size};
+  auto decompressed_block = std::vector<char>(_block_size);
   return decompress(chunk_offset, std::nullopt, decompressed_block).first;
 }
 
