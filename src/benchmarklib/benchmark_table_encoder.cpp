@@ -96,10 +96,12 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
     if (encoding_supports_data_type(encoding_config.default_encoding_spec.encoding_type, column_data_type)) {
       chunk_encoding_spec.push_back(encoding_config.default_encoding_spec);
     } else {
-      std::cout << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
-      std::cout << column_data_type << " cannot be encoded as ";
-      std::cout << encoding_config.default_encoding_spec.encoding_type << " and is ";
-      std::cout << "left Unencoded." << std::endl;
+      auto ss = std::stringstream{};
+      ss << " - Column '" << table_name << "." << table->column_name(column_id) << "' of type ";
+      ss << column_data_type << " cannot be encoded as ";
+      ss << encoding_config.default_encoding_spec.encoding_type << " and is ";
+      ss << "left Unencoded." << std::endl;
+      std::cout << ss.str();
       chunk_encoding_spec.emplace_back(EncodingType::Unencoded);
     }
   }

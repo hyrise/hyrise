@@ -205,8 +205,8 @@ set(
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/date_utils_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
+    lib/utils/date_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/load_table_test.cpp
@@ -230,10 +230,10 @@ set(
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
-    utils/constraint_test_utils.hpp
     plugins/mvcc_delete_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
+    utils/constraint_test_utils.hpp
 )
 
 set (
@@ -257,7 +257,7 @@ set(
     LIBRARIES
     gtest
     gmock
-    sqlite3
+    SQLite::SQLite3
     hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
 )
 

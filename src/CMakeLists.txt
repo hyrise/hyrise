@@ -63,30 +63,12 @@ endif()
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 
 include_directories(
-    ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
-    ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
-    ${PROJECT_SOURCE_DIR}/third_party/magic_enum/include
-
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
     ${PROJECT_SOURCE_DIR}/src/plugins/
 
-    ${Boost_INCLUDE_DIRS}
-)
-
-# Include these libraries as system libraries to silence some warnings caused by -Weverything
-include_directories(
-    SYSTEM
-    ${TBB_INCLUDE_DIR}
-    ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
-    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
-    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
-    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
+    # TODO(Martin): ask Marcel for the best way to include fsst
     ${PROJECT_SOURCE_DIR}/third_party/fsst
-    ${PROJECT_SOURCE_DIR}/third_party/json
-    ${PROJECT_SOURCE_DIR}/third_party/lz4
-    ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
-    ${PROJECT_SOURCE_DIR}/third_party/zstd
 )
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
