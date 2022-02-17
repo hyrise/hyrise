@@ -35,8 +35,11 @@ class PluginManager : public Noncopyable {
   PluginManager() = default;
   friend class Hyrise;
 
+  PluginManager(PluginManager&& other)
+    : _plugins{std::move(_plugins)}, _dl_mutex{} {}
+
   const PluginManager& operator=(const PluginManager&) = delete;
-  PluginManager& operator=(PluginManager&&) = delete;
+  PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 
