@@ -47,6 +47,6 @@ class PluginManager : public Noncopyable {
       const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter);
 
   // Lock for dl* functions (see clang-tidy concurrency-mt-unsafe)
-  std::mutex _dl_mutex;
+  mutable std::mutex _dl_mutex;
 };
 }  // namespace opossum
