@@ -42,15 +42,16 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   {
     std::lock_guard<std::mutex> lock(_dl_mutex);
 
-    PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
+    PluginHandle plugin_handle = dlopen(path.c_str(),
+		                        static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
     Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
 
     // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
     // factory method. See the sources of AbstractPlugin and TestPlugin for further details.
     void* factory = dlsym(plugin_handle, "factory");
     Assert(factory,
-	   "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
-	   "for your plugin!");
+           "Instantiating plugin failed: Use the EXPORT_PLUGIN (abstract_plugin.hpp) macro to export a factory method "
+           "for your plugin!");
   }
 
   using PluginGetter = AbstractPlugin* (*)();

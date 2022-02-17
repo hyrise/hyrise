@@ -49,4 +49,5 @@ class PluginManager : public Noncopyable {
   // Lock for dl* functions (see clang-tidy concurrency-mt-unsafe)
   mutable std::mutex _dl_mutex;
 };
+
 }  // namespace opossum

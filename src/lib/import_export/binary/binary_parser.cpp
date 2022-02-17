@@ -58,7 +58,8 @@ pmr_vector<pmr_string> BinaryParser::_read_values(std::ifstream& file, const siz
 template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<BoolAsByteType> readable_bools(count);
-  file.read(reinterpret_cast<char*>(readable_bools.data()), static_cast<std::streamsize>(readable_bools.size()) * sizeof(BoolAsByteType));
+  file.read(reinterpret_cast<char*>(readable_bools.data()),
+		                    static_cast<std::streamsize>(readable_bools.size()) * sizeof(BoolAsByteType));
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
@@ -278,11 +279,11 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
 
   if (std::is_same<T, pmr_string>::value) {
     return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-					   nullptr, block_size, last_block_size, compressed_size, num_elements);
+                                           nullptr, block_size, last_block_size, compressed_size, num_elements);
   }
 
   return std::make_shared<LZ4Segment<T>>(std::move(lz4_blocks), std::move(null_values), std::move(dictionary),
-					 block_size, last_block_size, compressed_size, num_elements);
+                                         block_size, last_block_size, compressed_size, num_elements);
 }
 
 std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
