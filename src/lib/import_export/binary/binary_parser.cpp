@@ -59,7 +59,7 @@ template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<BoolAsByteType> readable_bools(count);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
-		                    static_cast<std::streamsize>(readable_bools.size()) * sizeof(BoolAsByteType));
+                                    static_cast<std::streamsize>(readable_bools.size()) * sizeof(BoolAsByteType));
   return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
 }
 
