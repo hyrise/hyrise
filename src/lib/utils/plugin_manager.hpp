@@ -36,7 +36,7 @@ class PluginManager : public Noncopyable {
   friend class Hyrise;
 
   const PluginManager& operator=(const PluginManager&) = delete;
-  PluginManager& operator=(PluginManager&&) = default;
+  PluginManager& operator=(PluginManager&&) = delete;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
 
@@ -47,7 +47,7 @@ class PluginManager : public Noncopyable {
       const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter);
 
   // Lock for dl* functions (see clang-tidy concurrency-mt-unsafe)
-  mutable std::mutex _dl_mutex;
+  std::mutex _dl_mutex;
 };
 
 }  // namespace opossum
