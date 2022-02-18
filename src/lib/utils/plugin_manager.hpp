@@ -1,7 +1,6 @@
 #pragma once
 
 #include <filesystem>
-#include <mutex>
 #include <unordered_map>
 
 #include "types.hpp"
@@ -46,5 +45,4 @@ class PluginManager : public Noncopyable {
   std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_and_erase_plugin(
       const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter);
 };
-
 }  // namespace opossum
