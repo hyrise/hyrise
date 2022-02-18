@@ -35,9 +35,6 @@ class PluginManager : public Noncopyable {
   PluginManager() = default;
   friend class Hyrise;
 
-  PluginManager(PluginManager&& other)
-    : _plugins{std::move(_plugins)}, _dl_mutex{} {}
-
   const PluginManager& operator=(const PluginManager&) = delete;
   PluginManager& operator=(PluginManager&&) = default;
 
@@ -48,9 +45,6 @@ class PluginManager : public Noncopyable {
   bool _is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const;
   std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_and_erase_plugin(
       const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter);
-
-  // Lock for dl* functions (see clang-tidy concurrency-mt-unsafe)
-  std::mutex _dl_mutex;
 };
 
 }  // namespace opossum
