@@ -69,7 +69,9 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
     if (const auto dictionary_segment = std::dynamic_pointer_cast<const DictionarySegment<ColumnDataType>>(segment)) {
       distinct_value_count = dictionary_segment->dictionary()->size();
       return;
-    } else if (const auto fs_dictionary_segment =
+    }
+
+    if (const auto fs_dictionary_segment =
                    std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
       distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
       return;
