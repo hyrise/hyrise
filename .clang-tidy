@@ -49,7 +49,8 @@ WarningsAsErrors: '*'
 #   altera-*                                                  Checks related to OpenCL programming for FPGAs.
 #   abseil-*                                                  Checks related to Google's abseil library (not used in Hyrise).
 #   readability-use-anyofallof                                We prefer `for (auto item : items)` over `std::ranges::all_of()` with a lambda.  TODO(Martin): discuss within issue ... everybody on board with it?
-#   readability-identifier-length                             Iff (!) the context is clear, `op` for operator or `fd` for functional dependencies is fine.  TODO(Martin): discuss within issue ... everybody on board with it?
+#   readability-identifier-length                             Iff (!) the context is clear, `op` for operator or `fd` for functional dependencies are fine. Generally, names with less than 3 chars should be avoided.
+#   readability-identifier-naming                             Error spamming on non-Hyrise code. LLVM Bug. TODO(anyone): test renabling when https://github.com/llvm/llvm-project/issues/46097 is fixed.
 
 
 CheckOptions:
