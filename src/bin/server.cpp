@@ -36,7 +36,6 @@ void generate_benchmark_data(std::string argument_string) {
   auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
   config->cache_binary_tables = true;
   if (benchmark_name == "tpcc") {
-    config->cache_binary_tables = false;  // Not yet supported for TPC-C
     opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpcds") {
     opossum::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
