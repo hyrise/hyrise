@@ -227,14 +227,16 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
                                const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
     if (auto correlated_parameter_expression =
-            std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
+        std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
       const auto value_iter = parameters.find(correlated_parameter_expression->parameter_id);
       if (value_iter != parameters.end()) {
         correlated_parameter_expression->set_value(value_iter->second);
       }
       return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-               pqp_subquery_expression) {
+    }
+    
+    if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+        pqp_subquery_expression) {
       pqp_subquery_expression->pqp->set_parameters(parameters);
       return ExpressionVisitation::DoNotVisitArguments;
     }
@@ -297,9 +299,13 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set");
     return *correlated_parameter_expression->value();
-  } else if (expression.type == ExpressionType::Value) {
+  }
+  
+  if (expression.type == ExpressionType::Value) {
     return static_cast<const ValueExpression&>(expression).value;
-  } else if (expression.type == ExpressionType::Cast) {
+  }
+  
+  if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
     Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined");
     // More complicated casts  should be resolved by ExpressionEvaluator.

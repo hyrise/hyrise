@@ -188,9 +188,9 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
-  } else {
-    return std::atomic_load(&_chunks[chunk_id]);
   }
+
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
@@ -198,9 +198,9 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   if (_type == TableType::References) {
     // see comment in non-const function
     return _chunks[chunk_id];
-  } else {
-    return std::atomic_load(&_chunks[chunk_id]);
   }
+
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<Chunk> Table::last_chunk() const {
@@ -208,9 +208,9 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks.back();
-  } else {
-    return std::atomic_load(&_chunks.back());
   }
+
+  return std::atomic_load(&_chunks.back());
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {

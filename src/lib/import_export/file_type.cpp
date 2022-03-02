@@ -25,11 +25,16 @@ FileType file_type_from_filename(const std::string& filename) {
   boost::algorithm::to_lower(extension);
   if (extension == ".csv") {
     return FileType::Csv;
-  } else if (extension == ".tbl") {
+  }
+
+  if (extension == ".tbl") {
     return FileType::Tbl;
-  } else if (extension == ".bin") {
+  }
+
+  if (extension == ".bin") {
     return FileType::Binary;
   }
+
   Fail("Unknown file extension " + extension);
 }
 

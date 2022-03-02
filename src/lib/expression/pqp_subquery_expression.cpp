@@ -25,9 +25,9 @@ std::shared_ptr<AbstractExpression> PQPSubqueryExpression::_on_deep_copy(
   if (_data_type_info) {
     return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), _data_type_info->data_type,
                                                    _data_type_info->nullable, parameters);
-  } else {
-    return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), parameters);
   }
+
+  return std::make_shared<PQPSubqueryExpression>(pqp->deep_copy(copied_ops), parameters);
 }
 
 DataType PQPSubqueryExpression::data_type() const {

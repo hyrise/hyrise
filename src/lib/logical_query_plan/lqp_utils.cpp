@@ -301,9 +301,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
       if (left_input_expression) {
         return left_input_expression;
-      } else {
-        return expression;
       }
+
+      return expression;
     }
 
     case LQPNodeType::Union: {
@@ -314,9 +314,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       if (left_input_expression && right_input_expression) {
         const auto or_expression = or_(left_input_expression, right_input_expression);
         return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
-      } else {
-        return nullptr;
       }
+
+      return nullptr;
     }
 
     case LQPNodeType::Projection:
@@ -363,9 +363,9 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   visit_lqp(lqp, [&](const auto& node) {
     if (node->input_count() > 0) {
       return LQPVisitation::VisitInputs;
-    } else {
-      nodes.emplace_back(node);
     }
+
+    nodes.emplace_back(node);
     return LQPVisitation::DoNotVisitInputs;
   });
 

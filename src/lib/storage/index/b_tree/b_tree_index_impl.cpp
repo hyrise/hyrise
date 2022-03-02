@@ -40,9 +40,9 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(DataType valu
   auto result = _btree.lower_bound(value);
   if (result == _btree.end()) {
     return _chunk_offsets.end();
-  } else {
-    return _chunk_offsets.begin() + result->second;
   }
+
+  return _chunk_offsets.begin() + result->second;
 }
 
 template <typename DataType>
@@ -50,9 +50,9 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
   auto result = _btree.upper_bound(value);
   if (result == _btree.end()) {
     return _chunk_offsets.end();
-  } else {
-    return _chunk_offsets.begin() + result->second;
   }
+
+  return _chunk_offsets.begin() + result->second;
 }
 
 template <typename DataType>

@@ -151,7 +151,9 @@ size_t AbstractLQPNode::input_count() const {
 LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const {
   if (output->_inputs[0].get() == this) {
     return LQPInputSide::Left;
-  } else if (output->_inputs[1].get() == this) {
+  }
+
+  if (output->_inputs[1].get() == this) {
     return LQPInputSide::Right;
   }
 

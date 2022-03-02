@@ -74,9 +74,9 @@ template <typename T>
 std::unique_ptr<BaseVectorDecompressor> LZ4Segment<T>::string_offset_decompressor() const {
   if (_string_offsets) {
     return _string_offsets->create_base_decompressor();
-  } else {
-    return nullptr;
   }
+
+  return nullptr;
 }
 
 template <typename T>

@@ -91,9 +91,9 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
   static_assert(std::is_floating_point_v<T>, "Values must be of floating point type.");
   if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
-  } else {
-    return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));
   }
+
+  return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));
 }
 
 }  // namespace

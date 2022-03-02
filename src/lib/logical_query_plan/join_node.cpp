@@ -125,10 +125,14 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
               std::back_inserter(*unique_constraints));
     return unique_constraints;
 
-  } else if (left_operand_is_unique) {
+  }
+
+  if (left_operand_is_unique) {
     // Uniqueness on the left prevents duplication of records on the right
     return right_unique_constraints;
-  } else if (right_operand_is_unique) {
+  }
+
+  if (right_operand_is_unique) {
     // Uniqueness on the right prevents duplication of records on the left
     return left_unique_constraints;
   }
