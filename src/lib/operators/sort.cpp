@@ -257,9 +257,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   if (input_table->row_count() == 0) {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
-    } else {
-      return input_table;
     }
+
+    return input_table;
   }
 
   std::shared_ptr<Table> sorted_table;
@@ -377,7 +377,7 @@ class Sort::SortImpl {
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
       std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
+                       [comparator](RowIDValuePair lhs, RowIDValuePair rhs) { return comparator(lhs.second, rhs.second); });
     };
     if (_sort_mode == SortMode::Ascending) {
       sort_with_comparator(std::less<>{});

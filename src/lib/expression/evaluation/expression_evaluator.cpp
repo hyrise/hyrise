@@ -489,7 +489,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
     // Nope, it is a list with diverse types - falling back to rewrite of expression:
     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
 
-  } else if (right_expression.type == ExpressionType::PQPSubquery) {
+  }
+
+  if (right_expression.type == ExpressionType::PQPSubquery) {
     const auto* subquery_expression = dynamic_cast<const PQPSubqueryExpression*>(&right_expression);
     Assert(subquery_expression, "Expected PQPSubqueryExpression");
 
@@ -510,7 +512,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           const auto result_size = _result_size(left_view.size(), subquery_results.size());
 
           result_values.resize(result_size);
-          // TODO(moritz) The InExpression doesn't in all cases need to return a nullable
+          // TODO(anybody): The InExpression doesn't in all cases need to return a nullable
           result_nulls.resize(result_size);
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size);
@@ -770,10 +772,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
     pmr_vector<bool> nulls{};
     nulls.emplace_back(true);
     return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{Result{}}}, nulls);
-  } else {
-    Assert(value.type() == typeid(Result), "Can't evaluate ValueExpression to requested type Result");
-    return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{boost::get<Result>(value)}});
   }
+
+  Assert(value.type() == typeid(Result), "Can't evaluate ValueExpression to requested type Result");
+  return std::make_shared<ExpressionResult<Result>>(pmr_vector<Result>{{boost::get<Result>(value)}});
 }
 
 template <typename Result>
@@ -789,9 +791,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
           case FunctionType::Concatenate:
             return _evaluate_concatenate(expression.arguments);
         }
-      } else {
-        Fail("Function can only be evaluated to a string");
       }
+      Fail("Function can only be evaluated to a string");
   }
   Fail("Invalid enum value");
 }
@@ -914,10 +915,10 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
       DebugAssert(table_iter != _uncorrelated_subquery_results->cend(),
                   "All uncorrelated PQPSubqueryExpression should be cached if cache is present");
       return {table_iter->second};
-    } else {
-      // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
-      return {_evaluate_subquery_expression_for_row(expression, ChunkOffset{0})};
     }
+
+    // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
+    return {_evaluate_subquery_expression_for_row(expression, ChunkOffset{0})};
   }
 
   // Make sure all columns (i.e. segments) that are parameters are materialized
@@ -1350,25 +1351,27 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
     pmr_vector<bool> nulls(left.size());
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](auto l, auto r) { return l || r; });
     return nulls;
-  } else if (left.size() > right.size()) {
+  }
+
+  if (left.size() > right.size()) {
     DebugAssert(right.size() <= 1,
                 "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
                 "rows (to represent a non-nullable operand)");
     if (!right.empty() && right.front()) {
       return pmr_vector<bool>({true});
-    } else {
-      return left;
     }
-  } else {
-    DebugAssert(left.size() <= 1,
-                "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
-                "rows (to represent a non-nullable operand)");
-    if (!left.empty() && left.front()) {
-      return pmr_vector<bool>({true});
-    } else {
-      return right;
-    }
+
+    return left;
   }
+
+  DebugAssert(left.size() <= 1,
+              "Operand should have either the same row count as the other, 1 row (to represent a literal), or no "
+              "rows (to represent a non-nullable operand)");
+  if (!left.empty() && left.front()) {
+    return pmr_vector<bool>({true});
+  }
+
+  return right;
 }
 
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const ColumnID column_id) {

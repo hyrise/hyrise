@@ -74,9 +74,9 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
     if (is_column_id(*argument_a)) {
       return std::vector<OperatorScanPredicate>{
           OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition}};
-    } else {
-      return std::nullopt;
     }
+
+    return std::nullopt;
   }
 
   Assert(predicate->arguments.size() > 1, "Expect non-unary PredicateExpression to have two or more arguments");

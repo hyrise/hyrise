@@ -507,11 +507,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   CompareResult _compare(const T& left, const T& right) {
     if (left < right) {
       return CompareResult::Less;
-    } else if (left == right) {
-      return CompareResult::Equal;
-    } else {
-      return CompareResult::Greater;
     }
+ 
+    if (left == right) {
+      return CompareResult::Equal;
+    }
+
+    return CompareResult::Greater;
   }
 
   // Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
