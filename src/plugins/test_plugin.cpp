@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "test_plugin.hpp"
 
 #include "storage/table.hpp"
@@ -15,6 +17,12 @@ void TestPlugin::start() {
 }
 
 void TestPlugin::stop() { Hyrise::get().storage_manager.drop_table("DummyTable"); }
+
+void TestPlugin::test_user_callable_function() const {
+  std::cout << "This output was triggered by user interaction." << std::endl;
+}
+
+EXPORT_USER_CALLABLE_FUNCTION(TestPlugin, test_user_callable_function)
 
 EXPORT_PLUGIN(TestPlugin)
 

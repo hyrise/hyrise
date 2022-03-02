@@ -36,6 +36,8 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));
 
+  SQLPipelineBuilder{"INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseTestPlugin', 'test_user_callable_function_extern')"}.create_pipeline().get_result_table();
+
   pm.unload_plugin("hyriseTestPlugin");
 
   // The test plugin removes the dummy table from the storage manager when it is unloaded

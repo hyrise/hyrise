@@ -16,6 +16,8 @@ class TestPlugin : public AbstractPlugin {
 
   void stop() final;
 
+  void test_user_callable_function() const;
+
   StorageManager& storage_manager;
 };
 

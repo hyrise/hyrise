@@ -25,6 +25,7 @@ class PluginManager : public Noncopyable {
  public:
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
+  void exec_function(const PluginName& name, const std::string& function_name);
 
   std::vector<PluginName> loaded_plugins() const;
 

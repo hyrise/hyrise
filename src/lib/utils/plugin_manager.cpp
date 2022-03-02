@@ -63,6 +63,23 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   _plugins[name] = std::move(plugin_handle_wrapper);
 }
 
+void PluginManager::exec_function(const PluginName& name, const std::string& function_name) {
+  Assert(_plugins.count(name) > 0, "Currently, no plugin called " + name + " is not loaded.");
+  auto handle = _plugins[name].handle;
+  void* function_to_execute = dlsym(handle, function_name.c_str());
+
+  Assert(function_to_execute, "No function called " + function_name + " in the plugin's shared library.");
+
+  using FunctionWrapper = void(*)(const std::unique_ptr<AbstractPlugin>&);
+  auto callable_function = reinterpret_cast<FunctionWrapper>(function_to_execute);
+
+  Assert(callable_function, "Could not properly cast the function called " + function_name + ". Does it return void and not take any parameters apart from the plugin itself?");
+
+  callable_function(_plugins[name].plugin);
+
+  // Todo(all): Decide whether we want logging here
+}
+
 void PluginManager::unload_plugin(const PluginName& name) {
   auto plugin_iter = _plugins.find(name);
   Assert(plugin_iter != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
