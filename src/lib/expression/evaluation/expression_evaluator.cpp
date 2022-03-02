@@ -488,7 +488,6 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     // Nope, it is a list with diverse types - falling back to rewrite of expression:
     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));
-
   }
 
   if (right_expression.type == ExpressionType::PQPSubquery) {

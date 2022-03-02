@@ -508,7 +508,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     if (left < right) {
       return CompareResult::Less;
     }
- 
+
     if (left == right) {
       return CompareResult::Equal;
     }
