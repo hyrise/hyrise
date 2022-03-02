@@ -234,7 +234,7 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       }
       return ExpressionVisitation::DoNotVisitArguments;
     }
-    
+
     if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
         pqp_subquery_expression) {
       pqp_subquery_expression->pqp->set_parameters(parameters);
@@ -300,11 +300,11 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set");
     return *correlated_parameter_expression->value();
   }
-  
+
   if (expression.type == ExpressionType::Value) {
     return static_cast<const ValueExpression&>(expression).value;
   }
-  
+
   if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
     Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined");

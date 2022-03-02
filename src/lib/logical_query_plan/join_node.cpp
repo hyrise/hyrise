@@ -124,7 +124,6 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     std::copy(right_unique_constraints->begin(), right_unique_constraints->end(),
               std::back_inserter(*unique_constraints));
     return unique_constraints;
-
   }
 
   if (left_operand_is_unique) {
