@@ -77,13 +77,13 @@ LikeMatcher::AllPatternVariant LikeMatcher::pattern_string_to_pattern_variant(co
   }
 
   if (tokens.size() == 2 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
-             std::holds_alternative<pmr_string>(tokens[1])) {
+      std::holds_alternative<pmr_string>(tokens[1])) {
     // Pattern has the form '%hello'
     return EndsWithPattern{std::get<pmr_string>(tokens[1])};
   }
 
   if (tokens.size() == 3 && tokens[0] == PatternToken{Wildcard::AnyChars} &&
-             std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
+      std::holds_alternative<pmr_string>(tokens[1]) && tokens[2] == PatternToken{Wildcard::AnyChars}) {
     // Pattern has the form '%hello%'
     return ContainsPattern{std::get<pmr_string>(tokens[1])};
   }

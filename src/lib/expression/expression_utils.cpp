@@ -227,7 +227,7 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
                                const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   visit_expression(expression, [&](auto& sub_expression) {
     if (auto correlated_parameter_expression =
-        std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
+            std::dynamic_pointer_cast<CorrelatedParameterExpression>(sub_expression)) {
       const auto value_iter = parameters.find(correlated_parameter_expression->parameter_id);
       if (value_iter != parameters.end()) {
         correlated_parameter_expression->set_value(value_iter->second);

@@ -72,7 +72,7 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
     }
 
     if (const auto fs_dictionary_segment =
-                   std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
+            std::dynamic_pointer_cast<const FixedStringDictionarySegment<pmr_string>>(segment)) {
       distinct_value_count = fs_dictionary_segment->fixed_string_dictionary()->size();
       return;
     }
