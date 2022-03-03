@@ -14,7 +14,8 @@ namespace opossum {
 
 // This macro allows the function `FunctionName` of the plugin called `PluginName` to be
 // externally callable. This is necessary to enable user-callable functions. As above,
-// it leads to plain C linkage. Use EXPORT in the implementation file of your plugin.
+// it leads to plain C linkage. Use EXPORT_USER_CALLABLE_FUNCTION in the implementation
+// file of your plugin if you want to make a function user-callable.
 #define EXPORT_USER_CALLABLE_FUNCTION(PluginName, FunctionName) \
   /* Careful! We are getting a raw pointer from a smart (unique) pointer here. */ \
   /* This could conflict with the intention of unique_ptr. It should not be    */ \
