@@ -61,6 +61,19 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
   plugin_handle_wrapper.plugin->start();
   _plugins[name] = std::move(plugin_handle_wrapper);
+
+  const auto keywords_functions = _plugins[name].plugin->keywords_functions();
+  for (const auto& [keyword, function] : keywords_functions) {
+    _keyword_function_map[{name, keyword}] = function;
+  }
+}
+
+void PluginManager::exec_function(const PluginName& plugin_name, const std::string& keyword) {
+  Assert(_keyword_function_map.count({plugin_name, keyword}) > 0, "There is no " + keyword + " defined for plugin " + plugin_name + ".");
+  const auto function = _keyword_function_map[{plugin_name, keyword}];
+  function();
+
+  // Todo(all): Decide whether we want logging here
 }
 
 void PluginManager::unload_plugin(const PluginName& name) {
@@ -74,6 +87,17 @@ std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_un
     const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter) {
   const PluginName name = plugin_iter->first;
   const auto& plugin_handle_wrapper = plugin_iter->second;
+
+  // Delete keywords and functions for plugin to be unloaded.
+  auto it = _keyword_function_map.cbegin();
+  while (it != _keyword_function_map.cend()) {
+    // Accessing first element of a pair that forms map's key.
+    if (it->first.first == name) {
+      it = _keyword_function_map.erase(it);
+    } else {
+      it++;
+    }
+  }
 
   plugin_handle_wrapper.plugin->stop();
   auto* const handle = plugin_handle_wrapper.handle;

@@ -16,6 +16,10 @@ class TestPlugin : public AbstractPlugin {
 
   void stop() final;
 
+  std::vector<std::pair<std::string, std::function<void(void)>>> keywords_functions() const final;
+
+  void test_user_callable_function() const;
+
   StorageManager& storage_manager;
 };
 

@@ -24,6 +24,10 @@ class AbstractPlugin {
   virtual void start() = 0;
 
   virtual void stop() = 0;
+
+  virtual std::vector<std::pair<std::string, std::function<void(void)>>> keywords_functions() const {
+    return {};
+  }
 };
 
 }  // namespace opossum

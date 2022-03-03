@@ -11,10 +11,21 @@ namespace opossum {
 
 using PluginHandle = void*;
 using PluginName = std::string;
+using Keyword = std::string;
 
 struct PluginHandleWrapper {
   PluginHandle handle;
   std::unique_ptr<AbstractPlugin> plugin;
+};
+
+struct string_pair_hash {
+  size_t operator () (const std::pair<PluginName, Keyword> &p) const {
+    size_t hash{0};
+    boost::hash_combine(hash, p.first);
+    boost::hash_combine(hash, p.second);
+
+    return hash;
+  }
 };
 
 class PluginManager : public Noncopyable {
@@ -25,6 +36,7 @@ class PluginManager : public Noncopyable {
  public:
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
+  void exec_function(const PluginName& plugin_name, const std::string& keyword);
 
   std::vector<PluginName> loaded_plugins() const;
 
@@ -38,6 +50,7 @@ class PluginManager : public Noncopyable {
   PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
+  std::unordered_map<std::pair<PluginName, Keyword>, std::function<void(void)>, string_pair_hash> _keyword_function_map;
 
   // This method is called during destruction and stops and unloads all currently loaded plugions.
   void _clean_up();
