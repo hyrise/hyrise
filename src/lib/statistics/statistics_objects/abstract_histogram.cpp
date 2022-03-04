@@ -402,6 +402,9 @@ std::pair<Cardinality, DistinctCount> AbstractHistogram<T>::estimate_cardinality
       auto lower_bin_id = _bin_for_value(*value);
       if (lower_bin_id == INVALID_BIN_ID) {
         lower_bin_id = _next_bin_for_value(*value);
+        if (lower_bin_id == INVALID_BIN_ID) {
+          lower_bin_id = 0;
+        }
         lower_bound = bin_minimum(lower_bin_id);
       }
 

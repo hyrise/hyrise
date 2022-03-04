@@ -265,35 +265,6 @@ void AbstractTableGenerator::generate_and_store() {
               << std::endl;
   }
 
-  /**
-   * Add the Tables to the StorageManager
-   */
-  {
-    std::cout << "- Adding tables to StorageManager and generating table statistics" << std::endl;
-    auto& storage_manager = Hyrise::get().storage_manager;
-    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-    jobs.reserve(table_info_by_name.size());
-    for (auto& table_info_by_name_pair : table_info_by_name) {
-      const auto& table_name = table_info_by_name_pair.first;
-      auto& table_info = table_info_by_name_pair.second;
-
-      const auto add_table = [&]() {
-        Timer per_table_timer;
-        if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
-        storage_manager.add_table(table_name, table_info.table);
-        const auto output =
-            std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
-        std::cout << output << std::flush;
-      };
-      jobs.emplace_back(std::make_shared<JobTask>(add_table));
-    }
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-    metrics.store_duration = timer.lap();
-
-    std::cout << "- Adding tables to StorageManager and generating table statistics done ("
-              << format_duration(metrics.store_duration) << ")" << std::endl;
-  }
 
   /**
    * Create indexes if requested by the user
@@ -376,6 +347,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
     const std::string& cache_directory) {
   std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
+  auto& storage_manager = Hyrise::get().storage_manager;
   std::mutex table_insert_mutex;
   const auto table_files = list_directory(cache_directory);
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -392,6 +364,9 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
 
       const std::lock_guard<std::mutex> lock(table_insert_mutex);
       table_info_by_name[table_name] = table_info;
+
+      if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+      storage_manager.add_table(table_name, table_info.table);
 
       std::printf("-  Loaded table '%s' from cached binary %s (%s)\n", table_name.string().c_str(),
                   table_file.relative_path().c_str(), timer.lap_formatted().c_str());

@@ -136,20 +136,20 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   dbgen_reset_seeds();
   dbgen_init_scale_factor(_scale_factor);
 
-  const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
   const auto order_count = static_cast<ChunkOffset>(tdefs[ORDER].base * scale);
+  const auto customer_count = static_cast<ChunkOffset>(tdefs[CUST].base * scale);
   const auto part_count = static_cast<ChunkOffset>(tdefs[PART].base * scale);
   const auto supplier_count = static_cast<ChunkOffset>(tdefs[SUPP].base * scale);
   const auto nation_count = static_cast<ChunkOffset>(tdefs[NATION].base);
   const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                customer_count, BenchmarkTableEncoder("customer", _benchmark_config->encoding_config)};
   TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count,
                              BenchmarkTableEncoder("orders", _benchmark_config->encoding_config)};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
                                 order_count * 4, BenchmarkTableEncoder("lineitem", _benchmark_config->encoding_config)};
+  TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
+                                customer_count, BenchmarkTableEncoder("customer", _benchmark_config->encoding_config)};
   TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names,
                             part_count, BenchmarkTableEncoder("part", _benchmark_config->encoding_config)};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
@@ -161,20 +161,25 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names,
                               region_count, BenchmarkTableEncoder("region", _benchmark_config->encoding_config)};
 
-  /**
-   * CUSTOMER
-   */
+  auto& storage_manager = Hyrise::get().storage_manager;
+  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
 
-  for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
-    auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
-    customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
-                                convert_money(customer.acctbal), customer.mktsegment, customer.comment);
-  }
+  auto print_generation_duration_and_add_table = [&] (Timer generation_timer, const std::string& table_name,
+                                                      std::shared_ptr<Table>& table) {
+    auto generation_output = std::string{"- Generated table '"} + table_name + "' (" + generation_timer.lap_formatted() + ")\n";
+    std::cout << generation_output << std::flush;
+    if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+    Timer adding_timer;
+    storage_manager.add_table(table_name, table);
+    const auto adding_output = std::string{"-  Added '"} + table_name + "' (" + adding_timer.lap_formatted() + ")\n";
+    std::cout << adding_output << std::flush;
+  };
 
   /**
    * ORDER and LINEITEM
    */
 
+  Timer orders_table_timer;
   for (size_t order_idx = 0; order_idx < order_count; ++order_idx) {
     const auto order = call_dbgen_mk<order_t>(order_idx + 1, mk_order, TPCHTable::Orders, 0l);
 
@@ -193,10 +198,36 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     }
   }
 
+  // Lineitem first to minimmize tables already loaded when creating its histograms.
+  auto lineitem_table = lineitem_builder.finish_table();
+  table_info_by_name["lineitem"].table = lineitem_table;
+  print_generation_duration_and_add_table(orders_table_timer, "lineitem", lineitem_table);
+
+  auto orders_table = order_builder.finish_table();
+  table_info_by_name["orders"].table = orders_table;
+  print_generation_duration_and_add_table(orders_table_timer, "orders", orders_table);
+
+  /**
+   * CUSTOMER
+   */
+
+  Timer customer_table_timer;
+  for (size_t row_idx = 0; row_idx < customer_count; row_idx++) {
+    auto customer = call_dbgen_mk<customer_t>(row_idx + 1, mk_cust, TPCHTable::Customer);
+    customer_builder.append_row(customer.custkey, customer.name, customer.address, customer.nation_code, customer.phone,
+                                convert_money(customer.acctbal), customer.mktsegment, customer.comment);
+  }
+
+  auto customer_table = customer_builder.finish_table();
+  table_info_by_name["customer"].table = customer_table;
+  print_generation_duration_and_add_table(customer_table_timer, "customer", customer_table);
+
+
   /**
    * PART and PARTSUPP
    */
 
+  Timer part_table_timer;
   for (size_t part_idx = 0; part_idx < part_count; ++part_idx) {
     const auto part = call_dbgen_mk<part_t>(part_idx + 1, mk_part, TPCHTable::Part);
 
@@ -228,10 +259,19 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     }
   }
 
+  auto part_table = part_builder.finish_table();
+  table_info_by_name["part"].table = part_table;
+  print_generation_duration_and_add_table(part_table_timer, "part", part_table);
+
+  auto partsupp_table = partsupp_builder.finish_table();
+  table_info_by_name["partsupp"].table = partsupp_table;
+  print_generation_duration_and_add_table(part_table_timer, "partsupp", partsupp_table);
+
   /**
    * SUPPLIER
    */
 
+  Timer supplier_table_timer;
   for (size_t supplier_idx = 0; supplier_idx < supplier_count; ++supplier_idx) {
     const auto supplier = call_dbgen_mk<supplier_t>(supplier_idx + 1, mk_supp, TPCHTable::Supplier);
 
@@ -239,19 +279,29 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                                 convert_money(supplier.acctbal), supplier.comment);
   }
 
+  auto supplier_table = supplier_builder.finish_table();
+  table_info_by_name["supplier"].table = supplier_table;
+  print_generation_duration_and_add_table(supplier_table_timer, "supplier", supplier_table);
+
   /**
    * NATION
    */
 
+  Timer nation_table_timer;
   for (size_t nation_idx = 0; nation_idx < nation_count; ++nation_idx) {
     const auto nation = call_dbgen_mk<code_t>(nation_idx + 1, mk_nation, TPCHTable::Nation);
     nation_builder.append_row(nation.code, nation.text, nation.join, nation.comment);
   }
 
+  auto nation_table = nation_builder.finish_table();
+  table_info_by_name["nation"].table = nation_table;
+  print_generation_duration_and_add_table(nation_table_timer, "nation", nation_table);
+
   /**
    * REGION
    */
 
+  Timer region_table_timer;
   for (size_t region_idx = 0; region_idx < region_count; ++region_idx) {
     const auto region = call_dbgen_mk<code_t>(region_idx + 1, mk_region, TPCHTable::Region);
     region_builder.append_row(region.code, region.text, region.comment);
@@ -265,31 +315,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   /**
    * Return
    */
-  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
-
-  auto customer_table = customer_builder.finish_table();
-  table_info_by_name["customer"].table = customer_table;
-
-  auto orders_table = order_builder.finish_table();
-  table_info_by_name["orders"].table = orders_table;
-
-  auto lineitem_table = lineitem_builder.finish_table();
-  table_info_by_name["lineitem"].table = lineitem_table;
-
-  auto part_table = part_builder.finish_table();
-  table_info_by_name["part"].table = part_table;
-
-  auto partsupp_table = partsupp_builder.finish_table();
-  table_info_by_name["partsupp"].table = partsupp_table;
-
-  auto supplier_table = supplier_builder.finish_table();
-  table_info_by_name["supplier"].table = supplier_table;
-
-  auto nation_table = nation_builder.finish_table();
-  table_info_by_name["nation"].table = nation_table;
 
   auto region_table = region_builder.finish_table();
   table_info_by_name["region"].table = region_table;
+  print_generation_duration_and_add_table(region_table_timer, "region", region_table);
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
@@ -297,6 +326,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
       table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
     }
   }
+
 
   return table_info_by_name;
 }
