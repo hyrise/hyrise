@@ -73,13 +73,15 @@ AbstractIndex::Iterator ARTNode4::_delegate_to_child(const AdaptiveRadixTreeInde
 }
 
 AbstractIndex::Iterator ARTNode4::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
-  return _delegate_to_child(
-      key, depth, [&key, this](size_t index, size_t new_depth) { return _children[index]->lower_bound(key, new_depth); });
+  return _delegate_to_child(key, depth, [&key, this](size_t index, size_t new_depth) {
+    return _children[index]->lower_bound(key, new_depth);
+  });
 }
 
 AbstractIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
-  return _delegate_to_child(
-      key, depth, [&key, this](size_t index, size_t new_depth) { return _children[index]->upper_bound(key, new_depth); });
+  return _delegate_to_child(key, depth, [&key, this](size_t index, size_t new_depth) {
+    return _children[index]->upper_bound(key, new_depth);
+  });
 }
 
 AbstractIndex::Iterator ARTNode4::begin() const { return _children[0]->begin(); }
