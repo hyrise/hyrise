@@ -160,7 +160,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
     removed_reductions_count++;
   }
-  std::cout << "Removed semi reductions: " << removal_candidates.size() << "/" << removed_reductions_count << std::endl;
+  std::cout << "Removed semi reductions: " << removed_reductions_count << "/" << removal_candidates.size() << std::endl;
 }
 
 }  // namespace opossum

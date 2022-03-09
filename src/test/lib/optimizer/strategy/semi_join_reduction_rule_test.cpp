@@ -49,12 +49,15 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
     _node_a,
     _node_b);
 
-  const auto expected_lqp = JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
+  auto expected_lqp = JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
       _node_a,
       _node_b),
     _node_b);
   // clang-format on
+  const auto join_node = std::static_pointer_cast<JoinNode>(expected_lqp);
+  auto semi_reduction_node = std::static_pointer_cast<JoinNode>(expected_lqp->left_input());
+  semi_reduction_node->mark_as_reducer_of(join_node);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
