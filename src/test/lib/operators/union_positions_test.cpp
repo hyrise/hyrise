@@ -310,7 +310,7 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
 
 TEST_F(UnionPositionsTest, DifferentTables) {
   /**
-   * Ensure that we get an error if we want to union different tables with different column definitions
+   * Ensure that we get an error if we want to union different tables with different column definitions.
    */
 
   auto table_wrapper_a = std::make_shared<TableWrapper>(_table_10_ints);
@@ -323,7 +323,7 @@ TEST_F(UnionPositionsTest, DifferentTables) {
 
 TEST_F(UnionPositionsTest, SameColumnsDifferentTables) {
   /**
-   * Ensure that we get an error if we want to union different tables with equal column definitions in debug builds
+   * Ensure that we get an error if we want to union different tables with equal column definitions in debug builds.
    */
   if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
 
