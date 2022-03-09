@@ -154,13 +154,10 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   /**
    * Phase 3: Remove semi join reduction nodes
    */
-  size_t removed_reductions_count = 0;
   for (const auto& removal_candidate : removal_candidates) {
     if (removal_blockers.contains(removal_candidate)) continue;
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
-    removed_reductions_count++;
   }
-  std::cout << "Removed semi reductions: " << removed_reductions_count << "/" << removal_candidates.size() << std::endl;
 }
 
 }  // namespace opossum
