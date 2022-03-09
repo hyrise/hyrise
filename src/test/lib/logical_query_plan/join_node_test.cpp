@@ -31,6 +31,8 @@ class JoinNodeTest : public BaseTest {
     _cross_join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _semi_join_reducer_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
+    _semi_join_reducer_node->mark_as_reducer_of(_inner_join_node);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
     // Prepare constraint definitions
@@ -44,7 +46,7 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_a;
   std::shared_ptr<MockNode> _mock_node_b;
   std::shared_ptr<JoinNode> _inner_join_node;
-  std::shared_ptr<JoinNode> _semi_join_node;
+  std::shared_ptr<JoinNode> _semi_join_node, _semi_join_reducer_node;
   std::shared_ptr<JoinNode> _anti_join_node;
   std::shared_ptr<JoinNode> _cross_join_node;
   std::shared_ptr<LQPColumnExpression> _t_a_a;
@@ -81,6 +83,7 @@ TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_cross_join_node, *_cross_join_node);
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
+  EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node);
   EXPECT_EQ(*_anti_join_node, *_anti_join_node);
 
   const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
@@ -103,29 +106,8 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_cross_join_node, *_cross_join_node->deep_copy());
   EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
+  EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node->deep_copy());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
-}
-
-TEST_F(JoinNodeTest, CopySemiJoinReduction) {
-  auto join_predicate = equals_(_t_a_a, _t_b_x);
-  auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate, _mock_node_a, _mock_node_b);
-  // clang-format off
-  const auto lqp =
-  JoinNode::make(JoinMode::Inner, join_predicate,
-    PredicateNode::make(greater_than_(_t_a_a, _t_a_b),
-      semi_join_reduction_node),
-    _mock_node_b);
-  // clang-format on
-  const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
-  semi_join_reduction_node->mark_as_reducer_of(join_node);
-
-  const auto copied_lqp = lqp->deep_copy();
-
-  const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
-  const auto copied_semi_join_reduction_node =
-      std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
-  EXPECT_TRUE(copied_semi_join_reduction_node->is_reducer());
-  EXPECT_EQ(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_join_node);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {
@@ -242,9 +224,9 @@ TEST_F(JoinNodeTest, FunctionalDependenciesSemiAndAntiJoins) {
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     // clang-format off
     const auto join_node =
-        JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
-                       _mock_node_a,
-                       _mock_node_b);
+    JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y),
+      _mock_node_a,
+      _mock_node_b);
     // clang-format on
 
     // We do not want JoinNode to return the FDs of the right input node
@@ -606,6 +588,33 @@ TEST_F(JoinNodeTest, UniqueConstraintsCrossJoin) {
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 
   EXPECT_TRUE(_cross_join_node->unique_constraints()->empty());
+}
+
+TEST_F(JoinNodeTest, GetOrFindCorrespondingJoinNode) {
+  auto join_predicate = equals_(_t_a_a, _t_b_x);
+  auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate, _mock_node_a, _mock_node_b);
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, join_predicate,
+    PredicateNode::make(greater_than_(_t_a_a, _t_a_b),
+      semi_join_reduction_node),
+    _mock_node_b);
+  // clang-format on
+  const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
+  semi_join_reduction_node->mark_as_reducer_of(join_node);
+  // The semi reduction join node should have a weak pointer to the corresponding join node.
+  EXPECT_EQ(semi_join_reduction_node->get_or_find_corresponding_join_node(), join_node);
+
+  const auto copied_lqp = lqp->deep_copy();
+
+  // A deep copied semi join reduction node does not have a weak pointer to a corresponding join node. Therefore,
+  // it must be discovered when get_or_find_corresponding_join_node is called.
+  const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
+  const auto copied_semi_join_reduction_node =
+      std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
+  EXPECT_NE(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), join_node);
+  EXPECT_NE(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_semi_join_reduction_node);
+  EXPECT_EQ(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_join_node);
 }
 
 }  // namespace opossum

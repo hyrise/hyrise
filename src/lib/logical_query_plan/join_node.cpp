@@ -257,11 +257,12 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const 
 
   if (_corresponding_join_node.expired()) {
     visit_lqp_upwards(const_cast<JoinNode*>(this)->shared_from_this(), [&](const auto& current_node) {
+      if (current_node.get() == this) return LQPUpwardVisitation::VisitOutputs;
       if (current_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
       // Currently, semi reductions are supported for single predicate joins only.
       if (join_node->join_predicates().size() != 1) return LQPUpwardVisitation::VisitOutputs;
-      if (join_predicates()[0] != join_node->join_predicates()[0]) return LQPUpwardVisitation::VisitOutputs;
+      if (*join_predicates()[0] != *join_node->join_predicates()[0]) return LQPUpwardVisitation::VisitOutputs;
 
       _corresponding_join_node = std::weak_ptr<JoinNode>(join_node);
       return LQPUpwardVisitation::DoNotVisitOutputs;
