@@ -87,7 +87,7 @@ AbstractIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::Bina
 AbstractIndex::Iterator ARTNode4::begin() const { return _children[0]->begin(); }
 
 AbstractIndex::Iterator ARTNode4::end() const {
-  for (auto index = uint8_t{4}; index > 0; --i) {
+  for (auto index = uint32_t{4}; index > 0; --index) {
     if (_children[index - 1]) {
       return _children[index - 1]->end();
     }
@@ -111,7 +111,7 @@ ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& 
                const std::pair<uint8_t, std::shared_ptr<ARTNode>>& right) { return left.first < right.first; });
   _partial_keys.fill(INVALID_INDEX);
   const auto child_count = children.size();
-  for (auto index = size_t{0}; index < child_count; ++index) {
+  for (auto index = uint32_t{0}; index < child_count; ++index) {
     _partial_keys[index] = children[index].first;
     _children[index] = children[index].second;
   }
@@ -249,12 +249,12 @@ ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNod
 
 AbstractIndex::Iterator ARTNode48::_delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
                                                       const std::function<Iterator(uint8_t, size_t)>& function) const {
-  auto partial_key = key[depth];
+  const auto partial_key = key[depth];
   if (_index_to_child[partial_key] != INVALID_INDEX) {
     // case0
     return function(partial_key, ++depth);
   }
-  for (auto index = uint8_t{partial_key + 1}; index < 256u; ++index) {
+  for (auto index = partial_key + 1; index < 256; ++index) {
     if (_index_to_child[index] != INVALID_INDEX) {
       // case2
       return _children[_index_to_child[index]]->begin();
@@ -335,12 +335,12 @@ ARTNode256::ARTNode256(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTN
 AbstractIndex::Iterator ARTNode256::_delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key,
                                                        size_t depth,
                                                        const std::function<Iterator(uint8_t, size_t)>& function) const {
-  auto partial_key = key[depth];
+  const auto partial_key = key[depth];
   if (_children[partial_key]) {
     // case0
     return function(partial_key, ++depth);
   }
-  for (auto index = uint16_t{partial_key + 1}; index < 256u; ++index) {
+  for (auto index = partial_key + 1; index < 256; ++index) {
     if (_children[index]) {
       // case2
       return _children[index]->begin();
@@ -375,7 +375,7 @@ AbstractIndex::Iterator ARTNode256::begin() const {
 
 AbstractIndex::Iterator ARTNode256::end() const {
   const auto child_count = _children.size();
-  for (auto index = size_t{child_count - 1}; index >= 0; --index) {
+  for (auto index = static_cast<int64_t>(child_count - 1); index >= 0; --index) {
     if (_children[index]) {
       return _children[index]->begin();
     }
