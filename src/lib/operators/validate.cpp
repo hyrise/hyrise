@@ -143,7 +143,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
 void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
-                                const TransactionID snapshot_commit_id,
+                                const CommitID snapshot_commit_id,
                                 std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
   // Stores whether a chunk has been found to be entirely visible. Only used for reference tables where no single
   // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues. This assumes that

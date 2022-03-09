@@ -27,7 +27,7 @@ class OperatorsValidateTest : public BaseTest {
   void SetUp() override {
     _test_table = load_table("resources/test_data/tbl/validate_input.tbl", 2u);
     set_all_records_visible(*_test_table);
-    invalidate_record(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
+    invalidate_record(*_test_table, RowID{ChunkID{1}, 0u}, CommitID{2});
 
     const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
 
@@ -65,7 +65,7 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
     auto mvcc_data = chunk->mvcc_data();
 
     for (auto i = 0u; i < chunk->size(); ++i) {
-      mvcc_data->set_begin_cid(i, 0u);
+      mvcc_data->set_begin_cid(i, CommitID{0});
       mvcc_data->set_end_cid(i, MvccData::MAX_COMMIT_ID);
     }
   }
@@ -79,7 +79,7 @@ void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID 
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -91,7 +91,7 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result =
       load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", 2u);
@@ -154,7 +154,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto snapshot_cid = CommitID{1};
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
-  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, 0));
+  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, CommitID{0}));
   // We explicitly do not finalize the chunk so that max_begin_cid remains emtpy
 
   auto validate = std::make_shared<Validate>(nullptr);
@@ -209,7 +209,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // This optimization is possible if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
 
@@ -241,7 +241,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 }
 
 TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
-  const auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  const auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   const auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
   validate_unsorted->set_transaction_context(context);

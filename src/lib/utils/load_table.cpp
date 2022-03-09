@@ -77,7 +77,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     table->append(variant_values);
 
     auto mvcc_data = table->last_chunk()->mvcc_data();
-    mvcc_data->set_begin_cid(table->last_chunk()->size() - 1, 0);
+    mvcc_data->set_begin_cid(table->last_chunk()->size() - 1, CommitID{0});
   }
 
   // All other chunks have been finalized by Table::append() when they reached their capacity.

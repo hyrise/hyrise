@@ -49,6 +49,11 @@ STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
 
+// When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
+// Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
+STRONG_TYPEDEF(uint32_t, CommitID);
+STRONG_TYPEDEF(uint32_t, TransactionID);
+
 // Used to identify a Parameter within a subquery. This can be either a parameter of a Prepared SELECT statement
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
 STRONG_TYPEDEF(uint16_t, ParameterID);
@@ -126,11 +131,6 @@ struct RowID {
 
 using WorkerID = uint32_t;
 using TaskID = uint32_t;
-
-// When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
-// Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
-using CommitID = uint32_t;
-using TransactionID = uint32_t;
 
 using CompressedVectorTypeID = uint8_t;
 

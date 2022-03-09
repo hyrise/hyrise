@@ -145,8 +145,9 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       // Do so in REVERSE column order so that the resize of `Chunk::_segments.front()` happens last. It is this last
       // resize that makes the new row count visible to the outside world.
       auto old_size = target_chunk->size();
-      for (ColumnID reverse_column_id{0}; reverse_column_id < target_chunk->column_count(); ++reverse_column_id) {
-        const auto column_id = static_cast<ColumnID>(target_chunk->column_count() - reverse_column_id - 1);
+      const auto column_count = target_chunk->column_count();
+      for (auto reverse_column_id = ColumnID{0}; reverse_column_id < column_count; ++reverse_column_id) {
+        const auto column_id = static_cast<ColumnID>(column_count - reverse_column_id - 1);
 
         resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
@@ -189,9 +190,10 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
       const auto num_rows_current_iteration = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
 
       // Copy from the source into the target Segments
-      for (ColumnID column_id{0}; column_id < target_chunk->column_count(); ++column_id) {
-        const auto source_segment = source_chunk->get_segment(column_id);
-        const auto target_segment = target_chunk->get_segment(column_id);
+      const auto column_count = target_chunk->column_count();
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto& source_segment = source_chunk->get_segment(column_id);
+        const auto& target_segment = target_chunk->get_segment(column_id);
 
         resolve_data_type(_target_table->column_data_type(column_id), [&](const auto data_type_t) {
           using ColumnDataType = typename decltype(data_type_t)::type;
@@ -224,7 +226,7 @@ void Insert::_on_commit_records(const CommitID cid) {
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->set_begin_cid(chunk_offset, cid);
-      mvcc_data->set_tid(chunk_offset, 0u, std::memory_order_relaxed);
+      mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
@@ -252,7 +254,7 @@ void Insert::_on_rollback_records() {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->set_end_cid(chunk_offset, 0u);
+      mvcc_data->set_end_cid(chunk_offset, CommitID{0});
 
       // Update chunk statistics
       target_chunk->increase_invalid_row_count(1u);
@@ -264,8 +266,8 @@ void Insert::_on_rollback_records() {
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
-      mvcc_data->set_begin_cid(chunk_offset, 0u);
-      mvcc_data->set_tid(chunk_offset, 0u, std::memory_order_relaxed);
+      mvcc_data->set_begin_cid(chunk_offset, CommitID{0});
+      mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
     // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.

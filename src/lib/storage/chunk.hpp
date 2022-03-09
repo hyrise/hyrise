@@ -201,8 +201,8 @@ class Chunk : private Noncopyable {
   mutable std::atomic<ChunkOffset> _invalid_row_count{0};
 
   // Default value of zero means "not set"
-  std::atomic<CommitID> _cleanup_commit_id{0};
-  static_assert(std::is_same<uint32_t, CommitID>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
+  std::atomic<CommitID> _cleanup_commit_id{CommitID{0}};
+  static_assert(std::is_same<uint32_t, CommitID::base_type>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
 }  // namespace opossum
