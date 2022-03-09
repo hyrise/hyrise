@@ -87,6 +87,8 @@ class TransactionManager : public Noncopyable {
   void _register_transaction(CommitID snapshot_commit_id);
   void _deregister_transaction(CommitID snapshot_commit_id);
 
+  // Using the base type here, as this is member is not passed around and things such as `_next_transactions_id++` are
+  // directly possible with an `std::atomic<TransactionID>`.
   std::atomic<TransactionID::base_type> _next_transaction_id;
 
   std::atomic<CommitID> _last_commit_id;
