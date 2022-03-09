@@ -42,7 +42,8 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
     // Value-based vs. Non-Value-based predicates
     //  The existence of at least one value operand leads to the efficient ColumnVsValue-TableScanImpl in PQPs.
     //  All other binary predicates require the more expensive ColumnVsColumn- or ExpressionEvaluator-TableScanImpls.
-    return !is_value_operand(binary_predicate->left_operand()) && !is_value_operand(binary_predicate->right_operand());
+    bool has_value_operand = is_value_operand(binary_predicate->left_operand()) || is_value_operand(binary_predicate->right_operand());
+    return !has_value_operand;
   }
 
   // TODO Enable & Benchmark
