@@ -246,6 +246,7 @@ void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_n
                   [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
       "Did not find matching join predicate in given corresponding JoinNode.");
   _is_reducer = true;
+  comment = "Semi Reduction";
   _corresponding_join_node = std::weak_ptr<JoinNode>(corresponding_join_node);
 }
 
