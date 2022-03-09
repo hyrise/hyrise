@@ -92,10 +92,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    *    if (corresponding_join_by_semi_reduction.at(removal_candidate)->input(corresponding_join_input_side) == removal_candidate) {
    */
   auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  auto removal_blockers =
-      std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
-  auto corresponding_join_by_semi_reduction =
-      std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::shared_ptr<AbstractLQPNode>>{};
+  auto removal_blockers = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
 
   /**
    * Phase 1: Collect semi join reductions
@@ -161,6 +158,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
     removed_reductions_count++;
   }
+  std::cout << "Removed semi reductions: " << removal_candidates.size() << "/" << removed_reductions_count << std::endl;
 }
 
 }  // namespace opossum
