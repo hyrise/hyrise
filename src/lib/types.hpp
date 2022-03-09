@@ -32,9 +32,8 @@
  *   ChunkID x{3}; or
  *   auto x = ChunkID{3};
  *
- * WorkerID, TaskID, CommitID, and TransactionID are used in std::atomics and
- * therefore need to be trivially copyable. That's currently not possible with
- * the strong typedef (as far as I know).
+ * Strong typedefs cannot be directly used in std::atomics as they need to be trivially copyable. Therefore, we use,
+ * e.g., std::atomic<TaskID::base_type> to both use strong typedefs and std::atomics.
  *
  * TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
  * the group key and adaptive radix tree implementations. Unfortunately, I
@@ -48,6 +47,9 @@ STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
+STRONG_TYPEDEF(uint32_t, WorkerID);
+STRONG_TYPEDEF(uint32_t, TaskID);
+STRONG_TYPEDEF(uint32_t, ChunkOffset);
 
 // When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
 // Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
@@ -101,8 +103,6 @@ using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
-using ChunkOffset = uint32_t;
-
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
@@ -129,17 +129,14 @@ struct RowID {
   }
 };
 
-using WorkerID = uint32_t;
-using TaskID = uint32_t;
-
 using CompressedVectorTypeID = uint8_t;
 
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
-constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
+constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID::base_type>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
-constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
+constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
