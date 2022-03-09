@@ -37,7 +37,7 @@ template <typename T>
 pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
   const auto bit_width = _read_value<uint8_t>(file);
   auto values = pmr_compact_vector(bit_width, count);
-  file.read(reinterpret_cast<char*>(values.get()), static_cast<long>(values.bytes()));
+  file.read(reinterpret_cast<char*>(values.get()), static_cast<std::streamsize>(values.bytes()));
   return values;
 }
 
