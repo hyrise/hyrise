@@ -6,6 +6,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/constraint_test_utils.hpp"
@@ -103,6 +104,28 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
+}
+
+TEST_F(JoinNodeTest, CopySemiJoinReduction) {
+  auto join_predicate = equals_(_t_a_a, _t_b_x);
+  auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate, _mock_node_a, _mock_node_b);
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, join_predicate,
+    PredicateNode::make(greater_than_(_t_a_a, _t_a_b),
+      semi_join_reduction_node),
+    _mock_node_b);
+  // clang-format on
+  const auto join_node = std::dynamic_pointer_cast<JoinNode>(lqp);
+  semi_join_reduction_node->mark_as_reducer_of(join_node);
+
+  const auto copied_lqp = lqp->deep_copy();
+
+  const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
+  const auto copied_semi_join_reduction_node =
+      std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
+  EXPECT_TRUE(copied_semi_join_reduction_node->is_reducer());
+  EXPECT_EQ(copied_semi_join_reduction_node->get_corresponding_join_node(), copied_join_node);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {
