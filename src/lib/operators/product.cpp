@@ -97,12 +97,15 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
       auto& pos_list_out = (is_left_side ? calculated_pos_lists_left : calculated_pos_lists_right)[pos_list_in];
       if (!pos_list_out) {
         // can't reuse
+	const auto left_chunk_size = chunk_left->size();
+	const auto right_chunk_size = chunk_right->size();
+	const auto pos_list_size = static_cast<size_t>(left_chunk_size * right_chunk_size);
         pos_list_out = std::make_shared<RowIDPosList>();
-        pos_list_out->reserve(chunk_left->size() * chunk_right->size());
-        for (size_t i = 0; i < chunk_left->size() * chunk_right->size(); ++i) {
+        pos_list_out->reserve(pos_list_size);
+        for (auto i = size_t{0}; i < pos_list_size; ++i) {
           // size_t is sufficient here, because ChunkOffset::max is 2^32 and (2^32 * 2^32 = 2^64)
-          auto offset = is_left_side ? static_cast<ChunkOffset>(i / chunk_right->size())
-                                     : static_cast<ChunkOffset>(i % chunk_right->size());
+          auto offset = is_left_side ? static_cast<ChunkOffset>(i / right_chunk_size)
+                                     : static_cast<ChunkOffset>(i % right_chunk_size);
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {
