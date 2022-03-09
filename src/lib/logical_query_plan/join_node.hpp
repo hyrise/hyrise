@@ -60,7 +60,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * TODO..
    */
-  std::shared_ptr<JoinNode> get_or_find_corresponding_join_node();
+  std::shared_ptr<JoinNode> get_or_find_corresponding_join_node() const;
 
   /**
    * This function should be called by the SemiJoinReductionRule only.
@@ -71,7 +71,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   bool _is_reducer = false;
-  std::weak_ptr<JoinNode> _corresponding_join_node;
+  mutable std::weak_ptr<JoinNode> _corresponding_join_node;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param

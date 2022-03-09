@@ -252,11 +252,11 @@ void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_n
 
 bool JoinNode::is_reducer() const { return _is_reducer; }
 
-std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() {
+std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const {
   if (!_is_reducer) return nullptr;
 
   if (_corresponding_join_node.expired()) {
-    visit_lqp_upwards(shared_from_this(), [&](const auto& current_node) {
+    visit_lqp_upwards(const_cast<JoinNode*>(this)->shared_from_this(), [&](const auto& current_node) {
       if (current_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
       // Currently, semi reductions are supported for single predicate joins only.
