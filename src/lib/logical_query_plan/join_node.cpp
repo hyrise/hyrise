@@ -257,23 +257,35 @@ std::shared_ptr<JoinNode> JoinNode::get_corresponding_join_node() const {
   return _corresponding_join_node.lock();
 }
 
-size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
+size_t JoinNode::_on_shallow_hash() const {
+  size_t hash = boost::hash_value(join_mode);
+  boost::hash_combine(hash, _is_reducer);
+  return hash;
+}
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  if (!join_predicates().empty()) {
-    return JoinNode::make(join_mode, expressions_copy_and_adapt_to_different_lqp(join_predicates(), node_mapping));
-  } else {
-    auto copied_join_node = JoinNode::make(join_mode);
-    if (_is_reducer) {
-      copied_join_node->mark_as_reducer_of(get_corresponding_join_node());
-    }
-    return copied_join_node;
+  if (join_predicates().empty()) {
+    Assert(join_mode == JoinMode::Cross, "Expected cross join.");
+    return JoinNode::make(join_mode);
   }
+  const auto copied_join_node =
+      JoinNode::make(join_mode, expressions_copy_and_adapt_to_different_lqp(join_predicates(), node_mapping));
+  if (_is_reducer) {
+    const auto corresponding_join =
+        std::static_pointer_cast<JoinNode>(node_mapping.at(get_corresponding_join_node()));
+    Assert(corresponding_join, "Did not find corresponding join node.");
+    copied_join_node->mark_as_reducer_of(corresponding_join);
+  }
+  return copied_join_node;
 }
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
   if (join_mode != join_node.join_mode) return false;
+  if (_is_reducer != join_node.is_reducer()) return false;
+  if (_is_reducer && get_corresponding_join_node() != join_node.get_corresponding_join_node()) {
+    return false;
+  }
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
 }
