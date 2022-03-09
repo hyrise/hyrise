@@ -60,7 +60,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * TODO..
    */
-  std::shared_ptr<JoinNode> get_corresponding_join_node() const;
+  std::shared_ptr<JoinNode> get_or_find_corresponding_join_node();
 
   /**
    * This function should be called by the SemiJoinReductionRule only.

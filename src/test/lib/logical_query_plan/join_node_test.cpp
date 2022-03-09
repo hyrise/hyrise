@@ -125,7 +125,7 @@ TEST_F(JoinNodeTest, CopySemiJoinReduction) {
   const auto copied_semi_join_reduction_node =
       std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
   EXPECT_TRUE(copied_semi_join_reduction_node->is_reducer());
-  EXPECT_EQ(copied_semi_join_reduction_node->get_corresponding_join_node(), copied_join_node);
+  EXPECT_EQ(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_join_node);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {

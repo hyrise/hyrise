@@ -42,7 +42,8 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
     // Value-based vs. Non-Value-based predicates
     //  The existence of at least one value operand leads to the efficient ColumnVsValue-TableScanImpl in PQPs.
     //  All other binary predicates require the more expensive ColumnVsColumn- or ExpressionEvaluator-TableScanImpls.
-    bool has_value_operand = is_value_operand(binary_predicate->left_operand()) || is_value_operand(binary_predicate->right_operand());
+    bool has_value_operand =
+        is_value_operand(binary_predicate->left_operand()) || is_value_operand(binary_predicate->right_operand());
     return !has_value_operand;
   }
 
@@ -114,6 +115,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    */
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
+    // TODO skip if we do not have a corresponding join
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
       // Start with the output(s) of the removal candidate
       if (upper_node == removal_candidate) return LQPUpwardVisitation::VisitOutputs;
@@ -141,7 +143,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
       // Add Removal Blocker, if it is not the corresponding join.
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
-      if (upper_join_node != *semi_reduction_node.get_corresponding_join_node()) {
+      if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
         removal_blockers.emplace(removal_candidate);
       }
 
