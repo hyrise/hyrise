@@ -92,8 +92,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
         referenced_segment = column_id;
       }
 
-      // see if we can reuse a PosList that we already calculated - important to use a reference here so that the map
-      // gets updated accordingly
+      // See if we can reuse a PosList that we already calculated - important to use a reference here so that the map
+      // gets updated accordingly.
       auto& pos_list_out = (is_left_side ? calculated_pos_lists_left : calculated_pos_lists_right)[pos_list_in];
       if (!pos_list_out) {
         // can't reuse
