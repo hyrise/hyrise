@@ -80,9 +80,9 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
 
 TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
   auto table = PosHashTable<int>{JoinHashBuildMode::ExistenceOnly, 100};
-  for (auto i = 0; i < 100; ++i) {
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i}});
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i + 1}});
+  for (auto index = uint16_t{0}; index < 100; ++index) {
+    table.emplace(index, RowID{ChunkID{100 + index}, ChunkOffset{200 + index}});
+    table.emplace(index, RowID{ChunkID{100 + index}, ChunkOffset{200 + index + 1}});
   }
   const auto expected_pos_list = RowIDPosList{RowID{ChunkID{150}, ChunkOffset{250}}};
   {
