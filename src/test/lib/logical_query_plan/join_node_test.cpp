@@ -84,6 +84,8 @@ TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node);
+  // The ::is_reducer property is just a flag and does not change the semi join. In the LQPTranslator... TODO
+  EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_node);
   EXPECT_EQ(*_anti_join_node, *_anti_join_node);
 
   const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
@@ -107,6 +109,7 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node->deep_copy());
+  EXPECT_TRUE(std::static_pointer_cast<JoinNode>(_semi_join_reducer_node->deep_copy())->is_reducer());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
 }
 

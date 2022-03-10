@@ -274,11 +274,7 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const 
   return _corresponding_join_node.lock();
 }
 
-size_t JoinNode::_on_shallow_hash() const {
-  size_t hash = boost::hash_value(join_mode);
-  boost::hash_combine(hash, _is_reducer);
-  return hash;
-}
+size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (join_predicates().empty()) {
@@ -294,7 +290,6 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
   if (join_mode != join_node.join_mode) return false;
-  if (_is_reducer != join_node.is_reducer()) return false;
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
 }
