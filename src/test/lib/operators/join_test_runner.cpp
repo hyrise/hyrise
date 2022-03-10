@@ -479,7 +479,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (const auto join_mode : {JoinMode::Inner, JoinMode::Right, JoinMode::Semi}) {
           for (const auto left_table_size : all_table_sizes) {
             for (const auto right_table_size : all_table_sizes) {
-              for (const auto chunk_size : all_chunk_sizes) {
+              for (const auto& chunk_size : all_chunk_sizes) {
                 for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
                   auto join_test_configuration = default_configuration;
                   join_test_configuration.join_mode = join_mode;
