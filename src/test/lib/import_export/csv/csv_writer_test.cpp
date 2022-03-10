@@ -186,6 +186,7 @@ TEST_F(CsvWriterTest, ExportAllTypes) {
 
 TEST_F(CsvWriterTest, NonsensePath) {
   table->append({1, "hello", 3.5f});
+  CsvWriter::write(*table, "this/path/does/not/exist");
   EXPECT_THROW(CsvWriter::write(*table, "this/path/does/not/exist"), std::exception);
 }
 
