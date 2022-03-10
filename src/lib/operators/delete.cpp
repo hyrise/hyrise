@@ -101,7 +101,7 @@ void Delete::_on_commit_records(const CommitID commit_id) {
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       referenced_chunk->mvcc_data()->set_end_cid(row_id.chunk_offset, commit_id);
-      referenced_chunk->increase_invalid_row_count(1);
+      referenced_chunk->increase_invalid_row_count(ChunkOffset{1});
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
@@ -121,8 +121,8 @@ void Delete::_on_rollback_records() {
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       // unlock all rows locked in _on_execute
-      const auto result = referenced_chunk->mvcc_data()->compare_exchange_tid(row_id.chunk_offset, expected,
-                                                                              TransactionID{0});
+      const auto result =
+          referenced_chunk->mvcc_data()->compare_exchange_tid(row_id.chunk_offset, expected, TransactionID{0});
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop

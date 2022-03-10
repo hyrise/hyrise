@@ -24,12 +24,12 @@ class JoinHashStepsTest : public BaseTest {
     }
 
     _table_int_with_nulls =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_with_null.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{10}));
     _table_int_with_nulls->never_clear_output();
     _table_int_with_nulls->execute();
 
     _table_with_nulls_and_zeros =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", ChunkOffset{10}));
     _table_with_nulls_and_zeros->never_clear_output();
     _table_with_nulls_and_zeros->execute();
 
@@ -52,8 +52,8 @@ class JoinHashStepsTest : public BaseTest {
     return row_count;
   }
 
-  inline static size_t _table_size_zero_one = 1'000;
-  inline static size_t _chunk_size_zero_one = 10;
+  inline static auto _table_size_zero_one = ChunkOffset{1'000};
+  inline static auto _chunk_size_zero_one = ChunkOffset{10};
   inline static std::shared_ptr<Table> _table_zero_one;
   inline static std::shared_ptr<TableWrapper> _table_int_with_nulls, _table_with_nulls_and_zeros;
   inline static std::shared_ptr<TableScan> _table_with_nulls_and_zeros_scanned;
@@ -62,8 +62,8 @@ class JoinHashStepsTest : public BaseTest {
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
   for (auto i = 0; i < 10; ++i) {
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i}});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i + 1}});
   }
   const auto expected_pos_list =
       RowIDPosList{RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}};
@@ -81,8 +81,8 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
 TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
   auto table = PosHashTable<int>{JoinHashBuildMode::ExistenceOnly, 100};
   for (auto i = 0; i < 100; ++i) {
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i});
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200} + i + 1});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i}});
+    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i + 1}});
   }
   const auto expected_pos_list = RowIDPosList{RowID{ChunkID{150}, ChunkOffset{250}}};
   {

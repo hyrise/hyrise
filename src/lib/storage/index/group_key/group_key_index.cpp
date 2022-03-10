@@ -31,8 +31,8 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   //    `unique_values_count` returns the size of dictionary which does not store a ValueID for NULL.
   //    Therefore we have `unique_values_count` ValueIDs (NULL-value-id is not included)
   //    for which we want to count the occurrences.
-  auto value_histogram =
-      std::vector<ChunkOffset>(_indexed_segment->unique_values_count() + 1u /*to mark the ending position */, 0u);
+  auto value_histogram = std::vector<ChunkOffset>{
+      ChunkOffset{_indexed_segment->unique_values_count() + 1u /*to mark the ending position */}, ChunkOffset{0}};
 
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,

@@ -29,16 +29,13 @@
  * like this
  *   ChunkID x = 3;
  * but need to use
- *   ChunkID x{3}; or
  *   auto x = ChunkID{3};
+ * In some cases (e.g., when shortening data types), casting to the base_type first might be necessary, e.g.:
+ *   ChunkID{static_cast<ChunkID::base_type>(size_t{17})}
  *
- * Strong typedefs cannot be directly used in std::atomics as they need to be trivially copyable. Therefore, we use,
- * e.g., std::atomic<TaskID::base_type> to both use strong typedefs and std::atomics.
- *
- * TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
- * the group key and adaptive radix tree implementations. Unfortunately, I
- * wasn’t able to properly resolve these issues because I am not familiar with
- * the code there
+ * We prefer strong typedefs, whenever they are applicable and make sense. However, there are cases where we cannot
+ * directly use them. For example in std::atomics as they need to be trivially copyable. Therefore, we use the
+ * base_type in atomics (e..g, std::atomic<TaskID::base_type>).
  */
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
@@ -103,7 +100,7 @@ using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
-constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base_type>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 struct RowID {

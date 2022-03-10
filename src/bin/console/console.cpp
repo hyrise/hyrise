@@ -475,7 +475,7 @@ int Console::_generate_tpcc(const std::string& args) {
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -500,7 +500,7 @@ int Console::_generate_tpch(const std::string& args) {
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -524,7 +524,7 @@ int Console::_generate_tpcds(const std::string& args) {
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");

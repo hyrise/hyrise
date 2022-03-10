@@ -32,17 +32,17 @@ class OperatorsIndexScanTest : public BaseTest {
   void SetUp() override {
     _index_type = get_index_type_of<DerivedIndex>();
 
-    auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
-    auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", 5);
+    auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
+    auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", ChunkOffset{5});
 
     ChunkEncoder::encode_all_chunks(int_int_7);
     ChunkEncoder::encode_all_chunks(int_int_5);
 
     _chunk_ids = std::vector<ChunkID>(int_int_7->chunk_count());
-    std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0u});
+    std::iota(_chunk_ids.begin(), _chunk_ids.end(), ChunkID{0});
 
     _chunk_ids_partly_compressed = std::vector<ChunkID>(int_int_5->chunk_count());
-    std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0u});
+    std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0});
 
     _column_ids = std::vector<ColumnID>{ColumnID{0u}};
 
@@ -64,7 +64,7 @@ class OperatorsIndexScanTest : public BaseTest {
     _int_int_small_chunk->never_clear_output();
     _int_int_small_chunk->execute();
 
-    const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
+    const auto partially_indexed_table = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
     ChunkEncoder::encode_all_chunks(partially_indexed_table);
     const auto second_chunk = partially_indexed_table->get_chunk(ChunkID{1});
     second_chunk->template create_index<DerivedIndex>(std::vector<ColumnID>{ColumnID{0}});
@@ -307,8 +307,9 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   index_scan->execute();
   union_op->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(union_op->get_output(),
-                            load_table("resources/test_data/tbl/int_int_shuffled_appended_and_filtered.tbl", 10));
+  EXPECT_TABLE_EQ_UNORDERED(
+      union_op->get_output(),
+      load_table("resources/test_data/tbl/int_int_shuffled_appended_and_filtered.tbl", ChunkOffset{10}));
 }
 
 }  // namespace opossum

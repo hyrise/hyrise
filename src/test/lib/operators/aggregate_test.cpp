@@ -72,103 +72,108 @@ class OperatorsAggregateTest : public BaseTest {
  public:
   static void SetUpTestCase() {  // called ONCE before the tests
     _table_wrapper_1_0 = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_1_0->never_clear_output();
     _table_wrapper_1_0->execute();
 
     _table_wrapper_1_0_null = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_0agg/input_null.tbl", ChunkOffset{2}));
     _table_wrapper_1_0_null->never_clear_output();
     _table_wrapper_1_0_null->execute();
 
     _table_wrapper_1_1 = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_1_1->never_clear_output();
     _table_wrapper_1_1->execute();
 
     _table_wrapper_1_1_large = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_large.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_large.tbl", ChunkOffset{2}));
     _table_wrapper_1_1_large->never_clear_output();
     _table_wrapper_1_1_large->execute();
 
     _table_wrapper_1_1_null = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", ChunkOffset{2}));
     _table_wrapper_1_1_null->never_clear_output();
     _table_wrapper_1_1_null->execute();
 
     _table_wrapper_1_2 = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_2agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_1_2->never_clear_output();
     _table_wrapper_1_2->execute();
 
     _table_wrapper_2_1 = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_2gb_1agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_2_1->never_clear_output();
     _table_wrapper_2_1->execute();
 
     _table_wrapper_2_2 = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_2gb_2agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_2_2->never_clear_output();
     _table_wrapper_2_2->execute();
 
     _table_wrapper_2_0_null = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_2gb_0agg/input_null.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_2gb_0agg/input_null.tbl", ChunkOffset{2}));
     _table_wrapper_2_0_null->never_clear_output();
     _table_wrapper_2_0_null->execute();
 
     _table_wrapper_3_1 = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_3gb_1agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_3_1->never_clear_output();
     _table_wrapper_3_1->execute();
 
     _table_wrapper_3_0_null = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_3gb_0agg/input_null.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_3gb_0agg/input_null.tbl", ChunkOffset{2}));
     _table_wrapper_3_0_null->never_clear_output();
     _table_wrapper_3_0_null->execute();
 
     _table_wrapper_1_1_string = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/input.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/input.tbl", ChunkOffset{2}));
     _table_wrapper_1_1_string->never_clear_output();
     _table_wrapper_1_1_string->execute();
 
     _table_wrapper_1_1_string_null = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/input_null.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_string_1gb_1agg/input_null.tbl", ChunkOffset{2}));
     _table_wrapper_1_1_string_null->never_clear_output();
     _table_wrapper_1_1_string_null->execute();
 
-    _table_wrapper_join_1 = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int4.tbl", 1));
+    _table_wrapper_join_1 =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int4.tbl", ChunkOffset{1}));
     _table_wrapper_join_1->never_clear_output();
     _table_wrapper_join_1->execute();
 
-    _table_wrapper_join_2 = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", 1));
+    _table_wrapper_join_2 =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", ChunkOffset{1}));
     _table_wrapper_join_2->never_clear_output();
     _table_wrapper_join_2->execute();
 
     _table_wrapper_2_0_a = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/join_2gb_0agg/input_a.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/join_2gb_0agg/input_a.tbl", ChunkOffset{2}));
     _table_wrapper_2_0_a->never_clear_output();
     _table_wrapper_2_0_a->execute();
 
     _table_wrapper_2_o_b = std::make_shared<TableWrapper>(
-        load_table("resources/test_data/tbl/aggregateoperator/join_2gb_0agg/input_b.tbl", 2));
+        load_table("resources/test_data/tbl/aggregateoperator/join_2gb_0agg/input_b.tbl", ChunkOffset{2}));
     _table_wrapper_2_o_b->never_clear_output();
     _table_wrapper_2_o_b->execute();
 
-    auto test_table = load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
+    auto test_table =
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(test_table);
 
     _table_wrapper_1_1_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_dict->never_clear_output();
     _table_wrapper_1_1_dict->execute();
 
-    test_table = load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", 2);
+    test_table =
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_null.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(test_table);
 
     _table_wrapper_1_1_null_dict = std::make_shared<TableWrapper>(std::move(test_table));
     _table_wrapper_1_1_null_dict->never_clear_output();
     _table_wrapper_1_1_null_dict->execute();
 
-    _table_wrapper_int_int = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", 2));
+    _table_wrapper_int_int =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
     _table_wrapper_int_int->never_clear_output();
     _table_wrapper_int_int->execute();
   }

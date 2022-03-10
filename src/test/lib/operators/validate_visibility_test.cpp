@@ -31,7 +31,7 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 
   std::string table_name = "validateTestTable";
 
-  static constexpr auto chunk_size = uint32_t{10};
+  static constexpr auto chunk_size = ChunkOffset{10};
 
   std::shared_ptr<GetTable> gt;
   std::shared_ptr<Table> t;
@@ -46,9 +46,9 @@ class OperatorsValidateVisibilityTest : public BaseTest {
 TEST_F(OperatorsValidateVisibilityTest, Impossible) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{2});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -60,9 +60,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible) {
 TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{42});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{42});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{2});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -74,9 +74,9 @@ TEST_F(OperatorsValidateVisibilityTest, PastDelete) {
 TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{4});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{1});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{4});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{1});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -88,9 +88,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible2) {
 TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{1});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{6});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{1});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{6});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -102,9 +102,9 @@ TEST_F(OperatorsValidateVisibilityTest, OwnDeleteUncommitted) {
 TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{50});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{3});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{1});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{50});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{3});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{1});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -116,9 +116,9 @@ TEST_F(OperatorsValidateVisibilityTest, Impossible3) {
 TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{3});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{3});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{3});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{3});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -130,9 +130,9 @@ TEST_F(OperatorsValidateVisibilityTest, OwnInsert) {
 TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{99});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{2});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{3});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{99});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{2});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{3});
 
   validate->set_transaction_context(context);
   validate->execute();
@@ -144,9 +144,9 @@ TEST_F(OperatorsValidateVisibilityTest, PastInsertOrFutureDelete) {
 TEST_F(OperatorsValidateVisibilityTest, UncommittedInsertOrFutureInsert) {
   auto context = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{2}, AutoCommit::No);
 
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(0, TransactionID{99});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(0, CommitID{3});
-  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(0, CommitID{3});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_tid(ChunkOffset{0}, TransactionID{99});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_begin_cid(ChunkOffset{0}, CommitID{3});
+  t->get_chunk(ChunkID{0})->mvcc_data()->set_end_cid(ChunkOffset{0}, CommitID{3});
 
   validate->set_transaction_context(context);
   validate->execute();

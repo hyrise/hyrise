@@ -175,7 +175,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
                                             JoinMode::AntiNullAsTrue};
     const auto all_table_sizes = std::vector{10u, 15u, 0u};
-    const auto all_chunk_sizes = std::vector{10u, 3u, 1u};
+    const auto all_chunk_sizes = std::vector{ChunkOffset{10}, ChunkOffset{3}, ChunkOffset{1}};
     const auto all_secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
         {},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},

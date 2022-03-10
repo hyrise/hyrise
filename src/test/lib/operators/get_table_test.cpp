@@ -17,7 +17,7 @@ class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("int_int_float",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
     ChunkEncoder::encode_all_chunks(table);
@@ -31,20 +31,23 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
   auto get_table = std::make_shared<GetTable>("int_int_float");
   get_table->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
+                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 }
 
 TEST_F(OperatorsGetTableTest, OutputDoesNotChangeChunkSize) {
   auto get_table = std::make_shared<GetTable>("int_int_float");
   get_table->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
+                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
   const auto table = Hyrise::get().storage_manager.get_table("int_int_float");
   table->append({1, 2, 10.0f});
   EXPECT_GT(table->chunk_count(), get_table->get_output()->chunk_count());
 
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
+                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 }
 
 TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {

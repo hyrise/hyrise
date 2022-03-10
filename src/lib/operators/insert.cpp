@@ -43,7 +43,9 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
 
       auto nulls_target_offset = target_begin_offset;
       for (auto nulls_iter = nulls_begin_iter; nulls_iter != nulls_end_iter; ++nulls_iter) {
-        if (*nulls_iter) target_value_segment->set_null_value(nulls_target_offset);
+        if (*nulls_iter) {
+          target_value_segment->set_null_value(nulls_target_offset);
+        }
         ++nulls_target_offset;
       }
     }
@@ -53,12 +55,12 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
       auto target_iter = target_values.begin() + target_begin_offset;
 
       // Copy values and null values
-      for (auto index = ChunkOffset(0); index < length; index++) {
+      for (auto index = ChunkOffset{0}; index < length; ++index) {
         *target_iter = source_iter->value();
 
         if (source_iter->is_null()) {
           // ValueSegments not being NULLable will be handled over there
-          target_value_segment->set_null_value(target_begin_offset + index);
+          target_value_segment->set_null_value(ChunkOffset{target_begin_offset + index});
         }
 
         ++source_iter;
@@ -182,12 +184,13 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
 
     auto target_chunk_offset = target_chunk_range.begin_chunk_offset;
     auto target_chunk_range_remaining_rows =
-        target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset;
+        ChunkOffset{target_chunk_range.end_chunk_offset - target_chunk_range.begin_chunk_offset};
 
     while (target_chunk_range_remaining_rows > 0) {
       const auto source_chunk = left_input_table()->get_chunk(source_row_id.chunk_id);
-      const auto source_chunk_remaining_rows = source_chunk->size() - source_row_id.chunk_offset;
-      const auto num_rows_current_iteration = std::min(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
+      const auto source_chunk_remaining_rows = ChunkOffset{source_chunk->size() - source_row_id.chunk_offset};
+      const auto num_rows_current_iteration =
+          std::min<ChunkOffset>(source_chunk_remaining_rows, target_chunk_range_remaining_rows);
 
       // Copy from the source into the target Segments
       const auto column_count = target_chunk->column_count();
@@ -257,7 +260,7 @@ void Insert::_on_rollback_records() {
       mvcc_data->set_end_cid(chunk_offset, CommitID{0});
 
       // Update chunk statistics
-      target_chunk->increase_invalid_row_count(1u);
+      target_chunk->increase_invalid_row_count(ChunkOffset{1});
     }
 
     // This fence guarantees that no other thread will ever observe `begin_cid = 0 && end_cid != 0` for rolled-back
