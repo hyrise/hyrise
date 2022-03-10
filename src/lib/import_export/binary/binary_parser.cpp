@@ -22,15 +22,7 @@ namespace opossum {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
-  try {
-    file.open(filename, std::ios::binary);
-  } catch(const std::exception& e)
-   {
-      std::cout << "HEY" <<  e.what() << std::endl;
-   }
-   std::cout << "HMPF" << std::endl;
-
-   // EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception); }
+  file.open(filename, std::ios::binary);
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);
