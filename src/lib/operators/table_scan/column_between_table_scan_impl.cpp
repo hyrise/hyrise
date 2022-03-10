@@ -132,7 +132,8 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
       #pragma omp simd
       // clang-format on
       // OMP pragma does not work with strong type defs.
-      for (auto offset = ChunkOffset::base_type{0}; offset < static_cast<ChunkOffset::base_type>(output_size); ++offset) {
+      for (auto offset = ChunkOffset::base_type{0}; offset < static_cast<ChunkOffset::base_type>(output_size);
+           ++offset) {
         // `matches` might already contain entries if it is called multiple times by
         // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment.
         matches[output_start_offset + offset] = RowID{chunk_id, ChunkOffset{offset}};

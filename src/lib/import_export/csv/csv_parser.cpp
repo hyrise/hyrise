@@ -179,7 +179,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
                                     const std::string& escaped_linebreak, std::mutex& append_chunk_mutex) {
   // For each csv column, create a CsvConverter which builds up a ValueSegment
   const auto column_count = table.column_count();
-  const auto row_count = ChunkOffset{field_ends.size() / column_count};
+  const auto row_count = ChunkOffset{static_cast<ChunkOffset::base_type>(field_ends.size() / column_count)};
   std::vector<std::unique_ptr<BaseCsvConverter>> converters;
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {

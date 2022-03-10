@@ -30,7 +30,7 @@
  *   ChunkID x = 3;
  * but need to use
  *   auto x = ChunkID{3};
- * In some cases (e.g., when shortening data types), casting to the base_type first might be necessary, e.g.:
+ * In some cases (e.g., when narrowing data types), casting to the base_type first might be necessary, e.g.:
  *   ChunkID{static_cast<ChunkID::base_type>(size_t{17})}
  *
  * We prefer strong typedefs, whenever they are applicable and make sense. However, there are cases where we cannot
