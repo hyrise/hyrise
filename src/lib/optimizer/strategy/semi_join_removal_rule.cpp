@@ -93,7 +93,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    *    if (corresponding_join_by_semi_reduction.at(removal_candidate)->input(corresponding_join_input_side) == removal_candidate) {
    */
   auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  auto removal_blockers = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  auto removal_blockers =
+      std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
   /**
    * Phase 1: Collect semi join reductions
