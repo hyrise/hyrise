@@ -61,9 +61,9 @@ class JoinHashStepsTest : public BaseTest {
 
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
-  for (auto i = 0; i < 10; ++i) {
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i}});
-    table.emplace(i, RowID{ChunkID{ChunkID::base_type{100} + i}, ChunkOffset{200 + i + 1}});
+  for (auto index = uint16_t{0}; index < 10; ++index) {
+    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
+    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
   }
   const auto expected_pos_list =
       RowIDPosList{RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}};
@@ -81,8 +81,8 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
 TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
   auto table = PosHashTable<int>{JoinHashBuildMode::ExistenceOnly, 100};
   for (auto index = uint16_t{0}; index < 100; ++index) {
-    table.emplace(index, RowID{ChunkID{100 + index}, ChunkOffset{200 + index}});
-    table.emplace(index, RowID{ChunkID{100 + index}, ChunkOffset{200 + index + 1}});
+    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
+    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
   }
   const auto expected_pos_list = RowIDPosList{RowID{ChunkID{150}, ChunkOffset{250}}};
   {
