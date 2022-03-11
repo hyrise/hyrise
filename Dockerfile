@@ -10,9 +10,9 @@ RUN apt-get update \
         bash-completion \
         bc \
         clang-11 \
-        clang-13 \
-        clang-format-13 \
-        clang-tidy-13 \
+        clang-14 \
+        clang-format-14 \
+        clang-tidy-14 \
         cmake \
         curl \
         dos2unix \
@@ -46,7 +46,7 @@ RUN apt-get update \
         valgrind \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
-    && ln -sf /usr/bin/llvm-symbolizer-13 /usr/bin/llvm-symbolizer \
+    && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
     && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
 
 ENV OPOSSUM_HEADLESS_SETUP=true
