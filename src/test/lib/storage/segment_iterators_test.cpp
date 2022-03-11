@@ -194,7 +194,7 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
 }
 
 template <typename T>
-bool operator<(const AbstractSegmentPosition<T>&, const AbstractSegmentPosition<T>&) {
+bool operator<(const AbstractSegmentPosition<T>& /*lhs*/, const AbstractSegmentPosition<T>& /*rhs*/) {
   // Fake comparator needed by is_heap
   return false;
 }

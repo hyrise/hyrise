@@ -59,7 +59,7 @@ DataType LQPSubqueryExpression::data_type() const {
   return lqp->output_expressions()[0]->data_type();
 }
 
-bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode&) const {
+bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*node*/) const {
   Assert(lqp->output_expressions().size() == 1,
          "Can only determine the nullability of SelectExpressions that return exactly one column");
   return lqp->is_column_nullable(ColumnID{0});

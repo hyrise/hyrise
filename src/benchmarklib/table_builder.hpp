@@ -38,7 +38,7 @@ template <typename T, bool _has_value>
 class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
  public:
   template <typename... Args>
-  explicit OptionalConstexpr(Args&&...) {}
+  explicit OptionalConstexpr(Args&&... /*unused*/) {}
 
   static_assert(!_has_value);
   static constexpr bool has_value = false;

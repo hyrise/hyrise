@@ -14,7 +14,7 @@ class TableWrapper;
 class MicroBenchmarkBasicFixture : public benchmark::Fixture {
  public:
   void SetUp(::benchmark::State& state) override;
-  void TearDown(::benchmark::State&) override;
+  void TearDown(::benchmark::State& /*state*/) override;
 
  protected:
   void _clear_cache();
