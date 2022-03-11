@@ -93,7 +93,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    *    if (corresponding_join_by_semi_reduction.at(removal_candidate)->input(corresponding_join_input_side) == removal_candidate) {
    */
   auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
-  auto removal_blockers =
+  auto removal_blockers1 = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  auto removal_blockers2 =
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
 
   /**
@@ -119,14 +120,17 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     // TODO skip if we do not have a corresponding join
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
       // Start with the output(s) of the removal candidate
-      if (upper_node == removal_candidate) return LQPUpwardVisitation::VisitOutputs;
+      if (upper_node == removal_candidate) {
+        return LQPUpwardVisitation::VisitOutputs;
+      }
 
       // Removal Blocker: AggregateNode
       //  The estimation for aggregate and column/column scans is bad, so whenever one of these occurs between the semi
       //  join reduction and the original join, do not remove the semi join reduction (i.e., abort the search for an
       //  upper node).
       if (upper_node->type == LQPNodeType::Aggregate) {
-        removal_blockers.emplace(removal_candidate);
+        removal_blockers1.emplace(removal_candidate);
+        removal_blockers2.emplace(removal_candidate);
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
@@ -134,7 +138,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       if (upper_node->type == LQPNodeType::Predicate) {
         const auto& upper_predicate_node = static_cast<const PredicateNode&>(*upper_node);
         if (is_expensive_predicate(upper_predicate_node.predicate())) {
-          removal_blockers.emplace(removal_candidate);
+          removal_blockers1.emplace(removal_candidate);
+          removal_blockers2.emplace(removal_candidate);
           return LQPUpwardVisitation::DoNotVisitOutputs;
         }
       }
@@ -145,7 +150,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // Add Removal Blocker, if it is not the corresponding join.
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
       if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
-        removal_blockers.emplace(removal_candidate);
+        removal_blockers1.emplace(removal_candidate);
+        removal_blockers2.emplace(removal_candidate);
       }
 
       return LQPUpwardVisitation::DoNotVisitOutputs;
@@ -156,7 +162,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    * Phase 3: Remove semi join reduction nodes
    */
   for (const auto& removal_candidate : removal_candidates) {
-    if (removal_blockers.contains(removal_candidate)) continue;
+    if (removal_blockers1.contains(removal_candidate) || removal_blockers2.contains(removal_candidate)) continue;
     lqp_remove_node(removal_candidate, AllowRightInput::Yes);
   }
 }
