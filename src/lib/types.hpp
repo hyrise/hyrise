@@ -34,8 +34,9 @@
  *   ChunkID{static_cast<ChunkID::base_type>(size_t{17})}
  *
  * We prefer strong typedefs, whenever they are applicable and make sense. However, there are cases where we cannot
- * directly use them. For example in std::atomics as they need to be trivially copyable. Therefore, we use the
- * base_type in atomics (e..g, std::atomic<TaskID::base_type>).
+ * directly use them. For example in std::atomics when we want to use C++'s specializations for integral types (e.g.,
+ * `++task_id` with `std::atomic<TaskID> task_id`). Therefore, we use the base_type in atomics (i.e., 
+ * `std::atomic<TaskID::base_type> task_id`).
  */
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
