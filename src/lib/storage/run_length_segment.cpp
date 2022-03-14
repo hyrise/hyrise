@@ -45,7 +45,9 @@ AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_offset) c
 
 template <typename T>
 ChunkOffset RunLengthSegment<T>::size() const {
-  if (_end_positions->empty()) return ChunkOffset{0};
+  if (_end_positions->empty()) {
+    return ChunkOffset{0};
+  }
   return ChunkOffset{_end_positions->back() + 1};
 }
 

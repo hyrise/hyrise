@@ -36,9 +36,9 @@ std::shared_ptr<opossum::RowIDPosList> generate_pos_list(float referenced_table_
 
   for (auto pos_list_idx = size_t{0}; pos_list_idx < pos_list_size; ++pos_list_idx) {
     const auto chunk_id = opossum::ChunkID{chunk_id_distribution(random_engine)};
-    const auto chunk_offset = chunk_offset_distribution(random_engine);
+    const auto chunk_offset = opossum::ChunkOffset{chunk_offset_distribution(random_engine)};
 
-    pos_list->emplace_back(opossum::RowID{chunk_id, opossum::ChunkOffset{chunk_offset}});
+    pos_list->emplace_back(opossum::RowID{chunk_id, chunk_offset});
   }
 
   return pos_list;

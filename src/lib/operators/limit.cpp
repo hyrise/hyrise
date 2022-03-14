@@ -64,13 +64,13 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
   auto chunk_id = ChunkID{0};
   const auto chunk_count = input_table->chunk_count();
-  for (size_t i = 0; i < num_rows && chunk_id < chunk_count; ++chunk_id) {
+  for (size_t index = 0; index < num_rows && chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
 
-    auto output_chunk_row_count = std::min<ChunkOffset>(input_chunk->size(), static_cast<ChunkOffset>(num_rows - i));
+    auto output_chunk_row_count = std::min<ChunkOffset>(input_chunk->size(), static_cast<ChunkOffset>(num_rows - index));
 
     const auto column_count = input_table->column_count();
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
@@ -97,7 +97,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
           std::make_shared<ReferenceSegment>(referenced_table, output_column_id, output_pos_list));
     }
 
-    i += output_chunk_row_count;
+    index += output_chunk_row_count;
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
     output_chunk->finalize();
     // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit

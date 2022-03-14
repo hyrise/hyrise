@@ -131,7 +131,7 @@ void ColumnBetweenTableScanImpl::_scan_dictionary_segment(
       {}  // clang-format off
       #pragma omp simd
       // clang-format on
-      // OMP pragma does not work with strong type defs.
+      // OpenMP directives do not work with strong type defs.
       for (auto offset = ChunkOffset::base_type{0}; offset < static_cast<ChunkOffset::base_type>(output_size);
            ++offset) {
         // `matches` might already contain entries if it is called multiple times by
