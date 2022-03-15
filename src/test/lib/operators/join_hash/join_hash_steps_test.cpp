@@ -61,7 +61,7 @@ class JoinHashStepsTest : public BaseTest {
 
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
   auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
-  for (auto index = uint16_t{0}; index < 10; ++index) {
+  for (auto index = uint32_t{0}; index < 10; ++index) {
     table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
     table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
   }
@@ -80,7 +80,7 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
 
 TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
   auto table = PosHashTable<int>{JoinHashBuildMode::ExistenceOnly, 100};
-  for (auto index = uint16_t{0}; index < 100; ++index) {
+  for (auto index = uint32_t{0}; index < 100; ++index) {
     table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
     table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
   }

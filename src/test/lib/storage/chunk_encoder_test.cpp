@@ -22,16 +22,16 @@ class ChunkEncoderTest : public BaseTest {
   void SetUp() override {
     static const auto row_count = 15u;
     static const auto target_chunk_size = ChunkOffset{5};
-    static const auto column_count = 3u;
+    static const auto column_count = ColumnCount{3};
 
     _table = create_test_table(row_count, target_chunk_size, column_count);
   }
 
   static std::shared_ptr<Table> create_test_table(const size_t row_count, const ChunkOffset target_chunk_size,
-                                                  const size_t column_count) {
+                                                  const ColumnCount column_count) {
     TableColumnDefinitions column_definitions;
 
-    for (auto column_id = 0u; column_id < column_count; ++column_id) {
+    for (auto column_id = ColumnCount{0}; column_id < column_count; ++column_id) {
       const auto column_name = std::to_string(column_id);
       column_definitions.emplace_back(column_name, DataType::Int, false);
     }
