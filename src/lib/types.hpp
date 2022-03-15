@@ -33,9 +33,9 @@
  * In some cases (e.g., when narrowing data types), casting to the base_type first might be necessary, e.g.:
  *   ChunkID{static_cast<ChunkID::base_type>(size_t{17})}
  *
- * We prefer strong typedefs, whenever they are applicable and make sense. However, there are cases where we cannot
- * directly use them. For example in std::atomics when we want to use C++'s specializations for integral types (e.g.,
- * `++task_id` with `std::atomic<TaskID> task_id`). Therefore, we use the base_type in atomics (i.e., 
+ * We prefer strong typedefs whenever they are applicable and make sense. However, there are cases where we cannot
+ * directly use them. For example, in std::atomics when we want to use C++'s specializations for integral types (e.g.,
+ * `++task_id` with `std::atomic<TaskID> task_id`). Therefore, we use the base_type in atomics (e.g.,
  * `std::atomic<TaskID::base_type> task_id`).
  */
 
@@ -49,8 +49,8 @@ STRONG_TYPEDEF(uint32_t, WorkerID);
 STRONG_TYPEDEF(uint32_t, TaskID);
 STRONG_TYPEDEF(uint32_t, ChunkOffset);
 
-// When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
-// Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
+// When changing these to 64-bit types, reading and writing to them might not be atomic anymore. Among others, the
+// validate operator might break when another operator is simultaneously writing begin or end CIDs.
 STRONG_TYPEDEF(uint32_t, CommitID);
 STRONG_TYPEDEF(uint32_t, TransactionID);
 
@@ -137,9 +137,9 @@ constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
-// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
-// not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
-// deleted in the same transaction (which has not yet committed)
+// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
+// yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
+// the same transaction (which has not yet committed)
 constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
 constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
 

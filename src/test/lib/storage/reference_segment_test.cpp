@@ -38,7 +38,7 @@ class ReferenceSegmentTest : public BaseTest {
     column_definitions2.emplace_back("b", DataType::Int, false);
     _test_table_dict =
         std::make_shared<opossum::Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
-    for (auto index = int{0}; index <= 24; index += 2) {
+    for (auto index = int32_t{0}; index <= 24; index += 2) {
       _test_table_dict->append({index, 100 + index});
     }
 
