@@ -70,7 +70,8 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
     Segments output_segments;
 
-    auto output_chunk_row_count = std::min<ChunkOffset>(input_chunk->size(), static_cast<ChunkOffset>(num_rows - index));
+    auto output_chunk_row_count =
+        std::min<ChunkOffset>(input_chunk->size(), static_cast<ChunkOffset>(num_rows - index));
 
     const auto column_count = input_table->column_count();
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
