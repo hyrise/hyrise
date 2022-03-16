@@ -64,7 +64,7 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
 }
 
 void export_values(std::ofstream& ofstream, const FixedStringVector& values) {
-  ofstream.write(values.data(), static_cast<long>(values.size()) * values.string_length());
+  ofstream.write(values.data(), static_cast<std::streamsize>(values.size()) * values.string_length());
 }
 
 // specialized implementation for string values

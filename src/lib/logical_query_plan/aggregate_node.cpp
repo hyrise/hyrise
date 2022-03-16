@@ -16,7 +16,8 @@
 #include "utils/assert.hpp"
 
 namespace {
-  using NodeExpressionsDifferenceType = typename std::iterator_traits<decltype(opossum::AggregateNode::node_expressions)::iterator>::difference_type;
+using NodeExpressionsDifferenceType =
+    typename std::iterator_traits<decltype(opossum::AggregateNode::node_expressions)::iterator>::difference_type;
 }  // namespace
 
 namespace opossum {
@@ -166,10 +167,12 @@ size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_be
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
-      node_expressions.begin(), node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx)};
+      node_expressions.begin(),
+      node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx)};
 
   const auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
-      node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx), node_expressions.end()};
+      node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx),
+      node_expressions.end()};
 
   return std::make_shared<AggregateNode>(
       expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),
