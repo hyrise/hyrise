@@ -42,17 +42,17 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
     // Value-based vs. Non-Value-based predicates
     //  The existence of at least one value operand leads to the efficient ColumnVsValue-TableScanImpl in PQPs.
     //  All other binary predicates require the more expensive ColumnVsColumn- or ExpressionEvaluator-TableScanImpls.
-    bool has_value_operand =
+    bool contains_value_operand =
         is_value_operand(binary_predicate->left_operand()) || is_value_operand(binary_predicate->right_operand());
-    return !has_value_operand;
+    return !contains_value_operand;
   }
 
-  // TODO Enable & Benchmark
-  //  if (const auto between_predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
-  //    // The ColumnBetween-TableScanImpl is chosen when lower and upper bound are specified as values. Otherwise, the
-  // expensive ExpressionEvaluator-TableScanImpl is required for evaluation.
-  //    return !(is_value_operand(between_predicate->lower_bound()) && is_value_operand(between_predicate->upper_bound()));
-  //  }
+  if (const auto between_predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
+    // The ColumnBetween-TableScanImpl is chosen when lower and upper bound are specified as values. Otherwise, the
+    // expensive ExpressionEvaluator-TableScanImpl is required for evaluation.
+    const bool contains_non_value_operands = !is_value_operand(between_predicate->lower_bound()) || !is_value_operand(between_predicate->upper_bound()));
+    return contains_non_value_operands;
+  }
 
   // TODO Benchmark
   // if (std::dynamic_pointer_cast<IsNullExpression>(predicate)) return false;
