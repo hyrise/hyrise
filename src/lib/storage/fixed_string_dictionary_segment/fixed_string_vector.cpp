@@ -27,25 +27,19 @@ void FixedStringVector::push_back(const pmr_string& string) {
   ++_size;
 }
 
-FixedStringIterator<false> FixedStringVector::begin() noexcept {
-  return {_string_length, _chars, 0};
-}
+FixedStringIterator<false> FixedStringVector::begin() noexcept { return {_string_length, _chars, 0}; }
 
 FixedStringIterator<false> FixedStringVector::end() noexcept {
   return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
 }
 
-FixedStringIterator<true> FixedStringVector::begin() const noexcept {
-  return {_string_length, _chars, 0};
-}
+FixedStringIterator<true> FixedStringVector::begin() const noexcept { return {_string_length, _chars, 0}; }
 
 FixedStringIterator<true> FixedStringVector::end() const noexcept {
   return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
 }
 
-FixedStringIterator<true> FixedStringVector::cbegin() const noexcept {
-  return {_string_length, _chars, 0};
-}
+FixedStringIterator<true> FixedStringVector::cbegin() const noexcept { return {_string_length, _chars, 0}; }
 
 FixedStringIterator<true> FixedStringVector::cend() const noexcept {
   return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
@@ -61,9 +55,7 @@ FixedString FixedStringVector::operator[](const size_t pos) {
   return {&_chars[pos * _string_length], _string_length};
 }
 
-FixedString FixedStringVector::at(const size_t pos) {
-  return {&_chars.at(pos * _string_length), _string_length};
-}
+FixedString FixedStringVector::at(const size_t pos) { return {&_chars.at(pos * _string_length), _string_length}; }
 
 pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   const auto* const string_start = &_chars[pos * _string_length];

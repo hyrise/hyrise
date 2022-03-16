@@ -49,8 +49,9 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       return std::make_shared<MinMaxFilter<T>>(value, value);
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals: {
-      auto end_iter = std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                                       [](const auto& range, const auto& search_value) { return range.second < search_value; });
+      auto end_iter =
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value,
+                           [](const auto& range, const auto& search_value) { return range.second < search_value; });
 
       // Copy all the ranges before the value.
       auto iter = ranges.cbegin();
@@ -67,8 +68,9 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
     } break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals: {
-      auto iter = std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                                 [](const auto& range, const auto& search_value) { return range.second < search_value; });
+      auto iter =
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value,
+                           [](const auto& range, const auto& search_value) { return range.second < search_value; });
 
       DebugAssert(iter != ranges.cend(), "does_not_contain() should have caught that.");
 
