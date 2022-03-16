@@ -269,7 +269,7 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
 
 template <typename T>
 std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
-                                               const std::optional<size_t> cached_block_index,
+                                               const std::optional<int64_t> cached_block_index,
                                                std::vector<char>& cached_block) const {
   const auto memory_offset = chunk_offset * sizeof(T);
   const auto block_index = memory_offset / _block_size;
@@ -289,7 +289,7 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
 
 template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
-                                                                 const std::optional<size_t> cached_block_index,
+                                                                 const std::optional<int64_t> cached_block_index,
                                                                  std::vector<char>& cached_block) const {
   /**
    * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed, and
@@ -306,7 +306,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    */
   auto offset_decompressor = _string_offsets->create_base_decompressor();
   auto start_offset = offset_decompressor->get(chunk_offset);
-  size_t end_offset;
+  auto end_offset = int64_t{0};
   if (chunk_offset + 1 == offset_decompressor->size()) {
     end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   } else {
@@ -317,8 +317,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * Find the block range in which the string is. If it is only in a single block, then the decompression is simple.
    * Otherwise multiple blocks need to be decompressed.
    */
-  const auto start_block = start_offset / _block_size;
-  const auto end_block = end_offset / _block_size;
+  const auto start_block = static_cast<int64_t>(start_offset / _block_size);
+  const auto end_block = static_cast<int64_t>(end_offset / _block_size);
 
   // Only one block needs to be decompressed.
   if (start_block == end_block) {
@@ -376,9 +376,9 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * block (i.e., the block before the cached block).
    * In that case, this index equals end_block - 1. Otherwise, it will equal end_block.
    */
-  auto new_cached_block_index = size_t{0u};
+  auto new_cached_block_index = int64_t{0};
 
-  for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
+  for (auto block_index = start_block; block_index <= end_block; ++block_index) {
     // Only decompress the current block if it's not cached.
     if (!(use_caching && block_index == *cached_block_index)) {
       _decompress_block_to_bytes(block_index, cached_block);

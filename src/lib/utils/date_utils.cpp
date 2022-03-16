@@ -17,7 +17,7 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
   return std::nullopt;
 }
 
-boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit) {
+boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int32_t offset, DatetimeComponent unit) {
   switch (unit) {
     case DatetimeComponent::Year: {
       const boost::date_time::year_functor<boost::gregorian::date> interval(offset);

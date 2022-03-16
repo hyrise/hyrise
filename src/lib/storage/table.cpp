@@ -272,9 +272,9 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
       }
 
       return row;
-    } else {
-      row_idx -= chunk->size();
     }
+
+    row_idx -= chunk->size();
   }
 
   Fail("row_idx out of bounds");

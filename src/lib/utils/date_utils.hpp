@@ -17,7 +17,7 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
  * E.g., March 31 + one month == April 30, and vice versa.
  * This also applies to leap years.
  */
-boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit);
+boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int32_t offset, DatetimeComponent unit);
 
 // ISO 8601 extended format representation of the date
 std::string date_to_string(const boost::gregorian::date& date);
