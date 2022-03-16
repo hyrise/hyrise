@@ -120,7 +120,7 @@ class Console : public Singleton<Console> {
   int _change_runtime_setting(const std::string& input);
 
   int _print_transaction_info(const std::string& input);
-  int _print_current_working_directory(const std::string& /*args/*);
+  int _print_current_working_directory(const std::string& /*args*/);
 
   int _load_plugin(const std::string& args);
   int _unload_plugin(const std::string& input);
