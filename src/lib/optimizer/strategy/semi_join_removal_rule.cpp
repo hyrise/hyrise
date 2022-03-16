@@ -155,11 +155,11 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
       if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
         bool block_removal = [&]() {
-          if (semi_reduction_node->left_input()->type != LQPNodeType::StoredTable) return true;
+          if (semi_reduction_node.left_input()->type != LQPNodeType::StoredTable) return true;
 
-          auto cardinality_semi_in_stored_table = estimator.estimate_cardinality(semi_reduction_node->left_input());
-          auto cardinality_join_in_left = estimator.estimate_cardinality(upper_join_node->left_input());
-          auto cardinality_join_in_right = estimator.estimate_cardinality(upper_join_node->right_input());
+          auto cardinality_semi_in_stored_table = estimator.estimate_cardinality(semi_reduction_node.left_input());
+          auto cardinality_join_in_left = estimator.estimate_cardinality(upper_join_node.left_input());
+          auto cardinality_join_in_right = estimator.estimate_cardinality(upper_join_node.right_input());
           auto max_cardinality_join_in = std::max(cardinality_join_in_left, cardinality_join_in_right);
 
           if (cardinality_semi_in_stored_table < max_cardinality_join_in) {
@@ -170,7 +170,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
           // Semi Join reduces the upper join's bigger input relation. However, it should have the smallest input
           // relation of both joins to be efficient.
           auto min_cardinality_join_in = std::min(cardinality_join_in_left, cardinality_join_in_right);
-          auto cardinality_semi_in_right = estimator.estimate_cardinality(semi_reduction_node->right_input());
+          auto cardinality_semi_in_right = estimator.estimate_cardinality(semi_reduction_node.right_input());
           if (cardinality_semi_in_right < min_cardinality_join_in) return true;
 
           // Semi Join might be more expensive than the upper join. Therefore, we do not want to remove its removal yet.
