@@ -50,7 +50,7 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
   if (const auto between_predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
     // The ColumnBetween-TableScanImpl is chosen when lower and upper bound are specified as values. Otherwise, the
     // expensive ExpressionEvaluator-TableScanImpl is required for evaluation.
-    const bool contains_non_value_operands = !is_value_operand(between_predicate->lower_bound()) || !is_value_operand(between_predicate->upper_bound()));
+    const bool contains_non_value_operands = !is_value_operand(between_predicate->lower_bound()) || !is_value_operand(between_predicate->upper_bound());
     return contains_non_value_operands;
   }
 
