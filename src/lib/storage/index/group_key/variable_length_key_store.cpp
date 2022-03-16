@@ -7,11 +7,12 @@
 
 namespace opossum {
 
-VariableLengthKeyStore::VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key) {
+VariableLengthKeyStore::VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key)
+    : _bytes_per_key{bytes_per_key} {
   static const CompositeKeyLength alignment = 8u;
-  _bytes_per_key = bytes_per_key;
   _key_alignment = (bytes_per_key / alignment + (bytes_per_key % alignment == 0u ? 0u : 1u)) * alignment;
-  _data = std::vector<VariableLengthKeyWord>(size * _key_alignment);
+  _data = std::vector<VariableLengthKeyWord>(
+      static_cast<std::vector<VariableLengthKeyWord>::size_type>(size * _key_alignment));
 }
 
 VariableLengthKeyProxy VariableLengthKeyStore::operator[](ChunkOffset position) {
@@ -26,7 +27,7 @@ VariableLengthKeyConstProxy VariableLengthKeyStore::operator[](ChunkOffset posit
                                      _bytes_per_key);
 }
 
-void VariableLengthKeyStore::resize(ChunkOffset size) { _data.resize(size * _key_alignment); }
+void VariableLengthKeyStore::resize(ChunkOffset size) { _data.resize(static_cast<std::vector<VariableLengthKeyWord>::size_type>(size * _key_alignment)); }
 
 void VariableLengthKeyStore::shrink_to_fit() { _data.shrink_to_fit(); }
 

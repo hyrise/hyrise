@@ -21,7 +21,7 @@ namespace opossum {
 
 size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
-  return (static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset) + distinct_count * value_bytes;
+  return (static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset) + static_cast<size_t>(distinct_count * value_bytes);
 }
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(
@@ -185,7 +185,7 @@ std::vector<std::shared_ptr<const AbstractSegment>> CompositeGroupKeyIndex::_get
 }
 
 size_t CompositeGroupKeyIndex::_memory_consumption() const {
-  size_t byte_count = _keys.size() * _keys.key_size();
+  auto byte_count = static_cast<size_t>(_keys.size() * _keys.key_size());
   byte_count += _key_offsets.size() * sizeof(ChunkOffset);
   byte_count += _position_list.size() * sizeof(ChunkOffset);
   return byte_count;

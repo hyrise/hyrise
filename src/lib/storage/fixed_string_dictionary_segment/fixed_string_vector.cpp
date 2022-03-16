@@ -28,27 +28,27 @@ void FixedStringVector::push_back(const pmr_string& string) {
 }
 
 FixedStringIterator<false> FixedStringVector::begin() noexcept {
-  return FixedStringIterator<false>(_string_length, _chars, 0);
+  return {_string_length, _chars, 0};
 }
 
 FixedStringIterator<false> FixedStringVector::end() noexcept {
-  return FixedStringIterator<false>(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
+  return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
 }
 
 FixedStringIterator<true> FixedStringVector::begin() const noexcept {
-  return FixedStringIterator<true>(_string_length, _chars, 0);
+  return {_string_length, _chars, 0};
 }
 
 FixedStringIterator<true> FixedStringVector::end() const noexcept {
-  return FixedStringIterator<true>(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
+  return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
 }
 
 FixedStringIterator<true> FixedStringVector::cbegin() const noexcept {
-  return FixedStringIterator<true>(_string_length, _chars, 0);
+  return {_string_length, _chars, 0};
 }
 
 FixedStringIterator<true> FixedStringVector::cend() const noexcept {
-  return FixedStringIterator<true>(_string_length, _chars, _string_length == 0 ? 0 : _chars.size());
+  return {_string_length, _chars, _string_length == 0 ? 0 : _chars.size()};
 }
 
 using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
@@ -58,11 +58,11 @@ ReverseIterator FixedStringVector::rend() noexcept { return ReverseIterator(begi
 
 FixedString FixedStringVector::operator[](const size_t pos) {
   PerformanceWarning("operator[] used");
-  return FixedString(&_chars[pos * _string_length], _string_length);
+  return {&_chars[pos * _string_length], _string_length};
 }
 
 FixedString FixedStringVector::at(const size_t pos) {
-  return FixedString(&_chars.at(pos * _string_length), _string_length);
+  return {&_chars.at(pos * _string_length), _string_length};
 }
 
 pmr_string FixedStringVector::get_string_at(const size_t pos) const {
@@ -74,9 +74,9 @@ pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   if (*(string_start + string_end) == '\0') {
     // The string is zero-padded - the pmr_string constructor takes care of finding the correct length
     return pmr_string(string_start);
-  } else {
-    return pmr_string(string_start, _string_length);
   }
+
+  return pmr_string(string_start, _string_length);
 }
 
 const char* FixedStringVector::data() const { return _chars.data(); }

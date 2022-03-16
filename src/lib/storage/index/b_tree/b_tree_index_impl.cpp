@@ -83,7 +83,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const Abstract
   }
 
   // Sort
-  std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
+  std::sort(values.begin(), values.end(), [](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
   _chunk_offsets.resize(values.size());
   for (size_t i = 0; i < values.size(); i++) {
     _chunk_offsets[i] = values[i].first;

@@ -37,7 +37,7 @@ MetaTableManager::MetaTableManager() {
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
   const auto prefix_len = META_PREFIX.size();
-  return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
+  return name.size() > prefix_len && std::string_view{name.data(), prefix_len} == MetaTableManager::META_PREFIX;
 }
 
 const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }

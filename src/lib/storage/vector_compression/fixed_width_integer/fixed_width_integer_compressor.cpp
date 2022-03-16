@@ -14,8 +14,8 @@ std::unique_ptr<BaseVectorCompressor> FixedWidthIntegerCompressor::create_new() 
 }
 
 uint32_t FixedWidthIntegerCompressor::_find_max_value(const pmr_vector<uint32_t>& vector) {
-  const auto it = std::max_element(vector.cbegin(), vector.cend());
-  return *it;
+  const auto iter = std::max_element(vector.cbegin(), vector.cend());
+  return *iter;
 }
 
 std::unique_ptr<BaseCompressedVector> FixedWidthIntegerCompressor::_compress_using_max_value(
