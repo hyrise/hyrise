@@ -559,13 +559,6 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
   const auto left_input_base_column_statistics = input_table_statistics->column_statistics[left_column_id];
   const auto left_data_type = input_table_statistics->column_data_type(left_column_id);
 
-  /**
-   * String estimates seem to be very bad
-   */
-   if (left_data_type == DataType::String) {
-     return input_table_statistics;
-   }
-  
   auto output_column_statistics =
       std::vector<std::shared_ptr<BaseAttributeStatistics>>{input_table_statistics->column_statistics.size()};
 
