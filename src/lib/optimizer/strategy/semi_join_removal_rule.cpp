@@ -116,8 +116,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   /**
    * Phase 2: Find corresponding JoinNode & Determine removal blockers.
    */
-  auto& estimator = *cost_estimator->cardinality_estimator->new_instance();
-  estimator.guarantee_bottom_up_construction();
+  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
+  estimator->guarantee_bottom_up_construction();
 
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
@@ -157,9 +157,9 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
         bool block_removal = [&]() {
           if (semi_reduction_node.left_input()->type != LQPNodeType::StoredTable) return true;
 
-          auto cardinality_semi_in_stored_table = estimator.estimate_cardinality(semi_reduction_node.left_input());
-          auto cardinality_join_in_left = estimator.estimate_cardinality(upper_join_node.left_input());
-          auto cardinality_join_in_right = estimator.estimate_cardinality(upper_join_node.right_input());
+          auto cardinality_semi_in_stored_table = estimator->estimate_cardinality(semi_reduction_node.left_input());
+          auto cardinality_join_in_left = estimator->estimate_cardinality(upper_join_node.left_input());
+          auto cardinality_join_in_right = estimator->estimate_cardinality(upper_join_node.right_input());
           auto max_cardinality_join_in = std::max(cardinality_join_in_left, cardinality_join_in_right);
 
           if (cardinality_semi_in_stored_table < max_cardinality_join_in) {
@@ -170,7 +170,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
           // Semi Join reduces the upper join's bigger input relation. However, it should have the smallest input
           // relation of both joins to be efficient.
           auto min_cardinality_join_in = std::min(cardinality_join_in_left, cardinality_join_in_right);
-          auto cardinality_semi_in_right = estimator.estimate_cardinality(semi_reduction_node.right_input());
+          auto cardinality_semi_in_right = estimator->estimate_cardinality(semi_reduction_node.right_input());
           if (cardinality_semi_in_right < min_cardinality_join_in) return true;
 
           // Semi Join might be more expensive than the upper join. Therefore, we do not want to remove its removal yet.
