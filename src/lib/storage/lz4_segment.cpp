@@ -272,7 +272,7 @@ std::pair<T, size_t> LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset,
                                                const std::optional<int64_t> cached_block_index,
                                                std::vector<char>& cached_block) const {
   const auto memory_offset = chunk_offset * sizeof(T);
-  const auto block_index = memory_offset / _block_size;
+  const auto block_index = static_cast<int64_t>(memory_offset / _block_size);
 
   /**
    * If the previously decompressed block was a different block than the one accessed now, overwrite it with the now
