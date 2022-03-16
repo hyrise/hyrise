@@ -116,8 +116,8 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   /**
    * Phase 2: Find corresponding JoinNode & Determine removal blockers.
    */
-  const auto estimator = cost_estimator->cardinality_estimator->new_instance();
-  estimator->guarantee_bottom_up_construction();
+  auto& estimator = *cost_estimator->cardinality_estimator->new_instance();
+  estimator.guarantee_bottom_up_construction();
 
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
