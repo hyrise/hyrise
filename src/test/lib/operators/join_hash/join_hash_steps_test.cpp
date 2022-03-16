@@ -46,8 +46,8 @@ class JoinHashStepsTest : public BaseTest {
   template <typename Iter>
   size_t get_row_count(Iter begin, Iter end) {
     size_t row_count = 0;
-    for (Iter it = begin; it != end; ++it) {
-      row_count += it->size();
+    for (Iter iter = begin; iter != end; ++iter) {
+      row_count += iter->size();
     }
     return row_count;
   }
@@ -60,10 +60,10 @@ class JoinHashStepsTest : public BaseTest {
 };
 
 TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
-  auto table = PosHashTable<int>{JoinHashBuildMode::AllPositions, 50};
+  auto table = PosHashTable<int64_t>{JoinHashBuildMode::AllPositions, 50};
   for (auto index = uint32_t{0}; index < 10; ++index) {
-    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
-    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
+    table.emplace(int64_t{index}, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
+    table.emplace(int64_t{index}, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
   }
   const auto expected_pos_list =
       RowIDPosList{RowID{ChunkID{105}, ChunkOffset{205}}, RowID{ChunkID{105}, ChunkOffset{206}}};
@@ -79,10 +79,10 @@ TEST_F(JoinHashStepsTest, SmallHashTableAllPositions) {
 }
 
 TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
-  auto table = PosHashTable<int>{JoinHashBuildMode::ExistenceOnly, 100};
+  auto table = PosHashTable<int64_t>{JoinHashBuildMode::ExistenceOnly, 100};
   for (auto index = uint32_t{0}; index < 100; ++index) {
-    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
-    table.emplace(index, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
+    table.emplace(int64_t{index}, RowID{ChunkID{100u + index}, ChunkOffset{200u + index}});
+    table.emplace(int64_t{index}, RowID{ChunkID{100u + index}, ChunkOffset{200u + index + 1}});
   }
   const auto expected_pos_list = RowIDPosList{RowID{ChunkID{150}, ChunkOffset{250}}};
   {
