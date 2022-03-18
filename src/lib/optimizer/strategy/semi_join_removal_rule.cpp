@@ -44,16 +44,16 @@ bool is_expensive_predicate(const std::shared_ptr<AbstractExpression>& predicate
     // Value-based vs. Non-Value-based predicates
     //  The existence of at least one value operand leads to the efficient ColumnVsValue-TableScanImpl in PQPs.
     //  All other binary predicates require the more expensive ColumnVsColumn- or ExpressionEvaluator-TableScanImpls.
-    bool contains_value_operand =
+    bool is_column_vs_value_predicate =
         is_value_operand(binary_predicate->left_operand()) || is_value_operand(binary_predicate->right_operand());
-    return !contains_value_operand;
+    return !is_column_vs_value_predicate;
   }
 
   if (const auto between_predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate)) {
-    // The ColumnBetween-TableScanImpl is chosen when lower and upper bound are specified as values. Otherwise, the
+    // The ColumnBetweenTableScanImpl is chosen when lower and upper bound are specified as values. Otherwise, the
     // expensive ExpressionEvaluator-TableScanImpl is required for evaluation.
-    const bool contains_non_value_operands = !is_value_operand(between_predicate->lower_bound()) || !is_value_operand(between_predicate->upper_bound());
-    return contains_non_value_operands;
+    const bool is_column_between_values_predicate = is_value_operand(between_predicate->lower_bound()) && is_value_operand(between_predicate->upper_bound());
+    return !is_column_between_values_predicate;
   }
 
   return true;
@@ -155,26 +155,17 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
       if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
         bool block_removal = [&]() {
-          if (semi_reduction_node.left_input()->type != LQPNodeType::StoredTable) return true;
+          // Multi predicate joins and anti joins are expensive for large numbers of tuples.
+          if (upper_join_node.join_predicates().size() > 1 || upper_join_node.join_mode == JoinMode::AntiNullAsFalse
+              || upper_join_node.join_mode == JoinMode::AntiNullAsTrue) { return true; }
 
-          auto cardinality_semi_in_stored_table = estimator->estimate_cardinality(semi_reduction_node.left_input());
-          auto cardinality_join_in_left = estimator->estimate_cardinality(upper_join_node.left_input());
-          auto cardinality_join_in_right = estimator->estimate_cardinality(upper_join_node.right_input());
-          auto max_cardinality_join_in = std::max(cardinality_join_in_left, cardinality_join_in_right);
-
-          if (cardinality_semi_in_stored_table < max_cardinality_join_in) {
-            // Semi Join reduces the upper join's smallest input relation, which is beneficial for a JoinHash operator.
-            return true;
-          }
-
-          // Semi Join reduces the upper join's bigger input relation. However, it should have the smallest input
-          // relation of both joins to be efficient.
-          auto min_cardinality_join_in = std::min(cardinality_join_in_left, cardinality_join_in_right);
-          auto cardinality_semi_in_right = estimator->estimate_cardinality(semi_reduction_node.right_input());
-          if (cardinality_semi_in_right < min_cardinality_join_in) return true;
-
-          // Semi Join might be more expensive than the upper join. Therefore, we do not want to remove its removal yet.
-          return false;
+          // We do not want to remove a semi join, if it reduces an upper join's smallest input relation because it
+          // improves the overall efficiency of our join implementations. For example, by requiring a smaller hashtable
+          // in the JoinHash operator.
+          const auto cardinality_semi_in_left = estimator->estimate_cardinality(semi_reduction_node.left_input());
+          const auto cardinality_upper_join_in_left = estimator->estimate_cardinality(upper_join_node.left_input());
+          const auto cardinality_upper_join_in_right = estimator->estimate_cardinality(upper_join_node.right_input());
+          return cardinality_semi_in_left < std::max(cardinality_upper_join_in_left, cardinality_upper_join_in_right);
         }();
 
         if (!block_removal) return LQPUpwardVisitation::VisitOutputs;
