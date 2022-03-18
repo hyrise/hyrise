@@ -149,6 +149,7 @@ When trying to optimize the time spent building the project, it is often helpful
 ## Maintainers
 - Jan Kossmann
 - Martin Boissier
+- Marcel Weisgut
 - Stefan Halfpap
 
 Contact: firstname.lastname@hpi.de
@@ -209,7 +210,6 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
--   Marcel    Weisgut
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
