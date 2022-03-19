@@ -151,7 +151,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       // Skip all other nodes, except for joins.
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
 
-      // Add Removal Blocker, if it is not the corresponding join.
+      // TODO Add Removal Blocker, if it is not the corresponding join.
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
       if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
         bool block_removal = [&]() {
@@ -165,7 +165,23 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
           const auto cardinality_semi_in_left = estimator->estimate_cardinality(semi_reduction_node.left_input());
           const auto cardinality_upper_join_in_left = estimator->estimate_cardinality(upper_join_node.left_input());
           const auto cardinality_upper_join_in_right = estimator->estimate_cardinality(upper_join_node.right_input());
-          return cardinality_semi_in_left < std::max(cardinality_upper_join_in_left, cardinality_upper_join_in_right);
+          if (cardinality_semi_in_left < std::max(cardinality_upper_join_in_left, cardinality_upper_join_in_right)) {
+            return true;
+          }
+
+          // If the upper join is the only node that sits between the semi reduction and the corresponding join
+          // (except ValidateNode), we do not count it as a removal blocker.
+          auto semi_reduction_output_node = semi_reduction_node.outputs()[0];
+          if (semi_reduction_output_node->type == LQPNodeType::Validate) {
+            semi_reduction_output_node = semi_reduction_output_node->outputs()[0];
+          }
+          if (upper_node != semi_reduction_output_node) return true;
+
+          auto upper_join_output_node = upper_join_node.outputs()[0];
+          if (upper_join_output_node->type == LQPNodeType::Validate) {
+            upper_join_output_node = upper_join_output_node->outputs()[0];
+          }
+          return upper_join_output_node == semi_reduction_node.get_or_find_corresponding_join_node();
         }();
 
         if (!block_removal) return LQPUpwardVisitation::VisitOutputs;
