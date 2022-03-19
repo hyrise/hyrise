@@ -175,13 +175,13 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
           if (semi_reduction_output_node->type == LQPNodeType::Validate) {
             semi_reduction_output_node = semi_reduction_output_node->outputs()[0];
           }
-          if (upper_node != semi_reduction_output_node) return true;
+          if (semi_reduction_output_node != upper_node) return true;
 
           auto upper_join_output_node = upper_join_node.outputs()[0];
           if (upper_join_output_node->type == LQPNodeType::Validate) {
             upper_join_output_node = upper_join_output_node->outputs()[0];
           }
-          return upper_join_output_node == semi_reduction_node.get_or_find_corresponding_join_node();
+          return upper_join_output_node != semi_reduction_node.get_or_find_corresponding_join_node();
         }();
 
         if (!block_removal) return LQPUpwardVisitation::VisitOutputs;
