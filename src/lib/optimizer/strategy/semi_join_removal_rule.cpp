@@ -91,7 +91,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
    *    // Semi Reduction is directly followed by the corresponding join.
    *    if (corresponding_join_by_semi_reduction.at(removal_candidate)->input(corresponding_join_input_side) == removal_candidate) {
    */
-  auto removal_candidates = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  auto removal_candidates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   auto removal_blockers1 = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   auto removal_blockers2 =
       std::unordered_set<std::shared_ptr<AbstractLQPNode>, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>{};
@@ -106,7 +106,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     // Check if the current node is a semi join reduction and ... TODO
     if (join_node.is_reducer()) {
       Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
-      removal_candidates.emplace(node);
+      removal_candidates.emplace_back(node);
     }
     return LQPVisitation::VisitInputs;
   });
@@ -155,6 +155,10 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
       if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
         bool block_removal = [&]() {
+          // Any semi join reducer might become removed in the course of this rule. Therefore, they should not block the
+          // removal of other semi join reducers.
+          if (upper_join_node.is_reducer()) return false;
+
           // Multi predicate joins and anti joins are expensive for large numbers of tuples.
           if (upper_join_node.join_predicates().size() > 1 || upper_join_node.join_mode == JoinMode::AntiNullAsFalse
               || upper_join_node.join_mode == JoinMode::AntiNullAsTrue) { return true; }
@@ -169,19 +173,14 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
             return true;
           }
 
-          // If the upper join is the only node that sits between the semi reduction and the corresponding join
-          // (except ValidateNode), we do not count it as a removal blocker.
-          auto semi_reduction_output_node = semi_reduction_node.outputs()[0];
-          if (semi_reduction_output_node->type == LQPNodeType::Validate) {
-            semi_reduction_output_node = semi_reduction_output_node->outputs()[0];
-          }
-          if (semi_reduction_output_node != upper_node) return true;
+          // Semi Join reduces the upper join's bigger input relation. For efficiency, however, the semi join's
+          // right input relation should be smaller than the smallest input relation of the upper join.
+          auto min_cardinality_join_in = std::min(cardinality_upper_join_in_left, cardinality_upper_join_in_right);
+          auto cardinality_semi_in_right = estimator->estimate_cardinality(semi_reduction_node.right_input());
+          if (cardinality_semi_in_right < min_cardinality_join_in) return true;
 
-          auto upper_join_output_node = upper_join_node.outputs()[0];
-          if (upper_join_output_node->type == LQPNodeType::Validate) {
-            upper_join_output_node = upper_join_output_node->outputs()[0];
-          }
-          return *upper_join_output_node != *semi_reduction_node.get_or_find_corresponding_join_node();
+          // Semi Join might be more expensive than the upper join. Therefore, we do not want to remove its removal yet.
+          return false;
         }();
 
         if (!block_removal) return LQPUpwardVisitation::VisitOutputs;
