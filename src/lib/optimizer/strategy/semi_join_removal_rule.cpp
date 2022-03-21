@@ -28,6 +28,11 @@ bool is_value_operand(const std::shared_ptr<AbstractExpression> operand) {
   return false;
 }
 
+Selectivity calculate_selectivity(const Cardinality in, const Cardinality out) {
+  if (out < 1.0f) return 0.0f;
+  return out / in;
+}
+
 /**
  * TODO.. Doc
  * @param predicate
@@ -159,27 +164,37 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
           // removal of other semi join reducers.
           if (upper_join_node.is_reducer()) return false;
 
-          // Multi predicate joins and anti joins are expensive for large numbers of tuples.
+          // Multi predicate joins and anti joins are always expensive for large numbers of tuples.
           if (upper_join_node.join_predicates().size() > 1 || upper_join_node.join_mode == JoinMode::AntiNullAsFalse
               || upper_join_node.join_mode == JoinMode::AntiNullAsTrue) { return true; }
 
           // We do not want to remove a semi join, if it reduces an upper join's smallest input relation because it
-          // improves the overall efficiency of our join implementations. For example, by requiring a smaller hashtable
-          // in the JoinHash operator.
-          const auto cardinality_semi_in_left = estimator->estimate_cardinality(semi_reduction_node.left_input());
+          // usually improves the efficiency of our join implementations. For example, by requiring a smaller hashtable
+          // in the JoinHash operator. TODO Benchmark: Remove this block
+          const auto cardinality_semi_in = estimator->estimate_cardinality(semi_reduction_node.left_input());
           const auto cardinality_upper_join_in_left = estimator->estimate_cardinality(upper_join_node.left_input());
           const auto cardinality_upper_join_in_right = estimator->estimate_cardinality(upper_join_node.right_input());
-          if (cardinality_semi_in_left < std::max(cardinality_upper_join_in_left, cardinality_upper_join_in_right)) {
+          if (cardinality_semi_in < std::max(cardinality_upper_join_in_left, cardinality_upper_join_in_right)) {
             return true;
+          }
+
+          // Semi reduction vs. upper semi join
+          if (upper_join_node.join_mode == JoinMode::Semi) {
+            const auto cardinality_semi_out = estimator->estimate_cardinality(semi_reduction_node.outputs()[0]);
+            const auto cardinality_upper_join_out = estimator->estimate_cardinality(upper_join_node.outputs()[0]);
+            const auto selectivity_semi = calculate_selectivity(cardinality_semi_in, cardinality_semi_out);
+            const auto selectivity_upper_semi = calculate_selectivity(cardinality_upper_join_in_left, cardinality_upper_join_out);
+            // TODO We want to keep...
+            return selectivity_semi < selectivity_upper_semi;
           }
 
           // Semi Join reduces the upper join's bigger input relation. For efficiency, however, the semi join's
           // right input relation should be smaller than the smallest input relation of the upper join.
-          auto min_cardinality_join_in = std::min(cardinality_upper_join_in_left, cardinality_upper_join_in_right);
-          auto cardinality_semi_in_right = estimator->estimate_cardinality(semi_reduction_node.right_input());
-          if (cardinality_semi_in_right < min_cardinality_join_in) return true;
+          auto min_cardinality_upper_join_in = std::min(cardinality_upper_join_in_left, cardinality_upper_join_in_right);
+          auto cardinality_semi_reducer = estimator->estimate_cardinality(semi_reduction_node.right_input());
+          if (cardinality_semi_reducer < min_cardinality_upper_join_in) return true;
 
-          // Semi Join might be more expensive than the upper join. Therefore, we do not want to remove its removal yet.
+          // Do not block the semi reduction's removal because it does not seem to benefit the latency of the upper join.
           return false;
         }();
 
