@@ -5,25 +5,57 @@
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"
 #include "operators/import.hpp"
+#include "operators/export.hpp"
+#include "operators/sort.hpp"
+#include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 #include "tpcds/tpcds_table_generator.hpp"
 #include "types.hpp"
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
+#include "import_export/binary/binary_writer.hpp"
+#include "import_export/binary/binary_parser.hpp"
 
 using namespace opossum;  // NOLINT
 
 int main() {
-  std::cout << "Hello world!!" << std::endl;
-  auto config = BenchmarkConfig::get_default_config();
-  config.cache_binary_tables = true;
+
+  const std::unordered_map<std::string, std::string> sort_tables = {
+      {"web_sales", "ws_sold_date_sk"},
+      {"store_sales", "ss_sold_date_sk"}};
+
+  const std::string table_path = "/home/Daniel.Lindner/hyrise/tpcds_cached_tables/sf-10/";
+  const std::string out_path = "/home/Daniel.Lindner/hyrise/tpcds_cached_tables/sf-10-sort/";
+  const std::string file_extension = ".bin";
+
+  for (const auto& [table_name, sort_column] : sort_tables) {
+    const auto file_path = table_path + table_name + file_extension;
+    std::cout << "load " << file_path << std::endl;
+    auto table = BinaryParser::parse(file_path);
+    std::cout << "sort" << std::endl;
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    const auto sort_column_id = table->column_id_by_name(sort_column);
+    //auto sort_definition = SortColumnDefinition{sort_column_id};
+    auto sort_definitions = std::vector<SortColumnDefinition>{SortColumnDefinition{sort_column_id}};
+    auto sort = std::make_shared<Sort>(table_wrapper, sort_definitions, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes);
+    table_wrapper->execute();
+    sort->execute();
+    std::cout << "encode" << std::endl;
+    auto sorted_table = std::const_pointer_cast<Table>(sort->get_output());
+    if (sorted_table->last_chunk()->is_mutable()) {sorted_table->last_chunk()->finalize();}
+    ChunkEncoder::encode_all_chunks(sorted_table);
+    std::cout << "export" << std::endl;
+    const auto output_path = out_path + table_name + file_extension;
+    BinaryWriter::write(*sorted_table, output_path);
+
+  }
+
+  /*
   const std::unordered_map<std::string, std::vector<std::string>> table_keys = {
       {"catalog_sales", {"cs_item_sk", "cs_order_number"}},
       {"date_dim", {"d_date_sk"}},
       {"customer_demographics", {"cd_demo_sk"}}};
-  const std::string table_path = "/home/Daniel.Lindner/hyrise/tpcds_cached_tables/sf-10/";
-  const std::string file_extension = ".bin";
   const size_t num_union_tuples = 1000;
   const size_t num_repetitions = 100;
 
@@ -34,7 +66,7 @@ int main() {
     const auto importer = std::make_shared<Import>(file_path, table_name);
     importer->execute();
 
-    if (table_name != measurement_table) {
+    //if (table_name != measurement_table) {
       std::cout << " - add keys " << boost::algorithm::join(key_columns, ", ") << std::endl;
       const auto table = Hyrise::get().storage_manager.get_table(table_name);
       std::unordered_set<ColumnID> columns;
@@ -42,8 +74,10 @@ int main() {
         columns.emplace(table->column_id_by_name(column));
       }
       table->add_soft_key_constraint({columns, KeyConstraintType::PRIMARY_KEY});
-    }
+    //}
   }
+
+  Hyrise::get().dependency_usage_config = std::make_shared<DependencyUsageConfig>();
   auto pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   auto lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
@@ -99,14 +133,21 @@ int main() {
   runtimes.clear();
   pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  const auto measurement_table_keys = table_keys.at(measurement_table);
-  std::cout << " - add keys " << boost::algorithm::join(measurement_table_keys, ", ") << std::endl;
+
+  std::cout << " -  enable JTS" << std::endl;
+  auto dependency_config = std::make_shared<DependencyUsageConfig>();
+  dependency_config->enable_join_to_semi = true;
+  Hyrise::get().dependency_usage_config = dependency_config;
+
   const auto m_table = Hyrise::get().storage_manager.get_table(measurement_table);
-  std::unordered_set<ColumnID> columns;
-  for (const auto& column : measurement_table_keys) {
-    columns.emplace(m_table->column_id_by_name(column));
-  }
-  m_table->add_soft_key_constraint({columns, KeyConstraintType::PRIMARY_KEY});
+  //const auto measurement_table_keys = table_keys.at(measurement_table);
+  //std::cout << " - add keys " << boost::algorithm::join(measurement_table_keys, ", ") << std::endl;
+  //std::unordered_set<ColumnID> columns;
+  //for (const auto& column : measurement_table_keys) {
+  //  columns.emplace(m_table->column_id_by_name(column));
+  //}
+  //m_table->add_soft_key_constraint({columns, KeyConstraintType::PRIMARY_KEY});
+
 
   std::cout << std::endl << query << std::endl;
   for (size_t current_repetition = 0; current_repetition <= num_repetitions; ++current_repetition) {
@@ -142,6 +183,7 @@ int main() {
   pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
+
   const auto new_table =
       std::make_shared<Table>(m_table->column_definitions(), TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
   auto num_qualifying_tuples = static_cast<int32_t>(std::round((27'440.0 / 1'920'800.0) * num_union_tuples));
@@ -168,8 +210,7 @@ int main() {
   //                           "cd_marital_status = 'W'  AND cd_education_status = 'Secondary'";
   const std::string query2 = "SELECT cs_item_sk FROM   catalog_sales, " + new_table_name +
                              " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  "
-                             "AND cd_education_status = 'Secondary' and catalog_sales.cs_bill_cdemo_sk BETWEEN 0 AND " +
-                             std::to_string(num_qualifying_tuples);
+                             "AND cd_education_status = 'Secondary'";
 
   std::cout << std::endl << query2 << std::endl;
   for (size_t current_repetition = 0; current_repetition <= num_repetitions; ++current_repetition) {
@@ -199,6 +240,47 @@ int main() {
   std::cout << avg << std::endl;
   std::cout << format_duration(sum3) << std::endl;
   std::cout << static_cast<double>(avg) / 1'000'000.0 << std::endl;
+
+
+  std::cout << std::endl << std::endl << "UNION + diP" << std::endl;
+  runtimes.clear();
+  pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+  lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+
+  const std::string query3 = "SELECT cs_item_sk FROM   catalog_sales, " + new_table_name +
+                             " WHERE cs_bill_cdemo_sk = cd_demo_sk  AND cd_gender = 'F'  AND cd_marital_status = 'W'  "
+                             "AND cd_education_status = 'Secondary' and catalog_sales.cs_bill_cdemo_sk BETWEEN 0 AND " +
+                             std::to_string(num_qualifying_tuples);
+
+  std::cout << std::endl << query3 << std::endl;
+  for (size_t current_repetition = 0; current_repetition <= num_repetitions; ++current_repetition) {
+    auto pipeline = SQLPipelineBuilder{query3}.with_pqp_cache(pqp_cache).with_lqp_cache(lqp_cache).create_pipeline();
+    pipeline.get_result_table();
+    const auto metrics = pipeline.metrics();
+    if (current_repetition == 0) {
+      std::cout << metrics << std::endl;
+      continue;
+    }
+
+    runtimes.push_back(metrics.statement_metrics.at(0)->plan_execution_duration);
+
+    if (current_repetition == num_repetitions) {
+      GraphvizConfig graphviz_config;
+      graphviz_config.format = "svg";
+      const auto& pqps = pipeline.get_physical_plans();
+      std::string suffix = "_union_dip";
+      PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, "PQP" + suffix + ".svg");
+    }
+  }
+  std::chrono::nanoseconds sum4;
+  for (const auto& runtime : runtimes) {
+    sum4 += runtime;
+  }
+  avg = sum4 / std::chrono::nanoseconds(runtimes.size());
+  std::cout << avg << std::endl;
+  std::cout << format_duration(sum4) << std::endl;
+  std::cout << static_cast<double>(avg) / 1'000'000.0 << std::endl;
+  */
 
   return 0;
 }

@@ -43,6 +43,7 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
 
   std::vector<DependencyCandidate> candidates;
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
+  // const auto inputs_to_visit = {join_node->left_input(), join_node->right_input()};
   // check for given inputs
   for (const auto& input_node : inputs_to_visit) {
     // find StoredTableNode, ensure that the table is not modified
@@ -50,10 +51,14 @@ std::vector<DependencyCandidate> JoinEliminationCandidateRule::apply_to_node(
     bool abort = false;
     // _inputs_to_visit() ensured that the input has 1 required column expression
     const auto& determinant = resolve_column_expression(*required_expressions_by_node.at(input_node).begin());
+    // TableColumnID determinant = INVALID_TABLE_COLUMN_ID;
     visit_lqp(input_node, [&](const auto& node) {
       if (abort) return LQPVisitation::DoNotVisitInputs;
       switch (node->type) {
-        case LQPNodeType::StoredTable:
+        case LQPNodeType::StoredTable: /*{
+          const auto& stored_table_node = static_cast<const StoredTableNode&>(*node);
+          determinant = table_columns[stored_table_node.table_name];
+        }*/
           return LQPVisitation::DoNotVisitInputs;
         case LQPNodeType::Validate:
           return LQPVisitation::VisitInputs;

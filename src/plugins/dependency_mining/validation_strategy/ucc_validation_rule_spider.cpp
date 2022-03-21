@@ -41,6 +41,10 @@ std::shared_ptr<ValidationResult> UCCValidationRuleSpider::_on_validate(const De
           if (!dictionary->empty()) {
             dictionaries.emplace_back(dictionary);
           }
+          if (dictionary_segment->unique_values_count() != dictionary_segment->size()) {
+            is_valid = false;
+            return;
+          }
         } else {
           Fail("Could not resolve dictionary segment");
         }
@@ -48,13 +52,13 @@ std::shared_ptr<ValidationResult> UCCValidationRuleSpider::_on_validate(const De
     };
 
     gather_dictionaries();
+    if (!is_valid) return;
 
     std::vector<ChunkOffset> positions(dictionaries.size(), ChunkOffset{0});
     Assert(dictionaries.size() == positions.size(), "invalid determinant positions");
     auto finished_dictionaries = ChunkID{0};
     const auto fetch_next_value = [&]() {
       auto current_smallest_value = ColumnDataType{0};
-      auto current_smallest_dictionary = ChunkID{0};
       bool init = false;
       for (auto dictionary_id = ChunkID{0}; dictionary_id < positions.size(); ++dictionary_id) {
         const auto& value_pointer = positions[dictionary_id];
@@ -64,7 +68,6 @@ std::shared_ptr<ValidationResult> UCCValidationRuleSpider::_on_validate(const De
         if (!init || value < current_smallest_value) {
           init = true;
           current_smallest_value = dictionary->at(value_pointer);
-          current_smallest_dictionary = dictionary_id;
           continue;
         } else if (value == current_smallest_value) {
           return false;
@@ -74,14 +77,9 @@ std::shared_ptr<ValidationResult> UCCValidationRuleSpider::_on_validate(const De
         const auto& value_pointer = positions[dictionary_id];
         const auto& dictionary = dictionaries.at(dictionary_id);
         if (value_pointer == dictionary->size()) continue;
-        auto n_v = uint8_t{0};
         if (dictionary->at(value_pointer) == current_smallest_value) {
-          if (n_v > 0) {
-            return false;
-          }
           if (value_pointer + 1 == dictionary->size()) ++finished_dictionaries;
           ++positions[dictionary_id];
-          ++n_v;
         }
       }
       return true;

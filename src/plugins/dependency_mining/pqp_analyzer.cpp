@@ -91,16 +91,16 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           if (!AggregateExpression::is_count_star(*expression)) {
             locally_required_expressions.emplace(expression->arguments[0]);
           } else {
-            /**
-             * COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
-             * INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
-             * ensure that the AggregateNode requires at least one expression from other nodes.
-             * For
-             *  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
-             *  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
-             *     is the only type of aggregate function, we simply require the first output expression from the
-             *     left input node.
-             */
+            //
+            // COUNT(*) is an edge case: The aggregate function contains a pseudo column expression with an
+            // INVALID_COLUMN_ID. We cannot require the latter from other nodes. However, in the end, we have to
+            // ensure that the AggregateNode requires at least one expression from other nodes.
+            // For
+            //  a) grouped COUNT(*) aggregates, this is guaranteed by the group-by column(s).
+            //  b) ungrouped COUNT(*) aggregates, it may be guaranteed by other aggregate functions. But, if COUNT(*)
+            //     is the only type of aggregate function, we simply require the first output expression from the
+            //     left input node.
+            //
             if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }

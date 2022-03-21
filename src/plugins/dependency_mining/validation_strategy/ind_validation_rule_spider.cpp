@@ -107,7 +107,6 @@ std::shared_ptr<ValidationResult> INDValidationRuleSpider::_on_validate(const De
     const auto fetch_next_value = [](auto& positions, const auto& dictionaries, const auto& next_value,
                                      auto& finished_dictionaries) {
       auto current_smallest_value = ColumnDataType{0};
-      auto current_smallest_dictionary = ChunkID{0};
       bool init = false;
       for (auto dictionary_id = ChunkID{0}; dictionary_id < positions.size(); ++dictionary_id) {
         const auto& value_pointer = positions[dictionary_id];
@@ -116,7 +115,6 @@ std::shared_ptr<ValidationResult> INDValidationRuleSpider::_on_validate(const De
         if (!init || dictionary->at(value_pointer) < current_smallest_value) {
           init = true;
           current_smallest_value = dictionary->at(value_pointer);
-          current_smallest_dictionary = dictionary_id;
           continue;
         }
       }

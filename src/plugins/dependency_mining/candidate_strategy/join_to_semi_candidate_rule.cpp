@@ -24,8 +24,8 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
   // Factor 0.5 for join to semi join rewrite is arbitrarily chosen
   // In most cases, semi joins are faster, but actual, there is a join done
   // We might even lose performance (reductions that are not added anymore)
-  // const auto my_priority = static_cast<size_t>(std::lround(0.5 * static_cast<double>(priority)));
-  const auto my_priority = priority;
+  const auto my_priority = static_cast<size_t>(std::lround(0.5 * static_cast<double>(priority)));
+  // const auto my_priority = priority;
 
   std::vector<DependencyCandidate> candidates;
   const auto& inputs_to_visit = _inputs_to_visit(join_node, required_expressions_by_node);
@@ -36,6 +36,15 @@ std::vector<DependencyCandidate> JoinToSemiCandidateRule::apply_to_node(
     if (join_column_id == INVALID_TABLE_COLUMN_ID) continue;
     candidates.emplace_back(TableColumnIDs{join_column_id}, TableColumnIDs{}, DependencyType::Unique, my_priority);
   }
+
+  /*const auto& predicate = std::static_pointer_cast<BinaryPredicateExpression>(predicates[0]);
+  for (const auto& expression : {predicate->left_operand(), predicate->right_operand()}) {
+    if (expression->type != ExpressionType::LQPColumn) return {};
+    auto table_column_id = resolve_column_expression(expression);
+    if (table_column_id == INVALID_TABLE_COLUMN_ID) return {};
+    candidates.emplace_back(TableColumnIDs{table_column_id}, TableColumnIDs{}, DependencyType::Unique, my_priority);
+  }*/
+
 
   return candidates;
 }
