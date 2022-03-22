@@ -143,7 +143,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
       if (join_node->join_mode != JoinMode::Left && join_node->join_mode != JoinMode::FullOuter &&
           join_node->join_mode != JoinMode::AntiNullAsTrue && join_node->join_mode != JoinMode::AntiNullAsFalse &&
           join_node->join_mode != JoinMode::Semi) {
-       reduce_if_beneficial(LQPInputSide::Left);
+        reduce_if_beneficial(LQPInputSide::Left);
       }
     }
 
