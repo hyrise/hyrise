@@ -127,7 +127,19 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
-    // TODO skip if we do not have a corresponding join
+    // The corresponding join is required to narrow down the adjacent plan nodes affected by the semi join reduction.
+    if (!semi_reduction_node.get_or_find_corresponding_join_node()) continue;
+    const auto& corresponding_join = *semi_reduction_node.get_or_find_corresponding_join_node();
+
+    if (*corresponding_join.left_input() != *semi_reduction_node.right_input() &&
+        *corresponding_join.right_input() != *semi_reduction_node.right_input()) {
+      // The current reducer is not a direct input to the corresponding join, and might be followed by some
+      // other joins before it merges into the corresponding join. See TPC-H Q9, for example. As a result,
+      // the semi join reduction does not exclusively block the corresponding join's execution, and can be processed in
+      // parallel. Thus, we do not remove it.
+      continue;
+    }
+
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
       // Start with the output(s) of the removal candidate
       if (upper_node == removal_candidate) {
