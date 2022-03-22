@@ -110,8 +110,19 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
     if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
     const auto& join_node = static_cast<const JoinNode&>(*node);
     // Check if the current node is a semi join reduction and ... TODO
-    if (join_node.is_reducer()) {
-      Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
+    // The corresponding join is required to narrow down the adjacent plan nodes affected by the semi join reduction in
+    // Phase 2.
+    if (!join_node.is_reducer()) return LQPVisitation::VisitInputs;
+    if (!join_node.get_or_find_corresponding_join_node()) return LQPVisitation::VisitInputs;
+    Assert(join_node.join_predicates().size() == 1, "Did not expect multi-predicate semi join reduction.");
+
+    const auto& corresponding_join = *join_node.get_or_find_corresponding_join_node();
+    if (*corresponding_join.left_input() == *join_node.right_input() ||
+        *corresponding_join.right_input() == *join_node.right_input()) {
+      // TODO The current reducer is not a direct input to the corresponding join, and might be followed by some
+      // other joins before it merges into the corresponding join. See TPC-H Q9, for example. As a result,
+      // the semi join reduction does not exclusively block the corresponding join's execution, and can be processed in
+      // parallel.
       removal_candidates.emplace_back(node);
     }
     return LQPVisitation::VisitInputs;
@@ -127,19 +138,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
   for (const auto& removal_candidate : removal_candidates) {
     const auto& semi_reduction_node = static_cast<const JoinNode&>(*removal_candidate);
-    // The corresponding join is required to narrow down the adjacent plan nodes affected by the semi join reduction.
-    if (!semi_reduction_node.get_or_find_corresponding_join_node()) continue;
-    const auto& corresponding_join = *semi_reduction_node.get_or_find_corresponding_join_node();
-
-    if (*corresponding_join.left_input() != *semi_reduction_node.right_input() &&
-        *corresponding_join.right_input() != *semi_reduction_node.right_input()) {
-      // The current reducer is not a direct input to the corresponding join, and might be followed by some
-      // other joins before it merges into the corresponding join. See TPC-H Q9, for example. As a result,
-      // the semi join reduction does not exclusively block the corresponding join's execution, and can be processed in
-      // parallel. Thus, we do not remove it.
-      continue;
-    }
-
     visit_lqp_upwards(removal_candidate, [&](const auto& upper_node) {
       // Start with the output(s) of the removal candidate
       if (upper_node == removal_candidate) {
@@ -171,7 +169,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
       // TODO Add Removal Blocker, if it is not the corresponding join.
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
-      if (upper_join_node != corresponding_join) {
+      if (upper_join_node != *semi_reduction_node.get_or_find_corresponding_join_node()) {
         bool block_removal = [&]() {
           // Any semi join reducer might become removed in the course of this rule. Therefore, they should not block the
           // removal of other semi join reducers.
