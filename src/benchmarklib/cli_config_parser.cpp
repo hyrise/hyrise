@@ -42,7 +42,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
-      PerformanceWarning("'--cores' or '--clients' specified but ignored, because '--scheduler' is false");
+      std::cout << "Warning: '--cores' or '--clients' specified but ignored, because '--scheduler' is false" << std::endl;
     }
   }
 

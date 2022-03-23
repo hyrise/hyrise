@@ -110,7 +110,7 @@ std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID ch
       if constexpr (std::is_same_v<LeftColumnDataType, pmr_string> == std::is_same_v<RightColumnDataType, pmr_string>) {
         auto right_iterable = create_any_segment_iterable<RightColumnDataType>(*right_segment);
 
-        PerformanceWarning("ColumnVsColumnTableScan using type-erased iterators");
+        std::cout << "Warning: ColumnVsColumnTableScan using type-erased iterators." << std::endl;
         result = _typed_scan_chunk_with_iterables<EraseTypes::Always>(chunk_id, left_iterable, right_iterable);
       } else {
         Fail("Trying to compare strings and non-strings");

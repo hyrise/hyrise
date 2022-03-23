@@ -74,7 +74,7 @@ class AbstractPosList : private Noncopyable {
 };
 
 inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
-  PerformanceWarning("Using slow PosList comparison.");
+  std::cout << "Warning: Using slow PosList comparison." << std::endl;
   return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 

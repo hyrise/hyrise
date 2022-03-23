@@ -16,7 +16,6 @@
 #include "storage/segment_iterate.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
 namespace opossum {
@@ -258,14 +257,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   join_index_performance_data.set_step_runtime(OperatorSteps::IndexJoining, index_joining_duration);
   join_index_performance_data.set_step_runtime(OperatorSteps::NestedLoopJoining, nested_loop_joining_duration);
 
-  if (join_index_performance_data.chunks_scanned_with_index <
-      join_index_performance_data.chunks_scanned_without_index) {
-    PerformanceWarning(std::string("Only ") + std::to_string(join_index_performance_data.chunks_scanned_with_index) +
-                       " of " +
+  std::cout << "Only " + std::to_string(join_index_performance_data.chunks_scanned_with_index) + " of " +
                        std::to_string(join_index_performance_data.chunks_scanned_with_index +
                                       join_index_performance_data.chunks_scanned_without_index) +
-                       " chunks processed using an index.");
-  }
+                       " chunks processed using an index." << std::endl;
 
   auto chunks = std::vector<std::shared_ptr<Chunk>>{};
   if (output_segments.at(0)->size() > 0) {
@@ -277,7 +272,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                                       const bool track_index_matches, const bool is_semi_or_anti_join,
                                       MultiPredicateJoinEvaluator& secondary_predicate_evaluator) {
-  PerformanceWarning("Fallback nested loop used.");
+  std::cout << "Warning: Fallback nested loop used." << std::endl;
   auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
 
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);

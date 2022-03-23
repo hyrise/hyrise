@@ -28,7 +28,7 @@ ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& reference
 }
 
 AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
 
   const auto row_id = (*_pos_list)[chunk_offset];
 

@@ -103,7 +103,7 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
           OperatorScanPredicate{boost::get<ColumnID>(*argument_a), predicate_condition, *argument_b, *argument_c}};
     }
 
-    PerformanceWarning("BETWEEN handled as two table scans because no BETWEEN specialization was available");
+    std::cout << "BETWEEN handled as two table scans because no BETWEEN specialization was available" << std::endl;
 
     // We can't handle the case, so we translate it into two predicates
     auto lower_bound_predicates = std::optional<std::vector<OperatorScanPredicate>>{};

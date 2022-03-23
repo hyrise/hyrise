@@ -57,7 +57,7 @@ ReverseIterator FixedStringVector::rbegin() noexcept { return ReverseIterator(en
 ReverseIterator FixedStringVector::rend() noexcept { return ReverseIterator(begin()); }
 
 FixedString FixedStringVector::operator[](const size_t pos) {
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
   return FixedString(&_chars[pos * _string_length], _string_length);
 }
 

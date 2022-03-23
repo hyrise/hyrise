@@ -27,7 +27,7 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T
 
 template <typename T>
 AllTypeVariant DictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
   access_counter[SegmentAccessCounter::AccessType::Dictionary] += 1;
   const auto typed_value = get_typed_value(chunk_offset);

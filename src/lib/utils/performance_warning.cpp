@@ -6,7 +6,7 @@ bool PerformanceWarningClass::_disabled = []() {  // NOLINT
   // static initializer hack to print some warnings in various binaries
 
   if constexpr (HYRISE_DEBUG) {
-    PerformanceWarning("Hyrise is running as a debug build.");
+    std::cout << "Note: Hyrise is running as a debug build. Performance may be affected." << std::endl;
   }
 
   return false;

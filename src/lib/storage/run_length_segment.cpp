@@ -35,7 +35,7 @@ std::shared_ptr<const pmr_vector<ChunkOffset>> RunLengthSegment<T>::end_position
 
 template <typename T>
 AllTypeVariant RunLengthSegment<T>::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
   const auto typed_value = get_typed_value(chunk_offset);
   if (!typed_value) {
     return NULL_VALUE;

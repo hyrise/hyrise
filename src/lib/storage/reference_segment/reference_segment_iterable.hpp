@@ -86,11 +86,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         });
 
         if (!functor_was_called) {
-          PerformanceWarning("ReferenceSegmentIterable for referenced segment type erased by compile-time setting");
+          std::cout << "Warning: ReferenceSegmentIterable for referenced segment type erased by compile-time setting." << std::endl;
         }
 
       } else {
-        PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
+        std::cout << "Warning: Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself." << std::endl;
       }
 
       if (functor_was_called) return;

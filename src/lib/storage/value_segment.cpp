@@ -41,7 +41,7 @@ ValueSegment<T>::ValueSegment(pmr_vector<T>&& values, pmr_vector<bool>&& null_va
 template <typename T>
 AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const {
   DebugAssert(chunk_offset != INVALID_CHUNK_OFFSET, "Passed chunk offset must be valid.");
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
 
   // Segment supports null values and value is null

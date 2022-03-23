@@ -2,7 +2,7 @@
 
 namespace opossum {
 AbstractPosList::PosListIterator<> AbstractPosList::begin() const {
-  PerformanceWarning("Unresolved iterator created for AbstractPosList");
+  std::cout << "Warning: Unresolved iterator created for AbstractPosList." << std::endl;
   return PosListIterator<>(this, ChunkOffset{0});
 }
 

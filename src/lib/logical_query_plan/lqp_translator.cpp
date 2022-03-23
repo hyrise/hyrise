@@ -327,7 +327,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
   if (join_node->join_mode == JoinMode::Cross) {
-    PerformanceWarning("CROSS join used");
+    std::cout << "Warning: CROSS join used." << std::endl;
     return std::make_shared<Product>(left_input_operator, right_input_operator);
   }
 

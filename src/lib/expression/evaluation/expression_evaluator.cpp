@@ -484,7 +484,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
       return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),
                                                                            std::move(result_nulls));
     }
-    PerformanceWarning("Using slow path for IN expression");
+    std::cout << "Warning: Values of left and right types are used, may be slower." << std::endl;
 
     // Nope, it is a list with diverse types - falling back to rewrite of expression:
     return evaluate_expression_to_result<ExpressionEvaluator::Bool>(*rewrite_in_list_expression(in_expression));

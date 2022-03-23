@@ -46,7 +46,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::option
 
 template <typename T>
 AllTypeVariant LZ4Segment<T>::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);

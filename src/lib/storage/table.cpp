@@ -258,7 +258,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 }
 
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
-  PerformanceWarning("get_row() used");
+  std::cout << "Warning: Inefficient get_row() is used." << std::endl;
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
@@ -281,7 +281,7 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
 }
 
 std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
-  PerformanceWarning("get_rows() used");
+  std::cout << "Warning: Inefficient get_rows() is used." << std::endl;
 
   // Allocate all rows
   auto rows = std::vector<std::vector<AllTypeVariant>>{row_count()};

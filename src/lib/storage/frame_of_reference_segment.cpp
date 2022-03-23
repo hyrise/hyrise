@@ -34,7 +34,7 @@ const BaseCompressedVector& FrameOfReferenceSegment<T, U>::offset_values() const
 
 template <typename T, typename U>
 AllTypeVariant FrameOfReferenceSegment<T, U>::operator[](const ChunkOffset chunk_offset) const {
-  PerformanceWarning("operator[] used");
+  std::cout << "Warning: Inefficient []-operator is used." << std::endl;
   DebugAssert(chunk_offset < size(), "Passed chunk offset must be valid.");
 
   const auto typed_value = get_typed_value(chunk_offset);

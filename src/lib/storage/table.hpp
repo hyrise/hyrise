@@ -131,7 +131,7 @@ class Table : private Noncopyable {
   // on a non-validated table, you may end up with a row you should not be able to see or an entirely different row.
   template <typename T>
   std::optional<T> get_value(const ColumnID column_id, const size_t row_number) const {
-    PerformanceWarning("get_value() used");
+    std::cout << "Warning: Inefficient get_value() used." << std::endl;
 
     Assert(column_id < column_count(), "column_id invalid");
 

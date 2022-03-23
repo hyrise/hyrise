@@ -21,7 +21,7 @@ auto create_iterable_from_segment(const ValueSegment<T>& segment) {
 template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
 #ifdef HYRISE_ERASE_DICTIONARY
-  PerformanceWarning("DictionarySegmentIterable erased by compile-time setting");
+  std::cout << "Warning: DictionarySegmentIterable erased by compile-time setting." << std::endl;
   return AnySegmentIterable<T>(DictionarySegmentIterable<T, pmr_vector<T>>(segment));
 #else
   if constexpr (EraseSegmentType) {
@@ -35,7 +35,7 @@ auto create_iterable_from_segment(const DictionarySegment<T>& segment) {
 template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
 #ifdef HYRISE_ERASE_RUNLENGTH
-  PerformanceWarning("RunLengthSegmentIterable erased by compile-time setting");
+  std::cout << "Warning: RunLengthSegmentIterable erased by compile-time setting." << std::endl;
   return AnySegmentIterable<T>(RunLengthSegmentIterable<T>(segment));
 #else
   if constexpr (EraseSegmentType) {
@@ -49,7 +49,7 @@ auto create_iterable_from_segment(const RunLengthSegment<T>& segment) {
 template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment) {
 #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-  PerformanceWarning("FixedStringDictionarySegmentIterable erased by compile-time setting");
+  std::cout << "Warning: FixedStringDictionarySegmentIterable erased by compile-time setting." << std::endl;
   return AnySegmentIterable<T>(DictionarySegmentIterable<T, FixedStringVector>(segment));
 #else
   if constexpr (EraseSegmentType) {
@@ -63,7 +63,7 @@ auto create_iterable_from_segment(const FixedStringDictionarySegment<T>& segment
 template <typename T, typename Enabled, bool EraseSegmentType>
 auto create_iterable_from_segment(const FrameOfReferenceSegment<T, Enabled>& segment) {
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
-  PerformanceWarning("FrameOfReferenceSegmentIterable erased by compile-time setting");
+  std::cout << "Warning: FrameOfReferenceSegmentIterable erased by compile-time setting." << std::endl;
   return AnySegmentIterable<T>(FrameOfReferenceSegmentIterable<T>(segment));
 #else
   if constexpr (EraseSegmentType) {

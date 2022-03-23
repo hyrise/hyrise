@@ -862,7 +862,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_predicated_join(const 
 
     // Add secondary join predicates as normal PredicateNodes
     for (const auto& join_predicate : join_predicates) {
-      PerformanceWarning("Secondary Join Predicates added as normal Predicates");
+      std::cout << "Warning: Secondary Join Predicates added as normal Predicates." << std::endl;
       lqp = _translate_predicate_expression(join_predicate, lqp);
     }
   }
