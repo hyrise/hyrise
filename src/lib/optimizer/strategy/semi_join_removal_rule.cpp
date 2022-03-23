@@ -160,6 +160,10 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
 
+      if (upper_join_node == *semi_reduction_node.get_or_find_corresponding_join_node()) {
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
+      
       const auto upper_join_blocks_removal = [&]() {
         // Any semi join reduction might become obsolete after this rule. Therefore, these upper joins should not block
         // other semi join reductions from being removed.
@@ -209,10 +213,6 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       if (upper_join_blocks_removal()) {
         removal_blockers1.emplace(removal_candidate);
         removal_blockers2.emplace(removal_candidate);
-        return LQPUpwardVisitation::DoNotVisitOutputs;
-      }
-
-      if (upper_join_node == *semi_reduction_node.get_or_find_corresponding_join_node()) {
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
 
