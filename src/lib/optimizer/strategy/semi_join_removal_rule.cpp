@@ -160,20 +160,9 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
       if (upper_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
       const auto& upper_join_node = static_cast<const JoinNode&>(*upper_node);
 
-      if (upper_join_node == *semi_reduction_node.get_or_find_corresponding_join_node()) {
-        //        const auto& corresponding_join = *semi_reduction_node.get_or_find_corresponding_join_node();
-        //        const auto semi_reduction_output_cardinality = estimator->estimate_cardinality(removal_candidate);
-        //        const auto corresponding_join_left_input_cardinality = estimator->estimate_cardinality(upper_join_node.left_input());
-        //        const auto corresponding_join_right_input_cardinality = estimator->estimate_cardinality(upper_join_node.right_input());
-        //        if (semi_reduction_output_cardinality <
-        //            std::max(corresponding_join_left_input_cardinality, corresponding_join_right_input_cardinality)) {
-        //        }
-        return LQPUpwardVisitation::DoNotVisitOutputs;
-      }
-
       const auto upper_join_blocks_removal = [&]() {
-        // Any semi join reducer might become removed in the course of this rule. Therefore, they should not block the
-        // removal of other semi join reducers.
+        // Any semi join reduction might become obsolete after this rule. Therefore, these upper joins should not block
+        // other semi join reductions from being removed.
         if (upper_join_node.is_reducer()) return false;
 
         // Multi predicate joins and anti joins are always expensive for large numbers of tuples.
@@ -184,7 +173,7 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
         // We do not want to remove a semi join, if it reduces an upper join's smallest input relation because it
         // usually improves the efficiency of our join implementations. For example, by requiring a smaller hashtable
-        // in the JoinHash operator. TODO Benchmark: Remove this block
+        // in the JoinHash operator. TODO Benchmark: Remove this block .. which query benefits from it?
         const auto semi_reduction_input_cardinality = estimator->estimate_cardinality(semi_reduction_node.left_input());
         const auto upper_join_left_input_cardinality = estimator->estimate_cardinality(upper_join_node.left_input());
         const auto upper_join_right_input_cardinality = estimator->estimate_cardinality(upper_join_node.right_input());
@@ -195,33 +184,39 @@ void SemiJoinRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
 
         // Semi reduction vs. upper semi join
         if (upper_join_node.join_mode == JoinMode::Semi) {
-          const auto semi_reduction_output_cardinality = estimator->estimate_cardinality(removal_candidate);
-          const auto upper_join_output_cardinality = estimator->estimate_cardinality(upper_node);
-          const auto semi_reduction_selectivity =
-              calculate_selectivity(semi_reduction_input_cardinality, semi_reduction_output_cardinality);
+          const auto semi_join_reduction_cardinality = estimator->estimate_cardinality(removal_candidate);
+          const auto upper_join_cardinality = estimator->estimate_cardinality(upper_node);
+          const auto semi_join_reduction_selectivity =
+              calculate_selectivity(semi_reduction_input_cardinality, semi_join_reduction_cardinality);
           const auto upper_semi_join_selectivity =
-              calculate_selectivity(upper_join_left_input_cardinality, upper_join_output_cardinality);
+              calculate_selectivity(upper_join_left_input_cardinality, upper_join_cardinality);
           // TODO We want to keep...
-          return semi_reduction_selectivity < upper_semi_join_selectivity;
+          return semi_join_reduction_selectivity < upper_semi_join_selectivity;
         }
 
         // Semi Join reduces the upper join's bigger input relation. For efficiency, however, the semi join's
         // right input relation should be smaller than the smallest input relation of the upper join.
-        auto min_cardinality_upper_join_in =
+        auto minimum_upper_join_input_cardinality =
             std::min(upper_join_left_input_cardinality, upper_join_right_input_cardinality);
-        auto cardinality_semi_reducer = estimator->estimate_cardinality(semi_reduction_node.right_input());
-        if (cardinality_semi_reducer < min_cardinality_upper_join_in) return true;
+        auto semi_reducer_cardinality = estimator->estimate_cardinality(semi_reduction_node.right_input());
+        if (semi_reducer_cardinality < minimum_upper_join_input_cardinality) return true;
 
-        // Do not block the semi reduction's removal because it does not seem to benefit the latency of the upper join.
+        // Do not block the semi reduction's removal because it does not seem to drastically reduce the latency of the
+        // upper join.
         return false;
       };
 
-      if (!upper_join_blocks_removal()) return LQPUpwardVisitation::VisitOutputs;
+      if (upper_join_blocks_removal()) {
+        removal_blockers1.emplace(removal_candidate);
+        removal_blockers2.emplace(removal_candidate);
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
 
-      removal_blockers1.emplace(removal_candidate);
-      removal_blockers2.emplace(removal_candidate);
+      if (upper_join_node == *semi_reduction_node.get_or_find_corresponding_join_node()) {
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
 
-      return LQPUpwardVisitation::DoNotVisitOutputs;
+      return LQPUpwardVisitation::VisitOutputs;
     });
   }
 
