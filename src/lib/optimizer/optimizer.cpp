@@ -58,8 +58,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
-
   optimizer->add_rule(std::make_unique<NullScanRemovalRule>());
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
@@ -77,6 +75,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
 
+  // TODO: Run after semi joins were added, and the PredicatePlacementRule.
+  optimizer->add_rule(std::make_unique<PredicateSplitUpRule>());
+
   // Prune chunks after the BetweenCompositionRule ran, as `a >= 5 AND a <= 7` may not be prunable predicates while
   // `a BETWEEN 5 and 7` is. Also, run it after the PredicatePlacementRule, so that predicates are as close to the
   // StoredTableNode as possible where the ChunkPruningRule can work with them.
@@ -85,7 +86,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
   // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
   // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
-  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>()); // TODO move to the end?
 
   // Bring predicates into the desired order once the PredicatePlacementRule has positioned them as desired
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
@@ -101,7 +102,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-  
+
   optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
 
   optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
