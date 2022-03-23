@@ -9,7 +9,7 @@
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
 #include "types.hpp"
-#include "utils/performance_warning.hpp"
+
 #include "utils/sqlite_add_indices.hpp"
 
 /**

@@ -23,7 +23,6 @@
 #include "sql/sql_plan_cache.hpp"
 #include "storage/chunk.hpp"
 #include "storage/encoding_type.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -88,8 +87,6 @@ class BenchmarkRunner : public Noncopyable {
   std::vector<BenchmarkItemResult> _results;
 
   nlohmann::json _context;
-
-  std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
   // This is a steady_clock timestamp. steady_clock guarantees that the clock is not adjusted while benchmarking.
   TimePoint _benchmark_start;

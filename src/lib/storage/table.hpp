@@ -15,7 +15,6 @@
 #include "table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

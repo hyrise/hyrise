@@ -10,7 +10,7 @@
 
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+
 #include "utils/size_estimation_utils.hpp"
 
 namespace opossum {

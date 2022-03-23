@@ -7,8 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "utils/performance_warning.hpp"
-
 namespace opossum {
 
 FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator)

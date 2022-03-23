@@ -8,7 +8,6 @@
 
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace opossum {
 
@@ -42,7 +41,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   if (cores != default_config.cores || clients != default_config.clients) {
     if (!enable_scheduler) {
-      std::cout << "Warning: '--cores' or '--clients' specified but ignored, because '--scheduler' is false" << std::endl;
+      std::cout << "Warning: '--cores' or '--clients' specified but ignored, because '--scheduler' is false"
+                << std::endl;
     }
   }
 

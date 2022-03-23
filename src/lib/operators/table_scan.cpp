@@ -36,7 +36,6 @@
 #include "table_scan/expression_evaluator_table_scan_impl.hpp"
 #include "utils/assert.hpp"
 #include "utils/lossless_predicate_cast.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

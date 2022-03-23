@@ -6,7 +6,6 @@
 #include "expression/value_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace {
 

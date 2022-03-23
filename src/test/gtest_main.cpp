@@ -4,7 +4,6 @@
 
 #include "base_test.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 
 std::string opossum::test_data_path;  // NOLINT
 
@@ -31,7 +30,6 @@ int main(int argc, char** argv) {
          "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise "
          "repository?");
 
-  opossum::PerformanceWarningDisabler pwd;
   ::testing::InitGoogleTest(&argc, argv);
 
   std::optional<std::string> prefix;

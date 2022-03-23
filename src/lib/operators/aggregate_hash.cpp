@@ -19,7 +19,7 @@
 #include "storage/segment_iterate.hpp"
 #include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
+
 #include "utils/timer.hpp"
 
 namespace {

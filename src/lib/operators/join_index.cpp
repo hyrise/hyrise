@@ -258,9 +258,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   join_index_performance_data.set_step_runtime(OperatorSteps::NestedLoopJoining, nested_loop_joining_duration);
 
   std::cout << "Only " + std::to_string(join_index_performance_data.chunks_scanned_with_index) + " of " +
-                       std::to_string(join_index_performance_data.chunks_scanned_with_index +
-                                      join_index_performance_data.chunks_scanned_without_index) +
-                       " chunks processed using an index." << std::endl;
+                   std::to_string(join_index_performance_data.chunks_scanned_with_index +
+                                  join_index_performance_data.chunks_scanned_without_index) +
+                   " chunks processed using an index."
+            << std::endl;
 
   auto chunks = std::vector<std::shared_ptr<Chunk>>{};
   if (output_segments.at(0)->size() > 0) {

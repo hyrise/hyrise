@@ -5,8 +5,6 @@
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_iterables.hpp"
 
-#include "utils/performance_warning.hpp"
-
 namespace opossum {
 
 template <typename T>

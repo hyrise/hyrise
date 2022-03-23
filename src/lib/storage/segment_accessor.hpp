@@ -7,7 +7,6 @@
 #include "storage/base_segment_accessor.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "types.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace opossum {
 

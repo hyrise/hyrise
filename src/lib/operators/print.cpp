@@ -16,7 +16,6 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/base_value_segment.hpp"
 #include "storage/reference_segment.hpp"
-#include "utils/performance_warning.hpp"
 
 namespace {
 
@@ -75,8 +74,6 @@ void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& 
 }
 
 std::shared_ptr<const Table> Print::_on_execute() {
-  PerformanceWarningDisabler pwd;
-
   auto widths = _column_string_widths(_min_cell_width, _max_cell_width, left_input_table());
 
   // print column headers

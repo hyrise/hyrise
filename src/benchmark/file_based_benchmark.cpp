@@ -8,7 +8,6 @@
 #include "file_based_benchmark_item_runner.hpp"
 #include "file_based_table_generator.hpp"
 #include "hyrise.hpp"
-#include "utils/performance_warning.hpp"
 
 using namespace opossum;  // NOLINT
 
