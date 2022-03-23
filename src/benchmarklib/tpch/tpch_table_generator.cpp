@@ -10,6 +10,10 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
+#include "benchmark_table_encoder.hpp"
+#include "hyrise.hpp"
+#include "scheduler/abstract_task.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table_key_constraint.hpp"
 #include "table_builder.hpp"
@@ -104,6 +108,57 @@ void dbgen_cleanup() {
   asc_date = nullptr;
 }
 
+void encode_tables(const std::shared_ptr<BenchmarkConfig>& benchmark_config,
+                   std::vector<std::pair<std::string, std::shared_ptr<Table>&>>& names_and_tables,
+		   std::atomic<bool>& table_generation_finished) {
+  auto last_encoded_chunk_id_per_table_map = std::map<std::string, int32_t>{};
+  auto encoding_job_list = std::list<std::vector<std::shared_ptr<opossum::AbstractTask>>>{};
+
+  auto is_last_run = false;
+  auto runs_without_encoding = size_t{0};
+  while (!is_last_run) {
+    is_last_run = table_generation_finished;
+
+    auto reencoding_took_place = std::atomic<bool>{false};
+    auto encoder_was_called = false;
+    encoding_job_list.emplace_back();
+    for (const auto& [table_name, table] : names_and_tables) {
+      if (!last_encoded_chunk_id_per_table_map.contains(table_name)) {
+        last_encoded_chunk_id_per_table_map[table_name] = -1;
+      }
+
+      for (auto chunk_id = opossum::ChunkID{static_cast<uint32_t>(last_encoded_chunk_id_per_table_map[table_name] + 1)}; chunk_id < table->chunk_count();
+           ++chunk_id) {
+        const auto chunk = table->get_chunk(chunk_id);
+        if (!chunk) {
+          break;
+        }
+
+        if (chunk->is_mutable()) {
+          chunk->finalize();
+        }
+
+        last_encoded_chunk_id_per_table_map[table_name] = chunk_id;
+	encoding_job_list.back().emplace_back(std::make_shared<JobTask>([&, chunk_id, table_name=table_name, table=table]() {
+          reencoding_took_place = BenchmarkTableEncoder::encode(benchmark_config->encoding_config, table_name, table, chunk_id);
+        }));
+        encoder_was_called = true;
+      }
+    }
+
+    // Start jobs, but don't wait for now. We'll wait later.
+    Hyrise::get().scheduler()->schedule_tasks(encoding_job_list.back());
+
+    runs_without_encoding = static_cast<size_t>(!encoder_was_called) * (runs_without_encoding + static_cast<size_t>(!encoder_was_called));
+    std::this_thread::sleep_for(std::chrono::milliseconds(10 * runs_without_encoding));
+  }
+
+  std::cout << "Waiting for all to finish ..." << std::endl;
+  for (const auto& encoding_jobs : encoding_job_list) {
+    Hyrise::get().scheduler()->wait_for_tasks(encoding_jobs);
+  }
+}
+
 }  // namespace
 
 namespace opossum {
@@ -144,25 +199,33 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
   const auto region_count = static_cast<ChunkOffset>(tdefs[REGION].base);
 
   // The `* 4` part is defined in the TPC-H specification.
-  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count,
-                             BenchmarkTableEncoder("orders", _benchmark_config->encoding_config)};
+  TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                order_count * 4, BenchmarkTableEncoder("lineitem", _benchmark_config->encoding_config)};
+                                order_count * 4};
   TableBuilder customer_builder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
-                                customer_count, BenchmarkTableEncoder("customer", _benchmark_config->encoding_config)};
-  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names,
-                            part_count, BenchmarkTableEncoder("part", _benchmark_config->encoding_config)};
+                                customer_count};
+  TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                part_count * 4, BenchmarkTableEncoder("partsupp", _benchmark_config->encoding_config)};
+                                part_count * 4};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
-                                supplier_count, BenchmarkTableEncoder("supplier", _benchmark_config->encoding_config)};
-  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names,
-                              nation_count, BenchmarkTableEncoder("nation", _benchmark_config->encoding_config)};
-  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names,
-                              region_count, BenchmarkTableEncoder("region", _benchmark_config->encoding_config)};
+                                supplier_count};
+  TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
+  TableBuilder region_builder{_benchmark_config->chunk_size, region_column_types, region_column_names, region_count};
+
+  // TODO(anyone): put all builders in a map above and use that one all over the place here.
+  auto table_builders = std::vector<std::pair<std::string, std::shared_ptr<Table>&>>{};
+  table_builders.reserve(8);
+
+  table_builders.emplace_back("orders", order_builder._table);
+  table_builders.emplace_back("lineitem", lineitem_builder._table);
+
+  auto data_generation_done = std::atomic<bool>{false};
+  auto encoder_thread = std::thread{[&] {
+    encode_tables(_benchmark_config, table_builders, data_generation_done);
+  }};
 
   auto& storage_manager = Hyrise::get().storage_manager;
-  std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
+  auto table_info_by_name = std::unordered_map<std::string, BenchmarkTableInfo>{};
 
   auto print_generation_duration_and_add_table = [&] (Timer generation_timer, const std::string& table_name,
                                                       std::shared_ptr<Table>& table) {
@@ -197,15 +260,37 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                                   lineitem.shipinstruct, lineitem.shipmode, lineitem.comment);
     }
   }
-
+  
   // Lineitem first to minimmize tables already loaded when creating its histograms.
   auto lineitem_table = lineitem_builder.finish_table();
   table_info_by_name["lineitem"].table = lineitem_table;
-  print_generation_duration_and_add_table(orders_table_timer, "lineitem", lineitem_table);
 
   auto orders_table = order_builder.finish_table();
   table_info_by_name["orders"].table = orders_table;
+
+  data_generation_done = true;
+  std::cout << "Waiting for lineitem and orders table encoding." << std::endl;
+  encoder_thread.join();
+  std::cout << "Encoding done." << std::endl;
+
+  std::cout << "Adding to storage manager." << std::endl;
   print_generation_duration_and_add_table(orders_table_timer, "orders", orders_table);
+  print_generation_duration_and_add_table(orders_table_timer, "lineitem", lineitem_table);
+  std::cout << "Done." << std::endl;
+
+  std::cout << "Processing remaining tables." << std::endl;
+  table_builders.clear();
+  table_builders.emplace_back("customer", customer_builder._table);
+  table_builders.emplace_back("part", part_builder._table);
+  table_builders.emplace_back("partsupp", partsupp_builder._table);
+  table_builders.emplace_back("supplier", supplier_builder._table);
+  table_builders.emplace_back("nation", nation_builder._table);
+  table_builders.emplace_back("region", region_builder._table);
+
+  data_generation_done = false;
+  encoder_thread = std::thread{[&] {
+    encode_tables(_benchmark_config, table_builders, data_generation_done);
+  }};
 
   /**
    * CUSTOMER
@@ -327,7 +412,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
     }
   }
 
-
+  data_generation_done = true;
+  encoder_thread.join();
   return table_info_by_name;
 }
 

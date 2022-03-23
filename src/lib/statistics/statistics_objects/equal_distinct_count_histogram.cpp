@@ -49,8 +49,8 @@ void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDist
 
 template <typename T>
 std::pair<bool, std::vector<std::pair<T, HistogramCountType>>> value_distribution_from_column(const Table& table,
-                                                                             const ColumnID column_id,
-                                                                             const HistogramDomain<T>& domain) {
+                                                                                              const ColumnID column_id,
+                                                                                              const HistogramDomain<T>& domain) {
   auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
 
@@ -58,11 +58,12 @@ std::pair<bool, std::vector<std::pair<T, HistogramCountType>>> value_distributio
 
   // Create set of chunks to process for histogram creation. For large data sets, we sample the chunks. Note, with the
   // current EquiDistinctCountHistograms, this approach has severe draw backs as this histogram assume complete
-  // knowledge. We limit the number of chunks to process to 9000, which roughly the number of chunks for SF 100, which
-  // results in roughly 250 GB of peak memory usage during histogram creation.
+  // knowledge. We limit the number of chunks to process to 1000, which is a simple guess to keep the memory consumption
+  // low.
   // Note: this is just a quick fixed value for measurements on a 512 GB server. Not recommended for general usage.
+  constexpr auto chunk_count_for_histogram_generation = uint32_t{1'000};
   auto chunks_to_process = std::vector<ChunkID>{};
-  if (chunk_count <= 9'000) {
+  if (chunk_count <= chunk_count_for_histogram_generation) {
     covers_entire_column = true;
     chunks_to_process = std::vector<ChunkID>(chunk_count);
     std::iota(std::begin(chunks_to_process), std::end(chunks_to_process), ChunkID{0});

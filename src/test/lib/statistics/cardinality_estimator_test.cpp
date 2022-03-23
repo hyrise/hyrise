@@ -78,7 +78,7 @@ class CardinalityEstimatorTest : public BaseTest {
     // clang-format off
     const auto histogram_c_x = std::make_shared<EqualDistinctCountHistogram<int32_t>>(
       std::vector<int32_t>{0, 8}, std::vector<int32_t>{7, 15},
-      std::vector<HistogramCountType>{32, 32}, 8, 0);
+      std::vector<HistogramCountType>{32, 32}, 8, 0, true);
 
     const auto histogram_c_y = std::make_shared<GenericHistogram<int32_t>>(
       std::vector<int32_t>{0},

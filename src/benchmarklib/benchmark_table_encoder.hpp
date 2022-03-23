@@ -4,6 +4,8 @@
 #include <memory>
 #include <string>
 
+#include "types.hpp"
+
 namespace opossum {
 
 class EncodingConfig;
@@ -11,11 +13,8 @@ class Table;
 
 class BenchmarkTableEncoder {
  public:
-  BenchmarkTableEncoder(const std::string table_name, const EncodingConfig& encoding_config);
-  bool encode(const std::shared_ptr<Table>& table, std::ostream& out = std::cout);
- private:
-  const std::string _table_name;
-  const EncodingConfig& _encoding_config;
+  static bool encode(const EncodingConfig& encoding_config, const std::string table_name, const std::shared_ptr<Table>& table);
+  static bool encode(const EncodingConfig& encoding_config, const std::string table_name, const std::shared_ptr<Table>& table, const ChunkID chunk_id);
 };
 
 }  // namespace opossum
