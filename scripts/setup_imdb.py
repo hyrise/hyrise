@@ -75,7 +75,15 @@ hash_md5 = hashlib.md5()
 url = urllib.request.urlopen(LOCATION)
 
 meta = url.info()
-file_size = int(meta["Content-Length"])
+
+if "X-Dropbox-Content-Length" in meta:
+    file_size = int(meta["X-Dropbox-Content-Length"])
+elif "Content-Length" in meta:
+    file_size = int(meta["Content-Length"])
+else:
+    print("- Aborting. Could not retrieve the imdb dataset's file size.")
+    clean_up()
+    sys.exit(1)
 
 file = open(FILE_NAME, "wb")
 

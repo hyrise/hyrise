@@ -8,19 +8,39 @@ endif()
 # unity builds for this folder, even if the user manually activated it.
 set(CMAKE_UNITY_BUILD "OFF")
 
-# Build sql-parser
+# Some third-party libraries already define proper CMake library targets. We can simply add those targets with
+# `add_subdirectory(<lib-directory>)`. For libraries without such definitions, we manually build the library targets.
+set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
+add_subdirectory(benchmark)
+add_subdirectory(googletest)
+add_subdirectory(libpqxx)
+add_subdirectory(magic_enum)
+add_subdirectory(nlohmann_json)
+add_subdirectory(robin-map)
+add_subdirectory(tpch-dbgen)
+
+# Build sql-parser library
+set(PARSER_DIR sql-parser)
+
 add_library(
     sqlparser
 
-    sql-parser/src/parser/bison_parser.cpp
-    sql-parser/src/parser/flex_lexer.cpp
-    sql-parser/src/sql/Expr.cpp
-    sql-parser/src/sql/PrepareStatement.cpp
-    sql-parser/src/sql/SQLStatement.cpp
-    sql-parser/src/sql/statements.cpp
-    sql-parser/src/SQLParser.cpp
-    sql-parser/src/SQLParserResult.cpp
-    sql-parser/src/util/sqlhelper.cpp
+    ${PARSER_DIR}/src/parser/bison_parser.cpp
+    ${PARSER_DIR}/src/parser/flex_lexer.cpp
+    ${PARSER_DIR}/src/sql/Expr.cpp
+    ${PARSER_DIR}/src/sql/PrepareStatement.cpp
+    ${PARSER_DIR}/src/sql/SQLStatement.cpp
+    ${PARSER_DIR}/src/sql/statements.cpp
+    ${PARSER_DIR}/src/SQLParser.cpp
+    ${PARSER_DIR}/src/SQLParserResult.cpp
+    ${PARSER_DIR}/src/util/sqlhelper.cpp
+)
+
+target_include_directories(
+    sqlparser
+
+    INTERFACE
+    ${PARSER_DIR}/src
 )
 
 target_compile_options(
@@ -35,18 +55,24 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     target_compile_options(sqlparser PRIVATE -Wno-unneeded-internal-declaration -Wno-format)
 endif()
 
-# Add Libraries with their own build setup
-SET(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "Disable download and building internal test suite of google benchmark." FORCE)
-add_subdirectory(benchmark)
-add_subdirectory(googletest)
-add_subdirectory(libpqxx)
-add_subdirectory(nlohmann_json)
-add_subdirectory(robin-map)
-add_subdirectory(tpch-dbgen)
 
-## Build lz4
+# Build cpp-btree library
+add_library(cpp-btree INTERFACE)
+target_include_directories(cpp-btree INTERFACE cpp-btree/include/btree)
+
+
+# Build flat-hash-map
+add_library(flat-hash-map INTERFACE)
+target_include_directories(flat-hash-map INTERFACE flat_hash_map)
+
+
+# Build cxxopts library
+add_library(cxxopts INTERFACE)
+target_include_directories(cxxopts INTERFACE cxxopts/include)
+
+
+# Build lz4 library
 set(LZ4_LIBRARY_DIR lz4/lib)
-
 add_library (lz4
     ${LZ4_LIBRARY_DIR}/lz4.c
     ${LZ4_LIBRARY_DIR}/lz4hc.c
@@ -54,19 +80,16 @@ add_library (lz4
     ${LZ4_LIBRARY_DIR}/lz4.h
     ${LZ4_LIBRARY_DIR}/lz4hc.h
 )
-
 target_include_directories(
     lz4
 
     PUBLIC
     ${LZ4_LIBRARY_DIR}
 )
-
 target_compile_options(lz4 PRIVATE -fPIC)
 
-## Build zstd
+# Build zstd library
 set(ZSTD_LIBRARY_DIR zstd/lib)
-
 add_library (zstd
     ${ZSTD_LIBRARY_DIR}/common/bitstream.h
     ${ZSTD_LIBRARY_DIR}/common/compiler.h
@@ -134,7 +157,7 @@ add_library (zstd
 target_include_directories(
     zstd
 
-    PRIVATE
+    PUBLIC
     ${ZSTD_LIBRARY_DIR}
     ${ZSTD_LIBRARY_DIR}/common
     ${ZSTD_LIBRARY_DIR}/compress
@@ -143,6 +166,8 @@ target_include_directories(
 
 target_compile_options(zstd PRIVATE -fPIC)
 
+
+# Build compact_vector library
 add_library(compact_vector INTERFACE)
 target_include_directories(compact_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/compact_vector/include)
 target_sources(compact_vector
@@ -154,10 +179,14 @@ target_sources(compact_vector
 )
 target_compile_options(compact_vector INTERFACE -Wno-cast-qual -Wno-old-style-cast -Wno-shorten-64-to-32 -Wno-shadow -Wno-reserved-id-macro -Wno-atomic-implicit-seq-cst)
 
+
+# Build uninitialized_vector library
 add_library(uninitialized_vector INTERFACE)
 target_include_directories(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/)
 target_sources(uninitialized_vector INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/uninitialized_vector/uninitialized_vector.hpp)
 
+
+# Build custom jemalloc library
 if(NOT APPLE)
   # Only configure jemalloc for non-Apple builds, as we cannot properly replace the allocator on Mac using static linking:
   #   If you ./configure jemalloc with --with-jemalloc-prefix="" on OSX and static link the library, your malloc's will
@@ -207,7 +236,8 @@ if(NOT APPLE)
   set_target_properties(custom_jemalloc PROPERTIES IMPORTED_LOCATION ${JEMALLOC_LIB_PATH})
 endif()
 
-# build tpcds_dbgen library
+
+# Build tpcds_dbgen library
 set(TPCDS_KIT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tpcds-kit/tools)
 add_library(tpcds_dbgen
   STATIC

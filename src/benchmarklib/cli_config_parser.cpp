@@ -106,7 +106,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto max_duration = parse_result["time"].as<uint64_t>();
   std::cout << "- Max duration per item is " << max_duration << " seconds" << std::endl;
-  const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
+  const Duration timeout_duration = std::chrono::seconds{max_duration};
 
   const auto warmup = parse_result["warmup"].as<uint64_t>();
   if (warmup > 0) {
@@ -114,7 +114,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   } else {
     std::cout << "- No warmup runs are performed" << std::endl;
   }
-  const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
+  const Duration warmup_duration = std::chrono::seconds{warmup};
 
   const auto verify = parse_result["verify"].as<bool>();
   if (verify) {
