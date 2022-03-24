@@ -714,8 +714,6 @@ target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 
 if(NOT APPLE)
     # Do not use jemalloc on Mac as we cannot properly replace the allocator - see third_party/CMakeLists.txt for details.
-    get_target_property(lib_include_dirs custom_jemalloc INTERFACE_INCLUDE_DIRECTORIES)
-    target_include_directories(hyrise_impl SYSTEM PUBLIC ${lib_include_dirs})
     target_link_libraries(hyrise_impl PUBLIC custom_jemalloc -rdynamic)
     target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
 
