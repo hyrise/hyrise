@@ -273,7 +273,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
           aggregate_push_down_nodes.emplace_back(push_down_node);
         } else {
-          lqp_insert_node_above(input_node, push_down_node);
+          lqp_insert_above_node(input_node, push_down_node);
         }
       }
       _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes, estimator);
@@ -303,20 +303,39 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         return;
       }
 
-      // We should push predicates below the diamond, if possible
-      auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      for (const auto& push_down_node : push_down_nodes) {
-        if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node->left_input())) {
-          diamond_push_down_nodes.emplace_back(push_down_node);
-        } else if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
-          lqp_insert_node_above(push_down_node, diamond_bottom_node);
-        } else {
-          // Insert above the diamond structure
-          lqp_insert_node_above(push_down_node, input_node);
+      // Do not move predicates below a Join or another UnionNode
+      if (diamond_bottom_node->right_input()) {
+        for (const auto& push_down_node : push_down_nodes) {
+          if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
+            lqp_insert_above_node(diamond_bottom_node, push_down_node);
+          } else {
+            // Insert above the diamond structure
+            lqp_insert_above_node(input_node, push_down_node);
+          }
+        }
+
+        // Continue pushdown traversal for both inputs
+        auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+        auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(diamond_bottom_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+
+      } else {
+        // Push predicates below the diamond, if possible
+        auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        for (const auto& push_down_node : push_down_nodes) {
+          if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node->left_input())) {
+            diamond_push_down_nodes.emplace_back(push_down_node);
+          } else if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
+            lqp_insert_above_node(diamond_bottom_node, push_down_node);
+          } else {
+            // Insert above the diamond structure
+            lqp_insert_above_node(input_node, push_down_node);
+          }
+        // Continue pushdown below the diamond
+        _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, diamond_push_down_nodes, estimator);
         }
       }
-      // Continue pushdown below the diamond
-      _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, diamond_push_down_nodes, estimator);
 
       // Optimize the diamond itself
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
