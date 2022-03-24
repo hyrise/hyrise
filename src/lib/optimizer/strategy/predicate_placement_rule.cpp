@@ -284,7 +284,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       // If we have a predicate-diamond, where all UnionNode inputs result from the same bottom node,
       // the pushdown traversal should continue below the diamond's bottom node.
       std::shared_ptr<AbstractLQPNode> diamond_bottom_node = find_diamond_bottom_node(union_node);
-      if (!diamond_bottom_node) handle_barrier();
+      if (!diamond_bottom_node) {
+        handle_barrier();
+        return;
+      }
 
       // We must determine whether the diamond's bottom node is used as an input by nodes which are not part of the
       // diamond. For this, we check the diamond's bottom node output count, and compare it the number of UnionNodes in
@@ -295,7 +298,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         if (diamond_node->type == LQPNodeType::Union) union_node_count++;
         return LQPVisitation::VisitInputs;
       });
-      if (union_node_count + 1 < diamond_bottom_node->output_count()) handle_barrier();
+      if (union_node_count + 1 < diamond_bottom_node->output_count()) {
+        handle_barrier();
+        return;
+      }
 
       // We should push predicates below the diamond, if possible
       auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
