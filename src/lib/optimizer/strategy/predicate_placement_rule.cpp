@@ -297,7 +297,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       });
       if (union_node_count + 1 < diamond_bottom_node->output_count()) handle_barrier();
 
-      // We can push predicates below the diamond.
+      // We should push predicates below the diamond, if possible
       auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       for (const auto& push_down_node : push_down_nodes) {
         if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node->left_input())) {
@@ -309,7 +309,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           lqp_insert_node_above(push_down_node, input_node);
         }
       }
+      // Continue pushdown below the diamond
       _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, diamond_push_down_nodes, estimator);
+
+      // Optimize the diamond itself
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
     } break;
 
     default: {

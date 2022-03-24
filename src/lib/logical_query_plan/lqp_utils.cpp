@@ -540,6 +540,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<
           }
           return LQPVisitation::DoNotVisitInputs;
         } else if (!diamond_node->left_input()) {
+          // We should have found a bottom diamond node with multiple outputs at this point.
           is_diamond = false;
         }
         return LQPVisitation::VisitInputs;
