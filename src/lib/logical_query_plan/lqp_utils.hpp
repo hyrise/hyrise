@@ -246,6 +246,6 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
 
-std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const auto std::shared_ptr<AbstractLQPNode>& diamond_root_node);
+std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<AbstractLQPNode>& diamond_root_node);
 
 }  // namespace opossum
