@@ -214,6 +214,23 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
   node->set_left_input(old_input);
 }
 
+void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
+                           const AllowRightInput allow_right_input) {
+  Assert(!node_to_insert->left_input() && (!node_to_insert->right_input() || allow_right_input == AllowRightInput::Yes),
+         "Expected node without inputs.");
+
+  // Re-link @param node's outputs to @param node_to_insert
+  const auto node_outputs = node->outputs();
+  for (const auto& output_node : node_outputs) {
+    const LQPInputSide input_side = node->get_input_side(output_node);
+    output_node->set_input(input_side, node_to_insert);
+  }
+
+  // Place @param node_to_insert above @param node
+  node_to_insert->set_left_input(node);
+}
+
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   if (!lqp) return true;
   if (lqp->type == LQPNodeType::Validate) return true;
