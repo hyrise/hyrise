@@ -539,6 +539,8 @@ std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<
             is_diamond = false;
           }
           return LQPVisitation::DoNotVisitInputs;
+        } else if (!diamond_node->left_input()) {
+          is_diamond = false;
         }
         return LQPVisitation::VisitInputs;
   });
