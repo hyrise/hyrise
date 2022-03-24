@@ -330,6 +330,36 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
     const auto diamond_bottom_node = find_diamond_bottom_node(lqp);
     EXPECT_EQ(diamond_bottom_node, nullptr);
   }
+  {
+    // clang-format off
+    const auto lqp =
+    UnionNode::make(SetOperationMode::All,
+      UnionNode::make(SetOperationMode::All,
+        PredicateNode::make(equals_(a_a, value_(3)),
+          node_a),
+        PredicateNode::make(equals_(a_a, value_(5)),
+          node_a),
+      PredicateNode::make(equals_(a_a, value_(7)),
+        node_a)));
+    // clang-format on
+    const auto diamond_bottom_node = find_diamond_bottom_node(lqp);
+    EXPECT_EQ(diamond_bottom_node, node_a);
+  }
+  {
+    // clang-format off
+    const auto lqp =
+    UnionNode::make(SetOperationMode::All,
+      UnionNode::make(SetOperationMode::All,
+        PredicateNode::make(equals_(a_a, value_(3)),
+          node_a),
+        PredicateNode::make(equals_(a_a, value_(5)),
+          node_b),
+      PredicateNode::make(equals_(a_a, value_(7)),
+        node_a)));
+    // clang-format on
+    const auto diamond_bottom_node = find_diamond_bottom_node(lqp);
+    EXPECT_EQ(diamond_bottom_node, nullptr);
+  }
 }
 
 }  // namespace opossum
