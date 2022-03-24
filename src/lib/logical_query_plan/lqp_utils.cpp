@@ -506,4 +506,28 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
    */
 }
 
+std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<AbstractLQPNode>& diamond_root_node) {
+  Assert(diamond_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
+  bool is_diamond = true;
+  std::optional<std::shared_ptr<AbstractLQPNode>> diamond_bottom_node;
+  visit_lqp(diamond_root_node, [&](const auto& diamond_node) {
+        if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
+        if (diamond_node->output_count() > 1) {
+          if (!diamond_bottom_node.has_value()) {
+            diamond_bottom_node = diamond_node;
+          } else if (diamond_bottom_node != diamond_node) {
+            // The LQP traversal should always end in the same bottom node having multiple outputs. Since we found two
+            // differing diamond bottom nodes, we must abort the traversal.
+            is_diamond = false;
+          }
+          return LQPVisitation::DoNotVisitInputs;
+        }
+        return LQPVisitation::VisitInputs;
+  });
+
+  if (!is_diamond) return nullptr;
+  Assert(diamond_bottom_node.has_value(), "Expected to find diamond bottom node.");
+  return diamond_bottom_node.value();
+}
+
 }  // namespace opossum
