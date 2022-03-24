@@ -353,9 +353,9 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
         PredicateNode::make(equals_(a_a, value_(3)),
           node_a),
         PredicateNode::make(equals_(a_a, value_(5)),
-          node_b),
+          node_b)),
       PredicateNode::make(equals_(a_a, value_(7)),
-        node_a)));
+        node_a));
     // clang-format on
     const auto diamond_bottom_node = find_diamond_bottom_node(lqp);
     EXPECT_EQ(diamond_bottom_node, nullptr);
