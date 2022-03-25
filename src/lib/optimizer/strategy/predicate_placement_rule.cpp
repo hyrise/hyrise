@@ -282,7 +282,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(input_node);
       // If we have a predicate-diamond, where all UnionNode inputs result from the same bottom node,
-      // the pushdown traversal should continue below the diamond's bottom node.
+      // the pushdown-traversal should continue below the diamond's bottom node.
       std::shared_ptr<AbstractLQPNode> diamond_bottom_node = find_diamond_bottom_node(union_node);
       if (!diamond_bottom_node) {
         handle_barrier();
@@ -290,8 +290,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       }
 
       // We must determine whether the diamond's bottom node is used as an input by nodes which are not part of the
-      // diamond. For this, we check the diamond's bottom node output count, and compare it the number of UnionNodes in
-      // the diamond structure.
+      // diamond. For this, we check the diamond's bottom node output count, and compare it with the number of
+      // UnionNodes in the diamond structure.
       size_t union_node_count = 1;
       visit_lqp(union_node, [&](const auto& diamond_node) {
         if (diamond_node == diamond_bottom_node) return LQPVisitation::DoNotVisitInputs;
@@ -303,7 +303,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         return;
       }
 
-      // Do not move predicates below a Join or another UnionNode
+      // Do not move predicates below a JoinNode or another UnionNode
       if (diamond_bottom_node->right_input()) {
         for (const auto& push_down_node : push_down_nodes) {
           if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
@@ -332,9 +332,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             // Insert above the diamond structure
             lqp_insert_above_node(input_node, push_down_node);
           }
+        }
         // Continue pushdown below the diamond
         _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, diamond_push_down_nodes, estimator);
-        }
       }
 
       // Optimize the diamond itself
@@ -345,7 +345,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     } break;
 
     default: {
-      // All not explicitly handled node types are barriers and we do not push predicates past them.
+      // All not explicitly handled node types are barriers, and we do not push predicates past them.
       handle_barrier();
     }
   }
