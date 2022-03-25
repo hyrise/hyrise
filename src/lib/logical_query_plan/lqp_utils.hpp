@@ -97,8 +97,7 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
 void lqp_insert_above_node(const std::shared_ptr<AbstractLQPNode>& node,
-                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
-                           const AllowRightInput allow_right_input = AllowRightInput::No);
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert);
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */

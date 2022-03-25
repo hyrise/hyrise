@@ -215,10 +215,8 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
 }
 
 void lqp_insert_above_node(const std::shared_ptr<AbstractLQPNode>& node,
-                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
-                           const AllowRightInput allow_right_input) {
-  Assert(!node_to_insert->left_input() && (!node_to_insert->right_input() || allow_right_input == AllowRightInput::Yes),
-         "Expected node without inputs.");
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert) {
+  Assert(!node_to_insert->left_input(), "Expected node without a left input set.");
 
   // Re-link @param node's outputs to @param node_to_insert
   const auto node_outputs = node->outputs();
