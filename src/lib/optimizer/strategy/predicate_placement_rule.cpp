@@ -12,6 +12,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
@@ -272,14 +273,79 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
           aggregate_push_down_nodes.emplace_back(push_down_node);
         } else {
-          _insert_nodes(current_node, input_side, {push_down_node});
+          lqp_insert_above_node(input_node, push_down_node);
         }
       }
       _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes, estimator);
     } break;
 
+    case LQPNodeType::Union: {
+      const auto union_node = std::dynamic_pointer_cast<UnionNode>(input_node);
+      // If we have a predicate-diamond, where all UnionNode inputs result from the same bottom node,
+      // the pushdown-traversal should continue below the diamond's bottom node.
+      std::shared_ptr<AbstractLQPNode> diamond_bottom_node = find_diamond_bottom_node(union_node);
+      if (!diamond_bottom_node) {
+        handle_barrier();
+        return;
+      }
+
+      // We must determine whether the diamond's bottom node is used as an input by nodes which are not part of the
+      // diamond. For this, we check the diamond's bottom node output count, and compare it with the number of
+      // UnionNodes in the diamond structure.
+      size_t union_node_count = 1;
+      visit_lqp(union_node, [&](const auto& diamond_node) {
+        if (diamond_node == diamond_bottom_node) return LQPVisitation::DoNotVisitInputs;
+        if (diamond_node->type == LQPNodeType::Union) union_node_count++;
+        return LQPVisitation::VisitInputs;
+      });
+      if (union_node_count + 1 < diamond_bottom_node->output_count()) {
+        handle_barrier();
+        return;
+      }
+
+      // Do not move predicates below a JoinNode or another UnionNode
+      if (diamond_bottom_node->right_input()) {
+        for (const auto& push_down_node : push_down_nodes) {
+          if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
+            lqp_insert_above_node(diamond_bottom_node, push_down_node);
+          } else {
+            // Insert above the diamond structure
+            lqp_insert_above_node(input_node, push_down_node);
+          }
+        }
+
+        // Continue pushdown traversal for both inputs
+        auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+        auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(diamond_bottom_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+
+      } else {
+        // Push predicates below the diamond, if possible
+        auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        for (const auto& push_down_node : push_down_nodes) {
+          if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node->left_input())) {
+            diamond_push_down_nodes.emplace_back(push_down_node);
+          } else if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
+            lqp_insert_above_node(diamond_bottom_node, push_down_node);
+          } else {
+            // Insert above the diamond structure
+            lqp_insert_above_node(input_node, push_down_node);
+          }
+        }
+        // Continue pushdown below the diamond
+        _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, diamond_push_down_nodes, estimator);
+      }
+
+      // Optimize the diamond itself
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+    } break;
+
     default: {
-      // All not explicitly handled node types are barriers and we do not push predicates past them.
+      // All not explicitly handled node types are barriers, and we do not push predicates past them.
       handle_barrier();
     }
   }

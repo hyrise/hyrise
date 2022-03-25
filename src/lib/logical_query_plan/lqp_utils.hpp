@@ -96,6 +96,8 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
                      const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
+void lqp_insert_above_node(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert);
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
@@ -245,5 +247,7 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
  * the @param lqp node's output expressions.
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+
+std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<AbstractLQPNode>& diamond_root_node);
 
 }  // namespace opossum

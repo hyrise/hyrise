@@ -214,6 +214,21 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
   node->set_left_input(old_input);
 }
 
+void lqp_insert_above_node(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert) {
+  Assert(!node_to_insert->left_input(), "Expected node without a left input set.");
+
+  // Re-link @param node's outputs to @param node_to_insert
+  const auto node_outputs = node->outputs();
+  for (const auto& output_node : node_outputs) {
+    const LQPInputSide input_side = node->get_input_side(output_node);
+    output_node->set_input(input_side, node_to_insert);
+  }
+
+  // Place @param node_to_insert above @param node
+  node_to_insert->set_left_input(node);
+}
+
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   if (!lqp) return true;
   if (lqp->type == LQPNodeType::Validate) return true;
@@ -504,6 +519,33 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
    *               - {a, b} => {SUM(d)}
    *               - {a}    => {b, c}
    */
+}
+
+std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<AbstractLQPNode>& union_node) {
+  Assert(union_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
+  Assert(union_node->input_count() > 1, "Diamond root node does not have two inputs.");
+  bool is_diamond = true;
+  std::optional<std::shared_ptr<AbstractLQPNode>> diamond_bottom_node;
+  visit_lqp(union_node, [&](const auto& diamond_node) {
+        if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
+        if (diamond_node->output_count() > 1) {
+          if (!diamond_bottom_node.has_value()) {
+            diamond_bottom_node = diamond_node;
+          } else if (diamond_bottom_node != diamond_node) {
+            // The LQP traversal should always end in the same bottom node having multiple outputs. Since we found two
+            // differing diamond bottom nodes, we must abort the traversal.
+            is_diamond = false;
+          }
+          return LQPVisitation::DoNotVisitInputs;
+        } else if (!diamond_node->left_input()) {
+          // We should have found a bottom diamond node with multiple outputs at this point.
+          is_diamond = false;
+        }
+        return LQPVisitation::VisitInputs;
+  });
+
+  if (!is_diamond || !diamond_bottom_node.has_value()) return nullptr;
+  return diamond_bottom_node.value();
 }
 
 }  // namespace opossum
