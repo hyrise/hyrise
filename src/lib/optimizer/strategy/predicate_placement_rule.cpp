@@ -303,8 +303,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         return;
       }
 
-      // Do not move predicates below a JoinNode or another UnionNode
       if (diamond_bottom_node->right_input()) {
+        // Do not move predicates below a JoinNode or another UnionNode
         for (const auto& push_down_node : push_down_nodes) {
           if (_is_evaluable_on_lqp(push_down_node, diamond_bottom_node)) {
             lqp_insert_above_node(diamond_bottom_node, push_down_node);
@@ -314,6 +314,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           }
         }
 
+        // TODO Idea for improvement:
+        //  1. If nodes were inserted below the diamond, store the topmost node's reference.
+        //     Call _push_down_traversal(inserted_node, LQPInputSide::Left, push_down_nodes, estimator);
+        //  2. If nothing was inserted below the diamond, call _push_down_traversal for each input side, as already done
+        //     so below
         // Continue pushdown traversal for both inputs
         auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
         _push_down_traversal(diamond_bottom_node, LQPInputSide::Left, left_push_down_nodes, estimator);
