@@ -314,7 +314,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
           }
         }
 
-        // TODO Idea for improvement:
+        // TODO(julianmenzler) Idea for improvement:
         //  1. If nodes were inserted below the diamond, store the topmost node's reference.
         //     Call _push_down_traversal(inserted_node, LQPInputSide::Left, push_down_nodes, estimator);
         //  2. If nothing was inserted below the diamond, call _push_down_traversal for each input side, as already done
