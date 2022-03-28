@@ -521,12 +521,12 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
    */
 }
 
-std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<AbstractLQPNode>& union_node) {
-  Assert(union_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
-  Assert(union_node->input_count() > 1, "Diamond root node does not have two inputs.");
+std::shared_ptr<AbstractLQPNode> find_diamond_bottom_node(const std::shared_ptr<AbstractLQPNode>& union_root_node) {
+  Assert(union_root_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
+  Assert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
   bool is_diamond = true;
   std::optional<std::shared_ptr<AbstractLQPNode>> diamond_bottom_node;
-  visit_lqp(union_node, [&](const auto& diamond_node) {
+  visit_lqp(union_root_node, [&](const auto& diamond_node) {
     if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
     if (diamond_node->output_count() > 1) {
       if (!diamond_bottom_node.has_value()) {
