@@ -18,12 +18,13 @@ namespace opossum {
 class UnionPositionsTest : public BaseTest {
  public:
   void SetUp() override {
-    _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", 3);
+    _table_10_ints = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{3});
     Hyrise::get().storage_manager.add_table("10_ints", _table_10_ints);
 
-    _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 3);
+    _table_int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{3});
     Hyrise::get().storage_manager.add_table("int_float4", _table_int_float4);
-    Hyrise::get().storage_manager.add_table("int_int", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("int_int",
+                                            load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
     _int_column_0_non_nullable = pqp_column_(ColumnID{0}, DataType::Int, false, "");
     _float_column_1_non_nullable = pqp_column_(ColumnID{1}, DataType::Float, false, "");
@@ -225,49 +226,49 @@ TEST_F(UnionPositionsTest, MultipleShuffledPosList) {
    */
   // Left input table, chunk 0, pos_list 0
   auto pos_list_left_0_0 = std::make_shared<RowIDPosList>();
-  pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, 2});
-  pos_list_left_0_0->emplace_back(RowID{ChunkID{0}, 1});
-  pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, 2});
+  pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, ChunkOffset{2}});
+  pos_list_left_0_0->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  pos_list_left_0_0->emplace_back(RowID{ChunkID{1}, ChunkOffset{2}});
 
   // Left input table, chunk 1, pos_list 0
   auto pos_list_left_1_0 = std::make_shared<RowIDPosList>();
-  pos_list_left_1_0->emplace_back(RowID{ChunkID{2}, 0});
-  pos_list_left_1_0->emplace_back(RowID{ChunkID{0}, 1});
+  pos_list_left_1_0->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
+  pos_list_left_1_0->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
 
   // Left input table, chunk 0, pos_list 1
   auto pos_list_left_0_1 = std::make_shared<RowIDPosList>();
-  pos_list_left_0_1->emplace_back(RowID{ChunkID{2}, 0});
-  pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, 1});
-  pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, 1});
+  pos_list_left_0_1->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
+  pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
+  pos_list_left_0_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
 
   // Left input table, chunk 1, pos_list 1
   auto pos_list_left_1_1 = std::make_shared<RowIDPosList>();
-  pos_list_left_1_1->emplace_back(RowID{ChunkID{1}, 0});
-  pos_list_left_1_1->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_left_1_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_left_1_1->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
 
   // Right input table, chunk 0, pos_list 0
   auto pos_list_right_0_0 = std::make_shared<RowIDPosList>();
-  pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
-  pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, 0});
-  pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, 2});
-  pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, ChunkOffset{2}});
+  pos_list_right_0_0->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
 
   // Right input table, chunk 1, pos_list 0
   auto pos_list_right_1_0 = std::make_shared<RowIDPosList>();
-  pos_list_right_1_0->emplace_back(RowID{ChunkID{0}, 0});
-  pos_list_right_1_0->emplace_back(RowID{ChunkID{2}, 0});
+  pos_list_right_1_0->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  pos_list_right_1_0->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
 
   // Right input table, chunk 0, pos_list 1
   auto pos_list_right_0_1 = std::make_shared<RowIDPosList>();
-  pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, 0});
-  pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, 0});
-  pos_list_right_0_1->emplace_back(RowID{ChunkID{2}, 0});
-  pos_list_right_0_1->emplace_back(RowID{ChunkID{0}, 0});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
+  pos_list_right_0_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
 
   // Right input table, chunk 1, pos_list 1
   auto pos_list_right_1_1 = std::make_shared<RowIDPosList>();
-  pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
-  pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
+  pos_list_right_1_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
 
   auto segment_left_0_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_left_0_0);
   auto segment_left_1_0 = std::make_shared<ReferenceSegment>(_table_int_float4, ColumnID{0}, pos_list_left_1_0);

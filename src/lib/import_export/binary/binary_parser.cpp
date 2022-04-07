@@ -26,7 +26,7 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     _import_chunk(file, table);
   }
 

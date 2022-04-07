@@ -25,11 +25,11 @@ namespace opossum {
 class OperatorsValidateTest : public BaseTest {
  protected:
   void SetUp() override {
-    _test_table = load_table("resources/test_data/tbl/validate_input.tbl", 2u);
+    _test_table = load_table("resources/test_data/tbl/validate_input.tbl", ChunkOffset{2});
     set_all_records_visible(*_test_table);
-    invalidate_record(*_test_table, RowID{ChunkID{1}, 0u}, 2u);
+    invalidate_record(*_test_table, RowID{ChunkID{1}, ChunkOffset{0}}, CommitID{2});
 
-    const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
+    const auto _test_table2 = load_table("resources/test_data/tbl/int_int3.tbl", ChunkOffset{3});
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     Hyrise::get().storage_manager.add_table(_table2_name, _test_table2);
@@ -64,9 +64,10 @@ void OperatorsValidateTest::set_all_records_visible(Table& table) {
     auto chunk = table.get_chunk(chunk_id);
     auto mvcc_data = chunk->mvcc_data();
 
-    for (auto i = 0u; i < chunk->size(); ++i) {
-      mvcc_data->set_begin_cid(i, 0u);
-      mvcc_data->set_end_cid(i, MvccData::MAX_COMMIT_ID);
+    const auto chunk_size = chunk->size();
+    for (auto index = ChunkOffset{0}; index < chunk_size; ++index) {
+      mvcc_data->set_begin_cid(index, CommitID{0});
+      mvcc_data->set_end_cid(index, MvccData::MAX_COMMIT_ID);
     }
   }
 }
@@ -75,13 +76,14 @@ void OperatorsValidateTest::invalidate_record(Table& table, RowID row, CommitID 
   auto chunk = table.get_chunk(row.chunk_id);
 
   chunk->mvcc_data()->set_end_cid(row.chunk_offset, end_cid);
-  chunk->increase_invalid_row_count(1);
+  chunk->increase_invalid_row_count(ChunkOffset{1});
 }
 
 TEST_F(OperatorsValidateTest, SimpleValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/validate_output_validated.tbl", ChunkOffset{2});
 
   auto validate = std::make_shared<Validate>(_table_wrapper);
   validate->set_transaction_context(context);
@@ -91,10 +93,10 @@ TEST_F(OperatorsValidateTest, SimpleValidate) {
 }
 
 TEST_F(OperatorsValidateTest, ScanValidate) {
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", 2u);
+      load_table("resources/test_data/tbl/validate_output_validated_scanned.tbl", ChunkOffset{2});
 
   auto a = PQPColumnExpression::from_table(*_test_table, "a");
   auto table_scan = std::make_shared<TableScan>(_table_wrapper, greater_than_equals_(a, 2));
@@ -141,7 +143,7 @@ TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
   auto snapshot_cid = CommitID{1};
-  auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, 0}}));
+  auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, ChunkOffset{0}}}));
   Segments segments = {std::make_shared<ReferenceSegment>(_test_table, ColumnID{0}, pos_list)};
   auto chunk = std::make_shared<Chunk>(segments);
 
@@ -154,7 +156,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithoutMaxBeginCid) {
   auto snapshot_cid = CommitID{1};
   auto vs_int = std::make_shared<ValueSegment<int32_t>>();
   vs_int->append(4);
-  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, 0));
+  auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, CommitID{0}));
   // We explicitly do not finalize the chunk so that max_begin_cid remains emtpy
 
   auto validate = std::make_shared<Validate>(nullptr);
@@ -183,7 +185,7 @@ TEST_F(OperatorsValidateTest, ChunkNotEntirelyVisibleWithInvalidRows) {
   vs_int->append(4);
 
   auto chunk = std::make_shared<Chunk>(Segments{vs_int}, std::make_shared<MvccData>(1, begin_cid));
-  chunk->increase_invalid_row_count(1);
+  chunk->increase_invalid_row_count(ChunkOffset{1});
   chunk->finalize();
 
   auto validate = std::make_shared<Validate>(nullptr);
@@ -209,15 +211,17 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   // This optimization is possible if a PosList of a reference segment references only one chunk.
   // Here, the fallback implementation for a PosList with multiple chunks is tested.
 
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/validate_output_validated.tbl", 2u);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/validate_output_validated.tbl", ChunkOffset{2});
 
   // Create a RowIDPosList referencing more than one chunk
   auto pos_list = std::make_shared<RowIDPosList>();
-  for (ChunkID chunk_id{0}; chunk_id < _test_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = _test_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_size = _test_table->get_chunk(chunk_id)->size();
-    for (ChunkOffset chunk_offset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       pos_list->emplace_back(RowID{chunk_id, chunk_offset});
     }
   }
@@ -241,7 +245,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
 }
 
 TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
-  const auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  const auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   const auto validate_unsorted = std::make_shared<Validate>(_table_wrapper);
   validate_unsorted->set_transaction_context(context);
@@ -255,7 +259,7 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
 
   // Verify that the sorted_by flag is set when it's present in left input.
   // Since Validate can not be executed after Sort, we need to load a sorted table.
-  const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", 2);
+  const auto sorted_table = load_table("resources/test_data/tbl/int_sorted.tbl", ChunkOffset{2});
   const auto sort_column_definition = SortColumnDefinition(ColumnID{0}, SortMode::Ascending);
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

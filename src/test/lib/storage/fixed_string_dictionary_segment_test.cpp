@@ -57,9 +57,9 @@ TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
   EXPECT_EQ(dict_segment->compressed_vector_type(), CompressedVectorType::FixedWidthInteger1Byte);
 
   // Decode values
-  EXPECT_EQ((*dict_segment)[0], AllTypeVariant("Bill"));
-  EXPECT_EQ((*dict_segment)[1], AllTypeVariant("Steve"));
-  EXPECT_EQ((*dict_segment)[2], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_segment)[ChunkOffset{0}], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_segment)[ChunkOffset{1}], AllTypeVariant("Steve"));
+  EXPECT_EQ((*dict_segment)[ChunkOffset{2}], AllTypeVariant("Bill"));
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
@@ -113,7 +113,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   EXPECT_EQ(dict_segment->null_value_id(), 2u);
-  EXPECT_TRUE(variant_is_null((*dict_segment)[1]));
+  EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{1}]));
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {

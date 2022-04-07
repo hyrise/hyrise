@@ -528,7 +528,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
        * We are aware that operator[] is slow, however, for one value it should be faster than segment_iterate_filtered.
        */
       const auto& first_segment = sorted_table->get_chunk(ChunkID{0})->get_segment(column_id);
-      const auto& first_value = (*first_segment)[0];
+      const auto& first_value = (*first_segment)[ChunkOffset{0}];
       if (variant_is_null(first_value)) {
         previous_value.reset();
       } else {
@@ -574,7 +574,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         RowID group_start;
         if (value_index == 0) {
           // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.
-          group_start = RowID{ChunkID{0}, 0};
+          group_start = RowID{ChunkID{0}, ChunkOffset{0}};
         } else {
           group_start = *group_boundary_iter;
           group_boundary_iter++;

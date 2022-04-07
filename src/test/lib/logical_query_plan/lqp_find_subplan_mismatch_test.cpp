@@ -50,7 +50,8 @@ class LQPFindSubplanMismatchTest : public BaseTest {
   };
 
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("table_a",
+                                            load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);

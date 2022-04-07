@@ -37,7 +37,7 @@ using SQLiteTestRunnerParam = std::tuple<std::pair<size_t /* line */, std::strin
 
 class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
  public:
-  static constexpr ChunkOffset CHUNK_SIZE = 10;
+  static constexpr auto CHUNK_SIZE = ChunkOffset{10};
 
   // Structure to cache initially loaded tables and store their file paths
   // to reload the the table from the given tbl file whenever required.

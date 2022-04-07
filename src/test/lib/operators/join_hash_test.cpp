@@ -9,20 +9,20 @@ namespace opossum {
 class OperatorsJoinHashTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
-    _table_wrapper_small =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/join_operators/anti_int4.tbl", 2));
+    _table_wrapper_small = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/join_operators/anti_int4.tbl", ChunkOffset{2}));
     _table_wrapper_small->execute();
 
     _table_tpch_orders =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", ChunkOffset{10}));
     _table_tpch_orders->execute();
 
-    _table_tpch_lineitems =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl", 10));
+    _table_tpch_lineitems = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl", ChunkOffset{10}));
     _table_tpch_lineitems->execute();
 
     _table_with_nulls =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", ChunkOffset{10}));
     _table_with_nulls->execute();
 
     // filters retain all rows

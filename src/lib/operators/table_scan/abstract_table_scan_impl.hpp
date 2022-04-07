@@ -109,7 +109,7 @@ class AbstractTableScanImpl {
     auto matches_out_index = matches_out.size();
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
-    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
+    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, ChunkOffset{0}});
 
     // As we access the offsets after we already moved the iterator, we need a copy of it. Creating this copy outside
     // of the while loop keeps the surprisingly high costs for copying an iterator to a minimum.
@@ -226,7 +226,7 @@ class AbstractTableScanImpl {
       // As we write directly into the matches_out vector, we have to make sure that is big enough. We grow the vector
       // more aggressively than its default behavior as the potentially wasted space is only ephemeral.
       if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
-        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
+        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, ChunkOffset{0}});
       }
     }
 
