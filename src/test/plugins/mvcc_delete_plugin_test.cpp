@@ -77,7 +77,7 @@ class MvccDeletePluginTest : public BaseTest {
   }
 
   const std::string _table_name{"mvccTestTable"};
-  static constexpr auto _chunk_size = size_t{4};
+  static constexpr auto _chunk_size = ChunkOffset{4};
   inline static std::shared_ptr<AbstractExpression> _column_a;
 };
 

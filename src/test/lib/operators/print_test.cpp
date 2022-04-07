@@ -34,7 +34,7 @@ class OperatorsPrintTest : public BaseTest {
   std::shared_ptr<GetTable> _gt;
 
   const std::string _table_name = "printTestTable";
-  const uint32_t _chunk_size = 10;
+  const ChunkOffset _chunk_size = ChunkOffset{10};
 };
 
 // class used to make protected methods visible without
@@ -211,7 +211,7 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
   // Per default, MVCC data is created when loading tables.
   // This test passes the flag for printing MVCC information, which is not printed by default.
   std::shared_ptr<TableWrapper> table =
-      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
   table->execute();
 
   Print::print(table, PrintFlags::Mvcc, output);
@@ -233,7 +233,7 @@ TEST_F(OperatorsPrintTest, MVCCTableLoad) {
 
 TEST_F(OperatorsPrintTest, PrintFlagsIgnoreChunkBoundaries) {
   std::shared_ptr<TableWrapper> table =
-      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
   table->execute();
 
   Print::print(table, PrintFlags::IgnoreChunkBoundaries, output);
@@ -286,7 +286,7 @@ TEST_F(OperatorsPrintTest, NullableColumnPrinting) {
 }
 
 TEST_F(OperatorsPrintTest, SegmentType) {
-  auto table = load_table("resources/test_data/tbl/int_float.tbl", 1);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1});
 
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{EncodingType::Dictionary});
   ChunkEncoder::encode_chunks(table, {ChunkID{1}}, SegmentEncodingSpec{EncodingType::RunLength});
@@ -311,7 +311,7 @@ TEST_F(OperatorsPrintTest, SegmentType) {
 }
 
 TEST_F(OperatorsPrintTest, SQL) {
-  auto table = load_table("resources/test_data/tbl/int_float.tbl", 1);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1});
   Hyrise::get().storage_manager.add_table("t", table);
 
   Print::print("SELECT * FROM t WHERE a <= 1234", PrintFlags::None, output);

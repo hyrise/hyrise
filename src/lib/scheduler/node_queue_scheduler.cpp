@@ -39,7 +39,8 @@ void NodeQueueScheduler::begin() {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     for (const auto& topology_cpu : topology_node.cpus) {
-      _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
+      _workers.emplace_back(
+          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
     }
   }
 
@@ -97,7 +98,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
-  task->set_id(task_counter);
+  task->set_id(TaskID{task_counter});
 
   if (!task->is_ready()) return;
 

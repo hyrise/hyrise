@@ -17,10 +17,10 @@ namespace opossum {
 class ChunkCompressionTaskTest : public BaseTest {};
 
 TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
-  auto table = load_table("resources/test_data/tbl/compression_input.tbl", 12u);
+  auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{12});
   Hyrise::get().storage_manager.add_table("table", table);
 
-  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 3u);
+  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{3});
   Hyrise::get().storage_manager.add_table("table_dict", table_dict);
 
   auto compression_task1 = std::make_shared<ChunkCompressionTask>("table_dict", ChunkID{0});
@@ -49,7 +49,7 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
 }
 
 TEST_F(ChunkCompressionTaskTest, DictionarySize) {
-  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
+  auto table_dict = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{6});
   Hyrise::get().storage_manager.add_table("table_dict", table_dict);
 
   auto compression = std::make_shared<ChunkCompressionTask>("table_dict", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}});
@@ -75,7 +75,7 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 }
 
 TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
-  auto table = load_table("resources/test_data/tbl/compression_input.tbl", 6u);
+  auto table = load_table("resources/test_data/tbl/compression_input.tbl", ChunkOffset{6});
   Hyrise::get().storage_manager.add_table("table_insert", table);
 
   auto gt1 = std::make_shared<GetTable>("table_insert");

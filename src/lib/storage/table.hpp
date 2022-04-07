@@ -135,17 +135,17 @@ class Table : private Noncopyable {
 
     Assert(column_id < column_count(), "column_id invalid");
 
-    size_t row_counter = 0u;
+    auto row_counter = size_t{0};
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
       if (!chunk) continue;
 
-      size_t current_size = chunk->size();
+      auto current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        const auto variant =
-            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)];
+        const auto variant = (*chunk->get_segment(
+            column_id))[ChunkOffset{static_cast<ChunkOffset::base_type>(row_number + current_size - row_counter)}];
         if (variant_is_null(variant)) {
           return std::nullopt;
         } else {
