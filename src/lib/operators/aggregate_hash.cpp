@@ -34,8 +34,8 @@ using namespace opossum;  // NOLINT
 constexpr auto CACHE_MASK = AggregateKeyEntry{1} << 63u;  // See explanation below
 
 template <typename CacheResultIds, typename ResultIds, typename Results, typename AggregateKey>
-typename Results::reference get_or_add_result(CacheResultIds, ResultIds& result_ids, Results& results,
-                                              AggregateKey& key, const RowID& row_id) {
+typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*/, ResultIds& result_ids,
+                                              Results& results, AggregateKey& key, const RowID& row_id) {
   if constexpr (std::is_same_v<AggregateKey, EmptyAggregateKey>) {
     // No GROUP BY columns are defined for this aggregate operator. We still want to keep most code paths similar and
     // avoid special handling. Thus, get_or_add_result is still called, however, we always return the same result

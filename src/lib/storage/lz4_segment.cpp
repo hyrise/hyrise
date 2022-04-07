@@ -448,7 +448,7 @@ std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const Polym
 }
 
 template <typename T>
-size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode) const {
+size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode can be ignored since all relevant information can be either obtained directly (e.g.,
   // size of NULL values vector) or the actual size is already stored (e.g., data_size()).
 
