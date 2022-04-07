@@ -405,9 +405,9 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 // Command functions
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
-int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
+int Console::_exit(const std::string& /*args*/) { return Console::ReturnCode::Quit; }
 
-int Console::_help(const std::string&) {
+int Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
   encoding_options += boost::algorithm::join(
       encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
@@ -892,7 +892,7 @@ int Console::_print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory(const std::string&) {
+int Console::_print_current_working_directory(const std::string& /*args*/) {
   out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }

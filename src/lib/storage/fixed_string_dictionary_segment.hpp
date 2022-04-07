@@ -40,7 +40,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t memory_usage(const MemoryUsageCalculationMode = MemoryUsageCalculationMode::Full) const final;
+  size_t memory_usage(const MemoryUsageCalculationMode /*mode*/ = MemoryUsageCalculationMode::Full) const final;
   /**@}*/
 
   /**

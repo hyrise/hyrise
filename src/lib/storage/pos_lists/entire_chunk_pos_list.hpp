@@ -24,7 +24,7 @@ class EntireChunkPosList : public AbstractPosList {
 
   bool empty() const final;
   size_t size() const final;
-  size_t memory_usage(const MemoryUsageCalculationMode) const final;
+  size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
   PosListIterator<EntireChunkPosList, RowID> begin() const;
   PosListIterator<EntireChunkPosList, RowID> end() const;
