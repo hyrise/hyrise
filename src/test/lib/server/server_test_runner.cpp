@@ -22,7 +22,7 @@ class ServerTestRunner : public BaseTest {
   void SetUp() override {
     Hyrise::reset();
 
-    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     auto server_runner = [](Server& server) { server.run(); };
@@ -80,7 +80,7 @@ TEST_F(ServerTestRunner, TestSimpleSelect) {
 }
 
 TEST_F(ServerTestRunner, ValidateCorrectTransfer) {
-  const auto all_types_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", 2);
+  const auto all_types_table = load_table("resources/test_data/tbl/all_data_types_sorted.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("all_types_table", all_types_table);
 
   pqxx::connection connection{_connection_string};

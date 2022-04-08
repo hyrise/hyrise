@@ -108,16 +108,32 @@ TEST_F(CompositeGroupKeyIndexTest, ConcatenatedKeys) {
 }
 
 TEST_F(CompositeGroupKeyIndexTest, Offsets) {
-  auto expected_int_str = std::vector<ChunkOffset>{0, 1, 2, 4, 5, 6, 7};
-  auto expected_str_int = std::vector<ChunkOffset>{0, 1, 2, 3, 5, 6, 7};
+  auto expected_int_str = std::vector{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{4},
+                                      ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{7}};
+  auto expected_str_int = std::vector{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3},
+                                      ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{7}};
 
   EXPECT_EQ(expected_int_str, *_offsets_int_str);
   EXPECT_EQ(expected_str_int, *_offsets_str_int);
 }
 
 TEST_F(CompositeGroupKeyIndexTest, PositionList) {
-  auto expected_int_str = std::vector<std::set<ChunkOffset>>{{4}, {2}, {1, 3}, {1, 3}, {6}, {0}, {5}, {7}};
-  auto expected_str_int = std::vector<std::set<ChunkOffset>>{{4}, {6}, {5}, {1, 3}, {1, 3}, {2}, {0}, {7}};
+  auto expected_int_str = std::vector<std::set<ChunkOffset>>{{ChunkOffset{4}},
+                                                             {ChunkOffset{2}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{6}},
+                                                             {ChunkOffset{0}},
+                                                             {ChunkOffset{5}},
+                                                             {ChunkOffset{7}}};
+  auto expected_str_int = std::vector<std::set<ChunkOffset>>{{ChunkOffset{4}},
+                                                             {ChunkOffset{6}},
+                                                             {ChunkOffset{5}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{2}},
+                                                             {ChunkOffset{0}},
+                                                             {ChunkOffset{7}}};
 
   EXPECT_POSITION_LIST_EQ(expected_int_str, *_position_list_int_str);
   EXPECT_POSITION_LIST_EQ(expected_str_int, *_position_list_str_int);

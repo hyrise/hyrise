@@ -34,8 +34,8 @@ namespace opossum {
 class OperatorDeepCopyTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
-    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
+    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     _a_a = PQPColumnExpression::from_table(*_table_a, "a");
     _a_b = PQPColumnExpression::from_table(*_table_a, "b");
     _b_a = PQPColumnExpression::from_table(*_table_b, "a");
@@ -44,10 +44,14 @@ class OperatorDeepCopyTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_table_name_a, _table_a);
     Hyrise::get().storage_manager.add_table(_table_name_b, _table_b);
 
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", 2));
-    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
-    _table_wrapper_d = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", 2));
+    _table_wrapper_a =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
+    _table_wrapper_b =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2}));
+    _table_wrapper_c =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", ChunkOffset{2}));
+    _table_wrapper_d =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int3.tbl", ChunkOffset{2}));
 
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
@@ -71,7 +75,7 @@ TYPED_TEST_SUITE(DeepCopyTestJoin, JoinTypes, );  // NOLINT(whitespace/parens)
 
 TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
   std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/join_operators/int_left_join_equals.tbl", 1);
+      load_table("resources/test_data/tbl/join_operators/int_left_join_equals.tbl", ChunkOffset{1});
   EXPECT_NE(expected_result, nullptr) << "Could not load expected result table";
 
   // build and execute join
@@ -94,7 +98,8 @@ TYPED_TEST(DeepCopyTestJoin, DeepCopyJoin) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyDifference) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 2);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2});
 
   // build and execute difference
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_c);
@@ -148,7 +153,7 @@ TEST_F(OperatorDeepCopyTest, DeepCopyGetTable) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_int3_limit_1.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_int3_limit_1.tbl", ChunkOffset{1});
 
   // build and execute limit
   auto limit = std::make_shared<Limit>(_table_wrapper_d, to_expression(int64_t{1}));
@@ -166,11 +171,12 @@ TEST_F(OperatorDeepCopyTest, DeepCopyLimit) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopySort) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_sorted.tbl", ChunkOffset{1});
 
   // build and execute sort
   auto sort = std::make_shared<Sort>(
-      _table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}}, 2u);
+      _table_wrapper_a, std::vector<SortColumnDefinition>{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},
+      ChunkOffset{2});
   sort->execute();
   EXPECT_TABLE_EQ_UNORDERED(sort->get_output(), expected_result);
 
@@ -185,7 +191,8 @@ TEST_F(OperatorDeepCopyTest, DeepCopySort) {
 }
 
 TEST_F(OperatorDeepCopyTest, DeepCopyTableScan) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
   // build and execute table scan
   auto scan = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
@@ -218,7 +225,7 @@ TEST_F(OperatorDeepCopyTest, DiamondShape) {
 TEST_F(OperatorDeepCopyTest, Subquery) {
   // Due to the nested structure of the subquery, it makes sense to keep this more high level than the other tests in
   // this suite. The test would be very confusing and error-prone with explicit operators as above.
-  const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
+  const auto table = load_table("resources/test_data/tbl/int_int_int.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_3int", table);
 
   const std::string subquery_query = "SELECT * FROM table_3int WHERE a = (SELECT MAX(b) FROM table_3int)";

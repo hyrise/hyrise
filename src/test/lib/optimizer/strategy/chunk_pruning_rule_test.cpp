@@ -34,28 +34,28 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", 2u);
+    auto compressed_table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("compressed", compressed_table);
 
-    auto long_compressed_table = load_table("resources/test_data/tbl/25_ints_sorted.tbl", 25u);
+    auto long_compressed_table = load_table("resources/test_data/tbl/25_ints_sorted.tbl", ChunkOffset{25});
     ChunkEncoder::encode_all_chunks(long_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("long_compressed", long_compressed_table);
 
-    auto run_length_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", 5u);
+    auto run_length_compressed_table = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{5});
     ChunkEncoder::encode_all_chunks(run_length_compressed_table, SegmentEncodingSpec{EncodingType::RunLength});
     storage_manager.add_table("run_length_compressed", run_length_compressed_table);
 
-    auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
+    auto string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{3});
     ChunkEncoder::encode_all_chunks(string_compressed_table, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("string_compressed", string_compressed_table);
 
-    auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", 3u);
+    auto fixed_string_compressed_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{3});
     ChunkEncoder::encode_all_chunks(fixed_string_compressed_table,
                                     SegmentEncodingSpec{EncodingType::FixedStringDictionary});
     storage_manager.add_table("fixed_string_compressed", fixed_string_compressed_table);
 
-    auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", 2u);
+    auto int_float4 = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{2});
     ChunkEncoder::encode_all_chunks(int_float4, SegmentEncodingSpec{EncodingType::Dictionary});
     storage_manager.add_table("int_float4", int_float4);
 
@@ -65,7 +65,7 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
 
     _rule = std::make_shared<ChunkPruningRule>();
 
-    storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", 10u));
+    storage_manager.add_table("uncompressed", load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{10}));
   }
 
   std::shared_ptr<ChunkPruningRule> _rule;

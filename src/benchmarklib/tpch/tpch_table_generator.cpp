@@ -114,7 +114,7 @@ std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                       uint32_t chunk_size)
+                                       ChunkOffset chunk_size)
     : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
@@ -148,10 +148,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                                 customer_count};
   TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                order_count * 4};
+                                ChunkOffset{order_count * 4}};
   TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                part_count * 4};
+                                ChunkOffset{part_count * 4}};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
                                 supplier_count};
   TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
