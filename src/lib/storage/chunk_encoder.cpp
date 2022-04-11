@@ -150,7 +150,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
     const auto chunk = table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
+    const auto& chunk_encoding_spec = chunk_encoding_specs[chunk_id];
     encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }

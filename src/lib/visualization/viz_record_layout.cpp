@@ -19,7 +19,8 @@ std::string VizRecordLayout::to_label_string() const {
   std::stringstream stream;
   stream << "{";
 
-  for (size_t element_idx{0}; element_idx < content.size(); ++element_idx) {
+  const auto content_size = content.size();
+  for (auto element_idx = size_t{0}; element_idx < content_size; ++element_idx) {
     const auto& element = content[element_idx];
 
     if (element.type() == typeid(std::string)) {
@@ -39,8 +40,8 @@ std::string VizRecordLayout::to_label_string() const {
 std::string VizRecordLayout::escape(const std::string& input) {
   std::ostringstream stream;
 
-  for (const auto& c : input) {
-    switch (c) {
+  for (const auto& character : input) {
+    switch (character) {
       case '<':
       case '>':
       case '{':
@@ -53,7 +54,7 @@ std::string VizRecordLayout::escape(const std::string& input) {
       default: {
       }
     }
-    stream << c;
+    stream << character;
   }
 
   return stream.str();

@@ -164,8 +164,8 @@ bool JoinVerification::_tuples_match(const Tuple& tuple_left, const Tuple& tuple
 bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicate, const Tuple& tuple_left,
                                            const Tuple& tuple_right) const {
   auto result = false;
-  const auto variant_left = tuple_left[predicate.column_ids.first];
-  const auto variant_right = tuple_right[predicate.column_ids.second];
+  const auto& variant_left = tuple_left[predicate.column_ids.first];
+  const auto& variant_right = tuple_right[predicate.column_ids.second];
 
   if (variant_is_null(variant_left) || variant_is_null(variant_right)) {
     // AntiNullAsTrue is the only JoinMode that treats null-booleans as TRUE, all others treat it as FALSE

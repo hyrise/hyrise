@@ -361,13 +361,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
     using JoinOperator = typename decltype(join_operator_t)::type;
 
-    if (join_operator) return;
+    if (join_operator) {
+      return;
+    }
 
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
+      // NOLINTNEXTLINE (clang-tidy complains about the move in the loop as it does not recognize the early out above)
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
-      return;
     }
   });
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");

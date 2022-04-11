@@ -46,9 +46,9 @@ size_t FixedString::size() const {
 
 size_t FixedString::maximum_length() const { return _maximum_length; }
 
-std::string FixedString::string() const { return std::string(_mem, strnlen(_mem, _maximum_length)); }
+std::string FixedString::string() const { return {_mem, strnlen(_mem, _maximum_length)}; }
 
-std::string_view FixedString::string_view() const { return std::string_view(_mem, strnlen(_mem, _maximum_length)); }
+std::string_view FixedString::string_view() const { return {_mem, strnlen(_mem, _maximum_length)}; }
 
 bool FixedString::operator<(const FixedString& other) const {
   const auto smallest_length = std::min(size(), other.size());

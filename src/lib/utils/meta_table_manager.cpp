@@ -49,7 +49,7 @@ void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table
 }
 
 bool MetaTableManager::has_table(const std::string& table_name) const {
-  return _meta_tables.count(_trim_table_name(table_name));
+  return _meta_tables.contains(_trim_table_name(table_name));
 }
 
 std::shared_ptr<AbstractMetaTable> MetaTableManager::get_table(const std::string& table_name) const {

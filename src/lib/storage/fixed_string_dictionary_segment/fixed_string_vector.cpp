@@ -65,10 +65,10 @@ pmr_string FixedStringVector::get_string_at(const size_t pos) const {
 
   if (*(string_start + string_end) == '\0') {
     // The string is zero-padded - the pmr_string constructor takes care of finding the correct length
-    return pmr_string(string_start);
+    return {string_start};
   }
 
-  return pmr_string(string_start, _string_length);
+  return {string_start, _string_length};
 }
 
 const char* FixedStringVector::data() const { return _chars.data(); }

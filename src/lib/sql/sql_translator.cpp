@@ -1571,7 +1571,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprFunctionRef: {
       // convert to upper-case to find mapping
-      std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
+      std::transform(name.begin(), name.end(), name.begin(),
+                     [](const auto character) { return std::toupper(character); });
 
       // Some SQL functions have aliases, which we map to one unique identifier here.
       static const std::unordered_map<std::string, std::string> function_aliases{{{"SUBSTRING"}, {"SUBSTR"}}};
