@@ -47,9 +47,9 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
     if (queue.try_pop(task)) {
       if (task->is_stealable()) {
         return task;
-      } else {
-        queue.push(task);
       }
+
+      queue.push(task);
     }
   }
   return nullptr;

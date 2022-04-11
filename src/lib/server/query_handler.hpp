@@ -16,7 +16,7 @@ struct ExecutionInformation {
   // the root operator's type.
   OperatorType root_operator_type;
   std::string pipeline_metrics;
-  ErrorMessage error_message;
+  ErrorMessages error_messages;
   std::optional<std::string> custom_command_complete_message;
 };
 

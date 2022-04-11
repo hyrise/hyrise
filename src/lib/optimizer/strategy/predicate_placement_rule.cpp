@@ -319,10 +319,10 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
           join_node->join_mode == JoinMode::AntiNullAsFalse) {
         return candidate_nodes;
-      } else {
-        _insert_nodes(current_node, input_side, candidate_nodes);
-        return {};
       }
+
+      _insert_nodes(current_node, input_side, candidate_nodes);
+      return {};
     } break;
 
     case LQPNodeType::Alias:
@@ -382,9 +382,8 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
         subquery_expression && !subquery_expression->arguments.empty()) {
       predicate_contains_correlated_subquery = true;
       return ExpressionVisitation::DoNotVisitArguments;
-    } else {
-      return ExpressionVisitation::VisitArguments;
     }
+    return ExpressionVisitation::VisitArguments;
   });
   return predicate_contains_correlated_subquery;
 }

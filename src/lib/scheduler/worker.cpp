@@ -23,7 +23,7 @@ namespace {
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
+thread_local std::weak_ptr<opossum::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 }  // namespace
 
 // The sleep time was determined experimentally
@@ -209,11 +209,11 @@ void Worker::_set_affinity() {
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
-  auto rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  if (rc != 0) {
-    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the DB
-    // unfunctional, but probably slower
-    std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
+  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+  if (return_code != 0) {
+    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the database
+    // unfunctional, but probably slower.
+    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ")." << std::endl;
   }
 #endif
 }

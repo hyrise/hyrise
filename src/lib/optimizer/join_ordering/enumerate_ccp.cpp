@@ -71,9 +71,9 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
     for (auto csg_cmp_pair : _csg_cmp_pairs) {
       // Components must be either single-vertex or must have been enumerated as the vertex set of a previously
       // enumerated CCP
-      Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
+      Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.contains(csg_cmp_pair.first),
              "CSG not yet enumerated");
-      Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,
+      Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.contains(csg_cmp_pair.second),
              "CSG not yet enumerated");
 
       enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
@@ -124,7 +124,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     reverse_vertex_indices.emplace_back(current_vertex_idx);
   } while ((current_vertex_idx = neighborhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);
 
-  for (auto iter = reverse_vertex_indices.rbegin(); iter != reverse_vertex_indices.rend(); ++iter) {
+  for (auto iter = reverse_vertex_indices.rbegin(); iter != reverse_vertex_indices.rend(); ++iter) {  // NOLINT
     auto cmp_vertex_set = JoinGraphVertexSet(_num_vertices);
     cmp_vertex_set.set(*iter);
 

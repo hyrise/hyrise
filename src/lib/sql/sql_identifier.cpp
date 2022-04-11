@@ -12,10 +12,12 @@ bool SQLIdentifier::operator==(const SQLIdentifier& rhs) const {
 }
 
 std::string SQLIdentifier::as_string() const {
-  std::stringstream ss;
-  if (table_name) ss << *table_name << ".";
-  ss << column_name;
-  return ss.str();
+  std::stringstream sstream;
+  if (table_name) {
+    sstream << *table_name << ".";
+  }
+  sstream << column_name;
+  return sstream.str();
 }
 
 }  // namespace opossum

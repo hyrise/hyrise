@@ -91,12 +91,12 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
 
       if (base_node->output_count() > 1) {
         return {base_node, left_predicate};
-      } else {
-        const auto parse_result_right = _parse_predicate(base_node);
-        const auto and_predicate = and_(left_predicate, parse_result_right.predicate);
-
-        return {parse_result_right.base_node, and_predicate};
       }
+
+      const auto parse_result_right = _parse_predicate(base_node);
+      const auto and_predicate = and_(left_predicate, parse_result_right.predicate);
+
+      return {parse_result_right.base_node, and_predicate};
     } break;
 
     default:

@@ -22,11 +22,17 @@ using namespace opossum;  // NOLINT
 PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {
     return PredicateCondition::BetweenInclusive;
-  } else if (left_inclusive && !right_inclusive) {
+  }
+
+  if (left_inclusive && !right_inclusive) {
     return PredicateCondition::BetweenUpperExclusive;
-  } else if (!left_inclusive && right_inclusive) {
+  }
+
+  if (!left_inclusive && right_inclusive) {
     return PredicateCondition::BetweenLowerExclusive;
-  } else if (!left_inclusive && !right_inclusive) {
+  }
+
+  if (!left_inclusive && !right_inclusive) {
     return PredicateCondition::BetweenExclusive;
   }
   Fail("Unreachable Case");
@@ -341,62 +347,57 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {
-        left_column_expression, value_expression, type, false, id,
-    };
-  } else {
-    value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->left_operand());
-    const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->right_operand());
-
-    // Case: "ValueExpression [CONDITION] ColumnExpression" will be checked
-    // Boundary type will be set according to this order
-    if (value_expression && right_column_expression) {
-      switch (expression->predicate_condition) {
-        case PredicateCondition::GreaterThanEquals:
-          type = ColumnBoundaryType::UpperBoundaryInclusive;
-          break;
-        case PredicateCondition::LessThanEquals:
-          type = ColumnBoundaryType::LowerBoundaryInclusive;
-          break;
-        case PredicateCondition::GreaterThan:
-          type = ColumnBoundaryType::UpperBoundaryExclusive;
-          break;
-        case PredicateCondition::LessThan:
-          type = ColumnBoundaryType::LowerBoundaryExclusive;
-          break;
-        default:
-          break;
-      }
-      return {
-          right_column_expression, value_expression, type, false, id,
-      };
-    } else if (left_column_expression && right_column_expression) {
-      // Case: "ColumnExpression [CONDITION] ColumnExpression" will be checked
-      // Boundary type will be set according to this order
-      switch (expression->predicate_condition) {
-        case PredicateCondition::LessThanEquals:
-          type = ColumnBoundaryType::UpperBoundaryInclusive;
-          break;
-        case PredicateCondition::GreaterThanEquals:
-          type = ColumnBoundaryType::LowerBoundaryInclusive;
-          break;
-        case PredicateCondition::LessThan:
-          type = ColumnBoundaryType::UpperBoundaryExclusive;
-          break;
-        case PredicateCondition::GreaterThan:
-          type = ColumnBoundaryType::LowerBoundaryExclusive;
-          break;
-        default:
-          break;
-      }
-      return {
-          left_column_expression, right_column_expression, type, true, id,
-      };
-    }
+    return {left_column_expression, value_expression, type, false, id};
   }
-  return {
-      nullptr, nullptr, ColumnBoundaryType::None, false, id,
-  };
+
+  value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->left_operand());
+  const auto right_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->right_operand());
+
+  // Case: "ValueExpression [CONDITION] ColumnExpression" will be checked
+  // Boundary type will be set according to this order
+  if (value_expression && right_column_expression) {
+    switch (expression->predicate_condition) {
+      case PredicateCondition::GreaterThanEquals:
+        type = ColumnBoundaryType::UpperBoundaryInclusive;
+        break;
+      case PredicateCondition::LessThanEquals:
+        type = ColumnBoundaryType::LowerBoundaryInclusive;
+        break;
+      case PredicateCondition::GreaterThan:
+        type = ColumnBoundaryType::UpperBoundaryExclusive;
+        break;
+      case PredicateCondition::LessThan:
+        type = ColumnBoundaryType::LowerBoundaryExclusive;
+        break;
+      default:
+        break;
+    }
+    return {right_column_expression, value_expression, type, false, id};
+  }
+
+  if (left_column_expression && right_column_expression) {
+    // Case: "ColumnExpression [CONDITION] ColumnExpression" will be checked
+    // Boundary type will be set according to this order
+    switch (expression->predicate_condition) {
+      case PredicateCondition::LessThanEquals:
+        type = ColumnBoundaryType::UpperBoundaryInclusive;
+        break;
+      case PredicateCondition::GreaterThanEquals:
+        type = ColumnBoundaryType::LowerBoundaryInclusive;
+        break;
+      case PredicateCondition::LessThan:
+        type = ColumnBoundaryType::UpperBoundaryExclusive;
+        break;
+      case PredicateCondition::GreaterThan:
+        type = ColumnBoundaryType::LowerBoundaryExclusive;
+        break;
+      default:
+        break;
+    }
+    return {left_column_expression, right_column_expression, type, true, id};
+  }
+
+  return {nullptr, nullptr, ColumnBoundaryType::None, false, id};
 }
 
 BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(

@@ -263,7 +263,7 @@ TEST_F(PostgresProtocolHandlerTest, ReadExecutePacket) {
 
 TEST_F(PostgresProtocolHandlerTest, SendErrorMessage) {
   const std::string error_description = "error";
-  const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, error_description}};
+  const auto error_message = ErrorMessages{{PostgresMessageType::HumanReadableError, error_description}};
   _protocol_handler->send_error_message(error_message);
   const std::string file_content = _mocked_socket->read();
 

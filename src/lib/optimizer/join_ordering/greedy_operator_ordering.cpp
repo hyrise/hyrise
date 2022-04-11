@@ -144,18 +144,17 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
                                         edge.predicates, cost_estimator);
 
     return {plan, cardinality_estimator->estimate_cardinality(plan)};
-
-  } else {
-    // Local edges and hyperedges
-    auto plan = vertex_clusters.at(joined_clusters.front());
-
-    for (auto joined_cluster_idx = size_t{1}; joined_cluster_idx < joined_clusters.size(); ++joined_cluster_idx) {
-      plan = JoinNode::make(JoinMode::Cross, plan, vertex_clusters.at(joined_clusters[joined_cluster_idx]));
-    }
-
-    plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator);
-    return {plan, cardinality_estimator->estimate_cardinality(plan)};
   }
+
+  // Local edges and hyperedges
+  auto plan = vertex_clusters.at(joined_clusters.front());
+
+  for (auto joined_cluster_idx = size_t{1}; joined_cluster_idx < joined_clusters.size(); ++joined_cluster_idx) {
+    plan = JoinNode::make(JoinMode::Cross, plan, vertex_clusters.at(joined_clusters[joined_cluster_idx]));
+  }
+
+  plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator);
+  return {plan, cardinality_estimator->estimate_cardinality(plan)};
 }
 
 }  // namespace opossum

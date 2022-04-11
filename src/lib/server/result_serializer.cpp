@@ -73,7 +73,7 @@ void ResultSerializer::send_query_response(
 
     // Iterate over each row in chunk
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      auto string_length_sum = 0;
+      auto string_length_sum = uint32_t{0};
       // Iterate over each attribute in row
       for (auto segment_id = ColumnID{0}; segment_id < column_count; segment_id++) {
         const auto attribute_value = (*segments[segment_id])[chunk_offset];
@@ -81,7 +81,7 @@ void ResultSerializer::send_query_response(
         const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
         if (string_value.has_value()) {
           // Sum up string lengths for a row to save an extra loop during serialization
-          string_length_sum += string_value.value().size();
+          string_length_sum += static_cast<uint32_t>(string_value.value().size());
         }
         values_as_strings[segment_id] = string_value;
       }
@@ -94,9 +94,9 @@ std::string ResultSerializer::build_command_complete_message(const ExecutionInfo
                                                              const uint64_t row_count) {
   if (execution_information.custom_command_complete_message) {
     return execution_information.custom_command_complete_message.value();
-  } else {
-    return build_command_complete_message(execution_information.root_operator_type, row_count);
   }
+
+  return build_command_complete_message(execution_information.root_operator_type, row_count);
 }
 
 std::string ResultSerializer::build_command_complete_message(const OperatorType root_operator_type,

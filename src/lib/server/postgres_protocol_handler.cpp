@@ -18,10 +18,10 @@ uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet_header() {
   if (protocol_version == SSL_REQUEST_CODE) {
     _ssl_deny();
     return read_startup_packet_header();
-  } else {
-    // Subtract uint32_t twice, since both packet length and protocol version have been read already
-    return body_length - 2 * LENGTH_FIELD_SIZE;
   }
+
+  // Subtract uint32_t twice, since both packet length and protocol version have been read already
+  return body_length - 2 * LENGTH_FIELD_SIZE;
 }
 
 template <typename SocketType>
@@ -228,20 +228,20 @@ std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
 }
 
 template <typename SocketType>
-void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessage& error_message) {
+void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessages& error_messages) {
   _write_buffer.template put_value(PostgresMessageType::ErrorResponse);
 
   // Calculate size of error message strings
-  auto string_length_sum = 0;
-  for (const auto& kv : error_message) {
-    string_length_sum += kv.second.size() + 1u /* null terminator */;
+  auto string_length_sum = size_t{0};
+  for (const auto& error_message : error_messages) {
+    string_length_sum += error_message.second.size() + 1ul /* null terminator */;
   }
 
-  const auto packet_size = LENGTH_FIELD_SIZE + error_message.size() * sizeof(PostgresMessageType) + string_length_sum +
+  const auto packet_size = LENGTH_FIELD_SIZE + error_messages.size() * sizeof(PostgresMessageType) + string_length_sum +
                            1u /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
-  for (const auto& [message_type, content] : error_message) {
+  for (const auto& [message_type, content] : error_messages) {
     _write_buffer.template put_value(message_type);
     _write_buffer.put_string(content);
   }
