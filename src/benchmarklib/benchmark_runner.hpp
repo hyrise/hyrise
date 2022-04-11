@@ -37,7 +37,7 @@ class SQLiteWrapper;
 class BenchmarkRunner : public Noncopyable {
  public:
   // Defines the interval in which the system utilization is collected
-  static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::milliseconds{1000};
+  static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::seconds{1};
 
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);
@@ -91,7 +91,10 @@ class BenchmarkRunner : public Noncopyable {
 
   std::optional<PerformanceWarningDisabler> _performance_warning_disabler;
 
-  std::chrono::system_clock::time_point _benchmark_start;
+  // This is a steady_clock timestamp. steady_clock guarantees that the clock is not adjusted while benchmarking.
+  TimePoint _benchmark_start;
+  // We need the system_clock here to provide human-readable timestamps relative to the benchmark start for log entries.
+  std::chrono::system_clock::time_point _benchmark_wall_clock_start;
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
   // let a simulated client schedule the next item, as well as the total number of finished items so far

@@ -77,6 +77,9 @@ TEST_F(ExpressionTest, Equals) {
   EXPECT_NE(*unary_minus_(6), *unary_minus_(6.5));
   EXPECT_EQ(*cast_(6.5, DataType::Int), *cast_(6.5, DataType::Int));
   EXPECT_NE(*cast_(6.5, DataType::Int), *cast_(6.5, DataType::Float));
+  EXPECT_EQ(*interval_(3, DatetimeComponent::Day), *interval_(3, DatetimeComponent::Day));
+  EXPECT_NE(*interval_(3, DatetimeComponent::Day), *interval_(3, DatetimeComponent::Month));
+  EXPECT_NE(*interval_(3, DatetimeComponent::Day), *interval_(4, DatetimeComponent::Day));
 }
 
 TEST_F(ExpressionTest, DeepEquals) {
@@ -164,6 +167,7 @@ TEST_F(ExpressionTest, DeepCopySubplanDeduplication) {
   expressions.emplace_back(extract_(DatetimeComponent::Day, pqp_subquery_expression_int1));
   // Function Expression
   expressions.emplace_back(substr_(pqp_subquery_expression_string, 0, 1));
+  // Interval Expression              [never contains PQPSubqueryExpression]
   // List Expression
   expressions.emplace_back(
       list_(pqp_subquery_expression_int1, pqp_subquery_expression_int2, pqp_subquery_expression_int3));
@@ -276,6 +280,7 @@ TEST_F(ExpressionTest, AsColumnName) {
   EXPECT_EQ(correlated_parameter_(ParameterID{0}, a)->as_column_name(), "Parameter[name=a; ParameterID=0]");
   EXPECT_EQ(in_(5, list_(1, 2, 3))->as_column_name(), "(5) IN (1, 2, 3)");
   EXPECT_EQ(not_in_(5, list_(1, 2, 3))->as_column_name(), "(5) NOT IN (1, 2, 3)");
+  EXPECT_EQ(interval_(30, DatetimeComponent::Day)->as_column_name(), "INTERVAL '30' Day");
 }
 
 TEST_F(ExpressionTest, AsColumnNameNested) {
@@ -331,6 +336,7 @@ TEST_F(ExpressionTest, DataType) {
   EXPECT_EQ(null_()->data_type(), DataType::Null);
   EXPECT_EQ(cast_(36.5, DataType::Int)->data_type(), DataType::Int);
   EXPECT_EQ(cast_(null_(), DataType::Float)->data_type(), DataType::Float);
+  EXPECT_EQ(interval_(30, DatetimeComponent::Day)->data_type(), DataType::String);
 
   EXPECT_EQ(less_than_(1, 2)->data_type(), DataType::Int);
   EXPECT_EQ(less_than_(1.5, 2)->data_type(), DataType::Int);
@@ -461,6 +467,11 @@ TEST_F(ExpressionTest, EqualsAndHash) {
   expressions.emplace_back(__LINE__, in_(6, list_(1, 2, 3)));
   expressions.emplace_back(__LINE__, not_in_(5, list_(1, 2, 3)));
   expressions.emplace_back(__LINE__, in_(5, lqp_subquery_(int_float_node)));
+
+  // IntervalExpression
+  expressions.emplace_back(__LINE__, interval_(1, DatetimeComponent::Day));
+  expressions.emplace_back(__LINE__, interval_(6, DatetimeComponent::Day));
+  expressions.emplace_back(__LINE__, interval_(6, DatetimeComponent::Month));
 
   // IsNullExpression
   expressions.emplace_back(__LINE__, is_null_(1));

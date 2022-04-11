@@ -40,7 +40,7 @@ class Chunk : private Noncopyable {
  public:
   // This is the architecture-defined limit on the size of a single chunk. The last chunk offset is reserved for NULL
   // as used in ReferenceSegments.
-  static constexpr ChunkOffset MAX_SIZE = std::numeric_limits<ChunkOffset>::max() - 1;
+  static constexpr auto MAX_SIZE = ChunkOffset{std::numeric_limits<ChunkOffset::base_type>::max() - 1};
 
   // For a new chunk, this is the size of the pre-allocated ValueSegments. This is only relevant for chunks that
   // contain data. Chunks that contain reference segments do not use the table's target_chunk_size at all.
@@ -50,7 +50,7 @@ class Chunk : private Noncopyable {
   // requires up to 16 bits for the value ids. A chunk size of 100'000 would put us just slightly over that 16 bits,
   // meaning that FixedWidthInteger vectors would use 32 instead of 16 bits. We do not use 65'536 because we need to
   // account for NULL being encoded as a separate value id.
-  static constexpr ChunkOffset DEFAULT_SIZE = 65'535;
+  static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
         const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
@@ -161,7 +161,7 @@ class Chunk : private Noncopyable {
    * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
    * the current transaction.
    */
-  ChunkOffset invalid_row_count() const { return _invalid_row_count.load(); }
+  ChunkOffset invalid_row_count() const { return ChunkOffset{_invalid_row_count}; }
 
   /**
    * Atomically increases the counter of deleted/invalidated rows within this chunk.
@@ -198,11 +198,12 @@ class Chunk : private Noncopyable {
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::vector<SortColumnDefinition> _sorted_by;
-  mutable std::atomic<ChunkOffset> _invalid_row_count{0};
+  mutable std::atomic<ChunkOffset::base_type> _invalid_row_count{ChunkOffset::base_type{0}};
 
   // Default value of zero means "not set"
-  std::atomic<CommitID> _cleanup_commit_id{0};
-  static_assert(std::is_same<uint32_t, CommitID>::value, "Type of _cleanup_commit_id does not match type of CommitID.");
+  std::atomic<CommitID> _cleanup_commit_id{CommitID{0}};
+  static_assert(std::is_same<uint32_t, CommitID::base_type>::value,
+                "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
 }  // namespace opossum

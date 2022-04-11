@@ -76,7 +76,7 @@ std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
 ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
 ChunkOffset Chunk::size() const {
-  if (_segments.empty()) return 0;
+  if (_segments.empty()) return ChunkOffset{0};
   const auto first_segment = get_segment(ColumnID{0});
   return static_cast<ChunkOffset>(first_segment->size());
 }
@@ -215,7 +215,7 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
-void Chunk::increase_invalid_row_count(const uint32_t count) const { _invalid_row_count += count; }
+void Chunk::increase_invalid_row_count(const ChunkOffset count) const { _invalid_row_count += count; }
 
 const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const { return _sorted_by; }
 
@@ -254,7 +254,8 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  if (_cleanup_commit_id == 0) {
+  // TODO(Martin): check with PR #2402 whether GCC still needs the `.load()` (some used in abstract_task.cpp twice).
+  if (_cleanup_commit_id.load() == CommitID{0}) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
   }

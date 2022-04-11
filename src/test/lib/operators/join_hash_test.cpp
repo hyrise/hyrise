@@ -9,20 +9,20 @@ namespace opossum {
 class OperatorsJoinHashTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
-    _table_wrapper_small =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/join_operators/anti_int4.tbl", 2));
+    _table_wrapper_small = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/join_operators/anti_int4.tbl", ChunkOffset{2}));
     _table_wrapper_small->execute();
 
     _table_tpch_orders =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/orders.tbl", ChunkOffset{10}));
     _table_tpch_orders->execute();
 
-    _table_tpch_lineitems =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl", 10));
+    _table_tpch_lineitems = std::make_shared<TableWrapper>(
+        load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl", ChunkOffset{10}));
     _table_tpch_lineitems->execute();
 
     _table_with_nulls =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", 10));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int4_with_null.tbl", ChunkOffset{10}));
     _table_with_nulls->execute();
 
     // filters retain all rows
@@ -79,17 +79,15 @@ TEST_F(OperatorsJoinHashTest, DescriptionAndName) {
                                  std::vector<OperatorJoinPredicate>{secondary_predicate}, 4);
 
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinHash (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: Unspecified");
+            "JoinHash (Inner) Column #0 = Column #0 AND Column #0 != Column #0");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: Unspecified");
+            "JoinHash (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0");
   EXPECT_EQ(join_operator_with_radix->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Radix bits: 4");
+            "JoinHash (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0");
 
   dummy_input->execute();
-  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinHash (Inner Join where a = a AND a != a) Radix bits: Unspecified");
-  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinHash\n(Inner Join where a = a AND a != a) Radix bits: Unspecified");
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "JoinHash (Inner) a = a AND a != a");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "JoinHash (Inner)\na = a\nAND a != a");
 
   EXPECT_EQ(join_operator->name(), "JoinHash");
 }

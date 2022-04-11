@@ -20,11 +20,13 @@ namespace opossum {
 class OperatorsDifferenceTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    _table_wrapper_a =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
     _table_wrapper_a->never_clear_output();
     _table_wrapper_a->execute();
 
-    _table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", 2));
+    _table_wrapper_b =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float3.tbl", ChunkOffset{2}));
     _table_wrapper_b->never_clear_output();
     _table_wrapper_b->execute();
   }
@@ -34,7 +36,8 @@ class OperatorsDifferenceTest : public BaseTest {
 };
 
 TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 2);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2});
 
   auto difference = std::make_shared<Difference>(_table_wrapper_a, _table_wrapper_b);
   difference->execute();
@@ -43,7 +46,8 @@ TEST_F(OperatorsDifferenceTest, DifferenceOnValueTables) {
 }
 
 TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 2);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{2});
 
   const auto a = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "a");
   const auto b = PQPColumnExpression::from_table(*_table_wrapper_a->get_output(), "b");
@@ -62,7 +66,7 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
-  auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", 2));
+  auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2}));
   table_wrapper_c->execute();
 
   auto difference = std::make_shared<Difference>(_table_wrapper_a, table_wrapper_c);
@@ -73,7 +77,8 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
 
-  auto table_wrapper_d = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/float_int.tbl", 2));
+  auto table_wrapper_d =
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2}));
   table_wrapper_d->execute();
 
   auto difference = std::make_shared<Difference>(_table_wrapper_a, table_wrapper_d);

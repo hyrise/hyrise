@@ -11,7 +11,7 @@ namespace opossum {
 class TableStatisticsTest : public BaseTest {};
 
 TEST_F(TableStatisticsTest, FromTable) {
-  const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);
+  const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", ChunkOffset{20});
 
   const auto table_statistics = TableStatistics::from_table(*table);
 

@@ -46,8 +46,8 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
     }
 
     stream << "Output: " << output_row_count << " row" << (output_row_count > 1 ? "s" : "") << " in "
-           << output_chunk_count << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", "
-           << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime)) << ".";
+           << output_chunk_count << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", " << format_duration(walltime)
+           << ".";
 
     if constexpr (std::is_same_v<Steps, NoSteps>) {
       return;

@@ -28,7 +28,7 @@
 --      l_returnflag, l_linestatus
 --
 -- Changes:
---  1. dates are not supported
+--  1. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  2. implicit type conversions for arithmetic operations are not supported
@@ -116,7 +116,7 @@ SELECT l_orderkey, SUM(l_extendedprice*(1.0-l_discount)) as revenue, o_orderdate
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >= '1996-07-01' AND o_orderdate < '1996-10-01' AND exists (SELECT *FROM lineitem WHERE l_orderkey = o_orderkey AND l_commitdate < l_receiptdate) GROUP BY o_orderpriority ORDER BY o_orderpriority;
@@ -153,7 +153,7 @@ SELECT o_orderpriority, count(*) as order_count FROM orders WHERE o_orderdate >=
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  3. implicit type conversions for arithmetic operations are not supported
@@ -171,7 +171,7 @@ SELECT n_name, SUM(l_extendedprice * (1.0 - l_discount)) as revenue FROM custome
 -- AND L_DISCOUNT BETWEEN .06 - 0.01 AND .06 + 0.01 AND L_QUANTITY < 24
 --
 -- Changes:
---  1. dates are not supported
+--  1. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  2. arithmetic expressions with constants are not resolved automatically yet, so pre-calculate them as well
@@ -207,7 +207,7 @@ SELECT sum(l_extendedprice*l_discount) AS REVENUE FROM lineitem WHERE l_shipdate
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  3. Extract is not supported
@@ -259,7 +259,7 @@ SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue FROM (SELECT n1.
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --  3. Extract is not supported
 --    a. Use SUBSTR instead (because our date columns are strings AND SQLite doesn't support EXTRACT)
@@ -342,7 +342,7 @@ SELECT nation, o_year, SUM(amount) as sum_profit FROM (SELECT n_name as nation, 
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  3. implicit type conversions for arithmetic operations are not supported
@@ -408,7 +408,7 @@ SELECT ps_partkey, SUM(ps_supplycost * ps_availqty) as value FROM partsupp, supp
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 SELECT l_shipmode, SUM(case when o_orderpriority ='1-URGENT' or o_orderpriority ='2-HIGH' then 1 else 0 end) as high_line_count, SUM(case when o_orderpriority <> '1-URGENT' AND o_orderpriority <> '2-HIGH' then 1 else 0 end) as low_line_count FROM orders, lineitem WHERE o_orderkey = l_orderkey AND l_shipmode IN ('MAIL','SHIP') AND l_commitdate < l_receiptdate AND l_shipdate < l_commitdate AND l_receiptdate >= '1994-01-01' AND l_receiptdate < '1995-01-01' GROUP BY l_shipmode ORDER BY l_shipmode;
@@ -452,7 +452,7 @@ SELECT c_count, count(*) as custdist FROM (SELECT c_custkey, count(o_orderkey) a
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  3. implicit type conversions for arithmetic operations are not supported
@@ -487,7 +487,7 @@ SELECT 100.00 * SUM(case when p_type like 'PROMO%' then l_extendedprice*(1.0-l_d
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
 --  2. "revenue[STREAM_ID]" renamed to "revenue"
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 --  3. implicit type conversions for arithmetic operations are not supported
@@ -642,7 +642,7 @@ SELECT SUM(l_extendedprice * (1.0 - l_discount)) as revenue FROM lineitem, "part
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey in (SELECT ps_suppkey FROM partsupp WHERE ps_partkey in (SELECT p_partkey FROM "part" WHERE p_name like 'forest%') AND ps_availqty > (SELECT 0.5 * SUM(l_quantity) FROM lineitem WHERE l_partkey = ps_partkey AND l_suppkey = ps_suppkey AND l_shipdate >= '1994-01-01' AND l_shipdate < '1995-01-01')) AND s_nationkey = n_nationkey AND n_name = 'CANADA' ORDER BY s_name;
@@ -683,7 +683,7 @@ SELECT s_name, s_address FROM supplier, nation WHERE s_suppkey in (SELECT ps_sup
 --
 -- Changes:
 --  1. This file contains hard-coded parameters to facilitate copy-and-paste into the console
---  2. dates are not supported
+--  2. SQLite does not support dates and intervals
 --    a. use strings as data type for now
 --    b. pre-calculate date operation
 SELECT s_name, count(*) as numwait FROM supplier, lineitem l1, orders, nation WHERE s_suppkey = l1.l_suppkey AND o_orderkey = l1.l_orderkey AND o_orderstatus = 'F' AND l1.l_receiptdate > l1.l_commitdate AND exists (SELECT * FROM lineitem l2 WHERE l2.l_orderkey = l1.l_orderkey AND l2.l_suppkey <> l1.l_suppkey) AND not exists (SELECT * FROM lineitem l3 WHERE l3.l_orderkey = l1.l_orderkey AND l3.l_suppkey <> l1.l_suppkey AND l3.l_receiptdate > l3.l_commitdate) AND s_nationkey = n_nationkey AND n_name = 'SAUDI ARABIA' GROUP BY s_name ORDER BY numwait DESC, s_name LIMIT 100;

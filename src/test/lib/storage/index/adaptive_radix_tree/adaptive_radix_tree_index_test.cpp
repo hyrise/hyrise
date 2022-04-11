@@ -36,7 +36,8 @@ class AdaptiveRadixTreeIndexTest : public BaseTest {
 
     _keys1 = {ValueID{0x01010101u}, ValueID{0x01010102u}, ValueID{0x01010201u}, ValueID{0x01020101u},
               ValueID{0x01020102u}, ValueID{0x02010101u}, ValueID{0x01010101u}};
-    _values1 = {0x00000001u, 0x00000002u, 0x00000003u, 0x00000004u, 0x00000005u, 0x00000006u, 0x00000007u};
+    _values1 = {ChunkOffset{0x00000001}, ChunkOffset{0x00000002}, ChunkOffset{0x00000003}, ChunkOffset{0x00000004},
+                ChunkOffset{0x00000005}, ChunkOffset{0x00000006}, ChunkOffset{0x00000007}};
 
     for (size_t i = 0; i < 7; ++i) {
       auto bc = AdaptiveRadixTreeIndex::BinaryComparable(_keys1[i]);
@@ -110,8 +111,9 @@ TEST_F(AdaptiveRadixTreeIndexTest, BinaryComparableFromChunkOffset) {
 }
 
 TEST_F(AdaptiveRadixTreeIndexTest, BulkInsert) {
-  std::vector<ChunkOffset> expected_chunk_offsets = {0x00000001u, 0x00000007u, 0x00000002u, 0x00000003u,
-                                                     0x00000004u, 0x00000005u, 0x00000006u};
+  std::vector<ChunkOffset> expected_chunk_offsets = {
+      ChunkOffset{0x00000001}, ChunkOffset{0x00000007}, ChunkOffset{0x00000002}, ChunkOffset{0x00000003},
+      ChunkOffset{0x00000004}, ChunkOffset{0x00000005}, ChunkOffset{0x00000006}};
   EXPECT_FALSE(std::dynamic_pointer_cast<Leaf>(_root));
   EXPECT_EQ(_index1->_chunk_offsets, expected_chunk_offsets);
 

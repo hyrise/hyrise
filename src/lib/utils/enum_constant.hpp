@@ -78,7 +78,7 @@ struct value_impl<E, when<opossum::is_enum_constant_v<E>>> {
 template <typename E>
 struct hash_impl<E, when<opossum::is_enum_constant_v<E>>> {
   template <typename X>
-  static constexpr auto apply(const X&) {
+  static constexpr auto apply(const X& /*x*/) {
     return type_c<opossum::enum_constant<decltype(X::value), X::value>>;
   }
 };

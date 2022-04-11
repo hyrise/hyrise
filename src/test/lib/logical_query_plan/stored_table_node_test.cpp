@@ -23,8 +23,10 @@ class StoredTableNodeTest : public BaseTest {
   void SetUp() override {
     Hyrise::reset();
 
-    Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
-    Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_a",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    Hyrise::get().storage_manager.add_table("t_b",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
     const auto& table_t_a = Hyrise::get().storage_manager.get_table("t_a");
     ChunkEncoder::encode_all_chunks(table_t_a);

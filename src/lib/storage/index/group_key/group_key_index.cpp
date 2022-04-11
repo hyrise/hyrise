@@ -31,8 +31,8 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   //    `unique_values_count` returns the size of dictionary which does not store a ValueID for NULL.
   //    Therefore we have `unique_values_count` ValueIDs (NULL-value-id is not included)
   //    for which we want to count the occurrences.
-  auto value_histogram =
-      std::vector<ChunkOffset>(_indexed_segment->unique_values_count() + 1u /*to mark the ending position */, 0u);
+  auto value_histogram = std::vector<ChunkOffset>{
+      _indexed_segment->unique_values_count() + 1u /*to mark the ending position */, ChunkOffset{0}};
 
   // 2) Count the occurrences of value-ids: Iterate once over the attribute vector (i.e. value ids)
   //    and count the occurrences of each value id at their respective position in the dictionary,
@@ -69,7 +69,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](auto& attribute_vector) {
     auto value_id_iter = attribute_vector.cbegin();
     auto null_positions_iter = _null_positions.begin();
-    auto position = 0u;
+    auto position = ChunkOffset{0};
     for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++position) {
       const auto& value_id = static_cast<ValueID>(*value_id_iter);
 
@@ -82,7 +82,7 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
 
       // increase the write-offset by one to ensure that further writes
       // are directed to the next position in `_positions`
-      value_write_offsets[value_id]++;
+      ++value_write_offsets[value_id];
     }
   });
 }

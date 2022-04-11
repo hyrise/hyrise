@@ -39,7 +39,7 @@ INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
   expected_table->append({2.2f});
   expected_table->append({3.3f});
@@ -54,7 +54,7 @@ TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithoutFileType) {
   auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({1.1f});
   expected_table->append({2.2f});
   expected_table->append({3.3f});
@@ -127,7 +127,7 @@ TEST_F(OperatorsImportTest, TargetChunkSize) {
   EXPECT_EQ(Hyrise::get().storage_manager.get_table("a")->chunk_count(), ChunkID{1});
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});

@@ -290,7 +290,7 @@ try {
           }, tpchVerification: {
             stage("tpchVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "./clang-release/hyriseBenchmarkTPCH -r 1 -s 1 --verify"
+                sh "./clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 1 -s 1 --verify"
               } else {
                 Utils.markStageSkippedForConditional("tpchVerification")
               }
@@ -298,7 +298,7 @@ try {
           }, tpchQueryPlans: {
             stage("tpchQueryPlans") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpch; cd query_plans/tpch && ../../clang-release/hyriseBenchmarkTPCH --dont_cache_binary_tables -r 2 -s 10 --visualize && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpch/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpch/operator_breakdown.pdf'
               } else {
@@ -308,11 +308,22 @@ try {
           }, tpcdsQueryPlansAndVerification: {
             stage("tpcdsQueryPlansAndVerification") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
-                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS -r 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
+                sh "mkdir -p query_plans/tpcds; cd query_plans/tpcds && ln -s ../../resources; ../../clang-release/hyriseBenchmarkTPCDS --dont_cache_binary_tables -r 1 -s 1 --visualize --verify && ../../scripts/plot_operator_breakdown.py ../../clang-release/"
                 archiveArtifacts artifacts: 'query_plans/tpcds/*.svg'
                 archiveArtifacts artifacts: 'query_plans/tpcds/operator_breakdown.pdf'
               } else {
                 Utils.markStageSkippedForConditional("tpcdsQueryPlansAndVerification")
+              }
+            }
+          }, jobQueryPlans: {
+            stage("jobQueryPlans") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // In contrast to TPC-H and TPC-DS above, we execute the JoinOrderBenchmark from the project's root directoy because its setup script requires us to do so.
+                sh "mkdir -p query_plans/job && ./clang-release/hyriseBenchmarkJoinOrder --dont_cache_binary_tables -r 1 --visualize && ./scripts/plot_operator_breakdown.py ./clang-release/ && mv operator_breakdown.pdf query_plans/job && mv *QP.svg query_plans/job"
+                archiveArtifacts artifacts: 'query_plans/job/*.svg'
+                archiveArtifacts artifacts: 'query_plans/job/operator_breakdown.pdf'
+              } else {
+                Utils.markStageSkippedForConditional("jobQueryPlans")
               }
             }
           }
@@ -324,10 +335,9 @@ try {
     }
   }
 
-  // I have not found a nice way to run this in parallel with the steps above, as those are in a `docker.inside` block and this is not.
   parallel clangDebugMacX64: {
     node('mac') {
-      stage("clang-debug-mac-x64") {
+      stage("clangDebugMacX64") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
@@ -335,7 +345,7 @@ try {
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
-            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm/9.0.0/bin/clang++ .."
+            sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${unity} ${debug} -DCMAKE_C_COMPILER=/usr/local/Cellar/llvm@12/12.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/Cellar/llvm@12/12.0.1_1/bin/clang++ .."
             sh "cd clang-debug && make -j8"
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4"
@@ -346,14 +356,14 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clang-debug-mac-x64")
+          Utils.markStageSkippedForConditional("clangDebugMacX64")
         }
       }
     }
   }, clangReleaseMacArm: {
     // For this to work, we installed a native non-standard JDK (zulu) via brew. See #2339 for more details.
     node('mac-arm') {
-      stage("clang-release-mac-arm") {
+      stage("clangReleaseMacArm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm          
@@ -362,7 +372,7 @@ try {
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
             
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm/12.0.0_1/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm@12/12.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm@12/12.0.1_1/bin/clang++ .."
             sh "cd clang-release && make -j8"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
@@ -378,7 +388,7 @@ try {
             sh "ls -A1 | xargs rm -rf"
           }
         } else {
-          Utils.markStageSkippedForConditional("clang-release-mac-arm")
+          Utils.markStageSkippedForConditional("clangReleaseMacArm")
         }
       }
     }

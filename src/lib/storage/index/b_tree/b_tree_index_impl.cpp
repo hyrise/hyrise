@@ -103,7 +103,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const Abstract
 }
 
 template <typename DataType>
-void BTreeIndexImpl<DataType>::_add_to_heap_memory_usage(const DataType&) {
+void BTreeIndexImpl<DataType>::_add_to_heap_memory_usage(const DataType& /*value*/) {
   // Except for pmr_string (see below), no supported data type uses heap allocations
 }
 
