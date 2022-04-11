@@ -37,7 +37,7 @@ template <typename T>
 pmr_compact_vector BinaryParser::_read_values_compact_vector(std::ifstream& file, const size_t count) {
   const auto bit_width = _read_value<uint8_t>(file);
   auto values = pmr_compact_vector(bit_width, count);
-  file.read(reinterpret_cast<char*>(values.get()), static_cast<std::streamsize>(values.bytes()));
+  file.read(reinterpret_cast<char*>(values.get()), static_cast<long>(values.bytes()));
   return values;
 }
 
@@ -59,8 +59,8 @@ template <>
 pmr_vector<bool> BinaryParser::_read_values(std::ifstream& file, const size_t count) {
   pmr_vector<BoolAsByteType> readable_bools(count);
   file.read(reinterpret_cast<char*>(readable_bools.data()),
-            static_cast<std::streamsize>(readable_bools.size()) * sizeof(BoolAsByteType));
-  return pmr_vector<bool>(readable_bools.begin(), readable_bools.end());
+            static_cast<long>(readable_bools.size()) * sizeof(BoolAsByteType));
+  return {readable_bools.begin(), readable_bools.end()};
 }
 
 pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, const size_t count) {
@@ -325,7 +325,7 @@ std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_v
 std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std::ifstream& file, const size_t count) {
   const auto string_length = _read_value<uint32_t>(file);
   pmr_vector<char> values(string_length * count);
-  file.read(values.data(), static_cast<std::streamsize>(values.size()));
+  file.read(values.data(), static_cast<long>(values.size()));
   return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
 

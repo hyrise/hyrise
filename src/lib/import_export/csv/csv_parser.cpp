@@ -193,7 +193,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
     });
   }
 
-  Assert(field_ends.size() == row_count * column_count, "Unexpected number of fields");
+  Assert(field_ends.size() == static_cast<size_t>(row_count) * column_count, "Unexpected number of fields");
 
   size_t start = 0;
   size_t row_id = 0;

@@ -64,7 +64,7 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
 }
 
 void export_values(std::ofstream& ofstream, const FixedStringVector& values) {
-  ofstream.write(values.data(), static_cast<std::streamsize>(values.size()) * values.string_length());
+  ofstream.write(values.data(), static_cast<long>(values.size()) * values.string_length());
 }
 
 // specialized implementation for string values
@@ -89,7 +89,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& values) {
   export_value(ofstream, static_cast<uint8_t>(values.bits()));
-  ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
+  ofstream.write(reinterpret_cast<const char*>(values.get()), static_cast<long>(values.bytes()));
 }
 
 }  // namespace

@@ -367,6 +367,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
                                 right_data_type, !secondary_join_predicates.empty()})) {
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
+      return;
     }
   });
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
