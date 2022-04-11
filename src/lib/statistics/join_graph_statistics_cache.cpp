@@ -40,19 +40,20 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       DebugAssert(vertex_iter->second < bitmask->size(), "Vertex index out of range");
       bitmask->set(vertex_iter->second);
       return LQPVisitation::DoNotVisitInputs;
+    }
 
-    } else if (const auto join_node = std::dynamic_pointer_cast<const JoinNode>(node)) {
+    if (const auto join_node = std::dynamic_pointer_cast<const JoinNode>(node)) {
       if (join_node->join_mode == JoinMode::Inner) {
         for (const auto& join_predicate : join_node->join_predicates()) {
           const auto predicate_index_iter = _predicate_indices.find(join_predicate);
           if (predicate_index_iter == _predicate_indices.end()) {
             bitmask.reset();
             return LQPVisitation::DoNotVisitInputs;
-          } else {
-            Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
-                   "Predicate index out of range");
-            bitmask->set(predicate_index_iter->second + _vertex_indices.size());
           }
+
+          Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
+                 "Predicate index out of range");
+          bitmask->set(predicate_index_iter->second + _vertex_indices.size());
         }
       } else if (join_node->join_mode == JoinMode::Cross) {
         return LQPVisitation::VisitInputs;
@@ -67,11 +68,10 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       if (predicate_index_iter == _predicate_indices.end()) {
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
-      } else {
-        Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
-        bitmask->set(predicate_index_iter->second + _vertex_indices.size());
       }
 
+      Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
+      bitmask->set(predicate_index_iter->second + _vertex_indices.size());
     } else if (node->type == LQPNodeType::Sort) {
       // ignore node type as it doesn't change the cardinality
     } else {

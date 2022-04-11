@@ -439,9 +439,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
                   // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
-                  // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
-                  // ID generation was applied and we need to generate the ID using the value->ID map.
-                  auto id = std::numeric_limits<AggregateKeyEntry>::max();
+                  // first set `value_id` to its maximum value. If after all branches it is still that max value, no
+                  // optimized  ID generation was applied and we need to generate the ID using the value->ID map.
+                  auto value_id = std::numeric_limits<AggregateKeyEntry>::max();
 
                   if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
@@ -470,45 +470,47 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                           // more complicated.
 
                         case 0: {
-                          id = uint64_t{1};
+                          value_id = uint64_t{1};
                         } break;
 
                         case 1: {
-                          id = uint64_t{2} + char_to_uint(string[0], 0);
+                          value_id = uint64_t{2} + char_to_uint(string[0], 0);
                         } break;
 
                         case 2: {
-                          id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                          value_id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
 
                         case 3: {
-                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
+                          value_id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
                                char_to_uint(string[0], 0);
                         } break;
 
                         case 4: {
-                          id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
+                          value_id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
                                char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
                       }
                     }
                   }
 
-                  if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
+                  if (value_id == std::numeric_limits<AggregateKeyEntry>::max()) {
                     // Could not take the shortcut above, either because we don't have a string or because it is too
                     // long
                     auto inserted = id_map.try_emplace(position.value(), id_counter);
 
-                    id = inserted.first->second;
+                    value_id = inserted.first->second;
 
                     // if the id_map didn't have the value as a key and a new element was inserted
-                    if (inserted.second) ++id_counter;
+                    if (inserted.second) {
+                      ++id_counter;
+                    }
                   }
 
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys[chunk_offset] = id;
+                    keys[chunk_offset] = value_id;
                   } else {
-                    keys[chunk_offset][group_column_index] = id;
+                    keys[chunk_offset][group_column_index] = value_id;
                   }
                 }
 

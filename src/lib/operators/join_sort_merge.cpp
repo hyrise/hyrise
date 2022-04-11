@@ -433,7 +433,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // add null value combinations for right row ids that have no match.
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         // right_row_ids_with_match has no key `right_row_id`
-        if (matched_right_row_ids.count(right_row_id) == 0) {
+        if (!matched_right_row_ids.contains(right_row_id)) {
           _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
         }
       });
@@ -485,7 +485,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       end = values.end();
     }
 
-    const auto linear_search_result = std::find_if(begin, end, [&](const auto& v) { return v.value > run_value; });
+    const auto linear_search_result =
+        std::find_if(begin, end, [&](const auto& mat_value) { return mat_value.value > run_value; });
     if (linear_search_result != end) {
       // Match found within the linearly scanned part.
       return std::distance(begin, linear_search_result);

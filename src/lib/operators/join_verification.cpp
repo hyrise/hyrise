@@ -6,9 +6,9 @@
 namespace {
 
 template <typename T>
-std::vector<T> concatenate(const std::vector<T>& l, const std::vector<T>& r) {
-  auto result = l;
-  result.insert(result.end(), r.begin(), r.end());
+std::vector<T> concatenate(const std::vector<T>& left, const std::vector<T>& right) {
+  auto result = left;
+  result.insert(result.end(), right.begin(), right.end());
   return result;
 }
 
