@@ -448,10 +448,10 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                     if (string.size() < 5) {
                       static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
 
-                      const auto char_to_uint = [](const char in, const uint bits) {
+                      const auto char_to_uint = [](const char char_in, const uint32_t bits) {
                         // chars may be signed or unsigned. For the calculation as described below, we need signed
                         // chars.
-                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
+                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&char_in)) << bits;
                       };
 
                       switch (string.size()) {
@@ -483,12 +483,12 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
                         case 3: {
                           value_id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
-                               char_to_uint(string[0], 0);
+                                     char_to_uint(string[0], 0);
                         } break;
 
                         case 4: {
                           value_id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
-                               char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                                     char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
                       }
                     }

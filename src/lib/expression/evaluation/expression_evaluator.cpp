@@ -1280,7 +1280,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
 }
 
 template <typename Functor>
-void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression, const Functor& functor) {
+void ExpressionEvaluator::_resolve_to_expression_result_view(const AbstractExpression& expression,
+                                                             const Functor& functor) {
   _resolve_to_expression_result(expression,
                                 [&](const auto& result) { result.as_view([&](const auto& view) { functor(view); }); });
 }
@@ -1289,12 +1290,12 @@ template <typename Functor>
 void ExpressionEvaluator::_resolve_to_expression_result_views(const AbstractExpression& left_expression,
                                                               const AbstractExpression& right_expression,
                                                               const Functor& functor) {
-  _resolve_to_expression_results(left_expression, right_expression,
-                                 [&](const auto& left_result, const auto& right_result) {
-                                   left_result.as_view([&](const auto& left_view) {
-                                     right_result.as_view([&](const auto& right_view) { functor(left_view, right_view); });
-                                   });
-                                 });
+  _resolve_to_expression_results(
+      left_expression, right_expression, [&](const auto& left_result, const auto& right_result) {
+        left_result.as_view([&](const auto& left_view) {
+          right_result.as_view([&](const auto& right_view) { functor(left_view, right_view); });
+        });
+      });
 }
 
 template <typename Functor>
@@ -1302,7 +1303,8 @@ void ExpressionEvaluator::_resolve_to_expression_results(const AbstractExpressio
                                                          const AbstractExpression& right_expression,
                                                          const Functor& functor) {
   _resolve_to_expression_result(left_expression, [&](const auto& left_result) {
-    _resolve_to_expression_result(right_expression, [&](const auto& right_result) { functor(left_result, right_result); });
+    _resolve_to_expression_result(right_expression,
+                                  [&](const auto& right_result) { functor(left_result, right_result); });
   });
 }
 
@@ -1347,7 +1349,8 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
                                                                    const pmr_vector<bool>& right) {
   if (left.size() == right.size()) {
     pmr_vector<bool> nulls(left.size());
-    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(), [](const auto lhs, const auto rhs) { return lhs || rhs; });
+    std::transform(left.begin(), left.end(), right.begin(), nulls.begin(),
+                   [](const auto lhs, const auto rhs) { return lhs || rhs; });
     return nulls;
   }
 
@@ -1377,7 +1380,7 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
 
   if (_segment_materializations[column_id]) {
     return;
-  }  
+  }
 
   const auto& segment = *_chunk->get_segment(column_id);
 
