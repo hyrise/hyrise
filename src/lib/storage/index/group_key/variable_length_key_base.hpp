@@ -63,6 +63,6 @@ bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
 /**
  * Prints the data as hex number.
  */
-std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key);
+std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key);
 
 }  // namespace opossum

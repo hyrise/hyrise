@@ -118,21 +118,27 @@ bool operator>(const VariableLengthKeyBase& left, const VariableLengthKeyBase& r
 
 bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left < right); }
 
-std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key) {
-  os << std::hex << std::setfill('0');
+std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key) {
+  stream << std::hex << std::setfill('0');
   const auto* const raw_data = reinterpret_cast<uint8_t*>(key._data);
+
   if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
-    for (CompositeKeyLength i = 1; i <= key._size; ++i) {
-      os << std::setw(2) << +raw_data[key._size - i];
-      if (i != key._size) os << ' ';
+    for (auto key_id = CompositeKeyLength{1}; key_id <= key._size; ++key_id) {
+      stream << std::setw(2) << +raw_data[key._size - key_id];
+      if (key_id != key._size) {
+        stream << ' ';
+      }
     }
   } else {
-    for (CompositeKeyLength i = 0; i < key._size; ++i) {
-      os << std::setw(2) << +raw_data[i];
-      if (i != key._size - 1) os << ' ';
+    for (auto key_id = CompositeKeyLength{0}; key_id < key._size; ++key_id) {
+      stream << std::setw(2) << +raw_data[key_id];
+      if (key_id != key._size - 1) {
+        stream << ' ';
+      }
     }
   }
-  os << std::dec << std::setw(0) << std::setfill(' ');
-  return os;
+
+  stream << std::dec << std::setw(0) << std::setfill(' ');
+  return stream;
 }
 }  // namespace opossum

@@ -11,25 +11,29 @@ namespace opossum {
 
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      if (!chunk) continue;  // Skip physically deleted chunks
+      if (!chunk) {
+        continue;  // Skip physically deleted chunks
+      }
 
-      for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+      const auto column_count = table->column_count();
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto& segment = chunk->get_segment(column_id);
 
         const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
 
         const auto estimated_size = segment->memory_usage(mode);
-        AllTypeVariant encoding = NULL_VALUE;
-        AllTypeVariant vector_compression = NULL_VALUE;
+        auto encoding = NULL_VALUE;
+        auto vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
           encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
 
           if (encoded_segment->compressed_vector_type()) {
-            std::stringstream ss;
-            ss << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string{ss.str()};
+            std::stringstream sstream;
+            sstream << *encoded_segment->compressed_vector_type();
+            vector_compression = pmr_string{sstream.str()};
           }
         }
 
@@ -77,7 +81,7 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
       return;
     }
 
-    std::unordered_set<ColumnDataType> distinct_values;
+    auto distinct_values = std::unordered_set<ColumnDataType>{};
     auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
     iterable.with_iterators([&](auto iter, auto end) {
       for (; iter != end; ++iter) {

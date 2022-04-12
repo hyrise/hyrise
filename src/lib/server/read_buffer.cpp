@@ -22,8 +22,8 @@ bool ReadBuffer<SocketType>::full() const {
 
 template <typename SocketType>
 std::string ReadBuffer<SocketType>::get_string() {
-  auto string_end = RingBufferIterator(_data);
-  std::string result;
+  auto string_end = RingBufferIterator{_data};
+  auto result = std::string{};
 
   // First, use bytes available in buffer
   if (size() != 0) {

@@ -97,7 +97,7 @@ void FixedStringVector::shrink_to_fit() { _chars.shrink_to_fit(); }
 
 PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() { return _chars.get_allocator(); }
 
-void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_length); }
+void FixedStringVector::reserve(const size_t size) { _chars.reserve(size * _string_length); }
 
 size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.capacity(); }
 

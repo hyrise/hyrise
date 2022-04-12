@@ -77,7 +77,7 @@ class FixedStringVector {
   size_t string_length() const;
 
   // Request the vector capacity to be at least enough to contain n elements
-  void reserve(const size_t n);
+  void reserve(const size_t size);
 
   // Remove elements from the vector
   void erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end);
