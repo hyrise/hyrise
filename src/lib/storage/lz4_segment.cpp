@@ -136,7 +136,8 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
 
   const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   auto decompressed_data = std::vector<char>(decompressed_size);
-  using DecompressedDataDifferenceType = typename std::iterator_traits<decltype(decompressed_data)::iterator>::difference_type;
+  using DecompressedDataDifferenceType =
+      typename std::iterator_traits<decltype(decompressed_data)::iterator>::difference_type;
 
   const auto num_blocks = _lz4_blocks.size();
 
@@ -165,8 +166,10 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
       end_char_offset = offset_decompressor->get(offset_index + 1);
     }
 
-    const auto start_offset_it = decompressed_data.cbegin() + static_cast<DecompressedDataDifferenceType>(start_char_offset);
-    const auto end_offset_it = decompressed_data.cbegin() + static_cast<DecompressedDataDifferenceType>(end_char_offset);
+    const auto start_offset_it =
+        decompressed_data.cbegin() + static_cast<DecompressedDataDifferenceType>(start_char_offset);
+    const auto end_offset_it =
+        decompressed_data.cbegin() + static_cast<DecompressedDataDifferenceType>(end_char_offset);
     decompressed_strings.emplace_back(start_offset_it, end_offset_it);
   }
 
@@ -292,7 +295,8 @@ template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
                                                                  const std::optional<int64_t> cached_block_index,
                                                                  std::vector<char>& cached_block) const {
-  using CachedBlockDifferenceType = typename std::iterator_traits<std::decay_t<decltype(cached_block)>::iterator>::difference_type;
+  using CachedBlockDifferenceType =
+      typename std::iterator_traits<std::decay_t<decltype(cached_block)>::iterator>::difference_type;
 
   /**
    * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed, and
@@ -399,7 +403,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
      */
     auto partial_result = pmr_string{};
     if (use_caching && block_index == *cached_block_index && block_index != start_block) {
-      const auto start_offset_it = cached_block_copy.cbegin() + static_cast<CachedBlockDifferenceType>(block_start_offset);
+      const auto start_offset_it =
+          cached_block_copy.cbegin() + static_cast<CachedBlockDifferenceType>(block_start_offset);
       const auto end_offset_it = cached_block_copy.cbegin() + static_cast<CachedBlockDifferenceType>(block_end_offset);
       partial_result = pmr_string{start_offset_it, end_offset_it};
     } else {

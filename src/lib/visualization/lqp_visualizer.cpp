@@ -183,7 +183,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     if (fds.empty()) {
       tooltip_stream << " <none>";
     }
-    
+
     const auto fd_count = fds.size();
     for (auto fd_idx = size_t{0}; fd_idx < fd_count; ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
