@@ -7,7 +7,11 @@ namespace {
 
 using namespace opossum;  // NOLINT
 
-auto div_ceil(auto lhs, auto rhs) { return (lhs + rhs - 1u) / rhs; }
+// Ceiling of integer division
+size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
+  DebugAssert(rhs > 0, "Divisor must be larger than 0.");
+  return (lhs + rhs - 1u) / rhs;
+}
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
@@ -21,7 +25,6 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   // values are not sorted by input chunks anymore, we can't process them chunk by chunk. Instead the values are copied
   // column by column for each output row.
 
-  // Ceiling of integer division
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
@@ -131,7 +134,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   const auto resolve_indirection = unsorted_table->type() == TableType::References;
   const auto column_count = output_table->column_count();
 
-  // Ceiling of integer division
   const auto output_chunk_count = div_ceil(input_pos_list.size(), output_chunk_size);
   Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
