@@ -152,7 +152,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
 
     for (const auto& expression : expressions) {
       const auto boundary = std::make_shared<ColumnBoundary>(_get_boundary(expression, id_counter));
-      id_counter++;
+      ++id_counter;
       if (boundary->type != ColumnBoundaryType::None) {
         if (boundary->boundary_is_column_expression) {
           const auto inverse_boundary = std::make_shared<ColumnBoundary>(_create_inverse_boundary(boundary));
@@ -323,7 +323,7 @@ void BetweenCompositionRule::_substitute_predicates_with_between_expressions(con
  *
  **/
 BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
-    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id) {
+    const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t expression_id) {
   auto type = ColumnBoundaryType::None;
   const auto left_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression->left_operand());
   auto value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->right_operand());
@@ -347,7 +347,7 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {left_column_expression, value_expression, type, false, id};
+    return {left_column_expression, value_expression, type, false, expression_id};
   }
 
   value_expression = std::dynamic_pointer_cast<ValueExpression>(expression->left_operand());
@@ -372,7 +372,7 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {right_column_expression, value_expression, type, false, id};
+    return {right_column_expression, value_expression, type, false, expression_id};
   }
 
   if (left_column_expression && right_column_expression) {
@@ -394,10 +394,10 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_get_boundary(
       default:
         break;
     }
-    return {left_column_expression, right_column_expression, type, true, id};
+    return {left_column_expression, right_column_expression, type, true, expression_id};
   }
 
-  return {nullptr, nullptr, ColumnBoundaryType::None, false, id};
+  return {nullptr, nullptr, ColumnBoundaryType::None, false, expression_id};
 }
 
 BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_boundary(

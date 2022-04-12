@@ -154,5 +154,7 @@ CheckOptions:
 
   # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency is fine.
   - key: readability-identifier-length.IgnoredParameterNames
-    value: ^[it,fd,op]$
+    value: "^(it|fd|op)$"
+  - key: readability-identifier-length.IgnoredVariableNames
+    value: "^(it|fd|op)$"
 

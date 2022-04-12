@@ -29,6 +29,9 @@ using namespace opossum::expression_functional;  // NOLINT
 
 namespace {
 
+using NodeExpressionsDifferenceType =
+    typename std::iterator_traits<decltype(opossum::AggregateNode::node_expressions)::iterator>::difference_type;
+
 using namespace opossum;  // NOLINT
 
 /**
@@ -478,7 +481,8 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
     const std::shared_ptr<AggregateNode>& node,
     const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions(
-      node->node_expressions.cbegin(), node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx);
+      node->node_expressions.cbegin(), node->node_expressions.cbegin() + static_cast<NodeExpressionsDifferenceType>(
+                                                                             node->aggregate_expressions_begin_idx));
   ExpressionUnorderedSet original_group_by_expressions(group_by_expressions.cbegin(), group_by_expressions.cend());
 
   const auto not_found_it = original_group_by_expressions.cend();
@@ -489,7 +493,9 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
   }
 
   std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions(
-      node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx, node->node_expressions.cend());
+      node->node_expressions.cbegin() +
+          static_cast<NodeExpressionsDifferenceType>(node->aggregate_expressions_begin_idx),
+      node->node_expressions.cend());
   return AggregateNode::make(group_by_expressions, aggregate_expressions);
 }
 

@@ -127,7 +127,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 
 class AbstractAggregateOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
+  AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& op,
                             const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                             const std::vector<ColumnID>& groupby_column_ids,
                             std::unique_ptr<AbstractOperatorPerformanceData> performance_data =

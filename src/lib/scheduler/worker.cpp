@@ -33,8 +33,8 @@ namespace opossum {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
 
-Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
-    : _queue(queue), _id(id), _cpu_id(cpu_id) {
+Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id)
+    : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);

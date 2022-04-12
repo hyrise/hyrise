@@ -53,7 +53,10 @@ std::string_view FixedString::string_view() const { return {_mem, strnlen(_mem, 
 bool FixedString::operator<(const FixedString& other) const {
   const auto smallest_length = std::min(size(), other.size());
   const auto result = memcmp(_mem, other._mem, smallest_length);
-  if (result == 0) return size() < other.size();
+  if (result == 0) {
+    return size() < other.size();
+  }
+
   return result < 0;
 }
 
@@ -70,7 +73,9 @@ bool operator<(const FixedString& lhs, const char* rhs) { return lhs.string_view
 bool operator<(const char* lhs, const FixedString& rhs) { return lhs < rhs.string_view(); }
 
 bool FixedString::operator==(const FixedString& other) const {
-  if (size() != other.size()) return false;
+  if (size() != other.size()) {
+    return false;
+  }
   return memcmp(_mem, other._mem, size()) == 0;
 }
 
@@ -80,7 +85,7 @@ void FixedString::swap(FixedString& other) {
   std::swap_ranges(_mem, _mem + _maximum_length, other._mem);
 }
 
-std::ostream& operator<<(std::ostream& os, const FixedString& obj) { return os << obj.string(); }
+std::ostream& operator<<(std::ostream& stream, const FixedString& obj) { return stream << obj.string(); }
 
 void swap(FixedString lhs, FixedString rhs) { lhs.swap(rhs); }
 
