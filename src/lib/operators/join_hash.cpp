@@ -196,7 +196,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
-            std::move(adjusted_secondary_predicates));
+            adjusted_secondary_predicates);
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -219,8 +219,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
-               JoinHash::PerformanceData& performance_data,
-               std::vector<OperatorJoinPredicate> secondary_predicates = {})
+               JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates)
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
         _probe_input_table(probe_input_table),
@@ -229,7 +228,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _predicate_condition(predicate_condition),
         _performance_data(performance_data),
         _output_column_order(output_column_order),
-        _secondary_predicates(std::move(secondary_predicates)),
+        _secondary_predicates(secondary_predicates),  // TODO(Martin): verify that reference is lifetime extended
         _radix_bits(radix_bits) {}
 
  protected:
@@ -242,7 +241,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
   OutputColumnOrder _output_column_order;
 
-  const std::vector<OperatorJoinPredicate> _secondary_predicates;
+  const std::vector<OperatorJoinPredicate>& _secondary_predicates;
 
   std::shared_ptr<Table> _output_table;
 

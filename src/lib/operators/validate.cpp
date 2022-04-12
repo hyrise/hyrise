@@ -53,8 +53,8 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
   return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
 
-Validate::Validate(const std::shared_ptr<AbstractOperator>& in)
-    : AbstractReadOnlyOperator(OperatorType::Validate, in) {}
+Validate::Validate(const std::shared_ptr<AbstractOperator>& op)
+    : AbstractReadOnlyOperator(OperatorType::Validate, op) {}
 
 const std::string& Validate::name() const {
   static const auto name = std::string{"Validate"};
@@ -78,8 +78,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   DebugAssert(transaction_context, "Validate requires a valid TransactionContext.");
   DebugAssert(transaction_context->phase() == TransactionPhase::Active, "Transaction is not active anymore.");
 
-  const auto in_table = left_input_table();
-  const auto chunk_count = in_table->chunk_count();
+  const auto input_table = left_input_table();
+  const auto chunk_count = input_table->chunk_count();
   const auto our_tid = transaction_context->transaction_id();
   const auto snapshot_commit_id = transaction_context->snapshot_commit_id();
 
@@ -109,7 +109,7 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
   }
 
   while (job_end_chunk_id < chunk_count) {
-    const auto chunk = in_table->get_chunk(job_end_chunk_id);
+    const auto chunk = input_table->get_chunk(job_end_chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // Small chunks are bundled together to avoid unnecessary scheduling overhead.
@@ -120,12 +120,12 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
       bool execute_directly = job_start_chunk_id == 0 && job_end_chunk_id == (chunk_count - 1);
 
       if (execute_directly) {
-        _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
+        _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
                          output_mutex);
       } else {
         jobs.push_back(std::make_shared<JobTask>([=, this, &output_chunks, &output_mutex] {
-          _validate_chunks(in_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id, output_chunks,
-                           output_mutex);
+          _validate_chunks(input_table, job_start_chunk_id, job_end_chunk_id, our_tid, snapshot_commit_id,
+                           output_chunks, output_mutex);
         }));
 
         // Prepare next job
@@ -138,10 +138,10 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
-  return std::make_shared<Table>(in_table->column_definitions(), TableType::References, std::move(output_chunks));
+  return std::make_shared<Table>(input_table->column_definitions(), TableType::References, std::move(output_chunks));
 }
 
-void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
+void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table, const ChunkID chunk_id_start,
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
                                 const CommitID snapshot_commit_id, std::vector<std::shared_ptr<Chunk>>& output_chunks,
                                 std::mutex& output_mutex) const {
@@ -153,7 +153,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
   auto entirely_visible_chunks_table = std::shared_ptr<const Table>{};  // used only for sanity check
 
   for (auto chunk_id = chunk_id_start; chunk_id <= chunk_id_end; ++chunk_id) {
-    const auto chunk_in = in_table->get_chunk(chunk_id);
+    const auto chunk_in = input_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     const auto expected_number_of_valid_rows = chunk_in->size() - chunk_in->invalid_row_count();
@@ -250,7 +250,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
 
       // Otherwise we have a non-reference Segment and simply iterate over all rows to build a poslist.
     } else {
-      referenced_table = in_table;
+      referenced_table = input_table;
 
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 

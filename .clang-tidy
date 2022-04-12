@@ -153,6 +153,6 @@ CheckOptions:
     value: lower_case
 
   # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency is fine.
-  - key: readability-identifier-length.MinimumVariableNameLength
-    value: 2
+  - key: readability-identifier-length.IgnoredParameterNames
+    value: ^[it,fd,op]$
 

@@ -107,8 +107,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _primary_right_column_id{right_column_id},
         _primary_predicate_condition{op},
         _mode{mode},
-        _secondary_join_predicates{secondary_join_predicates} {
-    _cluster_count = _determine_number_of_clusters();
+        _secondary_join_predicates{secondary_join_predicates},
+        _cluster_count{_determine_number_of_clusters()} {
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
   }

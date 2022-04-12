@@ -68,12 +68,11 @@ pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, co
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
-  pmr_vector<pmr_string> values(count);
-  size_t start = 0;
-
-  for (size_t i = 0; i < count; ++i) {
-    values[i] = pmr_string(buffer.data() + start, buffer.data() + start + string_lengths[i]);
-    start += string_lengths[i];
+  auto values = pmr_vector<pmr_string>(count);
+  auto start = size_t{0};
+  for (auto index = size_t{0}; index < count; ++index) {
+    values[index] = pmr_string(buffer.data() + start, buffer.data() + start + string_lengths[index]);
+    start += string_lengths[index];
   }
 
   return values;
@@ -94,8 +93,8 @@ std::pair<std::shared_ptr<Table>, ChunkID> BinaryParser::_read_header(std::ifstr
   const auto column_nullables = _read_values<bool>(file, column_count);
   const auto column_names = _read_string_values(file, column_count);
 
-  TableColumnDefinitions output_column_definitions;
-  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+  auto output_column_definitions = TableColumnDefinitions{};
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto data_type = data_type_to_string.right.at(std::string{column_data_types[column_id]});
     output_column_definitions.emplace_back(std::string{column_names[column_id]}, data_type,
                                            column_nullables[column_id]);

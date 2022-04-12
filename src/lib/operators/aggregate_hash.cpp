@@ -141,10 +141,10 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 
 namespace opossum {
 
-AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
+AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& op,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
+    : AbstractAggregateOperator(op, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
   // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list
   _has_aggregate_functions =
