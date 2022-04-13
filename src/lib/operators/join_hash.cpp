@@ -489,9 +489,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // simple heuristic: half of the rows of the probe side will match
     const size_t result_rows_per_partition =
         _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
-    for (size_t i = 0; i < partition_count; i++) {
-      build_side_pos_lists[i].reserve(result_rows_per_partition);
-      probe_side_pos_lists[i].reserve(result_rows_per_partition);
+    for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
+      build_side_pos_lists[partition_index].reserve(result_rows_per_partition);
+      probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
     Timer timer_probing;

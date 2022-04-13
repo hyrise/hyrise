@@ -50,7 +50,7 @@ class VariableLengthKey {
 
   VariableLengthKey& shift_and_set(uint64_t value, uint8_t bits_to_set);
 
-  friend std::ostream& operator<<(std::ostream& os, const VariableLengthKey& key);
+  friend std::ostream& operator<<(std::ostream& stream, const VariableLengthKey& key);
 
  private:
   explicit VariableLengthKey(const VariableLengthKeyBase& other);

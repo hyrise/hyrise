@@ -315,7 +315,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
   auto start_offset = offset_decompressor->get(chunk_offset);
   auto end_offset = int64_t{0};
   if (chunk_offset + 1 == offset_decompressor->size()) {
-    end_offset = static_cast<int64_t>(_lz4_blocks.size() - 1) * _block_size + _last_block_size;
+    end_offset = (static_cast<int64_t>(_lz4_blocks.size()) - 1) * _block_size + _last_block_size;
   } else {
     end_offset = offset_decompressor->get(chunk_offset + 1);
   }
