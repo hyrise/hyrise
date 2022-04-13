@@ -88,8 +88,8 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
 
   auto access_pattern = AccessPattern::Point;
   for (auto item_index = size_t{1}; item_index < max_items_to_compare; ++item_index) {
-    const int64_t diff =
-        static_cast<int64_t>(positions[item_index].chunk_offset) - static_cast<int64_t>(positions[item_index - 1].chunk_offset);
+    const int64_t diff = static_cast<int64_t>(positions[item_index].chunk_offset) -
+                         static_cast<int64_t>(positions[item_index - 1].chunk_offset);
 
     auto input = Input{};
     if (diff == 0) {

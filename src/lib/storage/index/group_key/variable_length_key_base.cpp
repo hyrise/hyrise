@@ -54,7 +54,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
         const auto [value, borrow] = shift_left_with_borrow(_data[index - byte_shift], bit_shift);
         _data[index] = value;
         if (index + 1 < _size) {
-         _data[index + 1] |= borrow;
+          _data[index + 1] |= borrow;
         }
       }
 
