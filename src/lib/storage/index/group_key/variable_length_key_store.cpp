@@ -28,7 +28,7 @@ VariableLengthKeyConstProxy VariableLengthKeyStore::operator[](ChunkOffset posit
 }
 
 void VariableLengthKeyStore::resize(ChunkOffset size) {
-  _data.resize(static_cast<std::vector<VariableLengthKeyWord>::size_type>(size * _key_alignment));
+  _data.resize(static_cast<size_t>(size * _key_alignment));
 }
 
 void VariableLengthKeyStore::shrink_to_fit() { _data.shrink_to_fit(); }

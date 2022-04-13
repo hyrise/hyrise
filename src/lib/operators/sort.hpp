@@ -25,7 +25,7 @@ class Sort : public AbstractReadOnlyOperator {
 
   enum class OperatorSteps : uint8_t { MaterializeSortColumns, Sort, TemporaryResultWriting, WriteOutput };
 
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
+  Sort(const std::shared_ptr<const AbstractOperator>& op, const std::vector<SortColumnDefinition>& sort_definitions,
        const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE,
        const ForceMaterialization force_materialization = ForceMaterialization::No);
 

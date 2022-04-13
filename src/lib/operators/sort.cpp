@@ -221,9 +221,9 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
 namespace opossum {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& op, const std::vector<SortColumnDefinition>& sort_definitions,
            const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
-    : AbstractReadOnlyOperator(OperatorType::Sort, in, nullptr,
+    : AbstractReadOnlyOperator(OperatorType::Sort, op, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
