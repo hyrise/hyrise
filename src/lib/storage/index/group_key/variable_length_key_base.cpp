@@ -50,7 +50,7 @@ VariableLengthKeyBase& VariableLengthKeyBase::operator<<=(CompositeKeyLength shi
   } else {
     if constexpr (__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__) {
       // perform shifting
-      for (int16_t index = _size - 1; index > static_cast<int16_t>(byte_shift) - 1; --index) {
+      for (auto index = _size - 1; index > byte_shift - 1; --index) {
         const auto [value, borrow] = shift_left_with_borrow(_data[index - byte_shift], bit_shift);
         _data[index] = value;
         if (index + 1 < _size) {

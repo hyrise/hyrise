@@ -150,7 +150,7 @@ class LZ4Segment : public AbstractEncodedSegment {
    *         input index if no new block had to be decompressed. Otherwise it is the index of the block that was written
    *         to the passed vector.
    */
-  std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<int64_t> cached_block_index,
+  std::pair<T, size_t> decompress(const ChunkOffset& chunk_offset, const std::optional<size_t> cached_block_index,
                                   std::vector<char>& cached_block) const;
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
@@ -220,7 +220,7 @@ template <>
 std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const;
 template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset&,
-                                                                 const std::optional<int64_t> cached_block_index,
+                                                                 const std::optional<size_t> cached_block_index,
                                                                  std::vector<char>&) const;
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const;

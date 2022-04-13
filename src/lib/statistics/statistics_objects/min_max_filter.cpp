@@ -159,10 +159,11 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
     }
-    case PredicateCondition::Like: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
+    // NOLINTBEGIN(bugprone-branch-clone)
+    case PredicateCondition::Like: {
       // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
-      // upper case letters. This can lead to a situation, where the USA% (e.g., JOB query XXXXX) is not pruned
-      // whenever just a single value starts with a lower case letter.
+      // upper case letters. This can lead to a situation, where the USA% (e.g., Join Order Benchamrk query 15c) is not
+      // pruned whenever just a single value starts with a lower case letter.
       // Examples for the handling of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
       // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}
@@ -180,7 +181,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
       return false;
     }
-    case PredicateCondition::NotLike: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
+    case PredicateCondition::NotLike: {
       // Examples for the handling of NotLike predicate:
       //                          | test%           | %test   | test\x7F% | test             | '' (empty string)
       // LikeMatcher::bounds()    | {test, tesu}    | nullopt | nullopt   | {test, test\0}   | {'', '\0'}
@@ -198,6 +199,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
       return false;
     }
+    // NOLINTEND(bugprone-branch-clone)
     default:
       return false;
   }

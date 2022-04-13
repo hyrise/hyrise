@@ -149,7 +149,7 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // fill empty space of key with zeros if less values than segments were provided
   auto empty_bits = std::accumulate(
-      _indexed_segments.cbegin() + values.size(), _indexed_segments.cend(), static_cast<uint8_t>(0u),
+      _indexed_segments.cbegin() + static_cast<int64_t>(values.size()), _indexed_segments.cend(), static_cast<uint8_t>(0u),
       [](auto value, auto segment) {
         return value + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT;
       });
