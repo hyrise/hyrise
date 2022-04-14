@@ -73,7 +73,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 # TODO(MW) comment
                 sudo add-apt-repository -y ppa:git-core/ppa
                 sudo apt-get update
-                sudo apt --only-upgrade install git
+                sudo apt --only-upgrade -y install git
                 git --version
                 #git config --global --add safe.directory=*
                 if ! git submodule update --jobs 5 --init --recursive; then
