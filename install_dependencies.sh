@@ -70,12 +70,6 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 # Packages added here should also be added to the Dockerfile
                 sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl dos2unix g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip systemtap systemtap-sdt-dev valgrind &
 
-                # Due to the security vulnerability CVE-2022-24765, we upgrade git and 
-                sudo add-apt-repository -y ppa:git-core/ppa
-                sudo apt-get update
-                sudo apt --only-upgrade -y install git
-                git --version
-                git config --global --add safe.directory=*
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
                     exit 1
