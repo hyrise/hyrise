@@ -4,7 +4,6 @@
 #include <magic_enum.hpp>
 
 #include "base_test.hpp"
-#include "lib/storage/index/index_scope.hpp"
 
 #include "nlohmann/json.hpp"
 #include "operators/join_hash.hpp"
