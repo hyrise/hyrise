@@ -75,7 +75,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 sudo apt-get update
                 sudo apt --only-upgrade -y install git
                 git --version
-                #git config --global --add safe.directory=*
+                git config --global --add safe.directory ${PWD}
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
                     exit 1
