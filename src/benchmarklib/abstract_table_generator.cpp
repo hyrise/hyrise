@@ -303,39 +303,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Create chunk indexes if requested by the user
    */
   if (_benchmark_config->chunk_indexes) {
-    std::cout << "- Creating chunk indexes" << std::endl;
-    const auto& indexes_by_table = _indexes_by_table();
-    if (indexes_by_table.empty()) {
-      std::cout << "-  No indexes defined by benchmark" << std::endl;
-    }
-    for (const auto& [table_name, indexes] : indexes_by_table) {
-      const auto& table = table_info_by_name[table_name].table;
-
-      for (const auto& index_columns : indexes) {
-        auto column_ids = std::vector<ColumnID>{};
-
-        for (const auto& index_column : index_columns) {
-          column_ids.emplace_back(table->column_id_by_name(index_column));
-        }
-
-        std::cout << "-  Creating index on " << table_name << " [ ";
-        for (const auto& index_column : index_columns) {
-          std::cout << index_column << " ";
-        }
-        std::cout << "] " << std::flush;
-        Timer per_index_timer;
-
-        if (column_ids.size() == 1) {
-          table->create_index<GroupKeyIndex>(column_ids);
-        } else {
-          table->create_index<CompositeGroupKeyIndex>(column_ids);
-        }
-
-        std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
-      }
-    }
-    metrics.chunk_index_duration = timer.lap();
-    std::cout << "- Creating chunk indexes done (" << format_duration(metrics.chunk_index_duration) << ")" << std::endl;
+    _create_chunk_indexes(table_info_by_name);
   } else {
     std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false" << std::endl;
   }
@@ -344,34 +312,7 @@ void AbstractTableGenerator::generate_and_store() {
    * Create table indexes if requested by the user
    */
   if (_benchmark_config->table_indexes) {
-    std::cout << "- Creating table indexes (single-column)" << std::endl;
-    const auto& indexes_by_table = _indexes_by_table();
-    if (indexes_by_table.empty()) {
-      std::cout << "-  No indexes defined by benchmark" << std::endl;
-    }
-    for (const auto& [table_name, indexes] : indexes_by_table) {
-      const auto& table = table_info_by_name[table_name].table;
-
-      auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
-      std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
-      for (const auto& index_columns : indexes) {
-        for (const auto& index_column : index_columns) {
-          std::cout << "-  Creating table index on " << table_name << " [ ";
-          std::cout << index_column << " ";
-          std::cout << "with chunk size"
-                    << " ";
-          std::cout << chunk_ids.size() << " ";
-          std::cout << "] " << std::flush;
-
-          Timer per_table_index_timer;
-          table->create_table_index<PartialHashIndex>(table->column_id_by_name(index_column), chunk_ids);
-
-          std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
-        }
-      }
-    }
-    metrics.table_index_duration = timer.lap();
-    std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
+    _create_table_indexes(table_info_by_name);
   } else {
     std::cout << "- No table indexes created as --table_indexes was not specified or set to false" << std::endl;
   }
@@ -386,6 +327,76 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
   auto config = BenchmarkConfig::get_default_config();
   config.chunk_size = chunk_size;
   return std::make_shared<BenchmarkConfig>(config);
+}
+
+void AbstractTableGenerator::_create_chunk_indexes(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+  Timer timer;
+  std::cout << "- Creating chunk indexes" << std::endl;
+  const auto& indexes_by_table = _indexes_by_table();
+  if (indexes_by_table.empty()) {
+    std::cout << "-  No indexes defined by benchmark" << std::endl;
+  }
+  for (const auto& [table_name, indexes] : indexes_by_table) {
+    const auto& table = table_info_by_name[table_name].table;
+
+    for (const auto& index_columns : indexes) {
+      auto column_ids = std::vector<ColumnID>{};
+
+      for (const auto& index_column : index_columns) {
+        column_ids.emplace_back(table->column_id_by_name(index_column));
+      }
+
+      std::cout << "-  Creating index on " << table_name << " [ ";
+      for (const auto& index_column : index_columns) {
+        std::cout << index_column << " ";
+      }
+      std::cout << "] " << std::flush;
+      Timer per_index_timer;
+
+      if (column_ids.size() == 1) {
+        table->create_index<GroupKeyIndex>(column_ids);
+      } else {
+        table->create_index<CompositeGroupKeyIndex>(column_ids);
+      }
+
+      std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
+    }
+  }
+  metrics.chunk_index_duration = timer.lap();
+  std::cout << "- Creating chunk indexes done (" << format_duration(metrics.chunk_index_duration) << ")" << std::endl;
+}
+
+void AbstractTableGenerator::_create_table_indexes(
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
+  Timer timer;
+  std::cout << "- Creating table indexes" << std::endl;
+  const auto& indexes_by_table = _indexes_by_table();
+  if (indexes_by_table.empty()) {
+    std::cout << "-  No indexes defined by benchmark" << std::endl;
+  }
+  for (const auto& [table_name, indexes] : indexes_by_table) {
+    const auto& table = table_info_by_name[table_name].table;
+
+    auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
+    std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
+    for (const auto& index_columns : indexes) {
+      if (index_columns.size() > 1) {
+        std::cout << "-  Requested multi-column index is stored as multiple single-column indexes." << std::endl;
+      }
+      for (const auto& index_column : index_columns) {
+        std::cout << "-  Creating table index on " << table_name << " [" << index_column << " with " << chunk_ids.size()
+                  << " indexed chunks]" << std::flush;
+
+        Timer per_table_index_timer;
+        table->create_table_index<PartialHashIndex>(table->column_id_by_name(index_column), chunk_ids);
+
+        std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
+      }
+    }
+  }
+  metrics.table_index_duration = timer.lap();
+  std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
 }
 
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }

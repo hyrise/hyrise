@@ -34,6 +34,8 @@ using ChunkRange = std::pair<ChunkID, ChunkID>;
 
 enum class InputSide { Left, Right };
 
+enum class IndexScope { Table, Chunk };
+
 // Join operators might build internal PosLists that they have to de-reference when assembling the output Table if the
 // input itself is already a reference Table.
 enum class InputTableType {
