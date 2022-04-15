@@ -24,7 +24,7 @@ AbstractTableIndex::Iterator AbstractTableIndex::null_cend() const { return _nul
 TableIndexType AbstractTableIndex::type() const { return _type; }
 
 size_t AbstractTableIndex::memory_consumption() const {
-  size_t bytes{0u};
+  auto bytes = size_t{0};
   bytes += _memory_consumption();
   bytes += sizeof(_type);
   return bytes;

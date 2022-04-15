@@ -26,7 +26,18 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
   virtual ~BasePartialHashIndexImpl() = default;
 
+  /**
+   * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
+   *
+   * @return The number of added chunks.
+   */
   virtual size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
+
+  /**
+   * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
+   *
+   * @return The number of removed chunks.
+   */
   virtual size_t remove_entries(const std::vector<ChunkID>&);
 
   virtual Iterator cbegin() const;

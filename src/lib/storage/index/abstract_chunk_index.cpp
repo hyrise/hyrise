@@ -30,7 +30,7 @@ size_t AbstractChunkIndex::estimate_memory_consumption(ChunkIndexType type, Chun
 AbstractChunkIndex::AbstractChunkIndex(const ChunkIndexType type) : _type{type} {}
 
 bool AbstractChunkIndex::is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-  auto indexed_segments = _get_indexed_segments();
+  const auto& indexed_segments = _get_indexed_segments();
   if (segments.size() > indexed_segments.size()) return false;
   if (segments.empty()) return false;
 
