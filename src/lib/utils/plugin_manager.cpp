@@ -90,15 +90,10 @@ std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_un
   const auto& plugin_handle_wrapper = plugin_iter->second;
 
   // Delete keywords and functions for plugin to be unloaded.
-  auto it = _user_executable_functions.cbegin();
-  while (it != _user_executable_functions.cend()) {
-    // Accessing first element of a pair that forms map's key.
-    if (it->first.first == plugin_name) {
-      it = _user_executable_functions.erase(it);
-    } else {
-      it++;
-    }
-  }
+  std::erase_if(_user_executable_functions, [&](const auto& item) {
+    const auto& [item_plugin_name, _] = item.first;
+    return item_plugin_name == plugin_name;
+  });
 
   plugin_handle_wrapper.plugin->stop();
   auto* const handle = plugin_handle_wrapper.handle;
