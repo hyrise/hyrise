@@ -62,6 +62,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   plugin_handle_wrapper.plugin->start();
   _plugins[plugin_name] = std::move(plugin_handle_wrapper);
 
+  // Add the newly loaded plugin's user executable functions to our map of functions.
   const auto user_executable_functions = _plugins[plugin_name].plugin->get_user_executable_functions();
   for (const auto& [function_name, function_pointer] : user_executable_functions) {
     _user_executable_functions[{plugin_name, function_name}] = function_pointer;
@@ -89,7 +90,7 @@ std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_un
   const PluginName plugin_name = plugin_iter->first;
   const auto& plugin_handle_wrapper = plugin_iter->second;
 
-  // Delete keywords and functions for plugin to be unloaded.
+  // Delete user exectuable functions of the plugin to be unloaded from the map of functions.
   std::erase_if(_user_executable_functions, [&](const auto& item) {
     const auto& [item_plugin_name, _] = item.first;
     return item_plugin_name == plugin_name;
