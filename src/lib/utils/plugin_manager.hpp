@@ -18,7 +18,7 @@ struct PluginHandleWrapper {
 };
 
 struct plugin_name_function_name_hash {
-  size_t operator() (const std::pair<PluginName, PluginFunctionName> &p) const {
+  size_t operator()(const std::pair<PluginName, PluginFunctionName>& p) const {
     size_t hash{0};
     boost::hash_combine(hash, p.first);
     boost::hash_combine(hash, p.second);
@@ -49,7 +49,8 @@ class PluginManager : public Noncopyable {
   PluginManager& operator=(PluginManager&&) = default;
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
-  std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash> _user_executable_functions;
+  std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>
+      _user_executable_functions;
 
   // This method is called during destruction and stops and unloads all currently loaded plugions.
   void _clean_up();

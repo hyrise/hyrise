@@ -70,7 +70,8 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 }
 
 void PluginManager::exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name) {
-  Assert(_user_executable_functions.count({plugin_name, function_name}) > 0, "There is no " + function_name + " defined for plugin " + plugin_name + ".");
+  Assert(_user_executable_functions.count({plugin_name, function_name}) > 0,
+         "There is no " + function_name + " defined for plugin " + plugin_name + ".");
 
   const auto user_executable_function = _user_executable_functions[{plugin_name, function_name}];
   user_executable_function();
@@ -80,7 +81,8 @@ void PluginManager::exec_user_function(const PluginName& plugin_name, const Plug
 
 void PluginManager::unload_plugin(const PluginName& plugin_name) {
   auto plugin_iter = _plugins.find(plugin_name);
-  Assert(plugin_iter != _plugins.cend(), "Unloading plugin failed: A plugin with name " + plugin_name + " does not exist.");
+  Assert(plugin_iter != _plugins.cend(),
+         "Unloading plugin failed: A plugin with name " + plugin_name + " does not exist.");
 
   _unload_and_erase_plugin(plugin_iter);
 }

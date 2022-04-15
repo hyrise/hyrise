@@ -6,7 +6,9 @@
 
 namespace opossum {
 
-MetaExecTable::MetaExecTable() : AbstractMetaTable(TableColumnDefinitions{{"plugin_name", DataType::String, false}, {"function_name", DataType::String, false}}) {}
+MetaExecTable::MetaExecTable()
+    : AbstractMetaTable(TableColumnDefinitions{{"plugin_name", DataType::String, false},
+                                               {"function_name", DataType::String, false}}) {}
 
 const std::string& MetaExecTable::name() const {
   static const auto name = std::string{"exec"};
