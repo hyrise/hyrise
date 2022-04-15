@@ -12,6 +12,9 @@ namespace opossum {
 #define EXPORT_PLUGIN(PluginName) \
   extern "C" AbstractPlugin* factory() { return new PluginName(); }
 
+using PluginFunctionName = std::string;
+using PluginFunctionPointer = std::function<void(void)>;
+
 // AbstractPlugin is the abstract super class for all plugins. An example implementation can be found
 // under test/utils/test_plugin.cpp. Usually plugins are implemented as singletons because there
 // shouldn't be multiple instances of them as they would compete against each other.
@@ -25,7 +28,7 @@ class AbstractPlugin {
 
   virtual void stop() = 0;
 
-  virtual std::vector<std::pair<std::string, std::function<void(void)>>> keywords_functions() const {
+  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> get_user_executable_functions() const {
     return {};
   }
 };

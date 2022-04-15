@@ -16,15 +16,13 @@ void TestPlugin::start() {
 
 void TestPlugin::stop() { Hyrise::get().storage_manager.drop_table("DummyTable"); }
 
-std::vector<std::pair<std::string, std::function<void(void)>>> TestPlugin::keywords_functions() const {
-  std::vector<std::pair<std::string, std::function<void(void)>>> result;
-
-  result.push_back({"UserCallable", [&]() { this->test_user_callable_function(); }});
-
-  return result;
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::get_user_executable_functions() const {
+  return {
+    {"OurFreelyChoosableFunctionName", [&]() { this->a_user_executable_function(); }}
+  };
 };
 
-void TestPlugin::test_user_callable_function() const {
+void TestPlugin::a_user_executable_function() const {
   std::cout << "This output was triggered by user interaction." << std::endl;
 }
 
