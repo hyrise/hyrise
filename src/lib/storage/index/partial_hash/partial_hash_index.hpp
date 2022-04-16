@@ -45,17 +45,17 @@ class PartialHashIndex : public AbstractTableIndex {
   size_t remove_entries(const std::vector<ChunkID>&);
 
  protected:
-  Iterator _cbegin() const override final;
-  Iterator _cend() const override final;
-  Iterator _null_cbegin() const override final;
-  Iterator _null_cend() const override final;
-  size_t _memory_consumption() const override final;
+  Iterator _cbegin() const final;
+  Iterator _cend() const final;
+  Iterator _null_cbegin() const final;
+  Iterator _null_cend() const final;
+  size_t _memory_consumption() const final;
 
-  IteratorPair _range_equals(const AllTypeVariant& value) const override final;
-  std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const override final;
+  IteratorPair _range_equals(const AllTypeVariant& value) const final;
+  std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const final;
 
-  bool _is_index_for(const ColumnID column_id) const override final;
-  std::set<ChunkID> _get_indexed_chunk_ids() const override final;
+  bool _is_index_for(const ColumnID column_id) const final;
+  std::set<ChunkID> _get_indexed_chunk_ids() const final;
 
  private:
   ColumnID _column_id;
