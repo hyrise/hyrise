@@ -66,9 +66,11 @@ try {
           stage("Setup") {
             checkout scm
 
-            sh "git config --global --add safe.directory $WORKSPACE"
-            // Get the paths of the submodules; for each path, add it as a git safe.directory
-            sh "grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'"
+            sh '''
+            git config --global --add safe.directory $WORKSPACE
+            # Get the paths of the submodules; for each path, add it as a git safe.directory
+            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
+            '''
 
             sh "./install_dependencies.sh"
 
