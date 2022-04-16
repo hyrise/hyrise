@@ -64,11 +64,9 @@ try {
       oppossumCI.inside("--cap-add SYS_PTRACE -u 0:0") {
         try {
           stage("Setup") {
-            // checkout scm
+            checkout scm
 
             sh '''
-            git clone https://github.com/hyrise/hyrise.git
-            whoami
             git config --global --add safe.directory $WORKSPACE
             # Get the paths of the submodules; for each path, add it as a git safe.directory
             grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
