@@ -68,12 +68,6 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/src/plugins/
 )
 
-# Include these libraries as system libraries to silence some warnings caused by -Weverything
-include_directories(
-    SYSTEM
-    ${PROJECT_SOURCE_DIR}/third_party/robin-map/include
-)
-
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")
 if (ENABLE_CLANG_TIDY)
     message(STATUS "clang-tidy enabled")
