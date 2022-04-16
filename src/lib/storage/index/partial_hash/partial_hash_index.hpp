@@ -28,7 +28,8 @@ class PartialHashIndex : public AbstractTableIndex {
                                             const uint32_t value_bytes);
 
   PartialHashIndex() = delete;
-  PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
+  PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID);
+  PartialHashIndex(const DataType data_type, const ColumnID);
 
   /**
    * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
@@ -58,8 +59,7 @@ class PartialHashIndex : public AbstractTableIndex {
   std::set<ChunkID> _get_indexed_chunk_ids() const final;
 
  private:
-  ColumnID _column_id;
-  bool _is_initialized = false;
+  const ColumnID _column_id;
   std::shared_ptr<BasePartialHashIndexImpl> _impl;
 };
 

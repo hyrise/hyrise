@@ -195,8 +195,9 @@ class Table : private Noncopyable {
                           const std::string& name = "") {
     static_assert(std::is_base_of<AbstractTableIndex, Index>::value,
                   "'Index' template argument is not an AbstractTableIndex");
+    Assert(column_id < _column_definitions.size(),
+           "Cannot create index: passed column id is larger than the highest table's column id.");
     TableIndexType table_index_type = get_table_index_type_of<Index>();
-
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
     chunks_to_index.reserve(chunk_ids.size());
     for (auto chunk_id : chunk_ids) {
@@ -204,7 +205,13 @@ class Table : private Noncopyable {
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
       chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
     }
-    auto index = std::make_shared<Index>(chunks_to_index, column_id);
+    std::shared_ptr<AbstractTableIndex> index = nullptr;
+    if (!chunks_to_index.empty()) {
+      index = std::make_shared<Index>(chunks_to_index, column_id);
+    } else {
+      const auto column_data_type = _column_definitions[column_id].data_type;
+      index = std::make_shared<Index>(column_data_type, column_id);
+    }
     _table_indexes.emplace_back(index);
 
     TableIndexStatistics table_indexes_statistics = {{column_id}, chunks_to_index, name, table_index_type};

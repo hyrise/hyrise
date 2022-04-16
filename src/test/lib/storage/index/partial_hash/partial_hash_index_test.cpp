@@ -63,7 +63,9 @@ TEST_F(PartialHashIndexTest, IndexCoverage) {
 }
 
 TEST_F(PartialHashIndexTest, EmptyInitialization) {
-  auto empty_index = PartialHashIndex(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>(), ColumnID{0});
+  EXPECT_THROW(PartialHashIndex(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>(), ColumnID{0}),
+               std::logic_error);
+  auto empty_index = PartialHashIndex(DataType::String, ColumnID{0});
 
   EXPECT_EQ(empty_index.cbegin(), empty_index.cend());
   EXPECT_EQ(empty_index.null_cbegin(), empty_index.null_cend());
@@ -76,7 +78,7 @@ TEST_F(PartialHashIndexTest, EmptyInitialization) {
   EXPECT_TRUE(empty_index.is_index_for(ColumnID{0}));
   EXPECT_FALSE(empty_index.is_index_for(ColumnID{1}));
 
-  EXPECT_THROW(*empty_index.cbegin(), std::logic_error);
+  EXPECT_EQ(empty_index.cbegin(), empty_index.cend());
   EXPECT_TRUE(empty_index.cbegin().operator==(empty_index.cbegin()));
   EXPECT_FALSE(empty_index.cbegin().operator!=(empty_index.cbegin()));
 }
@@ -169,7 +171,7 @@ TEST_F(PartialHashIndexTest, Add) {
 }
 
 TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
-  auto empty_index = PartialHashIndex(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>(), ColumnID{0});
+  auto empty_index = PartialHashIndex(DataType::String, ColumnID{0});
 
   auto chunks_to_add =
       std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{0}, table->get_chunk(ChunkID{0}))};
@@ -193,7 +195,7 @@ TEST_F(PartialHashIndexTest, Remove) {
 }
 
 TEST_F(PartialHashIndexTest, RemoveFromEmpty) {
-  auto empty_index = PartialHashIndex(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>(), ColumnID{0});
+  auto empty_index = PartialHashIndex(DataType::Int, ColumnID{0});
 
   EXPECT_EQ(empty_index.remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
   EXPECT_EQ(empty_index.get_indexed_chunk_ids().size(), 0);
@@ -339,13 +341,12 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
   // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
   // +  48 chunk ids set
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
-  // +   1 _is_initialized
   // +  16 impl
   // +   1 TableIndexType
-  // = 608
-  EXPECT_EQ(index->memory_consumption(), 608u);
+  // = 607
+  EXPECT_EQ(index->memory_consumption(), 607u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 584u);
+  EXPECT_EQ(index->memory_consumption(), 583u);
 #endif
 }
 
@@ -374,13 +375,12 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
   // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
   // +  48 chunk ids set
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
-  // +   1 _is_initialized
   // +  16 impl
   // +   1 TableIndexType
-  // = 280
-  EXPECT_EQ(index->memory_consumption(), 280u);
+  // = 279
+  EXPECT_EQ(index->memory_consumption(), 279u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 256u);
+  EXPECT_EQ(index->memory_consumption(), 255u);
 #endif
 }
 
@@ -410,13 +410,12 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
   // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
   // +  48 chunk ids set
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
-  // +   1 _is_initialized
   // +  16 impl
   // +   1 TableIndexType
-  // = 680
-  EXPECT_EQ(index->memory_consumption(), 680u);
+  // = 679
+  EXPECT_EQ(index->memory_consumption(), 679u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 656u);
+  EXPECT_EQ(index->memory_consumption(), 655u);
 #endif
 }
 
@@ -444,13 +443,12 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
   // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
   // +  48 chunk ids set
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
-  // +   1 _is_initialized
   // +  16 impl
   // +   1 TableIndexType
-  // = 232
-  EXPECT_EQ(index->memory_consumption(), 232u);
+  // = 231
+  EXPECT_EQ(index->memory_consumption(), 231u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 208u);
+  EXPECT_EQ(index->memory_consumption(), 207u);
 #endif
 }
 
