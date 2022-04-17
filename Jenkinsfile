@@ -66,6 +66,9 @@ try {
           stage("Setup") {
             checkout scm
 
+            // During CI runs, the user is different from the owner of the directories, which blocks the execution of git
+            // commands since the fix of the git vulnerability CVE-2022-24765. git commands can then only be executed if
+            // the corresponding directories are added as safe directories.
             sh '''
             git config --global --add safe.directory $WORKSPACE
             # Get the paths of the submodules; for each path, add it as a git safe.directory
