@@ -14,6 +14,13 @@ class PluginManagerTest : public BaseTest {
     return pm._plugins;
   }
 
+  std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>&
+  get_user_executable_functions() {
+    auto& pm = Hyrise::get().plugin_manager;
+
+    return pm._user_executable_functions;
+  }
+
   void call_clean_up() {
     auto& pm = Hyrise::get().plugin_manager;
     pm._clean_up();
@@ -35,10 +42,6 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
 
   // The test plugin creates a dummy table when it is started
   EXPECT_TRUE(sm.has_table("DummyTable"));
-
-  SQLPipelineBuilder{"INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseTestPlugin', 'UserCallable')"}
-      .create_pipeline()
-      .get_result_table();
 
   pm.unload_plugin("hyriseTestPlugin");
 
@@ -71,6 +74,86 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   // The test plugin removes the dummy table from the storage manager when it is unloaded
   // (implicitly by the destructor of the PluginManager).
   EXPECT_FALSE(sm.has_table("DummyTable"));
+}
+
+TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
+  auto& pm = Hyrise::get().plugin_manager;
+  auto& plugins = get_plugins();
+
+  EXPECT_EQ(plugins.size(), 0u);
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
+  EXPECT_EQ(plugins.size(), 2u);
+
+  auto& user_executable_functions = get_user_executable_functions();
+
+  EXPECT_EQ(user_executable_functions.size(), 3);
+  EXPECT_EQ(user_executable_functions.count({"hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
+  EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
+  EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "SpecialFunction17"}), 1);
+
+  pm.unload_plugin("hyriseTestPlugin");
+  EXPECT_EQ(user_executable_functions.size(), 1);
+
+  pm.unload_plugin("hyriseSecondTestPlugin");
+  EXPECT_EQ(user_executable_functions.size(), 0);
+}
+
+TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
+  auto& pm = Hyrise::get().plugin_manager;
+  auto& sm = Hyrise::get().storage_manager;
+
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
+
+  // SQLPipelineBuilder{"INSERT INTO meta_exec (plugin_name, function_name)
+  // VALUES ('hyriseTestPlugin', 'OurFreelyChoosableFunctionName')"}
+  //     .create_pipeline()
+  //     .get_result_table();
+  pm.exec_user_function("hyriseTestPlugin", "OurFreelyChoosableFunctionName");
+  // The test plugin creates the below table when the called function is executed
+  EXPECT_TRUE(sm.has_table("TableOfTestPlugin"));
+
+  // SQLPipelineBuilder{"INSERT INTO meta_exec (plugin_name, function_name)
+  // VALUES ('hyriseSecondTestPlugin', 'OurFreelyChoosableFunctionName')"}
+  //     .create_pipeline()
+  //     .get_result_table();
+  pm.exec_user_function("hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName");
+  // The second test plugin creates the below table when the called function is executed
+  EXPECT_TRUE(sm.has_table("TableOfSecondTestPlugin"));
+}
+
+TEST_F(PluginManagerTest, CallNotCallableUserExecutableFunctions) {
+  auto& pm = Hyrise::get().plugin_manager;
+
+  // Call non-existing function
+  EXPECT_THROW(pm.exec_user_function("hyriseUnknownPlugin", "OurFreelyChoosableFunctionName"), std::exception);
+  // EXPECT_THROW(SQLPipelineBuilder{"INSERT INTO meta_exec (plugin_name, function_name)
+  // VALUES ('hyriseUnknownPlugin', "
+  //                                 "'OurFreelyChoosableFunctionName')"}
+  //                  .create_pipeline()
+  //                  .get_result_table(),
+  //              std::logic_error);
+
+  // Call existing, loaded plugin but non-existing function
+  pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
+  EXPECT_THROW(pm.exec_user_function("hyriseSecondTestPlugin", "SpecialFunction17"), std::exception);
+  // auto sql_pipeline_2 =
+  //     SQLPipelineBuilder{
+  //         "INSERT INTO meta_exec (plugin_name, function_name)
+  // VALUES ('hyriseSecondTestPlugin', 'SpecialFunction17')"}
+  //         .create_pipeline();
+  // EXPECT_THROW(sql_pipeline_2.get_result_table(), std::exception);
+
+  // Call function exposed by plugin but plugin has been unloaded before
+  pm.unload_plugin("hyriseSecondTestPlugin");
+  EXPECT_THROW(pm.exec_user_function("hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"), std::exception);
+  // auto sql_pipeline_3 =
+  //     SQLPipelineBuilder{
+  //         "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseSecondTestPlugin', "
+  //         "'OurFreelyChoosableFunctionName')"}
+  //         .create_pipeline();
+  // EXPECT_THROW(sql_pipeline_3.get_result_table(), std::exception);
 }
 
 TEST_F(PluginManagerTest, LoadingSameName) {
