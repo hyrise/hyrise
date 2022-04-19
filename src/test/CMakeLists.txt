@@ -212,6 +212,7 @@ set(
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
     lib/utils/meta_table_manager_test.cpp
+    lib/utils/meta_tables/meta_exec_table_test.cpp
     lib/utils/meta_tables/meta_log_table_test.cpp
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
