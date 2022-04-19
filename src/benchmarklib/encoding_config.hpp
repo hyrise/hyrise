@@ -37,7 +37,7 @@ class EncodingConfig {
 
   nlohmann::json to_json() const;
 
-  static const char* description;
+  static const char* const description;
 };
 
 }  // namespace opossum

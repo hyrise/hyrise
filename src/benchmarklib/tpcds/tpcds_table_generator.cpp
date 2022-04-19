@@ -122,7 +122,7 @@ pmr_string boolean_to_string(bool boolean) { return {1, boolean ? 'Y' : 'N'}; }
 pmr_string zip_to_string(int32_t zip) {
   auto result = pmr_string(5, '?');
   const auto snprintf_ret = std::snprintf(result.data(), result.size() + 1, "%05d", zip);
-  assert(snprintf_ret > 0, "Unexpected string to parse.");
+  Assert(snprintf_ret > 0, "Unexpected string to parse.");
   return result;
 }
 
@@ -138,7 +138,7 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
   auto result = pmr_string(10, '?');
   const auto snprintf_ret =
       std::snprintf(result.data(), result.size() + 1, "%4d-%02d-%02d", date.year, date.month, date.day);
-  assert(snprintf_ret > 0, "Unexpected string to parse.");
+  Assert(snprintf_ret > 0, "Unexpected string to parse.");
 
   return result;
 }
@@ -429,7 +429,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_r
   auto catalog_page = CATALOG_PAGE_TBL{};
   const auto snprintf_ret =
       std::snprintf(catalog_page.cp_department, sizeof(catalog_page.cp_department), "%s", "DEPARTMENT");
-  assert(snprintf_ret > 0, "Unexpected string to parse.");
+  Assert(snprintf_ret > 0, "Unexpected string to parse.");
   for (auto i = ds_key_t{0}; i < catalog_page_count; i++) {
     // need a pointer to the previous result of mk_w_catalog_page, because cp_department is only set once
     mk_w_catalog_page(&catalog_page, catalog_page_first + i);
@@ -1134,7 +1134,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
   auto web_site = W_WEB_SITE_TBL{};
   static_assert(sizeof(web_site.web_class) == 51);
   const auto snprintf_ret = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
-  assert(snprintf_ret > 0, "Unexpected string to parse.");
+  Assert(snprintf_ret > 0, "Unexpected string to parse.");
   for (auto i = ds_key_t{0}; i < web_site_count; ++i) {
     // mk_w_web_site needs a pointer to the previous result because it expects values set previously to still be there
     mk_w_web_site(&web_site, web_site_first + i);

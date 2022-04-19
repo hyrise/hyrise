@@ -20,7 +20,7 @@ class Table;
 
 enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
-extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
+extern const std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
 
 /**
  * Wrapper around the official tpch-dbgen tool, making it directly generate opossum::Table instances without having

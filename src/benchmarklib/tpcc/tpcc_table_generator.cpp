@@ -398,7 +398,7 @@ TPCCTableGenerator::OrderLineCounts TPCCTableGenerator::generate_order_line_coun
 template <typename T>
 std::vector<std::optional<T>> TPCCTableGenerator::_generate_inner_order_line_column(
     std::vector<size_t> indices, TPCCTableGenerator::OrderLineCounts order_line_counts,
-    const std::function<std::optional<T>(std::vector<size_t>)>& generator_function) {
+    const std::function<std::optional<T>(std::vector<size_t>&)>& generator_function) {
   auto order_line_count = order_line_counts[indices[0]][indices[1]][indices[2]];
 
   std::vector<std::optional<T>> values;
@@ -416,8 +416,8 @@ template <typename T>
 void TPCCTableGenerator::_add_order_line_column(
     std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions, std::string name,
     std::shared_ptr<std::vector<size_t>> cardinalities, TPCCTableGenerator::OrderLineCounts order_line_counts,
-    const std::function<std::optional<T>(std::vector<size_t>)>& generator_function) {
-  const std::function<std::vector<std::optional<T>>(std::vector<size_t>)> wrapped_generator_function =
+    const std::function<std::optional<T>(std::vector<size_t>&)>& generator_function) {
+  const std::function<std::vector<std::optional<T>>(std::vector<size_t>&)> wrapped_generator_function =
       [&](std::vector<size_t>& indices) {
         return _generate_inner_order_line_column(indices, order_line_counts, generator_function);
       };
@@ -543,7 +543,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
 
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
-    for (auto& [table_name, table_info] : table_info_by_name) {
+    for (const auto& [table_name, table_info] : table_info_by_name) {
       table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";  // NOLINT
     }
   }
