@@ -60,9 +60,10 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   {
     auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
-    for (auto i = 0; i < MAX_COLUMN; i++) {
-      Streams[i].nInitialSeed = static_cast<int>(static_cast<int64_t>(n_seed) + skip * i);
-      Streams[i].nSeed = static_cast<int>(static_cast<int64_t>(n_seed) + skip * i);
+    for (auto i = 0; i < MAX_COLUMN; ++i) {
+      const auto seed = n_seed + skip * i;
+      Streams[i].nInitialSeed = seed;
+      Streams[i].nSeed = seed;
       Streams[i].nUsed = 0;
     }
   }
@@ -116,11 +117,12 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
-pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
+pmr_string boolean_to_string(bool boolean) { return {1, boolean ? 'Y' : 'N'}; }
 
 pmr_string zip_to_string(int32_t zip) {
   auto result = pmr_string(5, '?');
-  std::snprintf(result.data(), result.size() + 1, "%05d", zip);
+  const auto snprintf_ret = std::snprintf(result.data(), result.size() + 1, "%05d", zip);
+  assert(snprintf_ret > 0, "Unexpected string to parse.");
   return result;
 }
 
@@ -134,7 +136,9 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
   jtodt(&date, static_cast<int>(date_id));
 
   auto result = pmr_string(10, '?');
-  std::snprintf(result.data(), result.size() + 1, "%4d-%02d-%02d", date.year, date.month, date.day);
+  const auto snprintf_ret =
+      std::snprintf(result.data(), result.size() + 1, "%4d-%02d-%02d", date.year, date.month, date.day);
+  assert(snprintf_ret > 0, "Unexpected string to parse.");
 
   return result;
 }
@@ -299,43 +303,60 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCDSTableGenerator::generat
 std::shared_ptr<Table> TPCDSTableGenerator::_generate_table(const std::string& table_name) const {
   if (table_name == "call_center") {
     return generate_call_center();
-  } else if (table_name == "catalog_page") {
-    return generate_catalog_page();
-  } else if (table_name == "customer_address") {
-    return generate_customer_address();
-  } else if (table_name == "customer") {
-    return generate_customer();
-  } else if (table_name == "customer_demographics") {
-    return generate_customer_demographics();
-  } else if (table_name == "date_dim") {
-    return generate_date_dim();
-  } else if (table_name == "household_demographics") {
-    return generate_household_demographics();
-  } else if (table_name == "income_band") {
-    return generate_income_band();
-  } else if (table_name == "inventory") {
-    return generate_inventory();
-  } else if (table_name == "item") {
-    return generate_item();
-  } else if (table_name == "promotion") {
-    return generate_promotion();
-  } else if (table_name == "reason") {
-    return generate_reason();
-  } else if (table_name == "ship_mode") {
-    return generate_ship_mode();
-  } else if (table_name == "store") {
-    return generate_store();
-  } else if (table_name == "time_dim") {
-    return generate_time_dim();
-  } else if (table_name == "warehouse") {
-    return generate_warehouse();
-  } else if (table_name == "web_page") {
-    return generate_web_page();
-  } else if (table_name == "web_site") {
-    return generate_web_site();
-  } else {
-    Fail("Unexpected table name: " + table_name);
   }
+  if (table_name == "catalog_page") {
+    return generate_catalog_page();
+  }
+  if (table_name == "customer_address") {
+    return generate_customer_address();
+  }
+  if (table_name == "customer") {
+    return generate_customer();
+  }
+  if (table_name == "customer_demographics") {
+    return generate_customer_demographics();
+  }
+  if (table_name == "date_dim") {
+    return generate_date_dim();
+  }
+  if (table_name == "household_demographics") {
+    return generate_household_demographics();
+  }
+  if (table_name == "income_band") {
+    return generate_income_band();
+  }
+  if (table_name == "inventory") {
+    return generate_inventory();
+  }
+  if (table_name == "item") {
+    return generate_item();
+  }
+  if (table_name == "promotion") {
+    return generate_promotion();
+  }
+  if (table_name == "reason") {
+    return generate_reason();
+  }
+  if (table_name == "ship_mode") {
+    return generate_ship_mode();
+  }
+  if (table_name == "store") {
+    return generate_store();
+  }
+  if (table_name == "time_dim") {
+    return generate_time_dim();
+  }
+  if (table_name == "warehouse") {
+    return generate_warehouse();
+  }
+  if (table_name == "web_page") {
+    return generate_web_page();
+  }
+  if (table_name == "web_site") {
+    return generate_web_site();
+  }
+
+  Fail("Unexpected table name: " + table_name);
 }
 
 std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_generate_sales_and_returns_tables(
@@ -406,7 +427,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_r
                                            catalog_page_column_names, static_cast<ChunkOffset>(catalog_page_count)};
 
   auto catalog_page = CATALOG_PAGE_TBL{};
-  std::snprintf(catalog_page.cp_department, sizeof(catalog_page.cp_department), "%s", "DEPARTMENT");
+  const auto snprintf_ret =
+      std::snprintf(catalog_page.cp_department, sizeof(catalog_page.cp_department), "%s", "DEPARTMENT");
+  assert(snprintf_ret > 0, "Unexpected string to parse.");
   for (auto i = ds_key_t{0}; i < catalog_page_count; i++) {
     // need a pointer to the previous result of mk_w_catalog_page, because cp_department is only set once
     mk_w_catalog_page(&catalog_page, catalog_page_first + i);
@@ -1110,8 +1133,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
   auto web_site = W_WEB_SITE_TBL{};
   static_assert(sizeof(web_site.web_class) == 51);
-  std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
-  for (auto i = ds_key_t{0}; i < web_site_count; i++) {
+  const auto snprintf_ret = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
+  assert(snprintf_ret > 0, "Unexpected string to parse.");
+  for (auto i = ds_key_t{0}; i < web_site_count; ++i) {
     // mk_w_web_site needs a pointer to the previous result because it expects values set previously to still be there
     mk_w_web_site(&web_site, web_site_first + i);
     tpcds_row_stop(WEB_SITE);

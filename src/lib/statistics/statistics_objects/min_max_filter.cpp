@@ -160,6 +160,7 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       return value >= max || value2 <= min;
     }
     // NOLINTBEGIN(bugprone-branch-clone)
+    // clang-tidy considers the following two cases to be identical. They are only identical for non-strings.
     case PredicateCondition::Like: {
       // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
       // upper case letters. This can lead to a situation, where the USA% (e.g., Join Order Benchamrk query 15c) is not

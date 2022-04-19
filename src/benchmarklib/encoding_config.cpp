@@ -81,7 +81,7 @@ nlohmann::json EncodingConfig::to_json() const {
 }
 
 // This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
-const char* EncodingConfig::description = R"(
+const char* const EncodingConfig::description = R"(
 ======================
 Encoding Configuration
 ======================

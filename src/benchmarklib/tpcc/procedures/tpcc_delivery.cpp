@@ -6,14 +6,12 @@
 namespace opossum {
 
 TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTPCCProcedure(sql_executor) {
+    : AbstractTPCCProcedure(sql_executor), ol_delivery_d{static_cast<int32_t>(std::time(nullptr))} {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
   std::uniform_int_distribution<> carrier_dist{1, 10};
   o_carrier_id = carrier_dist(_random_engine);
-
-  ol_delivery_d = static_cast<int32_t>(std::time(nullptr));
 }
 
 bool TPCCDelivery::_on_execute() {

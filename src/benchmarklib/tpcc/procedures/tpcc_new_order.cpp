@@ -7,14 +7,12 @@
 namespace opossum {
 
 TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTPCCProcedure(sql_executor) {
+    : AbstractTPCCProcedure(sql_executor), c_id{static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000))} {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
   std::uniform_int_distribution<> district_dist{1, 10};
   d_id = district_dist(_random_engine);
-
-  c_id = static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000));
 
   std::uniform_int_distribution<> num_items_dist{5, 15};
   ol_cnt = num_items_dist(_random_engine);

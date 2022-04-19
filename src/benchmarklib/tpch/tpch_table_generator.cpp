@@ -15,7 +15,7 @@ extern "C" {
 #include "table_builder.hpp"
 #include "utils/timer.hpp"
 
-extern char** asc_date;
+extern const char** asc_date;
 extern seed_t seed[];  // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
@@ -51,7 +51,7 @@ const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_stri
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 // clang-format on
 
-std::unordered_map<opossum::TPCHTable, std::underlying_type_t<opossum::TPCHTable>> tpch_table_to_dbgen_id = {
+const std::unordered_map<opossum::TPCHTable, std::underlying_type_t<opossum::TPCHTable>> tpch_table_to_dbgen_id = {
     {opossum::TPCHTable::Part, PART},     {opossum::TPCHTable::PartSupp, PSUPP}, {opossum::TPCHTable::Supplier, SUPP},
     {opossum::TPCHTable::Customer, CUST}, {opossum::TPCHTable::Orders, ORDER},   {opossum::TPCHTable::LineItem, LINE},
     {opossum::TPCHTable::Nation, NATION}, {opossum::TPCHTable::Region, REGION}};
@@ -108,7 +108,7 @@ void dbgen_cleanup() {
 
 namespace opossum {
 
-std::unordered_map<TPCHTable, std::string> tpch_table_names = {
+const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Part, "part"},         {TPCHTable::PartSupp, "partsupp"}, {TPCHTable::Supplier, "supplier"},
     {TPCHTable::Customer, "customer"}, {TPCHTable::Orders, "orders"},     {TPCHTable::LineItem, "lineitem"},
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};

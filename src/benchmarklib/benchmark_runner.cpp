@@ -505,7 +505,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
 nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
-  auto local_time = *std::localtime(&current_time);
+  auto local_time = *std::localtime(&current_time);  // NOLINT(concurrency-mt-unsafe) - not called in parallel
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
