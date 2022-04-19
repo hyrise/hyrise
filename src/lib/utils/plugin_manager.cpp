@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
 
@@ -76,7 +77,11 @@ void PluginManager::exec_user_function(const PluginName& plugin_name, const Plug
   const auto user_executable_function = _user_executable_functions[{plugin_name, function_name}];
   user_executable_function();
 
-  // Todo(all): Decide whether we want logging here
+  auto& log_manager = Hyrise::get().log_manager;
+  log_manager.add_message(
+      "PluginManager",
+      "Called user executable function `" + function_name + "` provided by plugin `" + plugin_name + "`.",
+      LogLevel::Info);
 }
 
 void PluginManager::unload_plugin(const PluginName& plugin_name) {

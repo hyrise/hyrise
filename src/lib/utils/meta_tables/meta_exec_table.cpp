@@ -27,8 +27,6 @@ void MetaExecTable::_on_insert(const std::vector<AllTypeVariant>& values) {
   const auto plugin_name = PluginName{boost::get<pmr_string>(values.at(0))};
   const auto function_name = PluginFunctionName{boost::get<pmr_string>(values.at(1))};
   Hyrise::get().plugin_manager.exec_user_function(plugin_name, function_name);
-
-  // Todo(all): Decide if we want to add something to the table or just execute.
 }
 
 }  // namespace opossum

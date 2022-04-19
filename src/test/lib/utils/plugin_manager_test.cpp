@@ -102,6 +102,7 @@ TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
 TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& sm = Hyrise::get().storage_manager;
+  auto& lm = Hyrise::get().log_manager;
 
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
@@ -110,9 +111,29 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
   // The test plugin creates the below table when the called function is executed
   EXPECT_TRUE(sm.has_table("TableOfTestPlugin"));
 
+  // The PluginManager adds log messages when user executable functions are called
+  EXPECT_EQ(lm.log_entries().size(), 1);
+  {
+    const auto& entry = lm.log_entries()[0];
+    EXPECT_EQ(entry.reporter, "PluginManager");
+    EXPECT_EQ(
+        entry.message,
+        "Called user executable function `OurFreelyChoosableFunctionName` provided by plugin `hyriseTestPlugin`.");
+    EXPECT_EQ(entry.log_level, LogLevel::Info);
+  }
+
   pm.exec_user_function("hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName");
   // The second test plugin creates the below table when the called function is executed
   EXPECT_TRUE(sm.has_table("TableOfSecondTestPlugin"));
+  EXPECT_EQ(lm.log_entries().size(), 2);
+  {
+    const auto& entry = lm.log_entries()[1];
+    EXPECT_EQ(entry.reporter, "PluginManager");
+    EXPECT_EQ(entry.message,
+              "Called user executable function `OurFreelyChoosableFunctionName` provided by plugin "
+              "`hyriseSecondTestPlugin`.");
+    EXPECT_EQ(entry.log_level, LogLevel::Info);
+  }
 }
 
 TEST_F(PluginManagerTest, CallNotCallableUserExecutableFunctions) {
