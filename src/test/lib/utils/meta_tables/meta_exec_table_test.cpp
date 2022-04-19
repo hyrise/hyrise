@@ -25,7 +25,7 @@ TEST_F(MetaExecTest, SelectUserExecutableFunctions) {
 
   const auto expected_table = std::make_shared<Table>(
       TableColumnDefinitions{{"plugin_name", DataType::String, false}, {"function_name", DataType::String, false}},
-      TableType::Data, 5);
+      TableType::Data, ChunkOffset{5});
 
   expected_table->append({pmr_string{"hyriseSecondTestPlugin"}, pmr_string{"OurFreelyChoosableFunctionName"}});
   expected_table->append({pmr_string{"hyriseTestPlugin"}, pmr_string{"OurFreelyChoosableFunctionName"}});
