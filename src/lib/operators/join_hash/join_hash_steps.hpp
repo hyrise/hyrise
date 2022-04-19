@@ -122,9 +122,9 @@ class PosHashTable {
     // If casted_value is already present in the hash table, this returns an iterator to the existing value. If not, it
     // inserts a mapping from casted_value to the index into _values, which is defined by the previously inserted
     // number of values.
-    const auto it = _offset_hash_table.emplace(casted_value, _offset_hash_table.size());
+    const auto iter = _offset_hash_table.emplace(casted_value, _offset_hash_table.size());
     if (_mode == JoinHashBuildMode::AllPositions) {
-      auto& pos_list = _small_pos_lists[it.first->second];
+      auto& pos_list = _small_pos_lists[iter.first->second];
       pos_list.emplace_back(row_id);
 
       DebugAssert(_offset_hash_table.size() < _small_pos_lists.size(),
@@ -324,21 +324,21 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto reference_chunk_offset = ChunkOffset{0};
 
       const auto segment = chunk_in->get_segment(column_id);
-      segment_with_iterators<T>(*segment, [&](auto it, auto end) {
-        using IterableType = typename decltype(it)::IterableType;
+      segment_with_iterators<T>(*segment, [&](auto iter, auto end) {
+        using IterableType = typename decltype(iter)::IterableType;
 
         if (dynamic_cast<ValueSegment<T>*>(&*segment)) {
           // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
           // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
           // can ignore them.
-          const auto inserted_rows = (end - it) - num_rows;
+          const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
         } else {
-          Assert(end - it == num_rows, "Non-ValueSegment changed size while being accessed");
+          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
         }
 
-        while (it != end) {
-          const auto& value = *it;
+        while (iter != end) {
+          const auto& value = *iter;
 
           if (!value.is_null() || keep_null_values) {
             // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
@@ -388,7 +388,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             ++reference_chunk_offset;
           }
 
-          ++it;
+          ++iter;
         }
       });
 

@@ -225,7 +225,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  auto test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
+  auto test_table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
@@ -241,7 +241,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
   Hyrise::get().scheduler()->finish();
 
-  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
 }
 

@@ -22,15 +22,15 @@ namespace opossum {
 struct NullValue {};
 
 // Relational operators
-inline bool operator==(const NullValue&, const NullValue&) { return false; }
-inline bool operator!=(const NullValue&, const NullValue&) { return false; }
-inline bool operator<(const NullValue&, const NullValue&) { return false; }
-inline bool operator<=(const NullValue&, const NullValue&) { return false; }
-inline bool operator>(const NullValue&, const NullValue&) { return false; }
-inline bool operator>=(const NullValue&, const NullValue&) { return false; }
-inline NullValue operator-(const NullValue&) { return NullValue{}; }
+inline bool operator==(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator!=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator<(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator<=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator>(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator>=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline NullValue operator-(const NullValue& /*value*/) { return NullValue{}; }
 
-inline size_t hash_value(const NullValue&) {
+inline size_t hash_value(const NullValue& /*value*/) {
   // Aggregate wants all NULLs in one bucket
   return 0;
 }

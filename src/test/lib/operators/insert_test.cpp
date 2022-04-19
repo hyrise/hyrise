@@ -45,10 +45,10 @@ TEST_F(OperatorsInsertTest, SelfInsert) {
   EXPECT_EQ(table->row_count(), 6u);
   EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
   EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 3u);
-  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
-  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{1}))[0], AllTypeVariant(12345));
-  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{0}))[0], AllTypeVariant(458.7f));
+  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{1}))[ChunkOffset{0}], AllTypeVariant(12345));
+  EXPECT_EQ((*table->get_chunk(ChunkID{0})->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant(458.7f));
+  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{1}))[ChunkOffset{0}], AllTypeVariant(12345));
+  EXPECT_EQ((*table->get_chunk(ChunkID{1})->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant(458.7f));
 
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{0})->size(), 3u);
   EXPECT_EQ(table->get_chunk(ChunkID{0})->get_segment(ColumnID{1})->size(), 3u);
@@ -61,7 +61,7 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   auto table_name2 = "test2";
 
   // 3 Rows, chunk_size = 4
-  auto table = load_table("resources/test_data/tbl/int.tbl", 4u);
+  auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
   // 10 Rows
@@ -88,11 +88,11 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   auto table_name2 = "test2";
 
   // 3 Rows
-  auto table = load_table("resources/test_data/tbl/int.tbl", 2u);
+  auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
   // 10 Rows
-  auto table2 = load_table("resources/test_data/tbl/10_ints.tbl", 3u);
+  auto table2 = load_table("resources/test_data/tbl/10_ints.tbl", ChunkOffset{3});
   Hyrise::get().storage_manager.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
@@ -115,7 +115,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   auto table_name2 = "test2";
 
   // 3 Rows
-  auto table = load_table("resources/test_data/tbl/int.tbl", 2u);
+  auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table(table_name, table);
   opossum::ChunkEncoder::encode_all_chunks(table);
 
@@ -140,7 +140,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
 TEST_F(OperatorsInsertTest, Rollback) {
   auto table_name = "test3";
 
-  auto table = load_table("resources/test_data/tbl/int.tbl", 4u);
+  auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
   auto get_table1 = std::make_shared<GetTable>(table_name);
@@ -170,7 +170,7 @@ TEST_F(OperatorsInsertTest, RollbackIncreaseInvalidRowCount) {
   auto t_name = "test1";
 
   // Set Up
-  auto t = load_table("resources/test_data/tbl/int.tbl", 10u);
+  auto t = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{10});
   Hyrise::get().storage_manager.add_table(t_name, t);
   auto row_count = t->row_count();
   EXPECT_EQ(Hyrise::get().storage_manager.get_table(t_name)->chunk_count(), 1);
@@ -200,10 +200,10 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   auto table_name = "test1";
   auto table_name2 = "test2";
 
-  auto table = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
+  auto table = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto table2 = load_table("resources/test_data/tbl/string_with_null.tbl", 4u);
+  auto table2 = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
@@ -218,7 +218,7 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
   EXPECT_EQ(table->chunk_count(), 2u);
   EXPECT_EQ(table->row_count(), 8u);
 
-  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[2];
+  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[ChunkOffset{2}];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 
@@ -226,10 +226,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   auto table_name = "test1";
   auto table_name2 = "test2";
 
-  auto table = load_table("resources/test_data/tbl/int_float_with_null.tbl", 3u);
+  auto table = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{3});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
+  auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
@@ -244,10 +244,10 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
   EXPECT_EQ(table->chunk_count(), 4u);
   EXPECT_EQ(table->row_count(), 8u);
 
-  auto null_val_int = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[2];
+  auto null_val_int = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{0})))[ChunkOffset{2}];
   EXPECT_TRUE(variant_is_null(null_val_int));
 
-  auto null_val_float = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[1];
+  auto null_val_float = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[ChunkOffset{1}];
   EXPECT_TRUE(variant_is_null(null_val_float));
 }
 
@@ -255,10 +255,10 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
   auto table_name = "test1";
   auto table_name2 = "test2";
 
-  auto table = load_table("resources/test_data/tbl/int_float.tbl", 3u);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{3});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
-  auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4u);
+  auto table2 = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name2, table2);
 
   auto get_table2 = std::make_shared<GetTable>(table_name2);
@@ -274,7 +274,7 @@ TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
 TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   auto table_name = "test1";
 
-  auto table = load_table("resources/test_data/tbl/float_with_null.tbl", 4u);
+  auto table = load_table("resources/test_data/tbl/float_with_null.tbl", ChunkOffset{4});
   Hyrise::get().storage_manager.add_table(table_name, table);
 
   auto dummy_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
@@ -293,7 +293,7 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
   EXPECT_EQ(table->chunk_count(), 2u);
   EXPECT_EQ(table->row_count(), 5u);
 
-  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[0];
+  auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[ChunkOffset{0}];
   EXPECT_TRUE(variant_is_null(null_val));
 }
 

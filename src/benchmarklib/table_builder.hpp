@@ -38,7 +38,7 @@ template <typename T, bool _has_value>
 class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
  public:
   template <typename... Args>
-  explicit OptionalConstexpr(Args&&...) {}
+  explicit OptionalConstexpr(Args&&... /*args*/) {}
 
   static_assert(!_has_value);
   static constexpr bool has_value = false;
@@ -108,7 +108,7 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const ChunkOffset estimated_rows = 0)
+               const ChunkOffset estimated_rows = ChunkOffset{0})
       : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 

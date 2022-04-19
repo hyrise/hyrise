@@ -155,7 +155,7 @@ class LZ4Segment : public AbstractEncodedSegment {
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
+  size_t memory_usage(const MemoryUsageCalculationMode /*mode*/) const final;
 
   /**@}*/
 

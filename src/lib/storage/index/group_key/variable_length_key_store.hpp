@@ -137,7 +137,7 @@ class VariableLengthKeyStore {
 
     void increment() { _data += _key_alignment; }
     void decrement() { _data -= _key_alignment; }
-    void advance(ChunkOffset n) { _data += n * _key_alignment; }
+    void advance(size_t n) { _data += n * _key_alignment; }
 
     Proxy dereference() const { return Proxy(_data, _bytes_per_key); }
 

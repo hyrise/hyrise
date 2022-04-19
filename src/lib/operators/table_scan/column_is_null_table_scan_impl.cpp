@@ -141,7 +141,7 @@ bool ColumnIsNullTableScanImpl::_matches_none(const BaseValueSegment& segment) c
 
 void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, RowIDPosList& matches, const size_t segment_size) {
   const auto num_rows = segment_size;
-  for (auto chunk_offset = 0u; chunk_offset < num_rows; ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < num_rows; ++chunk_offset) {
     matches.emplace_back(RowID{chunk_id, chunk_offset});
   }
 }

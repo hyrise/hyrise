@@ -13,7 +13,7 @@ class CsvParserTest : public BaseTest {};
 
 TEST_F(CsvParserTest, SingleFloatColumn) {
   auto table = CsvParser::parse("resources/test_data/csv/float.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float.tbl", ChunkOffset{5});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
@@ -23,19 +23,19 @@ TEST_F(CsvParserTest, WindowsEncoding) {
 
 TEST_F(CsvParserTest, FloatIntTable) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
 TEST_F(CsvParserTest, StringNoQuotes) {
   auto table = CsvParser::parse("resources/test_data/csv/string.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/string.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{5});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
 TEST_F(CsvParserTest, StringQuotes) {
   auto table = CsvParser::parse("resources/test_data/csv/string_quotes.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/string.tbl", 5);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/string.tbl", ChunkOffset{5});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
@@ -43,7 +43,7 @@ TEST_F(CsvParserTest, StringEscaping) {
   auto table = CsvParser::parse("resources/test_data/csv/string_escaped.csv");
 
   auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String, false}}, TableType::Data, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::String, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -54,7 +54,7 @@ TEST_F(CsvParserTest, StringEscaping) {
 
 TEST_F(CsvParserTest, NoRows) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_empty.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int_empty.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int_empty.tbl", ChunkOffset{2});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
@@ -66,7 +66,7 @@ TEST_F(CsvParserTest, NoRowsNoColumns) {
 
 TEST_F(CsvParserTest, TrailingNewline) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_trailing_newline.csv");
-  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", 2);
+  std::shared_ptr<Table> expected_table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
@@ -76,7 +76,7 @@ TEST_F(CsvParserTest, EmptyStrings) {
   auto table = CsvParser::parse("resources/test_data/csv/empty_strings.csv");
   TableColumnDefinitions column_definitions{
       {"a", DataType::String, false}, {"b", DataType::String, false}, {"c", DataType::String, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
   for (int i = 0; i < 8; ++i) {
     expected_table->append({"", "", ""});
   }
@@ -92,7 +92,7 @@ TEST_F(CsvParserTest, SemicolonSeparator) {
 
   TableColumnDefinitions column_definitions{
       {"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Int, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
   for (int i = 0; i < 8; ++i) {
     expected_table->append({1, 2, 3});
   }
@@ -122,7 +122,7 @@ TEST_F(CsvParserTest, TargetChunkSize) {
   EXPECT_EQ(table->chunk_count(), ChunkID{1});
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});
@@ -138,7 +138,7 @@ TEST_F(CsvParserTest, StringEscapingNonRfc) {
   auto table = CsvParser::parse(csv_file, Chunk::DEFAULT_SIZE, csv_meta);
 
   TableColumnDefinitions column_definitions{{"a", DataType::String, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
   expected_table->append({"aa\"\"aa"});
   expected_table->append({"xx\"x"});
   expected_table->append({"yy,y"});
@@ -152,7 +152,7 @@ TEST_F(CsvParserTest, ImportNumericNullValues) {
 
   TableColumnDefinitions column_definitions{
       {"a", DataType::Float, true}, {"b", DataType::Int, false}, {"c", DataType::Int, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
 
   expected_table->append({458.7f, 12345, NULL_VALUE});
   expected_table->append({NULL_VALUE, 123, 456});
@@ -165,7 +165,7 @@ TEST_F(CsvParserTest, ImportStringNullValues) {
   auto table = CsvParser::parse("resources/test_data/csv/string_with_null.csv");
 
   TableColumnDefinitions column_definitions{{"a", DataType::String, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
 
   expected_table->append({"xxx"});
   expected_table->append({"www"});
@@ -180,7 +180,7 @@ TEST_F(CsvParserTest, ImportUnquotedNullStringAsNull) {
   auto table = CsvParser::parse("resources/test_data/csv/null_literal.csv");
 
   TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
 
   expected_table->append({1, "Hello"});
   expected_table->append({NULL_VALUE, "World"});
@@ -196,7 +196,7 @@ TEST_F(CsvParserTest, ImportUnquotedNullStringAsValue) {
   auto table = CsvParser::parse("resources/test_data/csv/null_literal_as_string.csv");
 
   TableColumnDefinitions column_definitions{{"a", DataType::Int, true}, {"b", DataType::String, true}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
 
   expected_table->append({1, "Hello"});
   expected_table->append({NULL_VALUE, "World"});
@@ -231,7 +231,7 @@ TEST_F(CsvParserTest, WithAndWithoutQuotes) {
   column_definitions.emplace_back("f", DataType::Int, false);
   column_definitions.emplace_back("g", DataType::Float, false);
   column_definitions.emplace_back("h", DataType::Double, false);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
 
   expected_table->append({"xxx", 23, 0.5f, 24.23, "xxx", 23, 0.5f, 24.23});
   expected_table->append({"yyy", 56, 7.4f, 2.123, "yyy", 23, 7.4f, 2.123});
@@ -246,7 +246,7 @@ TEST_F(CsvParserTest, StringDoubleEscape) {
   auto table = CsvParser::parse(csv_file, Chunk::DEFAULT_SIZE, csv_meta);
 
   TableColumnDefinitions column_definitions{{"a", DataType::String, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 5);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
 
   expected_table->append({"xxx\\\"xyz\\\""});
 
@@ -282,7 +282,7 @@ TEST_F(CsvParserTest, WithScheduler) {
   auto table = CsvParser::parse("resources/test_data/csv/float_int_large.csv");
 
   TableColumnDefinitions column_definitions{{"b", DataType::Float, false}, {"a", DataType::Int, false}};
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20});
 
   for (int i = 0; i < 100; ++i) {
     expected_table->append({458.7f, 12345});

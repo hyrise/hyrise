@@ -92,8 +92,8 @@ class ExpressionResultLiteral {
 
   size_t size() const { return 1u; }
 
-  const T& value(const size_t = 0) const { return _value; }
-  bool is_null(const size_t = 0) const { return _null; }
+  const T& value(const size_t /*value*/) const { return _value; }
+  bool is_null(const size_t /*value*/) const { return _null; }
 
  private:
   T _value;
