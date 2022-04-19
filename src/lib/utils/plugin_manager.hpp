@@ -39,6 +39,9 @@ class PluginManager : public Noncopyable {
 
   std::vector<PluginName> loaded_plugins() const;
 
+  std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>
+  user_executable_functions() const;
+
   ~PluginManager();
 
  protected:

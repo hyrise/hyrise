@@ -7,10 +7,7 @@
 
 namespace opossum {
 
-class MetaExecTest : public BaseTest {
- protected:
-  // void TearDown() override { Hyrise::reset(); }
-};
+class MetaExecTest : public BaseTest {};
 
 TEST_F(MetaExecTest, IsMutable) {
   const auto meta_exec_table = std::make_shared<MetaExecTable>();
@@ -18,6 +15,27 @@ TEST_F(MetaExecTest, IsMutable) {
   EXPECT_TRUE(meta_exec_table->can_insert());
   EXPECT_FALSE(meta_exec_table->can_update());
   EXPECT_FALSE(meta_exec_table->can_delete());
+}
+
+TEST_F(MetaExecTest, SelectUserExecutableFunctions) {
+  auto& pm = Hyrise::get().plugin_manager;
+
+  pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
+  pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
+
+  const auto expected_table = std::make_shared<Table>(
+      TableColumnDefinitions{{"plugin_name", DataType::String, false}, {"function_name", DataType::String, false}},
+      TableType::Data, 5);
+
+  expected_table->append({pmr_string{"hyriseSecondTestPlugin"}, pmr_string{"OurFreelyChoosableFunctionName"}});
+  expected_table->append({pmr_string{"hyriseTestPlugin"}, pmr_string{"OurFreelyChoosableFunctionName"}});
+  expected_table->append({pmr_string{"hyriseTestPlugin"}, pmr_string{"SpecialFunction17"}});
+
+  auto table_wrapper = std::make_shared<TableWrapper>(std::move(expected_table));
+  table_wrapper->execute();
+
+  const auto& [_, result_table] = SQLPipelineBuilder{"SELECT * FROM meta_exec"}.create_pipeline().get_result_table();
+  EXPECT_TABLE_EQ_UNORDERED(result_table, table_wrapper->get_output());
 }
 
 TEST_F(MetaExecTest, CallUserExecutableFunctions) {

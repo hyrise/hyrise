@@ -14,13 +14,6 @@ class PluginManagerTest : public BaseTest {
     return pm._plugins;
   }
 
-  std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>&
-  get_user_executable_functions() {
-    auto& pm = Hyrise::get().plugin_manager;
-
-    return pm._user_executable_functions;
-  }
-
   void call_clean_up() {
     auto& pm = Hyrise::get().plugin_manager;
     pm._clean_up();
@@ -85,18 +78,20 @@ TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
   EXPECT_EQ(plugins.size(), 2u);
 
-  auto& user_executable_functions = get_user_executable_functions();
+  {
+    auto user_executable_functions = pm.user_executable_functions();
 
-  EXPECT_EQ(user_executable_functions.size(), 3);
-  EXPECT_EQ(user_executable_functions.count({"hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
-  EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
-  EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "SpecialFunction17"}), 1);
+    EXPECT_EQ(user_executable_functions.size(), 3);
+    EXPECT_EQ(user_executable_functions.count({"hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
+    EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
+    EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "SpecialFunction17"}), 1);
+  }
 
   pm.unload_plugin("hyriseTestPlugin");
-  EXPECT_EQ(user_executable_functions.size(), 1);
+  EXPECT_EQ(pm.user_executable_functions().size(), 1);
 
   pm.unload_plugin("hyriseSecondTestPlugin");
-  EXPECT_EQ(user_executable_functions.size(), 0);
+  EXPECT_EQ(pm.user_executable_functions().size(), 0);
 }
 
 TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
