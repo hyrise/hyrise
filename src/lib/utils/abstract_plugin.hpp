@@ -28,7 +28,7 @@ class AbstractPlugin {
 
   virtual void stop() = 0;
 
-  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> get_user_executable_functions() const {
+  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const {
     return {};
   }
 };

@@ -16,7 +16,7 @@ void TestPlugin::start() {
 
 void TestPlugin::stop() { Hyrise::get().storage_manager.drop_table("DummyTable"); }
 
-std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::get_user_executable_functions() const {
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::provided_user_executable_functions() const {
   return {{"OurFreelyChoosableFunctionName", [&]() { this->a_user_executable_function(); }},
           {"SpecialFunction17", [&]() { this->another_user_executable_function(); }}};
 }
