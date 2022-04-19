@@ -5,8 +5,8 @@
 namespace opossum {
 
 /**
- * This is a class for plugin control via a meta table.
- * Inserting loads a plugin, deleting unloads it.
+ * This is a class for calling user executable functions provided by plugins.
+ * Inserting plugin and function name calls a function, selecting from the table returns all executable functions.
  */
 class MetaExecTable : public AbstractMetaTable {
  public:

@@ -69,7 +69,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   _plugins[plugin_name] = std::move(plugin_handle_wrapper);
 
   // Add the newly loaded plugin's user executable functions to our map of functions.
-  const auto user_executable_functions = _plugins[plugin_name].plugin->get_user_executable_functions();
+  const auto user_executable_functions = _plugins[plugin_name].plugin->provided_user_executable_functions();
   for (const auto& [function_name, function_pointer] : user_executable_functions) {
     _user_executable_functions[{plugin_name, function_name}] = function_pointer;
   }
