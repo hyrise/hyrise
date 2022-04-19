@@ -60,11 +60,11 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   {
     auto n_seed = get_int(rng_seed_string.data());
     auto skip = INT_MAX / MAX_COLUMN;
-    for (auto i = 0; i < MAX_COLUMN; ++i) {
-      const auto seed = n_seed + skip * i;
-      Streams[i].nInitialSeed = seed;
-      Streams[i].nSeed = seed;
-      Streams[i].nUsed = 0;
+    for (auto index = 0; index < MAX_COLUMN; ++index) {
+      const auto seed = n_seed + skip * index;
+      Streams[index].nInitialSeed = seed;
+      Streams[index].nSeed = seed;
+      Streams[index].nUsed = 0;
     }
   }
 
@@ -381,10 +381,10 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_ro
 
   auto call_center = CALL_CENTER_TBL{};
   call_center.cc_closed_date_id = ds_key_t{-1};
-  for (auto i = ds_key_t{0}; i < call_center_count; i++) {
+  for (auto call_center_index = ds_key_t{0}; call_center_index < call_center_count; ++call_center_index) {
     // mk_w_call_center needs a pointer to the previous result of mk_w_call_center to add "update entries" for the
     // same call center
-    mk_w_call_center(&call_center, call_center_first + i);
+    mk_w_call_center(&call_center, call_center_first + call_center_index);
     tpcds_row_stop(CALL_CENTER);
 
     call_center_builder.append_row(
@@ -430,9 +430,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_r
   const auto snprintf_ret =
       std::snprintf(catalog_page.cp_department, sizeof(catalog_page.cp_department), "%s", "DEPARTMENT");
   Assert(snprintf_ret > 0, "Unexpected string to parse.");
-  for (auto i = ds_key_t{0}; i < catalog_page_count; i++) {
+  for (auto catalog_page_index = ds_key_t{0}; catalog_page_index < catalog_page_count; ++catalog_page_index) {
     // need a pointer to the previous result of mk_w_catalog_page, because cp_department is only set once
-    mk_w_catalog_page(&catalog_page, catalog_page_first + i);
+    mk_w_catalog_page(&catalog_page, catalog_page_first + catalog_page_index);
     tpcds_row_stop(CATALOG_PAGE);
 
     catalog_page_builder.append_row(catalog_page.cp_catalog_page_sk, catalog_page.cp_catalog_page_id,
@@ -460,17 +460,18 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
   auto catalog_returns_builder =
       TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types, catalog_returns_column_names};
 
-  for (auto i = ds_key_t{0}; i < catalog_sales_count; i++) {
+  for (auto catalog_sale = ds_key_t{0}; catalog_sale < catalog_sales_count; ++catalog_sale) {
     auto catalog_sales = W_CATALOG_SALES_TBL{};
     auto catalog_returns = W_CATALOG_RETURNS_TBL{};
 
-    // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + i, &catalog_returns, &was_returned);
+    // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + catalog_sale,
+    //                                     &catalog_returns, &was_returned);
     {
-      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + i, 0);
-      int n_lineitems;
+      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + catalog_sale, 0);
+      auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto j = 1; j <= n_lineitems; j++) {
-        int was_returned = 0;
+      for (auto lineitem_index = 1; lineitem_index <= n_lineitems; ++lineitem_index) {
+        auto was_returned = 0;
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
         if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -560,9 +561,10 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_address(ds_key_t m
       TableBuilder{_benchmark_config->chunk_size, customer_address_column_types, customer_address_column_names,
                    static_cast<ChunkOffset>(customer_address_count)};
 
-  for (auto i = ds_key_t{0}; i < customer_address_count; i++) {
-    const auto customer_address =
-        call_dbgen_mk<W_CUSTOMER_ADDRESS_TBL, &mk_w_customer_address, CUSTOMER_ADDRESS>(customer_address_first + i);
+  for (auto customer_address_index = ds_key_t{0}; customer_address_index < customer_address_count;
+       ++customer_address_index) {
+    const auto customer_address = call_dbgen_mk<W_CUSTOMER_ADDRESS_TBL, &mk_w_customer_address, CUSTOMER_ADDRESS>(
+        customer_address_first + customer_address_index);
 
     customer_address_builder.append_row(
         customer_address.ca_addr_sk, customer_address.ca_addr_id,
@@ -589,8 +591,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer(ds_key_t max_rows)
   auto customer_builder = TableBuilder{_benchmark_config->chunk_size, customer_column_types, customer_column_names,
                                        static_cast<ChunkOffset>(customer_count)};
 
-  for (auto i = ds_key_t{0}; i < customer_count; i++) {
-    const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + i);
+  for (auto customer_index = ds_key_t{0}; customer_index < customer_count; ++customer_index) {
+    const auto customer = call_dbgen_mk<W_CUSTOMER_TBL, &mk_w_customer, CUSTOMER>(customer_first + customer_index);
 
     customer_builder.append_row(
         customer.c_customer_sk, customer.c_customer_id, resolve_key(C_CURRENT_CDEMO_SK, customer.c_current_cdemo_sk),
@@ -618,10 +620,11 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_demographics(ds_ke
       TableBuilder{_benchmark_config->chunk_size, customer_demographics_column_types,
                    customer_demographics_column_names, static_cast<ChunkOffset>(customer_demographics_count)};
 
-  for (auto i = ds_key_t{0}; i < customer_demographics_count; i++) {
+  for (auto customer_demographic = ds_key_t{0}; customer_demographic < customer_demographics_count;
+       ++customer_demographic) {
     const auto customer_demographics =
         call_dbgen_mk<W_CUSTOMER_DEMOGRAPHICS_TBL, &mk_w_customer_demographics, CUSTOMER_DEMOGRAPHICS>(
-            customer_demographics_first + i);
+            customer_demographics_first + customer_demographic);
 
     customer_demographics_builder.append_row(
         customer_demographics.cd_demo_sk, resolve_string(CD_GENDER, customer_demographics.cd_gender),
@@ -644,8 +647,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
   auto date_builder = TableBuilder{_benchmark_config->chunk_size, date_column_types, date_column_names,
                                    static_cast<ChunkOffset>(date_count)};
 
-  for (auto i = ds_key_t{0}; i < date_count; i++) {
-    const auto date = call_dbgen_mk<W_DATE_TBL, &mk_w_date, DATE>(date_first + i);
+  for (auto date_index = ds_key_t{0}; date_index < date_count; ++date_index) {
+    const auto date = call_dbgen_mk<W_DATE_TBL, &mk_w_date, DATE>(date_first + date_index);
 
     auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
 
@@ -682,10 +685,11 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_household_demographics(ds_k
       TableBuilder{_benchmark_config->chunk_size, household_demographics_column_types,
                    household_demographics_column_names, static_cast<ChunkOffset>(household_demographics_count)};
 
-  for (auto i = ds_key_t{0}; i < household_demographics_count; i++) {
+  for (auto household_demographic = ds_key_t{0}; household_demographic < household_demographics_count;
+       ++household_demographic) {
     const auto household_demographics =
         call_dbgen_mk<W_HOUSEHOLD_DEMOGRAPHICS_TBL, &mk_w_household_demographics, HOUSEHOLD_DEMOGRAPHICS>(
-            household_demographics_first + i);
+            household_demographics_first + household_demographic);
 
     household_demographics_builder.append_row(
         household_demographics.hd_demo_sk,
@@ -706,8 +710,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_income_band(ds_key_t max_ro
   auto income_band_builder = TableBuilder{_benchmark_config->chunk_size, income_band_column_types,
                                           income_band_column_names, static_cast<ChunkOffset>(income_band_count)};
 
-  for (auto i = ds_key_t{0}; i < income_band_count; i++) {
-    const auto income_band = call_dbgen_mk<W_INCOME_BAND_TBL, &mk_w_income_band, INCOME_BAND>(income_band_first + i);
+  for (auto income_band_index = ds_key_t{0}; income_band_index < income_band_count; ++income_band_index) {
+    const auto income_band =
+        call_dbgen_mk<W_INCOME_BAND_TBL, &mk_w_income_band, INCOME_BAND>(income_band_first + income_band_index);
 
     income_band_builder.append_row(income_band.ib_income_band_id,
                                    resolve_integer(IB_LOWER_BOUND, income_band.ib_lower_bound),
@@ -724,8 +729,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_inventory(ds_key_t max_rows
   auto inventory_builder = TableBuilder{_benchmark_config->chunk_size, inventory_column_types, inventory_column_names,
                                         static_cast<ChunkOffset>(inventory_count)};
 
-  for (auto i = ds_key_t{0}; i < inventory_count; i++) {
-    const auto inventory = call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + i);
+  for (auto inventory_index = ds_key_t{0}; inventory_index < inventory_count; ++inventory_index) {
+    const auto inventory =
+        call_dbgen_mk<W_INVENTORY_TBL, &mk_w_inventory, INVENTORY>(inventory_first + inventory_index);
 
     inventory_builder.append_row(inventory.inv_date_sk, inventory.inv_item_sk, inventory.inv_warehouse_sk,
                                  resolve_integer(INV_QUANTITY_ON_HAND, inventory.inv_quantity_on_hand));
@@ -741,8 +747,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_item(ds_key_t max_rows) con
   auto item_builder = TableBuilder{_benchmark_config->chunk_size, item_column_types, item_column_names,
                                    static_cast<ChunkOffset>(item_count)};
 
-  for (auto i = ds_key_t{0}; i < item_count; i++) {
-    const auto item = call_dbgen_mk<W_ITEM_TBL, &mk_w_item, ITEM>(item_first + i);
+  for (auto item_index = ds_key_t{0}; item_index < item_count; ++item_index) {
+    const auto item = call_dbgen_mk<W_ITEM_TBL, &mk_w_item, ITEM>(item_first + item_index);
 
     item_builder.append_row(
         item.i_item_sk, item.i_item_id, resolve_date_id(I_REC_START_DATE_ID, item.i_rec_start_date_id),
@@ -768,8 +774,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_promotion(ds_key_t max_rows
   auto promotion_builder = TableBuilder{_benchmark_config->chunk_size, promotion_column_types, promotion_column_names,
                                         static_cast<ChunkOffset>(promotion_count)};
 
-  for (auto i = ds_key_t{0}; i < promotion_count; i++) {
-    const auto promotion = call_dbgen_mk<W_PROMOTION_TBL, &mk_w_promotion, PROMOTION>(promotion_first + i);
+  for (auto promotion_index = ds_key_t{0}; promotion_index < promotion_count; ++promotion_index) {
+    const auto promotion =
+        call_dbgen_mk<W_PROMOTION_TBL, &mk_w_promotion, PROMOTION>(promotion_first + promotion_index);
 
     promotion_builder.append_row(
         promotion.p_promo_sk, promotion.p_promo_id, resolve_key(P_START_DATE_ID, promotion.p_start_date_id),
@@ -798,8 +805,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_reason(ds_key_t max_rows) c
   auto reason_builder = TableBuilder{_benchmark_config->chunk_size, reason_column_types, reason_column_names,
                                      static_cast<ChunkOffset>(reason_count)};
 
-  for (auto i = ds_key_t{0}; i < reason_count; i++) {
-    const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + i);
+  for (auto reason_index = ds_key_t{0}; reason_index < reason_count; ++reason_index) {
+    const auto reason = call_dbgen_mk<W_REASON_TBL, &mk_w_reason, REASON>(reason_first + reason_index);
 
     reason_builder.append_row(reason.r_reason_sk, reason.r_reason_id,
                               resolve_string(R_REASON_DESCRIPTION, reason.r_reason_description));
@@ -815,8 +822,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_ship_mode(ds_key_t max_rows
   auto ship_mode_builder = TableBuilder{_benchmark_config->chunk_size, ship_mode_column_types, ship_mode_column_names,
                                         static_cast<ChunkOffset>(ship_mode_count)};
 
-  for (auto i = ds_key_t{0}; i < ship_mode_count; i++) {
-    const auto ship_mode = call_dbgen_mk<W_SHIP_MODE_TBL, &mk_w_ship_mode, SHIP_MODE>(ship_mode_first + i);
+  for (auto ship_mode_index = ds_key_t{0}; ship_mode_index < ship_mode_count; ++ship_mode_index) {
+    const auto ship_mode =
+        call_dbgen_mk<W_SHIP_MODE_TBL, &mk_w_ship_mode, SHIP_MODE>(ship_mode_first + ship_mode_index);
 
     ship_mode_builder.append_row(ship_mode.sm_ship_mode_sk, ship_mode.sm_ship_mode_id,
 
@@ -835,8 +843,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_store(ds_key_t max_rows) co
   auto store_builder = TableBuilder{_benchmark_config->chunk_size, store_column_types, store_column_names,
                                     static_cast<ChunkOffset>(store_count)};
 
-  for (auto i = ds_key_t{0}; i < store_count; i++) {
-    const auto store = call_dbgen_mk<W_STORE_TBL, &mk_w_store, STORE>(store_first + i);
+  for (auto store_index = ds_key_t{0}; store_index < store_count; ++store_index) {
+    const auto store = call_dbgen_mk<W_STORE_TBL, &mk_w_store, STORE>(store_first + store_index);
 
     store_builder.append_row(
         store.store_sk, store.store_id,
@@ -877,18 +885,18 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
   auto store_returns_builder =
       TableBuilder{_benchmark_config->chunk_size, store_returns_column_types, store_returns_column_names};
 
-  for (auto i = ds_key_t{0}; i < store_sales_count; i++) {
+  for (auto store_sale = ds_key_t{0}; store_sale < store_sales_count; ++store_sale) {
     auto store_sales = W_STORE_SALES_TBL{};
     auto store_returns = W_STORE_RETURNS_TBL{};
 
-    // modified call to mk_w_store_sales(&store_sales, store_sales_first + i, &store_returns, &was_returned)
+    // modified call to mk_w_store_sales(&store_sales, store_sales_first + store_sale, &store_returns, &was_returned)
     {
-      mk_w_store_sales_master(&store_sales, store_sales_first + i, 0);
+      mk_w_store_sales_master(&store_sales, store_sales_first + store_sale, 0);
 
-      int n_lineitems;
+      auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto j = 1; j <= n_lineitems; j++) {
-        int was_returned = 0;
+      for (auto lineitem_index = 1; lineitem_index <= n_lineitems; ++lineitem_index) {
+        auto was_returned = 0;
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
         if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -957,8 +965,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_time_dim(ds_key_t max_rows)
   auto time_builder = TableBuilder{_benchmark_config->chunk_size, time_column_types, time_column_names,
                                    static_cast<ChunkOffset>(time_count)};
 
-  for (auto i = ds_key_t{0}; i < time_count; i++) {
-    const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + i);
+  for (auto time_index = ds_key_t{0}; time_index < time_count; ++time_index) {
+    const auto time = call_dbgen_mk<W_TIME_TBL, &mk_w_time, TIME>(time_first + time_index);
 
     time_builder.append_row(time.t_time_sk, time.t_time_id, resolve_integer(T_TIME, time.t_time),
                             resolve_integer(T_HOUR, time.t_hour), resolve_integer(T_MINUTE, time.t_minute),
@@ -977,8 +985,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_warehouse(ds_key_t max_rows
   auto warehouse_builder = TableBuilder{_benchmark_config->chunk_size, warehouse_column_types, warehouse_column_names,
                                         static_cast<ChunkOffset>(warehouse_count)};
 
-  for (auto i = ds_key_t{0}; i < warehouse_count; i++) {
-    const auto warehouse = call_dbgen_mk<W_WAREHOUSE_TBL, &mk_w_warehouse, WAREHOUSE>(warehouse_first + i);
+  for (auto warehouse_index = ds_key_t{0}; warehouse_index < warehouse_count; ++warehouse_index) {
+    const auto warehouse =
+        call_dbgen_mk<W_WAREHOUSE_TBL, &mk_w_warehouse, WAREHOUSE>(warehouse_first + warehouse_index);
 
     warehouse_builder.append_row(
         warehouse.w_warehouse_sk, warehouse.w_warehouse_id,
@@ -1007,8 +1016,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_page(ds_key_t max_rows)
   auto web_page_builder = TableBuilder{_benchmark_config->chunk_size, web_page_column_types, web_page_column_names,
                                        static_cast<ChunkOffset>(web_page_count)};
 
-  for (auto i = ds_key_t{0}; i < web_page_count; i++) {
-    const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + i);
+  for (auto web_page_index = ds_key_t{0}; web_page_index < web_page_count; ++web_page_index) {
+    const auto web_page = call_dbgen_mk<W_WEB_PAGE_TBL, &mk_w_web_page, WEB_PAGE>(web_page_first + web_page_index);
 
     web_page_builder.append_row(
         web_page.wp_page_sk, web_page.wp_page_id, resolve_date_id(WP_REC_START_DATE_ID, web_page.wp_rec_start_date_id),
@@ -1035,18 +1044,18 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
   auto web_returns_builder =
       TableBuilder{_benchmark_config->chunk_size, web_returns_column_types, web_returns_column_names};
 
-  for (auto i = ds_key_t{0}; i < web_sales_count; i++) {
+  for (auto web_sales_index = ds_key_t{0}; web_sales_index < web_sales_count; ++web_sales_index) {
     auto web_sales = W_WEB_SALES_TBL{};
     auto web_returns = W_WEB_RETURNS_TBL{};
 
-    // modified call to mk_w_web_sales(&web_sales, web_sales_first + i, &web_returns, &was_returned);
+    // modified call to mk_w_web_sales(&web_sales, web_sales_first + web_sales_index, &web_returns, &was_returned);
     {
-      mk_w_web_sales_master(&web_sales, web_sales_first + i, 0);
+      mk_w_web_sales_master(&web_sales, web_sales_first + web_sales_index, 0);
 
-      int n_lineitems;
+      auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto j = 1; j <= n_lineitems; j++) {
-        int was_returned = 0;
+      for (auto lineitem_index = 1; lineitem_index <= n_lineitems; ++lineitem_index) {
+        auto was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
         if (web_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -1135,9 +1144,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
   static_assert(sizeof(web_site.web_class) == 51);
   const auto snprintf_ret = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
   Assert(snprintf_ret > 0, "Unexpected string to parse.");
-  for (auto i = ds_key_t{0}; i < web_site_count; ++i) {
+  for (auto web_site_index = ds_key_t{0}; web_site_index < web_site_count; ++web_site_index) {
     // mk_w_web_site needs a pointer to the previous result because it expects values set previously to still be there
-    mk_w_web_site(&web_site, web_site_first + i);
+    mk_w_web_site(&web_site, web_site_first + web_site_index);
     tpcds_row_stop(WEB_SITE);
 
     web_site_builder.append_row(

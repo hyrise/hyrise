@@ -22,12 +22,14 @@ std::shared_ptr<const Table> Product::_on_execute() {
   TableColumnDefinitions column_definitions;
 
   // add columns from left table to output
-  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+  const auto left_input_column_count = left_input_table()->column_count();
+  for (auto column_id = ColumnID{0}; column_id < left_input_column_count; ++column_id) {
     column_definitions.emplace_back(left_input_table()->column_definitions()[column_id]);
   }
 
   // add columns from right table to output
-  for (ColumnID column_id{0}; column_id < right_input_table()->column_count(); ++column_id) {
+  const auto right_input_column_count = right_input_table()->column_count();
+  for (auto column_id = ColumnID{0}; column_id < right_input_column_count; ++column_id) {
     column_definitions.emplace_back(right_input_table()->column_definitions()[column_id]);
   }
 
@@ -35,11 +37,11 @@ std::shared_ptr<const Table> Product::_on_execute() {
   auto chunk_count_left_table = left_input_table()->chunk_count();
   auto chunk_count_right_table = right_input_table()->chunk_count();
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
+  for (auto chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
     const auto chunk_left = left_input_table()->get_chunk(chunk_id_left);
     Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
+    for (auto chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
       const auto chunk_right = right_input_table()->get_chunk(chunk_id_right);
       Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -77,7 +79,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
     // duplication
     auto table = is_left_side ? left_input_table() : right_input_table();
 
-    for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+    const auto column_count = chunk_in->column_count();
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       std::shared_ptr<const Table> referenced_table;
       ColumnID referenced_segment;
       std::shared_ptr<const AbstractPosList> pos_list_in;
@@ -102,10 +105,10 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
         const auto pos_list_size = static_cast<size_t>(left_chunk_size) * right_chunk_size;
         pos_list_out = std::make_shared<RowIDPosList>();
         pos_list_out->reserve(pos_list_size);
-        for (auto i = size_t{0}; i < pos_list_size; ++i) {
+        for (auto pos_list_index = size_t{0}; pos_list_index < pos_list_size; ++pos_list_index) {
           // size_t is sufficient here, because ChunkOffset::max is 2^32 and (2^32 * 2^32 = 2^64)
-          auto offset = is_left_side ? static_cast<ChunkOffset>(i / right_chunk_size)
-                                     : static_cast<ChunkOffset>(i % right_chunk_size);
+          auto offset = is_left_side ? static_cast<ChunkOffset>(pos_list_index / right_chunk_size)
+                                     : static_cast<ChunkOffset>(pos_list_index % right_chunk_size);
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {

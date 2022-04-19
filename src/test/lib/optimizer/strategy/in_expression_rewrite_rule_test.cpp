@@ -40,7 +40,9 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     null_in_expression = in_(col_a, list_(1, NULL_VALUE));
 
     auto hundred_elements = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (auto i = 0; i < 100; ++i) hundred_elements.emplace_back(value_(i));
+    for (auto index = 0; index < 100; ++index) {
+      hundred_elements.emplace_back(value_(index));
+    }
     hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col_a,
                                                                    std::make_shared<ListExpression>(hundred_elements));
     hundred_element_in_expression_large_input = std::make_shared<InExpression>(
@@ -311,7 +313,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto i = 0; i < 100; ++i) table->append({i});
+    for (auto index = 0; index < 100; ++index) {
+      table->append({index});
+    }
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
@@ -329,7 +333,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto i = 0; i < 100; ++i) table->append({i});
+    for (auto index = 0; index < 100; ++index) {
+      table->append({index});
+    }
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp =

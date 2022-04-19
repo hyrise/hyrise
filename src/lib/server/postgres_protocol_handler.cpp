@@ -150,7 +150,7 @@ std::pair<std::string, std::string> PostgresProtocolHandler<SocketType>::read_pa
   // The number of parameter data types specified (can be zero). These data types are ignored currently.
   const auto data_types_specified = _read_buffer.template get_value<uint16_t>();
 
-  for (auto i = 0; i < data_types_specified; i++) {
+  for (auto data_type_id = 0; data_type_id < data_types_specified; ++data_type_id) {
     // Specifies the object ID of the parameter data type.
     // Placing a zero here is equivalent to leaving the type unspecified.
     /*auto data_type = */ _read_buffer.template get_value<int32_t>();
@@ -193,21 +193,21 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
   const auto statement_name = _read_buffer.get_string();
   const auto num_format_codes = _read_buffer.template get_value<int16_t>();
 
-  for (auto i = 0; i < num_format_codes; i++) {
+  for (auto format_code_index = 0; format_code_index < num_format_codes; ++format_code_index) {
     Assert(_read_buffer.template get_value<int16_t>() == 0, "Assuming all parameters to be in text format (0)");
   }
 
   const auto num_parameter_values = _read_buffer.template get_value<int16_t>();
 
   std::vector<AllTypeVariant> parameter_values;
-  for (auto i = 0; i < num_parameter_values; ++i) {
+  for (auto parameter_value = 0; parameter_value < num_parameter_values; ++parameter_value) {
     const auto parameter_value_length = _read_buffer.template get_value<int32_t>();
     parameter_values.emplace_back(pmr_string{_read_buffer.get_string(parameter_value_length, HasNullTerminator::No)});
   }
 
   const auto num_result_column_format_codes = _read_buffer.template get_value<int16_t>();
 
-  for (auto i = 0; i < num_result_column_format_codes; i++) {
+  for (auto format_code = 0; format_code < num_result_column_format_codes; ++format_code) {
     Assert(_read_buffer.template get_value<int16_t>() == 0, "Assuming all result columns to be in text format (0)");
   }
 
