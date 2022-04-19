@@ -82,7 +82,7 @@ TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
     sql_pipeline.transaction_context()->rollback(RollbackReason::Conflict);
   }
 
-  // // Call existing, loaded plugin but non-existing function
+  // Call existing, loaded plugin but non-existing function
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
 
   {
