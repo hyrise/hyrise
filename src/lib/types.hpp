@@ -146,8 +146,7 @@ constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() -
 // Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
 // safety net which ensures that NULL values are handled correctly. E.g., getting a chunk with INVALID_CHUNK_ID
 // immediately crashes.
-constexpr RowID NULL_ROW_ID =
-    RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Could not use constexpr here
+constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
