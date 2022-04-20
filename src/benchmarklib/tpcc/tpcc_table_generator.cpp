@@ -251,7 +251,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_PHONE", cardinalities,
                           [&](std::vector<size_t>& /*indices*/) { return pmr_string{_random_gen.nstring(16, 16)}; });
   _add_column<int32_t>(segments_by_chunk, column_definitions, "C_SINCE", cardinalities,
-                       [&](std::vector<size_t> /*indices*/) { return _current_date; });
+                       [&](std::vector<size_t>& /*indices*/) { return _current_date; });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "C_CREDIT", cardinalities,
                           [&](std::vector<size_t>& indices) {
                             bool is_original = original_ids.find(indices[2]) != original_ids.end();
@@ -369,25 +369,26 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   auto table =
       std::make_shared<Table>(column_definitions, TableType::Data, _benchmark_config->chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
-    table->append_chunk(segments, mvcc_data);
+    const auto chunk_size = segments.front()->size();
+    const auto mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
+    table->append_chunk(segments, std::move(mvcc_data));
   }
 
   return table;
 }
 
 TPCCTableGenerator::OrderLineCounts TPCCTableGenerator::generate_order_line_counts() {
-  OrderLineCounts v(_num_warehouses);
-  for (auto& v_per_warehouse : v) {
-    v_per_warehouse.resize(NUM_DISTRICTS_PER_WAREHOUSE);
-    for (auto& v_per_district : v_per_warehouse) {
-      v_per_district.resize(NUM_ORDERS_PER_DISTRICT);
-      for (auto& v_per_order : v_per_district) {
-        v_per_order = _random_gen.random_number(5, 15);
+  auto order_line_counts = OrderLineCounts(_num_warehouses);
+  for (auto& counts_per_warehouse : order_line_counts) {
+    counts_per_warehouse.resize(NUM_DISTRICTS_PER_WAREHOUSE);
+    for (auto& counts_per_district : counts_per_warehouse) {
+      counts_per_district.resize(NUM_ORDERS_PER_DISTRICT);
+      for (auto& count_per_order : counts_per_district) {
+        count_per_order = _random_gen.random_number(5, 15);
       }
     }
   }
-  return v;
+  return order_line_counts;
 }
 
 /**
