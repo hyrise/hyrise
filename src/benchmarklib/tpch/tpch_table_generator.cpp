@@ -15,8 +15,8 @@ extern "C" {
 #include "table_builder.hpp"
 #include "utils/timer.hpp"
 
-extern const char** asc_date;
-extern seed_t seed[];  // NOLINT
+extern const char** asc_date;  // NOLINT
+extern seed_t seed[];          // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"

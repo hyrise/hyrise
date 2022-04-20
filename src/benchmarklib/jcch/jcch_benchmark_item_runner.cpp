@@ -56,6 +56,10 @@ void JCCHBenchmarkItemRunner::_load_params() {
     Assert(std::filesystem::exists(dbgen_queries_path),
            std::string{"Query templates not found at "} + dbgen_queries_path);
 
+    // NOLINTBEGIN(concurrency-mt-unsafe)
+    // clang-tidy complains that system() is not thread-safe. We can ignore this warning, because _load_params is only
+    // called in the constructor once.
+
     // Create local directory and copy query templates if needed
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
     Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed");
@@ -76,6 +80,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
       auto ret = system(cmd.str().c_str());
       Assert(!ret, "Calling qgen failed");
     }
+    // NOLINTEND(concurrency-mt-unsafe)
 
     std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
   }

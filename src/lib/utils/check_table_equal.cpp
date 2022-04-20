@@ -47,7 +47,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
   std::stringstream stream;
   bool previous_row_highlighted = false;
 
-  for (auto row_id = size_t{0}; row_id < matrix.size(); row_id++) {
+  for (auto row_id = size_t{0}; row_id < matrix.size(); ++row_id) {
     auto highlight = false;
     auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
                            [&](const auto& element) { return element.first == row_id; });
@@ -73,7 +73,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     }
 
     // Highlicht each (applicable) cell with highlight color
-    for (auto column_id = ColumnID{0}; column_id < matrix[row_id].size(); column_id++) {
+    for (auto column_id = ColumnID{0}; column_id < matrix[row_id].size(); ++column_id) {
       auto cell = boost::lexical_cast<std::string>(matrix[row_id][column_id]);
       coloring = "";
       if (highlight && it->second == column_id) {
@@ -132,9 +132,17 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode,
                                              IgnoreNullable ignore_nullable) {
-  if (!actual_table && expected_table) return "No 'actual' table given";
-  if (actual_table && !expected_table) return "No 'expected' table given";
-  if (!actual_table && !expected_table) return "No 'expected' table and no 'actual' table given";
+  if (!actual_table && expected_table) {
+    return "No 'actual' table given";
+  }
+
+  if (actual_table && !expected_table) {
+    return "No 'expected' table given";
+  }
+
+  if (!actual_table && !expected_table) {
+    return "No 'expected' table and no 'actual' table given";
+  }
 
   auto stream = std::stringstream{};
 
@@ -195,7 +203,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       }
 
       bool all_null = true;
-      for (auto row_id = size_t{HEADER_SIZE}; row_id < expected_matrix.size(); row_id++) {
+      for (auto row_id = size_t{HEADER_SIZE}; row_id < expected_matrix.size(); ++row_id) {
         if (!variant_is_null(expected_matrix[row_id][column_id])) {
           all_null = false;
           break;
@@ -263,8 +271,8 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   };
 
   // Compare each cell, skipping header
-  for (auto row_id = size_t{HEADER_SIZE}; row_id < actual_matrix.size(); row_id++) {
-    for (auto column_id = ColumnID{0}; column_id < actual_matrix[row_id].size(); column_id++) {
+  for (auto row_id = size_t{HEADER_SIZE}; row_id < actual_matrix.size(); ++row_id) {
+    for (auto column_id = ColumnID{0}; column_id < actual_matrix[row_id].size(); ++column_id) {
       if (variant_is_null(actual_matrix[row_id][column_id]) || variant_is_null(expected_matrix[row_id][column_id])) {
         highlight_if(
             !(variant_is_null(actual_matrix[row_id][column_id]) && variant_is_null(expected_matrix[row_id][column_id])),

@@ -70,9 +70,9 @@ TEST_F(TPCDSTableGeneratorTest, TableContentsFirstRows) {
 
 TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
- * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager.
- * Then check whether the row count is correct for all tables.
- */
+   * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager.
+   * Then check whether the row count is correct for all tables.
+   */
 
   const auto expected_sizes = std::map<std::string, uint64_t>{{"call_center", 6},
                                                               {"catalog_page", 11718},

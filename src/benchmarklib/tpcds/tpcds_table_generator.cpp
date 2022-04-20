@@ -59,7 +59,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   // init_rand from genrand.c, adapted
   {
     auto n_seed = get_int(rng_seed_string.data());
-    auto skip = INT_MAX / MAX_COLUMN;
+    const auto skip = INT_MAX / MAX_COLUMN;
     for (auto index = 0; index < MAX_COLUMN; ++index) {
       const auto seed = n_seed + skip * index;
       Streams[index].nInitialSeed = seed;
@@ -77,7 +77,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
-  for (auto table_id = 0; table_id <= MAX_TABLE; table_id++) {
+  for (auto table_id = 0; table_id <= MAX_TABLE; ++table_id) {
     resetSeeds(table_id);
     RNGReset(table_id);
   }
@@ -117,12 +117,12 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
-pmr_string boolean_to_string(bool boolean) { return {1, boolean ? 'Y' : 'N'}; }
+pmr_string boolean_to_string(bool boolean) { return {boolean ? "Y" : "N"}; }
 
 pmr_string zip_to_string(int32_t zip) {
   auto result = pmr_string(5, '?');
-  const auto snprintf_ret = std::snprintf(result.data(), result.size() + 1, "%05d", zip);
-  Assert(snprintf_ret > 0, "Unexpected string to parse.");
+  const auto snprintf_rc = std::snprintf(result.data(), result.size() + 1, "%05d", zip);
+  Assert(snprintf_rc > 0, "Unexpected string to parse.");
   return result;
 }
 
@@ -136,9 +136,9 @@ std::optional<pmr_string> resolve_date_id(int column_id, ds_key_t date_id) {
   jtodt(&date, static_cast<int>(date_id));
 
   auto result = pmr_string(10, '?');
-  const auto snprintf_ret =
+  const auto snprintf_rc =
       std::snprintf(result.data(), result.size() + 1, "%4d-%02d-%02d", date.year, date.month, date.day);
-  Assert(snprintf_ret > 0, "Unexpected string to parse.");
+  Assert(snprintf_rc > 0, "Unexpected string to parse.");
 
   return result;
 }
@@ -363,13 +363,17 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::_
     const std::string& sales_table_name) const {
   if (sales_table_name == "catalog_sales") {
     return generate_catalog_sales_and_returns();
-  } else if (sales_table_name == "store_sales") {
-    return generate_store_sales_and_returns();
-  } else if (sales_table_name == "web_sales") {
-    return generate_web_sales_and_returns();
-  } else {
-    Fail("Unexpected sales table name: " + sales_table_name);
   }
+
+  if (sales_table_name == "store_sales") {
+    return generate_store_sales_and_returns();
+  }
+
+  if (sales_table_name == "web_sales") {
+    return generate_web_sales_and_returns();
+  }
+
+  Fail("Unexpected sales table name: " + sales_table_name);
 }
 
 std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_rows) const {
@@ -427,9 +431,9 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_catalog_page(ds_key_t max_r
                                            catalog_page_column_names, static_cast<ChunkOffset>(catalog_page_count)};
 
   auto catalog_page = CATALOG_PAGE_TBL{};
-  const auto snprintf_ret =
+  const auto snprintf_rc =
       std::snprintf(catalog_page.cp_department, sizeof(catalog_page.cp_department), "%s", "DEPARTMENT");
-  Assert(snprintf_ret > 0, "Unexpected string to parse.");
+  Assert(snprintf_rc > 0, "Unexpected string to parse.");
   for (auto catalog_page_index = ds_key_t{0}; catalog_page_index < catalog_page_count; ++catalog_page_index) {
     // need a pointer to the previous result of mk_w_catalog_page, because cp_department is only set once
     mk_w_catalog_page(&catalog_page, catalog_page_first + catalog_page_index);
@@ -460,17 +464,17 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
   auto catalog_returns_builder =
       TableBuilder{_benchmark_config->chunk_size, catalog_returns_column_types, catalog_returns_column_names};
 
-  for (auto catalog_sale = ds_key_t{0}; catalog_sale < catalog_sales_count; ++catalog_sale) {
+  for (auto catalog_sale_index = ds_key_t{0}; catalog_sale_index < catalog_sales_count; ++catalog_sale_index) {
     auto catalog_sales = W_CATALOG_SALES_TBL{};
     auto catalog_returns = W_CATALOG_RETURNS_TBL{};
 
-    // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + catalog_sale,
+    // modified call to mk_w_catalog_sales(&catalog_sales, catalog_sales_first + catalog_sale_index,
     //                                     &catalog_returns, &was_returned);
     {
-      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + catalog_sale, 0);
+      mk_w_catalog_sales_master(&catalog_sales, catalog_sales_first + catalog_sale_index, 0);
       auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
-      for (auto lineitem_index = 1; lineitem_index <= n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = 0; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
@@ -895,7 +899,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
 
       auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
-      for (auto lineitem_index = 1; lineitem_index <= n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = 0; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
@@ -1054,7 +1058,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
 
       auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto lineitem_index = 1; lineitem_index <= n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = 0; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
@@ -1142,8 +1146,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
   auto web_site = W_WEB_SITE_TBL{};
   static_assert(sizeof(web_site.web_class) == 51);
-  const auto snprintf_ret = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
-  Assert(snprintf_ret > 0, "Unexpected string to parse.");
+  const auto snprintf_rc = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
+  Assert(snprintf_rc > 0, "Unexpected string to parse.");
   for (auto web_site_index = ds_key_t{0}; web_site_index < web_site_count; ++web_site_index) {
     // mk_w_web_site needs a pointer to the previous result because it expects values set previously to still be there
     mk_w_web_site(&web_site, web_site_first + web_site_index);

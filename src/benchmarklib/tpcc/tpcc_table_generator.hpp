@@ -41,7 +41,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   using OrderLineCounts = std::vector<std::vector<std::vector<size_t>>>;
 
-  OrderLineCounts generate_order_line_counts();
+  OrderLineCounts generate_order_line_counts() const;
 
   std::shared_ptr<Table> generate_order_table(const OrderLineCounts& order_line_counts);
 

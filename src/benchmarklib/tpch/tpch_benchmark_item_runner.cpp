@@ -509,18 +509,18 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
     std::stringstream sql;
     sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
     return sql.str();
-  } else {
-    // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
-    auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
-
-    for (const auto& parameter_value : parameter_values) {
-      boost::replace_first(query_template, "?", parameter_value);
-    }
-
-    Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder");
-
-    return query_template;
   }
+
+  // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
+  auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
+
+  for (const auto& parameter_value : parameter_values) {
+    boost::replace_first(query_template, "?", parameter_value);
+  }
+
+  Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder");
+
+  return query_template;
 }
 
 }  // namespace opossum
