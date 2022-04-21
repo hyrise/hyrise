@@ -153,7 +153,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdown) {
+TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
   // We expect predicates to get pushed below UnionNode-based diamonds if they continue to be evaluable.
   // clang-format off
   const auto input_common_node =
@@ -180,6 +180,34 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdown) {
     PredicateNode::make(like_(_a_a, "%Man%"),
       expected_common_node));
   // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
+  // Derived from SimpleDiamondPushdownTest.
+  // clang-format off
+  const auto input_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_b, 10),  // <-- This PredicateNode should get pushed below the diamond.
+    UnionNode::make(SetOperationMode::Positions,
+      PredicateNode::make(like_(_a_a, "%man%"),
+        input_common_node),
+      PredicateNode::make(like_(_a_a, "%Man%"),
+        input_common_node)));
+  // clang-format on
+
+  const auto expected_lqp = input_lqp->deep_copy();
+
+  // Increase the outputs count of input_common_node
+  EXPECT_EQ(input_common_node->outputs().size(), 2);
+  const auto dummy_lqp = ProjectionNode::make(expression_vector(_a_a), input_common_node);
+  EXPECT_EQ(input_common_node->outputs().size(), 3);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
