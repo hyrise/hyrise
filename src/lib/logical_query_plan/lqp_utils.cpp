@@ -204,19 +204,24 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
 }
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node, const AllowRightInput allow_right_input) {
-  DebugAssert(!node->left_input() && (!node->right_input() || allow_right_input == AllowRightInput::Yes) &&
-                  node->output_count() == 0,
-              "Expected node without inputs and outputs");
+                     const std::shared_ptr<AbstractLQPNode>& node_to_insert, const AllowRightInput allow_right_input) {
+  DebugAssert(!node_to_insert->left_input(), "Expected node without a left input set.");
+  DebugAssert(!node_to_insert->right_input() || allow_right_input == AllowRightInput::Yes,
+              "Expected node without a right input set.");
+  DebugAssert(node_to_insert->output_count() == 0, "Expected node without outputs.");
 
   const auto old_input = parent_node->input(input_side);
-  parent_node->set_input(input_side, node);
-  node->set_left_input(old_input);
+  parent_node->set_input(input_side, node_to_insert);
+  node_to_insert->set_left_input(old_input);
 }
 
-void lqp_insert_above_node(const std::shared_ptr<AbstractLQPNode>& node,
-                           const std::shared_ptr<AbstractLQPNode>& node_to_insert) {
-  Assert(!node_to_insert->left_input(), "Expected node without a left input set.");
+void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
+                           const AllowRightInput allow_right_input) {
+  DebugAssert(!node_to_insert->left_input(), "Expected node without a left input set.");
+  DebugAssert(!node_to_insert->right_input() || allow_right_input == AllowRightInput::Yes,
+              "Expected node without a right input set.");
+  DebugAssert(node_to_insert->output_count() == 0, "Expected node without outputs.");
 
   // Re-link @param node's outputs to @param node_to_insert
   const auto node_outputs = node->outputs();
@@ -524,7 +529,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
 std::shared_ptr<AbstractLQPNode> find_diamond_bottom_root_node(
     const std::shared_ptr<AbstractLQPNode>& union_root_node) {
   Assert(union_root_node->type == LQPNodeType::Union, "Expecting UnionNode as the diamond's root node.");
-  Assert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
+  DebugAssert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
   bool is_diamond = true;
   std::optional<std::shared_ptr<AbstractLQPNode>> diamond_bottom_root_node;
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
@@ -533,13 +538,13 @@ std::shared_ptr<AbstractLQPNode> find_diamond_bottom_root_node(
       if (!diamond_bottom_root_node.has_value()) {
         diamond_bottom_root_node = diamond_node;
       } else if (diamond_bottom_root_node != diamond_node) {
-        // The LQP traversal should always end in the same bottom node having multiple outputs. Since we found two
-        // differing diamond bottom nodes, we must abort the traversal.
+        // The LQP traversal should always end in the same bottom root node having multiple outputs. Since we found two
+        // different bottom root nodes, we abort the traversal.
         is_diamond = false;
       }
       return LQPVisitation::DoNotVisitInputs;
     } else if (!diamond_node->left_input()) {
-      // We should have found a bottom diamond node with multiple outputs at this point.
+      // We should have found a common bottom root node with multiple outputs at this point.
       is_diamond = false;
     }
     return LQPVisitation::VisitInputs;
