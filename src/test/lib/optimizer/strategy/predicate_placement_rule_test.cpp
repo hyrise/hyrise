@@ -153,6 +153,37 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicatePlacementRuleTest, SingleUnionDiamondPushdown) {
+  // clang-format off
+  const auto input_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_b, 10),  // <-- We expect this PredicateNode to get pushed below the diamond structure.
+    UnionNode::make(SetOperationMode::All,
+      PredicateNode::make(less_than_(_a_a, 0),
+        input_common_node),
+      PredicateNode::make(greater_than_(_a_a, 10),
+        input_common_node)));
+
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    PredicateNode::make(equals_(_a_b, 10),
+      _stored_table_a));
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::All,
+    PredicateNode::make(less_than_(_a_a, 0),
+      expected_common_node),
+    PredicateNode::make(greater_than_(_a_a, 10),
+      expected_common_node));
+
+  // clang-format on
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
 TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
   // If the predicate cannot be pushed down and is effectively re-inserted at the same position, make sure that
   // its outputs are correctly restored.
