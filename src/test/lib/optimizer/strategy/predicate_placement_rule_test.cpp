@@ -252,6 +252,57 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
+  // In this test, two predicates sit on top of two consecutive Union diamonds. While both predicates can be pushed
+  // below the first diamond, only one predicate can also be pushed below the second diamond.
+  // clang-format off
+  const auto input_common_node =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(like_(_c_a, "%woman%"),
+      ProjectionNode::make(expression_vector(_c_a, _c_b, cast_(11, DataType::Float)),
+        _stored_table_c)),
+    PredicateNode::make(like_(_c_a, "%Woman%"),
+      ProjectionNode::make(expression_vector(_c_a, _c_b, cast_(11, DataType::Float)),
+        _stored_table_c)));
+
+  const auto input_lqp =
+  PredicateNode::make(greater_than_(_c_a, 1000),  // <-- 1st Predicate before pushdown
+    PredicateNode::make(equals_(_c_b, 10),        // <-- 2nd Predicate before pushdown
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(like_(_c_a, "%man%"),
+          input_common_node),
+        PredicateNode::make(like_(_c_a, "%Man%"),
+          input_common_node))));
+
+  // We apply the rule before defining the expected LQP. Otherwise, we would modify the outputs of _stored_table_c, and
+  // thus affect the rule's outcome.
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  const auto expected_common_node2 =
+  PredicateNode::make(equals_(_c_b, 10),         // <-- 2nd Predicate after pushdown
+    _stored_table_c);
+
+  const auto expected_common_node1 =
+  PredicateNode::make(greater_than_(_c_a, 1000), // <-- 1st Predicate after pushdown
+    UnionNode::make(SetOperationMode::Positions,
+      ProjectionNode::make(expression_vector(_c_a, _c_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_c_a, "%woman%"),
+          expected_common_node2)),
+      ProjectionNode::make(expression_vector(_c_a, _c_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_c_a, "%Woman%"),
+          expected_common_node2))));
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(like_(_c_a, "%man%"),
+      expected_common_node1),
+    PredicateNode::make(like_(_c_a, "%Man%"),
+      expected_common_node1));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
   // We expect predicates to get pushed below UnionNode-based diamonds if they continue to be evaluable.
   // clang-format off
