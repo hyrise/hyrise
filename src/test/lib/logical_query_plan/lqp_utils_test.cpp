@@ -315,8 +315,8 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
       PredicateNode::make(greater_than_(a_a, value_(5)),
         node_a));
     // clang-format on
-    const auto diamond_bottom_node = find_diamond_bottom_root_node(lqp);
-    EXPECT_EQ(diamond_bottom_node, node_a);
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, node_a);
   }
   {
     // clang-format off
@@ -327,8 +327,8 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
       PredicateNode::make(greater_than_(a_a, value_(5)),
         node_b));
     // clang-format on
-    const auto diamond_bottom_node = find_diamond_bottom_root_node(lqp);
-    EXPECT_EQ(diamond_bottom_node, nullptr);
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, nullptr);
   }
   {
     // clang-format off
@@ -342,8 +342,8 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
       PredicateNode::make(equals_(a_a, value_(7)),
         node_a));
     // clang-format on
-    const auto diamond_bottom_node = find_diamond_bottom_root_node(lqp);
-    EXPECT_EQ(diamond_bottom_node, node_a);
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, node_a);
   }
   {
     // clang-format off
@@ -357,8 +357,8 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
       PredicateNode::make(equals_(a_a, value_(7)),
         node_a));
     // clang-format on
-    const auto diamond_bottom_node = find_diamond_bottom_root_node(lqp);
-    EXPECT_EQ(diamond_bottom_node, nullptr);
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, nullptr);
   }
 }
 

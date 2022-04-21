@@ -187,14 +187,16 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
 }
 
 TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
-  // Derived from SimpleDiamondPushdownTest.
+  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's bottom root node is used by another LQP node,
+  // which is not part of the diamond. As a result, the predicate pushdown must be blocked because it would incorrectly
+  // filter the other LQP node not part of the diamond.
   // clang-format off
   const auto input_common_node =
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
     _stored_table_a);
 
   const auto input_lqp =
-  PredicateNode::make(equals_(_a_b, 10),  // <-- This PredicateNode should get pushed below the diamond.
+  PredicateNode::make(equals_(_a_b, 10),
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(like_(_a_a, "%man%"),
         input_common_node),
@@ -205,9 +207,9 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
   const auto expected_lqp = input_lqp->deep_copy();
 
   // Increase the outputs count of input_common_node
-  EXPECT_EQ(input_common_node->outputs().size(), 2);
-  const auto dummy_lqp = ProjectionNode::make(expression_vector(_a_a), input_common_node);
-  EXPECT_EQ(input_common_node->outputs().size(), 3);
+  ASSERT_EQ(input_common_node->outputs().size(), 2);
+  const auto non_diamond_lqp_node = ProjectionNode::make(expression_vector(_a_a), input_common_node);
+  ASSERT_EQ(input_common_node->outputs().size(), 3);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
@@ -215,9 +217,8 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
 }
 
 TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
-  // We expect predicates to get pushed below UnionNode-based diamonds if they continue to be evaluable. In this test,
-  // the diamond's bottom root node is an AggregateNode which blocks one predicate from getting pushed below the
-  // diamond.
+  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's bottom root node is an AggregateNode which
+  // blocks one predicate from getting pushed below the diamond.
   // clang-format off
   const auto input_common_node =
   AggregateNode::make(expression_vector(_a_a), expression_vector(min_(_a_b)),

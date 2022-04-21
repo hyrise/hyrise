@@ -330,8 +330,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        *   Therefore, we do not want to continue the pushdown traversal below the diamond. Because otherwise, we would
        *   incorrectly filter the Join's left input.
        *
-       * To identify cases as above, we check the outputs count of the diamond's bottom root node and compare it with
-       * the number of UnionNodes in the diamond structure.
+       * To identify cases such as above, we check the outputs count of the diamond's bottom root node and compare it
+       * with the number of UnionNodes in the diamond structure.
        */
       size_t union_node_count = 0;
       visit_lqp(union_node, [&](const auto& diamond_node) {
