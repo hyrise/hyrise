@@ -161,7 +161,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
     _stored_table_a);
 
   const auto input_lqp =
-  PredicateNode::make(equals_(_a_b, 10),  // <-- This PredicateNode should get pushed below the diamond.
+  PredicateNode::make(equals_(_a_b, 10),    // <-- Predicate before pushdown
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(like_(_a_a, "%man%"),
         input_common_node),
@@ -170,7 +170,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
 
   const auto expected_common_node =
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-    PredicateNode::make(equals_(_a_b, 10),
+    PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate after pushdown
       _stored_table_a));
 
   const auto expected_lqp =
@@ -225,8 +225,8 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
     _stored_table_a);
 
   const auto input_lqp =
-  PredicateNode::make(equals_(_a_a, 10),
-    PredicateNode::make(greater_than_(min_(_a_b), 100),
+  PredicateNode::make(equals_(_a_a, 10),                 // <-- 1st Predicate before pushdown
+    PredicateNode::make(greater_than_(min_(_a_b), 100),  // <-- 2nd Predicate before pushdown
       UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(like_(_a_a, "%man%"),
           input_common_node),
@@ -234,9 +234,9 @@ TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
           input_common_node))));
 
   const auto expected_common_node =
-  PredicateNode::make(greater_than_(min_(_a_b), 100),
+  PredicateNode::make(greater_than_(min_(_a_b), 100),   // <-- 2nd Predicate after pushdown
     AggregateNode::make(expression_vector(_a_a), expression_vector(min_(_a_b)),
-      PredicateNode::make(equals_(_a_a, 10),
+      PredicateNode::make(equals_(_a_a, 10),            // <-- 1st Predicate after pushdown
         _stored_table_a)));
 
   const auto expected_lqp =
@@ -311,7 +311,7 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
     _stored_table_a);
 
   const auto input_lqp =
-  PredicateNode::make(equals_(_a_b, 10),  // <-- This PredicateNode should get pushed below the diamond.
+  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate before pushdown
     UnionNode::make(SetOperationMode::Positions,
       UnionNode::make(SetOperationMode::Positions,
         PredicateNode::make(like_(_a_a, "%man"),
@@ -323,7 +323,7 @@ TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
 
   const auto expected_common_node =
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-    PredicateNode::make(equals_(_a_b, 10),  // <-- PredicateNode should end up here after the pushdown.
+    PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate after pushdown
       _stored_table_a));
 
   const auto expected_lqp =
