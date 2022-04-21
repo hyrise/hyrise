@@ -333,13 +333,13 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        * To identify cases as above, we check the outputs count of the diamond's bottom root node and compare it with
        * the number of UnionNodes in the diamond structure.
        */
-      size_t union_node_count = 1;
+      size_t union_node_count = 0;
       visit_lqp(union_node, [&](const auto& diamond_node) {
         if (diamond_node == diamond_bottom_root_node) return LQPVisitation::DoNotVisitInputs;
         if (diamond_node->type == LQPNodeType::Union) union_node_count++;
         return LQPVisitation::VisitInputs;
       });
-      if (union_node_count + 1 < diamond_bottom_root_node->output_count()) {
+      if (diamond_bottom_root_node->output_count() != union_node_count + 1) {
         handle_barrier();
         return;
       }
