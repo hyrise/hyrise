@@ -96,7 +96,7 @@ void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const 
                      const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
-// TODO(julianmenzler) Rename to: lqp_insert_above_node
+// TODO(julianmenzler) Rename to: lqp_insert_above_node, Maybe add allow_right_input == AllowRightInput::kYes
 void lqp_insert_above_node(const std::shared_ptr<AbstractLQPNode>& node,
                            const std::shared_ptr<AbstractLQPNode>& node_to_insert);
 /**
