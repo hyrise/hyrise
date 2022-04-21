@@ -281,56 +281,60 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(input_node);
-      // If we have a diamond of predicates, where all UnionNode inputs result from the same bottom node,
-      // the pushdown-traversal should continue below the diamond's bottom node, if possible.
-      //
-      //                                        |
-      //                                  ____Union_____
-      //                                 /              \
-      //                      Predicate(a LIKE %man)    |
-      //                                |               |
-      //                                |     Predicate(a LIKE %woman)
-      //                                |               |
-      //                                |               |
-      //  Diamond's bottom node ----->  \_____Node______/    ________ Try to continue pushdown traversal here
-      //                                        |  <--------´
-      //                                        |
+      /**
+       *
+       * If we have a diamond of predicates, where all UnionNode inputs result from the same bottom node,
+       * the pushdown-traversal should continue below the diamond's bottom node, if possible.
+       *
+       *                                        |
+       *                                  ____Union_____
+       *                                 /              \
+       *                      Predicate(a LIKE %man)    |
+       *                                |               |
+       *                                |     Predicate(a LIKE %woman)
+       *                                |               |
+       *                                |               |
+       *                                \_____Node______/  <---- Diamond's bottom root node
+       *                                        |  <------------ Continue pushdown traversal here, if possible
+       *                                        |
+       */
       std::shared_ptr<AbstractLQPNode> diamond_bottom_root_node = find_diamond_bottom_root_node(union_node);
       if (!diamond_bottom_root_node) {
         handle_barrier();
         return;
       }
-
-      // In the following, we determine whether the diamond's bottom root node is used as an input by nodes which are
-      // not part of the diamond because we should only filter the predicates of the diamond nodes, not other nodes'
-      // predicates. For example:
-      //                                           |                                |
-      //                                     ____Union_____                   Join(a = x)
-      //                                    /              \                     /    \
-      //                             ______/               |                     |    |
-      //                            /                      |                     |    |
-      //                     ____Union_____                |                     |    |
-      //                    /              \               |                     |    |
-      //                   /               |     Predicate(a LIKE %woman)        |    |
-      //        Predicate(a LIKE %man)     |               |                     |    |
-      //                  |                |               |                     |    |
-      //                  |       Predicate(a LIKE %child) |                     |    |
-      //                  |                |               |                     |    |
-      //                  |                \______   ______/                     |    |
-      //                   \                      \ /                            |    |
-      //                    \____________________  |  __________________________/     |
-      //                                         \ | /                                |
-      //     Diamond's bottom root node ------->  Node                              Table
-      //     has four output nodes, but only       |
-      //     three of them are part of the        ...
-      //     predicate diamond. Consequently,
-      //     we cannot continue the pushdown
-      //     traversal below this node. Otherwise,
-      //     we would filter the Join's input
-      //     predicates, which is incorrect.
-      //
-      // To identify cases as above, we check the diamond's bottom root node output count and compare it with the number
-      // of Unions in the diamond structure.
+      /**
+       * In the following, we determine whether the diamond's bottom root node is used as an input by nodes which are
+       * not part of the diamond because we should only filter the predicates of the diamond nodes, not other nodes'
+       * predicates. For example:
+       *                                           |                                |
+       *                                     ____Union_____                   Join(a = x)
+       *                                    /              \                     /    \
+       *                             ______/               |                     |    |
+       *                            /                      |                     |    |
+       *                     ____Union_____                |                     |    |
+       *                    /              \               |                     |    |
+       *                   /               |     Predicate(a LIKE %woman)        |    |
+       *        Predicate(a LIKE %man)     |               |                     |    |
+       *                  |                |               |                     |    |
+       *                  |       Predicate(a LIKE %child) |                     |    |
+       *                  |                |               |                     |    |
+       *                  |                \______   ______/                     |    |
+       *                   \                      \ /                            |    |
+       *                    \____________________  |  __________________________/     |
+       *                                         \ | /                                |
+       *     Diamond's bottom root node ------->  Node                              Table
+       *     has four output nodes, but only       |
+       *     three of them are part of the        ...
+       *     predicate diamond. Consequently,
+       *     we cannot continue the pushdown
+       *     traversal below this node. Otherwise,
+       *     we would filter the Join's input
+       *     predicates, which is incorrect.
+       *
+       * To identify cases as above, we check the diamond's bottom root node output count and compare it with the number
+       * of Unions in the diamond structure.
+       */
       size_t union_node_count = 1;
       visit_lqp(union_node, [&](const auto& diamond_node) {
         if (diamond_node == diamond_bottom_root_node) return LQPVisitation::DoNotVisitInputs;
