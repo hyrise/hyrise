@@ -320,19 +320,18 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        *                  |                |               |                     |    |
        *                  |                \______   ______/                     |    |
        *                   \                      \ /                            |    |
-       *                    \____________________  |  __________________________/     |
-       *                                         \ | /                                |
-       *     Diamond's bottom root node ------->  Node                              Table
-       *     has four output nodes, but only       |
-       *     three of them are part of the        ...
-       *     predicate diamond. Consequently,
-       *     we cannot continue the pushdown
-       *     traversal below this node. Otherwise,
-       *     we would filter the Join's input
-       *     predicates, which is incorrect.
+       *                    \___________________  | |  __________________________/    |
+       *                                        \ | | /                               |
+       *                  ------------------->    Node                              Table
+       *                /                          |
+       *               /                          ...
+       *   ___________/______________
+       *   Diamond's bottom root node has four outputs, but only three outputs are part of the diamond structure.
+       *   Therefore, we do not want to continue the pushdown traversal below the diamond. Because otherwise, we would
+       *   incorrectly filter the Join's left input.
        *
-       * To identify cases as above, we check the diamond's bottom root node output count and compare it with the number
-       * of Unions in the diamond structure.
+       * To identify cases as above, we check the outputs count of the diamond's bottom root node and compare it with
+       * the number of UnionNodes in the diamond structure.
        */
       size_t union_node_count = 1;
       visit_lqp(union_node, [&](const auto& diamond_node) {
