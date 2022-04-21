@@ -279,11 +279,11 @@ TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   const auto expected_common_node2 =
-  PredicateNode::make(equals_(_c_b, 10),         // <-- 2nd Predicate after pushdown
+  PredicateNode::make(equals_(_c_b, 10),          // <-- 2nd Predicate after pushdown
     _stored_table_c);
 
   const auto expected_common_node1 =
-  PredicateNode::make(greater_than_(_c_a, 1000), // <-- 1st Predicate after pushdown
+  PredicateNode::make(greater_than_(_c_a, 1000),  // <-- 1st Predicate after pushdown
     UnionNode::make(SetOperationMode::Positions,
       ProjectionNode::make(expression_vector(_c_a, _c_b, cast_(11, DataType::Float)),
         PredicateNode::make(like_(_c_a, "%woman%"),

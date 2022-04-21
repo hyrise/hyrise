@@ -282,8 +282,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(input_node);
       /**
-       * If we have a diamond of predicates, where all UnionNode inputs result from the same bottom root node,
-       * the pushdown-traversal should continue below the diamond's bottom root node, if possible.
+       * If we have a diamond of predicates where all UnionNode inputs result from the same bottom root node, the
+       * pushdown traversal should continue below the diamond's bottom root node, if possible.
        *
        *                                        |
        *                                  ____Union_____
@@ -322,11 +322,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        *                   \                      \ /                            |    |
        *                    \___________________  | |  __________________________/    |
        *                                        \ | | /                               |
-       *                  ------------------->    Node                              Table
-       *                /                          |
-       *               /                          ...
-       *   ___________/______________
-       *   Diamond's bottom root node has four outputs, but only three outputs are part of the diamond structure.
+       *                     ---------------->    Node                              Table
+       *                    /                      |
+       *                   /                      ...
+       *       ___________/______________
+       *   The diamond's bottom root node has four outputs, but only three outputs are part of the diamond structure.
        *   Therefore, we do not want to continue the pushdown traversal below the diamond. Because otherwise, we would
        *   incorrectly filter the Join's left input.
        *
