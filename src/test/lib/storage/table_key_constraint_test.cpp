@@ -18,7 +18,7 @@ class TableKeyConstraintTest : public BaseTest {
       column_definitions.emplace_back("column1", DataType::Int, false);
       column_definitions.emplace_back("column2", DataType::Int, false);
       column_definitions.emplace_back("column3", DataType::Int, false);
-      _table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+      _table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
       sm.add_table("table", _table);
     }
@@ -27,7 +27,7 @@ class TableKeyConstraintTest : public BaseTest {
       TableColumnDefinitions column_definitions;
       column_definitions.emplace_back("column0", DataType::Int, false);
       column_definitions.emplace_back("column1", DataType::Int, true);
-      _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+      _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
       sm.add_table("table_nullable", _table_nullable);
     }

@@ -11,8 +11,10 @@ namespace opossum {
 class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
  public:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
-    Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_a",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    Hyrise::get().storage_manager.add_table("t_b",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
     _stored_table_node_left = StoredTableNode::make("t_a");
     _stored_table_node_left->set_pruned_chunk_ids({ChunkID{2}});

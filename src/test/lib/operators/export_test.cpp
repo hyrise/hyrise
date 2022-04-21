@@ -25,7 +25,7 @@ class OperatorsExportTest : public BaseTest {
     column_definitions.emplace_back("b", DataType::String, false);
     column_definitions.emplace_back("c", DataType::Float, false);
 
-    table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
     std::remove(test_filename.c_str());
     std::remove(test_meta_filename.c_str());
@@ -61,7 +61,8 @@ INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
                          ::testing::Values(FileType::Csv, FileType::Binary), export_test_formatter);
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
-  auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   table->append({1.1f});
   table->append({2.2f});
   table->append({3.3f});
@@ -79,7 +80,8 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithFileType) {
 }
 
 TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
-  auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+  auto table =
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   table->append({1.1f});
   table->append({2.2f});
   table->append({3.3f});

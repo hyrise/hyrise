@@ -73,7 +73,8 @@ void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
 class AggregateSortTest : public BaseTest {
  public:
   void SetUp() override {
-    const auto table_1 = load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", 2);
+    const auto table_1 =
+        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input.tbl", ChunkOffset{2});
     table_1->set_value_clustered_by({ColumnID{0}});
     table_1->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Ascending));
     table_1->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition(ColumnID{0}, SortMode::Descending));
@@ -81,8 +82,8 @@ class AggregateSortTest : public BaseTest {
     _table_wrapper_1->never_clear_output();
     _table_wrapper_1->execute();
 
-    const auto table_2 =
-        load_table("resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", 2);
+    const auto table_2 = load_table(
+        "resources/test_data/tbl/aggregateoperator/groupby_int_1gb_1agg/input_multi_columns.tbl", ChunkOffset{2});
     table_2->set_value_clustered_by({ColumnID{0}, ColumnID{1}, ColumnID{2}});
     table_2->get_chunk(ChunkID{0})
         ->set_individually_sorted_by({SortColumnDefinition(ColumnID{0}, SortMode::Ascending),
@@ -173,7 +174,7 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
 
 TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
   std::shared_ptr<Table> table_sorted_value_clustered =
-      load_table("resources/test_data/tbl/int_sorted_value_clustered.tbl", 6);
+      load_table("resources/test_data/tbl/int_sorted_value_clustered.tbl", ChunkOffset{6});
   table_sorted_value_clustered->set_value_clustered_by({ColumnID{0}});
 
   const auto test_clustered_table_input = [&](const auto table) {
