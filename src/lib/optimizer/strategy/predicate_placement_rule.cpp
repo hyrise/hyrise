@@ -282,9 +282,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     case LQPNodeType::Union: {
       const auto union_node = std::dynamic_pointer_cast<UnionNode>(input_node);
       /**
-       *
-       * If we have a diamond of predicates, where all UnionNode inputs result from the same bottom node,
-       * the pushdown-traversal should continue below the diamond's bottom node, if possible.
+       * If we have a diamond of predicates, where all UnionNode inputs result from the same bottom root node,
+       * the pushdown-traversal should continue below the diamond's bottom root node, if possible.
        *
        *                                        |
        *                                  ____Union_____
