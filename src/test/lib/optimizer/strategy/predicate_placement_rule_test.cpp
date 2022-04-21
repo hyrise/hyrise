@@ -168,7 +168,10 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
     ProjectionNode::make(expression_vector(_a_a, cast_(3.2, DataType::Float)),
       input_sub_lqp));
 
-  const auto expected_sub_lqp = input_sub_lqp->deep_copy();
+  const auto expected_sub_lqp =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ValidateNode::make(
+      _stored_table_a));
 
   const auto expected_lqp =
   UpdateNode::make("int_float",
@@ -203,7 +206,10 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondBottomRootNode) {
 
   // We expect the diamond predicates to get pushed below the Projections. However, since the diamond's bottom root node
   // has multiple outputs, predicates are not expected to get pushed down any further.
-  const auto expected_common_node = input_common_node->deep_copy();
+  const auto expected_common_node =
+  PredicateNode::make(greater_than_(_a_a, 1),
+    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+      _stored_table_a));
 
   const auto expected_lqp =
   UnionNode::make(SetOperationMode::All,
