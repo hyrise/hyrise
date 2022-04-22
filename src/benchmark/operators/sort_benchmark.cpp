@@ -43,6 +43,7 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
   if (use_reference_segment) {
     input_operator = std::make_shared<Limit>(input_operator,
                                              expression_functional::to_expression(std::numeric_limits<int64_t>::max()));
+    input_operator->never_clear_output();
     input_operator->execute();
   }
 
