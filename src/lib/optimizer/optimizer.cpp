@@ -98,11 +98,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
-  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-
-  // Run before the PredicateMergeRule, so that expensive merge-predicates are not pushed further down (TPC-DS Q41).
-  optimizer->add_rule(std::make_unique<PredicateReorderingRule>());
-
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
