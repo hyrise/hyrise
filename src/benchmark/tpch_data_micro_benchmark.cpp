@@ -151,6 +151,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmar
   first_scan->execute();
   const auto first_scan_result = first_scan->get_output();
   const auto second_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
+  second_scan->never_clear_output();
   second_scan->execute();
 
   for (auto _ : state) {
