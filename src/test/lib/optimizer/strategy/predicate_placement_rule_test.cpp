@@ -204,7 +204,6 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
       PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate before pushdown
         ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
           input_common_node))));
-  // clang-format on
 
   // Increase the outputs count of input_common_node
   ASSERT_EQ(input_common_node->outputs().size(), 2);
@@ -226,6 +225,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
       ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
         PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate after pushdown
           expected_common_node))));
+  // clang-format on
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
