@@ -134,7 +134,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
 TEST_F(PluginManagerTest, CallNotCallableUserExecutableFunctions) {
   auto& pm = Hyrise::get().plugin_manager;
 
-  // Call non-existing function
+  // Call non-existing plugin (with non-existing function)
   EXPECT_THROW(pm.exec_user_function("hyriseUnknownPlugin", "OurFreelyChoosableFunctionName"), std::exception);
 
   // Call existing, loaded plugin but non-existing function

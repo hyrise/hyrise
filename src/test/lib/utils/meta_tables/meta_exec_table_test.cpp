@@ -69,7 +69,7 @@ TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
   // exeception to be thrown. This is due to an assert in the TransactionContext's destructor checking for failed
   // operators. See ~TransactionContext for details.
 
-  // Call non-existing function
+  // Call non-existing plugin (with non-existing function)
   {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     auto sql_pipeline =

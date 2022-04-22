@@ -76,7 +76,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 }
 
 void PluginManager::exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name) {
-  Assert(_user_executable_functions.count({plugin_name, function_name}) > 0,
+  Assert(_user_executable_functions.count({plugin_name, function_name}) == 1,
          "There is no " + function_name + " defined for plugin " + plugin_name + ".");
 
   const auto user_executable_function = _user_executable_functions[{plugin_name, function_name}];
