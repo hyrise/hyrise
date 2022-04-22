@@ -110,6 +110,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   }
 
   table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
   return table_wrapper;
 }
