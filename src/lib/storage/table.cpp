@@ -254,7 +254,6 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
   // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
 
   auto new_chunk_iter = _chunks.push_back(nullptr);
-  DebugAssert(*new_chunk_iter == nullptr, "Inserted std::shared_ptr<Chunk> is expected to be nullptr.");
   std::atomic_store(&*new_chunk_iter, std::make_shared<Chunk>(segments, mvcc_data, alloc));
 }
 
