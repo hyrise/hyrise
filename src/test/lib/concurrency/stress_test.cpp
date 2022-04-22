@@ -250,8 +250,8 @@ TEST_F(StressTest, ChunkInserts) {
 
   const auto chunk_count = table->chunk_count();
   EXPECT_EQ(chunk_count, iterations_per_thread * thread_count);
-  for (auto chunk_index = size_t{0}; chunk_index < chunk_count; ++chunk_index) {
-    const auto chunk = table->get_chunk(ChunkID{chunk_index});
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto chunk = table->get_chunk(chunk_id);
     EXPECT_NE(chunk, nullptr);
     EXPECT_EQ(chunk->size(), 1);
   }
