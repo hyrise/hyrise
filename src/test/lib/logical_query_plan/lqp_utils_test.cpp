@@ -362,4 +362,31 @@ TEST_F(LQPUtilsTest, FindDiamondBottomNode) {
   }
 }
 
+TEST_F(LQPUtilsTest, InsertAboveNode) {
+  // clang-format off
+  const auto lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_(a_a, value_(3)),
+      node_a),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
+      node_a));
+
+  const auto node_to_insert = ProjectionNode::make(expression_vector(a_a, a_b, add_(a_a, a_b)));
+  lqp_insert_node_above(node_a, node_to_insert);
+
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(a_a, a_b, add_(a_a, a_b)),
+    node_a);
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_(a_a, value_(3)),
+      expected_common_node),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
+      expected_common_node));
+  // clang-format on
+
+  EXPECT_LQP_EQ(lqp, expected_lqp);
+}
+
 }  // namespace opossum
