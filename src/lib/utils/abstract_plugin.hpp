@@ -28,6 +28,12 @@ class AbstractPlugin {
 
   virtual void stop() = 0;
 
+  // This method provides an interface for making plugin functions executable by plugin users.
+  // Please see the test_plugin.cpp and the meta_exec_table_test.cpp for examples on how to use it.
+  // IMPORTANT: The execution of such user-executable functions is blocking, see the PluginManager's
+  // exec_user_function method. If you are writing a plugin and provide user-exectuable functions it
+  // is YOUR responsibility to keep these function calls as short and efficient as possible, e.g.,
+  // by spinning up a thread inside the plugin to execute the actual functionality.
   virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const {
     return {};
   }
