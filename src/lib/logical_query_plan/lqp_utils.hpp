@@ -253,8 +253,8 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
 
 /**
- * Takes the given UnionNode @param union_root_node, and traverses the LQP until a common bottom root node was found.
- * @returns a shared pointer to the diamond's bottom root node, if one was found. Otherwise, a null pointer is returned.
+ * Takes the given UnionNode @param union_root_node and traverses the LQP until a common bottom root node was found.
+ * @returns a shared pointer to the diamond's bottom root node. If it was not found, a null pointer is returned.
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_bottom_root_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 

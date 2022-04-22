@@ -199,12 +199,24 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
   PredicateNode::make(equals_(_a_b, 10),
     UnionNode::make(SetOperationMode::Positions,
       PredicateNode::make(like_(_a_a, "%man%"),
-        input_common_node),
+        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+          input_common_node)),
       PredicateNode::make(like_(_a_a, "%Man%"),
-        input_common_node)));
+        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+          input_common_node))));
   // clang-format on
 
-  const auto expected_lqp = input_lqp->deep_copy();
+  // Predicates are not pushed through the diamond. However, predicates inside the diamond are pushed towards the
+  // diamond's bottom.
+  const auto expected_lqp =
+  PredicateNode::make(equals_(_a_b, 10),
+    UnionNode::make(SetOperationMode::Positions,
+      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_a_a, "%man%"),
+          input_common_node)),
+      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_a_a, "%Man%"),
+          input_common_node))));
 
   // Increase the outputs count of input_common_node
   ASSERT_EQ(input_common_node->outputs().size(), 2);

@@ -302,6 +302,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         handle_barrier();
         return;
       }
+
       /**
        * In the following, we determine whether the diamond's bottom root node is used as an input by nodes which are
        * not part of the diamond because we should only filter the predicates of the diamond nodes, not other nodes'
