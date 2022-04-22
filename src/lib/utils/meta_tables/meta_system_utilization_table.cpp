@@ -3,6 +3,7 @@
 
 #ifdef __APPLE__
 #include <mach/mach.h>
+#include <sys/sysctl.h>
 #endif
 
 #ifdef HYRISE_WITH_JEMALLOC

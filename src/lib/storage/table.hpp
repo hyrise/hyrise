@@ -10,6 +10,7 @@
 
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
+#include "memory/zero_allocator.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
@@ -26,6 +27,7 @@ class TableStatistics;
  */
 class Table : private Noncopyable {
   friend class StorageTableTest;
+  friend class StressTest;
 
  public:
   static std::shared_ptr<Table> create_dummy_table(const TableColumnDefinitions& column_definitions);
@@ -237,7 +239,7 @@ class Table : private Noncopyable {
    *
    * For the zero_allocator, see the implementation of Table::append_chunk.
    */
-  tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
+  tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
 
   TableKeyConstraints _table_key_constraints;
 
