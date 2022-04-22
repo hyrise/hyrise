@@ -196,32 +196,36 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
     _stored_table_a);
 
   const auto input_lqp =
-  PredicateNode::make(equals_(_a_b, 10),
+  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate, which should NOT get pushed through the diamond
     UnionNode::make(SetOperationMode::Positions,
-      PredicateNode::make(like_(_a_a, "%man%"),
+      PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate before pushdown
         ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
           input_common_node)),
-      PredicateNode::make(like_(_a_a, "%Man%"),
+      PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate before pushdown
         ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
           input_common_node))));
   // clang-format on
-
-  // Predicates are not pushed through the diamond. However, predicates inside the diamond are pushed towards the
-  // diamond's bottom.
-  const auto expected_lqp =
-  PredicateNode::make(equals_(_a_b, 10),
-    UnionNode::make(SetOperationMode::Positions,
-      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-        PredicateNode::make(like_(_a_a, "%man%"),
-          input_common_node)),
-      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
-        PredicateNode::make(like_(_a_a, "%Man%"),
-          input_common_node))));
 
   // Increase the outputs count of input_common_node
   ASSERT_EQ(input_common_node->outputs().size(), 2);
   const auto non_diamond_lqp_node = ProjectionNode::make(expression_vector(_a_a), input_common_node);
   ASSERT_EQ(input_common_node->outputs().size(), 3);
+
+  // Predicates are not pushed through the diamond. However, predicates inside the diamond are pushed towards the
+  // diamond's bottom.
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto expected_lqp =
+  PredicateNode::make(equals_(_a_b, 10),
+    UnionNode::make(SetOperationMode::Positions,
+      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate after pushdown
+          expected_common_node)),
+      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate after pushdown
+          expected_common_node))));
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
