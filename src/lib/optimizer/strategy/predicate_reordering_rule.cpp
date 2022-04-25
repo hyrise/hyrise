@@ -55,9 +55,10 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
 
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_nodes;
+  // We keep track of the visited predicate chains' nodes, so that this rule touches involved nodes only once.
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> visited_predicate_chain_nodes;
   visit_lqp(lqp_root, [&](const auto& node) {
-    if (is_predicate_style_node(node) && !visited_nodes.contains(node)) {
+    if (is_predicate_style_node(node) && !visited_predicate_chain_nodes.contains(node)) {
       std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
       // Gather adjacent PredicateNodes
@@ -78,8 +79,8 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
        * Sort PredicateNodes in descending order with regards to the expected row_count
        * Continue rule in deepest input
        */
-      visited_nodes.insert(predicate_nodes.cbegin(), predicate_nodes.cend());
       if (predicate_nodes.size() > 1) {
+        visited_predicate_chain_nodes.insert(predicate_nodes.cbegin(), predicate_nodes.cend());
         _reorder_predicates(predicate_nodes);
       }
     }
