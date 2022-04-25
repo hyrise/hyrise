@@ -29,8 +29,8 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   if (node->type == LQPNodeType::Validate) return true;
 
   // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
-  // might place the join below a validate node, but since it is not a "proper" join (i.e., one that returns columns
-  // from multiple tables), the validate will still be able to operate on the semi join's output.
+  // might place the join below a ValidateNode, but since it is not a "proper" join (i.e., one that returns columns
+  // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
     if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
