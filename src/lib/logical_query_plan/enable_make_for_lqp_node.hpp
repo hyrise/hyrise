@@ -66,13 +66,13 @@ class EnableMakeForLQPNode {
  private:
   template <class ArgumentsTupleType, size_t... ConstructorIndices>
   static std::shared_ptr<DerivedNode> create_lqp_node(const ArgumentsTupleType& arguments_tuple,
-                                                             std::index_sequence<ConstructorIndices...> /* indices */) {
+                                                      std::index_sequence<ConstructorIndices...> /* indices */) {
     return std::make_shared<DerivedNode>(std::get<ConstructorIndices>(arguments_tuple)...);
   }
 
   template <size_t ArgumentIndex, typename... ArgumentTypes>
   using IsLQPNodeArgument = std::is_convertible<std::tuple_element_t<ArgumentIndex, std::tuple<ArgumentTypes...>>,
-                                                 std::shared_ptr<AbstractLQPNode>>;
+                                                std::shared_ptr<AbstractLQPNode>>;
 };
 
 }  // namespace opossum
