@@ -6,8 +6,6 @@
 
 namespace opossum {
 
-enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
-
 std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_component);
 
 /**

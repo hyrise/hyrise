@@ -229,6 +229,11 @@ void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredic
 
 namespace opossum {
 
+std::string SubqueryToJoinRule::name() const {
+  static const auto name = std::string{"SubqueryToJoinRule"};
+  return name;
+}
+
 std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_predicate_node_join_candidate(
     const PredicateNode& predicate_node) {
   PredicateNodeInfo result;

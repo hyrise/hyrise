@@ -16,7 +16,8 @@ void CsvWriter::_generate_meta_info_file(const Table& table, const std::string& 
   CsvMeta meta{};
 
   // Column Types
-  for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {
+  const auto column_count = table.column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     ColumnMeta column_meta;
     column_meta.name = table.column_name(column_id);
     column_meta.type = data_type_to_string.left.at(table.column_data_type(column_id));
@@ -56,12 +57,14 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
    * a row-based representation takes some effort.
    */
   const auto chunk_count = table.chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  const auto column_count = table.column_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    for (ChunkOffset chunk_offset = 0; chunk_offset < chunk->size(); ++chunk_offset) {
-      for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {
+    const auto chunk_size = chunk->size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto segment = chunk->get_segment(column_id);
 
         // The previous implementation did a double dispatch (at least two virtual method calls)

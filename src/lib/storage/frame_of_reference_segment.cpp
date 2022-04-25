@@ -67,7 +67,7 @@ std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_alloc
 }
 
 template <typename T, typename U>
-size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode) const {
+size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode ignored since full calculation is efficient.
   size_t segment_size =
       sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() + sizeof(_null_values);

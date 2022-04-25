@@ -60,6 +60,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
+  table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
@@ -99,6 +100,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
+  table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
@@ -138,6 +140,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
+  table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);

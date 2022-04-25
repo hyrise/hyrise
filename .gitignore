@@ -42,4 +42,6 @@ cmake-build-*
 default.profdata
 default.profraw
 
+tpcc_cached_tables/
 tpcds_cached_tables/
+tpch_cached_tables/

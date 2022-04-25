@@ -13,7 +13,7 @@ namespace opossum {
  */
 static void BM_TPCHTableGenerator(benchmark::State& state) {  // NOLINT
   for (auto _ : state) {
-    TPCHTableGenerator(0.5f, ClusteringConfiguration::None, 1000).generate_and_store();
+    TPCHTableGenerator(0.5f, ClusteringConfiguration::None, ChunkOffset{1000}).generate_and_store();
     Hyrise::reset();
   }
 }

@@ -17,7 +17,7 @@ ChangeMetaTable::ChangeMetaTable(const std::string& table_name, const MetaTableC
       _change_type(change_type) {}
 
 const std::string& ChangeMetaTable::name() const {
-  static const auto name = std::string{"Change Meta Table"};
+  static const auto name = std::string{"ChangeMetaTable"};
   return name;
 }
 

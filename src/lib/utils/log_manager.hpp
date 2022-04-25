@@ -9,6 +9,7 @@
 namespace opossum {
 
 struct LogEntry {
+  // We need system_clock here to provide human readable timestamps in MetaLogTable.
   std::chrono::system_clock::time_point timestamp;
   LogLevel log_level;
   std::string reporter;

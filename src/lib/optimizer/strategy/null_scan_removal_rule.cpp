@@ -23,6 +23,11 @@
 
 namespace opossum {
 
+std::string NullScanRemovalRule::name() const {
+  static const auto name = std::string{"NullScanRemovalRule"};
+  return name;
+}
+
 void NullScanRemovalRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& root) const {
   Assert(root->type == LQPNodeType::Root, "NullScanRemovalRule needs root to hold onto");
 

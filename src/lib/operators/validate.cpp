@@ -143,8 +143,8 @@ std::shared_ptr<const Table> Validate::_on_execute(std::shared_ptr<TransactionCo
 
 void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
                                 const ChunkID chunk_id_end, const TransactionID our_tid,
-                                const TransactionID snapshot_commit_id,
-                                std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const {
+                                const CommitID snapshot_commit_id, std::vector<std::shared_ptr<Chunk>>& output_chunks,
+                                std::mutex& output_mutex) const {
   // Stores whether a chunk has been found to be entirely visible. Only used for reference tables where no single
   // chunk guarantee has been given. Not stored in Validate object to avoid concurrency issues. This assumes that
   // only one table is referenced over all chunks. If, in the future, this is not true anymore, entirely_visible_chunks
@@ -264,9 +264,9 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         temp_pos_list.guarantee_single_chunk();
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
-        for (auto i = 0u; i < chunk_size; i++) {
-          if (opossum::is_row_visible(our_tid, snapshot_commit_id, i, *mvcc_data)) {
-            temp_pos_list.emplace_back(RowID{chunk_id, i});
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+          if (opossum::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
+            temp_pos_list.emplace_back(RowID{chunk_id, chunk_offset});
           }
         }
         pos_list_out = std::make_shared<const RowIDPosList>(std::move(temp_pos_list));

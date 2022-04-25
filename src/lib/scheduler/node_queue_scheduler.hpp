@@ -113,7 +113,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
 
  private:
-  std::atomic<TaskID> _task_counter{TaskID{0}};
+  std::atomic<TaskID::base_type> _task_counter{0};
   std::shared_ptr<UidAllocator> _worker_id_allocator;
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;

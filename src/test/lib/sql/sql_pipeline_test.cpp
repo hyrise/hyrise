@@ -23,9 +23,9 @@ namespace opossum {
 class SQLPipelineTest : public BaseTest {
  protected:
   static void SetUpTestCase() {  // called ONCE before the tests
-    _table_a_multi = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    _table_a_multi = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     _table_a_multi->append({11, 11.11f});
-    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    _table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, false);
@@ -40,7 +40,7 @@ class SQLPipelineTest : public BaseTest {
     Hyrise::reset();
 
     // We reload table_a every time since it is modified during the test case.
-    _table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     Hyrise::get().storage_manager.add_table("table_a_multi", _table_a_multi);
@@ -426,7 +426,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   // Mark a row as modified by a different transaction
   auto first_chunk_mvcc_data = _table_a->get_chunk(ChunkID{0})->mvcc_data();
 
-  first_chunk_mvcc_data->set_tid(1, TransactionID{17});
+  first_chunk_mvcc_data->set_tid(ChunkOffset{1}, TransactionID{17});
 
   const auto sql =
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
@@ -441,16 +441,16 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailure) {
   EXPECT_TRUE(transaction_context->aborted());
 
   // No row should have been touched
-  EXPECT_EQ(first_chunk_mvcc_data->get_tid(0), TransactionID{0});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(0), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
 
-  EXPECT_EQ(first_chunk_mvcc_data->get_tid(1), TransactionID{17});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(1), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{17});
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
 
   auto second_chunk_mvcc_data = _table_a->get_chunk(ChunkID{1})->mvcc_data();
 
-  EXPECT_EQ(second_chunk_mvcc_data->get_tid(0), TransactionID{0});
-  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(0), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(second_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
+  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
@@ -459,7 +459,7 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   // Mark a row as modified by a different transaction
   auto first_chunk_mvcc_data = _table_a->get_chunk(ChunkID{0})->mvcc_data();
 
-  first_chunk_mvcc_data->set_tid(1, TransactionID{17});
+  first_chunk_mvcc_data->set_tid(ChunkOffset{1}, TransactionID{17});
 
   const auto sql =
       "UPDATE table_a SET a = 1 WHERE a = 12345; UPDATE table_a SET a = 1 WHERE a = 123; "
@@ -472,18 +472,18 @@ TEST_F(SQLPipelineTest, UpdateWithTransactionFailureAutoCommit) {
   EXPECT_EQ(sql_pipeline.failed_pipeline_statement()->get_sql_string(), "UPDATE table_a SET a = 1 WHERE a = 123;");
 
   // This time, the first row should have been updated before the second statement failed
-  EXPECT_EQ(first_chunk_mvcc_data->get_tid(0), TransactionID{1});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(0), CommitID{2});  // initial commit ID + 1
+  EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{1});
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), CommitID{2});  // initial commit ID + 1
 
   // This row was being modified by a different transaction, so it should not have been touched
-  EXPECT_EQ(first_chunk_mvcc_data->get_tid(1), TransactionID{17});
-  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(1), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(first_chunk_mvcc_data->get_tid(ChunkOffset{1}), TransactionID{17});
+  EXPECT_EQ(first_chunk_mvcc_data->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
 
   // We had to abort before we got to the third statement
   auto second_chunk_mvcc_data = _table_a->get_chunk(ChunkID{1})->mvcc_data();
 
-  EXPECT_EQ(second_chunk_mvcc_data->get_tid(0), TransactionID{0});
-  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(0), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(second_chunk_mvcc_data->get_tid(ChunkOffset{0}), TransactionID{0});
+  EXPECT_EQ(second_chunk_mvcc_data->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
 }
 
 TEST_F(SQLPipelineTest, GetTimes) {

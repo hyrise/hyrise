@@ -28,15 +28,15 @@ std::shared_ptr<opossum::RowIDPosList> generate_pos_list(float referenced_table_
 
   std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
       0, static_cast<opossum::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
-  std::uniform_int_distribution<opossum::ChunkOffset> chunk_offset_distribution(
-      opossum::ChunkOffset{0}, static_cast<opossum::ChunkOffset>(referenced_table_chunk_size - 1));
+  std::uniform_int_distribution<opossum::ChunkOffset::base_type> chunk_offset_distribution(
+      opossum::ChunkOffset{0}, static_cast<opossum::ChunkOffset::base_type>(referenced_table_chunk_size - 1));
 
   auto pos_list = std::make_shared<opossum::RowIDPosList>();
   pos_list->reserve(pos_list_size);
 
-  for (size_t pos_list_idx = 0; pos_list_idx < pos_list_size; ++pos_list_idx) {
+  for (auto pos_list_idx = size_t{0}; pos_list_idx < pos_list_size; ++pos_list_idx) {
     const auto chunk_id = opossum::ChunkID{chunk_id_distribution(random_engine)};
-    const auto chunk_offset = chunk_offset_distribution(random_engine);
+    const auto chunk_offset = opossum::ChunkOffset{chunk_offset_distribution(random_engine)};
 
     pos_list->emplace_back(opossum::RowID{chunk_id, chunk_offset});
   }
@@ -98,9 +98,11 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
    */
   auto table_wrapper_left =
       std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
+  table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
   auto table_wrapper_right =
       std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
+  table_wrapper_right->never_clear_output();
   table_wrapper_right->execute();
 
   for (auto _ : state) {

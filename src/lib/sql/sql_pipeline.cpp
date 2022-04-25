@@ -33,11 +33,11 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
 
   hsql::SQLParserResult parse_result;
 
-  const auto start = std::chrono::high_resolution_clock::now();
+  const auto start = std::chrono::steady_clock::now();
   hsql::SQLParser::parse(sql, &parse_result);
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics.parse_time_nanos = std::chrono::duration_cast<std::chrono::nanoseconds>(done - start);
+  const auto done = std::chrono::steady_clock::now();
+  _metrics.parse_time_nanos = done - start;
   DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_nanos.count());
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));

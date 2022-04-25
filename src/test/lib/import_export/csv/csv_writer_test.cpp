@@ -24,7 +24,7 @@ class CsvWriterTest : public BaseTest {
     column_definitions.emplace_back("b", DataType::String, false);
     column_definitions.emplace_back("c", DataType::Float, false);
 
-    table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
     std::remove(test_filename.c_str());
     std::remove(test_meta_filename.c_str());
@@ -119,7 +119,7 @@ TEST_F(CsvWriterTest, FixedStringDictionarySegmentFixedWidthInteger) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto string_table = std::make_shared<Table>(column_definitions, TableType::Data, 4);
+  auto string_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{4});
   string_table->append({"a"});
   string_table->append({"string"});
   string_table->append({"xxx"});
@@ -175,7 +175,7 @@ TEST_F(CsvWriterTest, ExportAllTypes) {
   column_definitions.emplace_back("d", DataType::Long, false);
   column_definitions.emplace_back("e", DataType::Double, false);
 
-  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  std::shared_ptr<Table> new_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
   new_table->append({1, "Hallo", 3.5f, static_cast<int64_t>(12), 2.333});
   CsvWriter::write(*new_table, test_filename);
 
@@ -190,7 +190,7 @@ TEST_F(CsvWriterTest, NonsensePath) {
 }
 
 TEST_F(CsvWriterTest, ExportNumericNullValues) {
-  auto new_table = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4);
+  auto new_table = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{4});
   CsvWriter::write(*new_table, test_filename);
 
   EXPECT_TRUE(file_exists(test_filename));
@@ -203,7 +203,7 @@ TEST_F(CsvWriterTest, ExportNumericNullValues) {
 }
 
 TEST_F(CsvWriterTest, ExportStringNullValues) {
-  auto new_table = load_table("resources/test_data/tbl/string_with_null.tbl", 4);
+  auto new_table = load_table("resources/test_data/tbl/string_with_null.tbl", ChunkOffset{4});
   CsvWriter::write(*new_table, test_filename);
 
   EXPECT_TRUE(file_exists(test_filename));
@@ -216,7 +216,7 @@ TEST_F(CsvWriterTest, ExportStringNullValues) {
 }
 
 TEST_F(CsvWriterTest, ExportNullValuesMeta) {
-  auto new_table = load_table("resources/test_data/tbl/int_float_with_null.tbl", 4);
+  auto new_table = load_table("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{4});
   CsvWriter::write(*new_table, test_filename);
 
   EXPECT_TRUE(file_exists(test_filename));

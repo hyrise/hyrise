@@ -20,6 +20,8 @@ namespace opossum {
  */
 class PredicateMergeRule : public AbstractRule {
  public:
+  std::string name() const override;
+
   size_t minimum_union_count{4};
 
  protected:

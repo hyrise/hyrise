@@ -30,7 +30,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 
   // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
   // might place the join below a validate node, but since it is not a "proper" join (i.e., one that returns columns
-  // from multiple tables), the validate will stil be able to operate on the semi join's output.
+  // from multiple tables), the validate will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
     if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
@@ -44,6 +44,11 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 }  // namespace
 
 namespace opossum {
+
+std::string PredicateReorderingRule::name() const {
+  static const auto name = std::string{"PredicateReorderingRule"};
+  return name;
+}
 
 void PredicateReorderingRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {

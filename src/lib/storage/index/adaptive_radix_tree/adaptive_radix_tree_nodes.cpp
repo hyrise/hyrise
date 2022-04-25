@@ -378,11 +378,11 @@ AbstractIndex::Iterator ARTNode256::end() const {
 
 Leaf::Leaf(AbstractIndex::Iterator& lower, AbstractIndex::Iterator& upper) : _begin(lower), _end(upper) {}
 
-AbstractIndex::Iterator Leaf::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable&, size_t) const {
+AbstractIndex::Iterator Leaf::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/, size_t) const {
   return _begin;
 }
 
-AbstractIndex::Iterator Leaf::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable&, size_t) const {
+AbstractIndex::Iterator Leaf::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/, size_t) const {
   return _end;
 }
 

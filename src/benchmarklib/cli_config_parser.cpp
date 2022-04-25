@@ -29,6 +29,11 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto core_info = enable_scheduler ? " using " + number_of_cores_str + " cores" : "";
   std::cout << "- Running in " + std::string(enable_scheduler ? "multi" : "single") + "-threaded mode" << core_info
             << std::endl;
+  const auto data_preparation_cores = parse_result["data_preparation_cores"].as<uint32_t>();
+  const auto number_of_data_preparation_cores_str =
+      (data_preparation_cores == 0) ? "all available" : std::to_string(data_preparation_cores);
+  std::cout << "- Data preparation will use " << number_of_data_preparation_cores_str
+            << (data_preparation_cores == 1 ? " core" : " cores") << std::endl;
 
   const auto clients = parse_result["clients"].as<uint32_t>();
   std::cout << "- " + std::to_string(clients) + " simulated ";
@@ -101,7 +106,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto max_duration = parse_result["time"].as<uint64_t>();
   std::cout << "- Max duration per item is " << max_duration << " seconds" << std::endl;
-  const Duration timeout_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{max_duration});
+  const Duration timeout_duration = std::chrono::seconds{max_duration};
 
   const auto warmup = parse_result["warmup"].as<uint64_t>();
   if (warmup > 0) {
@@ -109,7 +114,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   } else {
     std::cout << "- No warmup runs are performed" << std::endl;
   }
-  const Duration warmup_duration = std::chrono::duration_cast<opossum::Duration>(std::chrono::seconds{warmup});
+  const Duration warmup_duration = std::chrono::seconds{warmup};
 
   const auto verify = parse_result["verify"].as<bool>();
   if (verify) {
@@ -132,10 +137,22 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
-  return BenchmarkConfig{
-      benchmark_mode,  chunk_size,          *encoding_config, indexes, max_runs, timeout_duration,
-      warmup_duration, output_file_path,    enable_scheduler, cores,   clients,  enable_visualization,
-      verify,          cache_binary_tables, metrics};
+  return BenchmarkConfig{benchmark_mode,
+                         chunk_size,
+                         *encoding_config,
+                         indexes,
+                         max_runs,
+                         timeout_duration,
+                         warmup_duration,
+                         output_file_path,
+                         enable_scheduler,
+                         cores,
+                         data_preparation_cores,
+                         clients,
+                         enable_visualization,
+                         verify,
+                         cache_binary_tables,
+                         metrics};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

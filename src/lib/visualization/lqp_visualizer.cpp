@@ -122,7 +122,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   const auto& separate_thousands_locale = std::locale(label_stream.getloc(), new SeparateThousandsFacet);
   label_stream.imbue(separate_thousands_locale);
 
-  if (!isnan(row_count)) {
+  if (!std::isnan(row_count)) {
     label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
                  << "% estd.";
   } else {

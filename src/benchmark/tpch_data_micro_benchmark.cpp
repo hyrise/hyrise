@@ -90,13 +90,14 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-  void TearDown(::benchmark::State&) override {}
+  void TearDown(::benchmark::State& /*state*/) override {}
 
   std::map<std::string, std::shared_ptr<TableWrapper>> create_table_wrappers(StorageManager& sm) {
     std::map<std::string, std::shared_ptr<TableWrapper>> wrapper_map;
     for (const auto& table_name : sm.table_names()) {
       auto table = sm.get_table(table_name);
       auto table_wrapper = std::make_shared<TableWrapper>(table);
+      table_wrapper->never_clear_output();
       table_wrapper->execute();
 
       wrapper_map.emplace(table_name, table_wrapper);
@@ -135,6 +136,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmar
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchmark::State& state) {
   const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+  first_scan->never_clear_output();
   first_scan->execute();
 
   for (auto _ : state) {
@@ -145,9 +147,11 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchma
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmark::State& state) {
   const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+  first_scan->never_clear_output();
   first_scan->execute();
   const auto first_scan_result = first_scan->get_output();
   const auto second_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
+  second_scan->never_clear_output();
   second_scan->execute();
 
   for (auto _ : state) {
@@ -165,6 +169,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnPhysicalTable)(b
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(benchmark::State& state) {
   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
+  table_scan->never_clear_output();
   table_scan->execute();
   const auto scanned_table = table_scan->get_output();
 
@@ -183,6 +188,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnPhysicalTable)(be
 
 BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(benchmark::State& state) {
   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
+  table_scan->never_clear_output();
   table_scan->execute();
   const auto scanned_table = table_scan->get_output();
 
@@ -208,6 +214,7 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& s
 
   const auto sorted_lineitem =
       std::make_shared<Sort>(lineitem, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
+  sorted_lineitem->never_clear_output();
   sorted_lineitem->execute();
   const auto mocked_table_scan_output = sorted_lineitem->get_output();
   const ColumnID group_by_column = l_orderkey_id;

@@ -163,7 +163,6 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(a)", "AVG(a)"};
-    // The cast will become unnecessary once #1799 is fixed
     const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))), expected_aliases,  // NOLINT
                                 ProjectionNode::make(expression_vector(sum_(col_a), count_(col_a), div_(cast_(sum_(col_a), DataType::Double), count_(col_a))),             // NOLINT
                                   AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_(col_a)), stored_table_node)));                            // NOLINT
@@ -176,14 +175,13 @@ TEST_F(ExpressionReductionRuleTest, RemoveDuplicateAggregate) {
   {
     // SELECT SUM(a), COUNT(*), AVG(a) -> SUM(a), COUNT(*), SUM(a) / COUNT(*) AS AVG(a) as a is not NULLable
     // clang-format off
-    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node), avg_(col_a)),                                            // NOLINT
+    const auto input_lqp = AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node), avg_(col_a)),                                                             // NOLINT
                              stored_table_node);
 
     const auto expected_aliases = std::vector<std::string>{"SUM(a)", "COUNT(*)", "AVG(a)"};
-    // The cast will become unnecessary once #1799 is fixed
     const auto expected_lqp = AliasNode::make(expression_vector(sum_(col_a), count_star_(stored_table_node), div_(cast_(sum_(col_a), DataType::Double), count_star_(stored_table_node))), expected_aliases,  // NOLINT
                                 ProjectionNode::make(expression_vector(sum_(col_a), count_star_(stored_table_node), div_(cast_(sum_(col_a), DataType::Double), count_star_(stored_table_node))),             // NOLINT
-                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node)),                                                  // NOLINT
+                                  AggregateNode::make(expression_vector(), expression_vector(sum_(col_a), count_star_(stored_table_node)),                                                                   // NOLINT
                                     stored_table_node)));
     // clang-format on
 

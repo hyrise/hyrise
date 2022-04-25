@@ -2,8 +2,9 @@
 
 #if !defined(BOOST_NO_IOSTREAM)
 #include <iosfwd>  // for std::basic_ostream forward declare
+
 #include <boost/detail/templated_streams.hpp>
-#endif             // BOOST_NO_IOSTREAM
+#endif  // BOOST_NO_IOSTREAM
 
 #include <boost/container_hash/hash.hpp>
 #include <boost/mpl/bool.hpp>
@@ -21,15 +22,15 @@ namespace opossum {
 struct NullValue {};
 
 // Relational operators
-inline bool operator==(const NullValue&, const NullValue&) { return false; }
-inline bool operator!=(const NullValue&, const NullValue&) { return false; }
-inline bool operator<(const NullValue&, const NullValue&) { return false; }
-inline bool operator<=(const NullValue&, const NullValue&) { return false; }
-inline bool operator>(const NullValue&, const NullValue&) { return false; }
-inline bool operator>=(const NullValue&, const NullValue&) { return false; }
-inline NullValue operator-(const NullValue&) { return NullValue{}; }
+inline bool operator==(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator!=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator<(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator<=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator>(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline bool operator>=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) { return false; }
+inline NullValue operator-(const NullValue& /*value*/) { return NullValue{}; }
 
-inline size_t hash_value(const NullValue&) {
+inline size_t hash_value(const NullValue& /*value*/) {
   // Aggregate wants all NULLs in one bucket
   return 0;
 }

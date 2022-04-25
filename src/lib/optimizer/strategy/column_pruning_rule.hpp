@@ -19,6 +19,9 @@ class AbstractLQPNode;
 //     information about which columns are needed and which ones are not. That information is gathered here and not
 //     exported.
 class ColumnPruningRule : public AbstractRule {
+ public:
+  std::string name() const override;
+
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };

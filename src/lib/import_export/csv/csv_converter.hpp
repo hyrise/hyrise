@@ -59,7 +59,10 @@ class CsvConverter : public BaseCsvConverter {
       Assert(_config.null_handling != NullHandling::RejectNullStrings,
              "Unquoted null found in CSV file. Quote it for string literal \"null\", leave field empty for null "
              "value, or set 'null_handling' to the appropriate strategy in parse config.");
-      if (_is_nullable && _config.null_handling == NullHandling::NullStringAsNull) {
+      if (_config.null_handling == NullHandling::NullStringAsNull) {
+        Assert(_is_nullable,
+               "Unquoted null found in CSV file, while the associated column is not nullable. Quote it "
+               "for string literal \"null\" or make the column nullable.");
         _null_values[position] = true;
         return;
       }

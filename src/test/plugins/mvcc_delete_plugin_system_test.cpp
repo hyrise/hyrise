@@ -52,7 +52,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_t_name_test, _table);
 
     // For some dummy inserts later on, we load an int table
-    auto t = load_table("resources/test_data/tbl/int.tbl", 10u);
+    auto t = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{10});
     Hyrise::get().storage_manager.add_table(_t_name_ints, t);
   }
 

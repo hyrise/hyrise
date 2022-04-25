@@ -391,7 +391,7 @@ class Sort::SortImpl {
       // NULLs come before all values. The SQL standard allows for this to be implementation-defined. We used to have
       // a NULLS LAST mode, but never used it over multiple years. Different databases have different behaviors, and
       // storing NULLs first even for descending orders is somewhat uncommon:
-      //   https://docs.mendix.com/refguide/null-ordering-behavior
+      //   https://docs.mendix.com/refguide/ordering-behavior#null-ordering-behavior
       // For Hyrise, we found that storing NULLs first is the method that requires the least amount of code.
       _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
     }

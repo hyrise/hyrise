@@ -8,6 +8,12 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 
 namespace opossum {
+
+std::string SemiJoinReductionRule::name() const {
+  static const auto name = std::string{"SemiJoinReductionRule"};
+  return name;
+}
+
 void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "Rule needs root to hold onto");
 

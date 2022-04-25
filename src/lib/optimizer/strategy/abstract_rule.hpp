@@ -42,6 +42,8 @@ class AbstractRule {
    */
   virtual void apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const;
 
+  virtual std::string name() const = 0;
+
   std::shared_ptr<AbstractCostEstimator> cost_estimator;
 
  protected:

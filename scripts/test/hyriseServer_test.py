@@ -20,7 +20,7 @@ def main():
     benchmark.expect(search_regex, timeout=120)
 
     server_port = int(re.search(search_regex, str(benchmark.after)).group(1))
-    client = pexpect.spawn(f"psql -h localhost -p {server_port}", timeout=10)
+    client = pexpect.spawn(f"psql -h localhost -p {server_port}", timeout=20)
 
     client.sendline("select count(*) from region;")
     client.expect_exact("COUNT(*)")

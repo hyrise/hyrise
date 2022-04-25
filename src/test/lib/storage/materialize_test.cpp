@@ -13,8 +13,9 @@ namespace opossum {
 class MaterializeTest : public EncodingTest {
  public:
   void SetUp() override {
-    _data_table = load_table_with_encoding("resources/test_data/tbl/int_float.tbl", 2);
-    _data_table_with_nulls = load_table_with_encoding("resources/test_data/tbl/int_float_with_null.tbl", 2);
+    _data_table = load_table_with_encoding("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
+    _data_table_with_nulls =
+        load_table_with_encoding("resources/test_data/tbl/int_float_with_null.tbl", ChunkOffset{2});
 
     const auto table_wrapper = std::make_shared<TableWrapper>(_data_table);
     table_wrapper->execute();
