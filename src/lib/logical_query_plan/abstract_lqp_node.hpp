@@ -217,7 +217,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * Holds a (short) comment that is printed during plan visualization. For example, this could be a comment added by
-   * the optimizer explaining. It is not automatically added to the description.
+   * the optimizer explaining that a node was added as a semi-join reduction node (see SubqueryToJoinRule). It is not
+   * automatically added to the description.
    */
   std::string comment;
 

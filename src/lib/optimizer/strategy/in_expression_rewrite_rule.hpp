@@ -28,7 +28,7 @@ class InExpressionRewriteRule : public AbstractRule {
 
   // With the auto strategy, IN expressions whose input has more than MIN_INPUT_ROWS_FOR_DISJUNCTION are rewritten
   // into disjunctive predicates.
-  constexpr static auto MIN_INPUT_ROWS_FOR_DISJUNCTION = 1,000,000f; // TODO Benchmark smaller numbers
+  constexpr static auto MIN_INPUT_ROWS_FOR_DISJUNCTION = 1'000'000.f; // TODO Benchmark smaller numbers
 
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;
