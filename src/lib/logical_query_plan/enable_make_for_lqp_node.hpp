@@ -10,17 +10,23 @@ namespace opossum {
 class AbstractLQPNode;
 
 /**
- * LQP node types should derive from this in order to enable the <NodeType>::make() function that allows for a clean
- * notation when building LQPs via code by allowing to pass in a nodes input(ren) as the last argument(s).
+ * With this class, LQP nodes inherit a static <DerivedNode>::make construction function that allows for convenience and
+ * a clean notation in tests. The ::make function creates an LQP node by passing the first few function arguments to the
+ * appropriate LQP node constructor. Furthermore, the left and right inputs of the generated LQP node are set from the
+ * last (two) function argument(s), if provided.
  *
- * const auto input_lqp =
- * PredicateNode::make(_mock_node_a, PredicateCondition::Equals, 42,
- *   PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 50,
- *     PredicateNode::make(_mock_node_b, PredicateCondition::GreaterThan, 40,
- *       ProjectionNode::make_pass_through(
- *         PredicateNode::make(_mock_node_a, PredicateCondition::GreaterThanEquals, 90,
- *           PredicateNode::make(_mock_node_c, PredicateCondition::LessThan, 500,
- *             _mock_node))))));
+ * The usage of ::make is intended as follows:
+ *  auto lqp =
+ *  JoinNode::make(JoinMode::Semi, equals_(b_y, literal),
+ *    JoinNode::make(JoinMode::Inner, equals_(a_a, b_x),
+ *      UnionNode::Make(SetOperationMode::All,
+ *        PredicateNode::make(greater_than_(a_a, 700),
+ *          node_a),
+ *        PredicateNode::make(less_than_(a_b, 123),
+ *          node_a)),
+ *      node_b),
+ *    ProjectionNode::make(expression_vector(literal),
+ *      dummy_table_node));
  */
 template <typename DerivedNode>
 class EnableMakeForLQPNode {
@@ -48,13 +54,13 @@ class EnableMakeForLQPNode {
             return node;
           }
         } else {
-          // Only one input LQP node was provided as an argument.
+          // Only one LQP input node was provided as an argument.
           auto node = std::make_shared<DerivedNode>();
           node->set_left_input(std::get<0>(arguments_tuple));
           return node;
         }
       } else {
-        // Additional input LQP nodes were not passed as last arguments.
+        // Additional LQP input nodes were not passed as last arguments.
         return create_lqp_node(arguments_tuple, std::make_index_sequence<sizeof...(ArgumentTypes)>());
       }
     } else {
