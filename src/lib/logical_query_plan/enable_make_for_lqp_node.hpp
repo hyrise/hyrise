@@ -27,7 +27,7 @@ class EnableMakeForLQPNode {
  public:
   // The following declaration is a variadic function template taking any number of arguments of arbitrary types.
   template <typename... ArgumentTypes>
-  static std::shared_ptr<DerivedNode> Make(ArgumentTypes&&... arguments) {
+  static std::shared_ptr<DerivedNode> make(ArgumentTypes&&... arguments) {
     if constexpr (sizeof...(ArgumentTypes) > 0) {
       auto arguments_tuple = std::forward_as_tuple(arguments...);
 
