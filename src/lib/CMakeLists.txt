@@ -649,8 +649,6 @@ set(
 
 set(
     LIBRARIES
-
-    compact_vector
     lz4
     magic_enum
     sqlparser
@@ -728,6 +726,7 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    compact_vector
     cpp-btree
     cxxopts
     flat-hash-map
