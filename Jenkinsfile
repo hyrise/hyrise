@@ -104,7 +104,7 @@ try {
             mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
-            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}     ${unity} .. &\
+            mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
             mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
             mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
             wait"
