@@ -251,8 +251,6 @@ void Insert::_on_rollback_records() {
      * foreign tid - which is what a visible row that is being deleted by a different transaction looks like. Thus,
      * the other transaction would consider the row (that is in the process of being rolled back and should have never
      * been visible) as visible.
-     *
-     * We need to set `begin_cid = 0` so that the ChunkCompressionTask can identify "completed" Chunks.
      */
 
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
