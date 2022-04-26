@@ -382,7 +382,7 @@ try {
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
             
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
-            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/Cellar/llvm@12/12.0.1_1/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/Cellar/llvm@12/12.0.1_1/bin/clang++ .."
+            sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ .."
             sh "cd clang-release && make -j8"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
