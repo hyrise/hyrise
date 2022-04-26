@@ -6,6 +6,7 @@
 
 #include "base_test.hpp"
 
+#include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
@@ -20,7 +21,8 @@ class StorageTableTest : public BaseTest {
     t = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
   }
 
-  static tbb::concurrent_vector<std::shared_ptr<Chunk>>& get_chunks(std::shared_ptr<Table>& table) {
+  static tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>>& get_chunks(
+      std::shared_ptr<Table>& table) {
     return table->_chunks;
   }
 
