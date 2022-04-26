@@ -96,6 +96,8 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
   cppcoro::recursive_generator<SegmentPosition<ValueType>> with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const override {
     if constexpr (is_point_accessible_segment_iterable_v<UnerasedIterable>) {
       co_yield iterable.template with_generator<ValueType>(position_filter);
+    } else {
+      Fail("Point access into non-PointAccessIterable not possible");
     }
   }
 
@@ -144,7 +146,6 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
 
   cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
     co_yield _iterable_wrapper->with_generator(position_filter);
-    // co_yield SegmentPosition(T{}, false, ChunkOffset{0});
   }
 
   size_t _on_size() const { return _iterable_wrapper->size(); }

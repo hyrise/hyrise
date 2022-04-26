@@ -21,4 +21,13 @@ int main() {
   for (const auto index : generator(17)) {
   	std::cout << index << std::endl;
   }
+
+  const auto gen  = std::make_unique<cppcoro::recursive_generator<size_t>>(generator(17));
+  cppcoro::recursive_generator<size_t>::iterator test = gen->begin();
+  std::cout << *test << std::endl;
+  ++test;
+  ++test;
+  ++test;
+  ++test;
+  std::cout << *test << std::endl;
 }

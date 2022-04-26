@@ -53,7 +53,81 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   }
 
   cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
-    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+    using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
+
+    switch (*_segment.compressed_vector_type()) {
+      case CompressedVectorType::FixedSize4ByteAligned: {
+        const auto& vector = dynamic_cast<const FixedSizeByteAlignedVector<uint32_t>&>(_segment.offset_values());
+
+        auto iter = PointAccessIterator<FixedSizeByteAlignedDecompressor<uint32_t>, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cbegin()};
+
+        const auto end = PointAccessIterator<FixedSizeByteAlignedDecompressor<uint32_t>, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      case CompressedVectorType::FixedSize2ByteAligned: {
+        const auto& vector = dynamic_cast<const FixedSizeByteAlignedVector<uint16_t>&>(_segment.offset_values());
+
+        auto iter = PointAccessIterator<FixedSizeByteAlignedDecompressor<uint16_t>, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cbegin()};
+
+        const auto end = PointAccessIterator<FixedSizeByteAlignedDecompressor<uint16_t>, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      case CompressedVectorType::FixedSize1ByteAligned: {
+        const auto& vector = dynamic_cast<const FixedSizeByteAlignedVector<uint8_t>&>(_segment.offset_values());
+
+        auto iter = PointAccessIterator<FixedSizeByteAlignedDecompressor<uint8_t>, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cbegin()};
+
+        const auto end = PointAccessIterator<FixedSizeByteAlignedDecompressor<uint8_t>, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      case CompressedVectorType::SimdBp128: {
+        const auto& vector = dynamic_cast<const SimdBp128Vector&>(_segment.offset_values());
+
+        auto iter = PointAccessIterator<SimdBp128Decompressor, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cbegin()};
+
+        const auto end = PointAccessIterator<SimdBp128Decompressor, PosListIteratorType>{
+          &_segment.block_minima(), &_segment.null_values(), vector.create_decompressor(),
+          position_filter->cbegin(), position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
+        break;
+      }
+      default:
+        Fail("Unexpected vector compression type.");
+    }
   }
 
   size_t _on_size() const { return _segment.size(); }

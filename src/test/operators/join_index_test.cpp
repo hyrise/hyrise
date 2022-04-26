@@ -18,6 +18,26 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+
+
+
+
+
+
+
+
+
+
+#include "operators/print.hpp"
+
+
+
+
+
+
+
+
+
 namespace opossum {
 
 template <typename DerivedIndex>
@@ -98,6 +118,8 @@ class JoinIndexTest : public BaseTest {
                                             index_side);
     EXPECT_NE(join, nullptr) << "Could not build Join";
     join->execute();
+
+    Print::print(join->get_output());
 
     EXPECT_TABLE_EQ_UNORDERED(join->get_output(), expected_result);
 

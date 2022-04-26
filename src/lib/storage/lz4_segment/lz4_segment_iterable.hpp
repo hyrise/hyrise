@@ -83,7 +83,50 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   }
 
   cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
-    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
+    // By far too much copying
+    auto cached_block = std::vector<char>(_segment.block_size());
+    std::optional<size_t> cached_block_index;
+
+    const auto position_filter_size = position_filter->size();
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter_size;
+
+    // vector storing the uncompressed values
+    auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
+
+    // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
+    // element. If the requested element is not within that block, the next block will be decompressed and written to
+    // `cached_block` while the value and the new block id are returned. In case the requested element is within the
+    // cached block, the value and the input block id are returned.
+    for (auto index = size_t{0u}; index < position_filter_size; ++index) {
+      const auto& position = (*position_filter)[index];
+      // NOLINTNEXTLINE
+      auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
+      decompressed_filtered_segment[index] = std::move(value);
+      cached_block_index = block_index;
+    }
+
+    using PosListIteratorType = decltype(position_filter->cbegin());
+    if (_segment.null_values()) {
+      auto iter = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
+                                                           _segment.null_values()->cbegin(), position_filter->cbegin(),
+                                                           position_filter->cbegin()};
+      const auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
+                                                                _segment.null_values()->cend(), position_filter->cbegin(),
+                                                                position_filter->cend()};
+      while (iter != end) {
+        co_yield *iter;
+        ++iter;
+      }
+    } else {
+      auto iter = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt,
+                                                           position_filter->cbegin(), position_filter->cbegin()};
+      const auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt,
+                                                                position_filter->cbegin(), position_filter->cend()};
+      while (iter != end) {
+        co_yield *iter;
+        ++iter;
+      }
+    }
   }
 
   size_t _on_size() const { return _segment.size(); }

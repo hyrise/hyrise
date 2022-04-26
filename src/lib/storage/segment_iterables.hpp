@@ -171,7 +171,7 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   template <typename T>
   cppcoro::recursive_generator<SegmentPosition<T>> with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
     if (!position_filter) {
-      Fail("Unexpected");
+      Fail("Unexpected position list passed.");
     }
 
     DebugAssert(position_filter->references_single_chunk(), "Expected PosList to reference single chunk");

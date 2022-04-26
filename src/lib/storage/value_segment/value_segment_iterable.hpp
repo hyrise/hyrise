@@ -53,18 +53,28 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
 
   cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
-
     using PosListIteratorType = std::decay_t<decltype(position_filter->cbegin())>;
 
-    auto iter = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                          position_filter->cbegin(), position_filter->cbegin()};
-    const auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
-                                                        position_filter->cbegin(), position_filter->cend()};
+    // TODO: limit copied code?
 
-    // TODO: we should limit the code duplication with _on_with_iterators()
-    while (iter != end) {
-      co_yield *iter;
-      ++iter;
+    if (_segment.is_nullable()) {
+      auto iter = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                            position_filter->cbegin(), position_filter->cbegin()};
+      const auto end = PointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), _segment.null_values().cbegin(),
+                                                          position_filter->cbegin(), position_filter->cend()};
+      while (iter != end) {
+        co_yield *iter;
+        ++iter;
+      }
+    } else {
+      auto iter = NonNullPointAccessIterator<PosListIteratorType>{
+          _segment.values().cbegin(), position_filter->cbegin(), position_filter->cbegin()};
+      const auto end = NonNullPointAccessIterator<PosListIteratorType>{_segment.values().cbegin(), position_filter->cbegin(),
+                                                                 position_filter->cend()};
+      while (iter != end) {
+        co_yield *iter;
+        ++iter;
+      }
     }
   }
 
@@ -206,7 +216,9 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
                                          PosListIteratorType>{std::move(position_filter_begin),
                                                               std::move(position_filter_it)},
           _values_begin_it{std::move(values_begin_it)},
-          _null_values_begin_it{std::move(null_values_begin_it)} {}
+          _null_values_begin_it{std::move(null_values_begin_it)} {
+            std::cout << "DLFJSFLKJSFLKDSJF" << std::endl;
+          }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface

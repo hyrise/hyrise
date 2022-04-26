@@ -43,6 +43,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
  public:
   using ValueType = T;
 
+  using GeneratorIterator = typename cppcoro::recursive_generator<SegmentPosition<T>>::iterator;
+
   explicit ReferenceSegmentIterable(const ReferenceSegment& segment) : _segment{segment} {}
 
   cppcoro::recursive_generator<SegmentPosition<T>> generator(const auto& iterable, const std::shared_ptr<RowIDPosList>& pos_list) const {
@@ -74,6 +76,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     // and using virtual method calls.
 
     if (position_filter->references_single_chunk() && position_filter->size() > 0) {
+          std::cout << "                            YES1" << std::endl;
       // If a single chunk is referenced, we use the PosList as a filter for the referenced segment iterable.
       // This assumes that the PosList itself does not contain any NULL values. As NULL-producing operators
       // (Join, Aggregate, Projection) do not emit a PosList with references_single_chunk, we can assume that the
@@ -131,6 +134,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       }
 
       if (functor_was_called) return;
+      std::cout << "                            YES2" << std::endl;
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
 
@@ -179,6 +183,12 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         ++pos_list_position;
       }
 
+      auto generator_stash = std::vector<cppcoro::recursive_generator<SegmentPosition<T>>>{};
+      generator_stash.reserve(max_chunk_id + 1);
+      auto generators = std::vector<GeneratorIterator>{};
+      generators.resize(max_chunk_id + 1);
+
+
       // std::vector<std::vector<SegmentPosition<T>>> segment_positions_per_segment{max_chunk_id + 1};
       for (auto chunk_id = ChunkID{0}; chunk_id < pos_lists_per_segment.size(); ++chunk_id) {
         const auto& iterable_pos_list = pos_lists_per_segment[chunk_id];
@@ -207,41 +217,95 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
             }
           };
 
+          // std::cout << std::endl;
+          std::cout << typeid(typed_segment).name() << std::endl;
+          std::cout << "### spreat pos lists: " << pos_lists_per_segment.size() << " (we are not at chunk id " << chunk_id << ") ... elements: ";
+          for (const auto& pos : *iterable_pos_list) {
+            std::cout << pos << ", ";
+          }
+          std::cout << std::endl;
           if constexpr (erase_reference_segment_type == EraseReferencedSegmentType::No) {
             const auto iterable = create_iterable_from_segment<T>(typed_segment);
             using IterableType = std::decay_t<decltype(iterable)>;
             if constexpr (!std::is_same_v<IterableType, ReferenceSegmentIterable>) {
-              for (const auto& el : iterable.template with_generator<T>(iterable_pos_list)) {
-                std::cout << "%" << el.value() << std::endl;
-              }
-              iterable.with_iterators(iterable_pos_list, write_segment_positions);
+              // auto counter = size_t{0};
+              // for ([[maybe_unused]] const auto& el : iterable.template with_generator<T>(iterable_pos_list)) {
+              //   ++counter;
+              // }
+              // std::cout << "NO DELETION - Element count: " << counter << std::endl;
+              // std::cout << "adding generator for chunk_id " << chunk_id << std::endl;
+              auto generator = iterable.template with_generator<T>(iterable_pos_list);
+              generators[chunk_id] = generator.begin();
+              generator_stash.emplace_back(std::move(generator));
+              // generators[chunk_id] = iterable.template with_generator<T>(iterable_pos_list).begin();
+
+              // std::cout << (**(generators[chunk_id])).value() << std::endl;
+              // ++(*(generators[chunk_id]));
+              // iterable.with_iterators(iterable_pos_list, write_segment_positions);
             } else {
-              Fail("Cannot instantiate an interable with a position list.");
-            }
+              Fail("Cannot instantiate an interable with a position list. #TODO");
+            } 
           } else {
             const auto iterable = create_any_segment_iterable<T>(typed_segment);
-            for (const auto& el : iterable.template with_generator<T>(iterable_pos_list)) {
-              std::cout << "%" << el.value() << std::endl;
-            }
-            iterable.with_iterators(iterable_pos_list, write_segment_positions);
+            // std::cout << typeid(iterable).name() << std::endl;
+            // auto counter = size_t{0};
+            // auto gen = iterable.template with_generator<T>(iterable_pos_list);
+            // auto begin = gen.begin();
+            // auto end = gen.end();
+            // std::cout << "generator distance: " << std::distance(begin, end) << " for pos list size " << iterable_pos_list->size();
+            // for ([[maybe_unused]] const auto& el : iterable.template with_generator<T>(iterable_pos_list)) {
+            //   ++counter;
+            // }
+            // if (counter == 0)
+            //   std::cout << "DELETION - Element count: EMPTY" << std::endl;
+            // else
+            //   std::cout << "DELETION - Element count: NON-EMPTY! " << counter << std::endl;
+            // std::cout << "y" << std::endl;
+            // for (const auto& pos : *iterable_pos_list) {
+            //   std::cout << "#" << pos << std::endl;
+            // }
+            // generator_stash[chunk_id] = std::make_unique<cppcoro::recursive_generator<SegmentPosition<T>>>(iterable.template with_generator<T>(iterable_pos_list));
+            // generators[chunk_id] = std::make_unique<GeneratorIterator>(generator_stash[chunk_id]->begin());
+            // std::cout << "adding generator for chunk_id " << chunk_id << std::endl;
+            auto generator = iterable.template with_generator<T>(iterable_pos_list);
+            generators[chunk_id] = generator.begin();
+            generator_stash.emplace_back(std::move(generator));
+            // generators[chunk_id] = iterable.template with_generator<T>(iterable_pos_list).begin();
+            // std::cout << "a" << std::endl;
+            // std::cout << (**(generators[chunk_id])).value() << std::endl;
+            // std::cout << "b" << std::endl;
+
+            // iterable.with_iterators(iterable_pos_list, write_segment_positions);
           }
         });
       }
 
-
+      // std::cout << generator_stash.size() << std::endl;
+      // std::cout << generators.size() << std::endl;
 
       DebugAssert(segment_positions.size() == position_filter->size(), "Sizes do not match");
+      // DebugAssert(generators.size() == generator_stash.size(), "Sizes do not match");
 
-      auto begin = SegmentPositionVectorIterator{&segment_positions, ChunkOffset{0}};
-      auto end = SegmentPositionVectorIterator{&segment_positions, static_cast<ChunkOffset>(position_filter->size())};
+      // auto begin = SegmentPositionVectorIterator{&segment_positions, ChunkOffset{0}};
+      // auto end = SegmentPositionVectorIterator{&segment_positions, static_cast<ChunkOffset>(position_filter->size())};
+
+      // std::cout << "size generators: " << generators.size() << std::endl;
+
+      auto begin = SegmentGeneratorsIterator{&generators, &*position_filter, ChunkOffset{0}};
+      auto end = SegmentGeneratorsIterator{&generators, &*position_filter, static_cast<ChunkOffset>(position_filter->size())};
+
+      // std::cout << "Calling functor" << std::endl;
 
       functor(begin, end);
+
+      generators.clear();
+      generator_stash.clear();
     }
   }
 
   cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
+    Fail("This method shall never be called.");
     co_yield SegmentPosition(T{}, false, ChunkOffset{0});
-    Fail("That path should simply NOT.");
   }
 
   size_t _on_size() const { return _segment.size(); }
@@ -404,6 +468,68 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
    private:
     const std::vector<SegmentPosition<T>>* _segment_positions;
+    ChunkOffset _chunk_offset;
+  };
+
+  // class SegmentGeneratorsIterator : public BaseSegmentIterator<SegmentGeneratorsIterator, SegmentPosition<T>, boost::forward_traversal_tag> {
+  class SegmentGeneratorsIterator : public BaseSegmentIterator<SegmentGeneratorsIterator, SegmentPosition<T>> {
+   public:
+    using ValueType = T;
+    using IterableType = ReferenceSegmentIterable<T, erase_reference_segment_type>;
+
+   public:
+    explicit SegmentGeneratorsIterator(std::vector<GeneratorIterator>* generators,
+                                       const AbstractPosList* position_list,
+                                       // const std::vector<bool>* null_values,
+                                       // const std::vector<size_t>* debug_pos_list_sizes,
+                                       const ChunkOffset chunk_offset)
+        : _generators{generators},
+          _position_list{position_list},
+          // _null_values{null_values},
+          // _debug_pos_list_sizes{debug_pos_list_sizes},
+          _chunk_offset{chunk_offset} {}
+
+   private:
+    friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
+
+    void increment() { ++_chunk_offset; }
+
+    void decrement() { --_chunk_offset; Fail("// TODO :: remomve, we should be input iter"); }
+    void advance(std::ptrdiff_t n) { _chunk_offset += n; Fail("// TODO :: remomve, we should be input iter"); }
+
+    bool equal(const SegmentGeneratorsIterator& other) const { return _chunk_offset == other._chunk_offset; }
+
+    std::ptrdiff_t distance_to(const SegmentGeneratorsIterator& other) const {
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
+    }
+
+    SegmentPosition<T> dereference() const {
+      const auto chunk_id = (*_position_list)[_chunk_offset].chunk_id;
+      if (chunk_id == INVALID_CHUNK_ID) {
+        std::cout << "Returning NULL" << std::endl;
+        return SegmentPosition<T>{T{}, true, _chunk_offset};
+      }
+      
+      std::cout << "deref position " << (*_position_list)[_chunk_offset] << "(gen: " << _generators << " - #generators: "
+                << _generators->size() << " - chunk offset: " << _chunk_offset
+                // << " - pos list size: " << (*_debug_pos_list_sizes)[chunk_id]
+                << " - chunk_id: " << chunk_id << ")" << std::endl;
+
+      auto& generator = (*_generators)[chunk_id];
+      const auto result = *generator;
+      ++generator;
+
+      std::cout << "Returning " << result.value() << std::endl;
+      // The offset of the iterator's result is the position within the position list of the previously created
+      // temporary chunk. We need to use the actual chunk offset here.
+      return SegmentPosition<T>{result.value(), result.is_null(), _chunk_offset};
+    }
+
+   private:
+    mutable std::vector<GeneratorIterator>* _generators;
+    const AbstractPosList* _position_list;
+    // const std::vector<bool>* _null_values;
+    // const std::vector<size_t>* _debug_pos_list_sizes;
     ChunkOffset _chunk_offset;
   };
 };

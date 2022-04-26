@@ -109,12 +109,25 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
         }
         break;
       }
-      case CompressedVectorType::SimdBp128:
+      case CompressedVectorType::SimdBp128: {
+        const auto& vector = dynamic_cast<const SimdBp128Vector&>(*_segment.attribute_vector());
+
+        auto iter = PointAccessIterator<opossum::SimdBp128Decompressor, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cbegin()};
+        const auto end = PointAccessIterator<opossum::SimdBp128Decompressor, DictionaryIteratorType, PosListIteratorType>{
+            _dictionary->cbegin(), _segment.null_value_id(), vector.create_decompressor(), position_filter->cbegin(),
+            position_filter->cend()};
+
+        while (iter != end) {
+          co_yield *iter;
+          ++iter;
+        }
         break;
+      }
       default:
-        Fail("sasfdasdf");
+        Fail("Unexpected vector compression type.");
     }
-    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
   }
 
   size_t _on_size() const { return _segment.size(); }

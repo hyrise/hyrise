@@ -23,6 +23,21 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
+
+
+
+
+
+
+
+
+
+#include "operators/print.hpp"
+
+
+
+
+
 namespace opossum {
 
 template <typename T>
@@ -811,8 +826,12 @@ TYPED_TEST(OperatorsAggregateTest, JoinThenAggregate) {
       OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
   join->execute();
 
+  std::cout << "join done " << std::endl;
+  Print::print(join->get_output());
+
   this->test_output(join, {}, {ColumnID{0}, ColumnID{3}},
                     "resources/test_data/tbl/aggregateoperator/join_2gb_0agg/result.tbl", 1);
+  std::cout << "output test done " << std::endl;
 }
 
 TYPED_TEST(OperatorsAggregateTest, OuterJoinThenAggregate) {

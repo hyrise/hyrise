@@ -42,7 +42,20 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   }
 
   cppcoro::recursive_generator<SegmentPosition<T>> _on_with_generator(const std::shared_ptr<const AbstractPosList>& position_filter) const {
-    co_yield SegmentPosition(T{}, false, ChunkOffset{0});
+    _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
+
+    using PosListIteratorType = decltype(position_filter->cbegin());
+    auto iter =
+        PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(), _segment.end_positions(),
+                                                 position_filter->cbegin(), position_filter->cbegin()};
+    const auto end =
+        PointAccessIterator<PosListIteratorType>{_segment.values(), _segment.null_values(), _segment.end_positions(),
+                                                 position_filter->cbegin(), position_filter->cend()};
+
+    while (iter != end) {
+      co_yield *iter;
+      ++iter;
+    }
   }
 
   size_t _on_size() const { return _segment.size(); }
