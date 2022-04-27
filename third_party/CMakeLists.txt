@@ -179,6 +179,11 @@ target_sources(compact_vector
 )
 target_compile_options(compact_vector INTERFACE -Wno-cast-qual -Wno-old-style-cast -Wno-shorten-64-to-32 -Wno-shadow -Wno-reserved-id-macro -Wno-atomic-implicit-seq-cst)
 
+set(XXHASH_BUILD_ENABLE_INLINE_API ON)
+set(XXHASH_BUILD_XXHSUM OFF)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/xxhash/cmake_unofficial/ ${CMAKE_CURRENT_SOURCE_DIR}/xxhash/build/ EXCLUDE_FROM_ALL)
+#...
+#target_link_libraries(MyTarget PRIVATE xxHash::xxhash)
 
 # Build uninitialized_vector library
 add_library(uninitialized_vector INTERFACE)

@@ -1,13 +1,15 @@
 #pragma once
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
-#include <boost/container/pmr/unsynchronized_pool_resource.hpp>
-#include <boost/container/small_vector.hpp>
-#include <boost/dynamic_bitset.hpp>
-#include <boost/lexical_cast.hpp>
-#include <uninitialized_vector.hpp>
+#include "boost/container/pmr/monotonic_buffer_resource.hpp"
+#include "boost/container/pmr/unsynchronized_pool_resource.hpp"
+#include "boost/container/small_vector.hpp"
+#include "boost/dynamic_bitset.hpp"
+#include "boost/lexical_cast.hpp"
 
 #include "bytell_hash_map.hpp"
+#include "uninitialized_vector.hpp"
+#include "xxhash.h"
+
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -564,7 +566,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
           DebugAssert(!(element.row_id == NULL_ROW_ID), "NULL_ROW_ID should not have made it this far");
         }
 
-        const size_t radix = hash_function(static_cast<HashedType>(element.value)) & radix_mask;
+        const size_t radix = xxh123_(static_cast<HashedType>(element.value)) & radix_mask;
 
         auto& output_idx = output_offsets_by_input_partition[input_partition_idx][radix];
         DebugAssert(output_idx < output[radix].elements.size(), "output_idx is completely out-of-bounds");
