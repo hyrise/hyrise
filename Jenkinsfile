@@ -78,7 +78,7 @@ try {
             sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
-            unity = '-DCMAKE_UNITY_BUILD=ON'
+            unity = '-DCMAKE_UNITY_BUILD=ON'  // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
 
             // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
             // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
@@ -94,7 +94,7 @@ try {
             // jemalloc's autoconf operates outside of the build folder (#1413). If we start two cmake instances at the same time, we run into conflicts.
             // Thus, run this one (any one, really) first, so that the autoconf step can finish in peace.
 
-            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}                    ${clang} ${unity} .. && make -j libjemalloc-build"
+            sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  .. && make -j libjemalloc-build"
 
             // Configure the rest in parallel
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}   ${unity} -DENABLE_CLANG_TIDY=ON .. &\
@@ -102,10 +102,10 @@ try {
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            .. &\
+            mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}   ${unity} .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
-            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}     ${unity} .. &\
+            mkdir gcc-release && cd gcc-release &&                                                       ${cmake} ${release}        ${gcc}              .. &\
             mkdir clang-9-debug && cd clang-9-debug &&                                                   ${cmake} ${debug}          ${clang9}  ${unity} .. &\
             wait"
           }
