@@ -43,7 +43,8 @@ PluginManager::user_executable_functions() const {
 void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto plugin_name = plugin_name_from_path(path);
 
-  Assert(!_plugins.count(plugin_name), "Loading plugin failed: A plugin with name " + plugin_name + " already exists.");
+  Assert(!_plugins.contains(plugin_name),
+         "Loading plugin failed: A plugin with name " + plugin_name + " already exists.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());

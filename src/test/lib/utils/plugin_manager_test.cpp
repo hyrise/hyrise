@@ -28,7 +28,7 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
   EXPECT_EQ(plugins.size(), 0u);
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
-  EXPECT_EQ(plugins.count("hyriseTestPlugin"), 1u);
+  EXPECT_TRUE(plugins.contains("hyriseTestPlugin"));
   EXPECT_EQ(plugins["hyriseTestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
   EXPECT_NE(plugins["hyriseTestPlugin"].handle, nullptr);
   EXPECT_NE(plugins["hyriseTestPlugin"].plugin, nullptr);
@@ -40,7 +40,7 @@ TEST_F(PluginManagerTest, LoadUnloadPlugin) {
 
   // The test plugin removes the dummy table from the storage manager when it is unloaded
   EXPECT_FALSE(sm.has_table("DummyTable"));
-  EXPECT_EQ(plugins.count("hyriseTestPlugin"), 0u);
+  EXPECT_FALSE(plugins.contains("hyriseTestPlugin"));
 }
 
 // Plugins are unloaded when the PluginManager's destructor is called, this is simulated and tested here.
@@ -52,7 +52,7 @@ TEST_F(PluginManagerTest, LoadPluginAutomaticUnload) {
   EXPECT_EQ(plugins.size(), 0u);
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
-  EXPECT_EQ(plugins.count("hyriseTestPlugin"), 1u);
+  EXPECT_TRUE(plugins.contains("hyriseTestPlugin"));
   EXPECT_EQ(plugins["hyriseTestPlugin"].plugin->description(), "This is the Hyrise TestPlugin");
   EXPECT_NE(plugins["hyriseTestPlugin"].handle, nullptr);
   EXPECT_NE(plugins["hyriseTestPlugin"].plugin, nullptr);
@@ -82,9 +82,9 @@ TEST_F(PluginManagerTest, LoadingUnloadingUserExecutableFunctions) {
     auto user_executable_functions = pm.user_executable_functions();
 
     EXPECT_EQ(user_executable_functions.size(), 3);
-    EXPECT_EQ(user_executable_functions.count({"hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
-    EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "OurFreelyChoosableFunctionName"}), 1);
-    EXPECT_EQ(user_executable_functions.count({"hyriseTestPlugin", "SpecialFunction17"}), 1);
+    EXPECT_TRUE(user_executable_functions.contains({"hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName"}));
+    EXPECT_TRUE(user_executable_functions.contains({"hyriseTestPlugin", "OurFreelyChoosableFunctionName"}));
+    EXPECT_TRUE(user_executable_functions.contains({"hyriseTestPlugin", "SpecialFunction17"}));
   }
 
   pm.unload_plugin("hyriseTestPlugin");
