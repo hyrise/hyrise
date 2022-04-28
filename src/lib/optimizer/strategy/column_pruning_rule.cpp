@@ -206,7 +206,9 @@ void recursively_gather_required_expressions(
   // We only continue with node's inputs once we have visited all paths above node. We check this by counting the
   // number of the node's outputs that have already been visited. Once we reach the output count, we can continue.
   if (node->type != LQPNodeType::Root) ++outputs_visited_by_node[node];
-  if (outputs_visited_by_node[node] < node->output_count()) return;
+  if (outputs_visited_by_node[node] < node->output_count()) {
+    return;
+  }
 
   // Once all nodes that may require columns from this node (i.e., this node's outputs) have been visited, we can
   // recurse into this node's inputs.
@@ -239,21 +241,29 @@ void try_join_to_semi_rewrite(
   // line more than once.
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  if (join_node->join_mode != JoinMode::Inner) return;
+  if (join_node->join_mode != JoinMode::Inner) {
+    return;
+  }
 
   // Check whether the left/right inputs are actually needed by following operators
   auto left_input_is_used = false;
   auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
     for (const auto& required_expression : required_expressions_by_node.at(output)) {
-      if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_is_used = true;
-      if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_is_used = true;
+      if (expression_evaluable_on_lqp(required_expression, *node->left_input())) {
+        left_input_is_used = true;
+      }
+      if (expression_evaluable_on_lqp(required_expression, *node->right_input())) {
+        right_input_is_used = true;
+      }
     }
   }
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
 
   // Early out, if we need output expressions from both input tables.
-  if (left_input_is_used && right_input_is_used) return;
+  if (left_input_is_used && right_input_is_used) {
+    return;
+  }
 
   /**
    * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
@@ -270,7 +280,9 @@ void try_join_to_semi_rewrite(
   for (const auto& join_predicate : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
     // Skip predicates that are not of type Equals (because we need n:1 or 1:1 join cardinality)
-    if (predicate->predicate_condition != PredicateCondition::Equals) continue;
+    if (predicate->predicate_condition != PredicateCondition::Equals) {
+      continue;
+    }
 
     // Collect operand expressions table-wise
     for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {

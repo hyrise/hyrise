@@ -120,7 +120,9 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
  public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
-    if (this == &other) return *this;
+    if (this == &other) {
+      return *this;
+    }
     _wrapper = other._wrapper->clone();
     return *this;
   }

@@ -38,7 +38,9 @@ std::string FunctionExpression::description(const DescriptionMode mode) const {
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
     stream << arguments[argument_idx]->description(mode);
-    if (argument_idx + 1 < arguments.size()) stream << ",";
+    if (argument_idx + 1 < arguments.size()) {
+      stream << ",";
+    }
   }
   stream << ")";
   return stream.str();

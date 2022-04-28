@@ -93,7 +93,7 @@ TEST_F(OptimizerTest, AssertsInPlanReferences) {
 }
 
 TEST_F(OptimizerTest, VerifiesResults) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
   // While the Asserts* tests checked the different features of validate_lqp, this test checks that a rule that breaks
   // an LQP throws an assertion.
   // clang-format off
@@ -115,7 +115,9 @@ TEST_F(OptimizerTest, VerifiesResults) {
     void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override {
       // Change the `b` expression in the projection to `x`, which is not part of the input LQP
       const auto projection_node = std::dynamic_pointer_cast<ProjectionNode>(lqp_root->left_input());
-      if (!projection_node) return;
+      if (!projection_node) {
+        return;
+      }
       projection_node->node_expressions[0] = out_of_plan_expression;
     }
 

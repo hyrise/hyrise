@@ -102,7 +102,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};
+      if (is_null) {
+        return SegmentPosition<T>{T{}, true, _chunk_offset};
+      }
 
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
@@ -141,7 +143,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       const auto value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+      if (is_null) {
+        return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+      }
 
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }

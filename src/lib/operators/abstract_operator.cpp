@@ -26,8 +26,12 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
   // Tell input operators that we want to consume their output
-  if (_left_input) mutable_left_input()->register_consumer();
-  if (_right_input) mutable_right_input()->register_consumer();
+  if (_left_input) {
+    mutable_left_input()->register_consumer();
+  }
+  if (_right_input) {
+    mutable_right_input()->register_consumer();
+  }
 }
 
 AbstractOperator::~AbstractOperator() {
@@ -41,9 +45,9 @@ AbstractOperator::~AbstractOperator() {
    */
   if constexpr (HYRISE_DEBUG) {
     auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
-    bool aborted = transaction_context ? transaction_context->aborted() : false;
-    bool left_has_executed = _left_input ? _left_input->executed() : false;
-    bool right_has_executed = _right_input ? _right_input->executed() : false;
+    auto aborted = transaction_context ? transaction_context->aborted() : false;
+    auto left_has_executed = _left_input ? _left_input->executed() : false;
+    auto right_has_executed = _right_input ? _right_input->executed() : false;
     Assert(executed() || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
@@ -64,7 +68,9 @@ void AbstractOperator::execute() {
    *    b) because there are no more consumers that need the operator's result.
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
-  if (executed()) return;
+  if (executed()) {
+    return;
+  }
   _transition_to(OperatorState::Running);
 
   if constexpr (HYRISE_DEBUG) {
@@ -106,8 +112,12 @@ void AbstractOperator::execute() {
   _transition_to(OperatorState::ExecutedAndAvailable);
 
   // Tell input operators that we no longer need their output.
-  if (_left_input) mutable_left_input()->deregister_consumer();
-  if (_right_input) mutable_right_input()->deregister_consumer();
+  if (_left_input) {
+    mutable_left_input()->deregister_consumer();
+  }
+  if (_right_input) {
+    mutable_right_input()->deregister_consumer();
+  }
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -172,7 +182,10 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  if (_never_clear_output) return;
+  if (_never_clear_output) {
+    return;
+  }
+
   _transition_to(OperatorState::ExecutedAndCleared);
   _output = nullptr;
 }
@@ -187,7 +200,9 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto copied_ops_iter = copied_ops.find(this);
-  if (copied_ops_iter != copied_ops.end()) return copied_ops_iter->second;
+  if (copied_ops_iter != copied_ops.end()) {
+    return copied_ops_iter->second;
+  }
 
   const auto copied_left_input =
       left_input() ? left_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};

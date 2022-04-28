@@ -25,7 +25,9 @@ std::string AliasNode::description(const DescriptionMode mode) const {
       stream << node_expressions[column_id]->description(expression_mode) << " AS " << aliases[column_id];
     }
 
-    if (column_id + 1u < node_expressions.size()) stream << ", ";
+    if (column_id + 1u < node_expressions.size()) {
+      stream << ", ";
+    }
   }
   return stream.str();
 }

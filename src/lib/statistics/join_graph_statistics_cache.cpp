@@ -34,7 +34,9 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
 
   visit_lqp(lqp, [&](const auto& node) {
     // Early out if `bitmask.reset()` was called during the search below
-    if (!bitmask.has_value()) return LQPVisitation::DoNotVisitInputs;
+    if (!bitmask.has_value()) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
 
     if (const auto vertex_iter = _vertex_indices.find(node); vertex_iter != _vertex_indices.end()) {
       DebugAssert(vertex_iter->second < bitmask->size(), "Vertex index out of range");
@@ -104,7 +106,8 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   // of the result
   auto cached_column_ids = std::vector<ColumnID>{requested_column_order.size()};
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
-  for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
+  const auto requested_column_order_size = requested_column_order.size();
+  for (auto column_id = ColumnID{0}; column_id < requested_column_order_size; ++column_id) {
     const auto cached_column_id_iter = cache_entry.column_expression_order.find(requested_column_order[column_id]);
     Assert(cached_column_id_iter != cache_entry.column_expression_order.end(), "Column not found in cached statistics");
     const auto cached_column_id = cached_column_id_iter->second;
@@ -113,10 +116,10 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   // Allocate the TableStatistics to be returned
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order.size()};
+  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order_size};
 
   // Bring AttributeStatistics into the requested order for each statistics slice
-  for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < requested_column_order_size; ++column_id) {
     const auto cached_column_id = cached_column_ids[column_id];
     const auto& cached_column_statistics = cached_table_statistics->column_statistics[cached_column_id];
     output_column_statistics[column_id] = cached_column_statistics;
@@ -134,7 +137,8 @@ void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
   auto cache_entry = CacheEntry{};
   cache_entry.table_statistics = table_statistics;
 
-  for (auto column_id = ColumnID{0}; column_id < column_order.size(); ++column_id) {
+  const auto column_order_count = column_order.size();
+  for (auto column_id = ColumnID{0}; column_id < column_order_count; ++column_id) {
     cache_entry.column_expression_order.emplace(column_order[column_id], column_id);
   }
 

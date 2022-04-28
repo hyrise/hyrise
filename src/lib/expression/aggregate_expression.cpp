@@ -42,7 +42,9 @@ std::string AggregateExpression::description(const DescriptionMode mode) const {
     }
   } else {
     stream << aggregate_function << "(";
-    if (argument()) stream << argument()->description(mode);
+    if (argument()) {
+      stream << argument()->description(mode);
+    }
     stream << ")";
   }
 
@@ -96,14 +98,22 @@ DataType AggregateExpression::data_type() const {
 
 bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
   // COUNT(*) is represented by an AggregateExpression with the COUNT function and an INVALID_COLUMN_ID.
-  if (expression.type != ExpressionType::Aggregate) return false;
+  if (expression.type != ExpressionType::Aggregate) {
+    return false;
+  }
   const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
 
-  if (aggregate_expression.aggregate_function != AggregateFunction::Count) return false;
-  if (aggregate_expression.argument()->type != ExpressionType::LQPColumn) return false;
+  if (aggregate_expression.aggregate_function != AggregateFunction::Count) {
+    return false;
+  }
+  if (aggregate_expression.argument()->type != ExpressionType::LQPColumn) {
+    return false;
+  }
 
   const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*aggregate_expression.argument());
-  if (lqp_column_expression.original_column_id != INVALID_COLUMN_ID) return false;  // NOLINT
+  if (lqp_column_expression.original_column_id != INVALID_COLUMN_ID) {
+    return false;  // NOLINT
+  }
 
   return true;
 }

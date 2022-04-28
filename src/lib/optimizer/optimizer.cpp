@@ -192,7 +192,9 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       // at the latest. However, feel free to add that check here.
       for (const auto& node_expression : node->node_expressions) {
         visit_expression(node_expression, [&](const auto& sub_expression) {
-          if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          if (sub_expression->type != ExpressionType::LQPColumn) {
+            return ExpressionVisitation::VisitArguments;
+          }
           const auto original_node = dynamic_cast<LQPColumnExpression&>(*sub_expression).original_node.lock();
           Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
           Assert(nodes_by_lqp[lqp].contains(original_node),

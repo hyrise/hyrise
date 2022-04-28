@@ -79,7 +79,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
      */
     auto current_predicate_chain = PredicateChain();
     visit_lqp_upwards(node, [&](const auto& current_node) {
-      if (visited_nodes.contains(current_node)) return LQPUpwardVisitation::DoNotVisitOutputs;
+      if (visited_nodes.contains(current_node)) {
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
       visited_nodes.insert(current_node);
 
       // Add to current predicate chain or finalize it when a non-PredicateNode follows

@@ -79,7 +79,9 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
   std::atomic_thread_fence(std::memory_order_seq_cst);
 
   // Atomically marks the task as scheduled or returns if another thread has already scheduled it.
-  if (!_try_transition_to(TaskState::Scheduled)) return;
+  if (!_try_transition_to(TaskState::Scheduled)) {
+    return;
+  }
 
   Hyrise::get().scheduler()->schedule(shared_from_this(), preferred_node_id, _priority);
 }

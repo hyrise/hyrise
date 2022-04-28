@@ -45,7 +45,9 @@ bool ValueExpression::_shallow_equals(const AbstractExpression& expression) cons
   /**
    * Even though null != null, two null expressions are *the same expressions* (e.g. when resolving ColumnIDs)
    */
-  if (data_type() == DataType::Null && value_expression.data_type() == DataType::Null) return true;
+  if (data_type() == DataType::Null && value_expression.data_type() == DataType::Null) {
+    return true;
+  }
 
   return value == value_expression.value;
 }

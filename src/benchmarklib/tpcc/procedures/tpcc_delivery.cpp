@@ -24,7 +24,9 @@ bool TPCCDelivery::_on_execute() {
 
     // TODO(anyone): Selecting MIN(NO_O_ID) IS NULL and using it here would not be necessary if get_value returned
     // NULLs as nullopt
-    if (*new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) continue;
+    if (*new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) {
+      continue;
+    }
 
     // The oldest undelivered order in that district
     const auto no_o_id = *new_order_table->get_value<int32_t>(ColumnID{1}, 0);

@@ -278,7 +278,9 @@ bool Console::_initialize_pipeline(const std::string& sql) {
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  if (!_initialize_pipeline(sql)) {
+    return ReturnCode::Error;
+  }
 
   try {
     _sql_pipeline->get_result_tables();
@@ -709,8 +711,8 @@ int Console::_visualize(const std::string& input) {
   const auto sql = boost::algorithm::join(input_words, " ");
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
-  if (!sql.empty()) {
-    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  if (!sql.empty() && !_initialize_pipeline(sql)) {
+    return ReturnCode::Error;
   }
 
   // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,

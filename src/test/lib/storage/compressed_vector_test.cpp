@@ -28,7 +28,9 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
       elem = value;
 
       value += increment;
-      if (value > max()) value = min();
+      if (value > max()) {
+        value = min();
+      }
     }
 
     return sequence;

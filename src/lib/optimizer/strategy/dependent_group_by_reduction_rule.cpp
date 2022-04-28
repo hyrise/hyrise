@@ -83,7 +83,9 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     // Early exit: If there are no functional dependencies, we can skip this rule.
     auto fds = aggregate_node.functional_dependencies();
-    if (fds.empty()) return LQPVisitation::VisitInputs;
+    if (fds.empty()) {
+      return LQPVisitation::VisitInputs;
+    }
 
     // --- Preparation ---
     // Store a copy of the root's output expressions before applying the rule

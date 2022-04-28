@@ -39,7 +39,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
-    if (this->_capacity == 0) return;
+    if (this->_capacity == 0) {
+      return;
+    }
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -71,7 +73,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
   std::optional<Value> try_get(const Key& query) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(query);
-    if (it == _map.end()) return std::nullopt;
+    if (it == _map.end()) {
+      return std::nullopt;
+    }
 
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);

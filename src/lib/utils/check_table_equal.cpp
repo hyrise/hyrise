@@ -209,7 +209,9 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
           break;
         }
       }
-      if (all_null) expected_column_type = actual_column_type;
+      if (all_null) {
+        expected_column_type = actual_column_type;
+      }
     }
 
     if (!boost::iequals(actual_table->column_name(column_id), expected_table->column_name(column_id))) {

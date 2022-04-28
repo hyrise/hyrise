@@ -24,7 +24,9 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   auto task = op->get_or_create_operator_task();
   // By using an unordered set, we can avoid adding duplicate tasks.
   const auto& [_, inserted] = tasks.insert(task);
-  if (!inserted) return task;
+  if (!inserted) {
+    return task;
+  }
 
   if (auto left = op->mutable_left_input()) {
     if (auto left_subtree_root = add_operator_tasks_recursively(left, tasks)) {

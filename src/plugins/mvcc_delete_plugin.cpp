@@ -36,9 +36,11 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
   // Check all tables
   for (auto& [table_name, table] : tables) {
-    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
-    size_t saved_memory = 0;
-    size_t num_chunks = 0;
+    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
+      continue;
+    }
+    auto saved_memory = size_t{0};
+    auto num_chunks = size_t{0};
 
     // Check all chunks, except for the last one, which is currently used for insertions
     const auto max_chunk_id = static_cast<ChunkID>(table->chunk_count() - 1);
@@ -48,8 +50,8 @@ void MvccDeletePlugin::_logical_delete_loop() {
         const auto chunk_memory = chunk->memory_usage(MemoryUsageCalculationMode::Sampled);
 
         // Calculate metric 1 – Chunk invalidation level
-        const double invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
-        const bool criterion1 = (DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio);
+        const auto invalidated_rows_ratio = static_cast<double>(chunk->invalid_row_count()) / chunk->size();
+        const auto criterion1 = (DELETE_THRESHOLD_PERCENTAGE_INVALIDATED_ROWS <= invalidated_rows_ratio);
 
         if (!criterion1) {
           continue;
@@ -65,7 +67,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
           }
         }
 
-        const bool criterion2 =
+        const auto criterion2 =
             highest_end_commit_id + DELETE_THRESHOLD_LAST_COMMIT <= Hyrise::get().transaction_manager.last_commit_id();
 
         if (!criterion2) {
@@ -73,7 +75,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
         }
 
         auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
-        const bool success = _try_logical_delete(table_name, chunk_id, transaction_context);
+        const auto success = _try_logical_delete(table_name, chunk_id, transaction_context);
 
         if (success) {
           DebugAssert(table->get_chunk(chunk_id)->get_cleanup_commit_id(),
@@ -111,7 +113,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
 
     if (chunk->get_cleanup_commit_id().has_value()) {
       // Check whether there are still active transactions that might use the chunk
-      bool conflicting_transactions = false;
+      auto conflicting_transactions = false;
       auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 
       if (lowest_snapshot_commit_id.has_value()) {
@@ -137,7 +139,7 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
 
   // Create temporary referencing table that contains the given chunk only
   //   Include all ChunksIDs of current table except chunk_id for pruning in GetTable
-  std::vector<ChunkID> excluded_chunk_ids(table->chunk_count() - 1);
+  auto excluded_chunk_ids = std::vector<ChunkID>(table->chunk_count() - 1);
   std::iota(excluded_chunk_ids.begin(), excluded_chunk_ids.begin() + chunk_id, 0);
   std::iota(excluded_chunk_ids.begin() + chunk_id, excluded_chunk_ids.end(), chunk_id + 1);
 

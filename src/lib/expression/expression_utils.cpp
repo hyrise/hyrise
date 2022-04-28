@@ -26,7 +26,9 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
 bool expressions_equal_to_expressions_in_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right, const LQPNodeMapping& node_mapping) {
-  if (expressions_left.size() != expressions_right.size()) return false;
+  if (expressions_left.size() != expressions_right.size()) {
+    return false;
+  }
 
   for (auto expression_idx = size_t{0}; expression_idx < expressions_left.size(); ++expression_idx) {
     const auto& expression_left = *expressions_left[expression_idx];
@@ -142,19 +144,29 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
 
   // Long+NULL -> Long; NULL+Long -> Long
-  if (lhs == DataType::Null) return rhs;
-  if (rhs == DataType::Null) return lhs;
+  if (lhs == DataType::Null) {
+    return rhs;
+  }
+  if (rhs == DataType::Null) {
+    return lhs;
+  }
 
-  if (lhs == DataType::String) return DataType::String;
+  if (lhs == DataType::String) {
+    return DataType::String;
+  }
 
-  if (lhs == DataType::Double || rhs == DataType::Double) return DataType::Double;
+  if (lhs == DataType::Double || rhs == DataType::Double) {
+    return DataType::Double;
+  }
   if (lhs == DataType::Long) {
     return is_floating_point_data_type(rhs) ? DataType::Double : DataType::Long;
   }
   if (rhs == DataType::Long) {
     return is_floating_point_data_type(lhs) ? DataType::Double : DataType::Long;
   }
-  if (lhs == DataType::Float || rhs == DataType::Float) return DataType::Float;
+  if (lhs == DataType::Float || rhs == DataType::Float) {
+    return DataType::Float;
+  }
 
   return DataType::Int;
 }

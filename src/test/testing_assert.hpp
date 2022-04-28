@@ -21,15 +21,23 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInpu
 
 template <typename Functor>
 bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
-  if (!node) return false;
-  if (contains_fn(node)) return true;
+  if (!node) {
+    return false;
+  }
+  if (contains_fn(node)) {
+    return true;
+  }
   return contained_in_lqp(node->left_input(), contains_fn) || contained_in_lqp(node->right_input(), contains_fn);
 }
 
 template <typename Functor>
 bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node, Functor contains_fn) {
-  if (!node) return false;
-  if (contains_fn(node)) return true;
+  if (!node) {
+    return false;
+  }
+  if (contains_fn(node)) {
+    return true;
+  }
   return contained_in_query_plan(node->left_input(), contains_fn) ||
          contained_in_query_plan(node->right_input(), contains_fn);
 }
@@ -88,7 +96,9 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 
 #define ASSERT_LQP_TIE(output, input_side, input)                   \
   {                                                                 \
-    if (!opossum::check_lqp_tie(output, input_side, input)) FAIL(); \
+    if (!opossum::check_lqp_tie(output, input_side, input)) {       \
+      FAIL();                                                       \
+    }                                                               \
   }                                                                 \
   static_assert(true, "End call of macro with a semicolon")
 

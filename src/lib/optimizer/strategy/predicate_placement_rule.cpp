@@ -40,7 +40,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  if (!input_node) return;  // Allow calling without checks
+  if (!input_node) {
+    return;  // Allow calling without checks
+  }
 
   // A helper method for cases where the input_node does not allow us to proceed
   const auto handle_barrier = [&]() {
@@ -159,8 +161,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               //  ^^     ^^                 inner_conjunction holds two (or more) elements from flattening the AND.
               //                            One of these elements is called expression_in_conjunction.
 
-              std::vector<std::shared_ptr<AbstractExpression>> left_disjunction{};
-              std::vector<std::shared_ptr<AbstractExpression>> right_disjunction{};
+              auto left_disjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
+              auto right_disjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
 
               // Tracks whether we had to abort the search for one of the sides as an inner_conjunction was found that
               // did not cover the side.
@@ -172,8 +174,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               for (const auto& expression_in_disjunction : outer_disjunction) {
                 // For the current expression_in_disjunction, these hold the PredicateExpressions that need to be true
                 // on the left/right side
-                std::vector<std::shared_ptr<AbstractExpression>> left_conjunction{};
-                std::vector<std::shared_ptr<AbstractExpression>> right_conjunction{};
+                auto left_conjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
+                auto right_conjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
 
                 // Fill left/right_conjunction
                 const auto inner_conjunction =
@@ -245,8 +247,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             // it might make more sense to duplicate the predicate and push it down on both sides.
             _insert_nodes(current_node, input_side, {push_down_node});
           } else {
-            if (move_to_left) left_push_down_nodes.emplace_back(push_down_node);
-            if (move_to_right) right_push_down_nodes.emplace_back(push_down_node);
+            if (move_to_left) {
+              left_push_down_nodes.emplace_back(push_down_node);
+            }
+            if (move_to_right) {
+              right_push_down_nodes.emplace_back(push_down_node);
+            }
           }
         }
       } else {
@@ -287,9 +293,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
 std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_traversal(
     const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
-  if (!current_node) return {};
+  if (!current_node) {
+    return {};
+  }
+
   const auto input_node = current_node->input(input_side);
-  if (!input_node) return {};
+  if (!input_node) {
+    return {};
+  }
 
   auto candidate_nodes = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Left);
   auto candidate_nodes_tmp = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
@@ -393,7 +404,9 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = static_cast<PredicateNode&>(*node);
-      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) return false;
+      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) {
+        return false;
+      }
 
       auto has_uncomputed_aggregate = false;
       const auto predicate = predicate_node.predicate();

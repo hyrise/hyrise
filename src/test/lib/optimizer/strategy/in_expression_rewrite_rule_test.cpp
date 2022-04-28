@@ -84,7 +84,9 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
     std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
 
-    if (values_found_in_predicates == expected_values) return true;
+    if (values_found_in_predicates == expected_values) {
+      return true;
+    }
 
     return false;
   }

@@ -69,7 +69,9 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
         auto belongs_to_predicate_pruning_chain = true;
         const auto& predicate_expression = predicate_node->predicate();
         visit_expression(predicate_expression, [&](const auto& expression) {
-          if (expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          if (expression->type != ExpressionType::LQPColumn) {
+            return ExpressionVisitation::VisitArguments;
+          }
           const auto& column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
           if (column_expression->original_node.lock() != stored_table_node) {
             // PredicateNode does not filter stored_table_node.
@@ -225,7 +227,9 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
                                                                             *stored_table_node_without_column_pruning);
     // End of hacky
 
-    if (!operator_predicates) return {};
+    if (!operator_predicates) {
+      return {};
+    }
 
     std::set<ChunkID> current_excluded_chunk_ids;
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
@@ -378,8 +382,12 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 }
 
 std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
-  if (chunk_id_sets.empty() || chunk_id_sets.at(0).empty()) return {};
-  if (chunk_id_sets.size() == 1) return chunk_id_sets.at(0);
+  if (chunk_id_sets.empty() || chunk_id_sets.at(0).empty()) {
+    return {};
+  }
+  if (chunk_id_sets.size() == 1) {
+    return chunk_id_sets.at(0);
+  }
 
   std::set<ChunkID> chunk_id_set = chunk_id_sets.at(0);
   for (auto set_idx = size_t{1}; set_idx < chunk_id_sets.size(); ++set_idx) {

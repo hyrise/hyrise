@@ -300,7 +300,9 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto get_table = std::make_shared<GetTable>(_table_name);
   get_table->execute();

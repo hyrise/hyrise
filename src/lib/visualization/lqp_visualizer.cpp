@@ -41,7 +41,9 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                    std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
                                    ExpressionUnorderedSet& visualized_sub_queries) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
-  if (visualized_nodes.find(node) != visualized_nodes.end()) return;
+  if (visualized_nodes.find(node) != visualized_nodes.end()) {
+    return;
+  }
   visualized_nodes.insert(node);
 
   auto node_label = node->description();
@@ -66,9 +68,13 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
+      if (!subquery_expression) {
+        return ExpressionVisitation::VisitArguments;
+      }
 
-      if (!visualized_sub_queries.emplace(subquery_expression).second) return ExpressionVisitation::VisitArguments;
+      if (!visualized_sub_queries.emplace(subquery_expression).second) {
+        return ExpressionVisitation::VisitArguments;
+      }
 
       _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries);
 

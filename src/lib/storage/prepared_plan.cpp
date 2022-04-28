@@ -41,7 +41,9 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
                                 std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   visit_lqp(lqp, [&](const auto& node) {
-    if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
+    if (!visited_nodes.emplace(node).second) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
 
     for (auto& expression : node->node_expressions) {
       expression_bind_placeholders_impl(expression, parameters, visited_nodes);

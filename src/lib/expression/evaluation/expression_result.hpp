@@ -85,7 +85,9 @@ class ExpressionResult : public BaseExpressionResult {
 
   bool is_null(const size_t idx) const {
     DebugAssert(size() == 1 || idx < size(), "Null idx out of bounds");
-    if (nulls.empty()) return false;
+    if (nulls.empty()) {
+      return false;
+    }
     return nulls[std::min(idx, nulls.size() - 1)];
   }
 

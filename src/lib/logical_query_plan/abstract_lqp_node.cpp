@@ -34,7 +34,9 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
                                   std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto subquery_expression = std::dynamic_pointer_cast<const LQPSubqueryExpression>(sub_expression);
-    if (!subquery_expression) return ExpressionVisitation::VisitArguments;
+    if (!subquery_expression) {
+      return ExpressionVisitation::VisitArguments;
+    }
     lqps.emplace(subquery_expression->lqp);
     collect_lqps_in_plan(*subquery_expression->lqp, lqps);
     return ExpressionVisitation::VisitArguments;
@@ -50,8 +52,12 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
     collect_lqps_from_expression(node_expression, lqps);
   }
 
-  if (lqp.left_input()) collect_lqps_in_plan(*lqp.left_input(), lqps);
-  if (lqp.right_input()) collect_lqps_in_plan(*lqp.right_input(), lqps);
+  if (lqp.left_input()) {
+    collect_lqps_in_plan(*lqp.left_input(), lqps);
+  }
+  if (lqp.right_input()) {
+    collect_lqps_in_plan(*lqp.right_input(), lqps);
+  }
 }
 
 }  // namespace
@@ -68,8 +74,12 @@ AbstractLQPNode::~AbstractLQPNode() {
 
   // We're in the destructor, thus we must make sure we're not calling any virtual methods - so we're doing the removal
   // directly instead of calling set_left_input/right_input(nullptr)
-  if (_inputs[0]) _inputs[0]->_remove_output_pointer(*this);
-  if (_inputs[1]) _inputs[1]->_remove_output_pointer(*this);
+  if (_inputs[0]) {
+    _inputs[0]->_remove_output_pointer(*this);
+  }
+  if (_inputs[1]) {
+    _inputs[1]->_remove_output_pointer(*this);
+  }
 }
 
 size_t AbstractLQPNode::hash() const {
@@ -209,7 +219,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
   const auto outputs = this->outputs();
   const auto input_sides = get_input_sides();
 
-  for (size_t output_idx = 0; output_idx < output_relations.size(); ++output_idx) {
+  const auto output_relation_count = output_relations.size();
+  for (auto output_idx = size_t{0}; output_idx < output_relation_count; ++output_idx) {
     output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
   }
 
@@ -223,7 +234,9 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input
 }
 
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
-  if (type != rhs.type) return false;
+  if (type != rhs.type) {
+    return false;
+  }
   return _on_shallow_equals(rhs, node_mapping);
 }
 
@@ -235,8 +248,11 @@ std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_express
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
   const auto& output_expressions = this->output_expressions();  // Avoid redundant retrieval in loop below
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-    if (*output_expressions[column_id] == expression) return column_id;
+  const auto output_expression_count = output_expressions.size();
+  for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+    if (*output_expressions[column_id] == expression) {
+      return column_id;
+    }
   }
   return std::nullopt;
 }
@@ -273,7 +289,9 @@ bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSe
               "The given expressions are not a subset of the LQP's output expressions.");
 
   const auto& unique_constraints = this->unique_constraints();
-  if (unique_constraints->empty()) return false;
+  if (unique_constraints->empty()) {
+    return false;
+  }
 
   return contains_matching_unique_constraint(unique_constraints, expressions);
 }
@@ -307,7 +325,9 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   // (2) Derive trivial FDs from the node's unique constraints
   const auto& unique_constraints = this->unique_constraints();
   // Early exit, if there are no unique constraints
-  if (unique_constraints->empty()) return non_trivial_fds;
+  if (unique_constraints->empty()) {
+    return non_trivial_fds;
+  }
 
   auto trivial_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
 
@@ -326,18 +346,24 @@ std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_depend
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
-  if (this == &rhs) return true;
+  if (this == &rhs) {
+    return true;
+  }
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 
 bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
-  std::shared_ptr<AbstractLQPNode> copied_left_input;
-  std::shared_ptr<AbstractLQPNode> copied_right_input;
+  auto copied_left_input = std::shared_ptr<AbstractLQPNode>{};
+  auto copied_right_input = std::shared_ptr<AbstractLQPNode>{};
 
-  if (left_input()) copied_left_input = left_input()->_deep_copy_impl(node_mapping);
-  if (right_input()) copied_right_input = right_input()->_deep_copy_impl(node_mapping);
+  if (left_input()) {
+    copied_left_input = left_input()->_deep_copy_impl(node_mapping);
+  }
+  if (right_input()) {
+    copied_right_input = right_input()->_deep_copy_impl(node_mapping);
+  }
 
   auto copy = _shallow_copy(node_mapping);
   copy->set_left_input(copied_left_input);
@@ -350,7 +376,9 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
   const auto node_mapping_iter = node_mapping.find(shared_from_this());
 
   // Handle diamond shapes in the LQP; don't copy nodes twice
-  if (node_mapping_iter != node_mapping.end()) return node_mapping_iter->second;
+  if (node_mapping_iter != node_mapping.end()) {
+    return node_mapping_iter->second;
+  }
 
   auto shallow_copy = _on_shallow_copy(node_mapping);
   node_mapping.emplace(shared_from_this(), shallow_copy);
@@ -422,8 +450,12 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   const auto output_lqp_to_stream = [&](const auto& root) {
     const auto get_inputs_fn = [](const auto& node2) {
       std::vector<std::shared_ptr<const AbstractLQPNode>> inputs;
-      if (node2->left_input()) inputs.emplace_back(node2->left_input());
-      if (node2->right_input()) inputs.emplace_back(node2->right_input());
+      if (node2->left_input()) {
+        inputs.emplace_back(node2->left_input());
+      }
+      if (node2->right_input()) {
+        inputs.emplace_back(node2->right_input());
+      }
       return inputs;
     };
 
@@ -440,7 +472,9 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
 
   output_lqp_to_stream(node);
 
-  if (lqps.empty()) return stream;
+  if (lqps.empty()) {
+    return stream;
+  }
 
   stream << "-------- Subqueries ---------" << std::endl;
 

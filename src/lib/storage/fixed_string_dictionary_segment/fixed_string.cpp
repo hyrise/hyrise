@@ -20,7 +20,9 @@ FixedString::FixedString(const FixedString& other)
 }
 
 FixedString::~FixedString() {
-  if (_owns_memory) delete[] _mem;
+  if (_owns_memory) {
+    delete[] _mem;
+  }
 }
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): Tested by FixedStringTest.Assign

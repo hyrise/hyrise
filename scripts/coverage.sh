@@ -41,10 +41,11 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler='/usr/local/opt/llvm/bin/'
 fi
 
-cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
+# TODO(Martin): explain why clang-11 (in case it works at all ...)
+cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang-11 -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++-11 -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-make hyriseTest -j $((cores / 6))
+make hyriseTest -j $((cores / 9))
 cd -
 
 rm -fr coverage; mkdir coverage

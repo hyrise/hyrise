@@ -336,7 +336,9 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       Fail("There are only 22 JCC-H queries");
   }
 
-  if (sql.empty()) sql = _substitute_placeholders(item_id, parameters);
+  if (sql.empty()) {
+    sql = _substitute_placeholders(item_id, parameters);
+  }
 
   const auto [status, table] = sql_executor.execute(sql, nullptr);
   Assert(status == SQLPipelineStatus::Success, "JCC-H items should not fail");
