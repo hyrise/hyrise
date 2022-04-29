@@ -181,7 +181,7 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
         const auto has_min_input_rows_for_disjunction = [&]() {
           // TODO Check for reasonable cardinality
           const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(sub_node->left_input());
-          return cardinality_in >= REASONABLE_CARDINALITY && cardinality_in >= MIN_INPUT_ROWS_FOR_DISJUNCTION;
+          return cardinality_in <= MIN_FOR_REASONABLE_CARDINALITY || cardinality_in >= MIN_INPUT_ROWS_FOR_DISJUNCTION;
         };
 
         if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION || has_min_input_rows_for_disjunction()) {
