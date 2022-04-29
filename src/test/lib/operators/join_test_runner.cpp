@@ -594,7 +594,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        */
 
       for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
-        for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
           if (encoding_type == EncodingType::Dictionary) {
             data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
           } else {

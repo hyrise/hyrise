@@ -127,7 +127,9 @@ std::shared_ptr<const Table> Print::_on_execute() {
         const auto& segment = chunk->get_segment(column_id);
         _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
       }
-      if (has_print_mvcc_flag(_flags)) _out << "|";
+      if (has_print_mvcc_flag(_flags)) {
+        _out << "|";
+      }
       _out << "|" << std::endl;
     }
 

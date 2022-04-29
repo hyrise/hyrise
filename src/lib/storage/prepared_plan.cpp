@@ -101,7 +101,9 @@ std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan
   stream << "ParameterIDs: [";
   for (auto parameter_idx = size_t{0}; parameter_idx < prepared_plan.parameter_ids.size(); ++parameter_idx) {
     stream << prepared_plan.parameter_ids[parameter_idx];
-    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) stream << ", ";
+    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) {
+      stream << ", ";
+    }
   }
   stream << "]\n";
   stream << *prepared_plan.lqp;

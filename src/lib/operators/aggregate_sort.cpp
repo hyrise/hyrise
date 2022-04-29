@@ -334,7 +334,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
         reference_segments.reserve(column_count);
 
         // Create actual ReferenceSegment objects.
-        for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
           reference_segments.push_back(ref_segment_out);
         }

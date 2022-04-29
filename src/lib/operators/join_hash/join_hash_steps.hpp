@@ -136,14 +136,15 @@ class PosHashTable {
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
     _offset_hash_table.shrink_to_fit();
+    const auto hash_table_count = _offset_hash_table.size();
 
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
       // Resize so that we can store the start offset of each range as well as the final end offset.
-      _unified_pos_list->offsets.resize(_offset_hash_table.size() + 1);
+      _unified_pos_list->offsets.resize(hash_table_count + 1);
 
       auto total_size = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_count; ++hash_table_idx) {
         _unified_pos_list->offsets[hash_table_idx] = total_size;
         total_size += _small_pos_lists[hash_table_idx].size();
       }
@@ -151,7 +152,7 @@ class PosHashTable {
 
       _unified_pos_list->pos_list.resize(total_size);
       auto offset = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_count; ++hash_table_idx) {
         std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
                   _unified_pos_list->pos_list.begin() + offset);
         offset += _small_pos_lists[hash_table_idx].size();
@@ -291,7 +292,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in) {
+      continue;
+    }
 
     const auto num_rows = chunk_in->size();
 
@@ -498,7 +501,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, finalize is called above.
-  if (radix_bits == 0) hash_tables[0]->finalize();
+  if (radix_bits == 0) {
+    hash_tables[0]->finalize();
+  }
 
   return hash_tables;
 }
@@ -603,8 +608,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   if constexpr (keep_null_values) {
     for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
       jobs.emplace_back(std::make_shared<JobTask>([&, output_partition_idx]() {
-        for (auto element_idx = size_t{0}; element_idx < output[output_partition_idx].null_values.size();
-             ++element_idx) {
+        const auto null_value_count = output[output_partition_idx].null_values.size();
+        for (auto element_idx = size_t{0}; element_idx < null_value_count; ++element_idx) {
           output[output_partition_idx].null_values[element_idx] =
               null_values_as_char[output_partition_idx][element_idx];
         }
@@ -787,9 +792,12 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(probe_radix_container.size());
+  
+  const auto probe_radix_container_count = probe_radix_container.size();
+  jobs.reserve(probe_radix_container_count);
 
-  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
+  
+  for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
       continue;

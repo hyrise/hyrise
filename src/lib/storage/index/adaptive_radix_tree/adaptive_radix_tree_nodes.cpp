@@ -64,9 +64,16 @@ AbstractIndex::Iterator ARTNode4::_delegate_to_child(const AdaptiveRadixTreeInde
                                                      const std::function<Iterator(size_t, size_t)>& function) const {
   const auto partial_key = key[depth];
   for (auto partial_key_id = uint8_t{0}; partial_key_id < 4; ++partial_key_id) {
-    if (_partial_keys[partial_key_id] < partial_key) continue;                                   // key not found yet
-    if (_partial_keys[partial_key_id] == partial_key) return function(partial_key_id, ++depth);  // case0
-    if (!_children[partial_key_id]) return end();  // no more keys available, case1b
+    if (_partial_keys[partial_key_id] < partial_key) {
+      continue;                                   // key not found yet
+    }
+    if (_partial_keys[partial_key_id] == partial_key) {
+      return function(partial_key_id, ++depth);  // case0
+    }
+    if (!_children[partial_key_id]) {
+      return end();  // no more keys available, case1b
+    }
+
     return _children[partial_key_id]->begin();     // case2
   }
   return end();  // case1a

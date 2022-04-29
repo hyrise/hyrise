@@ -121,7 +121,7 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   pmr_vector<bool> columns_are_nullable(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
     column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
     column_names[column_id] = table.column_name(column_id);
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
@@ -145,7 +145,7 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 
   // Iterating over all segments of this chunk and exporting them
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
+  for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); column_id++) {
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
                                   [&](const auto data_type_t, const auto& resolved_segment) {
                                     _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);

@@ -94,7 +94,8 @@ void MetaTableManager::update(const std::string& table_name, const std::shared_p
   const auto& update_rows = update_values->get_rows();
   Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
 
-  for (size_t row = 0; row < selected_rows.size(); row++) {
+  const auto row_count = selected_rows.size();
+  for (auto row = size_t{0}; row < row_count; ++row) {
     _meta_tables.at(table_name)->_update(selected_rows[row], update_rows[row]);
   }
 }

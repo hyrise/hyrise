@@ -20,7 +20,8 @@ SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter
 }
 
 void SegmentAccessCounter::_set_counters(const SegmentAccessCounter& counter) {
-  for (auto counter_index = size_t{0}, size = _counters.size(); counter_index < size; ++counter_index) {
+  const auto counter_count = _counters.size();
+  for (auto counter_index = size_t{0}; counter_index < counter_count; ++counter_index) {
     _counters[counter_index] = counter._counters[counter_index].load();
   }
 }
@@ -116,7 +117,8 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
 }
 
 bool SegmentAccessCounter::operator==(const SegmentAccessCounter& other) const {
-  for (auto counter_index = size_t{0}, size = _counters.size(); counter_index < size; ++counter_index) {
+  const auto counter_count = _counters.size();
+  for (auto counter_index = size_t{0}; counter_index < counter_count; ++counter_index) {
     if (_counters[counter_index] != other._counters[counter_index]) {
       return false;
     }

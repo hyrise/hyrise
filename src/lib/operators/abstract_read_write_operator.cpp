@@ -29,7 +29,9 @@ void AbstractReadWriteOperator::execute() {
     throw;
   }
 
-  if (_rw_state == ReadWriteOperatorState::Conflicted) return;
+  if (_rw_state == ReadWriteOperatorState::Conflicted) {
+    return;
+  }
 
   _rw_state = ReadWriteOperatorState::Executed;
 }

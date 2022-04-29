@@ -39,7 +39,9 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
-  if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) return;
+  if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) {
+    return;
+  }
 
   _successors.emplace_back(successor);
   successor->_predecessors.emplace_back(shared_from_this());
@@ -50,7 +52,9 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
   std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
-  if (!is_done()) successor->_pending_predecessors++;
+  if (!is_done()) {
+    successor->_pending_predecessors++;
+  }
 }
 
 const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }
@@ -88,7 +92,9 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 
 void AbstractTask::_join() {
   auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
-  if (is_done()) return;
+  if (is_done()) {
+    return;
+  }
 
   DebugAssert(is_scheduled(), "Task must be scheduled before it can be waited for");
   _done_condition_variable.wait(lock, [&]() { return is_done(); });
@@ -120,7 +126,9 @@ void AbstractTask::execute() {
     successor->_on_predecessor_done();
   }
 
-  if (_done_callback) _done_callback();
+  if (_done_callback) {
+    _done_callback();
+  }
 
   {
     std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
@@ -141,13 +149,17 @@ void AbstractTask::_on_predecessor_done() {
       // If the first task was executed faster than the other tasks were scheduled, we might end up in a situation where
       // the successor is not properly scheduled yet. At the time of writing, this did not make a difference, but for
       // the sake of a clearly defined lifecycle, we wait for the task to be scheduled.
-      if (!is_scheduled()) return;
+      if (!is_scheduled()) {
+        return;
+      }
 
       // Instead of adding the current task to the queue, try to execute it immediately on the same worker as the last
       // predecessor. This should improve cache locality and reduce the scheduling costs.
       current_worker->execute_next(shared_from_this());
     } else {
-      if (is_scheduled()) execute();
+      if (is_scheduled()) {
+        execute();
+      }
       // Otherwise it will get execute()d once it is scheduled. It is entirely possible for Tasks to "become ready"
       // before they are being scheduled in a no-Scheduler context. Think:
       //
@@ -174,15 +186,21 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
   std::lock_guard<std::mutex> lock(_transition_to_mutex);
   switch (new_state) {
     case TaskState::Scheduled:
-      if (_state >= TaskState::Scheduled) return false;
+      if (_state >= TaskState::Scheduled) {
+        return false;
+      }
       Assert(_state == TaskState::Created, "Illegal state transition to TaskState::Scheduled.");
       break;
     case TaskState::Enqueued:
-      if (_state >= TaskState::Enqueued) return false;
+      if (_state >= TaskState::Enqueued) {
+        return false;
+      }
       Assert(TaskState::Scheduled, "Illegal state transition to TaskState::Enqueued");
       break;
     case TaskState::AssignedToWorker:
-      if (_state >= TaskState::AssignedToWorker) return false;
+      if (_state >= TaskState::AssignedToWorker) {
+        return false;
+      }
       Assert(_state == TaskState::Scheduled || _state == TaskState::Enqueued,
              "Illegal state transition to TaskState::AssignedToWorker");
       break;

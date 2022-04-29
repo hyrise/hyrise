@@ -425,7 +425,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
-              if (!chunk_in) continue;
+              if (!chunk_in) {
+                continue;
+              }
 
               auto& keys = keys_per_chunk[chunk_id];
 
@@ -588,7 +590,8 @@ void AggregateHash::_aggregate() {
    * created on. We do this here, and not in the per-chunk-loop below, because there might be no Chunks in the input
    * and _write_aggregate_output() needs these contexts anyway.
    */
-  for (ColumnID aggregate_idx{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+  const auto aggregate_count = _aggregates.size();
+  for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
     const auto& aggregate = _aggregates[aggregate_idx];
 
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -612,7 +615,9 @@ void AggregateHash::_aggregate() {
   const auto chunk_count = input_table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = input_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in) {
+      continue;
+    }
 
     // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
     const auto input_chunk_size = chunk_in->size();
@@ -869,7 +874,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator);

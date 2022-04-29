@@ -78,7 +78,9 @@ std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
 ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
 
 ChunkOffset Chunk::size() const {
-  if (_segments.empty()) return ChunkOffset{0};
+  if (_segments.empty()) {
+    return ChunkOffset{0};
+  }
   const auto first_segment = get_segment(ColumnID{0});
   return static_cast<ChunkOffset>(first_segment->size());
 }
@@ -141,20 +143,30 @@ void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
 }
 
 bool Chunk::references_exactly_one_table() const {
-  if (column_count() == 0) return false;
+  if (column_count() == 0) {
+    return false;
+  }
 
   auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(ColumnID{0}));
-  if (!first_segment) return false;
+  if (!first_segment) {
+    return false;
+  }
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
-  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
+  for (auto column_id = ColumnID{1}; column_id < column_count(); ++column_id) {
     const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
-    if (!segment) return false;
+    if (!segment) {
+      return false;
+    }
 
-    if (first_referenced_table != segment->referenced_table()) return false;
+    if (first_referenced_table != segment->referenced_table()) {
+      return false;
+    }
 
-    if (first_pos_list != segment->pos_list()) return false;
+    if (first_pos_list != segment->pos_list()) {
+      return false;
+    }
   }
 
   return true;
@@ -196,7 +208,9 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 for (auto column_id : column_ids)
-                  if (column_id >= static_cast<ColumnID>(column_count())) return false;
+                  if (column_id >= static_cast<ColumnID>(column_count())) {
+                    return false;
+                  }
                 return true;
               }()),
               "column ids not within range [0, column_count()).");
@@ -235,15 +249,21 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& sorted_by_column : sorted_by) {
       const auto& sorted_segment = get_segment(sorted_by_column.column);
-      if (sorted_segment->size() < 2) break;
+      if (sorted_segment->size() < 2) {
+        break;
+      }
 
       segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
         Assert(std::is_sorted(begin, end,
                               [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
                                 // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
                                 // it+n and it (n being non-negative), which needs to evaluate to false.
-                                if (right.is_null()) return false;  // handles right side is NULL and both are NULL
-                                if (left.is_null()) return true;
+                                if (right.is_null()) {
+                                  return false;  // handles right side is NULL and both are NULL
+                                }
+                                if (left.is_null()) {
+                                  return true;
+                                }
                                 const auto ascending = sort_mode == SortMode::Ascending;
                                 return ascending ? left.value() < right.value() : left.value() > right.value();
                               }),

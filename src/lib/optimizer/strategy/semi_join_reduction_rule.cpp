@@ -30,7 +30,9 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
   estimator->guarantee_bottom_up_construction();
 
   visit_lqp(lqp_root, [&](const auto& node) {
-    if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
+    if (node->type != LQPNodeType::Join) {
+      return LQPVisitation::VisitInputs;
+    }
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
     // As multi-predicate joins are expensive, we do not want to create semi join reductions that use them. Instead, we
@@ -115,8 +117,12 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
             return true;
           };
 
-          if (try_deeper_reducer_node(LQPInputSide::Left)) continue;
-          if (try_deeper_reducer_node(LQPInputSide::Right)) continue;
+          if (try_deeper_reducer_node(LQPInputSide::Left)) {
+            continue;
+          }
+          if (try_deeper_reducer_node(LQPInputSide::Right)) {
+            continue;
+          }
           break;
         }
 

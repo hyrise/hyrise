@@ -189,7 +189,9 @@ void Session::_handle_execute() {
 
   const auto physical_plan = portal_it->second;
 
-  if (portal_name.empty()) _portals.erase(portal_it);
+  if (portal_name.empty()) {
+    _portals.erase(portal_it);
+  }
 
   if (!_transaction_context) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

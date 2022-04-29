@@ -36,7 +36,9 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // If an expression that is not a top-level expression is already an input, we require it
   if (std::find_if(input_expressions.begin(), input_expressions.end(),
                    [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
-    if (!top_level) required_expressions.emplace(expression);
+    if (!top_level) {
+      required_expressions.emplace(expression);
+    }
     return;
   }
 
@@ -108,7 +110,9 @@ ExpressionUnorderedSet gather_locally_required_expressions(
              *     is the only type of aggregate function, we simply require the first output expression from the
              *     left input node.
              */
-            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
+            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) {
+              continue;
+            }
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }
         }
@@ -205,7 +209,9 @@ void recursively_gather_required_expressions(
 
   // We only continue with node's inputs once we have visited all paths above node. We check this by counting the
   // number of the node's outputs that have already been visited. Once we reach the output count, we can continue.
-  if (node->type != LQPNodeType::Root) ++outputs_visited_by_node[node];
+  if (node->type != LQPNodeType::Root) {
+    ++outputs_visited_by_node[node];
+  }
   if (outputs_visited_by_node[node] < node->output_count()) {
     return;
   }
@@ -213,7 +219,9 @@ void recursively_gather_required_expressions(
   // Once all nodes that may require columns from this node (i.e., this node's outputs) have been visited, we can
   // recurse into this node's inputs.
   for (const auto& input : {node->left_input(), node->right_input()}) {
-    if (!input) continue;
+    if (!input) {
+      continue;
+    }
 
     // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
     // needs
@@ -294,7 +302,9 @@ void try_join_to_semi_rewrite(
     }
   }
   // Early out, if we did not see any Equals-predicates.
-  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
+  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) {
+    return;
+  }
 
   // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
   if (!left_input_is_used &&

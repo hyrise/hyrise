@@ -444,7 +444,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
     // less values stored than in the initial input table.
     for (const auto& hash_table : hash_tables) {
-      if (!hash_table) continue;
+      if (!hash_table) {
+        continue;
+      }
 
       _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
       const auto position_count = hash_table->position_count();

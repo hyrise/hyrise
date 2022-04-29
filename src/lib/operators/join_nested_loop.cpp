@@ -334,7 +334,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
 void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
                                          const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {

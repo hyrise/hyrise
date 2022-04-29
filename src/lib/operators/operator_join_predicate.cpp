@@ -10,7 +10,9 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
                                                                             const AbstractLQPNode& left_input,
                                                                             const AbstractLQPNode& right_input) {
   const auto* abstract_predicate_expression = dynamic_cast<const AbstractPredicateExpression*>(&predicate);
-  if (!abstract_predicate_expression) return std::nullopt;
+  if (!abstract_predicate_expression) {
+    return std::nullopt;
+  }
 
   switch (abstract_predicate_expression->predicate_condition) {
     case PredicateCondition::Equals:

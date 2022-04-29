@@ -51,7 +51,9 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& op,
    */
   auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
   for (const auto& subquery_expression : pqp_subquery_expressions) {
-    if (subquery_expression->is_correlated()) continue;
+    if (subquery_expression->is_correlated()) {
+      continue;
+    }
     /**
      * Uncorrelated subqueries will be resolved when TableScan::create_impl is called. Therefore, we
      * 1. register as a consumer and
@@ -287,7 +289,9 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
               "Expected to resolve all uncorrelated subqueries.");
 
   // Return original predicate if we did not compute any subquery results
-  if (computed_subqueries_count == 0) return predicate;
+  if (computed_subqueries_count == 0) {
+    return predicate;
+  }
 
   /**
    * (2) Create new predicate with arguments from step (1)

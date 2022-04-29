@@ -94,12 +94,12 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                     FloatComparisonMode::AbsoluteDifference)
 
-#define ASSERT_LQP_TIE(output, input_side, input)                   \
-  {                                                                 \
-    if (!opossum::check_lqp_tie(output, input_side, input)) {       \
-      FAIL();                                                       \
-    }                                                               \
-  }                                                                 \
+#define ASSERT_LQP_TIE(output, input_side, input)             \
+  {                                                           \
+    if (!opossum::check_lqp_tie(output, input_side, input)) { \
+      FAIL();                                                 \
+    }                                                         \
+  }                                                           \
   static_assert(true, "End call of macro with a semicolon")
 
 #define EXPECT_LQP_EQ(lhs, rhs)                                                                           \

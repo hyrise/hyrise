@@ -58,7 +58,9 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       num_finished_tasks += worker->num_finished_tasks();
     }
 
-    if (num_finished_tasks == _task_counter) break;
+    if (num_finished_tasks == _task_counter) {
+      break;
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }

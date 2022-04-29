@@ -227,7 +227,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   }
 
   Segments segments;
-  for (ColumnID column_id{0}; column_id < _test_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < _test_table->column_count(); ++column_id) {
     segments.emplace_back(std::make_shared<ReferenceSegment>(_test_table, column_id, pos_list));
   }
 

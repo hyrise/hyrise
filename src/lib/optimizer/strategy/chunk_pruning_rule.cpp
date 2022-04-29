@@ -80,14 +80,18 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
           }
           return ExpressionVisitation::DoNotVisitArguments;
         });
-        if (belongs_to_predicate_pruning_chain) current_predicate_pruning_chain.emplace_back(predicate_node);
+        if (belongs_to_predicate_pruning_chain) {
+          current_predicate_pruning_chain.emplace_back(predicate_node);
+        }
       } break;
       case LQPNodeType::Join: {
         // Check whether the predicate pruning chain can continue after the join
         predicate_pruning_chain_continues = false;
         auto join_node = std::static_pointer_cast<JoinNode>(current_node);
         for (const auto& expression : join_node->output_expressions()) {
-          if (expression->type != ExpressionType::LQPColumn) continue;
+          if (expression->type != ExpressionType::LQPColumn) {
+            continue;
+          }
           const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
           if (column_expression->original_node.lock() == stored_table_node) {
             // At least one column expression of stored_table_node survives the join.
@@ -151,7 +155,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
   // (2) Set pruned chunks for each StoredTableNode
   for (const auto& [stored_table_node, predicate_pruning_chains] : predicate_pruning_chains_by_stored_table_node) {
-    if (predicate_pruning_chains.empty()) continue;
+    if (predicate_pruning_chains.empty()) {
+      continue;
+    }
 
     // (2.1) Determine set of pruned chunks per predicate pruning chain
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
@@ -162,7 +168,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
     // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains
     auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
-    if (pruned_chunk_ids.empty()) continue;
+    if (pruned_chunk_ids.empty()) {
+      continue;
+    }
 
     // (2.3) Set the pruned chunk ids of stored_table_node
     DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
@@ -271,10 +279,14 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       auto num_rows_pruned = size_t{0};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
-        if (!chunk) continue;
+        if (!chunk) {
+          continue;
+        }
 
         const auto pruning_statistics = chunk->pruning_statistics();
-        if (!pruning_statistics) continue;
+        if (!pruning_statistics) {
+          continue;
+        }
 
         const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
         if (_can_prune(*segment_statistics, condition, *value, value2)) {

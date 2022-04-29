@@ -246,7 +246,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate) continue;
+    if (input_expression->type != ExpressionType::Aggregate) {
+      continue;
+    }
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
     switch (aggregate_expression.aggregate_function) {
       case AggregateFunction::Sum: {
@@ -338,7 +340,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       expression_deep_replace(expression, replacements);
     }
 
-    if (node->type == LQPNodeType::Alias) updated_an_alias = true;
+    if (node->type == LQPNodeType::Alias) {
+      updated_an_alias = true;
+    }
 
     return LQPUpwardVisitation::VisitOutputs;
   });

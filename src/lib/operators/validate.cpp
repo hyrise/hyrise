@@ -48,7 +48,9 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
 
   const auto& mvcc_data = chunk->mvcc_data();
   const auto max_begin_cid = mvcc_data->max_begin_cid;
-  if (!max_begin_cid) return false;
+  if (!max_begin_cid) {
+    return false;
+  }
 
   return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
@@ -240,7 +242,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
-      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < chunk_in->column_count(); ++column_id) {
         const auto reference_segment =
             std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id));
         const auto referenced_column_id = reference_segment->referenced_column_id();
@@ -273,7 +275,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       }
 
       // Create actual ReferenceSegment objects.
-      for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < chunk_in->column_count(); ++column_id) {
         auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list_out);
         output_segments.push_back(ref_segment_out);
       }

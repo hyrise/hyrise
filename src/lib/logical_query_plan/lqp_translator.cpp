@@ -653,7 +653,8 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
     const std::shared_ptr<AbstractLQPNode>& node) const {
   auto pqp_expressions = std::vector<std::shared_ptr<AbstractExpression>>(lqp_expressions.size());
 
-  for (auto expression_idx = size_t{0}; expression_idx < pqp_expressions.size(); ++expression_idx) {
+  const auto pqp_expression_count = pqp_expressions.size();
+  for (auto expression_idx = size_t{0}; expression_idx < pqp_expression_count; ++expression_idx) {
     pqp_expressions[expression_idx] = _translate_expression(lqp_expressions[expression_idx], node);
   }
 

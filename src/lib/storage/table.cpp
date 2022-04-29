@@ -275,7 +275,7 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
     if (row_idx < chunk->size()) {
       auto row = std::vector<AllTypeVariant>(column_count());
 
-      for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
         row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
       }
 

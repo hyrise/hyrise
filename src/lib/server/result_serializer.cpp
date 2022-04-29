@@ -17,7 +17,8 @@ void ResultSerializer::send_table_description(
   postgres_protocol_handler->send_row_description_header(column_name_length_sum,
                                                          static_cast<uint16_t>(table->column_count()));
 
-  for (ColumnID column_id{0u}; column_id < table->column_count(); ++column_id) {
+  const auto column_count = table->column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     uint32_t object_id = 0;
     int16_t type_width = 0;
 

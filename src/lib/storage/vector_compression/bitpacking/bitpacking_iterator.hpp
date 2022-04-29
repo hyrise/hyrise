@@ -18,7 +18,9 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   BitPackingIterator(BitPackingIterator&& other) = default;
 
   BitPackingIterator& operator=(const BitPackingIterator& other) {
-    if (this == &other) return *this;
+    if (this == &other) {
+      return *this;
+    }
 
     DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator");
     _absolute_index = other._absolute_index;
@@ -26,7 +28,9 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   }
 
   BitPackingIterator& operator=(BitPackingIterator&& other) {
-    if (this == &other) return *this;
+    if (this == &other) {
+      return *this;
+    }
 
     DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator");
     _absolute_index = other._absolute_index;

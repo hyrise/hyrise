@@ -73,7 +73,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   // that reference the ANY'd column.
   auto output_expressions = node_expressions;
 
-  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expressions.size();
+  const auto output_expression_count = output_expressions.size();
+  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expression_count;
        ++expression_idx) {
     auto& output_expression = output_expressions[expression_idx];
     DebugAssert(output_expression->type == ExpressionType::Aggregate,

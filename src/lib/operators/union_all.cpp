@@ -40,7 +40,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       Segments output_segments;
 
       // iterating over all segments of the current chunk
-      for (ColumnID column_id{0}; column_id < input->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < input->column_count(); ++column_id) {
         output_segments.push_back(chunk->get_segment(column_id));
       }
 

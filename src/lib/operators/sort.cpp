@@ -50,7 +50,9 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       {
         const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
         value_segment_value_vector.reserve(next_chunk_size);
-        if (column_is_nullable) value_segment_null_vector.reserve(next_chunk_size);
+        if (column_is_nullable) {
+          value_segment_null_vector.reserve(next_chunk_size);
+        }
       }
 
       auto accessor_by_chunk_id =
@@ -67,7 +69,9 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         const auto typed_value = accessor->access(chunk_offset);
         const auto is_null = !typed_value;
         value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
-        if (column_is_nullable) value_segment_null_vector.push_back(is_null);
+        if (column_is_nullable) {
+          value_segment_null_vector.push_back(is_null);
+        }
 
         ++current_segment_size;
 
@@ -90,7 +94,9 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           const auto next_chunk_size =
               std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
           value_segment_value_vector.reserve(next_chunk_size);
-          if (column_is_nullable) value_segment_null_vector.reserve(next_chunk_size);
+          if (column_is_nullable) {
+            value_segment_null_vector.reserve(next_chunk_size);
+          }
 
           ++chunk_it;
         }
@@ -185,8 +191,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
       // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
       // `output_chunk_size` rows.
-      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list.size();
-           ++input_pos_list_offset) {
+      const auto input_pos_list_size = input_pos_list.size();
+      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size; ++input_pos_list_offset) {
         const auto& row_id = input_pos_list[input_pos_list_offset];
         if (resolve_indirection) {
           const auto& input_reference_segment = static_cast<ReferenceSegment&>(*input_segments[row_id.chunk_id]);
@@ -324,7 +330,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           break;
         }
       }
-      if (must_materialize) break;
+      if (must_materialize) {
+        break;
+      }
     }
   }
 

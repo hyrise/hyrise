@@ -219,7 +219,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
               const auto add_disjunction_if_beneficial =
                   [&](const auto& disjunction, const auto& disjunction_input_node, auto& predicate_nodes) {
-                    if (disjunction.empty()) return;
+                    if (disjunction.empty()) {
+                      return;
+                    }
 
                     const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
                     const auto predicate_node = PredicateNode::make(expression, disjunction_input_node);
@@ -227,7 +229,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     // Determine the selectivity of the predicate if executed on disjunction_input_node
                     const auto cardinality_in = estimator.estimate_cardinality(disjunction_input_node);
                     const auto cardinality_out = estimator.estimate_cardinality(predicate_node);
-                    if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) return;
+                    if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) {
+                      return;
+                    }
 
                     // predicate_node was found to be beneficial. Add it to predicate_nodes so that _insert_nodes will
                     // insert it as low as possible in the left/right input of the join. As predicate_nodes might have

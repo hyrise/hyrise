@@ -90,7 +90,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
         current_predicate_chain.push_back(current_predicate_node);
       } else if (!current_predicate_chain.empty()) {
         for (const auto& output_node : current_node->outputs()) {
-          if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
+          if (!visited_nodes.contains(output_node)) {
+            node_queue.push(output_node);
+          }
         }
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
@@ -99,7 +101,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
       if (current_node->outputs().size() > 1) {
         for (const auto& output_node : current_node->outputs()) {
           // Prepare the next iteration of visit_lqp_upwards
-          if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
+          if (!visited_nodes.contains(output_node)) {
+            node_queue.push(output_node);
+          }
         }
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
