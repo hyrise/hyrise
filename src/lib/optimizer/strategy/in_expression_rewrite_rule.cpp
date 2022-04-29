@@ -107,8 +107,9 @@ std::string InExpressionRewriteRule::name() const {
 }
 
 std::shared_ptr<AbstractCardinalityEstimator> InExpressionRewriteRule::_cardinality_estimator() const {
-  if (!_cardinality_estimator_internal)
+  if (!_cardinality_estimator_internal) {
     _cardinality_estimator_internal = cost_estimator->cardinality_estimator->new_instance();
+  }
 
   return _cardinality_estimator_internal;
 }
@@ -174,12 +175,16 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
       if (right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
         rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
                         in_expression->is_negated());
-      } else if ((right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION ||
-                  _cardinality_estimator()->estimate_cardinality(sub_node->left_input()) >=
-                      MIN_INPUT_ROWS_FOR_DISJUNCTION) &&
-                 !in_expression->is_negated() &&
+      } else if (!in_expression->is_negated() &&
                  !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
-        rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+        if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION) {
+          rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+        } else if {
+          const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(sub_node->left_input();
+          if (cardinality_in >= REASONABLE_CARDINALITY && cardinality_in >= MIN_INPUT_ROWS_FOR_DISJUNCTION) {
+            rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+          }
+        }
       } else {
         // Stick with the ExpressionEvaluator
       }
