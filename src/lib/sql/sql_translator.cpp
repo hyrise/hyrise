@@ -1308,7 +1308,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
     const auto view_column_count = create_statement.viewColumns->size();
     AssertInput(view_column_count == output_expressions.size(),
                 "Number of Columns in CREATE VIEW does not match SELECT statement");
-    
+
     for (auto column_id = ColumnID{0}; column_id < view_column_count; ++column_id) {
       column_names.insert_or_assign(column_id, (*create_statement.viewColumns)[column_id]);
     }

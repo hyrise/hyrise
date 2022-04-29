@@ -792,11 +792,10 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  
+
   const auto probe_radix_container_count = probe_radix_container.size();
   jobs.reserve(probe_radix_container_count);
 
-  
   for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {

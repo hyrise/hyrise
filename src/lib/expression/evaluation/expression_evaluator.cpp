@@ -743,7 +743,7 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
       break;
 
     case ExistsExpressionType::NotExists:
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count;++chunk_offset) {
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_table_count; ++chunk_offset) {
         result_values[chunk_offset] = subquery_result_tables[chunk_offset]->row_count() == 0;
       }
       break;
