@@ -170,6 +170,7 @@ set(
     lossless_cast.hpp
     lossy_cast.hpp
     memory/boost_default_memory_resource.cpp
+    memory/zero_allocator.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
     operators/abstract_aggregate_operator.hpp
