@@ -224,7 +224,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
               indexed_chunk_ids_in_index_iter++;
             } else {
               // sets are not disjoint => at least one chunk would be indexed twice => do not use this table index
-              continue;
+              break;
             }
           }
         }
