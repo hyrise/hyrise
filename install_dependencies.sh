@@ -70,7 +70,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 --slave /usr/bin/g++ g++ /usr/bin/g++-11
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-14 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-14 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-14 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-14 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-14
+                # we use llvm-profdata-11 and llvm-cov-11 due to an unresolved issue with coverage under clang14 (https://github.com/llvm/llvm-project/issues/54907)
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-14 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-14 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-11 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-11 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-14
             else
                 echo "Error during installation."
                 exit 1
