@@ -177,14 +177,17 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
                         in_expression->is_negated());
       } else if (!in_expression->is_negated() &&
                  !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
-        if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION) {
+
+        const auto has_min_input_rows_for_disjunction = [&]() {
+          // TODO Check for reasonable cardinality
+          const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(sub_node->left_input());
+          return cardinality_in >= REASONABLE_CARDINALITY && cardinality_in >= MIN_INPUT_ROWS_FOR_DISJUNCTION;
+        };
+
+        if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION || has_min_input_rows_for_disjunction()) {
           rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
-        } else if {
-          const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(sub_node->left_input();
-          if (cardinality_in >= REASONABLE_CARDINALITY && cardinality_in >= MIN_INPUT_ROWS_FOR_DISJUNCTION) {
-            rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
-          }
         }
+
       } else {
         // Stick with the ExpressionEvaluator
       }
