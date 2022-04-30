@@ -251,9 +251,6 @@ void Insert::_on_rollback_records() {
 
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
-
-    // This fence ensures that the changes to TID (which are not sequentially consistent) are visible to other threads.
-    std::atomic_thread_fence(std::memory_order_release);
   }
 }
 
