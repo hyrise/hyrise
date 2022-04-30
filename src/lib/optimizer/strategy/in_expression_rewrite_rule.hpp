@@ -26,10 +26,10 @@ class InExpressionRewriteRule : public AbstractRule {
   // into disjunctive predicates.
   constexpr static auto MAX_ELEMENTS_FOR_DISJUNCTION = 3;
 
-  // With the auto strategy, IN expressions whose input has more than MIN_INPUT_ROWS_FOR_DISJUNCTION are rewritten
+  // With the auto strategy, IN expressions whose input has more than MAX_ROWS_FOR_EXPRESSION_EVALUATOR are rewritten
   // into disjunctive predicates.
   constexpr static auto REASONABLE_CARDINALITY_MINIMUM = 10.f;
-  constexpr static auto MIN_INPUT_ROWS_FOR_DISJUNCTION = 1'000'000.f;
+  constexpr static auto MAX_ROWS_FOR_EXPRESSION_EVALUATOR = 50'000.f;
 
   // With the auto strategy, IN expressions with MIN_ELEMENTS_FOR_JOIN or more are rewritten into semi joins.
   constexpr static auto MIN_ELEMENTS_FOR_JOIN = 20;

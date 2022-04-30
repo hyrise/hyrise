@@ -183,7 +183,9 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
 
           auto input_node = sub_node->left_input();
           if (input_node->type == LQPNodeType::Join && std::dynamic_pointer_cast<JoinNode>(input_node)->is_reducer()) {
-            // TODO Explain
+            // TODO Explain: Semi Join might become removed based on the result of this rule. cf. SemiRemovalRule
+            //  Therefore, consider the input cardinality of the semi reduction as the input cardinality for the IN
+            //  predicate
             input_node = input_node->left_input();
           }
           const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(input_node);
@@ -191,7 +193,8 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
             // TODO Explain
             return true;
           }
-          return cardinality_in >= MIN_INPUT_ROWS_FOR_DISJUNCTION;
+          const auto min_cardinality_in = MAX_ROWS_FOR_EXPRESSION_EVALUATOR * right_side_expressions.size() / (MAX_ELEMENTS_FOR_DISJUNCTION + 1);
+          return cardinality_in > min_cardinality_in;
         }();
 
         if (qualifies_for_disjunction) {
