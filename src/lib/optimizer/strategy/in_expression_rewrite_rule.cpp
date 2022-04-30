@@ -180,7 +180,13 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
 
         const auto qualifies_for_disjunction = [&]() {
           if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION) return true;
-          const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(sub_node->left_input());
+
+          auto input_node = sub_node->left_input();
+          if (input_node->type == LQPNodeType::Join && std::dynamic_pointer_cast<JoinNode>(input_node)->is_reducer()) {
+            // TODO Explain
+            input_node = input_node->left_input();
+          }
+          const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(input_node);
           if (cardinality_in <= REASONABLE_CARDINALITY_MINIMUM) {
             // TODO Explain
             return true;
