@@ -270,6 +270,33 @@ TEST_F(LQPUtilsTest, LQPFindModifiedTables) {
   EXPECT_NE(delete_tables.find("node_a"), delete_tables.end());
 }
 
+TEST_F(LQPUtilsTest, LQPInsertAboveNode) {
+  // clang-format off
+  const auto lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_(a_a, value_(3)),
+      node_a),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
+      node_a));
+
+  const auto node_to_insert = ProjectionNode::make(expression_vector(a_a, a_b, add_(a_a, a_b)));
+  lqp_insert_node_above(node_a, node_to_insert);
+
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(a_a, a_b, add_(a_a, a_b)),
+    node_a);
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_(a_a, value_(3)),
+      expected_common_node),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
+      expected_common_node));
+  // clang-format on
+
+  EXPECT_LQP_EQ(lqp, expected_lqp);
+}
+
 TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   // Prepare an LQP with multiple subqueries in a nested manner
 
@@ -303,6 +330,63 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
   EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
   EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
+}
+
+TEST_F(LQPUtilsTest, FindDiamondBottomRootNode) {
+  {
+    // clang-format off
+    const auto lqp =
+    UnionNode::make(SetOperationMode::Positions,
+      PredicateNode::make(less_than_(a_a, value_(3)),
+        node_a),
+      PredicateNode::make(greater_than_(a_a, value_(5)),
+        node_a));
+    // clang-format on
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, node_a);
+  }
+  {
+    // clang-format off
+    const auto lqp =
+    UnionNode::make(SetOperationMode::Positions,
+      PredicateNode::make(less_than_(a_a, value_(3)),
+        node_a),
+      PredicateNode::make(greater_than_(a_a, value_(5)),
+        node_b));
+    // clang-format on
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, nullptr);
+  }
+  {
+    // clang-format off
+    const auto lqp =
+    UnionNode::make(SetOperationMode::All,
+      UnionNode::make(SetOperationMode::All,
+        PredicateNode::make(equals_(a_a, value_(3)),
+          node_a),
+        PredicateNode::make(equals_(a_a, value_(5)),
+          node_a)),
+      PredicateNode::make(equals_(a_a, value_(7)),
+        node_a));
+    // clang-format on
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, node_a);
+  }
+  {
+    // clang-format off
+    const auto lqp =
+    UnionNode::make(SetOperationMode::All,
+      UnionNode::make(SetOperationMode::All,
+        PredicateNode::make(equals_(a_a, value_(3)),
+          node_a),
+        PredicateNode::make(equals_(a_a, value_(5)),
+          node_b)),
+      PredicateNode::make(equals_(a_a, value_(7)),
+        node_a));
+    // clang-format on
+    const auto diamond_bottom_root_node = find_diamond_bottom_root_node(lqp);
+    EXPECT_EQ(diamond_bottom_root_node, nullptr);
+  }
 }
 
 }  // namespace opossum
