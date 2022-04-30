@@ -29,7 +29,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 
   _transaction_id = context->transaction_id();
 
-  for (ChunkID chunk_id{0}; chunk_id < _referencing_table->chunk_count(); ++chunk_id) {
+  const auto chunk_count = _referencing_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = _referencing_table->get_chunk(chunk_id);
 
     DebugAssert(chunk->references_exactly_one_table(),
@@ -64,7 +65,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
             "Trying to delete a row that is not visible to the current transaction. Has the input been validated?");
 
         // Actual row "lock" for delete happens here, making sure that no other transaction can delete this row
-        auto expected = 0u;
+        const auto expected = TransactionID{0};
         const auto success = mvcc_data->compare_exchange_tid(row_id.chunk_offset, expected, _transaction_id);
 
         if (!success) {
@@ -89,8 +90,8 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
 }
 
 void Delete::_on_commit_records(const CommitID commit_id) {
-  for (ChunkID referencing_chunk_id{0}; referencing_chunk_id < _referencing_table->chunk_count();
-       ++referencing_chunk_id) {
+  const auto chunk_count = _referencing_table->chunk_count();
+  for (auto referencing_chunk_id = ChunkID{0}; referencing_chunk_id < chunk_count; ++referencing_chunk_id) {
     const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto referencing_segment =
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
@@ -100,15 +101,15 @@ void Delete::_on_commit_records(const CommitID commit_id) {
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       referenced_chunk->mvcc_data()->set_end_cid(row_id.chunk_offset, commit_id);
-      referenced_chunk->increase_invalid_row_count(1);
+      referenced_chunk->increase_invalid_row_count(ChunkOffset{1});
       // We do not unlock the rows so subsequent transactions properly fail when attempting to update these rows.
     }
   }
 }
 
 void Delete::_on_rollback_records() {
-  for (ChunkID referencing_chunk_id{0}; referencing_chunk_id < _referencing_table->chunk_count();
-       ++referencing_chunk_id) {
+  const auto chunk_count = _referencing_table->chunk_count();
+  for (auto referencing_chunk_id = ChunkID{0}; referencing_chunk_id < chunk_count; ++referencing_chunk_id) {
     const auto referencing_chunk = _referencing_table->get_chunk(referencing_chunk_id);
     const auto referencing_segment =
         std::static_pointer_cast<const ReferenceSegment>(referencing_chunk->get_segment(ColumnID{0}));
@@ -120,7 +121,8 @@ void Delete::_on_rollback_records() {
       const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
       // unlock all rows locked in _on_execute
-      const auto result = referenced_chunk->mvcc_data()->compare_exchange_tid(row_id.chunk_offset, expected, 0u);
+      const auto result =
+          referenced_chunk->mvcc_data()->compare_exchange_tid(row_id.chunk_offset, expected, TransactionID{0});
 
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop

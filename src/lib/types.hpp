@@ -29,17 +29,14 @@
  * like this
  *   ChunkID x = 3;
  * but need to use
- *   ChunkID x{3}; or
  *   auto x = ChunkID{3};
+ * In some cases (e.g., when narrowing data types), casting to the base_type first might be necessary, e.g.:
+ *   ChunkID{static_cast<ChunkID::base_type>(size_t{17})}
  *
- * WorkerID, TaskID, CommitID, and TransactionID are used in std::atomics and
- * therefore need to be trivially copyable. That's currently not possible with
- * the strong typedef (as far as I know).
- *
- * TODO(anyone): Also, strongly typing ChunkOffset causes a lot of errors in
- * the group key and adaptive radix tree implementations. Unfortunately, I
- * wasn’t able to properly resolve these issues because I am not familiar with
- * the code there
+ * We prefer strong typedefs whenever they are applicable and make sense. However, there are cases where we cannot
+ * directly use them. For example, in std::atomics when we want to use C++'s specializations for integral types (e.g.,
+ * `++task_id` with `std::atomic<TaskID> task_id`). Therefore, we use the base_type in atomics (e.g.,
+ * `std::atomic<TaskID::base_type> task_id`).
  */
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
@@ -48,6 +45,17 @@ STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
+STRONG_TYPEDEF(uint32_t, WorkerID);
+STRONG_TYPEDEF(uint32_t, TaskID);
+STRONG_TYPEDEF(uint32_t, ChunkOffset);
+
+// When changing the following two strong typedefs to 64-bit types, please be aware that both are used with
+// std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
+// since 2010 should work fine. For 64-bit atomics on ARM CPUs, the instruction set should be at least ARMv8.1-A.
+// Earlier instruction sets also work, but might yield less efficient code. More information can be found here:
+// https://community.arm.com/arm-community-blogs/b/tools-software-ides-blog/posts/making-the-most-of-the-arm-architecture-in-gcc-10  // NOLINT
+STRONG_TYPEDEF(uint32_t, CommitID);
+STRONG_TYPEDEF(uint32_t, TransactionID);
 
 // Used to identify a Parameter within a subquery. This can be either a parameter of a Prepared SELECT statement
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
@@ -96,9 +104,7 @@ using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
 
-using ChunkOffset = uint32_t;
-
-constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset>::max()};
+constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base_type>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 struct RowID {
@@ -124,27 +130,19 @@ struct RowID {
   }
 };
 
-using WorkerID = uint32_t;
-using TaskID = uint32_t;
-
-// When changing these to 64-bit types, reading and writing to them might not be atomic anymore.
-// Among others, the validate operator might break when another operator is simultaneously writing begin or end CIDs.
-using CommitID = uint32_t;
-using TransactionID = uint32_t;
-
 using CompressedVectorTypeID = uint8_t;
 
 using ColumnIDPair = std::pair<ColumnID, ColumnID>;
 
 constexpr NodeID INVALID_NODE_ID{std::numeric_limits<NodeID::base_type>::max()};
-constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID>::max()};
+constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID::base_type>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
-constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID>::max()};
+constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
 
-// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but
-// not yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but
-// deleted in the same transaction (which has not yet committed)
+// TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
+// yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
+// the same transaction (which has not yet committed)
 constexpr auto INVALID_TRANSACTION_ID = TransactionID{0};
 constexpr auto INITIAL_TRANSACTION_ID = TransactionID{1};
 

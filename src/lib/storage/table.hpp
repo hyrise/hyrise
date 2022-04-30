@@ -10,6 +10,7 @@
 
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
+#include "memory/zero_allocator.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
@@ -135,17 +136,17 @@ class Table : private Noncopyable {
 
     Assert(column_id < column_count(), "column_id invalid");
 
-    size_t row_counter = 0u;
+    auto row_counter = size_t{0};
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
       if (!chunk) continue;
 
-      size_t current_size = chunk->size();
+      auto current_size = chunk->size();
       row_counter += current_size;
       if (row_counter > row_number) {
-        const auto variant =
-            (*chunk->get_segment(column_id))[static_cast<ChunkOffset>(row_number + current_size - row_counter)];
+        const auto variant = (*chunk->get_segment(
+            column_id))[ChunkOffset{static_cast<ChunkOffset::base_type>(row_number + current_size - row_counter)}];
         if (variant_is_null(variant)) {
           return std::nullopt;
         } else {
@@ -235,9 +236,9 @@ class Table : private Noncopyable {
    * With C++20 we will get std::atomic<std::shared_ptr<T>>, which allows us to omit the std::atomic_load() and
    * std::atomic_store() function calls.
    *
-   * For the zero_allocator, see the implementation of Table::append_chunk.
+   * For the ZeroAllocator, see the implementation of Table::append_chunk.
    */
-  tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>> _chunks;
+  tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>> _chunks;
 
   TableKeyConstraints _table_key_constraints;
 

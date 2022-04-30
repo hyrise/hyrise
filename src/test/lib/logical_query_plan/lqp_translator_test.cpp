@@ -77,7 +77,7 @@ class LQPTranslatorTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
     Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
     Hyrise::get().storage_manager.add_table("int_float_chunked",
-                                            load_table("resources/test_data/tbl/int_float.tbl", 1));
+                                            load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1}));
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");

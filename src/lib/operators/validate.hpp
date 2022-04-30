@@ -30,7 +30,7 @@ class Validate : public AbstractReadOnlyOperator {
 
  private:
   void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
-                        const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id,
+                        const ChunkID chunk_id_end, const TransactionID our_tid, const CommitID snapshot_commit_id,
                         std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const;
 
   // This is a performance optimization that can only be used if a couple of conditions are met, i.e., if

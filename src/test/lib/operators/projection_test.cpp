@@ -28,10 +28,12 @@ namespace opossum {
 class OperatorsProjectionTest : public BaseTest {
  public:
   void SetUp() override {
-    table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_a =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
     table_wrapper_a->never_clear_output();
     table_wrapper_a->execute();
-    table_wrapper_b = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", 2));
+    table_wrapper_b =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2}));
     table_wrapper_b->never_clear_output();
     table_wrapper_b->execute();
 

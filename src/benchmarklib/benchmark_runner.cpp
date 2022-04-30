@@ -521,7 +521,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // clang-format on
 
   return nlohmann::json{{"date", timestamp_stream.str()},
-                        {"chunk_size", config.chunk_size},
+                        {"chunk_size", static_cast<ChunkOffset::base_type>(config.chunk_size)},
                         {"compiler", compiler.str()},
                         {"build_type", HYRISE_DEBUG ? "debug" : "release"},
                         {"encoding", config.encoding_config.to_json()},

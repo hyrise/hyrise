@@ -30,7 +30,7 @@ bool AbstractTask::is_stealable() const { return _stealable; }
 bool AbstractTask::is_scheduled() const { return _state >= TaskState::Scheduled; }
 
 std::string AbstractTask::description() const {
-  return _description.empty() ? "{Task with id: " + std::to_string(_id) + "}" : _description;
+  return _description.empty() ? "{Task with id: " + std::to_string(_id.load()) + "}" : _description;
 }
 
 void AbstractTask::set_id(TaskID id) { _id = id; }
@@ -124,7 +124,7 @@ void AbstractTask::execute() {
     std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
     _done_condition_variable.notify_all();
   }
-  DTRACE_PROBE2(HYRISE, JOB_END, _id, reinterpret_cast<uintptr_t>(this));
+  DTRACE_PROBE2(HYRISE, JOB_END, _id.load(), reinterpret_cast<uintptr_t>(this));
 }
 
 TaskState AbstractTask::state() const { return _state; }

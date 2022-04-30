@@ -21,7 +21,7 @@ namespace opossum {
 class OperatorClearOutputTest : public BaseTest {
  protected:
   void SetUp() override {
-    _table = load_table("resources/test_data/tbl/int_int_int.tbl", 2);
+    _table = load_table("resources/test_data/tbl/int_int_int.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table(_table_name, _table);
     _a = PQPColumnExpression::from_table(*_table, ColumnID{0});
     _b = PQPColumnExpression::from_table(*_table, ColumnID{1});

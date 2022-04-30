@@ -33,7 +33,7 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
       // Init is_current_null such that it does not equal the first entry
       auto current_value = T{};
       auto is_current_null = !it->is_null();
-      auto current_index = 0u;
+      auto current_index = ChunkOffset{0};
 
       for (; it != end; ++it) {
         auto segment_value = *it;

@@ -10,7 +10,7 @@
 
 namespace opossum {
 
-void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
+void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
   const auto chunk_size = ChunkOffset{2'000};
   const auto row_count = size_t{40'000};
 
@@ -20,12 +20,17 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
   _table_wrapper_b = std::make_shared<TableWrapper>(table_generator->generate_table(2ul, row_count, chunk_size));
   _table_dict_wrapper = std::make_shared<TableWrapper>(
       table_generator->generate_table(2ul, row_count, chunk_size, SegmentEncodingSpec{EncodingType::Dictionary}));
+
+  _table_wrapper_a->never_clear_output();
+  _table_wrapper_b->never_clear_output();
+  _table_dict_wrapper->never_clear_output();
+
   _table_wrapper_a->execute();
   _table_wrapper_b->execute();
   _table_dict_wrapper->execute();
 }
 
-void MicroBenchmarkBasicFixture::TearDown(::benchmark::State&) { opossum::Hyrise::reset(); }
+void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) { opossum::Hyrise::reset(); }
 
 void MicroBenchmarkBasicFixture::_clear_cache() { micro_benchmark_clear_cache(); }
 
