@@ -179,7 +179,7 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
                  !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
 
         const auto qualifies_for_disjunction = [&]() {
-          if (right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION) return true;
+          if (right_side_expressions.size() < MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR) return true;
 
           auto input_node = sub_node->left_input();
           if (input_node->type == LQPNodeType::Join && std::dynamic_pointer_cast<JoinNode>(input_node)->is_reducer()) {
