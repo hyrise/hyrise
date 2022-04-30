@@ -31,7 +31,7 @@ class InExpressionRewriteRule : public AbstractRule {
 
   // With the auto strategy, IN expressions whose input has more than MAX_ROWS_FOR_EXPRESSION_EVALUATOR are rewritten
   // into disjunctive predicates.
-  constexpr static auto MAX_ROWS_FOR_EXPRESSION_EVALUATOR = 50'000.f;
+  constexpr static auto MAX_ROWS_FOR_EXPRESSION_EVALUATOR = 25'000.f;
 
   // TODO
   constexpr static auto REASONABLE_CARDINALITY_MINIMUM = 1.f;

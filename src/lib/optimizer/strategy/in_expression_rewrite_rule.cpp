@@ -177,7 +177,6 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
                         in_expression->is_negated());
       } else if (!in_expression->is_negated() &&
                  !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
-
         const auto qualifies_for_disjunction = [&]() {
           if (right_side_expressions.size() < MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR) return true;
 
@@ -193,7 +192,9 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
             // TODO Explain
             return true;
           }
-          const auto min_cardinality_in = MAX_ROWS_FOR_EXPRESSION_EVALUATOR * right_side_expressions.size() / (MAX_ELEMENTS_FOR_DISJUNCTION + 1);
+          // TODO Explain: A large set count makes the disjunction more expensive...
+          const auto min_cardinality_in =
+              MAX_ROWS_FOR_EXPRESSION_EVALUATOR * right_side_expressions.size() / MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR;
           return cardinality_in > min_cardinality_in;
         }();
 
