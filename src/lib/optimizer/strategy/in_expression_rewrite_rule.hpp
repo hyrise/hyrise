@@ -34,7 +34,7 @@ class InExpressionRewriteRule : public AbstractRule {
   constexpr static auto MAX_ROWS_FOR_EXPRESSION_EVALUATOR = 50'000.f;
 
   // TODO
-  constexpr static auto REASONABLE_CARDINALITY_MINIMUM = 10.f;
+  constexpr static auto REASONABLE_CARDINALITY_MINIMUM = 1.f;
 
   // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
   // is helpful for testing and benchmarks. Note that it does not circumvent the restrictions on the element type.
