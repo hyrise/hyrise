@@ -110,6 +110,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   }
 
   table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
   return table_wrapper;
 }
@@ -126,6 +127,7 @@ void BM_TableScanSorted(
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
 
   const auto table_wrapper = table_creator(encoding_type, mode);
+  table_wrapper->never_clear_output();
 
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
 
@@ -182,6 +184,7 @@ void BM_TableScanSorted(
   std::shared_ptr<AbstractOperator> input;
   if (is_reference_scan) {
     input = std::make_shared<TableScan>(table_wrapper, reference_scan_predicate);
+    input->never_clear_output();
     input->execute();
     auto warm_up = std::make_shared<TableScan>(input, predicate);
     warm_up->execute();
