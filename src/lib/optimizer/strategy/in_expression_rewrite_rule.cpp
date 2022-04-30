@@ -182,20 +182,27 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
 
           auto input_node = sub_node->left_input();
           if (input_node->type == LQPNodeType::Join && std::dynamic_pointer_cast<JoinNode>(input_node)->is_reducer()) {
-            // TODO Explain: Semi Join might become removed based on the result of this rule. cf. SemiRemovalRule
-            //  Therefore, consider the input cardinality of the semi reduction as the input cardinality for the IN
-            //  predicate
+            // The semi reduction input node might become removed by the SemiJoinReductionRemovalRule. However, the
+            // removal decision depends on the outcome of this rule (an ExpressionEvaluator or Join computation of the
+            // IN predicate blocks the semi reduction removal, for instance). Therefore, we ignore the semi reduction
+            // node, and consider the semi reduction's input cardinality rather than its output cardinality.
             input_node = input_node->left_input();
           }
           const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(input_node);
-          if (cardinality_in <= REASONABLE_CARDINALITY_MINIMUM) {
-            // TODO Explain
+          if (cardinality_in < MIN_ROWS_FOR_EXPRESSION_EVALUATOR) {
+            // Our cardinality estimation is far from perfect. In the JOB benchmark, estimate failures tend to add up,
+            // so that upper parts of the LQPs have row counts of 1 and smaller. In reality, however, the row counts
+            // still turn out to be in the hundred thousands to millions. Therefore, we use disjunctions for very
+            // small input row counts since we cannot trust them. As a result, the JOB benchmark profits heavily.
             return true;
           }
+          // TODO Benchmark scaling
           // TODO Explain: A large set count makes the disjunction more expensive...
-          const auto min_cardinality_in =
+          // The cost of a disjunction increases with the number of the IN predicate's elements. Therefore, we want to
+          // consider it when looking at the input cardinality...
+          const auto min_rows_for_disjunction =
               MAX_ROWS_FOR_EXPRESSION_EVALUATOR * right_side_expressions.size() / MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR;
-          return cardinality_in > min_cardinality_in;
+          return min_rows_for_disjunction <= cardinality_in;
         }();
 
         if (qualifies_for_disjunction) {
