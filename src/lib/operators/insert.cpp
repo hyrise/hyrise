@@ -242,32 +242,13 @@ void Insert::_on_rollback_records() {
     const auto target_chunk = _target_table->get_chunk(target_chunk_range.chunk_id);
     auto mvcc_data = target_chunk->mvcc_data();
 
-    /**
-     * !!! Crucial comment, PLEASE READ AND _UNDERSTAND_ before altering any of the following code !!!
-     *
-     * Set end_cids to 0 (effectively making the rows invisible for everyone) BEFORE setting the begin_cids to 0.
-     *
-     * Otherwise, another transaction/thread might observe a row with begin_cid == 0, end_cid == MAX_COMMIT_ID and a
-     * foreign tid - which is what a visible row that is being deleted by a different transaction looks like. Thus,
-     * the other transaction would consider the row (that is in the process of being rolled back and should have never
-     * been visible) as visible.
-     */
-
     for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
          ++chunk_offset) {
       mvcc_data->set_end_cid(chunk_offset, CommitID{0});
 
       // Update chunk statistics
       target_chunk->increase_invalid_row_count(ChunkOffset{1});
-    }
 
-    // This fence guarantees that no other thread will ever observe `begin_cid = 0 && end_cid != 0` for rolled-back
-    // records
-    std::atomic_thread_fence(std::memory_order_release);
-
-    for (auto chunk_offset = target_chunk_range.begin_chunk_offset; chunk_offset < target_chunk_range.end_chunk_offset;
-         ++chunk_offset) {
-      mvcc_data->set_begin_cid(chunk_offset, CommitID{0});
       mvcc_data->set_tid(chunk_offset, TransactionID{0}, std::memory_order_relaxed);
     }
 
