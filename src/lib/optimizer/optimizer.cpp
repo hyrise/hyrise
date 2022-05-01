@@ -91,8 +91,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // joins and would not recognize such a rewritten predicate.
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
 
-  optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
-
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
