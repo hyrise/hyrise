@@ -69,6 +69,11 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
+  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
+  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
+  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
+  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
+
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
@@ -94,12 +99,7 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
-
-  // The LQPTranslator may translate two individual but equivalent LQP nodes into the same PQP operator. The
-  // StoredTableColumnAlignmentRule supports this effort by aligning the list of pruned column ids across nodes that
-  // could become deduplicated. For this, the ColumnPruningRule needs to have been executed.
-  optimizer->add_rule(std::make_unique<StoredTableColumnAlignmentRule>());
-
+  
   optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   return optimizer;
