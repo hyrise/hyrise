@@ -8,6 +8,7 @@
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
+#include "utils/meta_tables/meta_exec_table.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
@@ -26,17 +27,18 @@ using MetaTableNames = std::vector<std::string>;
 class MetaTableManagerTest : public BaseTest {
  public:
   static MetaTables meta_tables() {
-    return {std::make_shared<MetaTablesTable>(),
-            std::make_shared<MetaColumnsTable>(),
-            std::make_shared<MetaChunksTable>(),
+    return {std::make_shared<MetaChunksTable>(),
             std::make_shared<MetaChunkSortOrdersTable>(),
+            std::make_shared<MetaColumnsTable>(),
+            std::make_shared<MetaExecTable>(),
+            std::make_shared<MetaLogTable>(),
+            std::make_shared<MetaPluginsTable>(),
             std::make_shared<MetaSegmentsTable>(),
             std::make_shared<MetaSegmentsAccurateTable>(),
-            std::make_shared<MetaPluginsTable>(),
             std::make_shared<MetaSettingsTable>(),
-            std::make_shared<MetaLogTable>(),
             std::make_shared<MetaSystemInformationTable>(),
-            std::make_shared<MetaSystemUtilizationTable>()};
+            std::make_shared<MetaSystemUtilizationTable>(),
+            std::make_shared<MetaTablesTable>()};
   }
 
   static MetaTableNames meta_table_names() {
@@ -55,7 +57,7 @@ class MetaTableManagerTest : public BaseTest {
     Hyrise::reset();
 
     const auto column_definitions = MetaMockTable().column_definitions();
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
     table->append({pmr_string{"foo"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();

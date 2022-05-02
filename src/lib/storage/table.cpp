@@ -248,9 +248,9 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
     }
   }
 
-  // tbb::concurrent_vector does not guarantee that elements reported by size() are fully initialized yet:
-  // https://software.intel.com/en-us/blogs/2009/04/09/delusion-of-tbbconcurrent_vectors-size-or-3-ways-to-traverse-in-parallel-correctly  // NOLINT
-  // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the zero_allocator for the concurrent_vector,
+  // tbb::concurrent_vector does not guarantee that elements reported by size() are fully initialized yet.
+  // https://oneapi-src.github.io/oneTBB/main/tbb_userguide/concurrent_vector_ug.html
+  // To avoid someone reading an incomplete shared_ptr<Chunk>, we (1) use the ZeroAllocator for the concurrent_vector,
   // making sure that an uninitialized entry compares equal to nullptr and (2) insert the desired chunk atomically.
 
   auto new_chunk_iter = _chunks.push_back(nullptr);

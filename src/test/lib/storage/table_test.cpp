@@ -6,6 +6,7 @@
 
 #include "base_test.hpp"
 
+#include "memory/zero_allocator.hpp"
 #include "resolve_type.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
@@ -17,10 +18,10 @@ class StorageTableTest : public BaseTest {
   void SetUp() override {
     column_definitions.emplace_back("column_1", DataType::Int, false);
     column_definitions.emplace_back("column_2", DataType::String, true);
-    t = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    t = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
   }
 
-  static tbb::concurrent_vector<std::shared_ptr<Chunk>, tbb::zero_allocator<std::shared_ptr<Chunk>>>& get_chunks(
+  static tbb::concurrent_vector<std::shared_ptr<Chunk>, ZeroAllocator<std::shared_ptr<Chunk>>>& get_chunks(
       std::shared_ptr<Table>& table) {
     return table->_chunks;
   }
@@ -108,7 +109,7 @@ TEST_F(StorageTableTest, GetRow) {
 
 TEST_F(StorageTableTest, GetRows) {
   TableColumnDefinitions column_definitions_nullable{{"a", DataType::Int, true}, {"b", DataType::String, true}};
-  const auto table = std::make_shared<Table>(column_definitions_nullable, TableType::Data, 2);
+  const auto table = std::make_shared<Table>(column_definitions_nullable, TableType::Data, ChunkOffset{2});
 
   table->append({4, "Hello,"});
   table->append({6, "world"});
@@ -126,7 +127,7 @@ TEST_F(StorageTableTest, GetRows) {
 }
 
 TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
-  t = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  t = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
   t->append({4, "Hello,"});
 
@@ -143,7 +144,7 @@ TEST_F(StorageTableTest, FillingUpAChunkFinalizesIt) {
 }
 
 TEST_F(StorageTableTest, AppendsMutableChunkIfLastChunkImmutableOnAppend) {
-  const auto table = load_table("resources/test_data/tbl/float_int.tbl", 2);
+  const auto table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
   EXPECT_EQ(table->chunk_count(), 2);
   EXPECT_EQ(table->row_count(), 3);
 
@@ -235,7 +236,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
   if (!HYRISE_DEBUG) GTEST_SKIP();
   TableColumnDefinitions column_definitions{};
-  EXPECT_THROW(Table(column_definitions, TableType::Data, 0), std::logic_error);
+  EXPECT_THROW(Table(column_definitions, TableType::Data, ChunkOffset{0}), std::logic_error);
 }
 
 TEST_F(StorageTableTest, MemoryUsageEstimation) {
@@ -244,7 +245,7 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
    * memory usage estimations
    */
 
-  auto mvcc_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  auto mvcc_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
   const auto empty_memory_usage = mvcc_table->memory_usage(MemoryUsageCalculationMode::Sampled);
 
@@ -257,7 +258,7 @@ TEST_F(StorageTableTest, MemoryUsageEstimation) {
 
 TEST_F(StorageTableTest, StableChunks) {
   // Tests that pointers to a chunk remain valid even if the table grows (#1463)
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 1);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{1});
   table->append({100, "Hello"});
 
   // The address of the first shared_ptr control object
@@ -271,7 +272,7 @@ TEST_F(StorageTableTest, StableChunks) {
   // The vector should have been resized / expanded by now
 
   EXPECT_EQ(first_chunk, &chunks_vector[0]);
-  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[0], AllTypeVariant{100});
+  EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
 }
 
 }  // namespace opossum

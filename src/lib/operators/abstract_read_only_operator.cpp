@@ -6,7 +6,7 @@
 
 namespace opossum {
 
-std::shared_ptr<const Table> AbstractReadOnlyOperator::_on_execute(std::shared_ptr<TransactionContext>) {
+std::shared_ptr<const Table> AbstractReadOnlyOperator::_on_execute(std::shared_ptr<TransactionContext> /*context*/) {
   return _on_execute();
 }
 

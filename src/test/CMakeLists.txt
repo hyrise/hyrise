@@ -71,6 +71,7 @@ set(
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
+    lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
@@ -212,6 +213,7 @@ set(
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
     lib/utils/meta_table_manager_test.cpp
+    lib/utils/meta_tables/meta_exec_table_test.cpp
     lib/utils/meta_tables/meta_log_table_test.cpp
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
@@ -273,7 +275,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
