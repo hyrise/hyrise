@@ -649,7 +649,6 @@ set(
 
 set(
     LIBRARIES
-
     lz4
     magic_enum
     sqlparser
