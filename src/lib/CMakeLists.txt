@@ -594,6 +594,8 @@ set(
     utils/meta_tables/meta_chunks_table.hpp
     utils/meta_tables/meta_columns_table.cpp
     utils/meta_tables/meta_columns_table.hpp
+    utils/meta_tables/meta_exec_table.cpp
+    utils/meta_tables/meta_exec_table.hpp
     utils/meta_tables/meta_log_table.cpp
     utils/meta_tables/meta_log_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
