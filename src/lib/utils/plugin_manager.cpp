@@ -40,7 +40,6 @@ PluginManager::user_executable_functions() const {
   return _user_executable_functions;
 }
 
-
 void PluginManager::load_plugin(const std::filesystem::path& path) {
   const auto plugin_name = plugin_name_from_path(path);
 
