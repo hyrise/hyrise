@@ -264,7 +264,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
-  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input()));
+  return std::make_shared<TableScan>(input_operator, _translate_expression(node->predicate(), node->left_input(),
+                                                                           node->left_input()->output_expressions()));
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
@@ -274,19 +275,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
   const auto input_operator = translate_node(input_node);
 
   const auto& output_expressions = alias_node->output_expressions();
-  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = alias_node->left_input()->output_expressions();
   auto column_ids = std::vector<ColumnID>();
-  column_ids.resize(output_expression_count);
+  column_ids.reserve(output_expressions.size());
 
-  input_node->iterate_output_expressions([&](const auto column_id, const auto& input_expression) {
-    for (auto expression_id = ColumnID{0}; expression_id < output_expression_count; ++expression_id) {
-      const auto& expression = output_expressions[expression_id];
-      if (*expression == *input_expression) {
-        column_ids[expression_id] = column_id;
-      }
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+  for (const auto& expression : output_expressions) {
+    const auto column_id = find_expression_idx(*expression, input_expressions);
+    Assert(column_id, "Could not resolve " + expression->as_column_name());
+    column_ids.emplace_back(*column_id);
+  }
 
   return std::make_shared<AliasOperator>(input_operator, column_ids, alias_node->aliases);
 }
@@ -387,19 +384,21 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   const auto aggregate_node = std::dynamic_pointer_cast<AggregateNode>(node);
 
   const auto input_operator = translate_node(node->left_input());
+  const auto& input_expressions = node->left_input()->output_expressions();
+  const auto& node_expressions = aggregate_node->node_expressions;
+  const auto node_expression_count = node_expressions.size();
 
   std::vector<std::shared_ptr<AggregateExpression>> pqp_aggregate_expressions;
-  pqp_aggregate_expressions.reserve(aggregate_node->node_expressions.size() -
-                                    aggregate_node->aggregate_expressions_begin_idx);
-  for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx;
-       expression_idx < aggregate_node->node_expressions.size(); ++expression_idx) {
+  pqp_aggregate_expressions.reserve(node_expression_count - aggregate_node->aggregate_expressions_begin_idx);
+  for (auto expression_idx = aggregate_node->aggregate_expressions_begin_idx; expression_idx < node_expression_count;
+       ++expression_idx) {
     const auto& lqp_expression = aggregate_node->node_expressions[expression_idx];
 
     Assert(lqp_expression->type == ExpressionType::Aggregate,
            "Expression '" + lqp_expression->as_column_name() +
                "' used as AggregateExpression is not an AggregateExpression");
 
-    const auto pqp_expression = _translate_expression(lqp_expression, node->left_input());
+    const auto pqp_expression = _translate_expression(lqp_expression, node->left_input(), input_expressions);
     const auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(pqp_expression);
     pqp_aggregate_expressions.emplace_back(aggregate_expression);
   }
@@ -407,26 +406,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   // Create GroupByColumns from the GroupBy expressions. For now, we expect all GroupBy expressions to be already
   // present, i.e., we do not calculate them on the fly.
   std::vector<ColumnID> group_by_column_ids;
-  group_by_column_ids.resize(aggregate_node->aggregate_expressions_begin_idx);
-
-  auto found_groupby_columns = ExpressionUnorderedSet{};
-  node->left_input()->iterate_output_expressions([&](const auto column_id, const auto& output_expression) {
-    for (auto expression_idx = size_t{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
-         ++expression_idx) {
-      const auto& expression = aggregate_node->node_expressions[expression_idx];
-      if (*output_expression == *expression) {
-        group_by_column_ids[expression_idx] = column_id;
-        found_groupby_columns.emplace(expression);
-      }
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+  group_by_column_ids.reserve(aggregate_node->aggregate_expressions_begin_idx);
 
   for (auto expression_idx = size_t{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
        ++expression_idx) {
     const auto& expression = aggregate_node->node_expressions[expression_idx];
-    Assert(found_groupby_columns.contains(expression),
-           "GroupBy expression '"s + expression->as_column_name() + "' not available as column");
+    const auto column_id = find_expression_idx(*expression, input_expressions);
+    Assert(column_id, "GroupBy expression '"s + expression->as_column_name() + "' not available as column");
+    group_by_column_ids.emplace_back(*column_id);
   }
   return std::make_shared<AggregateHash>(input_operator, pqp_aggregate_expressions, group_by_column_ids);
 }
@@ -577,26 +564,24 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
 }
 
 std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
-    const std::shared_ptr<AbstractExpression>& lqp_expression, const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractExpression>& lqp_expression, const std::shared_ptr<AbstractLQPNode>& node,
+    const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions) const {
   auto pqp_expression = lqp_expression->deep_copy();
 
   /**
     * Resolve Expressions to PQPColumnExpressions referencing columns from the input Operator. After this, no
     * LQPColumnExpressions remain in the pqp_expression and it is a valid PQP expression.
     */
-  const auto& output_expressions = node->output_expressions();
+
   const auto& output_expression_count = output_expressions.size();
   visit_expression(pqp_expression, [&](auto& expression) {
     // Try to resolve the Expression to a column from the input node
-    for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
-      const auto& output_expression = output_expressions[column_id];
-      if (*expression == *output_expression) {
-        expression = std::make_shared<PQPColumnExpression>(column_id, expression->data_type(),
-                                                           node->is_column_nullable(column_id),
-                                                           output_expression->as_column_name());
-
-        return ExpressionVisitation::DoNotVisitArguments;
-      }
+    const auto column_id = find_expression_idx(*expression, output_expressions);
+    if (column_id) {
+      expression = std::make_shared<PQPColumnExpression>(*column_id, expression->data_type(),
+                                                         node->is_column_nullable(*column_id),
+                                                         output_expressions[*column_id]->as_column_name());
+      return ExpressionVisitation::DoNotVisitArguments;
     }
 
     // Resolve COUNT(*)
@@ -642,6 +627,7 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
           const auto& parameter_expression = subquery_expression->parameter_expression(parameter_idx);
           if (*parameter_expression == *expression) {
             subquery_parameters[parameter_idx] = {subquery_expression->parameter_ids[parameter_idx], column_id};
+            break;
           }
         }
       }
@@ -672,10 +658,12 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
 std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expressions(
     const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
     const std::shared_ptr<AbstractLQPNode>& node) const {
-  auto pqp_expressions = std::vector<std::shared_ptr<AbstractExpression>>(lqp_expressions.size());
+  const auto expression_count = lqp_expressions.size();
+  auto pqp_expressions = std::vector<std::shared_ptr<AbstractExpression>>(expression_count);
+  const auto& output_expressions = node->output_expressions();
 
-  for (auto expression_idx = size_t{0}; expression_idx < pqp_expressions.size(); ++expression_idx) {
-    pqp_expressions[expression_idx] = _translate_expression(lqp_expressions[expression_idx], node);
+  for (auto expression_idx = size_t{0}; expression_idx < expression_count; ++expression_idx) {
+    pqp_expressions[expression_idx] = _translate_expression(lqp_expressions[expression_idx], node, output_expressions);
   }
 
   return pqp_expressions;

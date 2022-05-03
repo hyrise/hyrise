@@ -22,7 +22,8 @@ class OperatorsUnionAllTest : public BaseTest {
     _table_wrapper_b =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2}));
 
-    _table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
+    _table_wrapper_c =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
     execute_all({_table_wrapper_a, _table_wrapper_b, _table_wrapper_c});
   }

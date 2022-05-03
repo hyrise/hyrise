@@ -85,6 +85,7 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
 TEST_F(UnionNodeTest, InvalidInputExpressions) {
+  // Ensure to forbid a union of nodes with different expressions, i.e., different columns.
   {
     auto union_node = UnionNode::make(SetOperationMode::Positions);
     union_node->set_left_input(_mock_node1);

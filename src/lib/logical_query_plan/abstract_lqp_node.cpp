@@ -232,11 +232,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_express
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
-  const auto& output_expressions = this->output_expressions();  // Avoid redundant retrieval in loop below
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-    if (*output_expressions[column_id] == expression) return column_id;
-  }
-  return std::nullopt;
+  const auto& output_expressions = this->output_expressions();
+  return find_expression_idx(expression, output_expressions);
 }
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {

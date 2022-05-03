@@ -248,17 +248,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
 
   const auto& output_expressions = alias_node.output_expressions();
   const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = alias_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  alias_node.left_input()->iterate_output_expressions([&](const auto input_column_id, const auto& input_expression) {
-    for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
-      const auto& expression = output_expressions[expression_idx];
-      if (*expression == *input_expression) {
-        column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
-      }
-    }
-    return AbstractLQPNode::ExpressionIteration::Continue;
-  });
+  for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
+    Assert(input_column_id, "Could not resolve " + expression.as_column_name());
+    column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
+  }
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
 }
@@ -272,25 +270,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
 
   const auto& output_expressions = projection_node.output_expressions();
   const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = projection_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  auto matched_expressions = ExpressionUnorderedSet{};
-  projection_node.left_input()->iterate_output_expressions(
-      [&](const auto input_column_id, const auto& input_expression) {
-        for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
-          const auto& expression = output_expressions[expression_idx];
-          if (*expression == *input_expression) {
-            column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
-            matched_expressions.emplace(expression);
-          }
-        }
-        return AbstractLQPNode::ExpressionIteration::Continue;
-      });
-
   for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
-    const auto& expression = output_expressions[expression_idx];
-    if (!matched_expressions.contains(expression)) {
-      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
+    if (input_column_id) {
+      column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
+    } else {
+      resolve_data_type(expression.data_type(), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         column_statistics[expression_idx] = std::make_shared<AttributeStatistics<ColumnDataType>>();
       });
@@ -307,25 +296,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
 
   const auto& output_expressions = aggregate_node.output_expressions();
   const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = aggregate_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  auto matched_expressions = ExpressionUnorderedSet{};
-  aggregate_node.left_input()->iterate_output_expressions(
-      [&](const auto input_column_id, const auto& input_expression) {
-        for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
-          const auto& expression = output_expressions[expression_idx];
-          if (*expression == *input_expression) {
-            column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
-            matched_expressions.emplace(expression);
-          }
-        }
-        return AbstractLQPNode::ExpressionIteration::Continue;
-      });
-
   for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
-    const auto& expression = output_expressions[expression_idx];
-    if (!matched_expressions.contains(expression)) {
-      resolve_data_type(expression->data_type(), [&](const auto data_type_t) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
+    if (input_column_id) {
+      column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
+    } else {
+      resolve_data_type(expression.data_type(), [&](const auto data_type_t) {
         using ColumnDataType = typename decltype(data_type_t)::type;
         column_statistics[expression_idx] = std::make_shared<AttributeStatistics<ColumnDataType>>();
       });

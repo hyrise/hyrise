@@ -1073,15 +1073,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
-      const auto any_expression_not_yet_available =
-          std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(), [&](const auto& expression) {
-            for (const auto& output_expression : output_expressions) {
-              if (*expression == *output_expression) {
-                return false;
-              }
-            }
-            return true;
-          });
+      const auto any_expression_not_yet_available = std::any_of(
+          pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
+          [&](const auto& expression) { return find_expression_idx(*expression, output_expressions) ? false : true; });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
