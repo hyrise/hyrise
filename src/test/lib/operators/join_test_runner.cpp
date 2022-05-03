@@ -6,6 +6,7 @@
 #include "base_test.hpp"
 
 #include "nlohmann/json.hpp"
+#include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"
@@ -16,6 +17,7 @@
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/storage_manager.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
@@ -30,6 +32,8 @@ namespace {
 using namespace opossum;  // NOLINT
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
+
+using ColumnIDs = std::vector<ColumnID>;
 
 enum class InputSide { Left, Right };
 
@@ -57,10 +61,11 @@ struct InputTableConfiguration {
   IndexScope index_scope{};
   ChunkRange indexed_chunk_range{};           // chunk range of indexed join column segments
   ChunkRange single_chunk_reference_range{};  // chunk range of join column segments that reference only one chunk
+  ColumnIDs pruned_column_ids{};
 
   auto to_tuple() const {
     return std::tie(side, chunk_size, table_size, table_type, encoding_type, index_scope, indexed_chunk_range,
-                    single_chunk_reference_range);
+                    single_chunk_reference_range, pruned_column_ids);
   }
 };
 
@@ -188,6 +193,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
+    const auto pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
+
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
@@ -220,15 +227,19 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         }
 
         // For the JoinIndex, additional parameters influence its execution behavior:
-        //  - index side (left or right)
-        //  - availability of an index for a join column segment
-        //  - presence of "single chunk reference guarantee" for join column reference segments
+        //  - Index side (left or right)
+        //  - Availability of an index for a join column segment
+        //  - Presence of "single chunk reference guarantee" for join column reference segments
+        //  - Pruned columns of the input table: table indexes are created for the stored base tables. Thus, after
+        //    column pruning in the GetTable operator, the original columns might not correspond to the resulting
+        //    columns anymore.
 
         // share of indexed segments; 1 means all segments are indexed
         std::array<float, 2> indexed_segment_shares{1.0f, .1f};
 
         std::vector<JoinTestConfiguration> variations{};
-        variations.reserve(all_index_sides.size() * indexed_segment_shares.size() * all_index_scopes.size());
+        variations.reserve(all_index_sides.size() * indexed_segment_shares.size() * all_index_scopes.size() *
+                           pruning_configurations.size());
         for (const auto& index_side : all_index_sides) {
           // calculate index chunk counts, eliminate duplicates by using the unordered set
           auto& indexed_input = index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
@@ -245,28 +256,31 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
           for (const auto& indexed_chunk_range : indexed_chunk_ranges) {
             for (const auto& index_scope : all_index_scopes) {
-              auto variation = configuration;
-              auto& variation_indexed_input =
-                  index_side == IndexSide::Left ? variation.left_input : variation.right_input;
-              variation.index_side = index_side;
-              variation_indexed_input.index_scope = index_scope;
-              variation_indexed_input.indexed_chunk_range = indexed_chunk_range;
+              for (const auto& pruned_column_ids : pruning_configurations) {
+                auto variation = configuration;
+                auto& variation_indexed_input =
+                    index_side == IndexSide::Left ? variation.left_input : variation.right_input;
+                variation.index_side = index_side;
+                variation_indexed_input.index_scope = index_scope;
+                variation_indexed_input.indexed_chunk_range = indexed_chunk_range;
+                variation_indexed_input.pruned_column_ids = pruned_column_ids;
 
-              if (variation_indexed_input.table_type != InputTableType::Data &&
-                  variation.join_mode == JoinMode::Inner) {
-                variation_indexed_input.single_chunk_reference_range = indexed_chunk_range;
+                if (variation_indexed_input.table_type != InputTableType::Data &&
+                    variation.join_mode == JoinMode::Inner) {
+                  variation_indexed_input.single_chunk_reference_range = indexed_chunk_range;
 
-                if ((indexed_chunk_range.second - indexed_chunk_range.first) > 1) {
-                  ++variation_indexed_input.single_chunk_reference_range.first;
+                  if ((indexed_chunk_range.second - indexed_chunk_range.first) > 1) {
+                    ++variation_indexed_input.single_chunk_reference_range.first;
+                  }
+
+                  if ((chunk_count - indexed_chunk_range.second) > 1) {
+                    // Leads to the creation of a reference segment that references a single chunk but the referenced
+                    // data segment is not indexed.
+                    ++variation_indexed_input.single_chunk_reference_range.second;
+                  }
                 }
-
-                if ((chunk_count - indexed_chunk_range.second) > 1) {
-                  // Leads to the creation of a reference segment that references a single chunk but the referenced
-                  // data segment is not indexed.
-                  ++variation_indexed_input.single_chunk_reference_range.second;
-                }
+                variations.emplace_back(variation);
               }
-              variations.emplace_back(variation);
             }
           }
         }
@@ -513,7 +527,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
   static std::string get_table_path(const InputTableConfiguration& key) {
     const auto& [side, chunk_size, table_size, input_table_type, encoding_type, index_scope, indexed_chunk_range,
-                 single_chunk_reference_range] = key;
+                 single_chunk_reference_range, pruned_column_ids] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
@@ -525,7 +539,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     auto input_table_iter = input_tables.find(key);
     if (input_table_iter == input_tables.end()) {
       const auto& [side, chunk_size, table_size, input_table_type, encoding_type, index_scope, indexed_chunk_range,
-                   single_chunk_reference_range] = key;
+                   single_chunk_reference_range, pruned_column_ids] = key;
       std::ignore = side;
       std::ignore = table_size;
 
@@ -617,6 +631,18 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
           data_table->create_table_index<PartialHashIndex>(column_id, chunk_ids);
         }
+      }
+
+      if (!pruned_column_ids.empty()) {
+        // Prune Columns using the GetTable operator
+        auto& storage_manager = Hyrise::get().storage_manager;
+        const auto stored_table_name = "JoinTestTable"s;
+        storage_manager.add_table(stored_table_name, data_table);
+        auto get_table =
+            std::make_shared<opossum::GetTable>(stored_table_name, std::vector<ChunkID>{}, pruned_column_ids);
+        get_table->execute();
+        auto pruned_table = get_table->get_output();
+        data_table = std::const_pointer_cast<Table>(pruned_table);
       }
 
       if (reference_table) {
