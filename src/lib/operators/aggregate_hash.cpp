@@ -93,10 +93,10 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     }
 
     // Lookup the key in the result_ids map
-    auto iter = result_ids.find(key);
-    if (iter != result_ids.end()) {
+    auto it = result_ids.find(key);
+    if (it != result_ids.end()) {
       // We have already seen this group and need to return a reference to the group's result.
-      const auto result_id = iter->second;
+      const auto result_id = it->second;
       if constexpr (std::is_same_v<CacheResultIds, std::true_type>) {
         // If requested, store the index the the first_key_entry and set the most significant bit to 1.
         *first_key_entry = CACHE_MASK | result_id;
@@ -107,7 +107,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     // We are seeing this group (i.e., this AggregateKey) for the first time, so we need to add it to the list of
     // results and set the row_id needed for restoring the GroupBy column(s).
     const auto result_id = results.size();
-    result_ids.emplace_hint(iter, key, result_id);
+    result_ids.emplace_hint(it, key, result_id);
 
     results.emplace_back();
     results[result_id].row_id = row_id;

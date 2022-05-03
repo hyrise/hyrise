@@ -140,7 +140,9 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
-  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto snapshot_cid = CommitID{1};
   auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, ChunkOffset{0}}}));
