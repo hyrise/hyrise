@@ -43,8 +43,9 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
           return pmr_string{std::string{"HereIsAReallyLongStringToGuaranteeThatWeNeedExternalMemory"} +
                             std::to_string(int_value)};
-        }
-        return int_value;
+        } else {
+	  return int_value;
+	}
       };
 
       original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{300});
@@ -66,7 +67,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
           original_segment->append(convert_value(100));
         }
       }
-      for (auto value = int32{200}; value <= 299; ++value) {
+      for (auto value = int32_t{200}; value <= 299; ++value) {
         original_segment->append(convert_value(value));
       }
     });

@@ -62,7 +62,7 @@ IndentWidth:     2
 IndentWrappedFunctionNames: false
 # JavaScriptQuotes: Leave
 # JavaScriptWrapImports: true
-#InsertBraces: true
+# InsertBraces: true     TODO(anyone): enable when clang15 is widely used.
 KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
