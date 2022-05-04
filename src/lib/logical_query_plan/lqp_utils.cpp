@@ -535,9 +535,9 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
     if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
     if (diamond_node->output_count() > 1) {
-      if (!diamond_origin_node.has_value()) {
+      if (!diamond_origin_node) {
         diamond_origin_node = diamond_node;
-      } else if (diamond_origin_node != diamond_node) {
+      } else {
         // The LQP traversal should always end in the same origin node having multiple outputs. Since we found two
         // different origin nodes, we abort the traversal.
         is_diamond = false;
