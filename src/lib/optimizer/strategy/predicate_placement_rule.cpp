@@ -278,7 +278,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     } break;
 
     case LQPNodeType::Union: {
-      const auto union_node = std::dynamic_pointer_cast<UnionNode>(input_node);
+      const auto union_node = std::static_pointer_cast<UnionNode>(input_node);
       /**
        * If we have a diamond of predicates where all UnionNode inputs result from the same origin node, the
        * pushdown traversal should continue below the diamond's origin node, if possible.
@@ -295,7 +295,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        *                                        |  <------------ Continue pushdown traversal here, if possible
        *                                        |
        */
-      std::shared_ptr<AbstractLQPNode> diamond_origin_node = find_diamond_origin_node(union_node);
+      const auto diamond_origin_node = find_diamond_origin_node(union_node);
       if (!diamond_origin_node) {
         handle_barrier();
         return;
@@ -329,7 +329,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        *   Therefore, we do not want to continue the pushdown traversal below the diamond. Because otherwise, we would
        *   incorrectly filter the Join's left input.
        *
-       * To identify cases such as above, we check the outputs count of the diamond's origin node and compare it
+       * To identify cases such as above, we check the output count of the diamond's origin node and compare it
        * with the number of UnionNodes in the diamond structure.
        */
       size_t union_node_count = 0;
@@ -345,9 +345,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
       if (diamond_origin_node->input_count() == 1) {
         auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-        const auto node_below_diamond = diamond_origin_node->left_input();
+        const auto& node_below_diamond_origin = diamond_origin_node->left_input();
         for (const auto& push_down_node : push_down_nodes) {
-          if (node_below_diamond && _is_evaluable_on_lqp(push_down_node, node_below_diamond)) {
+          if (node_below_diamond_origin && _is_evaluable_on_lqp(push_down_node, node_below_diamond_origin)) {
             // Push predicate below the diamond's origin node
             diamond_push_down_nodes.emplace_back(push_down_node);
           } else if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {

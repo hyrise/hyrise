@@ -205,7 +205,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
         ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
           input_common_node))));
 
-  // Increase the outputs count of input_common_node
+  // Increase the output count of input_common_node
   ASSERT_EQ(input_common_node->outputs().size(), 2);
   const auto non_diamond_lqp_node = ProjectionNode::make(expression_vector(_a_a), input_common_node);
   ASSERT_EQ(input_common_node->outputs().size(), 3);
