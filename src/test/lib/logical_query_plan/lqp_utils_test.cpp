@@ -332,7 +332,7 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
 }
 
-TEST_F(LQPUtilsTest, FindDiamondBottomRootNode) {
+TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
   {
     // clang-format off
     const auto lqp =

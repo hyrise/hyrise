@@ -211,7 +211,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
   ASSERT_EQ(input_common_node->outputs().size(), 3);
 
   // Predicates are not pushed through the diamond. However, predicates inside the diamond are pushed towards the
-  // diamond's bottom.
+  // diamond's origin.
   const auto expected_common_node =
   ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
     _stored_table_a);
@@ -409,7 +409,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtUnion) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondBottomRootNode) {
+TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
   // We must stop pushing down predicates when reaching a node with multiple outputs.
   // clang-format off
   const auto input_common_node =
