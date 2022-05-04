@@ -550,8 +550,8 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(
     return LQPVisitation::VisitInputs;
   });
 
-  if (!is_diamond || !diamond_origin_node.has_value()) return nullptr;
-  return diamond_origin_node.value();
+  if (is_diamond && diamond_origin_node) *diamond_origin_node;
+  return nullptr;
 }
 
 }  // namespace opossum
