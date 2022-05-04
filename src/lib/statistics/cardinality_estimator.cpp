@@ -251,7 +251,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
   const auto& input_expressions = alias_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
     const auto& expression = *output_expressions[expression_idx];
     const auto input_column_id = find_expression_idx(expression, input_expressions);
     Assert(input_column_id, "Could not resolve " + expression.as_column_name());
@@ -273,7 +273,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
   const auto& input_expressions = projection_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
     const auto& expression = *output_expressions[expression_idx];
     const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {
@@ -299,7 +299,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
   const auto& input_expressions = aggregate_node.left_input()->output_expressions();
   auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < output_expression_count; ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
     const auto& expression = *output_expressions[expression_idx];
     const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {

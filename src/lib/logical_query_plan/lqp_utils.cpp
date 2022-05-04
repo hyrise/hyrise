@@ -491,8 +491,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                                }
                                const auto expression_idx =
                                    find_expression_idx(*fd_determinant_expression, output_expressions);
-                               if (expression_idx && lqp->is_column_nullable(
-                                                         ColumnID{static_cast<ColumnID::base_type>(*expression_idx)})) {
+                               if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
                                  return true;
                                }
                              }

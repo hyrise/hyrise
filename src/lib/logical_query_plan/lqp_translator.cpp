@@ -408,7 +408,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_aggregate_node(
   std::vector<ColumnID> group_by_column_ids;
   group_by_column_ids.reserve(aggregate_node->aggregate_expressions_begin_idx);
 
-  for (auto expression_idx = size_t{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
+  for (auto expression_idx = ColumnID{0}; expression_idx < aggregate_node->aggregate_expressions_begin_idx;
        ++expression_idx) {
     const auto& expression = aggregate_node->node_expressions[expression_idx];
     const auto column_id = find_expression_idx(*expression, input_expressions);
@@ -662,7 +662,7 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   auto pqp_expressions = std::vector<std::shared_ptr<AbstractExpression>>(expression_count);
   const auto& output_expressions = node->output_expressions();
 
-  for (auto expression_idx = size_t{0}; expression_idx < expression_count; ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < expression_count; ++expression_idx) {
     pqp_expressions[expression_idx] = _translate_expression(lqp_expressions[expression_idx], node, output_expressions);
   }
 

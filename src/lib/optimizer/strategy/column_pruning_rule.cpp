@@ -85,7 +85,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
       const auto& node_expressions = node->node_expressions;
 
-      for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+      for (auto expression_idx = ColumnID{0}; expression_idx < node_expressions.size(); ++expression_idx) {
         const auto& expression = node_expressions[expression_idx];
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
