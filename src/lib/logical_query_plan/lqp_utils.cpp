@@ -550,7 +550,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(
     return LQPVisitation::VisitInputs;
   });
 
-  if (is_diamond && diamond_origin_node) *diamond_origin_node;
+  if (is_diamond && diamond_origin_node.has_value()) *diamond_origin_node;
   return nullptr;
 }
 
