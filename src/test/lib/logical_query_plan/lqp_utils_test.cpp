@@ -332,7 +332,8 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
 }
 
-TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
+TEST_F(LQPUtilsTest, FindDiamondOriginNodeSingleUnion) {
+  // Test if the origin node of a simple diamond is returned.
   {
     // clang-format off
     const auto lqp =
@@ -345,6 +346,8 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
     const auto diamond_origin_node = find_diamond_origin_node(lqp);
     EXPECT_EQ(diamond_origin_node, node_a);
   }
+
+  // Test for null pointer, because the diamond from above no longer has a common origin node.
   {
     // clang-format off
     const auto lqp =
@@ -357,6 +360,10 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
     const auto diamond_origin_node = find_diamond_origin_node(lqp);
     EXPECT_EQ(diamond_origin_node, nullptr);
   }
+}
+
+TEST_F(LQPUtilsTest, FindDiamondOriginNodeMultipleUnions) {
+  // Test if the diamond's origin node is returned in case of multiple UnionNodes.
   {
     // clang-format off
     const auto lqp =
@@ -372,6 +379,8 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
     const auto diamond_origin_node = find_diamond_origin_node(lqp);
     EXPECT_EQ(diamond_origin_node, node_a);
   }
+
+  // Test for null pointer, because the diamond from above no longer has a common origin node.
   {
     // clang-format off
     const auto lqp =
