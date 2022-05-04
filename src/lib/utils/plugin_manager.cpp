@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/assert.hpp"
 
@@ -34,10 +35,16 @@ std::vector<PluginName> PluginManager::loaded_plugins() const {
   return plugin_names;
 }
 
-void PluginManager::load_plugin(const std::filesystem::path& path) {
-  const auto name = plugin_name_from_path(path);
+std::unordered_map<std::pair<PluginName, PluginFunctionName>, PluginFunctionPointer, plugin_name_function_name_hash>
+PluginManager::user_executable_functions() const {
+  return _user_executable_functions;
+}
 
-  Assert(!_plugins.count(name), "Loading plugin failed: A plugin with name " + name + " already exists.");
+void PluginManager::load_plugin(const std::filesystem::path& path) {
+  const auto plugin_name = plugin_name_from_path(path);
+
+  Assert(!_plugins.contains(plugin_name),
+         "Loading plugin failed: A plugin with name " + plugin_name + " already exists.");
 
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
   Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
@@ -60,20 +67,47 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
          "Loading plugin failed: There can only be one instance of every plugin.");
 
   plugin_handle_wrapper.plugin->start();
-  _plugins[name] = std::move(plugin_handle_wrapper);
+  _plugins[plugin_name] = std::move(plugin_handle_wrapper);
+
+  // Add the newly loaded plugin's user executable functions to our map of functions.
+  const auto& user_executable_functions = _plugins[plugin_name].plugin->provided_user_executable_functions();
+  for (const auto& [function_name, function_pointer] : user_executable_functions) {
+    _user_executable_functions[{plugin_name, function_name}] = function_pointer;
+  }
 }
 
-void PluginManager::unload_plugin(const PluginName& name) {
-  auto plugin_iter = _plugins.find(name);
-  Assert(plugin_iter != _plugins.cend(), "Unloading plugin failed: A plugin with name " + name + " does not exist.");
+void PluginManager::exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name) {
+  Assert(_user_executable_functions.contains({plugin_name, function_name}),
+         "There is no " + function_name + " defined for plugin " + plugin_name + ".");
+
+  const auto user_executable_function = _user_executable_functions[{plugin_name, function_name}];
+  user_executable_function();
+
+  auto& log_manager = Hyrise::get().log_manager;
+  log_manager.add_message(
+      "PluginManager",
+      "Called user executable function `" + function_name + "` provided by plugin `" + plugin_name + "`.",
+      LogLevel::Info);
+}
+
+void PluginManager::unload_plugin(const PluginName& plugin_name) {
+  auto plugin_iter = _plugins.find(plugin_name);
+  Assert(plugin_iter != _plugins.cend(),
+         "Unloading plugin failed: A plugin with name " + plugin_name + " does not exist.");
 
   _unload_and_erase_plugin(plugin_iter);
 }
 
 std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_unload_and_erase_plugin(
     const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter) {
-  const PluginName name = plugin_iter->first;
+  const PluginName plugin_name = plugin_iter->first;
   const auto& plugin_handle_wrapper = plugin_iter->second;
+
+  // Delete user exectuable functions of the plugin to be unloaded from the map of functions.
+  std::erase_if(_user_executable_functions, [&](const auto& item) {
+    const auto& [item_plugin_name, _] = item.first;
+    return item_plugin_name == plugin_name;
+  });
 
   plugin_handle_wrapper.plugin->stop();
   auto* const handle = plugin_handle_wrapper.handle;
