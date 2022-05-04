@@ -78,7 +78,9 @@ try {
             sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
-            unity = '-DCMAKE_UNITY_BUILD=ON'  // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
+
+            // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
+            unity = '-DCMAKE_UNITY_BUILD=ON'
 
             // Note that clang 9 is still the default version installed by install_dependencies.sh. This is so that we do
             // not unnecessarily require Ubuntu 20.04. If you want to upgrade to -10, please update install_dependencies.sh,
