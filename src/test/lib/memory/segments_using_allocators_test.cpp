@@ -44,8 +44,8 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
           return pmr_string{std::string{"HereIsAReallyLongStringToGuaranteeThatWeNeedExternalMemory"} +
                             std::to_string(int_value)};
         } else {
-	  return int_value;
-	}
+          return int_value;
+        }
       };
 
       original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{300});
