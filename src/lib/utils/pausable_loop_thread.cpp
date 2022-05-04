@@ -49,8 +49,7 @@ void PausableLoopThread::pause() {
     return;
   }
   _pause_requested = true;
-  while (!_is_paused) {
-  }
+  while (!_is_paused) {}
 }
 
 void PausableLoopThread::resume() {

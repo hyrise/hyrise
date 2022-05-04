@@ -22,11 +22,17 @@ class AbstractPosList : private Noncopyable {
     PosListIterator(const PosListType* pos_list, const ChunkOffset offset)
         : _pos_list(pos_list), _chunk_offset(offset) {}
 
-    void increment() { ++_chunk_offset; }
+    void increment() {
+      ++_chunk_offset;
+    }
 
-    void decrement() { --_chunk_offset; }
+    void decrement() {
+      --_chunk_offset;
+    }
 
-    void advance(std::ptrdiff_t n) { _chunk_offset += n; }
+    void advance(std::ptrdiff_t n) {
+      _chunk_offset += n;
+    }
 
     bool equal(const PosListIterator& other) const {
       DebugAssert(_pos_list == other._pos_list, "PosListIterator compared to iterator on different PosList instance");

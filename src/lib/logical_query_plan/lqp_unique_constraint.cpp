@@ -15,7 +15,9 @@ bool LQPUniqueConstraint::operator==(const LQPUniqueConstraint& rhs) const {
                      [&rhs](const auto column_expression) { return rhs.expressions.contains(column_expression); });
 }
 
-bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const { return !(rhs == *this); }
+bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const {
+  return !(rhs == *this);
+}
 
 size_t LQPUniqueConstraint::hash() const {
   size_t hash = 0;

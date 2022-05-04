@@ -5,7 +5,9 @@ namespace opossum {
 AbstractTableConstraint::AbstractTableConstraint(std::unordered_set<ColumnID> init_columns)
     : _columns(std::move(init_columns)) {}
 
-const std::unordered_set<ColumnID>& AbstractTableConstraint::columns() const { return _columns; }
+const std::unordered_set<ColumnID>& AbstractTableConstraint::columns() const {
+  return _columns;
+}
 
 bool AbstractTableConstraint::operator==(const AbstractTableConstraint& rhs) const {
   if (this == &rhs) {
@@ -23,6 +25,8 @@ bool AbstractTableConstraint::operator==(const AbstractTableConstraint& rhs) con
   return _on_equals(rhs);
 }
 
-bool AbstractTableConstraint::operator!=(const AbstractTableConstraint& rhs) const { return !(rhs == *this); }
+bool AbstractTableConstraint::operator!=(const AbstractTableConstraint& rhs) const {
+  return !(rhs == *this);
+}
 
 }  // namespace opossum

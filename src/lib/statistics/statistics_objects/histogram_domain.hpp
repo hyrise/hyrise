@@ -46,9 +46,13 @@ class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
 template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_floating_point_v<T>>> {
  public:
-  T next_value_clamped(T v) const { return std::nextafter(v, std::numeric_limits<T>::infinity()); }
+  T next_value_clamped(T v) const {
+    return std::nextafter(v, std::numeric_limits<T>::infinity());
+  }
 
-  T previous_value_clamped(T v) const { return std::nextafter(v, -std::numeric_limits<T>::infinity()); }
+  T previous_value_clamped(T v) const {
+    return std::nextafter(v, -std::numeric_limits<T>::infinity());
+  }
 };
 
 template <>

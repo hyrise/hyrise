@@ -24,7 +24,9 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   struct PosListsHasher {
-    size_t operator()(const PosLists& pos_lists) const { return boost::hash_range(pos_lists.begin(), pos_lists.end()); }
+    size_t operator()(const PosLists& pos_lists) const {
+      return boost::hash_range(pos_lists.begin(), pos_lists.end());
+    }
   };
 
   std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher> shared_pos_lists_by_pos_lists;

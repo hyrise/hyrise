@@ -64,6 +64,8 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
          expressions_equal(arguments, function_expression.arguments);
 }
 
-size_t FunctionExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(function_type)); }
+size_t FunctionExpression::_shallow_hash() const {
+  return boost::hash_value(static_cast<size_t>(function_type));
+}
 
 }  // namespace opossum

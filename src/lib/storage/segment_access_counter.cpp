@@ -9,7 +9,9 @@ SegmentAccessCounter::SegmentAccessCounter() {
               "access_type_string_mapping should contain as many entries as there are access types.");
 }
 
-SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& other) { _set_counters(other); }
+SegmentAccessCounter::SegmentAccessCounter(const SegmentAccessCounter& other) {
+  _set_counters(other);
+}
 
 SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter& other) {
   if (this == &other) {
@@ -126,6 +128,8 @@ bool SegmentAccessCounter::operator==(const SegmentAccessCounter& other) const {
   return true;
 }
 
-bool SegmentAccessCounter::operator!=(const SegmentAccessCounter& other) const { return !(*this == other); }
+bool SegmentAccessCounter::operator!=(const SegmentAccessCounter& other) const {
+  return !(*this == other);
+}
 
 }  // namespace opossum

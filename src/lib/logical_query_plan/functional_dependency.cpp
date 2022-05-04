@@ -35,7 +35,9 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   return true;
 }
 
-bool FunctionalDependency::operator!=(const FunctionalDependency& other) const { return !(other == *this); }
+bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
+  return !(other == *this);
+}
 
 size_t FunctionalDependency::hash() const {
   auto hash = size_t{0};

@@ -41,11 +41,19 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
   return (*chunk->get_segment(_referenced_column_id))[row_id.chunk_offset];
 }
 
-const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const { return _pos_list; }
-const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const { return _referenced_table; }
-ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
+const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const {
+  return _pos_list;
+}
+const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const {
+  return _referenced_table;
+}
+ColumnID ReferenceSegment::referenced_column_id() const {
+  return _referenced_column_id;
+}
 
-ChunkOffset ReferenceSegment::size() const { return static_cast<ChunkOffset>(_pos_list->size()); }
+ChunkOffset ReferenceSegment::size() const {
+  return static_cast<ChunkOffset>(_pos_list->size());
+}
 
 std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {

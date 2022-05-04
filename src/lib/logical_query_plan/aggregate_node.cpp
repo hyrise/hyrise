@@ -170,7 +170,9 @@ std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependen
   return non_trivial_fds;
 }
 
-size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
+size_t AggregateNode::_on_shallow_hash() const {
+  return aggregate_expressions_begin_idx;
+}
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{

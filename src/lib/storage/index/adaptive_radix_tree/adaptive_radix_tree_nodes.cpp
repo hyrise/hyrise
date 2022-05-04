@@ -91,7 +91,9 @@ AbstractIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::Bina
   });
 }
 
-AbstractIndex::Iterator ARTNode4::begin() const { return _children[0]->begin(); }
+AbstractIndex::Iterator ARTNode4::begin() const {
+  return _children[0]->begin();
+}
 
 AbstractIndex::Iterator ARTNode4::end() const {
   for (auto index = uint32_t{4}; index > 0; --index) {
@@ -183,7 +185,9 @@ AbstractIndex::Iterator ARTNode16::upper_bound(const AdaptiveRadixTreeIndex::Bin
                    size_t new_depth) { return _children[partial_key_pos]->upper_bound(key, new_depth); });
 }
 
-AbstractIndex::Iterator ARTNode16::begin() const { return _children[0]->begin(); }
+AbstractIndex::Iterator ARTNode16::begin() const {
+  return _children[0]->begin();
+}
 
 /**
  * _end searches the child with the largest partial key == the last child in the _children array.
@@ -402,8 +406,12 @@ AbstractIndex::Iterator Leaf::upper_bound(const AdaptiveRadixTreeIndex::BinaryCo
   return _end;
 }
 
-AbstractIndex::Iterator Leaf::begin() const { return _begin; }
+AbstractIndex::Iterator Leaf::begin() const {
+  return _begin;
+}
 
-AbstractIndex::Iterator Leaf::end() const { return _end; }
+AbstractIndex::Iterator Leaf::end() const {
+  return _end;
+}
 
 }  // namespace opossum

@@ -15,7 +15,9 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
+NodeQueueScheduler::NodeQueueScheduler() {
+  _worker_id_allocator = std::make_shared<UidAllocator>();
+}
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
@@ -87,9 +89,13 @@ void NodeQueueScheduler::finish() {
   _task_counter = 0;
 }
 
-bool NodeQueueScheduler::active() const { return _active; }
+bool NodeQueueScheduler::active() const {
+  return _active;
+}
 
-const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
+const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const {
+  return _queues;
+}
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {

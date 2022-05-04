@@ -62,15 +62,25 @@ AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVari
   return _upper_bound(values);
 }
 
-AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
+AbstractIndex::Iterator AbstractIndex::cbegin() const {
+  return _cbegin();
+}
 
-AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
+AbstractIndex::Iterator AbstractIndex::cend() const {
+  return _cend();
+}
 
-AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _null_positions.cbegin(); }
+AbstractIndex::Iterator AbstractIndex::null_cbegin() const {
+  return _null_positions.cbegin();
+}
 
-AbstractIndex::Iterator AbstractIndex::null_cend() const { return _null_positions.cend(); }
+AbstractIndex::Iterator AbstractIndex::null_cend() const {
+  return _null_positions.cend();
+}
 
-SegmentIndexType AbstractIndex::type() const { return _type; }
+SegmentIndexType AbstractIndex::type() const {
+  return _type;
+}
 
 size_t AbstractIndex::memory_consumption() const {
   size_t bytes{0u};

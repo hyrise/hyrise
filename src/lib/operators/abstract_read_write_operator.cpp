@@ -57,7 +57,9 @@ bool AbstractReadWriteOperator::execute_failed() const {
   return _rw_state == ReadWriteOperatorState::Conflicted || _rw_state == ReadWriteOperatorState::RolledBack;
 }
 
-ReadWriteOperatorState AbstractReadWriteOperator::state() const { return _rw_state; }
+ReadWriteOperatorState AbstractReadWriteOperator::state() const {
+  return _rw_state;
+}
 
 void AbstractReadWriteOperator::_mark_as_failed() {
   Assert(_rw_state == ReadWriteOperatorState::Pending, "Operator can only be marked as failed if pending.");

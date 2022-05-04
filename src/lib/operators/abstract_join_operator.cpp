@@ -30,9 +30,13 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
          "Unsupported predicate condition");
 }
 
-JoinMode AbstractJoinOperator::mode() const { return _mode; }
+JoinMode AbstractJoinOperator::mode() const {
+  return _mode;
+}
 
-const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const { return _primary_predicate; }
+const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const {
+  return _primary_predicate;
+}
 
 const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predicates() const {
   return _secondary_predicates;

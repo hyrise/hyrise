@@ -9,7 +9,9 @@
 
 namespace opossum {
 
-LikeMatcher::LikeMatcher(const pmr_string& pattern) { _pattern_variant = pattern_string_to_pattern_variant(pattern); }
+LikeMatcher::LikeMatcher(const pmr_string& pattern) {
+  _pattern_variant = pattern_string_to_pattern_variant(pattern);
+}
 
 size_t LikeMatcher::get_index_of_next_wildcard(const pmr_string& pattern, const size_t offset) {
   return pattern.find_first_of("_%", offset);

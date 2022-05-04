@@ -61,7 +61,9 @@ void OperatorJoinPredicate::flip() {
   flipped = true;
 }
 
-bool OperatorJoinPredicate::is_flipped() const { return flipped; }
+bool OperatorJoinPredicate::is_flipped() const {
+  return flipped;
+}
 
 bool operator<(const OperatorJoinPredicate& lhs, const OperatorJoinPredicate& rhs) {
   return std::tie(lhs.column_ids, lhs.predicate_condition) < std::tie(rhs.column_ids, rhs.predicate_condition);

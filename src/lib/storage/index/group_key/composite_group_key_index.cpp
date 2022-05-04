@@ -113,9 +113,13 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _keys.shrink_to_fit();
 }
 
-AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const {
+  return _position_list.cbegin();
+}
 
-AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const {
+  return _position_list.cend();
+}
 
 AbstractIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);

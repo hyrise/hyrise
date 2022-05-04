@@ -55,11 +55,17 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   return stream.str();
 }
 
-const std::string& GetTable::table_name() const { return _name; }
+const std::string& GetTable::table_name() const {
+  return _name;
+}
 
-const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const { return _pruned_chunk_ids; }
+const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const {
+  return _pruned_chunk_ids;
+}
 
-const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _pruned_column_ids; }
+const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
+  return _pruned_column_ids;
+}
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,

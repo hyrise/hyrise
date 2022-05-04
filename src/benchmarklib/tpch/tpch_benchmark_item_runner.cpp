@@ -48,7 +48,9 @@ TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<Benchmark
          "Invalid TPC-H item id");
 }
 
-const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const { return _items; }
+const std::vector<BenchmarkItemID>& TPCHBenchmarkItemRunner::items() const {
+  return _items;
+}
 
 bool TPCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
   const auto sql = _build_query(item_id);

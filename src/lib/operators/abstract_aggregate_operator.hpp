@@ -16,7 +16,9 @@ Therefore, we partially specialize the whole class and define the get_aggregate_
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_function>
 class AggregateFunctionBuilder {
  public:
-  void get_aggregate_function() { Fail("Invalid aggregate function"); }
+  void get_aggregate_function() {
+    Fail("Invalid aggregate function");
+  }
 };
 
 using StandardDeviationSampleData = std::array<double, 4>;

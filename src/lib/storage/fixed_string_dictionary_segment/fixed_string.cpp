@@ -46,11 +46,17 @@ size_t FixedString::size() const {
   return std::distance(_mem, position);
 }
 
-size_t FixedString::maximum_length() const { return _maximum_length; }
+size_t FixedString::maximum_length() const {
+  return _maximum_length;
+}
 
-std::string FixedString::string() const { return {_mem, strnlen(_mem, _maximum_length)}; }
+std::string FixedString::string() const {
+  return {_mem, strnlen(_mem, _maximum_length)};
+}
 
-std::string_view FixedString::string_view() const { return {_mem, strnlen(_mem, _maximum_length)}; }
+std::string_view FixedString::string_view() const {
+  return {_mem, strnlen(_mem, _maximum_length)};
+}
 
 bool FixedString::operator<(const FixedString& other) const {
   const auto smallest_length = std::min(size(), other.size());
@@ -62,17 +68,29 @@ bool FixedString::operator<(const FixedString& other) const {
   return result < 0;
 }
 
-bool operator<(const FixedString& lhs, const std::string& rhs) { return lhs.string() < rhs; }
+bool operator<(const FixedString& lhs, const std::string& rhs) {
+  return lhs.string() < rhs;
+}
 
-bool operator<(const std::string& lhs, const FixedString& rhs) { return lhs < rhs.string(); }
+bool operator<(const std::string& lhs, const FixedString& rhs) {
+  return lhs < rhs.string();
+}
 
-bool operator<(const FixedString& lhs, const std::string_view& rhs) { return lhs.string_view() < rhs; }
+bool operator<(const FixedString& lhs, const std::string_view& rhs) {
+  return lhs.string_view() < rhs;
+}
 
-bool operator<(const std::string_view& lhs, const FixedString& rhs) { return lhs < rhs.string_view(); }
+bool operator<(const std::string_view& lhs, const FixedString& rhs) {
+  return lhs < rhs.string_view();
+}
 
-bool operator<(const FixedString& lhs, const char* rhs) { return lhs.string_view() < rhs; }
+bool operator<(const FixedString& lhs, const char* rhs) {
+  return lhs.string_view() < rhs;
+}
 
-bool operator<(const char* lhs, const FixedString& rhs) { return lhs < rhs.string_view(); }
+bool operator<(const char* lhs, const FixedString& rhs) {
+  return lhs < rhs.string_view();
+}
 
 bool FixedString::operator==(const FixedString& other) const {
   if (size() != other.size()) {
@@ -87,20 +105,36 @@ void FixedString::swap(FixedString& other) {
   std::swap_ranges(_mem, _mem + _maximum_length, other._mem);
 }
 
-std::ostream& operator<<(std::ostream& stream, const FixedString& obj) { return stream << obj.string(); }
+std::ostream& operator<<(std::ostream& stream, const FixedString& obj) {
+  return stream << obj.string();
+}
 
-void swap(FixedString lhs, FixedString rhs) { lhs.swap(rhs); }
+void swap(FixedString lhs, FixedString rhs) {
+  lhs.swap(rhs);
+}
 
-bool operator==(const FixedString& lhs, const std::string& rhs) { return lhs.string() == rhs; }
+bool operator==(const FixedString& lhs, const std::string& rhs) {
+  return lhs.string() == rhs;
+}
 
-bool operator==(const std::string& lhs, const FixedString& rhs) { return lhs == rhs.string(); }
+bool operator==(const std::string& lhs, const FixedString& rhs) {
+  return lhs == rhs.string();
+}
 
-bool operator==(const FixedString& lhs, const std::string_view& rhs) { return lhs.string_view() == rhs; }
+bool operator==(const FixedString& lhs, const std::string_view& rhs) {
+  return lhs.string_view() == rhs;
+}
 
-bool operator==(const std::string_view& lhs, const FixedString& rhs) { return lhs == rhs.string_view(); }
+bool operator==(const std::string_view& lhs, const FixedString& rhs) {
+  return lhs == rhs.string_view();
+}
 
-bool operator==(const FixedString& lhs, const char* rhs) { return lhs.string_view() == rhs; }
+bool operator==(const FixedString& lhs, const char* rhs) {
+  return lhs.string_view() == rhs;
+}
 
-bool operator==(const char* lhs, const FixedString& rhs) { return lhs == rhs.string_view(); }
+bool operator==(const char* lhs, const FixedString& rhs) {
+  return lhs == rhs.string_view();
+}
 
 }  // namespace opossum

@@ -62,7 +62,9 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
       root_operator_task);
 }
 
-const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
+const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const {
+  return _op;
+}
 
 void OperatorTask::skip_operator_task() {
   // Newly created tasks always have TaskState::Created. However, AbstractOperator::get_or_create_operator_task needs

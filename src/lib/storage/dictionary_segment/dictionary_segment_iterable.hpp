@@ -59,7 +59,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     });
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   template <typename CompressedVectorIterator, typename DictionaryIteratorType>
@@ -94,9 +96,13 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       _chunk_offset += n;
     }
 
-    bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
+    bool equal(const Iterator& other) const {
+      return _attribute_it == other._attribute_it;
+    }
 
-    std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
+    std::ptrdiff_t distance_to(const Iterator& other) const {
+      return other._attribute_it - _attribute_it;
+    }
 
     SegmentPosition<T> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);

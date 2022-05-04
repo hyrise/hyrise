@@ -53,7 +53,9 @@ AbstractOperator::~AbstractOperator() {
   }
 }
 
-OperatorType AbstractOperator::type() const { return _type; }
+OperatorType AbstractOperator::type() const {
+  return _type;
+}
 
 bool AbstractOperator::executed() const {
   return _state == OperatorState::ExecutedAndAvailable || _state == OperatorState::ExecutedAndCleared;
@@ -190,7 +192,9 @@ void AbstractOperator::clear_output() {
   _output = nullptr;
 }
 
-std::string AbstractOperator::description(DescriptionMode description_mode) const { return name(); }
+std::string AbstractOperator::description(DescriptionMode description_mode) const {
+  return name();
+}
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
@@ -224,11 +228,17 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
   return copied_op;
 }
 
-std::shared_ptr<const Table> AbstractOperator::left_input_table() const { return _left_input->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::left_input_table() const {
+  return _left_input->get_output();
+}
 
-std::shared_ptr<const Table> AbstractOperator::right_input_table() const { return _right_input->get_output(); }
+std::shared_ptr<const Table> AbstractOperator::right_input_table() const {
+  return _right_input->get_output();
+}
 
-size_t AbstractOperator::consumer_count() const { return _consumer_count.load(); }
+size_t AbstractOperator::consumer_count() const {
+  return _consumer_count.load();
+}
 
 void AbstractOperator::register_consumer() {
   Assert(_state <= OperatorState::ExecutedAndAvailable,
@@ -253,9 +263,13 @@ void AbstractOperator::deregister_consumer() {
   }
 }
 
-void AbstractOperator::never_clear_output() { _never_clear_output = true; }
+void AbstractOperator::never_clear_output() {
+  _never_clear_output = true;
+}
 
-bool AbstractOperator::transaction_context_is_set() const { return _transaction_context.has_value(); }
+bool AbstractOperator::transaction_context_is_set() const {
+  return _transaction_context.has_value();
+}
 
 std::shared_ptr<TransactionContext> AbstractOperator::transaction_context() const {
   DebugAssert(!transaction_context_is_set() || !_transaction_context->expired(),
@@ -290,9 +304,13 @@ std::shared_ptr<AbstractOperator> AbstractOperator::mutable_right_input() const 
   return std::const_pointer_cast<AbstractOperator>(_right_input);
 }
 
-std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const { return _left_input; }
+std::shared_ptr<const AbstractOperator> AbstractOperator::left_input() const {
+  return _left_input;
+}
 
-std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const { return _right_input; }
+std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const {
+  return _right_input;
+}
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   Assert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
@@ -308,7 +326,9 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   }
 }
 
-OperatorState AbstractOperator::state() const { return _state; }
+OperatorState AbstractOperator::state() const {
+  return _state;
+}
 
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   std::lock_guard<std::mutex> lock(_operator_task_mutex);

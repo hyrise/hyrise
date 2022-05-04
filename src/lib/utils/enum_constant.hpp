@@ -31,7 +31,9 @@ struct enum_constant {
 
   static constexpr auto value = enum_value;
 
-  constexpr EnumType operator()() const { return value; }
+  constexpr EnumType operator()() const {
+    return value;
+  }
 };
 
 /**

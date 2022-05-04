@@ -47,7 +47,9 @@ class PerformanceWarningClass {
     return previous;
   }
 
-  static void enable() { _disabled = false; }
+  static void enable() {
+    _disabled = false;
+  }
 
   friend class PerformanceWarningDisabler;
 };

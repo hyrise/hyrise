@@ -2,7 +2,9 @@
 
 namespace opossum {
 
-void RowIDPosList::guarantee_single_chunk() { _references_single_chunk = true; }
+void RowIDPosList::guarantee_single_chunk() {
+  _references_single_chunk = true;
+}
 
 bool RowIDPosList::references_single_chunk() const {
   if (_references_single_chunk) {

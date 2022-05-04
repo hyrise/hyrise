@@ -238,7 +238,9 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& op, const std::vector<
   DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
 }
 
-const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
+const std::vector<SortColumnDefinition>& Sort::sort_definitions() const {
+  return _sort_definitions;
+}
 
 const std::string& Sort::name() const {
   static const auto name = std::string{"Sort"};

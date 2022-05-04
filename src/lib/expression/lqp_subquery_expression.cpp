@@ -22,7 +22,9 @@ LQPSubqueryExpression::LQPSubqueryExpression(
          "Need exactly as many ParameterIDs as parameter Expressions");
 }
 
-size_t LQPSubqueryExpression::parameter_count() const { return parameter_ids.size(); }
+size_t LQPSubqueryExpression::parameter_count() const {
+  return parameter_ids.size();
+}
 
 std::shared_ptr<AbstractExpression> LQPSubqueryExpression::parameter_expression(const size_t parameter_idx) const {
   Assert(parameter_idx < parameter_count(), "Parameter index out of range");
@@ -67,7 +69,9 @@ bool LQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*node
   return lqp->is_column_nullable(ColumnID{0});
 }
 
-bool LQPSubqueryExpression::is_correlated() const { return !arguments.empty(); }
+bool LQPSubqueryExpression::is_correlated() const {
+  return !arguments.empty();
+}
 
 bool LQPSubqueryExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPSubqueryExpression*>(&expression),

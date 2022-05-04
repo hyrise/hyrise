@@ -93,7 +93,9 @@ bool operator==(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
   return left._size == right._size && std::memcmp(left._data, right._data, left._size) == 0;
 }
 
-bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left == right); }
+bool operator!=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
+  return !(left == right);
+}
 
 bool operator<(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
   static_assert(std::is_same_v<VariableLengthKeyWord, uint8_t>, "Changes for new word type required.");
@@ -122,9 +124,13 @@ bool operator<=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
   return left < right || left == right;
 }
 
-bool operator>(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left <= right); }
+bool operator>(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
+  return !(left <= right);
+}
 
-bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) { return !(left < right); }
+bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& right) {
+  return !(left < right);
+}
 
 std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key) {
   stream << std::hex << std::setfill('0');

@@ -14,8 +14,7 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
   } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>&) {
   } catch (const boost::wrapexcept<boost::gregorian::bad_month>&) {
   } catch (const boost::wrapexcept<boost::gregorian::bad_year>&) {
-  } catch (const boost::wrapexcept<boost::bad_lexical_cast>&) {
-  }
+  } catch (const boost::wrapexcept<boost::bad_lexical_cast>&) {}
   return std::nullopt;
 }
 

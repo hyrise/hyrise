@@ -64,7 +64,9 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& op,
   }
 }
 
-const std::shared_ptr<AbstractExpression>& TableScan::predicate() const { return _predicate; }
+const std::shared_ptr<AbstractExpression>& TableScan::predicate() const {
+  return _predicate;
+}
 
 const std::string& TableScan::name() const {
   static const auto name = std::string{"TableScan"};
@@ -466,6 +468,8 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
                                                             uncorrelated_subquery_results);
 }
 
-void TableScan::_on_cleanup() { _impl.reset(); }
+void TableScan::_on_cleanup() {
+  _impl.reset();
+}
 
 }  // namespace opossum

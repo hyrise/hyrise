@@ -32,7 +32,9 @@ std::string AliasNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const { return node_expressions; }
+std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const {
+  return node_expressions;
+}
 
 std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
   return _forward_left_unique_constraints();

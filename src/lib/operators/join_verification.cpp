@@ -16,7 +16,9 @@ std::vector<T> concatenate(const std::vector<T>& left, const std::vector<T>& rig
 
 namespace opossum {
 
-bool JoinVerification::supports(const JoinConfiguration config) { return true; }
+bool JoinVerification::supports(const JoinConfiguration config) {
+  return true;
+}
 
 JoinVerification::JoinVerification(const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,

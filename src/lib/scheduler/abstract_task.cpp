@@ -17,23 +17,37 @@ namespace opossum {
 
 AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
 
-TaskID AbstractTask::id() const { return _id; }
+TaskID AbstractTask::id() const {
+  return _id;
+}
 
-NodeID AbstractTask::node_id() const { return _node_id; }
+NodeID AbstractTask::node_id() const {
+  return _node_id;
+}
 
-bool AbstractTask::is_ready() const { return _pending_predecessors == 0; }
+bool AbstractTask::is_ready() const {
+  return _pending_predecessors == 0;
+}
 
-bool AbstractTask::is_done() const { return _state == TaskState::Done; }
+bool AbstractTask::is_done() const {
+  return _state == TaskState::Done;
+}
 
-bool AbstractTask::is_stealable() const { return _stealable; }
+bool AbstractTask::is_stealable() const {
+  return _stealable;
+}
 
-bool AbstractTask::is_scheduled() const { return _state >= TaskState::Scheduled; }
+bool AbstractTask::is_scheduled() const {
+  return _state >= TaskState::Scheduled;
+}
 
 std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id.load()) + "}" : _description;
 }
 
-void AbstractTask::set_id(TaskID task_id) { _id = task_id; }
+void AbstractTask::set_id(TaskID task_id) {
+  _id = task_id;
+}
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
   // Since OperatorTasks can be reused by, e.g., uncorrelated subqueries, this function may already have been called
@@ -57,15 +71,25 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   }
 }
 
-const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const { return _predecessors; }
+const std::vector<std::weak_ptr<AbstractTask>>& AbstractTask::predecessors() const {
+  return _predecessors;
+}
 
-const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const { return _successors; }
+const std::vector<std::shared_ptr<AbstractTask>>& AbstractTask::successors() const {
+  return _successors;
+}
 
-void AbstractTask::set_node_id(NodeID node_id) { _node_id = node_id; }
+void AbstractTask::set_node_id(NodeID node_id) {
+  _node_id = node_id;
+}
 
-bool AbstractTask::try_mark_as_enqueued() { return _try_transition_to(TaskState::Enqueued); }
+bool AbstractTask::try_mark_as_enqueued() {
+  return _try_transition_to(TaskState::Enqueued);
+}
 
-bool AbstractTask::try_mark_as_assigned_to_worker() { return _try_transition_to(TaskState::AssignedToWorker); }
+bool AbstractTask::try_mark_as_assigned_to_worker() {
+  return _try_transition_to(TaskState::AssignedToWorker);
+}
 
 void AbstractTask::set_done_callback(const std::function<void()>& done_callback) {
   DebugAssert(!is_scheduled(), "Possible race: Don't set callback after the Task was scheduled");
@@ -137,7 +161,9 @@ void AbstractTask::execute() {
   DTRACE_PROBE2(HYRISE, JOB_END, _id.load(), reinterpret_cast<uintptr_t>(this));
 }
 
-TaskState AbstractTask::state() const { return _state; }
+TaskState AbstractTask::state() const {
+  return _state;
+}
 
 void AbstractTask::_on_predecessor_done() {
   Assert(_pending_predecessors > 0, "The count of pending predecessors equals zero and cannot be decremented.");

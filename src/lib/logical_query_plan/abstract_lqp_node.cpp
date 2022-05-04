@@ -101,11 +101,17 @@ size_t AbstractLQPNode::hash() const {
   return hash;
 }
 
-size_t AbstractLQPNode::_on_shallow_hash() const { return 0; }
+size_t AbstractLQPNode::_on_shallow_hash() const {
+  return 0;
+}
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const { return _inputs[0]; }
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::left_input() const {
+  return _inputs[0];
+}
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::right_input() const { return _inputs[1]; }
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::right_input() const {
+  return _inputs[1];
+}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::input(LQPInputSide side) const {
   const auto input_index = static_cast<int>(side);
@@ -227,7 +233,9 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
   return output_relations;
 }
 
-size_t AbstractLQPNode::output_count() const { return _outputs.size(); }
+size_t AbstractLQPNode::output_count() const {
+  return _outputs.size();
+}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {
   return _deep_copy_impl(input_node_mapping);
@@ -352,7 +360,9 @@ bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
   return !lqp_find_subplan_mismatch(shared_from_this(), rhs.shared_from_this());
 }
 
-bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const { return !operator==(rhs); }
+bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
+  return !operator==(rhs);
+}
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
   auto copied_left_input = std::shared_ptr<AbstractLQPNode>{};

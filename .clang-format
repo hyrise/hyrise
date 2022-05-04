@@ -9,11 +9,11 @@ AlignEscapedNewlinesLeft: true
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: true
@@ -46,6 +46,7 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat:   false
+EmptyLineBeforeAccessModifier: LogicalBlock
 ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeCategories:
@@ -61,6 +62,7 @@ IndentWidth:     2
 IndentWrappedFunctionNames: false
 # JavaScriptQuotes: Leave
 # JavaScriptWrapImports: true
+#InsertBraces: true
 KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
@@ -84,8 +86,11 @@ SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 2
 SpacesInAngles:  false
-SpacesInContainerLiterals: true
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
 SpacesInCStyleCastParentheses: false
+SpacesInLineCommentPrefix:
+  Minimum:         1
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard:        Auto

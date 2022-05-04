@@ -132,7 +132,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   const ReferenceSegment& _segment;
@@ -160,15 +162,25 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() { ++_pos_list_it; }
+    void increment() {
+      ++_pos_list_it;
+    }
 
-    void decrement() { --_pos_list_it; }
+    void decrement() {
+      --_pos_list_it;
+    }
 
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
+    void advance(std::ptrdiff_t n) {
+      _pos_list_it += n;
+    }
 
-    bool equal(const MultipleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
+    bool equal(const MultipleChunkIterator& other) const {
+      return _pos_list_it == other._pos_list_it;
+    }
 
-    std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
+    std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const {
+      return other._pos_list_it - _pos_list_it;
+    }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {

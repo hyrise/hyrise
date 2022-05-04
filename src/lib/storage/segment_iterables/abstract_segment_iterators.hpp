@@ -77,11 +77,17 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_position_filter_it; }
+  void increment() {
+    ++_position_filter_it;
+  }
 
-  void decrement() { --_position_filter_it; }
+  void decrement() {
+    --_position_filter_it;
+  }
 
-  void advance(std::ptrdiff_t n) { _position_filter_it += n; }
+  void advance(std::ptrdiff_t n) {
+    _position_filter_it += n;
+  }
 
   bool equal(const AbstractPointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);

@@ -38,7 +38,9 @@ class UnionNodeTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _v;
 };
 
-TEST_F(UnionNodeTest, Description) { EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: Positions"); }
+TEST_F(UnionNodeTest, Description) {
+  EXPECT_EQ(_union_node->description(), "[UnionNode] Mode: Positions");
+}
 
 TEST_F(UnionNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_union_node->output_expressions().at(0), *_mock_node1->output_expressions().at(0));
@@ -80,9 +82,13 @@ TEST_F(UnionNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_union_node->hash(), UnionNode::make(SetOperationMode::All)->hash());
 }
 
-TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node); }
+TEST_F(UnionNodeTest, Copy) {
+  EXPECT_EQ(*_union_node->deep_copy(), *_union_node);
+}
 
-TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
+TEST_F(UnionNodeTest, NodeExpressions) {
+  ASSERT_EQ(_union_node->node_expressions.size(), 0u);
+}
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});

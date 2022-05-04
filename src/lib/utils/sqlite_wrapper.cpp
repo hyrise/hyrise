@@ -160,7 +160,9 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
   raw_execute_query("PRAGMA case_sensitive_like = true;");
 }
 
-SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db) { other.db = nullptr; }
+SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db) {
+  other.db = nullptr;
+}
 
 SQLiteWrapper::Connection::~Connection() {
   if (db) {
@@ -168,7 +170,9 @@ SQLiteWrapper::Connection::~Connection() {
   }
 }
 
-SQLiteWrapper::Connection SQLiteWrapper::new_connection() const { return Connection{_uri}; }
+SQLiteWrapper::Connection SQLiteWrapper::new_connection() const {
+  return Connection{_uri};
+}
 
 std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::string& sql) const {
   sqlite3_stmt* sqlite_statement;
@@ -189,8 +193,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
       Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + "\n");
     }
 
-    while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {
-    }
+    while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
   }
 
   return_code = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);

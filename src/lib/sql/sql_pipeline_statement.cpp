@@ -54,7 +54,9 @@ void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<Transac
   _transaction_context = transaction_context;
 }
 
-const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; }
+const std::string& SQLPipelineStatement::get_sql_string() {
+  return _sql_string;
+}
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
   if (_parsed_sql_statement) {
@@ -330,7 +332,9 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
   return _transaction_context;
 }
 
-const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const {
+  return _metrics;
+}
 
 void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
   const auto& storage_manager = Hyrise::get().storage_manager;

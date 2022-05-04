@@ -43,7 +43,9 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
   }
 }
 
-bool Chunk::is_mutable() const { return _is_mutable; }
+bool Chunk::is_mutable() const {
+  return _is_mutable;
+}
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
@@ -75,7 +77,9 @@ std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
+ColumnCount Chunk::column_count() const {
+  return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())};
+}
 
 ChunkOffset Chunk::size() const {
   if (_segments.empty()) {
@@ -85,9 +89,13 @@ ChunkOffset Chunk::size() const {
   return static_cast<ChunkOffset>(first_segment->size());
 }
 
-bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
+bool Chunk::has_mvcc_data() const {
+  return _mvcc_data != nullptr;
+}
 
-std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
+std::shared_ptr<MvccData> Chunk::mvcc_data() const {
+  return _mvcc_data;
+}
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
@@ -186,7 +194,9 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   _segments = std::move(new_segments);
 }
 
-const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
+const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const {
+  return _alloc;
+}
 
 size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
@@ -222,7 +232,9 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   return segments;
 }
 
-const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const { return _pruning_statistics; }
+const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
+  return _pruning_statistics;
+}
 
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
@@ -231,9 +243,13 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
-void Chunk::increase_invalid_row_count(const ChunkOffset count) const { _invalid_row_count += count; }
+void Chunk::increase_invalid_row_count(const ChunkOffset count) const {
+  _invalid_row_count += count;
+}
 
-const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const { return _sorted_by; }
+const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const {
+  return _sorted_by;
+}
 
 void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
   set_individually_sorted_by(std::vector<SortColumnDefinition>{sorted_by});

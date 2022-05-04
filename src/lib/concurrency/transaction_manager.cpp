@@ -25,7 +25,9 @@ TransactionManager& TransactionManager::operator=(TransactionManager&& transacti
   return *this;
 }
 
-CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
+CommitID TransactionManager::last_commit_id() const {
+  return _last_commit_id;
+}
 
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(const AutoCommit auto_commit) {
   const CommitID snapshot_commit_id = _last_commit_id;

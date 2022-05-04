@@ -73,8 +73,12 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::get_allocator;
 
   // Element access
-  RowID operator[](const size_t index) const final { return Vector::operator[](index); }
-  RowID& operator[](const size_t index) { return Vector::operator[](index); }
+  RowID operator[](const size_t index) const final {
+    return Vector::operator[](index);
+  }
+  RowID& operator[](const size_t index) {
+    return Vector::operator[](index);
+  }
 
   using Vector::back;
   using Vector::data;
@@ -91,8 +95,12 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::max_size;
   using Vector::reserve;
   using Vector::shrink_to_fit;
-  size_t size() const final { return Vector::size(); }
-  bool empty() const final { return Vector::empty(); }
+  size_t size() const final {
+    return Vector::size();
+  }
+  bool empty() const final {
+    return Vector::empty();
+  }
 
   // Modifiers
   using Vector::clear;

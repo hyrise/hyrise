@@ -163,7 +163,9 @@ class Chunk : private Noncopyable {
    * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
    * the current transaction.
    */
-  ChunkOffset invalid_row_count() const { return ChunkOffset{_invalid_row_count}; }
+  ChunkOffset invalid_row_count() const {
+    return ChunkOffset{_invalid_row_count};
+  }
 
   /**
    * Atomically increases the counter of deleted/invalidated rows within this chunk.

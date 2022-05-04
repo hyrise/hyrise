@@ -19,7 +19,9 @@ bool TaskQueue::empty() const {
   return true;
 }
 
-NodeID TaskQueue::node_id() const { return _node_id; }
+NodeID TaskQueue::node_id() const {
+  return _node_id;
+}
 
 void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priority) {
   DebugAssert((priority < NUM_PRIORITY_LEVELS), "Illegal priority level");

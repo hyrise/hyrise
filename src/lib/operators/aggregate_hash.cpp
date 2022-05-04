@@ -167,7 +167,9 @@ std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
 
 void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void AggregateHash::_on_cleanup() { _contexts_per_column.clear(); }
+void AggregateHash::_on_cleanup() {
+  _contexts_per_column.clear();
+}
 
 /*
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the

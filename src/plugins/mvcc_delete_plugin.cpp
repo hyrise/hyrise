@@ -10,7 +10,9 @@
 
 namespace opossum {
 
-std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
+std::string MvccDeletePlugin::description() const {
+  return "Physical MVCC delete plugin";
+}
 
 void MvccDeletePlugin::start() {
   _loop_thread_logical_delete =

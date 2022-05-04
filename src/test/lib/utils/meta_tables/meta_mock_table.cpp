@@ -9,24 +9,46 @@ const std::string& MetaMockTable::name() const {
   return name;
 }
 
-bool MetaMockTable::can_insert() const { return true; }
+bool MetaMockTable::can_insert() const {
+  return true;
+}
 
-bool MetaMockTable::can_delete() const { return true; }
+bool MetaMockTable::can_delete() const {
+  return true;
+}
 
-bool MetaMockTable::can_update() const { return true; }
+bool MetaMockTable::can_update() const {
+  return true;
+}
 
-size_t MetaMockTable::insert_calls() const { return _insert_calls; }
+size_t MetaMockTable::insert_calls() const {
+  return _insert_calls;
+}
 
-size_t MetaMockTable::remove_calls() const { return _remove_calls; }
+size_t MetaMockTable::remove_calls() const {
+  return _remove_calls;
+}
 
-size_t MetaMockTable::update_calls() const { return _update_calls; }
+size_t MetaMockTable::update_calls() const {
+  return _update_calls;
+}
 
-size_t MetaMockTable::generate_calls() const { return _generate_calls; }
+size_t MetaMockTable::generate_calls() const {
+  return _generate_calls;
+}
 
-const std::vector<AllTypeVariant> MetaMockTable::insert_values() const { return _insert_values; }
-const std::vector<AllTypeVariant> MetaMockTable::remove_values() const { return _remove_values; }
-const std::vector<AllTypeVariant> MetaMockTable::update_selected_values() const { return _update_selected_values; }
-const std::vector<AllTypeVariant> MetaMockTable::update_updated_values() const { return _update_updated_values; }
+const std::vector<AllTypeVariant> MetaMockTable::insert_values() const {
+  return _insert_values;
+}
+const std::vector<AllTypeVariant> MetaMockTable::remove_values() const {
+  return _remove_values;
+}
+const std::vector<AllTypeVariant> MetaMockTable::update_selected_values() const {
+  return _update_selected_values;
+}
+const std::vector<AllTypeVariant> MetaMockTable::update_updated_values() const {
+  return _update_updated_values;
+}
 
 std::shared_ptr<Table> MetaMockTable::_on_generate() const {
   _generate_calls++;

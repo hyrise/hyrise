@@ -22,7 +22,9 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
    * Generates a random zip code as defined by TPCC
    * @return    the zip code as String
    */
-  std::string zip_code() { return nstring(4, 4) + "11111"; }
+  std::string zip_code() {
+    return nstring(4, 4) + "11111";
+  }
 
   /**
    * Generates a non-uniform random number based on a formula defined by TPCC

@@ -61,11 +61,17 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   }
 }
 
-const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
+const TableColumnDefinitions& Table::column_definitions() const {
+  return _column_definitions;
+}
 
-TableType Table::type() const { return _type; }
+TableType Table::type() const {
+  return _type;
+}
 
-UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
+UseMvcc Table::uses_mvcc() const {
+  return _use_mvcc;
+}
 
 ColumnCount Table::column_count() const {
   return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
@@ -178,9 +184,13 @@ uint64_t Table::row_count() const {
   return row_count;
 }
 
-bool Table::empty() const { return row_count() == 0u; }
+bool Table::empty() const {
+  return row_count() == 0u;
+}
 
-ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
+ChunkID Table::chunk_count() const {
+  return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())};
+}
 
 ChunkOffset Table::target_chunk_size() const {
   DebugAssert(_type == TableType::Data, "target_chunk_size is only valid for data tables");
@@ -321,17 +331,25 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
   return rows;
 }
 
-std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
+std::unique_lock<std::mutex> Table::acquire_append_mutex() {
+  return std::unique_lock<std::mutex>(*_append_mutex);
+}
 
-std::shared_ptr<TableStatistics> Table::table_statistics() const { return _table_statistics; }
+std::shared_ptr<TableStatistics> Table::table_statistics() const {
+  return _table_statistics;
+}
 
 void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
 }
 
-std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+std::vector<IndexStatistics> Table::indexes_statistics() const {
+  return _indexes;
+}
 
-const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
 
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
@@ -364,7 +382,9 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 }
 
-const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
+const std::vector<ColumnID>& Table::value_clustered_by() const {
+  return _value_clustered_by;
+}
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
   // Ensure that all chunks are finalized because the table should not be altered afterwards.
