@@ -187,7 +187,7 @@ TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
 }
 
 TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
-  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's bottom root node is used by another LQP node,
+  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's origin node is used by another LQP node,
   // which is not part of the diamond. As a result, the predicate pushdown must be blocked because it would incorrectly
   // filter the other LQP node not part of the diamond.
   // clang-format off
@@ -233,7 +233,7 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
 }
 
 TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
-  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's bottom root node is an AggregateNode which
+  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's origin node is an AggregateNode which
   // blocks one predicate from getting pushed below the diamond.
   // clang-format off
   const auto input_common_node =
@@ -428,7 +428,7 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondBottomRootNode) {
        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(5.2, DataType::Float)),
         input_common_node))));
 
-  // We expect the diamond predicates to get pushed below the Projections. However, since the diamond's bottom root node
+  // We expect the diamond predicates to get pushed below the Projections. However, since the diamond's origin node
   // has multiple outputs, predicates are not expected to get pushed down any further.
   const auto expected_common_node =
   PredicateNode::make(greater_than_(_a_a, 1),
