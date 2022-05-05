@@ -399,6 +399,7 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeNestedUnions) {
 }
 
 TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
+  // Edge case: In this test, the diamond's root node has the same number of outputs as the diamond's origin node.
   // clang-format off
   const auto bottom_diamond_root_node =
   UnionNode::make(SetOperationMode::Positions,
@@ -414,8 +415,8 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
     PredicateNode::make(greater_than_(a_a, value_(5)),
       bottom_diamond_root_node));
   // clang-format on
+  ASSERT_EQ(bottom_diamond_root_node->output_count(), node_a->output_count());
 
-  ASSERT_EQ(bottom_diamond_root_node->output_count(), 2);
   const auto bottom_diamond_origin_node = find_diamond_origin_node(bottom_diamond_root_node);
   EXPECT_EQ(bottom_diamond_origin_node, node_a);
 
