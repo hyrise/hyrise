@@ -4,11 +4,13 @@
 # It downloads the IMDB used by the JoinOrderBenchmark and unzips it. We do this in Python and not in C++ because
 # downloading and unzipping is straight forward in Python.
 
+import argparse
 import hashlib
 import os
 import sys
 import urllib.request
 import zipfile
+
 
 
 def clean_up(including_table_dir=False):
@@ -31,9 +33,6 @@ def is_setup():
     return True
 
 
-# [cmd, table_dir]
-assert len(sys.argv) == 2
-table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark

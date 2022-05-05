@@ -89,8 +89,9 @@ class CsvWriter {
    */
   void end_line();
 
+  static void generate_meta_info_file(const Table& table, const std::string& filename);
+
  protected:
-  static void _generate_meta_info_file(const Table& table, const std::string& filename);
   static void _generate_content_file(const Table& table, const std::string& filename, const ParseConfig& config);
   static void _write(const AllTypeVariant& value, std::ofstream& ofstream, const ParseConfig& config);
   static pmr_string _escape(const pmr_string& string, const ParseConfig& config);

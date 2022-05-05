@@ -105,3 +105,17 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
+
+# Configure hyriseBenchmarkPublicBI
+add_executable(
+    hyriseBenchmarkPublicBI
+
+    public_bi_benchmark.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkPublicBI
+
+    hyrise
+    hyriseBenchmarkLib
+)

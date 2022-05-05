@@ -8,11 +8,11 @@
 namespace opossum {
 
 void CsvWriter::write(const Table& table, const std::string& filename, const ParseConfig& config) {
-  _generate_meta_info_file(table, filename + CsvMeta::META_FILE_EXTENSION);
+  generate_meta_info_file(table, filename + CsvMeta::META_FILE_EXTENSION);
   _generate_content_file(table, filename, config);
 }
 
-void CsvWriter::_generate_meta_info_file(const Table& table, const std::string& filename) {
+void CsvWriter::generate_meta_info_file(const Table& table, const std::string& filename) {
   CsvMeta meta{};
 
   // Column Types
