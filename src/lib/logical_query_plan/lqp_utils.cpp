@@ -532,6 +532,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   bool is_diamond = true;
   std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
+    if (diamond_node == union_root_node) LQPVisitation::VisitInputs;
     if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
     if (diamond_node->output_count() > 1) {
       if (!diamond_origin_node) {
