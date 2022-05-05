@@ -531,10 +531,8 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   DebugAssert(union_root_node->input_count() > 1, "Diamond root node does not have two inputs.");
   bool is_diamond = true;
   std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
-  std::cout << "union root ptr: " << union_root_node << std::endl;
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
-    std::cout << "traversal: " << diamond_node << std::endl;
-    if (diamond_node == union_root_node) return LQPVisitation::VisitInputs;
+    //if (diamond_node == union_root_node) return LQPVisitation::VisitInputs;
     if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
 
     if (diamond_node->output_count() > 1) {
