@@ -420,7 +420,7 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
   EXPECT_EQ(bottom_diamond_origin_node, node_a);
 
   const auto top_diamond_origin_node = find_diamond_origin_node(top_diamond_root_node);
-  EXPECT_EQ(bottom_diamond_origin_node, bottom_diamond_root_node);
+  EXPECT_EQ(top_diamond_origin_node, bottom_diamond_root_node);
 }
 
 }  // namespace opossum
