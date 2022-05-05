@@ -400,24 +400,27 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeNestedUnions) {
 
 TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
   // clang-format off
-  const auto bottom_diamond =
+  const auto bottom_diamond_root_node =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_a, value_(3)),
       node_a),
     PredicateNode::make(greater_than_(a_a, value_(5)),
       node_a));
 
-  const auto top_diamond =
+  const auto top_diamond_root_node =
   UnionNode::make(SetOperationMode::Positions,
     PredicateNode::make(less_than_(a_a, value_(3)),
-      bottom_diamond),
+      bottom_diamond_root_node),
     PredicateNode::make(greater_than_(a_a, value_(5)),
-      bottom_diamond));
+      bottom_diamond_root_node));
   // clang-format on
 
-  ASSERT_EQ(bottom_diamond->output_count(), 2);
-  const auto bottom_diamond_origin_node = find_diamond_origin_node(bottom_diamond);
+  ASSERT_EQ(bottom_diamond_root_node->output_count(), 2);
+  const auto bottom_diamond_origin_node = find_diamond_origin_node(bottom_diamond_root_node);
   EXPECT_EQ(bottom_diamond_origin_node, node_a);
+
+  const auto top_diamond_origin_node = find_diamond_origin_node(top_diamond_root_node);
+  EXPECT_EQ(bottom_diamond_origin_node, bottom_diamond_root_node);
 }
 
 }  // namespace opossum
