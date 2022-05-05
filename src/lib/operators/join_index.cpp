@@ -49,7 +49,9 @@ bool JoinIndex::supports(const JoinConfiguration config) {
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
-                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side)
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side,
+                     const std::vector<ColumnID> pruned_column_ids_left,
+                     const std::vector<ColumnID> pruned_column_ids_right)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
@@ -57,6 +59,21 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
   if (_index_side == IndexSide::Left) {
     _adjusted_primary_predicate.flip();
   }
+
+  const auto column_count_left_before_pruning = left_input_table()->column_count() + pruned_column_ids_left.size();
+  for (auto column_id = ColumnID{0}; column_id < column_count_left_before_pruning; ++column_id) {
+    if(std::find(pruned_column_ids_left.begin(), pruned_column_ids_left.end(), column_id) != pruned_column_ids_left.end()) {
+      _column_id_mapping_left.emplace_back(column_id);
+    }
+  }
+
+  const auto column_count_right_before_pruning = right_input_table()->column_count() + pruned_column_ids_right.size();
+  for (auto column_id = ColumnID{0}; column_id < column_count_right_before_pruning; ++column_id) {
+    if(std::find(pruned_column_ids_right.begin(), pruned_column_ids_right.end(), column_id) != pruned_column_ids_right.end()) {
+      _column_id_mapping_right.emplace_back(column_id);
+    }
+  }
+
 }
 
 const std::string& JoinIndex::name() const {
