@@ -365,7 +365,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         // Do not move pushdown predicates below the diamond's origin node if it is a Join, a Union or another node
         // with multiple inputs. Instead, insert the pushdown predicates above it and call the _push_down_traversal
         // subroutine again, so that the predicate pushdown for the node with multiple inputs is handled appropriately.
-        auto updated_diamond_origin_node = diamond_origin_node;
+        auto& updated_diamond_origin_node = diamond_origin_node;
         for (const auto& push_down_node : push_down_nodes) {
           if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
             // Push predicate above the diamond's origin node
