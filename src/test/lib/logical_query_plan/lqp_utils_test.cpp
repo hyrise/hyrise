@@ -332,7 +332,7 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
   EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
 }
 
-TEST_F(LQPUtilsTest, FindDiamondOriginNodeSingleUnion) {
+TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
   // Test if the origin node of a simple diamond is returned.
   {
     // clang-format off
@@ -362,7 +362,7 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeSingleUnion) {
   }
 }
 
-TEST_F(LQPUtilsTest, FindDiamondOriginNodeMultipleUnions) {
+TEST_F(LQPUtilsTest, FindDiamondOriginNodeNestedUnions) {
   // Test if the diamond's origin node is returned in case of multiple UnionNodes.
   {
     // clang-format off
@@ -396,6 +396,28 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeMultipleUnions) {
     const auto diamond_origin_node = find_diamond_origin_node(lqp);
     EXPECT_EQ(diamond_origin_node, nullptr);
   }
+}
+
+TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
+  // clang-format off
+  const auto bottom_diamond =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_(a_a, value_(3)),
+      node_a),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
+      node_a));
+
+  const auto top_diamond =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(less_than_(a_a, value_(3)),
+      bottom_diamond),
+    PredicateNode::make(greater_than_(a_a, value_(5)),
+      bottom_diamond));
+  // clang-format on
+
+  ASSERT_EQ(bottom_diamond->output_count(), 2);
+  const auto bottom_diamond_origin_node = find_diamond_origin_node(bottom_diamond);
+  EXPECT_EQ(bottom_diamond_origin_node, node_a);
 }
 
 }  // namespace opossum
