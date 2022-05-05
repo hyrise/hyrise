@@ -36,8 +36,7 @@ class JoinIndex : public AbstractJoinOperator {
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
-            const IndexSide index_side = IndexSide::Right, const std::vector<ColumnID> pruned_column_ids_left = {},
-            const std::vector<ColumnID> pruned_column_ids_right = {});
+            const IndexSide index_side = IndexSide::Right, const std::vector<ColumnID> pruned_column_ids = {});
 
   const std::string& name() const override;
 
@@ -122,8 +121,7 @@ class JoinIndex : public AbstractJoinOperator {
   std::vector<std::vector<bool>> _index_matches;
 
 
-  std::vector<ColumnID> _column_id_mapping_left;
-  std::vector<ColumnID> _column_id_mapping_right;
+  std::vector<ColumnID> _column_id_mapping;
 };
 
 }  // namespace opossum

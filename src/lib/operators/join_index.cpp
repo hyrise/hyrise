@@ -50,8 +50,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side,
-                     const std::vector<ColumnID> pruned_column_ids_left,
-                     const std::vector<ColumnID> pruned_column_ids_right)
+                     const std::vector<ColumnID> pruned_column_ids)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
@@ -60,20 +59,16 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     _adjusted_primary_predicate.flip();
   }
 
-  const auto column_count_left_before_pruning = left_input_table()->column_count() + pruned_column_ids_left.size();
-  for (auto column_id = ColumnID{0}; column_id < column_count_left_before_pruning; ++column_id) {
-    if(std::find(pruned_column_ids_left.begin(), pruned_column_ids_left.end(), column_id) != pruned_column_ids_left.end()) {
-      _column_id_mapping_left.emplace_back(column_id);
-    }
+  auto column_count_before_pruning = right_input_table()->column_count() + pruned_column_ids.size();
+  if (index_side == IndexSide::Left) {
+    column_count_before_pruning = left_input_table()->column_count() + pruned_column_ids.size();
   }
 
-  const auto column_count_right_before_pruning = right_input_table()->column_count() + pruned_column_ids_right.size();
-  for (auto column_id = ColumnID{0}; column_id < column_count_right_before_pruning; ++column_id) {
-    if(std::find(pruned_column_ids_right.begin(), pruned_column_ids_right.end(), column_id) != pruned_column_ids_right.end()) {
-      _column_id_mapping_right.emplace_back(column_id);
+  for (auto column_id = ColumnID{0}; column_id < column_count_before_pruning; ++column_id) {
+    if(std::find(pruned_column_ids.begin(), pruned_column_ids.end(), column_id) != pruned_column_ids.end()) {
+      _column_id_mapping.emplace_back(column_id);
     }
   }
-
 }
 
 const std::string& JoinIndex::name() const {
@@ -214,7 +209,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // Here we prefer to use table indexes if the join supports them. If no table index exists or other predicates than
     // Equals or NotEquals are requested, chunk indexes are used. If no chunk index exists, NestedLoopJoin is used as a
     // fallback solution.
-    const auto& table_indexes = _index_input_table->get_table_indexes(_adjusted_primary_predicate.column_ids.second);
+    const auto& table_indexes = _index_input_table->get_table_indexes(_column_id_mapping.at(_adjusted_primary_predicate.column_ids.second));
     if (!table_indexes.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
          _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
@@ -276,7 +271,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
         const auto& indexes =
-            index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
+            index_chunk->get_indexes(std::vector<ColumnID>{_column_id_mapping.at(_adjusted_primary_predicate.column_ids.second)});
         if (!indexes.empty()) {
           // We assume the first index to be efficient for our join as we do not want to spend time on evaluating the
           // best index inside of this join loop.
@@ -357,7 +352,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
   Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-  const auto& index_segment = index_chunk->get_segment(_adjusted_primary_predicate.column_ids.second);
+  const auto& index_segment = index_chunk->get_segment(_column_id_mapping.at(_adjusted_primary_predicate.column_ids.second));
   const auto& index_pos_list_size_pre_fallback = _index_pos_list->size();
 
   const auto chunk_count = _probe_input_table->chunk_count();
