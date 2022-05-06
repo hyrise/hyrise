@@ -93,9 +93,15 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node,
+                     const std::shared_ptr<AbstractLQPNode>& node_to_insert,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
+/**
+ * Sets @param node as the left input of @param node_to_insert, and re-connects all outputs to @param node_to_insert.
+ */
+void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
+                           const AllowRightInput allow_right_input = AllowRightInput::No);
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
@@ -245,5 +251,11 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
  * the @param lqp node's output expressions.
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+
+/**
+ * Takes the given UnionNode @param union_root_node and traverses the LQP until a common origin node was found.
+ * @returns a shared pointer to the diamond's origin node. If it was not found, a null pointer is returned.
+ */
+std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 
 }  // namespace opossum
