@@ -124,8 +124,6 @@ int main(int argc, char* argv[]) {
   ("b,benchmarks", "Subset of bnehcmarks to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
   // clang-format on
 
-  const auto BENCHMARKS = std::vector<std::string>{"Arade", "Bimbo", "CMSprovider", "CityMaxCapita", "CommonGovernment", "Corporations", "Eixo", "Euro2016", "Food", "Generico", "HashTags", "Hatred", "IGlocations1", "IGlocations2", "IUBLibrary", "MLB", "MedPayment1", "MedPayment2", "Medicare1", "Medicare2", "Medicare3", "Motos", "MulheresMil", "NYC", "PanCreactomy1", "PanCreactomy2", "Physicians", "Provider", "RealEstate1", "RealEstate2", "Redfin1", "Redfin2", "Redfin3", "Redfin4", "Rentabilidad", "Romance", "SalariesFrance", "TableroSistemaPenal", "Taxpayer", "Telco", "TrainsUK1", "TrainsUK2", "USCensus", "Uberlandia", "Wins", "YaleLanguages"};
-
   std::shared_ptr<BenchmarkConfig> benchmark_config;
   std::string query_dir;
   std::string table_dir;
@@ -183,16 +181,13 @@ int main(int argc, char* argv[]) {
       tables.emplace_back(identifier.substr(0, identifier.size() - suffix_size));
       std::cout << identifier.substr(0, identifier.size() - suffix_size) << std::endl;
     }
-    std::cout << "sort" << std::endl;
     std::sort(tables.begin(), tables.end());
-    std::cout << "sort done" << std::endl;
     for (const auto& table_name : tables) {
       std::cout << "    " << table_name << std::endl;
       const auto table_meta_path = table_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
       std::cout << table_meta_path << std::endl;
       std::ifstream file(table_meta_path);
       const auto exists = file.is_open();
-      std::cout << (exists ? "y" : "n") << std::endl;
       file.close();
 
       if (exists) {
@@ -207,7 +202,6 @@ int main(int argc, char* argv[]) {
       sstr << definition_file.rdbuf();
       auto create_table_statement_string = sstr.str();
       definition_file.close();
-      //std::cout << create_table_statement_string << std::endl;
 
       const auto replace_keywords = std::vector<std::pair<std::string, std::string>>{{"timestamp", "text"}, {"boolean", "text"}, {"bigint", "long"}};
 
@@ -219,12 +213,15 @@ int main(int argc, char* argv[]) {
         }
       }
 
-      const auto table_node = SQLPipelineBuilder{create_table_statement_string}
+      const auto create_table_node = SQLPipelineBuilder{create_table_statement_string}
         .disable_mvcc()
         .create_pipeline()
-        .get_unoptimized_logical_plans().at(0)->left_input();
-      const auto& static_table_node = static_cast<StaticTableNode&>(*table_node);
-      CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path);
+        .get_unoptimized_logical_plans().at(0);
+      const auto& static_table_node = static_cast<StaticTableNode&>(*table_node->left_input());
+      CsvMeta meta{};
+      meta.config.separator = '|';
+      meta.config.null_handling = NullHandling::NullStringAsNull;
+      CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path, csv_meta);
       //std::cout << *create_table_node << std::endl;
     }
 

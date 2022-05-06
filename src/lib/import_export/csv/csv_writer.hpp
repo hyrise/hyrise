@@ -89,7 +89,7 @@ class CsvWriter {
    */
   void end_line();
 
-  static void generate_meta_info_file(const Table& table, const std::string& filename);
+  static void generate_meta_info_file(const Table& table, const std::string& filename, const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
  protected:
   static void _generate_content_file(const Table& table, const std::string& filename, const ParseConfig& config);

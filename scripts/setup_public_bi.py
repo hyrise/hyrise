@@ -13,7 +13,7 @@ import re
 import bz2
 
 
-def clean_up(table_dir,including_tables=False):
+def clean_up(table_dir, including_tables=False):
     if os.path.exists(table_dir):
         delete_extension = ".csv" if including_tables else ".bz2"
         files_to_delete = [x for x in os.listdir(table_dir) if x.endswith(delete_extension)]
@@ -27,6 +27,7 @@ def tables_are_setup(table_dir, tables_per_benchmark):
             return False
     return True
 
+
 def queries_are_setup(query_dir, queries_per_benchmark):
     for benchmark, queries in queries_per_benchmark.items():
         for query in queries:
@@ -38,7 +39,13 @@ def queries_are_setup(query_dir, queries_per_benchmark):
 def parse_args():
     ap = argparse.ArgumentParser(description="Setup data and queries for the Public BI Benchmark")
     ap.add_argument("data_dir", type=str, help="Directory where tables and queries will be located")
-    ap.add_argument("-b", "--benchmark_source", type=str, help="Path to the public_bi_benchmark repository", default="third_party/public_bi_benchmark")
+    ap.add_argument(
+        "-b",
+        "--benchmark_source",
+        type=str,
+        help="Path to the public_bi_benchmark repository",
+        default="third_party/public_bi_benchmark",
+    )
     return ap.parse_args()
 
 
@@ -52,9 +59,10 @@ def main(data_dir, benchmark_source):
 
     for benchmark in benchmarks:
         current_benchmark_dir = os.path.join(benchmark_dir, benchmark)
-        tables_per_benchmark[benchmark] = [table_name[:-len(".table.sql")] for table_name in os.listdir(os.path.join(current_benchmark_dir, "tables"))]
+        tables_per_benchmark[benchmark] = [
+            table_name[: -len(".table.sql")] for table_name in os.listdir(os.path.join(current_benchmark_dir, "tables"))
+        ]
         queries_per_benchmark[benchmark] = os.listdir(os.path.join(current_benchmark_dir, "queries"))
-
 
     print("- Retrieving the Public BI dataset.")
     num_files = sum([len(tables) for tables in tables_per_benchmark.values()])
@@ -84,7 +92,6 @@ def main(data_dir, benchmark_source):
                     assert table_name_match is not None
                     table_name = table_name_match.group(0)
 
-
                     if "Content-Length" in meta:
                         file_size = int(meta["Content-Length"])
                     else:
@@ -109,7 +116,9 @@ def main(data_dir, benchmark_source):
 
                                     already_retrieved += len(buffer)
                                     target_file.write(buffer)
-                                    status = r" - Retrieved %3.2f%% of the data" % (already_retrieved * 100.0 / file_size)
+                                    status = r" - Retrieved %3.2f%% of the data" % (
+                                        already_retrieved * 100.0 / file_size
+                                    )
                                     status = status + chr(8) * (len(status) + 1)
                                     print(status, end="\r")
                             except Exception:
@@ -120,7 +129,7 @@ def main(data_dir, benchmark_source):
                     print(" - Decompressing the file...")
                     try:
                         with bz2.open(table_path) as compressed_file:
-                            with open(table_path[:-len(".bz2")], "w") as decompressed_file:
+                            with open(table_path[: -len(".bz2")], "w") as decompressed_file:
                                 decompressed_file.write(compressed_file.read().decode())
                     except Exception:
                         print("- Aborting. Something went wrong during decompression. Cleaning up.")
@@ -128,7 +137,7 @@ def main(data_dir, benchmark_source):
 
     print("- Preparing the Public BI queries.")
     if queries_are_setup(query_dir, queries_per_benchmark):
-         print("- Public BI queries already complete, no setup action required")
+        print("- Public BI queries already complete, no setup action required")
     else:
         if not os.path.isdir(query_dir):
             os.makedirs(query_dir)
