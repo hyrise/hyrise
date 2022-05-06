@@ -936,4 +936,3 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 };
 
 }  // namespace opossum
-
