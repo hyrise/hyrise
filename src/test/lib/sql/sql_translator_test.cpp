@@ -2356,6 +2356,7 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "  a_smallint SMALLINT,"
       "  a_int INTEGER,"
       "  a_long LONG,"
+      "  a_bigint BIGINT,"
       "  a_decimal DECIMAL(5,2),"
       "  a_real REAL,"
       "  a_float FLOAT,"
@@ -2368,12 +2369,13 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       ")");
 
   const auto column_definitions =
-      TableColumnDefinitions{{"a_smallint", DataType::Int, false},        {"a_int", DataType::Int, false},
-                             {"a_long", DataType::Long, false},           {"a_decimal", DataType::Float, false},
-                             {"a_real", DataType::Float, false},          {"a_float", DataType::Float, false},
-                             {"a_double", DataType::Double, true},        {"a_varchar", DataType::String, false},
-                             {"a_char_varying", DataType::String, false}, {"a_date", DataType::String, false},
-                             {"a_time", DataType::String, false},         {"a_datetime", DataType::String, false}};
+      TableColumnDefinitions{{"a_smallint", DataType::Int, false},   {"a_int", DataType::Int, false},
+                             {"a_long", DataType::Long, false},      {"a_bigint", DataType::Long, false},
+                             {"a_decimal", DataType::Float, false},  {"a_real", DataType::Float, false},
+                             {"a_float", DataType::Float, false},    {"a_double", DataType::Double, true},
+                             {"a_varchar", DataType::String, false}, {"a_char_varying", DataType::String, false},
+                             {"a_date", DataType::String, false},    {"a_time", DataType::String, false},
+                             {"a_datetime", DataType::String, false}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
@@ -3123,6 +3125,17 @@ TEST_F(SQLTranslatorTest, CastStatement) {
         DummyTableNode::make());
     // clang-format on
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('2000-01-01' as DATE);");
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    // BIGINT is an alias for LONG
+    const auto cast_expression = expression_vector(cast_(value_(int32_t{1}), DataType::Long));
+    // clang-format off
+    const auto expected_lqp =
+      ProjectionNode::make(cast_expression,
+        DummyTableNode::make());
+    // clang-format on
+    const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST(1 as BIGINT);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 }
