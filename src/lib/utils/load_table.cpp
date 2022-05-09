@@ -17,7 +17,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace opossum {
 
-std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t chunk_size) {
+std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffset chunk_size) {
   std::string line;
   std::getline(infile, line);
   Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
@@ -35,23 +35,24 @@ std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, size_t ch
   }
 
   TableColumnDefinitions column_definitions;
-  for (size_t i = 0; i < column_names.size(); i++) {
-    const auto data_type = data_type_to_string.right.find(column_types[i]);
+  const auto column_name_count = column_names.size();
+  for (auto index = size_t{0}; index < column_name_count; ++index) {
+    const auto data_type = data_type_to_string.right.find(column_types[index]);
     Assert(data_type != data_type_to_string.right.end(),
-           std::string("Invalid data type ") + column_types[i] + " for column " + column_names[i]);
-    column_definitions.emplace_back(column_names[i], data_type->second, column_nullable[i]);
+           std::string("Invalid data type ") + column_types[index] + " for column " + column_names[index]);
+    column_definitions.emplace_back(column_names[index], data_type->second, column_nullable[index]);
   }
 
   return std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, UseMvcc::Yes);
 }
 
-std::shared_ptr<Table> create_table_from_header(const std::string& file_name, size_t chunk_size) {
+std::shared_ptr<Table> create_table_from_header(const std::string& file_name, ChunkOffset chunk_size) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
   return create_table_from_header(infile, chunk_size);
 }
 
-std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_size,
+std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chunk_size,
                                   FinalizeLastChunk finalize_last_chunk) {
   std::ifstream infile(file_name);
   Assert(infile.is_open(), "load_table: Could not find file " + file_name);
@@ -63,7 +64,8 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     auto string_values = split_string_by_delimiter(line, '|');
     auto variant_values = std::vector<AllTypeVariant>(string_values.size());
 
-    for (auto column_id = ColumnID{0}; column_id < string_values.size(); ++column_id) {
+    const auto string_value_count = string_values.size();
+    for (auto column_id = ColumnID{0}; column_id < string_value_count; ++column_id) {
       if (table->column_is_nullable(column_id) && string_values[column_id] == "null") {
         variant_values[column_id] = NULL_VALUE;
       } else {
@@ -77,7 +79,7 @@ std::shared_ptr<Table> load_table(const std::string& file_name, size_t chunk_siz
     table->append(variant_values);
 
     auto mvcc_data = table->last_chunk()->mvcc_data();
-    mvcc_data->set_begin_cid(table->last_chunk()->size() - 1, 0);
+    mvcc_data->set_begin_cid(ChunkOffset{table->last_chunk()->size() - 1}, CommitID{0});
   }
 
   // All other chunks have been finalized by Table::append() when they reached their capacity.

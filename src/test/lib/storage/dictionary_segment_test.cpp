@@ -155,7 +155,7 @@ TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   EXPECT_EQ((*dict)[1], 4);
 
   // Test retrieval of null value
-  EXPECT_TRUE(variant_is_null((*dict_segment)[4]));
+  EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{4}]));
 }
 
 TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerVectorSize) {

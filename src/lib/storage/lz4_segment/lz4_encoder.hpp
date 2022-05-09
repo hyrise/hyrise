@@ -1,7 +1,7 @@
 #pragma once
 
-#include <lib/zdict.h>
 #include <lz4hc.h>
+#include <zdict.h>
 
 #include <algorithm>
 #include <array>

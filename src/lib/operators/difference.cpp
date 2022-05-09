@@ -44,18 +44,20 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
   // Iterating over all chunks and for each chunk over all segments
   const auto chunk_count_right = right_input_table()->chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count_right; chunk_id++) {
+  const auto column_count_right = right_input_table()->column_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_right; ++chunk_id) {
     const auto chunk = right_input_table()->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     // creating a temporary row representation with strings to be filled segment-wise
     auto string_row_vector = std::vector<std::stringstream>(chunk->size());
-    for (ColumnID column_id{0}; column_id < right_input_table()->column_count(); column_id++) {
+    for (auto column_id = ColumnID{0}; column_id < column_count_right; ++column_id) {
       const auto abstract_segment = chunk->get_segment(column_id);
 
       // filling the row vector with all values from this segment
       auto row_string_buffer = std::stringstream{};
-      for (ChunkOffset chunk_offset = 0; chunk_offset < abstract_segment->size(); chunk_offset++) {
+      const auto segment_size = abstract_segment->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < segment_size; ++chunk_offset) {
         // Previously we called a virtual method of the AbstractSegment interface here.
         // It was replaced with a call to the subscript operator as that is equally slow.
         const auto value = (*abstract_segment)[chunk_offset];
@@ -65,17 +67,18 @@ std::shared_ptr<const Table> Difference::_on_execute() {
 
     // Remove duplicate rows by adding all rows to a unordered set
     std::transform(string_row_vector.cbegin(), string_row_vector.cend(),
-                   std::inserter(right_input_row_set, right_input_row_set.end()), [](auto& x) { return x.str(); });
+                   std::inserter(right_input_row_set, right_input_row_set.end()),
+                   [](auto& item) { return item.str(); });
   }
 
   // 2. Now we check for each chunk of the left input which rows can be added to the output
 
   std::vector<std::shared_ptr<Chunk>> output_chunks;
-  output_chunks.reserve(left_input_table()->chunk_count());
 
   // Iterating over all chunks and for each chunk over all segment
   const auto chunk_count_left = left_input_table()->chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count_left; chunk_id++) {
+  output_chunks.reserve(chunk_count_left);
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count_left; ++chunk_id) {
     const auto in_chunk = left_input_table()->get_chunk(chunk_id);
     Assert(in_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -84,7 +87,8 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     // creating a map to share pos_lists (see table_scan.hpp)
     std::unordered_map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>> out_pos_list_map;
 
-    for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); column_id++) {
+    const auto column_count_left = left_input_table()->column_count();
+    for (auto column_id = ColumnID{0}; column_id < column_count_left; ++column_id) {
       const auto abstract_segment = in_chunk->get_segment(column_id);
       // temporary variables needed to create the reference segment
       const auto referenced_segment =
@@ -114,10 +118,11 @@ std::shared_ptr<const Table> Difference::_on_execute() {
     }
 
     // for all offsets check if the row can be added to the output
-    for (ChunkOffset chunk_offset = 0; chunk_offset < in_chunk->size(); chunk_offset++) {
+    const auto in_chunk_size = in_chunk->size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < in_chunk_size; ++chunk_offset) {
       // creating string representation off the row at chunk_offset
       auto row_string_buffer = std::stringstream{};
-      for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); column_id++) {
+      for (auto column_id = ColumnID{0}; column_id < column_count_left; ++column_id) {
         const auto abstract_segment = in_chunk->get_segment(column_id);
 
         // Previously a virtual method of the AbstractSegment interface was called here.

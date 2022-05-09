@@ -1,13 +1,6 @@
 #pragma once
 
-#ifdef __clang__
-#pragma clang diagnostic ignored "-Wall"
 #include <btree_map.h>
-#pragma clang diagnostic pop
-#elif __GNUC__
-#pragma GCC system_header
-#include <btree_map.h>
-#endif
 
 #include "all_type_variant.hpp"
 #include "storage/abstract_segment.hpp"
@@ -51,21 +44,21 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   Iterator lower_bound(DataType value) const;
   Iterator upper_bound(DataType value) const;
 
-  Iterator lower_bound(const std::vector<AllTypeVariant>&) const override;
-  Iterator upper_bound(const std::vector<AllTypeVariant>&) const override;
+  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const override;
+  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const override;
   Iterator cbegin() const override;
   Iterator cend() const override;
 
  protected:
   void _bulk_insert(const std::shared_ptr<const AbstractSegment>&, std::vector<ChunkOffset>& _null_positions);
-  void _add_to_heap_memory_usage(const DataType&);
+  void _add_to_heap_memory_usage(const DataType& /*value*/);
 
   btree::btree_map<DataType, size_t> _btree;
   size_t _heap_bytes_used;
 };
 
 template <>
-void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string&);
+void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& value);
 
 EXPLICITLY_DECLARE_DATA_TYPES(BTreeIndexImpl);
 

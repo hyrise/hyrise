@@ -22,7 +22,7 @@ namespace opossum {
 class OperatorPerformanceDataTest : public BaseTest {
  protected:
   static void SetUpTestCase() {
-    _table = load_table("resources/test_data/tbl/int_int.tbl", 2);
+    _table = load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2});
     _table_wrapper = std::make_shared<TableWrapper>(_table);
     _table_wrapper->never_clear_output();
     _table_wrapper->execute();
@@ -34,7 +34,7 @@ class OperatorPerformanceDataTest : public BaseTest {
 
 TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
   const TableColumnDefinitions column_definitions{{"a", DataType::Int, false}};
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   table->append({1});
   table->append({2});
   table->append({3});
@@ -57,7 +57,7 @@ TEST_F(OperatorPerformanceDataTest, ElementsAreSet) {
 // scanned with a sorted search (i.e., binary search).
 TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   const TableColumnDefinitions column_definitions{{"a", DataType::Int, false}};
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
   table->append({1});
   table->append({2});
   table->append({2});
@@ -141,7 +141,7 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
   // Test that nullable columns do not contribute all-rows-matching shortcuts
   const TableColumnDefinitions nullable_column_definition = {{"a", DataType::Int, true}};
-  table = std::make_shared<Table>(nullable_column_definition, TableType::Data, 2);
+  table = std::make_shared<Table>(nullable_column_definition, TableType::Data, ChunkOffset{2});
   table->append({1});
   table->append({2});
   table->append({2});
@@ -203,12 +203,13 @@ TEST_F(OperatorPerformanceDataTest, JoinHashStepRuntimes) {
 }
 
 TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
-  const auto table_a = load_table("resources/test_data/tbl/int_int2.tbl", 2);
+  const auto table_a = load_table("resources/test_data/tbl/int_int2.tbl", ChunkOffset{2});
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
   table_wrapper_a->never_clear_output();
   table_wrapper_a->execute();
 
-  const auto table_b = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 2);  // larger than int_int.tbl
+  const auto table_b =
+      load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{2});  // larger than int_int.tbl
   const auto table_wrapper_b = std::make_shared<TableWrapper>(table_b);
   table_wrapper_b->never_clear_output();
   table_wrapper_b->execute();
@@ -252,7 +253,7 @@ TEST_F(OperatorPerformanceDataTest, JoinHashBloomFilterReductions) {
 // Check that steps of IndexJoin (indexed chunks/unindexed chunks) are executed as expected.
 TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
   // This test modifies a table. Hence, we create a new one for this test only.
-  auto table = load_table("resources/test_data/tbl/int_int.tbl", 2);
+  auto table = load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2});
   auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->never_clear_output();
   table_wrapper->execute();

@@ -47,14 +47,9 @@ add_executable(
 )
 target_link_libraries(
     hyriseConsole
+
+    PRIVATE
     hyriseBenchmarkLib
     ncurses
-    ${READLINE_LIBRARY}
-)
-
-target_include_directories(
-    hyriseConsole
-
-    SYSTEM PUBLIC
-    ${READLINE_INCLUDE_DIR}
+    readline
 )

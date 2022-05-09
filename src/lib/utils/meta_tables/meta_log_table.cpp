@@ -23,8 +23,7 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& entry : Hyrise::get().log_manager.log_entries()) {
-    const auto timestamp_ns =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(entry.timestamp.time_since_epoch()).count();
+    const auto timestamp_ns = std::chrono::nanoseconds{entry.timestamp.time_since_epoch()}.count();
 
     // We need this to format the timestamp in a thread-safe way.
     // https://stackoverflow.com/questions/25618702/

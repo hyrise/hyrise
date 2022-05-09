@@ -10,9 +10,9 @@ namespace opossum {
 
 class StorageValueSegmentTest : public BaseTest {
  protected:
-  ValueSegment<int> vs_int{false, 100};
-  ValueSegment<pmr_string> vs_str{false, 100};
-  ValueSegment<double> vs_double{false, 100};
+  ValueSegment<int> vs_int{false, ChunkOffset{100}};
+  ValueSegment<pmr_string> vs_str{false, ChunkOffset{100}};
+  ValueSegment<double> vs_double{false, ChunkOffset{100}};
 };
 
 TEST_F(StorageValueSegmentTest, GetSize) {
@@ -76,9 +76,9 @@ TEST_F(StorageValueSegmentTest, ArraySubscriptOperatorReturnsNullValue) {
   vs_str.append(NULL_VALUE);
   vs_double.append(NULL_VALUE);
 
-  EXPECT_TRUE(variant_is_null(vs_int[0]));
-  EXPECT_TRUE(variant_is_null(vs_str[0]));
-  EXPECT_TRUE(variant_is_null(vs_double[0]));
+  EXPECT_TRUE(variant_is_null(vs_int[ChunkOffset{0}]));
+  EXPECT_TRUE(variant_is_null(vs_str[ChunkOffset{0}]));
+  EXPECT_TRUE(variant_is_null(vs_double[ChunkOffset{0}]));
 }
 
 TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {

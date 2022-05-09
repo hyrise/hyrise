@@ -25,7 +25,7 @@ TEST_F(SyntheticTableGeneratorTest, StringGeneration) {
 
 TEST_F(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
   constexpr auto row_count = size_t{100};
-  constexpr auto chunk_size = size_t{10};
+  constexpr auto chunk_size = ChunkOffset{10};
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
   auto uniform_distribution_0_1 = ColumnDataDistribution::make_uniform_config(0.0, 1.0);
 
@@ -47,7 +47,7 @@ class SyntheticTableGeneratorDataTypeTests : public testing::TestWithParam<Param
 
 TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
   constexpr auto row_count = size_t{25};
-  constexpr auto chunk_size = size_t{10};
+  constexpr auto chunk_size = ChunkOffset{10};
 
   const auto tested_data_type = std::get<0>(GetParam());
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
@@ -75,7 +75,8 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
   const auto generated_chunk_count = table->chunk_count();
   const auto generated_column_count = table->column_count();
   EXPECT_EQ(table->row_count(), row_count);
-  EXPECT_EQ(generated_chunk_count, static_cast<size_t>(std::round(static_cast<float>(row_count) / chunk_size)));
+  EXPECT_EQ(generated_chunk_count,
+            static_cast<size_t>(std::round(static_cast<float>(row_count) / static_cast<float>(chunk_size))));
   EXPECT_EQ(generated_column_count, supported_segment_encodings.size());
 
   for (auto column_id = ColumnID{0}; column_id < generated_column_count; ++column_id) {

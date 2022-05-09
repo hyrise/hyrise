@@ -21,7 +21,7 @@ class StressTest : public BaseTest {
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
-  auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+  auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{};
 
@@ -101,7 +101,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3}, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("table_b", table);
 
   const auto iterations_per_thread = 20;

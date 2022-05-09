@@ -79,28 +79,26 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
-  _benchmark_start = std::chrono::system_clock::now();
+  _benchmark_start = std::chrono::steady_clock::now();
+  _benchmark_wall_clock_start = std::chrono::system_clock::now();
 
   auto track_system_utilization = std::atomic_bool{_config.metrics};
   auto system_utilization_tracker = std::thread{[&] {
     if (!track_system_utilization) return;
 
-    // Start tracking the system utilization. Use a hack to make the timestamp column a long column, as CAST is not yet
-    // supported.
+    // Start tracking the system utilization
     SQLPipelineBuilder{
-        "CREATE TABLE benchmark_system_utilization_log AS SELECT 999999999999 - 999999999999 AS \"timestamp\", * FROM "
+        "CREATE TABLE benchmark_system_utilization_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
         "meta_system_utilization"}
         .create_pipeline()
         .get_result_table();
 
     while (track_system_utilization) {
-      const auto timestamp =
-          std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
-              .count();
+      const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
 
       auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT 999999999999 - 999999999999 + " << timestamp
-                  << ", * FROM meta_system_utilization";
+      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
+                  << "as LONG), * FROM meta_system_utilization";
 
       SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 
@@ -266,21 +264,19 @@ void BenchmarkRunner::_benchmark_ordered() {
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
     result.duration = _state.benchmark_duration;
-    const auto duration_of_all_runs_ns =
-        static_cast<float>(std::chrono::duration_cast<std::chrono::nanoseconds>(_state.benchmark_duration).count());
-    const auto duration_seconds = duration_of_all_runs_ns / 1'000'000'000.f;
-    const auto items_per_second = static_cast<float>(result.successful_runs.size()) / duration_seconds;
+    // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
+    const auto duration_seconds = std::chrono::duration<double>{_state.benchmark_duration}.count();
+    const auto items_per_second = static_cast<double>(result.successful_runs.size()) / duration_seconds;
 
     // Compute mean by using accumulators
     boost::accumulators::accumulator_set<double, boost::accumulators::stats<boost::accumulators::tag::mean>>
         accumulator;
     for (const auto& entry : result.successful_runs) {
-      const auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(entry.duration);
-      accumulator(static_cast<double>(duration.count()));
+      // For readability and to be consistent with compare_benchmarks.py, query latencies should be in milliseconds.
+      // chrono::milliseconds uses an integer precision duration type, but we need a floating-point value.
+      accumulator(std::chrono::duration<double, std::milli>{entry.duration}.count());
     }
-    const auto mean_in_nanoseconds = boost::accumulators::mean(accumulator);
-    // For readability and to be consistent with compare_benchmarks.py SQL queries should be in milliseconds
-    const auto mean_in_milliseconds = mean_in_nanoseconds / 1'000'000;
+    const auto mean_in_milliseconds = boost::accumulators::mean(accumulator);
 
     if (!_config.verify && !_config.enable_visualization) {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
@@ -304,9 +300,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 
   auto task = std::make_shared<JobTask>(
       [&, item_id]() {
-        const auto run_start = std::chrono::system_clock::now();
+        const auto run_start = std::chrono::steady_clock::now();
         auto [success, metrics, any_run_verification_failed] = _benchmark_item_runner->execute_item(item_id);
-        const auto run_end = std::chrono::system_clock::now();
+        const auto run_end = std::chrono::steady_clock::now();
 
         --_currently_running_clients;
         ++_total_finished_runs;
@@ -362,7 +358,7 @@ void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
 }
 
 void BenchmarkRunner::write_report_to_file() const {
-  const auto total_duration = std::chrono::system_clock::now() - _benchmark_start;
+  const std::chrono::nanoseconds total_duration = std::chrono::steady_clock::now() - _benchmark_start;
 
   nlohmann::json benchmarks;
 
@@ -407,20 +403,18 @@ void BenchmarkRunner::write_report_to_file() const {
       return runs_json;
     };
 
-    nlohmann::json benchmark{
-        {"name", name},
-        {"duration", std::chrono::duration_cast<std::chrono::nanoseconds>(result.duration).count()},
-        {"successful_runs", runs_to_json(result.successful_runs)},
-        {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
+    nlohmann::json benchmark{{"name", name},
+                             {"duration", result.duration.count()},
+                             {"successful_runs", runs_to_json(result.successful_runs)},
+                             {"unsuccessful_runs", runs_to_json(result.unsuccessful_runs)}};
 
     // For ordered benchmarks, report the time that this individual item ran. For shuffled benchmarks, return the
     // duration of the entire benchmark. This means that items_per_second of ordered and shuffled runs are not
     // comparable.
     const auto reported_item_duration =
         _config.benchmark_mode == BenchmarkMode::Shuffled ? total_duration : result.duration;
-    const auto reported_item_duration_ns =
-        static_cast<double>(std::chrono::duration_cast<std::chrono::nanoseconds>(reported_item_duration).count());
-    const auto duration_seconds = reported_item_duration_ns / 1'000'000'000.0;
+    // chrono::seconds uses an integer precision duration type, but we need a floating-point value.
+    const auto duration_seconds = std::chrono::duration<double>(reported_item_duration).count();
     const auto items_per_second =
         duration_seconds > 0 ? (static_cast<double>(result.successful_runs.size()) / duration_seconds) : 0;
 
@@ -438,12 +432,12 @@ void BenchmarkRunner::write_report_to_file() const {
     table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
-  nlohmann::json summary{
-      {"table_size_in_bytes", table_size},
-      {"total_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(total_duration).count()}};
+  nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
 
-  const auto benchmark_start_ns =
-      std::chrono::duration_cast<std::chrono::nanoseconds>(_benchmark_start.time_since_epoch()).count();
+  // To get timestamps relative to the benchmark start, we substract the benchmark start timepoint.
+  // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.
+  // Because the system_clock can be readjusted anytime, the timestamps could be slightly out of line.
+  const auto benchmark_start_ns = std::chrono::nanoseconds{_benchmark_wall_clock_start.time_since_epoch()}.count();
   auto log_json = _sql_to_json(std::string{"SELECT \"timestamp\" - "} + std::to_string(benchmark_start_ns) +
                                " AS \"timestamp\", log_level, reporter, message FROM meta_log");
 
@@ -526,24 +520,23 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   #endif
   // clang-format on
 
-  return nlohmann::json{
-      {"date", timestamp_stream.str()},
-      {"chunk_size", config.chunk_size},
-      {"compiler", compiler.str()},
-      {"build_type", HYRISE_DEBUG ? "debug" : "release"},
-      {"encoding", config.encoding_config.to_json()},
-      {"indexes", config.indexes},
-      {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
-      {"max_runs", config.max_runs},
-      {"max_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.max_duration).count()},
-      {"warmup_duration", std::chrono::duration_cast<std::chrono::nanoseconds>(config.warmup_duration).count()},
-      {"using_scheduler", config.enable_scheduler},
-      {"cores", config.cores},
-      {"clients", config.clients},
-      {"data_preparation_cores", config.data_preparation_cores},
-      {"verify", config.verify},
-      {"time_unit", "ns"},
-      {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
+  return nlohmann::json{{"date", timestamp_stream.str()},
+                        {"chunk_size", static_cast<ChunkOffset::base_type>(config.chunk_size)},
+                        {"compiler", compiler.str()},
+                        {"build_type", HYRISE_DEBUG ? "debug" : "release"},
+                        {"encoding", config.encoding_config.to_json()},
+                        {"indexes", config.indexes},
+                        {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
+                        {"max_runs", config.max_runs},
+                        {"max_duration", config.max_duration.count()},
+                        {"warmup_duration", config.warmup_duration.count()},
+                        {"using_scheduler", config.enable_scheduler},
+                        {"cores", config.cores},
+                        {"clients", config.clients},
+                        {"data_preparation_cores", config.data_preparation_cores},
+                        {"verify", config.verify},
+                        {"time_unit", "ns"},
+                        {"GIT-HASH", GIT_HEAD_SHA1 + std::string(GIT_IS_DIRTY ? "-dirty" : "")}};
 }
 
 nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
@@ -580,9 +573,7 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
 
   auto moment_or_timestamp = moment;
   if (moment_or_timestamp.empty()) {
-    const auto timestamp =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now() - _benchmark_start)
-            .count();
+    const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
     moment_or_timestamp = std::to_string(timestamp);
   }
 

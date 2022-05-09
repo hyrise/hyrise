@@ -27,7 +27,7 @@ class OperatorsUpdateTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     // Update operator works on the StorageManager
     Hyrise::get().storage_manager.add_table(table_to_update_name, table);
   }

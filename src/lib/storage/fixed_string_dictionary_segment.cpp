@@ -67,7 +67,7 @@ std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_all
 }
 
 template <typename T>
-size_t FixedStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode) const {
+size_t FixedStringDictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode ignored as full calculation is efficient.
   return sizeof(*this) + _dictionary->data_size() + _attribute_vector->data_size();
 }

@@ -10,7 +10,7 @@ bool EntireChunkPosList::empty() const { return size() == 0; }
 
 size_t EntireChunkPosList::size() const { return _common_chunk_size; }
 
-size_t EntireChunkPosList::memory_usage(const MemoryUsageCalculationMode) const { return sizeof *this; }
+size_t EntireChunkPosList::memory_usage(const MemoryUsageCalculationMode /*mode*/) const { return sizeof *this; }
 
 AbstractPosList::PosListIterator<EntireChunkPosList, RowID> EntireChunkPosList::begin() const {
   return PosListIterator<EntireChunkPosList, RowID>(this, ChunkOffset{0});

@@ -21,23 +21,23 @@ class VariableLengthKeyStoreTest : public BaseTest {
     _key_equal = VariableLengthKey(sizeof(uint32_t));
     _key_less = VariableLengthKey(sizeof(uint32_t));
     _key_greater = VariableLengthKey(sizeof(uint32_t));
-    _store = VariableLengthKeyStore(4, sizeof(uint32_t));
-    _store_sorted = VariableLengthKeyStore(4, sizeof(uint32_t));
+    _store = VariableLengthKeyStore(ChunkOffset{4}, sizeof(uint32_t));
+    _store_sorted = VariableLengthKeyStore(ChunkOffset{4}, sizeof(uint32_t));
 
     _key_reference |= 65793u;
     _key_equal |= 65793u;
     _key_less |= 65535u;
     _key_greater |= 131072u;
 
-    _store[0] = _key_reference;
-    _store[1] = _key_equal;
-    _store[2] = _key_less;
-    _store[3] = _key_greater;
+    _store[ChunkOffset{0}] = _key_reference;
+    _store[ChunkOffset{1}] = _key_equal;
+    _store[ChunkOffset{2}] = _key_less;
+    _store[ChunkOffset{3}] = _key_greater;
 
-    _store_sorted[0] = _key_less;
-    _store_sorted[1] = _key_reference;
-    _store_sorted[2] = _key_equal;
-    _store_sorted[3] = _key_greater;
+    _store_sorted[ChunkOffset{0}] = _key_less;
+    _store_sorted[ChunkOffset{1}] = _key_reference;
+    _store_sorted[ChunkOffset{2}] = _key_equal;
+    _store_sorted[ChunkOffset{3}] = _key_greater;
   }
 
  protected:
@@ -150,16 +150,16 @@ TEST_F(VariableLengthKeyStoreTest, SearchWithStd) {
 }
 
 TEST_F(VariableLengthKeyStoreTest, ReadAccessViaBracketsOperator) {
-  EXPECT_TRUE(_store[0] == _key_reference);
-  EXPECT_TRUE(_store[1] == _key_equal);
-  EXPECT_TRUE(_store[2] == _key_less);
-  EXPECT_TRUE(_store[3] == _key_greater);
+  EXPECT_TRUE(_store[ChunkOffset{0}] == _key_reference);
+  EXPECT_TRUE(_store[ChunkOffset{1}] == _key_equal);
+  EXPECT_TRUE(_store[ChunkOffset{2}] == _key_less);
+  EXPECT_TRUE(_store[ChunkOffset{3}] == _key_greater);
 
   const auto& cstore = _store;
-  EXPECT_TRUE(cstore[0] == _key_reference);
-  EXPECT_TRUE(cstore[1] == _key_equal);
-  EXPECT_TRUE(cstore[2] == _key_less);
-  EXPECT_TRUE(cstore[3] == _key_greater);
+  EXPECT_TRUE(cstore[ChunkOffset{0}] == _key_reference);
+  EXPECT_TRUE(cstore[ChunkOffset{1}] == _key_equal);
+  EXPECT_TRUE(cstore[ChunkOffset{2}] == _key_less);
+  EXPECT_TRUE(cstore[ChunkOffset{3}] == _key_greater);
 }
 
 TEST_F(VariableLengthKeyStoreTest, WriteAccessViaBracketsOperator) {
@@ -173,16 +173,16 @@ TEST_F(VariableLengthKeyStoreTest, WriteAccessViaBracketsOperator) {
   value_2 |= 2u;
   value_3 |= 3u;
 
-  _store[0] = value_0;
-  _store[1] = value_1;
-  _store[2] = value_2;
-  _store[3] = value_0;
-  _store[3] |= 3u;
+  _store[ChunkOffset{0}] = value_0;
+  _store[ChunkOffset{1}] = value_1;
+  _store[ChunkOffset{2}] = value_2;
+  _store[ChunkOffset{3}] = value_0;
+  _store[ChunkOffset{3}] |= 3u;
 
-  EXPECT_TRUE(_store[0] == value_0);
-  EXPECT_TRUE(_store[1] == value_1);
-  EXPECT_TRUE(_store[2] == value_2);
-  EXPECT_TRUE(_store[3] == value_3);
+  EXPECT_TRUE(_store[ChunkOffset{0}] == value_0);
+  EXPECT_TRUE(_store[ChunkOffset{1}] == value_1);
+  EXPECT_TRUE(_store[ChunkOffset{2}] == value_2);
+  EXPECT_TRUE(_store[ChunkOffset{3}] == value_3);
 }
 
 TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
@@ -191,8 +191,8 @@ TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
   auto short_key = VariableLengthKey(sizeof(uint16_t));
   auto long_key = VariableLengthKey(sizeof(uint64_t));
 
-  EXPECT_THROW(_store[0] = short_key, std::logic_error);
-  EXPECT_THROW(_store[0] = long_key, std::logic_error);
+  EXPECT_THROW(_store[ChunkOffset{0}] = short_key, std::logic_error);
+  EXPECT_THROW(_store[ChunkOffset{0}] = long_key, std::logic_error);
   EXPECT_THROW(*_store.begin() = short_key, std::logic_error);
   EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
 }

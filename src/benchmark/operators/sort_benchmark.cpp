@@ -38,10 +38,12 @@ static void BM_Sort(benchmark::State& state, const size_t row_count = 40'000, co
 
   const auto input_table = generate_custom_table(row_count, data_type, null_ratio);
   std::shared_ptr<AbstractOperator> input_operator = std::make_shared<TableWrapper>(input_table);
+  input_operator->never_clear_output();
   input_operator->execute();
   if (use_reference_segment) {
     input_operator = std::make_shared<Limit>(input_operator,
                                              expression_functional::to_expression(std::numeric_limits<int64_t>::max()));
+    input_operator->never_clear_output();
     input_operator->execute();
   }
 

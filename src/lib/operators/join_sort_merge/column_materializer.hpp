@@ -118,7 +118,7 @@ class ColumnMaterializer {
     if (segment.size() > 0 && samples_to_collect > 0) {
       auto collected_samples = std::vector<T>{};
       collected_samples.reserve(samples_to_collect);
-      const auto step_width = segment.size() / std::max(1u, samples_to_collect);
+      const auto step_width = segment.size() / std::max(ChunkOffset{1}, samples_to_collect);
 
       for (auto sample_count = size_t{0}; sample_count < samples_to_collect; ++sample_count) {
         // NULL values in passed `segment` vector have already been

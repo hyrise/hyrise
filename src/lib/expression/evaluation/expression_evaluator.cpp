@@ -1339,7 +1339,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
   //        no matter whether there is a (potentially) non-empty Chunk involved or not.
   //        So 5+3 always gives you one result element: 8
 
-  if (((row_counts == 0) || ...)) return 0;
+  if (((row_counts == 0) || ...)) return ChunkOffset{0};
 
   return static_cast<ChunkOffset>(std::max({row_counts...}));
 }

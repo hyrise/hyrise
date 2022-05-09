@@ -293,8 +293,8 @@ class SortedSegmentSearch {
       const auto first_offset = begin->chunk_offset();
       const auto distance = std::distance(begin, end);
 
-      for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-        matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < distance; ++chunk_offset) {
+        matches[output_idx++] = RowID{chunk_id, ChunkOffset{first_offset + chunk_offset}};
       }
     }
   }

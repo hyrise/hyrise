@@ -17,7 +17,7 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
 
   const auto dir_001 = std::string{"resources/test_data/tbl/tpch/sf-0.01/"};
 
-  const auto chunk_size = 1000;
+  const auto chunk_size = ChunkOffset{1'000};
   auto table_info_by_name = TPCHTableGenerator(0.01f, ClusteringConfiguration::None, chunk_size).generate();
 
   EXPECT_TABLE_EQ_ORDERED(table_info_by_name.at("part").table, load_table(dir_001 + "part.tbl", chunk_size));

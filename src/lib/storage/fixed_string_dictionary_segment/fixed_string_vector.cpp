@@ -58,7 +58,7 @@ ReverseIterator FixedStringVector::rend() noexcept { return ReverseIterator(begi
 
 FixedString FixedStringVector::operator[](const size_t pos) {
   PerformanceWarning("operator[] used");
-  return FixedString(&_chars[pos * _string_length], _string_length);
+  return {&_chars[pos * _string_length], _string_length};
 }
 
 FixedString FixedStringVector::at(const size_t pos) {
@@ -95,9 +95,9 @@ void FixedStringVector::erase(const FixedStringIterator<false> start, const Fixe
     return;
   }
 
-  auto it = _chars.begin();
-  std::advance(it, _chars.size() - count * _string_length);
-  _chars.erase(it, _chars.end());
+  auto iter = _chars.begin();
+  std::advance(iter, _chars.size() - count * _string_length);
+  _chars.erase(iter, _chars.end());
   _size -= count;
 }
 
