@@ -70,7 +70,7 @@ def main(data_dir, benchmark_source):
     query_dir = os.path.join(data_dir, "queries")
     abort = (False, 0)
 
-    if tables_are_setup(table_dir, tables_per_benchmark):
+    if tables_are_setup(table_dir, tables_per_benchmark) or True:
         print("- Public BI tables already complete, no setup action required")
     else:
         print(f"- Downloading {num_files} tables")

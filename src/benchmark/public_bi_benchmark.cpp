@@ -27,8 +27,8 @@ using namespace opossum;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
 namespace {
-const std::unordered_map<std::string, std::unordered_set<std::string>> filename_blacklist_per_benchmark() {
-  auto filename_blacklist = std::unordered_map<std::string, std::unordered_set<std::string>>{};
+const std::unordered_set<std::string> filename_blacklist() {
+  auto filename_blacklist = std::unordered_set<std::string>{};
   const auto blacklist_file_path = "resources/benchmark/public_bi/query_blacklist.cfg";
   std::ifstream blacklist_file(blacklist_file_path);
 
@@ -38,11 +38,7 @@ const std::unordered_map<std::string, std::unordered_set<std::string>> filename_
     std::string filename;
     while (std::getline(blacklist_file, filename)) {
       if (filename.size() > 0 && filename.at(0) != '#') {
-        const auto sep_position = filename.find_first_of(".");
-        const auto benchmark = filename.substr(0, sep_position);
-        const auto query = filename.substr(sep_position + 1, filename.size());
-        std::cout << benchmark <<  "    " << query;
-        filename_blacklist[benchmark].emplace(query);
+        filename_blacklist.emplace(filename);
       }
     }
     blacklist_file.close();
@@ -62,13 +58,15 @@ int main(int argc, char* argv[]) {
   ("data_directory", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_DATA_DIRECTORY)) // NOLINT
   ("repo_directory", "Root directory of the Public BI Benchmark repository", cxxopts::value<std::string>()->default_value(DEFAULT_REPO_DIRECTORY)) // NOLINT
   ("b,benchmarks", "Subset of benchmarks to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")) // NOLINT
-  ("dont_download", "Do not download the benchmark tables", cxxopts::value<bool>()->default_value("false"));
+  ("d, dont_download", "Do not download the benchmark tables", cxxopts::value<bool>()->default_value("false"))
+  ("run_together", "Load all datasets together and run the queries in one execution", cxxopts::value<bool>()->default_value("false"));
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
   std::string repo_dir;
   std::string data_dir;
   bool skip_download;
+  bool run_together;
   // Comma-separated query names or "all"
   std::string benchmarks_str;
 
@@ -81,6 +79,7 @@ int main(int argc, char* argv[]) {
   data_dir = cli_parse_result["data_directory"].as<std::string>();
   benchmarks_str = cli_parse_result["benchmarks"].as<std::string>();
   skip_download = cli_parse_result["dont_download"].as<bool>();
+  run_together = cli_parse_result["run_together"].as<bool>();
 
 
   benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
@@ -111,34 +110,41 @@ int main(int argc, char* argv[]) {
     benchmarks.emplace_back(std::string{directory_entry.path().stem()});
   }
   std::sort(benchmarks.begin(), benchmarks.end());
+  std::unordered_map<std::string, std::vector<std::string>> queries_per_benchmark;
+  std::unordered_map<std::string, std::unordered_set<std::string>> tables_per_benchmark;
 
   std::cout << "- Generating table meta information if necessary" << std::endl;
   const auto suffix = std::string{".table"};
   const auto suffix_size = suffix.size();
   for (const auto& benchmark : benchmarks) {
-    std::cout << benchmark << std::endl;
+    //std::cout << benchmark << std::endl;
     std::vector<std::string> tables;
-    std::cout << repo_dir + "/benchmark/" + benchmark + "/tables" << std::endl;
+    //std::cout << repo_dir + "/benchmark/" + benchmark + "/tables" << std::endl;
 
     const auto table_path = repo_dir + "/benchmark/" + benchmark + "/tables";
+    const auto query_path = repo_dir + "/benchmark/" + benchmark + "/queries";
 
     for (const auto& directory_entry : std::filesystem::directory_iterator(table_path)) {
       if (!std::filesystem::is_regular_file(directory_entry)) continue;
       const auto identifier = std::string{directory_entry.path().stem()};
-      tables.emplace_back(identifier.substr(0, identifier.size() - suffix_size));
-      std::cout << identifier.substr(0, identifier.size() - suffix_size) << std::endl;
+      const auto table_name = identifier.substr(0, identifier.size() - suffix_size);
+      tables.emplace_back(table_name);
+      tables_per_benchmark[benchmark].emplace(table_name);
     }
 
-    std::unordered_map<std::string, std::vector<std::string>> tables_per_benchmark;
-    std::unordered_map<std::string, std::vector<std::string>> queries_per_benchmark;
-    std::unordered_map<std::string, std::vector<std::string>> blacklisted_queries;
-    std::sort(tables.begin(), tables.end());
-    for (const auto& table_name : tables) {
-      std::cout << "    " << table_name << std::endl;
+    for (const auto& directory_entry : std::filesystem::directory_iterator(query_path)) {
+      if (!std::filesystem::is_regular_file(directory_entry)) continue;
+      const auto identifier = std::string{directory_entry.path().stem()};
+      queries_per_benchmark[benchmark].emplace_back(benchmark + "." + identifier);
+    }
+
+
+    std::sort(tables.begin(), tables.end());    for (const auto& table_name : tables) {
+      //std::cout << "    " << table_name << std::endl;
       const auto table_meta_path = data_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
-      std::cout << table_meta_path << std::endl;
+      //std::cout << table_meta_path << std::endl;
       std::ifstream file(table_meta_path);
-      const auto exists = file.is_open();
+      //const auto exists = file.is_open();
       file.close();
 
       if (exists) {
@@ -174,43 +180,109 @@ int main(int argc, char* argv[]) {
       csv_meta.config.null_handling = NullHandling::NullStringAsNull;
       CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path, csv_meta);
     }
-
   }
 
-  const auto blacklist = filename_blacklist_per_benchmark();
+  const auto blacklist = filename_blacklist();
 
-  /*
+
   // The join-order-benchmark ships with these two .sql scripts, but we do not want to run them as part of the benchmark
   // as they do not contains actual queries
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
+  const auto query_path = data_dir + "/queries";
+  const auto table_path = data_dir + "/tables";
 
   std::cout << "- Benchmarking queries from " << query_path << std::endl;
   std::cout << "- Running on tables from " << table_path << std::endl;
 
-  std::optional<std::unordered_set<std::string>> query_subset;
-  if (queries_str == "all") {
+  std::optional<std::unordered_map<std::string, std::unordered_set<std::string>>> query_subset;
+  std::vector<std::string> benchmarks_to_run;
+  if (benchmarks_str == "all") {
     std::cout << "- Running all queries from specified path" << std::endl;
+    benchmarks_to_run = benchmarks;
   } else {
-    std::cout << "- Running subset of queries: " << queries_str << std::endl;
+    std::cout << "- Running subset of benchmarks: " << benchmarks_str << std::endl;
 
     // "a, b, c, d" -> ["a", " b", " c", " d"]
-    auto query_subset_untrimmed = std::vector<std::string>{};
-    boost::algorithm::split(query_subset_untrimmed, queries_str, boost::is_any_of(","));
+    auto benchmark_subset_untrimmed = std::vector<std::string>{};
+    boost::algorithm::split(benchmark_subset_untrimmed, benchmarks_str, boost::is_any_of(","));
 
     // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
     query_subset.emplace();
-    for (auto& query_name : query_subset_untrimmed) {
-      query_subset->emplace(boost::trim_copy(query_name));
+    for (auto& benchmark_name : benchmark_subset_untrimmed) {
+      auto benchmark_trimmed = boost::trim_copy(benchmark_name);
+      benchmarks_to_run.emplace_back(benchmark_trimmed);
+      (*query_subset)[benchmark_trimmed].insert(queries_per_benchmark[benchmark_trimmed].begin(), queries_per_benchmark[benchmark_trimmed].end());
     }
   }
 
-  // Run the benchmark
-  auto context = BenchmarkRunner::create_context(*benchmark_config);
-  auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
-  table_generator->set_add_constraints_callback(add_key_constraints);
-  auto benchmark_item_runner =
-      std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, non_query_file_names, query_subset);
 
+
+  if (run_together) {
+    std::cout << "- Run all queries together" << std::endl;
+    auto all_subset_queries = std::optional<std::unordered_set<std::string>>{};
+    if (query_subset) {
+      for (const auto& [_, queries] : *query_subset) {
+        all_subset_queries->insert(queries.begin(), queries.end());
+      }
+    }
+    // Run the benchmark
+    auto context = BenchmarkRunner::create_context(*benchmark_config);
+    auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
+    auto benchmark_item_runner =
+        std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, blacklist, all_subset_queries);
+
+    if (benchmark_item_runner->items().empty()) {
+      std::cout << "No items to run.\n";
+      return 1;
+    }
+
+    auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
+                                                              std::move(table_generator), context);
+    Hyrise::get().benchmark_runner = benchmark_runner;
+
+    if (benchmark_config->verify) {
+      add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
+    }
+
+    std::cout << "done." << std::endl;
+
+    benchmark_runner->run();
+  } else {
+    std::cout << "- Run benchmarks separately" << std::endl;
+    for (const auto& benchmark : benchmarks_to_run) {
+      std::cout << "- " << benchmark << std::endl;
+      auto context = BenchmarkRunner::create_context(*benchmark_config);
+      auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path, tables_per_benchmark[benchmark]);
+      std::optional<std::unordered_set<std::string>> my_subset_queries;
+      if (query_subset) {
+        my_subset_queries = (*query_subset)[benchmark];
+      }
+      auto benchmark_item_runner =
+        std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, blacklist, my_subset_queries);
+
+
+      if (benchmark_item_runner->items().empty()) {
+    std::cout << "No items to run.\n";
+    return 1;
+  }
+
+  auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
+                                                            std::move(table_generator), context);
+  Hyrise::get().benchmark_runner = benchmark_runner;
+
+  if (benchmark_config->verify) {
+    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
+  }
+
+  std::cout << "done." << std::endl;
+
+  benchmark_runner->run();
+  }
+}
+
+
+
+  /*
   if (benchmark_item_runner->items().empty()) {
     std::cout << "No items to run.\n";
     return 1;

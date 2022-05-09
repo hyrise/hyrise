@@ -16,8 +16,8 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                                                 const std::string& path)
-    : AbstractTableGenerator(benchmark_config), _path(path) {}
+                                                 const std::string& path, const std::optional<std::unordered_set<std::string>>& table_subset)
+    : AbstractTableGenerator(benchmark_config), _path(path), _table_subset(table_subset) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {
   Assert(std::filesystem::is_directory(_path), std::string{"Table path "} + _path + " must be a directory");
@@ -38,6 +38,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
     auto table_name = directory_entry.filename();
     table_name.replace_extension("");
+
+    if (_table_subset && !_table_subset->contains(table_name)) {
+      continue;
+    }
 
     auto table_info_by_name_iter = table_info_by_name.find(table_name);
 
