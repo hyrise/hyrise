@@ -26,107 +26,49 @@
 using namespace opossum;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
-/**
- * Each of the 21 JOB tables has one surrogate key. This function registers key constraints for all of them.
- */
-/*void add_key_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  const auto& aka_name_table = table_info_by_name.at("aka_name").table;
-  aka_name_table->add_soft_key_constraint({{aka_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
+namespace {
+const std::unordered_map<std::string, std::unordered_set<std::string>> filename_blacklist_per_benchmark() {
+  auto filename_blacklist = std::unordered_map<std::string, std::unordered_set<std::string>>{};
+  const auto blacklist_file_path = "resources/benchmark/public_bi/query_blacklist.cfg";
+  std::ifstream blacklist_file(blacklist_file_path);
 
-  const auto& aka_title_table = table_info_by_name.at("aka_title").table;
-  aka_title_table->add_soft_key_constraint(
-      {{aka_title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& cast_info_table = table_info_by_name.at("cast_info").table;
-  cast_info_table->add_soft_key_constraint(
-      {{cast_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& char_name_table = table_info_by_name.at("char_name").table;
-  char_name_table->add_soft_key_constraint(
-      {{char_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& comp_cast_type_table = table_info_by_name.at("comp_cast_type").table;
-  comp_cast_type_table->add_soft_key_constraint(
-      {{comp_cast_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& company_name_table = table_info_by_name.at("company_name").table;
-  company_name_table->add_soft_key_constraint(
-      {{company_name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& company_type_table = table_info_by_name.at("company_type").table;
-  company_type_table->add_soft_key_constraint(
-      {{company_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& complete_cast_table = table_info_by_name.at("complete_cast").table;
-  complete_cast_table->add_soft_key_constraint(
-      {{complete_cast_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& info_type_table = table_info_by_name.at("info_type").table;
-  info_type_table->add_soft_key_constraint(
-      {{info_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& keyword_table = table_info_by_name.at("keyword").table;
-  keyword_table->add_soft_key_constraint({{keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& kind_type_table = table_info_by_name.at("kind_type").table;
-  kind_type_table->add_soft_key_constraint(
-      {{kind_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& link_type_table = table_info_by_name.at("link_type").table;
-  link_type_table->add_soft_key_constraint(
-      {{link_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& movie_companies_table = table_info_by_name.at("movie_companies").table;
-  movie_companies_table->add_soft_key_constraint(
-      {{movie_companies_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& movie_info_table = table_info_by_name.at("movie_info").table;
-  movie_info_table->add_soft_key_constraint(
-      {{movie_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& movie_info_idx_table = table_info_by_name.at("movie_info_idx").table;
-  movie_info_idx_table->add_soft_key_constraint(
-      {{movie_info_idx_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& movie_keyword_table = table_info_by_name.at("movie_keyword").table;
-  movie_keyword_table->add_soft_key_constraint(
-      {{movie_keyword_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& movie_link_table = table_info_by_name.at("movie_link").table;
-  movie_link_table->add_soft_key_constraint(
-      {{movie_link_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& name_table = table_info_by_name.at("name").table;
-  name_table->add_soft_key_constraint({{name_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& person_info_table = table_info_by_name.at("person_info").table;
-  person_info_table->add_soft_key_constraint(
-      {{person_info_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& role_type_table = table_info_by_name.at("role_type").table;
-  role_type_table->add_soft_key_constraint(
-      {{role_type_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-
-  const auto& title_table = table_info_by_name.at("title").table;
-  title_table->add_soft_key_constraint({{title_table->column_id_by_name("id")}, KeyConstraintType::PRIMARY_KEY});
-}*/
+  if (!blacklist_file) {
+    std::cerr << "Cannot open the blacklist file: " << blacklist_file_path << "\n";
+  } else {
+    std::string filename;
+    while (std::getline(blacklist_file, filename)) {
+      if (filename.size() > 0 && filename.at(0) != '#') {
+        const auto sep_position = filename.find_first_of(".");
+        const auto benchmark = filename.substr(0, sep_position);
+        const auto query = filename.substr(sep_position + 1, filename.size());
+        std::cout << benchmark <<  "    " << query;
+        filename_blacklist[benchmark].emplace(query);
+      }
+    }
+    blacklist_file.close();
+  }
+  return filename_blacklist;
+}
+}  // namespace
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Public BI Benchmark");
 
-  const auto DEFAULT_TABLE_DIRECTORY = "public_bi_data";
-  const auto DEFAULT_QUERY_DIRECTORY = "third_party/public_bi_benchmark";
+  const auto DEFAULT_DATA_DIRECTORY = "public_bi_data";
+  const auto DEFAULT_REPO_DIRECTORY = "third_party/public_bi_benchmark";
 
   // clang-format off
   cli_options.add_options()
-  ("table_directory", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_TABLE_DIRECTORY)) // NOLINT
-  ("query_directory", "Directory containing the .sql files of the Join Order Benchmark", cxxopts::value<std::string>()->default_value(DEFAULT_QUERY_DIRECTORY)) // NOLINT
-  ("b,benchmarks", "Subset of bnehcmarks to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")); // NOLINT
+  ("data_directory", "Directory containing the Tables as csv, tbl or binary files. CSV files require meta-files, see csv_meta.hpp or any *.csv.json file.", cxxopts::value<std::string>()->default_value(DEFAULT_DATA_DIRECTORY)) // NOLINT
+  ("repo_directory", "Root directory of the Public BI Benchmark repository", cxxopts::value<std::string>()->default_value(DEFAULT_REPO_DIRECTORY)) // NOLINT
+  ("b,benchmarks", "Subset of benchmarks to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")) // NOLINT
+  ("dont_download", "Do not download the benchmark tables", cxxopts::value<bool>()->default_value("false"));
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
-  std::string query_dir;
-  std::string table_dir;
+  std::string repo_dir;
+  std::string data_dir;
+  bool skip_download;
   // Comma-separated query names or "all"
   std::string benchmarks_str;
 
@@ -135,33 +77,38 @@ int main(int argc, char* argv[]) {
 
   if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
 
-  query_dir = cli_parse_result["query_directory"].as<std::string>();
-  table_dir = cli_parse_result["table_directory"].as<std::string>();
+  repo_dir = cli_parse_result["repo_directory"].as<std::string>();
+  data_dir = cli_parse_result["data_directory"].as<std::string>();
   benchmarks_str = cli_parse_result["benchmarks"].as<std::string>();
+  skip_download = cli_parse_result["dont_download"].as<bool>();
+
 
   benchmark_config = std::make_shared<BenchmarkConfig>(CLIConfigParser::parse_cli_options(cli_parse_result));
 
   // Check that the options "query_path" and "table_path" were specified
-  if (query_dir.empty() || table_dir.empty()) {
-    std::cerr << "Need to specify --query_directory=path/to/queries and --table_directory=path/to/table_files" << std::endl;
+  if (repo_dir.empty() || data_dir.empty()) {
+    std::cerr << "Need to specify --repo_directory=path/to/queries and --data_directory=path/to/table_files" << std::endl;
     std::cerr << cli_options.help({}) << std::endl;
     return 1;
   }
 
-  /**
-   * Use a Python script to download and unzip the IMDB. We do this in Python and not in C++ because downloading and
-   * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
-   */
-  const auto setup_public_bi_command = "python3 scripts/setup_public_bi.py "s + table_dir + " -b " + query_dir;
-  const auto setup_public_bi_return_code = system(setup_public_bi_command.c_str());
-  Assert(setup_public_bi_return_code == 0, "setup_public_bi.py failed. Did you run the benchmark from the project root dir?");
 
-  std::vector<std::filesystem::path> benchmarks;
+  if (!skip_download) {
+    /**
+     * Use a Python script to download and unzip the IMDB. We do this in Python and not in C++ because downloading and
+     * unzipping is straight forward in Python (and we suspect in C++ it might be... cumbersome).
+     */
+    const auto setup_public_bi_command = "python3 scripts/setup_public_bi.py "s + data_dir + " -b " + repo_dir;
+    const auto setup_public_bi_return_code = system(setup_public_bi_command.c_str());
+    Assert(setup_public_bi_return_code == 0, "setup_public_bi.py failed. Did you run the benchmark from the project root dir?");
+  }
 
-  for (const auto& directory_entry : std::filesystem::directory_iterator(query_dir + "/benchmark")) {
+  std::vector<std::string> benchmarks;
+
+  for (const auto& directory_entry : std::filesystem::directory_iterator(repo_dir + "/benchmark")) {
     if (std::filesystem::is_regular_file(directory_entry)) continue;
 
-    benchmarks.emplace_back(directory_entry.path().stem());
+    benchmarks.emplace_back(std::string{directory_entry.path().stem()});
   }
   std::sort(benchmarks.begin(), benchmarks.end());
 
@@ -171,9 +118,9 @@ int main(int argc, char* argv[]) {
   for (const auto& benchmark : benchmarks) {
     std::cout << benchmark << std::endl;
     std::vector<std::string> tables;
-    std::cout << query_dir + "/benchmark/" + std::string{benchmark} + "/tables" << std::endl;
+    std::cout << repo_dir + "/benchmark/" + benchmark + "/tables" << std::endl;
 
-    const auto table_path = query_dir + "/benchmark/" + std::string{benchmark} + "/tables";
+    const auto table_path = repo_dir + "/benchmark/" + benchmark + "/tables";
 
     for (const auto& directory_entry : std::filesystem::directory_iterator(table_path)) {
       if (!std::filesystem::is_regular_file(directory_entry)) continue;
@@ -181,10 +128,14 @@ int main(int argc, char* argv[]) {
       tables.emplace_back(identifier.substr(0, identifier.size() - suffix_size));
       std::cout << identifier.substr(0, identifier.size() - suffix_size) << std::endl;
     }
+
+    std::unordered_map<std::string, std::vector<std::string>> tables_per_benchmark;
+    std::unordered_map<std::string, std::vector<std::string>> queries_per_benchmark;
+    std::unordered_map<std::string, std::vector<std::string>> blacklisted_queries;
     std::sort(tables.begin(), tables.end());
     for (const auto& table_name : tables) {
       std::cout << "    " << table_name << std::endl;
-      const auto table_meta_path = table_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
+      const auto table_meta_path = data_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
       std::cout << table_meta_path << std::endl;
       std::ifstream file(table_meta_path);
       const auto exists = file.is_open();
@@ -194,7 +145,7 @@ int main(int argc, char* argv[]) {
         continue;
       }
 
-      const auto create_table_path = query_dir + "/benchmark/" + std::string{benchmark} + "/tables/" + table_name + suffix + ".sql";
+      const auto create_table_path = repo_dir + "/benchmark/" + benchmark + "/tables/" + table_name + suffix + ".sql";
       std::ifstream definition_file(create_table_path);
       Assert(definition_file.is_open(), "Did not find table definition for " + table_name);
 
@@ -203,7 +154,7 @@ int main(int argc, char* argv[]) {
       auto create_table_statement_string = sstr.str();
       definition_file.close();
 
-      const auto replace_keywords = std::vector<std::pair<std::string, std::string>>{{"timestamp", "text"}, {"boolean", "text"}, {"bigint", "long"}};
+      const auto replace_keywords = std::vector<std::pair<std::string, std::string>>{{"timestamp", "text"}, {"boolean", "text"}};
 
       for (const auto& [kw, replacement] : replace_keywords) {
         while (true) {
@@ -217,15 +168,16 @@ int main(int argc, char* argv[]) {
         .disable_mvcc()
         .create_pipeline()
         .get_unoptimized_logical_plans().at(0);
-      const auto& static_table_node = static_cast<StaticTableNode&>(*table_node->left_input());
-      CsvMeta meta{};
-      meta.config.separator = '|';
-      meta.config.null_handling = NullHandling::NullStringAsNull;
+      const auto& static_table_node = static_cast<StaticTableNode&>(*create_table_node->left_input());
+      CsvMeta csv_meta{};
+      csv_meta.config.separator = '|';
+      csv_meta.config.null_handling = NullHandling::NullStringAsNull;
       CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path, csv_meta);
-      //std::cout << *create_table_node << std::endl;
     }
 
   }
+
+  const auto blacklist = filename_blacklist_per_benchmark();
 
   /*
   // The join-order-benchmark ships with these two .sql scripts, but we do not want to run them as part of the benchmark
