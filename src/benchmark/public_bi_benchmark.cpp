@@ -147,9 +147,9 @@ int main(int argc, char* argv[]) {
       //const auto exists = file.is_open();
       file.close();
 
-      if (exists) {
-        continue;
-      }
+      //if (exists) {
+      //  continue;
+      //}
 
       const auto create_table_path = repo_dir + "/benchmark/" + benchmark + "/tables/" + table_name + suffix + ".sql";
       std::ifstream definition_file(create_table_path);
