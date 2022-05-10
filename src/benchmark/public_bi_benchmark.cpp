@@ -27,8 +27,8 @@ using namespace opossum;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
 namespace {
-const std::unordered_set<std::string> filename_blacklist() {
-  auto filename_blacklist = std::unordered_set<std::string>{};
+const std::unordered_map<std::string, std::unordered_set<std::string>> filename_blacklist() {
+  auto filename_blacklist = std::unordered_map<std::string, std::unordered_set<std::string>> {};
   const auto blacklist_file_path = "resources/benchmark/public_bi/query_blacklist.cfg";
   std::ifstream blacklist_file(blacklist_file_path);
 
@@ -38,13 +38,25 @@ const std::unordered_set<std::string> filename_blacklist() {
     std::string filename;
     while (std::getline(blacklist_file, filename)) {
       if (filename.size() > 0 && filename.at(0) != '#') {
-        filename_blacklist.emplace(filename);
+        const auto benchmark_length = filename.find_first_of(".");
+        const auto benchmark = filename.substr(0, benchmark_length);
+        filename_blacklist[benchmark].emplace(filename);
       }
     }
     blacklist_file.close();
   }
+  for (const auto& [b, qs] : filename_blacklist) {
+    std::cout << b << ": " << boost::algorithm::join(qs, ", ") << std::endl;
+  }
   return filename_blacklist;
 }
+
+/*
+template <typename ContainerType>
+const ContainerType<std::string> list_directory(const std::string& path, const bool list_directories) {
+  return ContainerType<std::string>{};
+}
+*/
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -144,12 +156,12 @@ int main(int argc, char* argv[]) {
       const auto table_meta_path = data_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
       //std::cout << table_meta_path << std::endl;
       std::ifstream file(table_meta_path);
-      //const auto exists = file.is_open();
+      const auto exists = file.is_open();
       file.close();
 
-      //if (exists) {
-      //  continue;
-      //}
+      if (exists) {
+        continue;
+      }
 
       const auto create_table_path = repo_dir + "/benchmark/" + benchmark + "/tables/" + table_name + suffix + ".sql";
       std::ifstream definition_file(create_table_path);
@@ -182,7 +194,11 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  const auto blacklist = filename_blacklist();
+  const auto blacklist_per_benchmark = filename_blacklist();
+  auto blacklist =  std::unordered_set<std::string>{};
+    for (const auto& [_, blacklist_queries] : blacklist_per_benchmark) {
+      blacklist.insert(blacklist_queries.begin(), blacklist_queries.end());
+    }
 
 
   // The join-order-benchmark ships with these two .sql scripts, but we do not want to run them as part of the benchmark
@@ -225,6 +241,7 @@ int main(int argc, char* argv[]) {
         all_subset_queries->insert(queries.begin(), queries.end());
       }
     }
+
     // Run the benchmark
     auto context = BenchmarkRunner::create_context(*benchmark_config);
     auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path);
@@ -250,54 +267,43 @@ int main(int argc, char* argv[]) {
   } else {
     std::cout << "- Run benchmarks separately" << std::endl;
     for (const auto& benchmark : benchmarks_to_run) {
-      std::cout << "- " << benchmark << std::endl;
-      auto context = BenchmarkRunner::create_context(*benchmark_config);
-      auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path, tables_per_benchmark[benchmark]);
       std::optional<std::unordered_set<std::string>> my_subset_queries;
       if (query_subset) {
         my_subset_queries = (*query_subset)[benchmark];
       }
+      if (blacklist_per_benchmark.contains(benchmark)) {
+        const auto num_queries = my_subset_queries ? my_subset_queries->size() : queries_per_benchmark[benchmark].size();
+        if (num_queries == blacklist_per_benchmark.at(benchmark).size()) {
+          std::cout << "- Skip " << benchmark << " (all queries blacklisted)" << std::endl;
+          continue;
+        }
+      }
+      std::cout << "- " << benchmark << std::endl;
+      auto context = BenchmarkRunner::create_context(*benchmark_config);
+      std::cout << boost::algorithm::join(tables_per_benchmark[benchmark], ", ") << std::endl;
+
+      auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path, tables_per_benchmark[benchmark]);
+
       auto benchmark_item_runner =
         std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, blacklist, my_subset_queries);
 
 
       if (benchmark_item_runner->items().empty()) {
-    std::cout << "No items to run.\n";
-    return 1;
+        std::cout << "No items to run.\n";
+        continue;
+      }
+
+      auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
+                                                                std::move(table_generator), context);
+      Hyrise::get().benchmark_runner = benchmark_runner;
+
+      if (benchmark_config->verify) {
+        add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
+      }
+
+      std::cout << "done." << std::endl;
+
+      benchmark_runner->run();
+    }
   }
-
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
-                                                            std::move(table_generator), context);
-  Hyrise::get().benchmark_runner = benchmark_runner;
-
-  if (benchmark_config->verify) {
-    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
-  }
-
-  std::cout << "done." << std::endl;
-
-  benchmark_runner->run();
-  }
-}
-
-
-
-  /*
-  if (benchmark_item_runner->items().empty()) {
-    std::cout << "No items to run.\n";
-    return 1;
-  }
-
-  auto benchmark_runner = std::make_shared<BenchmarkRunner>(*benchmark_config, std::move(benchmark_item_runner),
-                                                            std::move(table_generator), context);
-  Hyrise::get().benchmark_runner = benchmark_runner;
-
-  if (benchmark_config->verify) {
-    add_indices_to_sqlite(query_path + "/schema.sql", query_path + "/fkindexes.sql", benchmark_runner->sqlite_wrapper);
-  }
-
-  std::cout << "done." << std::endl;
-
-  benchmark_runner->run();
-  */
 }
