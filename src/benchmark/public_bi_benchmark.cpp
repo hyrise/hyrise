@@ -269,10 +269,13 @@ int main(int argc, char* argv[]) {
     for (const auto& benchmark : benchmarks_to_run) {
       std::optional<std::unordered_set<std::string>> my_subset_queries;
       if (query_subset) {
-        my_subset_queries = (*query_subset)[benchmark];
+        my_subset_queries = query_subset->at(benchmark);
+      } else {
+        // std::cout << boost::algorithm::join(queries_per_benchmark[benchmark], ", ") << std::endl;
+        my_subset_queries = std::unordered_set<std::string>{queries_per_benchmark.at(benchmark).begin(), queries_per_benchmark.at(benchmark).end()};
       }
       if (blacklist_per_benchmark.contains(benchmark)) {
-        const auto num_queries = my_subset_queries ? my_subset_queries->size() : queries_per_benchmark[benchmark].size();
+        const auto num_queries = my_subset_queries->size();
         if (num_queries == blacklist_per_benchmark.at(benchmark).size()) {
           std::cout << "- Skip " << benchmark << " (all queries blacklisted)" << std::endl;
           continue;
@@ -280,9 +283,7 @@ int main(int argc, char* argv[]) {
       }
       std::cout << "- " << benchmark << std::endl;
       auto context = BenchmarkRunner::create_context(*benchmark_config);
-      std::cout << boost::algorithm::join(tables_per_benchmark[benchmark], ", ") << std::endl;
-
-      auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path, tables_per_benchmark[benchmark]);
+      auto table_generator = std::make_unique<FileBasedTableGenerator>(benchmark_config, table_path, tables_per_benchmark.at(benchmark));
 
       auto benchmark_item_runner =
         std::make_unique<FileBasedBenchmarkItemRunner>(benchmark_config, query_path, blacklist, my_subset_queries);
@@ -303,7 +304,15 @@ int main(int argc, char* argv[]) {
 
       std::cout << "done." << std::endl;
 
-      benchmark_runner->run();
+      try {
+        benchmark_runner->run();
+      } catch (std::exception& e) {
+        std::cout << "- ERROR running " << benchmark << std::endl;
+        std::cout << e.what() << std::endl << std::endl;
+
+      }
+
+
     }
   }
 }
