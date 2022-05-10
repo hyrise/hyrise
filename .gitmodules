@@ -47,6 +47,9 @@
 [submodule "third_party/robin-map"]
 	path = third_party/robin-map
 	url = https://github.com/Tessil/robin-map.git
+[submodule "third_party/sql-parser"]
+	path = third_party/sql-parser
+	url = https://github.com/hyrise/sql-parser.git
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
@@ -56,7 +59,3 @@
 [submodule "third_party/public_bi_benchmark"]
 	path = third_party/public_bi_benchmark
 	url = https://github.com/cwida/public_bi_benchmark.git
-[submodule "third_party/sql-parser"]
-	path = third_party/sql-parser
-	url = https://github.com/hyrise/sql-parser.git
-	branch = dey4ss/bigint
