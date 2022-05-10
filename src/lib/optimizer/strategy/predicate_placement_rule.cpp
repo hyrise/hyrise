@@ -16,6 +16,22 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
+using namespace opossum;  // NOLINT
+
+namespace {
+
+// TODO
+class TemporaryRootNode : public LogicalPlanRootNode {
+ public:
+  explicit TemporaryRootNode() : LogicalPlanRootNode() {}
+
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override {
+    return "[TemporaryRootNode]";
+  }
+};
+
+}
+
 namespace opossum {
 
 std::string PredicatePlacementRule::name() const {
@@ -50,13 +66,36 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   const auto handle_barrier = [&]() {
     _insert_nodes(current_node, input_side, push_down_nodes);
 
-    if (input_node->left_input()) {
-      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+    const auto& barrier_node = input_node;
+    const auto barrier_node_is_pushdown_predicate = [&barrier_node]() {
+      if (barrier_node->type == LQPNodeType::Predicate) {
+        const auto predicate_node = std::static_pointer_cast<PredicateNode>(barrier_node);
+        return !_is_expensive_predicate(predicate_node->predicate());
+      } else if (barrier_node->type == LQPNodeType::Join) {
+        const auto join_mode = std::static_pointer_cast<JoinNode>(barrier_node)->join_mode;
+        return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
+               join_mode == JoinMode::AntiNullAsFalse;
+      }
+      return false;
+    }();
+
+    auto next_traversal_root = barrier_node;
+    if (barrier_node_is_pushdown_predicate) {
+      next_traversal_root = std::make_shared<TemporaryRootNode>();
+      lqp_insert_node_above(barrier_node, next_traversal_root);
     }
-    if (input_node->right_input()) {
+
+    if (next_traversal_root->left_input()) {
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(next_traversal_root, LQPInputSide::Left, left_push_down_nodes, estimator);
+    }
+    if (next_traversal_root->right_input()) {
       auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+      _push_down_traversal(next_traversal_root, LQPInputSide::Right, right_push_down_nodes, estimator);
+    }
+
+    if (next_traversal_root->type == LQPNodeType::Root) {
+      lqp_remove_node(next_traversal_root);
     }
   };
 
