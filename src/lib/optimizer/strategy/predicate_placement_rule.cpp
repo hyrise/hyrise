@@ -41,7 +41,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  if (!input_node) return;  // Allow calling without checks
+  if (!input_node) {
+    Assert(push_down_nodes.empty(), "Expected pushdown nodes to be already inserted.");
+    return;  // Allow calling without checks
+  }
 
   // A helper method for cases where the input_node does not allow us to proceed
   const auto handle_barrier = [&]() {
@@ -63,21 +66,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;
   }
 
-  // Removes a node from the current LQP and continues to run _push_down_traversal on the node's inputs. It is the
-  // caller's responsibility to put the node back into the LQP at some new position.
-  const auto untie_and_recurse = [&](const std::shared_ptr<AbstractLQPNode>& node) {
-    push_down_nodes.emplace_back(node);
-
-    // As node might be the input to multiple nodes, remember those nodes before we untie node
-    const auto output_relations = node->output_relations();
-
-    lqp_remove_node(node, AllowRightInput::Yes);
+  // Removes input_node from the current LQP and continues to run _push_down_traversal. It is the caller's
+  // responsibility to put it back into the LQP at some new position.
+  const auto untie_input_node_and_recurse = [&]() {
+    push_down_nodes.emplace_back(input_node);
+    lqp_remove_node(input_node, AllowRightInput::Yes);
     _push_down_traversal(current_node, input_side, push_down_nodes, estimator);
-
-    // Restore the output relationships
-    for (const auto& [output_node, output_side] : output_relations) {
-      output_node->set_input(output_side, current_node->input(input_side));
-    }
   };
 
   switch (input_node->type) {
@@ -85,7 +79,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(input_node);
 
       if (!_is_expensive_predicate(predicate_node->predicate())) {
-        untie_and_recurse(input_node);
+        untie_input_node_and_recurse();
       } else {
         _push_down_traversal(input_node, input_side, push_down_nodes, estimator);
       }
@@ -101,7 +95,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
         _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
 
-        untie_and_recurse(input_node);
+        untie_input_node_and_recurse();
         break;
       }
 
