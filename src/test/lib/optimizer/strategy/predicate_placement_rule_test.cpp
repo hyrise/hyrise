@@ -586,27 +586,25 @@ TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
 }
 
 TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
-  // In this test, the PredicatePlacementRule cannot push down the top two predicates because of a PredicateNode having
-  // multiple outputs (the barrier). The purpose of this test is to check if the barrier PredicateNode becomes
-  // pushed down.
+  // In this test, the PredicatePlacementRule cannot push down the top two predicates because of a predicate having
+  // multiple outputs (the barrier node). The purpose of this test is to check whether a barrier node becomes
+  // pushed down by the rule, if it is a predicate eligible for pushdown.
+
+  const auto barrier_predicate_node =
+  PredicateNode::make(greater_than_(_b_b, 123),                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2)
+    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),         // <-- 2nd Predicate before pushdown
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        _stored_table_b,
+        _stored_table_c),
+      _stored_table_a));
 
   // clang-format off
-  auto input_common_node =
-  JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),           // <-- 2nd Predicate before pushdown
-    JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
-      _stored_table_b,
-      _stored_table_c),
-    _stored_table_a);
-
-  const auto barrier_predicate_node = PredicateNode::make(greater_than_(_b_b, 123));
-  barrier_predicate_node->set_left_input(input_common_node);
-
   auto input_lqp =
   PredicateNode::make(greater_than_(_c_a, 150),
     PredicateNode::make(greater_than_(_c_a, 100),
-      barrier_predicate_node));                                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2)
+      barrier_predicate_node));
 
-  // Increase output count, so that the predicate becomes a barrier in the _push_down_traversal subroutine.
+  // Increase the predicate's output count so that it becomes an actual barrier in the _push_down_traversal subroutine.
   const auto temporary_node = LogicalPlanRootNode::make(barrier_predicate_node);
   ASSERT_EQ(barrier_predicate_node->output_count(), 2);
 
