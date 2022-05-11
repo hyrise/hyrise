@@ -30,7 +30,7 @@ class TemporaryRootNode : public LogicalPlanRootNode {
   }
 };
 
-}
+}  // namespace
 
 namespace opossum {
 
@@ -62,7 +62,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;  // Allow calling without checks
   }
 
-  // A helper method for cases where the input_node does not allow us to proceed
+  // A helper method for cases where the input_node does not allow us to proceed.
   const auto handle_barrier = [&]() {
     _insert_nodes(current_node, input_side, push_down_nodes);
 
@@ -94,7 +94,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       _push_down_traversal(next_traversal_root, LQPInputSide::Right, right_push_down_nodes, estimator);
     }
 
-    if (next_traversal_root->type == LQPNodeType::Root) {
+    if (std::dynamic_pointer_cast<TemporaryRootNode>(next_traversal_root)) {
       lqp_remove_node(next_traversal_root);
     }
   };
@@ -105,8 +105,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;
   }
 
-  // Removes input_node from the current LQP and continues to run _push_down_traversal. It is the caller's
-  // responsibility to put it back into the LQP at some new position.
+  // Removes input_node from the current LQP and continues to run _push_down_traversal.
   const auto untie_input_node_and_recurse = [&]() {
     push_down_nodes.emplace_back(input_node);
     lqp_remove_node(input_node, AllowRightInput::Yes);
