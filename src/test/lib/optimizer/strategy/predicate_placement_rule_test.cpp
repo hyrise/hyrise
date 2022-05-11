@@ -414,8 +414,8 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
   // We must stop pushing down predicates when reaching a node with multiple outputs.
   // clang-format off
   const auto input_common_node =
-  PredicateNode::make(greater_than_(_a_a, 1),
     ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+      PredicateNode::make(greater_than_(_a_a, 1),
       _stored_table_a));
 
   const auto input_lqp =
@@ -432,8 +432,8 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
   // We expect the diamond predicates to get pushed below the Projections. However, since the diamond's origin node
   // has multiple outputs, predicates are not expected to get pushed down any further.
   const auto expected_common_node =
-  PredicateNode::make(greater_than_(_a_a, 1),
-    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    PredicateNode::make(greater_than_(_a_a, 1),
       _stored_table_a));
 
   const auto expected_lqp =
