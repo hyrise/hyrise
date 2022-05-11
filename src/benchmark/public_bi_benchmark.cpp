@@ -45,9 +45,6 @@ const std::unordered_map<std::string, std::unordered_set<std::string>> filename_
     }
     blacklist_file.close();
   }
-  for (const auto& [b, qs] : filename_blacklist) {
-    std::cout << b << ": " << boost::algorithm::join(qs, ", ") << std::endl;
-  }
   return filename_blacklist;
 }
 
@@ -71,7 +68,8 @@ int main(int argc, char* argv[]) {
   ("repo_directory", "Root directory of the Public BI Benchmark repository", cxxopts::value<std::string>()->default_value(DEFAULT_REPO_DIRECTORY)) // NOLINT
   ("b,benchmarks", "Subset of benchmarks to run as a comma separated list", cxxopts::value<std::string>()->default_value("all")) // NOLINT
   ("d, dont_download", "Do not download the benchmark tables", cxxopts::value<bool>()->default_value("false"))
-  ("run_together", "Load all datasets together and run the queries in one execution", cxxopts::value<bool>()->default_value("false"));
+  ("run_together", "Load all datasets together and run the queries in one execution", cxxopts::value<bool>()->default_value("false"))
+  ("s, skip_benchmarks", "Subset of benchmarks to skip as a comma separated list", cxxopts::value<std::string>()->default_value(""));
   // clang-format on
 
   std::shared_ptr<BenchmarkConfig> benchmark_config;
@@ -81,6 +79,7 @@ int main(int argc, char* argv[]) {
   bool run_together;
   // Comma-separated query names or "all"
   std::string benchmarks_str;
+  std::string skip_str;
 
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
@@ -90,6 +89,7 @@ int main(int argc, char* argv[]) {
   repo_dir = cli_parse_result["repo_directory"].as<std::string>();
   data_dir = cli_parse_result["data_directory"].as<std::string>();
   benchmarks_str = cli_parse_result["benchmarks"].as<std::string>();
+  skip_str = cli_parse_result["skip_benchmarks"].as<std::string>();
   skip_download = cli_parse_result["dont_download"].as<bool>();
   run_together = cli_parse_result["run_together"].as<bool>();
 
@@ -212,25 +212,56 @@ int main(int argc, char* argv[]) {
 
   std::optional<std::unordered_map<std::string, std::unordered_set<std::string>>> query_subset;
   std::vector<std::string> benchmarks_to_run;
-  if (benchmarks_str == "all") {
+  if (benchmarks_str == "all" && skip_str.empty()) {
     std::cout << "- Running all queries from specified path" << std::endl;
     benchmarks_to_run = benchmarks;
   } else {
-    std::cout << "- Running subset of benchmarks: " << benchmarks_str << std::endl;
+    const auto indic = skip_str.empty() ? "" : " w/o " + skip_str;
+    std::cout << "- Running subset of benchmarks: " << benchmarks_str << indic << std::endl;
 
-    // "a, b, c, d" -> ["a", " b", " c", " d"]
-    auto benchmark_subset_untrimmed = std::vector<std::string>{};
-    boost::algorithm::split(benchmark_subset_untrimmed, benchmarks_str, boost::is_any_of(","));
 
-    // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
-    query_subset.emplace();
-    for (auto& benchmark_name : benchmark_subset_untrimmed) {
-      auto benchmark_trimmed = boost::trim_copy(benchmark_name);
-      benchmarks_to_run.emplace_back(benchmark_trimmed);
-      (*query_subset)[benchmark_trimmed].insert(queries_per_benchmark[benchmark_trimmed].begin(), queries_per_benchmark[benchmark_trimmed].end());
+    std::unordered_set<std::string> excluded_benchmarks;
+    if (!skip_str.empty()) {
+      // "a, b, c, d" -> ["a", " b", " c", " d"]
+      auto benchmark_subset_untrimmed = std::vector<std::string>{};
+      boost::algorithm::split(benchmark_subset_untrimmed, skip_str, boost::is_any_of(","));
+
+      // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
+      query_subset.emplace();
+      for (auto& benchmark_name : benchmark_subset_untrimmed) {
+        auto benchmark_trimmed = boost::trim_copy(benchmark_name);
+        AssertInput(queries_per_benchmark.contains(benchmark_trimmed), "Unknown benchmark '" + benchmark_trimmed + "'");
+        excluded_benchmarks.emplace(benchmark_trimmed);
+      }
+    }
+
+    if (benchmarks_str == "all") {
+      for (const auto& benchmark : benchmarks) {
+        if (!excluded_benchmarks.contains(benchmark)) {
+          benchmarks_to_run.emplace_back(benchmark);
+        }
+      }
+    } else {
+
+      // "a, b, c, d" -> ["a", " b", " c", " d"]
+      auto benchmark_subset_untrimmed = std::vector<std::string>{};
+      boost::algorithm::split(benchmark_subset_untrimmed, benchmarks_str, boost::is_any_of(","));
+
+      // ["a", " b", " c", " d"] -> ["a", "b", "c", "d"]
+      query_subset.emplace();
+      for (auto& benchmark_name : benchmark_subset_untrimmed) {
+        auto benchmark_trimmed = boost::trim_copy(benchmark_name);
+        AssertInput(queries_per_benchmark.contains(benchmark_trimmed), "Unknown benchmark '" + benchmark_trimmed + "'");
+        if (!excluded_benchmarks.contains(benchmark_trimmed)) {
+          benchmarks_to_run.emplace_back(benchmark_trimmed);
+        }
+      }
+    }
+
+    for (const auto& benchmark : benchmarks_to_run) {
+      (*query_subset)[benchmark].insert(queries_per_benchmark[benchmark].begin(), queries_per_benchmark[benchmark].end());
     }
   }
-
 
 
   if (run_together) {
@@ -268,6 +299,7 @@ int main(int argc, char* argv[]) {
     std::cout << "- Run benchmarks separately" << std::endl;
     for (const auto& benchmark : benchmarks_to_run) {
       std::optional<std::unordered_set<std::string>> my_subset_queries;
+      std::cout << "b " << benchmark << std::endl;
       if (query_subset) {
         my_subset_queries = query_subset->at(benchmark);
       } else {
@@ -309,7 +341,6 @@ int main(int argc, char* argv[]) {
       } catch (std::exception& e) {
         std::cout << "- ERROR running " << benchmark << std::endl;
         std::cout << e.what() << std::endl << std::endl;
-
       }
 
 
