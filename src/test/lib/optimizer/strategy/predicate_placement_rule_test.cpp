@@ -6,6 +6,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -582,6 +583,52 @@ TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
+  // In this test, the PredicatePlacementRule cannot push down the top two predicates because of a PredicateNode having
+  // multiple outputs (the barrier). The purpose of this test is to check if the barrier PredicateNode becomes
+  // pushed down.
+
+  // clang-format off
+  auto input_common_node =
+  JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),           // <-- 2nd Predicate before pushdown
+    JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+      _stored_table_b,
+      _stored_table_c),
+    _stored_table_a);
+
+  const auto barrier_predicate_node = PredicateNode::make(greater_than_(_b_b, 123));
+  barrier_predicate_node->set_left_input(input_common_node);
+
+  auto input_lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      barrier_predicate_node));                                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2)
+
+  // Increase output count, so that the predicate becomes a barrier in the _push_down_traversal subroutine.
+  const auto temporary_node = LogicalPlanRootNode::make(barrier_predicate_node);
+  ASSERT_EQ(barrier_predicate_node->output_count(), 2);
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        PredicateNode::make(greater_than_(_b_b, 123),           // <-- 1st Predicate after pushdown
+          JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),   // <-- 2nd Predicate after pushdown
+            _stored_table_b,
+            _stored_table_a)),
+        _stored_table_c)));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_EQ(barrier_predicate_node->output_count(), 1);
+  // After the pushdown, the inner join should have the two outputs that barrier_predicate_node previously had.
+  const auto& inner_join = std::dynamic_pointer_cast<JoinNode>(actual_lqp->left_input()->left_input());
+  EXPECT_EQ(inner_join->output_count(), 2);
+  EXPECT_EQ(temporary_node->left_input(), inner_join);
 }
 
 TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
