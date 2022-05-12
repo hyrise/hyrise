@@ -71,7 +71,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * @param corresponding_join_node having the same join predicate.
    * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi join reductions to LQPs.
    */
-  void mark_as_reducer_of(std::shared_ptr<JoinNode>& corresponding_join_node);
+  void mark_as_reducer_of(const std::shared_ptr<JoinNode>& corresponding_join_node);
 
   JoinMode join_mode;
 

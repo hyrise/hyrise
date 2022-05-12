@@ -228,7 +228,7 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
-void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode>& corresponding_join_node) {
+void JoinNode::mark_as_reducer_of(const std::shared_ptr<JoinNode>& corresponding_join_node) {
   Assert(corresponding_join_node, "Corresponding JoinNode must be provided.");
   Assert(!_is_reducer, "The semi reducer status should be set once only.");
   Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
