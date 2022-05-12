@@ -80,13 +80,14 @@ TEST_F(JoinNodeTest, OutputColumnExpressions) {
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
+  EXPECT_EQ(*_anti_join_node, *_anti_join_node);
   EXPECT_EQ(*_cross_join_node, *_cross_join_node);
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node);
-  // The ::is_reducer property is just a flag and does not change the semi join. In the LQPTranslator... TODO
+  // The `is_reducer` property does not play a role in the equality check. See JoinNode::_on_shallow_equals for
+  // more details on this. As a result, we expect _semi_join_node and _semi_join_reducer_node to be considered as equal.
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_node);
-  EXPECT_EQ(*_anti_join_node, *_anti_join_node);
 
   const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
   const auto other_join_node_b = JoinNode::make(JoinMode::Inner, not_like_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -605,18 +606,17 @@ TEST_F(JoinNodeTest, GetOrFindCorrespondingJoinNode) {
   // clang-format on
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
   semi_join_reduction_node->mark_as_reducer_of(join_node);
-  // The semi reduction join node should have a weak pointer to the corresponding join node.
+
+  // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
+  // corresponding join.
   EXPECT_EQ(semi_join_reduction_node->get_or_find_corresponding_join_node(), join_node);
 
+  // After a deep copy, the semi join reduction node's weak pointer to the corresponding join node should be unset.
+  // Therefore, get_or_find_corresponding_join_node must discover it via the LQP upwards traversal logic.
   const auto copied_lqp = lqp->deep_copy();
-
-  // A deep copied semi join reduction node does not have a weak pointer to a corresponding join node. Therefore,
-  // it must be discovered when get_or_find_corresponding_join_node is called.
   const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
   const auto copied_semi_join_reduction_node =
       std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
-  EXPECT_NE(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), join_node);
-  EXPECT_NE(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_semi_join_reduction_node);
   EXPECT_EQ(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_join_node);
 }
 

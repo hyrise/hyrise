@@ -281,6 +281,8 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
+  // We do not consider the _is_reducer attribute in this comparison, because we want the LQPTranslator to translate
+  // identical semi joins into a single operator, regardless of the `is_reducer` property.
   if (join_mode != join_node.join_mode) return false;
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
