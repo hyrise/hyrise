@@ -84,13 +84,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
     auto next_push_down_traversal_root = barrier_node;
     if (barrier_node_is_pushdown_predicate) {
-      // The barrier node is a predicate eligible for a pushdown. Therefore, we would like it to be covered by the
-      // next recursion of _push_down_traversal. However, since _push_down_traversal only looks at the inputs of
-      // a given root node, the barrier node would not become pushed down.
-      // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. In the following,
-      // the temporary root node is used as the root node for the next recursion of _push_down_traversal. As a result,
-      // barrier_node will be seen as an input of the temporary root node, and thus become pushed down by the rule,
-      // if possible.
+      // The barrier node is a predicate eligible for pushdown. Therefore, we would like it to be covered by the next
+      // recursion of _push_down_traversal. However, since _push_down_traversal looks at the inputs of a given
+      // root node only, barrier_node would not become pushed down.
+      // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. Afterwards, the temporary
+      // root node is used as a root for the next _push_down_traversal recursion. As a result, barrier_node will be seen
+      // as an input of the temporary root node, and thus become pushed down by the rule, if possible.
       next_push_down_traversal_root = std::make_shared<TemporaryRootNode>();
       lqp_insert_node_above(barrier_node, next_push_down_traversal_root);
     }
