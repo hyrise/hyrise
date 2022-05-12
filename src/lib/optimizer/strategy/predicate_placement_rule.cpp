@@ -387,26 +387,26 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         return;
       }
 
-      auto next_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      auto updated_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       const auto& node_below_diamond_origin = diamond_origin_node->left_input();
       for (const auto& push_down_node : push_down_nodes) {
         if (node_below_diamond_origin && _is_evaluable_on_lqp(push_down_node, node_below_diamond_origin)) {
-          // Save for next pushdown traversal
-          next_push_down_nodes.emplace_back(push_down_node);
+          // Save for the next _push_down_traversal recursion
+          updated_push_down_nodes.emplace_back(push_down_node);
         } else if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
-          // Diamond's origin node is a barrier
+          // The diamond's origin node is a barrier for push_down_node
           lqp_insert_node_above(diamond_origin_node, push_down_node, AllowRightInput::Yes);
         } else {
-          // Insert predicate above the diamond, so that it stays evaluable.
+          // The diamond as a whole is a barrier for push_down_node
           lqp_insert_node_above(union_node, push_down_node, AllowRightInput::Yes);
         }
       }
 
-      // Continue predicate pushdown below the diamond structure.
-      auto temporary_diamond_origin_node = std::make_shared<TemporaryRootNode>();
-      lqp_insert_node_above(diamond_origin_node, temporary_diamond_origin_node);
-      _push_down_traversal(temporary_diamond_origin_node, LQPInputSide::Left, next_push_down_nodes, estimator);
-      lqp_remove_node(temporary_diamond_origin_node);
+      // Continue predicate pushdown below the diamond
+      auto temporary_root_node = std::make_shared<TemporaryRootNode>();
+      lqp_insert_node_above(diamond_origin_node, temporary_root_node);
+      _push_down_traversal(temporary_root_node, LQPInputSide::Left, updated_push_down_nodes, estimator);
+      lqp_remove_node(temporary_root_node);
 
       // Optimize the diamond itself
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
