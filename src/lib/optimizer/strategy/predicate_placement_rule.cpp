@@ -20,10 +20,13 @@ using namespace opossum;  // NOLINT
 
 namespace {
 
-// TODO
+/**
+ * This node type is used by the _push_down_traversal subroutine for recursion purposes. For more details, see the
+ * comments in the `handle_barrier` lambda helper, for example.
+ */
 class TemporaryRootNode : public LogicalPlanRootNode {
  public:
-  explicit TemporaryRootNode() : LogicalPlanRootNode() {}
+  TemporaryRootNode() : LogicalPlanRootNode() {}
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override {
     return "[TemporaryRootNode]";
@@ -79,23 +82,33 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       return false;
     }();
 
-    auto next_traversal_root = barrier_node;
+    auto next_push_down_traversal_root = barrier_node;
     if (barrier_node_is_pushdown_predicate) {
-      next_traversal_root = std::make_shared<TemporaryRootNode>();
-      lqp_insert_node_above(barrier_node, next_traversal_root);
+      // The barrier node is a predicate eligible for a pushdown. Therefore, we would like it to be covered by the
+      // next recursion of _push_down_traversal. However, since _push_down_traversal only looks at the inputs of
+      // a given root node, the barrier node would not become pushed down.
+      // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. In the following,
+      // the temporary root node is used as the root node for the next recursion of _push_down_traversal. As a result,
+      // barrier_node will be seen as an input of the temporary root node, and thus become pushed down by the rule,
+      // if possible.
+      next_push_down_traversal_root = std::make_shared<TemporaryRootNode>();
+      lqp_insert_node_above(barrier_node, next_push_down_traversal_root);
     }
 
-    if (next_traversal_root->left_input()) {
+    if (next_push_down_traversal_root->left_input()) {
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(next_traversal_root, LQPInputSide::Left, left_push_down_nodes, estimator);
-    }
-    if (next_traversal_root->right_input()) {
-      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(next_traversal_root, LQPInputSide::Right, right_push_down_nodes, estimator);
+      _push_down_traversal(next_push_down_traversal_root, LQPInputSide::Left, left_push_down_nodes, estimator);
+
+      if (next_push_down_traversal_root->right_input()) {
+        auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(next_push_down_traversal_root, LQPInputSide::Right, right_push_down_nodes, estimator);
+      }
     }
 
-    if (std::dynamic_pointer_cast<TemporaryRootNode>(next_traversal_root)) {
-      lqp_remove_node(next_traversal_root);
+    // The recursion calls to _push_down_traversal have returned. Therefore, we must remove the temporary root node, we
+    // might have inserted previously. (see comment above)
+    if (std::dynamic_pointer_cast<TemporaryRootNode>(next_push_down_traversal_root)) {
+      lqp_remove_node(next_push_down_traversal_root);
     }
   };
 

@@ -592,7 +592,7 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
 
   // clang-format off
   const auto barrier_predicate_node =
-  PredicateNode::make(greater_than_(_b_b, 123),                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2)
+  PredicateNode::make(greater_than_(_b_b, 123),                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2) //NOLINT
     JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),         // <-- 2nd Predicate before pushdown
       JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
         _stored_table_b,
