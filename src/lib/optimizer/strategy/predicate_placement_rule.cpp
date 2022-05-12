@@ -26,7 +26,7 @@ namespace {
  */
 class TemporaryRootNode : public LogicalPlanRootNode {
  public:
-  TemporaryRootNode() : LogicalPlanRootNode() {}
+  TemporaryRootNode() = default;
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override {
     return "[TemporaryRootNode]";
