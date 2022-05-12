@@ -53,17 +53,23 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   /**
-   * @returns true if the SemiJoinReductionRule added this node to the LQP.
+   * @returns true if the JoinNode has as a semi reduction role in the LQP. If so, it was most likely created by the
+   *          SemiJoinReductionRule.
    */
   bool is_reducer() const;
 
   /**
-   * TODO..
+   * @returns a shared pointer to the semi join reduction's corresponding JoinNode. If the pointer is not stored in a
+   *          member variable, the LQP is traversed upwards until the corresponding JoinNode has been found, otherwise
+   *          the function fails.
+   * @pre JoinNode is set to JoinMode::Semi, and ::mark_as_reducer_of has been called.
    */
   std::shared_ptr<JoinNode> get_or_find_corresponding_join_node() const;
 
   /**
-   * This function should be called by the SemiJoinReductionRule only.
+   * Sets the `is_reducer` property of this JoinNode to true, and stores a weak pointer to the
+   * @param corresponding_join_node having the same join predicate.
+   * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi join reductions to LQPs.
    */
   void mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_node);
 

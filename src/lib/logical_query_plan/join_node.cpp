@@ -248,6 +248,7 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const 
   if (!_is_reducer) return nullptr;
 
   if (_corresponding_join_node.expired()) {
+    // Find corresponding join by traversing upwards
     visit_lqp_upwards(const_cast<JoinNode*>(this)->shared_from_this(), [&](const auto& current_node) {
       if (current_node.get() == this) return LQPUpwardVisitation::VisitOutputs;
       if (current_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
@@ -259,7 +260,7 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const 
       _corresponding_join_node = std::weak_ptr<JoinNode>(join_node);
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
-    // TODO make if?
+
     Assert(!_corresponding_join_node.expired(), "Could not find corresponding join node.");
   }
 
