@@ -232,7 +232,8 @@ void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_n
   Assert(corresponding_join_node, "Corresponding JoinNode must be provided.");
   Assert(!_is_reducer, "The semi reducer status should be set once only.");
   Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
-  DebugAssert(join_predicates().size() == 1, "Currently, semi join reductions are expected to have a single join predicate.");
+  DebugAssert(join_predicates().size() == 1,
+              "Currently, semi join reductions are expected to have a single join predicate.");
   DebugAssert(
       std::any_of(corresponding_join_node->join_predicates().begin(), corresponding_join_node->join_predicates().end(),
                   [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
