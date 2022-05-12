@@ -287,14 +287,12 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 
   {
-    // ExpressionEvaluator for five elements
+    // ExpressionEvaluator for five elements, if table is not large
     const auto input_lqp = PredicateNode::make(five_element_in_expression, node);
     const auto result_lqp = StrategyBaseTest::apply_rule(rule, input_lqp);
     EXPECT_EQ(result_lqp, input_lqp);
 
-    // No cardinality check here, as an IN expression with 5 elements will not be touched (see
-    // MAX_ELEMENTS_FOR_DISJUNCTION and MIN_ELEMENTS_FOR_JOIN). These InExpressions are currently not supported by the
-    // CardinalityEstimator.
+    // No cardinality check here. These InExpressions are currently not supported by the CardinalityEstimator.
   }
 
   {

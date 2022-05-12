@@ -107,8 +107,9 @@ std::string InExpressionRewriteRule::name() const {
 }
 
 std::shared_ptr<AbstractCardinalityEstimator> InExpressionRewriteRule::_cardinality_estimator() const {
-  if (!_cardinality_estimator_internal)
+  if (!_cardinality_estimator_internal) {
     _cardinality_estimator_internal = cost_estimator->cardinality_estimator->new_instance();
+  }
 
   return _cardinality_estimator_internal;
 }
@@ -174,12 +175,41 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
       if (right_side_expressions.size() >= MIN_ELEMENTS_FOR_JOIN) {
         rewrite_to_join(sub_node, left_expression, right_side_expressions, *common_data_type,
                         in_expression->is_negated());
-      } else if ((right_side_expressions.size() <= MAX_ELEMENTS_FOR_DISJUNCTION ||
-                  _cardinality_estimator()->estimate_cardinality(sub_node->left_input()) >=
-                      MIN_INPUT_ROWS_FOR_DISJUNCTION) &&
-                 !in_expression->is_negated() &&
+      } else if (!in_expression->is_negated() &&
                  !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
-        rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+        const auto qualifies_for_disjunction = [&]() {
+          if (right_side_expressions.size() < MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR) return true;
+
+          auto input_node = sub_node->left_input();
+          if (input_node->type == LQPNodeType::Join && std::dynamic_pointer_cast<JoinNode>(input_node)->is_reducer()) {
+            // The semi reduction input node might become removed by the SemiJoinReductionRemovalRule. However, the
+            // removal decision depends on the outcome of this rule (an ExpressionEvaluator or Join computation of the
+            // IN predicate blocks the semi reduction removal, for instance). Therefore, we ignore the semi reduction
+            // node, and consider the semi reduction's input cardinality rather than its output cardinality.
+            input_node = input_node->left_input();
+          }
+          const auto cardinality_in = _cardinality_estimator()->estimate_cardinality(input_node);
+          if (cardinality_in < MIN_ROWS_FOR_EXPRESSION_EVALUATOR) {
+            // Our cardinality estimation is far from perfect. In the JOB benchmark, estimate failures tend to add up,
+            // so that upper parts of the LQPs have row counts of 1 and smaller. In reality, however, the row counts
+            // still turn out to be in the hundred thousands to millions. Therefore, we use disjunctions for very
+            // small input row counts since we cannot trust them. As a result, the JOB benchmark profits heavily.
+            return true;
+          }
+          // TODO Benchmark scaling
+          // TODO Explain: A large set count makes the disjunction more expensive...
+          // The cost of a disjunction increases with the number of the IN predicate's elements. Therefore, we want to
+          // consider it when looking at the input cardinality...
+//          const auto min_rows_for_disjunction =
+//              MAX_ROWS_FOR_EXPRESSION_EVALUATOR * float(right_side_expressions.size()) / float(MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR);
+//          return min_rows_for_disjunction <= cardinality_in;
+          return cardinality_in > MAX_ROWS_FOR_EXPRESSION_EVALUATOR;
+        }();
+
+        if (qualifies_for_disjunction) {
+          rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
+        }
+
       } else {
         // Stick with the ExpressionEvaluator
       }
