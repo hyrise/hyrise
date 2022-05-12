@@ -128,7 +128,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     return false;
   }
 
-  std::string search_for{meta.config.separator, meta.config.delimiter, meta.config.quote};
+  const auto search_for = meta.config.no_escape ? std::string{meta.config.separator, meta.config.delimiter} : std::string{meta.config.separator, meta.config.delimiter, meta.config.quote};
 
   size_t from = 0;
   unsigned int rows = 0;

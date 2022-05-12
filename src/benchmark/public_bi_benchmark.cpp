@@ -81,6 +81,9 @@ int main(int argc, char* argv[]) {
   std::string benchmarks_str;
   std::string skip_str;
 
+  std::cout << "char 0 " << '\0' << std::endl;
+  std::cout << "char 127 " << '\127' << std::endl;
+
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
@@ -190,6 +193,7 @@ int main(int argc, char* argv[]) {
       CsvMeta csv_meta{};
       csv_meta.config.separator = '|';
       csv_meta.config.null_handling = NullHandling::NullStringAsNull;
+      csv_meta.config.no_escape = true;
       CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path, csv_meta);
     }
   }
@@ -230,7 +234,7 @@ int main(int argc, char* argv[]) {
       query_subset.emplace();
       for (auto& benchmark_name : benchmark_subset_untrimmed) {
         auto benchmark_trimmed = boost::trim_copy(benchmark_name);
-        AssertInput(queries_per_benchmark.contains(benchmark_trimmed), "Unknown benchmark '" + benchmark_trimmed + "'");
+        AssertInput(queries_per_benchmark.contains(benchmark_trimmed), "Unknown benchmark '" + benchmark_trimmed + "'. Available choices: all, " + boost::algorithm::join(benchmarks, ", "));
         excluded_benchmarks.emplace(benchmark_trimmed);
       }
     }
@@ -251,7 +255,7 @@ int main(int argc, char* argv[]) {
       query_subset.emplace();
       for (auto& benchmark_name : benchmark_subset_untrimmed) {
         auto benchmark_trimmed = boost::trim_copy(benchmark_name);
-        AssertInput(queries_per_benchmark.contains(benchmark_trimmed), "Unknown benchmark '" + benchmark_trimmed + "'");
+        AssertInput(queries_per_benchmark.contains(benchmark_trimmed), "Unknown benchmark '" + benchmark_trimmed + "'. Available choices: all, " + boost::algorithm::join(benchmarks, ", "));
         if (!excluded_benchmarks.contains(benchmark_trimmed)) {
           benchmarks_to_run.emplace_back(benchmark_trimmed);
         }
@@ -299,7 +303,6 @@ int main(int argc, char* argv[]) {
     std::cout << "- Run benchmarks separately" << std::endl;
     for (const auto& benchmark : benchmarks_to_run) {
       std::optional<std::unordered_set<std::string>> my_subset_queries;
-      std::cout << "b " << benchmark << std::endl;
       if (query_subset) {
         my_subset_queries = query_subset->at(benchmark);
       } else {
