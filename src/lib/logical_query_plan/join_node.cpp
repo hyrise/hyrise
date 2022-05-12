@@ -230,15 +230,14 @@ const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicate
 
 void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_node) {
   Assert(corresponding_join_node, "Corresponding JoinNode must be provided.");
-  Assert(!_is_reducer, "Function is meant to be called once only.");
-  DebugAssert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
-  DebugAssert(join_predicates().size() == 1, "Semi join reductions are expected to have one join predicate only.");
+  Assert(!_is_reducer, "The semi reducer status should be set once only.");
+  Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
+  DebugAssert(join_predicates().size() == 1, "Currently, semi join reductions are expected to have a single join predicate.");
   DebugAssert(
       std::any_of(corresponding_join_node->join_predicates().begin(), corresponding_join_node->join_predicates().end(),
                   [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
       "Did not find matching join predicate in given corresponding JoinNode.");
   _is_reducer = true;
-  comment = "Semi Reduction";
   _corresponding_join_node = std::weak_ptr<JoinNode>(corresponding_join_node);
 }
 
