@@ -228,18 +228,62 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
+void JoinNode::mark_as_reducer_of(std::shared_ptr<JoinNode> corresponding_join_node) {
+  Assert(corresponding_join_node, "Corresponding JoinNode must be provided.");
+  Assert(!_is_reducer, "The semi reducer status should be set once only.");
+  Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
+  DebugAssert(join_predicates().size() == 1,
+              "Currently, semi join reductions are expected to have a single join predicate.");
+  DebugAssert(
+      std::any_of(corresponding_join_node->join_predicates().begin(), corresponding_join_node->join_predicates().end(),
+                  [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
+      "Did not find matching join predicate in given corresponding JoinNode.");
+  _is_reducer = true;
+  _corresponding_join_node = std::weak_ptr<JoinNode>(corresponding_join_node);
+}
+
+bool JoinNode::is_reducer() const { return _is_reducer; }
+
+std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const {
+  if (!_is_reducer) return nullptr;
+
+  if (_corresponding_join_node.expired()) {
+    // Find corresponding join by traversing upwards
+    visit_lqp_upwards(const_cast<JoinNode*>(this)->shared_from_this(), [&](const auto& current_node) {
+      if (current_node.get() == this) return LQPUpwardVisitation::VisitOutputs;
+      if (current_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
+      const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
+      // Currently, semi reductions are supported for single predicate joins only.
+      if (join_node->join_predicates().size() != 1) return LQPUpwardVisitation::VisitOutputs;
+      if (*join_predicates()[0] != *join_node->join_predicates()[0]) return LQPUpwardVisitation::VisitOutputs;
+
+      _corresponding_join_node = std::weak_ptr<JoinNode>(join_node);
+      return LQPUpwardVisitation::DoNotVisitOutputs;
+    });
+
+    Assert(!_corresponding_join_node.expired(), "Could not find corresponding join node.");
+  }
+
+  return _corresponding_join_node.lock();
+}
+
 size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
-  if (!join_predicates().empty()) {
-    return JoinNode::make(join_mode, expressions_copy_and_adapt_to_different_lqp(join_predicates(), node_mapping));
-  } else {
+  if (join_predicates().empty()) {
+    Assert(join_mode == JoinMode::Cross, "Expected cross join.");
     return JoinNode::make(join_mode);
   }
+  const auto copied_join_node =
+      JoinNode::make(join_mode, expressions_copy_and_adapt_to_different_lqp(join_predicates(), node_mapping));
+  copied_join_node->_is_reducer = _is_reducer;
+  return copied_join_node;
 }
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
+  // We do not consider the _is_reducer attribute in this comparison, because we want the LQPTranslator to translate
+  // identical semi joins into a single operator, regardless of the `is_reducer` property.
   if (join_mode != join_node.join_mode) return false;
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
