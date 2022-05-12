@@ -12,6 +12,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
@@ -112,9 +113,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
       // It is safe to move predicates down past the named joins as doing so does not affect the presence of NULLs
-      if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
-          join_node->join_mode == JoinMode::AntiNullAsFalse) {
+      if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->left_input());
           const auto move_to_right = _is_evaluable_on_lqp(push_down_node, join_node->right_input());
@@ -239,11 +238,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
               // End of the pre-join filter code
             }
-            _insert_nodes(current_node, input_side, {push_down_node});
+            lqp_insert_node(current_node, input_side, push_down_node, AllowRightInput::Yes);
           } else if (move_to_left && move_to_right) {
             // This predicate applies to both the left and the right side. We have not seen this case in the wild yet,
             // it might make more sense to duplicate the predicate and push it down on both sides.
-            _insert_nodes(current_node, input_side, {push_down_node});
+            lqp_insert_node(current_node, input_side, push_down_node, AllowRightInput::Yes);
           } else {
             if (move_to_left) left_push_down_nodes.emplace_back(push_down_node);
             if (move_to_right) right_push_down_nodes.emplace_back(push_down_node);
@@ -272,14 +271,129 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
           aggregate_push_down_nodes.emplace_back(push_down_node);
         } else {
-          _insert_nodes(current_node, input_side, {push_down_node});
+          lqp_insert_node_above(input_node, push_down_node, AllowRightInput::Yes);
         }
       }
       _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes, estimator);
     } break;
 
+    case LQPNodeType::Union: {
+      const auto union_node = std::static_pointer_cast<UnionNode>(input_node);
+      /**
+       * If we have a diamond of predicates where all UnionNode inputs result from the same origin node, the
+       * pushdown traversal should continue below the diamond's origin node, if possible.
+       *
+       *                                        |
+       *                                  ____Union_____
+       *                                 /              \
+       *                      Predicate(a LIKE %man)    |
+       *                                |               |
+       *                                |     Predicate(a LIKE %woman)
+       *                                |               |
+       *                                |               |
+       *                                \_____Node______/  <---- Diamond's origin node
+       *                                        |  <------------ Continue pushdown traversal here, if possible
+       *                                        |
+       */
+      const auto diamond_origin_node = find_diamond_origin_node(union_node);
+      if (!diamond_origin_node) {
+        handle_barrier();
+        return;
+      }
+
+      /**
+       * In the following, we determine whether the diamond's origin node is used as an input by nodes which are
+       * not part of the diamond because we should only filter the predicates of the diamond nodes, not other nodes'
+       * predicates. For example:
+       *                                           |                                |
+       *                                     ____Union_____                   Join(a = x)
+       *                                    /              \                     /    \
+       *                             ______/               |                     |    |
+       *                            /                      |                     |    |
+       *                     ____Union_____                |                     |    |
+       *                    /              \               |                     |    |
+       *                   /               |     Predicate(a LIKE %woman)        |    |
+       *        Predicate(a LIKE %man)     |               |                     |    |
+       *                  |                |               |                     |    |
+       *                  |       Predicate(a LIKE %child) |                     |    |
+       *                  |                |               |                     |    |
+       *                  |                \______   ______/                     |    |
+       *                   \                      \ /                            |    |
+       *                    \___________________  | |  __________________________/    |
+       *                                        \ | | /                               |
+       *                     ---------------->    Node                              Table
+       *                    /                      |
+       *                   /                      ...
+       *       ___________/_________
+       *   The diamond's origin node has four outputs, but only three outputs are part of the diamond structure.
+       *   Therefore, we do not want to continue the pushdown traversal below the diamond. Because otherwise, we would
+       *   incorrectly filter the Join's left input.
+       *
+       * To identify cases such as above, we check the output count of the diamond's origin node and compare it
+       * with the number of UnionNodes in the diamond structure.
+       */
+      size_t union_node_count = 0;
+      visit_lqp(union_node, [&](const auto& diamond_node) {
+        if (diamond_node == diamond_origin_node) return LQPVisitation::DoNotVisitInputs;
+        if (diamond_node->type == LQPNodeType::Union) union_node_count++;
+        return LQPVisitation::VisitInputs;
+      });
+      if (diamond_origin_node->output_count() != union_node_count + 1) {
+        handle_barrier();
+        return;
+      }
+
+      if (diamond_origin_node->input_count() == 1) {
+        auto diamond_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        const auto& node_below_diamond_origin = diamond_origin_node->left_input();
+        for (const auto& push_down_node : push_down_nodes) {
+          if (node_below_diamond_origin && _is_evaluable_on_lqp(push_down_node, node_below_diamond_origin)) {
+            // Push predicate below the diamond's origin node
+            diamond_push_down_nodes.emplace_back(push_down_node);
+          } else if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
+            // Push predicate above the diamond's origin node
+            lqp_insert_node_above(diamond_origin_node, push_down_node, AllowRightInput::Yes);
+          } else {
+            // Insert predicate above the diamond, so that it stays evaluable.
+            lqp_insert_node_above(union_node, push_down_node, AllowRightInput::Yes);
+          }
+        }
+        // Continue predicate pushdown below the diamond structure
+        _push_down_traversal(diamond_origin_node, LQPInputSide::Left, diamond_push_down_nodes, estimator);
+
+      } else {
+        // Do not move pushdown predicates below the diamond's origin node if it is a Join, a Union or another node
+        // with multiple inputs. Instead, insert the pushdown predicates above it and call the _push_down_traversal
+        // subroutine again, so that the predicate pushdown for the node with multiple inputs is handled appropriately.
+        auto updated_diamond_origin_node = diamond_origin_node;
+        for (const auto& push_down_node : push_down_nodes) {
+          if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
+            // Push predicate above the diamond's origin node
+            lqp_insert_node_above(diamond_origin_node, push_down_node, AllowRightInput::Yes);
+            if (updated_diamond_origin_node == diamond_origin_node) {
+              updated_diamond_origin_node = push_down_node;
+            }
+          } else {
+            // Insert predicate above the diamond, so that it stays evaluable.
+            lqp_insert_node_above(union_node, push_down_node, AllowRightInput::Yes);
+          }
+        }
+
+        auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(updated_diamond_origin_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+        _push_down_traversal(updated_diamond_origin_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+      }
+
+      // Optimize the diamond itself
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(union_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+      _push_down_traversal(union_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+    } break;
+
     default: {
-      // All not explicitly handled node types are barriers and we do not push predicates past them.
+      // All not explicitly handled node types are barriers, and we do not push predicates past them.
       handle_barrier();
     }
   }
@@ -379,7 +493,7 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
   auto predicate_contains_correlated_subquery = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
     if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-        subquery_expression && !subquery_expression->arguments.empty()) {
+        subquery_expression && subquery_expression->is_correlated()) {
       predicate_contains_correlated_subquery = true;
       return ExpressionVisitation::DoNotVisitArguments;
     } else {

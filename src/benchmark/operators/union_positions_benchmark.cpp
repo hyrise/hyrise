@@ -98,9 +98,11 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
    */
   auto table_wrapper_left =
       std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
+  table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
   auto table_wrapper_right =
       std::make_shared<TableWrapper>(create_reference_table(referenced_table, num_rows, num_columns));
+  table_wrapper_right->never_clear_output();
   table_wrapper_right->execute();
 
   for (auto _ : state) {
