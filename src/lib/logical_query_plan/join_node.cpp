@@ -249,7 +249,7 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_corresponding_join_node() const 
 
   if (_corresponding_join_node.expired()) {
     // Find corresponding join by traversing upwards
-    visit_lqp_upwards(const_cast<JoinNode*>(this)->shared_from_this(), [&](const auto& current_node) {
+    visit_lqp_upwards(std::const_pointer_cast<AbstractLQPNode>(shared_from_this()), [&](const auto& current_node) {
       if (current_node.get() == this) return LQPUpwardVisitation::VisitOutputs;
       if (current_node->type != LQPNodeType::Join) return LQPUpwardVisitation::VisitOutputs;
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
