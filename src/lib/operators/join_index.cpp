@@ -54,20 +54,9 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
-      _adjusted_primary_predicate(primary_predicate) {
+      _adjusted_primary_predicate(primary_predicate), _pruned_column_ids{pruned_column_ids} {
   if (_index_side == IndexSide::Left) {
     _adjusted_primary_predicate.flip();
-  }
-
-  auto column_count_before_pruning = right_input_table()->column_count() + pruned_column_ids.size();
-  if (index_side == IndexSide::Left) {
-    column_count_before_pruning = left_input_table()->column_count() + pruned_column_ids.size();
-  }
-
-  for (auto column_id = ColumnID{0}; column_id < column_count_before_pruning; ++column_id) {
-    if(std::find(pruned_column_ids.begin(), pruned_column_ids.end(), column_id) != pruned_column_ids.end()) {
-      _column_id_mapping.emplace_back(column_id);
-    }
   }
 }
 
@@ -108,6 +97,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   } else {
     _probe_input_table = left_input_table();
     _index_input_table = right_input_table();
+  }
+
+  auto column_count_before_pruning = _index_input_table->column_count() + _pruned_column_ids.size();
+
+  for (auto column_id = ColumnID{0}; column_id < column_count_before_pruning; ++column_id) {
+    if(std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), column_id) == _pruned_column_ids.end()) {
+      _column_id_mapping.emplace_back(column_id);
+    }
   }
 
   _index_matches.resize(_index_input_table->chunk_count());

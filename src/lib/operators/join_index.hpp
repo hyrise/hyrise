@@ -121,6 +121,7 @@ class JoinIndex : public AbstractJoinOperator {
   std::vector<std::vector<bool>> _index_matches;
 
 
+  const std::vector<ColumnID> _pruned_column_ids;
   std::vector<ColumnID> _column_id_mapping;
 };
 
