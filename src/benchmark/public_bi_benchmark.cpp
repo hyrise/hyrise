@@ -81,9 +81,6 @@ int main(int argc, char* argv[]) {
   std::string benchmarks_str;
   std::string skip_str;
 
-  std::cout << "char 0 " << '\0' << std::endl;
-  std::cout << "char 127 " << '\127' << std::endl;
-
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
@@ -341,11 +338,10 @@ int main(int argc, char* argv[]) {
 
       try {
         benchmark_runner->run();
-      } catch (std::exception& e) {
-        std::cout << "- ERROR running " << benchmark << std::endl;
+      } catch (const std::exception& e) {
+        std::cout << std::endl << "- ERROR running " << benchmark << std::endl;
         std::cout << e.what() << std::endl << std::endl;
       }
-
 
     }
   }
