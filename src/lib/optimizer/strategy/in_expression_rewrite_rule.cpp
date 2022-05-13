@@ -196,13 +196,6 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
             // small input row counts since we cannot trust them. As a result, the JOB benchmark profits heavily.
             return true;
           }
-          // TODO Benchmark scaling
-          // TODO Explain: A large set count makes the disjunction more expensive...
-          // The cost of a disjunction increases with the number of the IN predicate's elements. Therefore, we want to
-          // consider it when looking at the input cardinality...
-//          const auto min_rows_for_disjunction =
-//              MAX_ROWS_FOR_EXPRESSION_EVALUATOR * float(right_side_expressions.size()) / float(MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR);
-//          return min_rows_for_disjunction <= cardinality_in;
           return cardinality_in > MAX_ROWS_FOR_EXPRESSION_EVALUATOR;
         }();
 
