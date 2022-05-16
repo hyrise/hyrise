@@ -1,6 +1,7 @@
 #include "static_table_node.hpp"
 
 #include <sstream>
+#include "magic_enum.hpp"
 
 #include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -22,6 +23,26 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
 
     if (column_id + 1u < table->column_definitions().size()) {
       stream << ", ";
+    }
+  }
+  const auto& table_key_constraints = table->soft_key_constraints();
+  if (!table_key_constraints.empty()) {
+    stream << "; table constraints: ";
+    for (auto constraint_it = table_key_constraints.cbegin(); constraint_it != table_key_constraints.cend();
+         ++constraint_it) {
+      const auto& table_key_constraint = *constraint_it;
+      stream << magic_enum::enum_name(table_key_constraint.key_type()) << "(";
+      const auto& columns = table_key_constraint.columns();
+      for (auto column_it = columns.begin(); column_it != columns.end(); ++column_it) {
+        stream << table->column_name(*column_it);
+        if (next(column_it) != columns.end()) {
+          stream << ", ";
+        }
+      }
+      stream << ")";
+      if (constraint_it + 1 != table_key_constraints.cend()) {
+        stream << ", ";
+      }
     }
   }
   stream << ")";

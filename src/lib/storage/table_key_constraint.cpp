@@ -9,7 +9,10 @@ KeyConstraintType TableKeyConstraint::key_type() const { return _key_type; }
 
 size_t TableKeyConstraint::hash() const {
   auto hash = boost::hash_value(_key_type);
-  for (const auto column : columns()) {
+  const auto& columns = this->columns();
+  auto columns_ordered = std::vector<ColumnID>{columns.begin(), columns.end()};
+  std::sort(columns_ordered.begin(), columns_ordered.end());
+  for (const auto& column : columns_ordered) {
     boost::hash_combine(hash, column);
   }
   return hash;
