@@ -2359,7 +2359,7 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "  a_smallint SMALLINT,"
       "  a_int INTEGER,"
       "  a_long LONG,"
-      "  a_bigint BIGINT UNIQUE,"
+      "  a_bigint BIGINT,"
       "  a_decimal DECIMAL(5,2),"
       "  a_real REAL,"
       "  a_float FLOAT,"
@@ -2564,7 +2564,8 @@ TEST_F(SQLTranslatorTest, Execute) {
 
 TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
   const auto prepared_lqp =
-      AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)), stored_table_node_int_float);
+  AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+    stored_table_node_int_float);
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
 
