@@ -66,6 +66,25 @@ TEST_F(CreateTableTest, Execute) {
   EXPECT_EQ(table->column_definitions(), column_definitions);
 }
 
+TEST_F(CreateTableTest, SoftKeyConstraints) {
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  const auto input_table = const_pointer_cast<Table>(dummy_table_wrapper->table);
+  const auto unique_constraint = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  input_table->add_soft_key_constraint(unique_constraint);
+
+  create_table->set_transaction_context(context);
+
+  create_table->execute();
+  context->commit();
+
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
+
+  const auto table = Hyrise::get().storage_manager.get_table("t");
+  const auto& table_key_constraints = table->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 1);
+  EXPECT_EQ(table_key_constraints.at(0), unique_constraint);
+}
+
 TEST_F(CreateTableTest, TableAlreadyExists) {
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);

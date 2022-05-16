@@ -1303,7 +1303,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     input_node = _translate_select_statement(*create_statement.select);
   } else {
     auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
-    auto column_constraints = TableKeyConstraints{}:
+    auto table_key_constraints = TableKeyConstraints{};
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
       const auto* parser_column_definition = create_statement.columns->at(column_id);
@@ -1365,31 +1365,60 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
 
+      // Translate column constraints
       for (const auto& column_constraint : *parser_column_definition->column_constraints) {
-        if (column_constraint == hsql::ConstraintType::Unique) {
-          column_constraints.emplace_back({column_id}, KeyConstraintType::UNIQUE);
-        } else if (column_constraint == hsql::ConstraintType::PrimaryKey) {
-          column_constraints.emplace_back({column_id}, KeyConstraintType::PRIMARY_KEY);
+        if (column_constraint != hsql::ConstraintType::Unique &&
+            column_constraint != hsql::ConstraintType::PrimaryKey) {
+          continue;
+        }
+        const auto constraint_type = column_constraint == hsql::ConstraintType::PrimaryKey
+                                         ? KeyConstraintType::PRIMARY_KEY
+                                         : KeyConstraintType::UNIQUE;
+        table_key_constraints.emplace_back(std::unordered_set<ColumnID>{column_id}, constraint_type);
+        std::cout << "WARNING: "
+                  << std::string{magic_enum::enum_name(constraint_type)} + " constraint for column " +
+                         column_definition.name + " will not be enforced\n";
+      }
+    }
+
+    // Translate table constraints
+    const auto column_count = column_definitions.size();
+    for (const auto& table_constraint : *create_statement.tableConstraints) {
+      std::unordered_set<ColumnID> column_ids;
+      const bool is_primary_key_constraint = table_constraint->type == hsql::ConstraintType::PrimaryKey;
+
+      // Resolve column IDs
+      for (const auto column_name : *table_constraint->columnNames) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          auto& column_definition = column_definitions[column_id];
+          if (column_definition.name == column_name) {
+            column_ids.emplace(column_id);
+            if (is_primary_key_constraint) {
+              column_definition.nullable = false;
+              AssertInput(
+                  !create_statement.columns->at(column_id)->column_constraints->contains(hsql::ConstraintType::Null),
+                  "PRIMARY KEY column " + column_name + " must not be nullable");
+            }
+            break;
+          }
         }
       }
+
+      const auto constraint_type =
+          is_primary_key_constraint ? KeyConstraintType::PRIMARY_KEY : KeyConstraintType::UNIQUE;
+      table_key_constraints.emplace_back(column_ids, constraint_type);
+      std::cout << "WARNING: "
+                << std::string{magic_enum::enum_name(constraint_type)} + " table constraint will not be enforced\n";
     }
 
-    for (const auto& table_constraint : *create_statement->tableConstraints) {
-      std::unordered_set<ColumnID> column_ids;
-      const auto& column_names = *table_constraint->columnNames;
-      const auto column_count = column_names.size();
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-        const auto column_name = std::string{column_names[column_id]};
-
-      }
-
-      }
-
+    // Set table constraints
+    const auto table = Table::create_dummy_table(column_definitions);
+    for (const auto& table_key_constraint : table_key_constraints) {
+      table->add_soft_key_constraint(table_key_constraint);
     }
-
-        input_node
-    const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+    input_node = StaticTableNode::make(table);
   }
+
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 

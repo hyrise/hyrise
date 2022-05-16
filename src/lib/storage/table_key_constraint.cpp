@@ -7,6 +7,14 @@ TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns
 
 KeyConstraintType TableKeyConstraint::key_type() const { return _key_type; }
 
+size_t TableKeyConstraint::hash() const {
+  auto hash = boost::hash_value(_key_type);
+  for (const auto column : columns()) {
+    boost::hash_combine(hash, column);
+  }
+  return hash;
+}
+
 bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constraint) const {
   DebugAssert(dynamic_cast<const TableKeyConstraint*>(&table_constraint),
               "Different table_constraint type should have been caught by AbstractTableConstraint::operator==");
