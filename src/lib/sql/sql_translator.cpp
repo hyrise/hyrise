@@ -1303,6 +1303,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     input_node = _translate_select_statement(*create_statement.select);
   } else {
     auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
+    auto column_constraints = TableKeyConstraints{}:
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
       const auto* parser_column_definition = create_statement.columns->at(column_id);
@@ -1363,8 +1364,31 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
+
+      for (const auto& column_constraint : *parser_column_definition->column_constraints) {
+        if (column_constraint == hsql::ConstraintType::Unique) {
+          column_constraints.emplace_back({column_id}, KeyConstraintType::UNIQUE);
+        } else if (column_constraint == hsql::ConstraintType::PrimaryKey) {
+          column_constraints.emplace_back({column_id}, KeyConstraintType::PRIMARY_KEY);
+        }
+      }
     }
-    input_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+
+    for (const auto& table_constraint : *create_statement->tableConstraints) {
+      std::unordered_set<ColumnID> column_ids;
+      const auto& column_names = *table_constraint->columnNames;
+      const auto column_count = column_names.size();
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto column_name = std::string{column_names[column_id]};
+
+      }
+
+      }
+
+    }
+
+        input_node
+    const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   }
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
