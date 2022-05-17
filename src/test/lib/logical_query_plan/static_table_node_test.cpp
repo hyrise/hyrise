@@ -24,6 +24,11 @@ class StaticTableNodeTest : public BaseTest {
 
 TEST_F(StaticTableNodeTest, Description) {
   EXPECT_EQ(static_table_node->description(), "[StaticTable]: (a int not nullable, b float nullable)");
+
+  dummy_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+  dummy_table->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  EXPECT_EQ(static_table_node->description(),
+            "[StaticTable]: (a int not nullable, b float nullable, PRIMARY_KEY(a), UNIQUE(b))");
 }
 
 TEST_F(StaticTableNodeTest, NodeExpressions) { ASSERT_EQ(static_table_node->node_expressions.size(), 0u); }
@@ -36,14 +41,21 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
   TableColumnDefinitions different_column_definitions;
   different_column_definitions.emplace_back("a", DataType::Int, false);
 
-  const auto different_static_table_node =
+  const auto different_static_table_node_by_definitions =
       StaticTableNode::make(Table::create_dummy_table(different_column_definitions));
 
+  const auto different_static_table_node_by_constraints =
+      StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  different_static_table_node_by_constraints->table->add_soft_key_constraint(
+      {{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+
   EXPECT_EQ(*same_static_table_node, *static_table_node);
-  EXPECT_NE(*different_static_table_node, *static_table_node);
+  EXPECT_NE(*different_static_table_node_by_definitions, *static_table_node);
+  EXPECT_NE(*different_static_table_node_by_constraints, *static_table_node);
 
   EXPECT_EQ(same_static_table_node->hash(), static_table_node->hash());
-  EXPECT_NE(different_static_table_node->hash(), static_table_node->hash());
+  EXPECT_NE(different_static_table_node_by_definitions->hash(), static_table_node->hash());
+  EXPECT_NE(different_static_table_node_by_constraints->hash(), static_table_node->hash());
 }
 
 TEST_F(StaticTableNodeTest, Copy) { EXPECT_EQ(*static_table_node, *static_table_node->deep_copy()); }

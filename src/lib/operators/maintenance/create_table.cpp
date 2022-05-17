@@ -64,6 +64,10 @@ std::shared_ptr<const Table> CreateTable::_on_execute(std::shared_ptr<Transactio
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, Chunk::DEFAULT_SIZE, UseMvcc::Yes);
     Hyrise::get().storage_manager.add_table(table_name, table);
 
+    for (const auto& table_key_constraint : _left_input->get_output()->soft_key_constraints()) {
+      table->add_soft_key_constraint(table_key_constraint);
+    }
+
     // Insert table data (if no data is present, insertion makes no difference)
     _insert = std::make_shared<Insert>(table_name, _left_input);
     _insert->set_transaction_context(context);

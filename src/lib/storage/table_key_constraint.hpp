@@ -16,6 +16,8 @@ class TableKeyConstraint final : public AbstractTableConstraint {
 
   KeyConstraintType key_type() const;
 
+  size_t hash() const;
+
  protected:
   bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
 

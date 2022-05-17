@@ -112,4 +112,26 @@ TEST_F(TableKeyConstraintTest, Equals) {
   EXPECT_FALSE(key_constraint_a == key_constraint_c);
 }
 
+TEST_F(TableKeyConstraintTest, Hash) {
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_reordered = TableKeyConstraint{{ColumnID{2}, ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto primary_key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_TRUE(key_constraint_a.hash() == key_constraint_a.hash());
+  EXPECT_TRUE(key_constraint_a.hash() == key_constraint_a_reordered.hash());
+  EXPECT_TRUE(key_constraint_a_reordered.hash() == key_constraint_a.hash());
+
+  EXPECT_FALSE(key_constraint_a.hash() == primary_key_constraint_a.hash());
+  EXPECT_FALSE(primary_key_constraint_a.hash() == key_constraint_a.hash());
+
+  EXPECT_FALSE(key_constraint_a.hash() == key_constraint_b.hash());
+  EXPECT_FALSE(key_constraint_b.hash() == key_constraint_a.hash());
+
+  EXPECT_FALSE(key_constraint_c.hash() == key_constraint_a.hash());
+  EXPECT_FALSE(key_constraint_a.hash() == key_constraint_c.hash());
+}
+
 }  // namespace opossum

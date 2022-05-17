@@ -1,6 +1,7 @@
 #include "static_table_node.hpp"
 
 #include <sstream>
+#include "magic_enum.hpp"
 
 #include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"
@@ -22,6 +23,26 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
 
     if (column_id + 1u < table->column_definitions().size()) {
       stream << ", ";
+    }
+  }
+  const auto& table_key_constraints = table->soft_key_constraints();
+  if (!table_key_constraints.empty()) {
+    stream << ", ";
+    for (auto constraint_it = table_key_constraints.cbegin(); constraint_it != table_key_constraints.cend();
+         ++constraint_it) {
+      const auto& table_key_constraint = *constraint_it;
+      stream << magic_enum::enum_name(table_key_constraint.key_type()) << "(";
+      const auto& columns = table_key_constraint.columns();
+      for (auto column_it = columns.cbegin(); column_it != columns.cend(); ++column_it) {
+        stream << table->column_name(*column_it);
+        if (std::next(column_it) != columns.cend()) {
+          stream << ", ";
+        }
+      }
+      stream << ")";
+      if (constraint_it + 1 != table_key_constraints.cend()) {
+        stream << ", ";
+      }
     }
   }
   stream << ")";
@@ -67,6 +88,10 @@ size_t StaticTableNode::_on_shallow_hash() const {
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
+  for (const auto& table_key_constraint : table->soft_key_constraints()) {
+    boost::hash_combine(hash, table_key_constraint.hash());
+  }
+
   return hash;
 }
 
@@ -76,7 +101,8 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
-  return table->column_definitions() == static_table_node.table->column_definitions();
+  return table->column_definitions() == static_table_node.table->column_definitions() &&
+         table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
 }
 
 }  // namespace opossum
