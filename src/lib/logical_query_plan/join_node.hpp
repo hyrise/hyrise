@@ -53,15 +53,19 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   /**
-   * @returns true if the JoinNode has a semi reduction role in the LQP, and was added by the SemiJoinReductionRule.
+   * There are two types of joins in LQPs: First, joins resulting from the SQL query translation, and second,
+   * artificial semi joins added by the SemiJoinReductionRule to pre-filter join tables.
+   *
+   * @returns true if this JoinNode was added artificially by the SemiJoinReductionRule for pre-filtering purposes.
    */
   bool is_semi_reduction() const;
 
   /**
-   * @returns a shared pointer to the semi join reduction's corresponding JoinNode. If the pointer is not stored in a
-   *          member variable, the LQP is traversed upwards until the corresponding JoinNode has been found, otherwise
-   *          the function fails.
-   * @pre JoinNode is set to JoinMode::Semi, and ::mark_as_semi_reduction_for has been called.
+   * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns
+   *          true.
+   * @returns a shared pointer to the JoinNode for which the semi join reduction was added as a pre-filter.
+   *          If the internal weak pointer to the corresponding join has expired, the LQP will be traversed upwards
+   *          until the corresponding join has been found, otherwise the function fails.
    */
   std::shared_ptr<JoinNode> get_or_find_semi_reduction_corresponding_join_node() const;
 
@@ -76,7 +80,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
  protected:
   /**
-   * The following two attributes are relevant for semi join reductions
+   * The following members are relevant for semi join reductions added by the SemiJoinReductionRule only. For details,
+   * read the documentation of ::is_semi_reduction and ::get_or_find_semi_reduction_corresponding_join_node.
    */
   bool _is_semi_reduction = false;
   mutable std::weak_ptr<JoinNode> _semi_reduction_corresponding_join_node;

@@ -252,7 +252,8 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_semi_reduction_corresponding_joi
   }
 
   if (_semi_reduction_corresponding_join_node.expired()) {
-    // Find corresponding join by traversing upwards
+    // The weak pointer is expired in deep copies of the LQP, for example. In such cases, find the corresponding join by
+    // traversing the LQP upwards.
     visit_lqp_upwards(std::const_pointer_cast<AbstractLQPNode>(shared_from_this()), [&](const auto& current_node) {
       if (current_node.get() == this) {
         return LQPUpwardVisitation::VisitOutputs;
