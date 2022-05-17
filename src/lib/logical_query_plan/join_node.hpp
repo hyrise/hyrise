@@ -64,27 +64,27 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns
    *          true.
    * @returns a shared pointer to the JoinNode for which the semi join reduction was added as a pre-filter.
-   *          If the internal weak pointer to the corresponding join has expired, the LQP will be traversed upwards
-   *          until the corresponding join has been found, otherwise the function fails.
+   *          If the internal weak pointer to the reduced join is not set or expired, the LQP will be traversed upwards
+   *          until the reduced join has been found, otherwise the function fails.
    */
-  std::shared_ptr<JoinNode> get_or_find_semi_reduction_corresponding_join_node() const;
+  std::shared_ptr<JoinNode> get_or_find_reduced_join_node() const;
 
   /**
    * Sets the `is_semi_reduction` property of this JoinNode to true, and stores a weak pointer to the
-   * @param corresponding_join_node having the same join predicate.
+   * @param reduced_join which gets pre-filtered by this semi join reduction.
    * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi join reductions to LQPs.
    */
-  void mark_as_semi_reduction_for(const std::shared_ptr<JoinNode>& corresponding_join_node);
+  void mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join);
 
   JoinMode join_mode;
 
  protected:
   /**
-   * The following members are relevant for semi join reductions added by the SemiJoinReductionRule only. For details,
-   * read the documentation of ::is_semi_reduction and ::get_or_find_semi_reduction_corresponding_join_node.
+   * The following data members are only relevant for semi joins added by the SemiJoinReductionRule. For details,
+   * read the documentation of ::is_semi_reduction and ::get_or_find_reduced_join_node.
    */
   bool _is_semi_reduction = false;
-  mutable std::weak_ptr<JoinNode> _semi_reduction_corresponding_join_node;
+  mutable std::weak_ptr<JoinNode> _reduced_join_node;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param

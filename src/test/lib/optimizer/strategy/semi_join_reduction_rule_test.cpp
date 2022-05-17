@@ -64,7 +64,7 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   // Check whether the added semi join is marked as a reducer
   auto join_node = std::static_pointer_cast<JoinNode>(actual_lqp->left_input());
   ASSERT_TRUE(join_node->is_semi_reduction());
-  EXPECT_EQ(join_node->get_or_find_semi_reduction_corresponding_join_node(), std::static_pointer_cast<JoinNode>(actual_lqp));
+  EXPECT_EQ(join_node->get_or_find_reduced_join_node(), std::static_pointer_cast<JoinNode>(actual_lqp));
 }
 
 TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {

@@ -32,7 +32,7 @@ class JoinNodeTest : public BaseTest {
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_reducer_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _semi_join_reducer_node->mark_as_semi_reduction_for(_inner_join_node);
+    _semi_join_reducer_node->mark_as_semi_reduction(_inner_join_node);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
     // Prepare constraint definitions
@@ -594,7 +594,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsCrossJoin) {
   EXPECT_TRUE(_cross_join_node->unique_constraints()->empty());
 }
 
-TEST_F(JoinNodeTest, GetOrFindSemiReductionCorrespondingJoinNode) {
+TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {
   const auto join_predicate = equals_(_t_a_a, _t_b_x);
   auto semi_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate, _mock_node_a, _mock_node_b);
   // clang-format off
@@ -605,23 +605,22 @@ TEST_F(JoinNodeTest, GetOrFindSemiReductionCorrespondingJoinNode) {
     _mock_node_b);
   // clang-format on
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
-  semi_reduction_node->mark_as_semi_reduction_for(join_node);
+  semi_reduction_node->mark_as_semi_reduction(join_node);
 
   // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
-  // corresponding join.
-  EXPECT_EQ(semi_reduction_node->get_or_find_semi_reduction_corresponding_join_node(), join_node);
+  // reduced join.
+  EXPECT_EQ(semi_reduction_node->get_or_find_reduced_join_node(), join_node);
 
-  // After a deep copy, the semi join reduction node's weak pointer to the corresponding join node should be unset.
-  // Therefore, get_or_find_semi_reduction_corresponding_join_node must discover it via the LQP upwards traversal logic.
+  // In a deep-copied LQP, the semi reduction node's weak pointer to the reduced join is unset (lazy approach).
+  // Therefore, get_or_find_reduced_join_node must utilize an LQP upwards traversal for discovering the reduced join.
   const auto copied_lqp = lqp->deep_copy();
   const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
-  const auto copied_semi_reduction_node =
-      std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
-  EXPECT_EQ(copied_semi_reduction_node->get_or_find_semi_reduction_corresponding_join_node(), copied_join_node);
+  const auto copied_semi_reduction_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
+  EXPECT_EQ(copied_semi_reduction_node->get_or_find_reduced_join_node(), copied_join_node);
 }
 
-TEST_F(JoinNodeTest, GetOrFindSemiReductionCorrespondingJoinNodeMultiPredicate) {
-  // In contrast to the test GetOrFindSemiReductionCorrespondingJoinNode, we define a semi reduction for a join with
+TEST_F(JoinNodeTest, GetOrFindReducedJoinNodeWithMultiplePredicates) {
+  // In contrast to the test GetOrFindReducedJoinNode, we define a semi reduction for a join with
   // multiple predicates.
 
   // clang-format off
@@ -639,20 +638,18 @@ TEST_F(JoinNodeTest, GetOrFindSemiReductionCorrespondingJoinNodeMultiPredicate) 
   // clang-format on
 
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
-  semi_reduction_node->mark_as_semi_reduction_for(join_node);
+  semi_reduction_node->mark_as_semi_reduction(join_node);
 
   // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
-  // corresponding join.
-  EXPECT_EQ(semi_reduction_node->get_or_find_semi_reduction_corresponding_join_node(), join_node);
+  // reduced join.
+  EXPECT_EQ(semi_reduction_node->get_or_find_reduced_join_node(), join_node);
 
-  // In a deep-copied LQP, the semi join reduction node's weak pointer to the corresponding join node should be unset.
-  // (lazy evaluation)
-  // As a result, get_or_find_semi_reduction_corresponding_join_node must discover it via the LQP upwards traversal logic.
+  // In a deep-copied LQP, the semi reduction node's weak pointer to the reduced join is unset (lazy approach).
+  // Therefore, get_or_find_reduced_join_node must utilize an LQP upwards traversal for discovering the reduced join.
   const auto copied_lqp = lqp->deep_copy();
   const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
-  const auto copied_semi_reduction_node =
-      std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
-  EXPECT_EQ(copied_semi_reduction_node->get_or_find_semi_reduction_corresponding_join_node(), copied_join_node);
+  const auto copied_semi_reduction_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
+  EXPECT_EQ(copied_semi_reduction_node->get_or_find_reduced_join_node(), copied_join_node);
 }
 
 }  // namespace opossum

@@ -230,35 +230,31 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
-void JoinNode::mark_as_semi_reduction_for(const std::shared_ptr<JoinNode>& corresponding_join_node) {
-  Assert(corresponding_join_node, "Corresponding JoinNode must be provided.");
+void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join_node) {
   Assert(!_is_semi_reduction, "The semi reducer status should be set once only.");
+  Assert(reduced_join_node, "Reduced JoinNode must be provided.");
   Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
   DebugAssert(join_predicates().size() == 1,
               "Currently, semi join reductions are expected to have a single join predicate.");
-  DebugAssert(
-      std::any_of(corresponding_join_node->join_predicates().begin(), corresponding_join_node->join_predicates().end(),
-                  [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
-      "Did not find matching join predicate in given corresponding JoinNode.");
+  DebugAssert(std::any_of(reduced_join_node->join_predicates().begin(), reduced_join_node->join_predicates().end(),
+                          [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
+              "Both semi join reduction node and the reduced join should have a common join predicate.");
   _is_semi_reduction = true;
-  _semi_reduction_corresponding_join_node = std::weak_ptr<JoinNode>(corresponding_join_node);
+  _reduced_join_node = std::weak_ptr<JoinNode>(reduced_join_node);
 }
 
 bool JoinNode::is_semi_reduction() const { return _is_semi_reduction; }
 
-std::shared_ptr<JoinNode> JoinNode::get_or_find_semi_reduction_corresponding_join_node() const {
+std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
   if (!_is_semi_reduction) {
     return nullptr;
   }
 
-  if (_semi_reduction_corresponding_join_node.expired()) {
-    // The weak pointer is expired in deep copies of the LQP, for example. In such cases, find the corresponding join by
-    // traversing the LQP upwards.
+  if (_reduced_join_node.expired()) {
+    // In deep copies of the LQP, the weak pointer to the reduced join is expired (lazy discovery). In such cases,
+    // find the reduced join by traversing the LQP upwards.
     visit_lqp_upwards(std::const_pointer_cast<AbstractLQPNode>(shared_from_this()), [&](const auto& current_node) {
-      if (current_node.get() == this) {
-        return LQPUpwardVisitation::VisitOutputs;
-      }
-      if (current_node->type != LQPNodeType::Join) {
+      if (current_node->type != LQPNodeType::Join || current_node.get() == this) {
         return LQPUpwardVisitation::VisitOutputs;
       }
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
@@ -267,15 +263,14 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_semi_reduction_corresponding_joi
         return LQPUpwardVisitation::VisitOutputs;
       }
 
-      _semi_reduction_corresponding_join_node = std::weak_ptr<JoinNode>(join_node);
+      _reduced_join_node = std::weak_ptr<JoinNode>(join_node);
       return LQPUpwardVisitation::DoNotVisitOutputs;
     });
 
-    Assert(!_semi_reduction_corresponding_join_node.expired(),
-           "Could not find corresponding join node for this semi join reduction.");
+    Assert(!_reduced_join_node.expired(), "Could not find JoinNode that gets reduced by this semi join reduction.");
   }
 
-  return _semi_reduction_corresponding_join_node.lock();
+  return _reduced_join_node.lock();
 }
 
 size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
@@ -293,8 +288,8 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
-  // We do not consider the _is_semi_reduction attribute in this comparison, because we want the LQPTranslator to translate
-  // identical semi joins into a single operator, regardless of the `is_semi_reduction` property.
+  // We do not consider the _is_semi_reduction attribute in this comparison, because we want the LQPTranslator to
+  // translate identical semi joins into a single operator, regardless of the `is_semi_reduction` property.
   if (join_mode != join_node.join_mode) {
     return false;
   }
