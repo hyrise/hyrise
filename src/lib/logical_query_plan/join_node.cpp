@@ -262,11 +262,8 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_semi_reduction_corresponding_joi
         return LQPUpwardVisitation::VisitOutputs;
       }
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
-      // Currently, semi reductions are supported for single predicate joins only.
-      if (join_node->join_predicates().size() != 1) {
-        return LQPUpwardVisitation::VisitOutputs;
-      }
-      if (*join_predicates()[0] != *join_node->join_predicates()[0]) {
+      if (std::none_of(join_node->join_predicates().begin(), join_node->join_predicates().end(),
+                       [&](const auto& predicate) { return *predicate == *join_predicates()[0]; })) {
         return LQPUpwardVisitation::VisitOutputs;
       }
 
