@@ -811,6 +811,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(f, DataType::Int), {99, 2, 13, 15}));
   EXPECT_TRUE(
       test_expression<pmr_string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(extract_(DatetimeComponent::Year, dates2), DataType::Int),
+                                       {2017, 2014, std::nullopt, std::nullopt}));
 }
 
 }  // namespace opossum
