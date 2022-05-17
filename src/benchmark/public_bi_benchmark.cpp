@@ -336,12 +336,12 @@ int main(int argc, char* argv[]) {
 
       std::cout << "done." << std::endl;
 
-      try {
+      //try {
         benchmark_runner->run();
-      } catch (const std::exception& e) {
-        std::cout << std::endl << "- ERROR running " << benchmark << std::endl;
-        std::cout << e.what() << std::endl << std::endl;
-      }
+      //} catch (const std::exception& e) {
+      //  std::cout << std::endl << "- ERROR running " << benchmark << std::endl;
+      //  std::cout << e.what() << std::endl << std::endl;
+      //}
 
     }
   }
