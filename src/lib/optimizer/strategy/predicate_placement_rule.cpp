@@ -16,25 +16,6 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-using namespace opossum;  // NOLINT
-
-namespace {
-
-/**
- * This node type is used by the _push_down_traversal subroutine for recursion purposes. For more details, see the
- * comments in the `handle_barrier` lambda helper, for example.
- */
-class TemporaryRootNode : public LogicalPlanRootNode {
- public:
-  TemporaryRootNode() = default;
-
-  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override {
-    return "[TemporaryRootNode]";
-  }
-};
-
-}  // namespace
-
 namespace opossum {
 
 std::string PredicatePlacementRule::name() const {
@@ -90,7 +71,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. Afterwards, the temporary
       // root node is used as a root for the next _push_down_traversal recursion. As a result, barrier_node will be seen
       // as an input of the temporary root node, and thus become pushed down by the rule, if possible.
-      next_push_down_traversal_root = std::make_shared<TemporaryRootNode>();
+      next_push_down_traversal_root = LogicalPlanRootNode::make();
       lqp_insert_node_above(barrier_node, next_push_down_traversal_root);
     }
 
@@ -106,7 +87,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
     // The recursion calls to _push_down_traversal have returned. Therefore, we must remove the temporary root node, we
     // might have inserted previously. (see comment above)
-    if (std::dynamic_pointer_cast<TemporaryRootNode>(next_push_down_traversal_root)) {
+    if (next_push_down_traversal_root->type == LQPNodeType::Root && next_push_down_traversal_root->output_count() > 0) {
       lqp_remove_node(next_push_down_traversal_root);
     }
   };
@@ -403,7 +384,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       }
 
       // Continue predicate pushdown below the diamond
-      auto temporary_root_node = std::make_shared<TemporaryRootNode>();
+      auto temporary_root_node = LogicalPlanRootNode::make();
       lqp_insert_node_above(diamond_origin_node, temporary_root_node);
       _push_down_traversal(temporary_root_node, LQPInputSide::Left, updated_push_down_nodes, estimator);
       lqp_remove_node(temporary_root_node);
