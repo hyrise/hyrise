@@ -691,17 +691,16 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
       const auto result_size = _result_size(argument_result_view.size());
       values.resize(result_size);
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
-        if (argument_result_view.is_null(chunk_offset)) {
-          continue;
-        }
-        const auto& argument_value = argument_result_view.value(chunk_offset);
-        try {
-          values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
-        } catch (boost::bad_lexical_cast&) {
-          std::stringstream error_message;
-          error_message << "Cannot cast '" << argument_value << "' as "
-                        << magic_enum::enum_name(cast_expression.data_type());
-          Fail(error_message.str());
+        if (!argument_result_view.is_null(chunk_offset)) {
+          const auto& argument_value = argument_result_view.value(chunk_offset);
+          try {
+            values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+          } catch (boost::bad_lexical_cast&) {
+            std::stringstream error_message;
+            error_message << "Cannot cast '" << argument_value << "' as "
+                          << magic_enum::enum_name(cast_expression.data_type());
+            Fail(error_message.str());
+          }
         }
       }
       nulls = argument_result.nulls;
@@ -830,7 +829,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
 
   from_result.as_view([&](const auto& from_view) {
     const auto from_view_size = from_view.size();
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(from_view_size); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         DebugAssert(from_view.value(chunk_offset).size() == 10u,
                     "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
