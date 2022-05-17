@@ -32,7 +32,7 @@ class JoinNodeTest : public BaseTest {
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     _semi_join_reducer_node = JoinNode::make(JoinMode::Semi, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
-    _semi_join_reducer_node->mark_as_reducer_of(_inner_join_node);
+    _semi_join_reducer_node->mark_as_semi_reduction_for(_inner_join_node);
     _anti_join_node = JoinNode::make(JoinMode::AntiNullAsTrue, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
 
     // Prepare constraint definitions
@@ -85,7 +85,7 @@ TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node);
-  // The `is_reducer` property does not play a role in the equality check. See JoinNode::_on_shallow_equals for
+  // The `is_semi_reduction` property does not play a role in the equality check. See JoinNode::_on_shallow_equals for
   // more details on this. As a result, we expect _semi_join_node and _semi_join_reducer_node to be considered as equal.
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_node);
 
@@ -110,7 +110,7 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_reducer_node, *_semi_join_reducer_node->deep_copy());
-  EXPECT_TRUE(std::static_pointer_cast<JoinNode>(_semi_join_reducer_node->deep_copy())->is_reducer());
+  EXPECT_TRUE(std::static_pointer_cast<JoinNode>(_semi_join_reducer_node->deep_copy())->is_semi_reduction());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
 }
 
@@ -594,7 +594,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsCrossJoin) {
   EXPECT_TRUE(_cross_join_node->unique_constraints()->empty());
 }
 
-TEST_F(JoinNodeTest, GetOrFindCorrespondingJoinNode) {
+TEST_F(JoinNodeTest, GetOrFindSemiReductionCorrespondingJoinNode) {
   auto join_predicate = equals_(_t_a_a, _t_b_x);
   auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate, _mock_node_a, _mock_node_b);
   // clang-format off
@@ -605,19 +605,19 @@ TEST_F(JoinNodeTest, GetOrFindCorrespondingJoinNode) {
     _mock_node_b);
   // clang-format on
   const auto join_node = std::static_pointer_cast<JoinNode>(lqp);
-  semi_join_reduction_node->mark_as_reducer_of(join_node);
+  semi_join_reduction_node->mark_as_semi_reduction_for(join_node);
 
   // The semi join reduction node should use the stored weak pointer to create and return a shared pointer to the
   // corresponding join.
-  EXPECT_EQ(semi_join_reduction_node->get_or_find_corresponding_join_node(), join_node);
+  EXPECT_EQ(semi_join_reduction_node->get_or_find_semi_reduction_corresponding_join_node(), join_node);
 
   // After a deep copy, the semi join reduction node's weak pointer to the corresponding join node should be unset.
-  // Therefore, get_or_find_corresponding_join_node must discover it via the LQP upwards traversal logic.
+  // Therefore, get_or_find_semi_reduction_corresponding_join_node must discover it via the LQP upwards traversal logic.
   const auto copied_lqp = lqp->deep_copy();
   const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
   const auto copied_semi_join_reduction_node =
       std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
-  EXPECT_EQ(copied_semi_join_reduction_node->get_or_find_corresponding_join_node(), copied_join_node);
+  EXPECT_EQ(copied_semi_join_reduction_node->get_or_find_semi_reduction_corresponding_join_node(), copied_join_node);
 }
 
 }  // namespace opossum

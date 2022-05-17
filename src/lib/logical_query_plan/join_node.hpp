@@ -53,31 +53,33 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   /**
-   * @returns true if the JoinNode has as a semi reduction role in the LQP. If so, it was most likely created by the
-   *          SemiJoinReductionRule.
+   * @returns true if the JoinNode has a semi reduction role in the LQP, and was added by the SemiJoinReductionRule.
    */
-  bool is_reducer() const;
+  bool is_semi_reduction() const;
 
   /**
    * @returns a shared pointer to the semi join reduction's corresponding JoinNode. If the pointer is not stored in a
    *          member variable, the LQP is traversed upwards until the corresponding JoinNode has been found, otherwise
    *          the function fails.
-   * @pre JoinNode is set to JoinMode::Semi, and ::mark_as_reducer_of has been called.
+   * @pre JoinNode is set to JoinMode::Semi, and ::mark_as_semi_reduction_for has been called.
    */
-  std::shared_ptr<JoinNode> get_or_find_corresponding_join_node() const;
+  std::shared_ptr<JoinNode> get_or_find_semi_reduction_corresponding_join_node() const;
 
   /**
-   * Sets the `is_reducer` property of this JoinNode to true, and stores a weak pointer to the
+   * Sets the `is_semi_reduction` property of this JoinNode to true, and stores a weak pointer to the
    * @param corresponding_join_node having the same join predicate.
    * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi join reductions to LQPs.
    */
-  void mark_as_reducer_of(const std::shared_ptr<JoinNode>& corresponding_join_node);
+  void mark_as_semi_reduction_for(const std::shared_ptr<JoinNode>& corresponding_join_node);
 
   JoinMode join_mode;
 
  protected:
-  bool _is_reducer = false;
-  mutable std::weak_ptr<JoinNode> _corresponding_join_node;
+  /**
+   * The following two attributes are relevant for semi join reductions
+   */
+  bool _is_semi_reduction = false;
+  mutable std::weak_ptr<JoinNode> _semi_reduction_corresponding_join_node;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
