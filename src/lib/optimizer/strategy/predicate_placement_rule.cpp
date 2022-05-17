@@ -67,10 +67,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     if (barrier_node_is_pushdown_predicate) {
       // The barrier node is a predicate eligible for pushdown. Therefore, we would like it to be covered by the next
       // recursion of _push_down_traversal. However, since _push_down_traversal looks at the inputs of a given
-      // root node only, barrier_node would not become pushed down.
+      // root node only, barrier_node would not be pushed down.
       // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. Afterwards, the temporary
       // root node is used as a root for the next _push_down_traversal recursion. As a result, barrier_node will be seen
-      // as an input of the temporary root node, and thus become pushed down by the rule, if possible.
+      // as an input of the temporary root node, and thus be pushed down by the rule, if possible.
       next_push_down_traversal_root = LogicalPlanRootNode::make();
       lqp_insert_node_above(barrier_node, next_push_down_traversal_root);
     }
@@ -368,32 +368,28 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         return;
       }
 
+      // Apply predicate pushdown to the diamond's nodes
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(union_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+      _push_down_traversal(union_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+
+      // Continue predicate pushdown below the diamond
       auto updated_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      const auto& node_below_diamond_origin = diamond_origin_node->left_input();
       for (const auto& push_down_node : push_down_nodes) {
-        if (node_below_diamond_origin && _is_evaluable_on_lqp(push_down_node, node_below_diamond_origin)) {
-          // Save for the next _push_down_traversal recursion
+        if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
+          // Save for next _push_down_traversal recursion
           updated_push_down_nodes.emplace_back(push_down_node);
-        } else if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
-          // The diamond's origin node is a barrier for push_down_node
-          lqp_insert_node_above(diamond_origin_node, push_down_node, AllowRightInput::Yes);
         } else {
-          // The diamond as a whole is a barrier for push_down_node
+          // The diamond is a barrier for push_down_node.
           lqp_insert_node_above(union_node, push_down_node, AllowRightInput::Yes);
         }
       }
-
-      // Continue predicate pushdown below the diamond
       auto temporary_root_node = LogicalPlanRootNode::make();
       lqp_insert_node_above(diamond_origin_node, temporary_root_node);
       _push_down_traversal(temporary_root_node, LQPInputSide::Left, updated_push_down_nodes, estimator);
       lqp_remove_node(temporary_root_node);
 
-      // Optimize the diamond itself
-      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(union_node, LQPInputSide::Left, left_push_down_nodes, estimator);
-      _push_down_traversal(union_node, LQPInputSide::Right, right_push_down_nodes, estimator);
     } break;
 
     default: {
