@@ -690,9 +690,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
     argument_result.as_view([&](const auto& argument_result_view) {
       const auto result_size = _result_size(argument_result_view.size());
       values.resize(result_size);
-      nulls = argument_result.nulls;
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
-        if (argument_result.is_nullable() && nulls[chunk_offset]) {
+        if (argument_result_view.is_null(chunk_offset)) {
           continue;
         }
         const auto& argument_value = argument_result_view.value(chunk_offset);
@@ -705,6 +704,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
           Fail(error_message.str());
         }
       }
+      nulls = argument_result.nulls;
     });
   });
 
