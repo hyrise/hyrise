@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
 
     std::sort(tables.begin(), tables.end());    for (const auto& table_name : tables) {
       //std::cout << "    " << table_name << std::endl;
-      const auto table_meta_path = data_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
+      const auto table_meta_path = data_dir + "/samples/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
       //std::cout << table_meta_path << std::endl;
       std::ifstream file(table_meta_path);
       const auto exists = file.is_open();
@@ -190,7 +190,9 @@ int main(int argc, char* argv[]) {
       CsvMeta csv_meta{};
       csv_meta.config.separator = '|';
       csv_meta.config.null_handling = NullHandling::NullStringAsNull;
-      csv_meta.config.no_escape = true;
+      csv_meta.config.quote = '\0';
+      csv_meta.config.separator_escape = '\\';
+      //csv_meta.config.no_escape = true;
       CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path, csv_meta);
     }
   }
@@ -206,7 +208,7 @@ int main(int argc, char* argv[]) {
   // as they do not contains actual queries
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
   const auto query_path = data_dir + "/queries";
-  const auto table_path = data_dir + "/tables";
+  const auto table_path = data_dir + "/samples";
 
   std::cout << "- Benchmarking queries from " << query_path << std::endl;
   std::cout << "- Running on tables from " << table_path << std::endl;

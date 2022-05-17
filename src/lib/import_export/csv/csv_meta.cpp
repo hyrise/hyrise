@@ -72,6 +72,7 @@ void from_json(const nlohmann::json& json, CsvMeta& meta) {
     assign_if_exists(config.reject_quoted_nonstrings, config_json, "reject_quoted_nonstrings");
     assign_if_exists(config.rfc_mode, config_json, "rfc_mode");
     assign_if_exists(config.no_escape, config_json, "no_escape");
+    assign_if_exists(config.separator_escape, config_json, "separator_escape");
 
     if (config_json.find("null_handling") != config_json.end()) {
       config.null_handling = config_json["null_handling"].get<NullHandling>();
@@ -101,7 +102,8 @@ void to_json(nlohmann::json& json, const CsvMeta& meta) {
                                          {"reject_quoted_nonstrings", meta.config.reject_quoted_nonstrings},
                                          {"null_handling", meta.config.null_handling},
                                          {"rfc_mode", meta.config.rfc_mode},
-                                         {"no_escape", meta.config.no_escape}};
+                                         {"no_escape", meta.config.no_escape},
+                                         {"separator_escape", std::string(1, meta.config.separator_escape)}};
 
   auto columns = nlohmann::json::parse("[]");
   for (const auto& column_meta : meta.columns) {

@@ -167,6 +167,11 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
       continue;
     }
 
+    if (elem == meta.config.separator && meta.config.separator_escape != 0 && csv_content[pos - 1] == meta.config.separator_escape) {
+      std::cout << "escape " << std::string(csv_content.begin() + pos - 10, csv_content.begin() + pos + 10) << std::endl;
+      continue;
+    }
+
     ++field_count;
     field_ends.push_back(pos);
   }
