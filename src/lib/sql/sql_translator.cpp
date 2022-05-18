@@ -108,8 +108,7 @@ const std::unordered_map<hsql::OrderType, SortMode> order_type_to_sort_mode = {
 const std::unordered_map<hsql::DataType, DataType> supported_hsql_data_types = {
     {hsql::DataType::INT, DataType::Int},     {hsql::DataType::LONG, DataType::Long},
     {hsql::DataType::FLOAT, DataType::Float}, {hsql::DataType::DOUBLE, DataType::Double},
-    {hsql::DataType::TEXT, DataType::String},
-};
+    {hsql::DataType::TEXT, DataType::String}, {hsql::DataType::BIGINT, DataType::Long}};
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
@@ -1347,6 +1346,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::INT:
           column_definition.data_type = DataType::Int;
           break;
+        case hsql::DataType::BIGINT:
         case hsql::DataType::LONG:
           column_definition.data_type = DataType::Long;
           break;

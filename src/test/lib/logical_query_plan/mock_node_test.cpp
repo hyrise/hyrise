@@ -69,8 +69,12 @@ TEST_F(MockNodeTest, HashingAndEqualityCheck) {
 }
 
 TEST_F(MockNodeTest, Copy) {
+  std::string comment = "Special MockNode.";
+  _mock_node_b->comment = comment;
+
   const auto copy = _mock_node_b->deep_copy();
   EXPECT_EQ(*_mock_node_b, *copy);
+  EXPECT_EQ(copy->comment, comment);
 
   _mock_node_b->set_pruned_column_ids({ColumnID{1}});
   EXPECT_NE(*_mock_node_b, *copy);

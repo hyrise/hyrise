@@ -44,6 +44,7 @@ class GDFSCache : public AbstractCache<Key, Value> {
     if (this->_capacity == 0) {
       return;
     }
+
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -151,3 +152,4 @@ class GDFSCache : public AbstractCache<Key, Value> {
 };
 
 }  // namespace opossum
+

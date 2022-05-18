@@ -391,6 +391,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& 
   }
 
   auto shallow_copy = _on_shallow_copy(node_mapping);
+  shallow_copy->comment = comment;
   node_mapping.emplace(shared_from_this(), shallow_copy);
 
   return shallow_copy;
