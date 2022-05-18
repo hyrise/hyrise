@@ -18,7 +18,7 @@ static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& t
     if (column_ids.size() != unique_constraint.expressions.size()) continue;
 
     // In-depth comparison: Column IDs
-    auto unique_constraint_column_ids = std::unordered_set<ColumnID>();
+    auto unique_constraint_column_ids = std::set<ColumnID>();
     for (const auto& expression : unique_constraint.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       if (column_expression) {

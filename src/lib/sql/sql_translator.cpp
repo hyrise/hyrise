@@ -1366,6 +1366,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       column_definition.nullable = parser_column_definition->nullable;
 
       // Translate column constraints
+      DebugAssert(parser_column_definition->column_constraints,
+                  "Column " + column_definition.name + " is missing constraint information");
       for (const auto& column_constraint : *parser_column_definition->column_constraints) {
         if (column_constraint != hsql::ConstraintType::Unique &&
             column_constraint != hsql::ConstraintType::PrimaryKey) {
@@ -1374,7 +1376,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         const auto constraint_type = column_constraint == hsql::ConstraintType::PrimaryKey
                                          ? KeyConstraintType::PRIMARY_KEY
                                          : KeyConstraintType::UNIQUE;
-        table_key_constraints.emplace_back(std::unordered_set<ColumnID>{column_id}, constraint_type);
+        table_key_constraints.emplace(std::set<ColumnID>{column_id}, constraint_type);
         std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " constraint for column "
                   << column_definition.name << " will not be enforced\n";
       }
@@ -1383,14 +1385,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     // Translate table constraints
     const auto column_count = column_definitions.size();
     for (const auto& table_constraint : *create_statement.tableConstraints) {
-      auto column_ids = std::unordered_set<ColumnID>{};
+      auto column_ids = std::set<ColumnID>{};
       const auto constraint_type = table_constraint->type == hsql::ConstraintType::PrimaryKey
                                        ? KeyConstraintType::PRIMARY_KEY
                                        : KeyConstraintType::UNIQUE;
 
       // Resolve column IDs
       DebugAssert(table_constraint->columnNames,
-                  "Table " + std::string{magic_enum::enum_name(constraint_type)} + " constraint must contain columns");
+                  std::string{magic_enum::enum_name(constraint_type)} + " table constraint must contain columns");
       for (const auto& column_name : *table_constraint->columnNames) {
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           auto& column_definition = column_definitions[column_id];
@@ -1407,7 +1409,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         }
       }
 
-      table_key_constraints.emplace_back(column_ids, constraint_type);
+      table_key_constraints.emplace(column_ids, constraint_type);
       std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced\n";
     }
 

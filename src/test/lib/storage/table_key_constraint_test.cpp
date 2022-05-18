@@ -46,18 +46,17 @@ TEST_F(TableKeyConstraintTest, DuplicateColumnIDs) {
 
 TEST_F(TableKeyConstraintTest, AddKeyConstraints) {
   EXPECT_EQ(_table->soft_key_constraints().size(), 0);
+
+  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   _table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
   EXPECT_EQ(_table->soft_key_constraints().size(), 1);
+
+  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{1}, ColumnID{2}}, KeyConstraintType::UNIQUE};
   _table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::UNIQUE});
   EXPECT_EQ(_table->soft_key_constraints().size(), 2);
 
-  const auto& key_constraint_1 = *_table->soft_key_constraints().cbegin();
-  EXPECT_EQ(key_constraint_1.columns().size(), 1);
-  EXPECT_EQ(*key_constraint_1.columns().begin(), ColumnID{0});
-
-  const auto& key_constraint_2 = *(++_table->soft_key_constraints().cbegin());
-  EXPECT_EQ(key_constraint_2.columns().size(), 2);
-  EXPECT_TRUE(key_constraint_2.columns().contains(ColumnID{1}) && key_constraint_2.columns().contains(ColumnID{2}));
+  EXPECT_TRUE(_table->soft_key_constraints().contains(key_constraint_1));
+  EXPECT_TRUE(_table->soft_key_constraints().contains(key_constraint_2));
 }
 
 TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {

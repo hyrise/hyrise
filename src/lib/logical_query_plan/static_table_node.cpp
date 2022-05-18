@@ -40,7 +40,7 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
         }
       }
       stream << ")";
-      if (constraint_it + 1 != table_key_constraints.cend()) {
+      if (std::next(constraint_it) != table_key_constraints.cend()) {
         stream << ", ";
       }
     }

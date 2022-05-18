@@ -82,7 +82,7 @@ TEST_F(CreateTableTest, SoftKeyConstraints) {
   const auto table = Hyrise::get().storage_manager.get_table("t");
   const auto& table_key_constraints = table->soft_key_constraints();
   EXPECT_EQ(table_key_constraints.size(), 1);
-  EXPECT_EQ(table_key_constraints.at(0), unique_constraint);
+  EXPECT_TRUE(table_key_constraints.contains(unique_constraint));
 }
 
 TEST_F(CreateTableTest, TableAlreadyExists) {

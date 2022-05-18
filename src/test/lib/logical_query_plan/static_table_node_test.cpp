@@ -25,8 +25,9 @@ class StaticTableNodeTest : public BaseTest {
 TEST_F(StaticTableNodeTest, Description) {
   EXPECT_EQ(static_table_node->description(), "[StaticTable]: (a int not nullable, b float nullable)");
 
-  dummy_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
   dummy_table->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::UNIQUE});
+  dummy_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY});
+
   EXPECT_EQ(static_table_node->description(),
             "[StaticTable]: (a int not nullable, b float nullable, PRIMARY_KEY(a), UNIQUE(b))");
 }

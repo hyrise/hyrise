@@ -12,11 +12,11 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
  */
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:
-  TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type);
+  TableKeyConstraint(std::set<ColumnID> init_columns, KeyConstraintType init_key_type);
 
   KeyConstraintType key_type() const;
 
-  size_t hash() const;
+  size_t hash() const final override;
 
  protected:
   bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
@@ -25,6 +25,6 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType _key_type;
 };
 
-using TableKeyConstraints = std::vector<TableKeyConstraint>;
+using TableKeyConstraints = std::unordered_set<TableKeyConstraint, std::hash<AbstractTableConstraint>>;
 
 }  // namespace opossum
