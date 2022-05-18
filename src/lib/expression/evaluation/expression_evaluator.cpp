@@ -687,27 +687,24 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
   auto nulls = pmr_vector<bool>{};
 
   _resolve_to_expression_result(*cast_expression.argument(), [&](const auto& argument_result) {
-    using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
-
-    const auto result_size = _result_size(argument_result.size());
-    values.resize(result_size);
-
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
-      const auto& argument_value = argument_result.value(chunk_offset);
-
-      // "NULL to <Something>" cast is handled by the `nulls` vector
-      if constexpr (!std::is_same_v<ArgumentDataType, NullValue>) {
-        try {
-          values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
-        } catch (boost::bad_lexical_cast&) {
-          std::stringstream error_message;
-          error_message << "Cannot cast '" << argument_value << "' as "
-                        << magic_enum::enum_name(cast_expression.data_type());
-          Fail(error_message.str());
+    argument_result.as_view([&](const auto& argument_result_view) {
+      const auto result_size = _result_size(argument_result_view.size());
+      values.resize(result_size);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
+        if (!argument_result_view.is_null(chunk_offset)) {
+          const auto& argument_value = argument_result_view.value(chunk_offset);
+          try {
+            values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+          } catch (boost::bad_lexical_cast&) {
+            std::stringstream error_message;
+            error_message << "Cannot cast '" << argument_value << "' as "
+                          << magic_enum::enum_name(cast_expression.data_type());
+            Fail(error_message.str());
+          }
         }
       }
-    }
-    nulls = argument_result.nulls;
+      nulls = argument_result.nulls;
+    });
   });
 
   return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
@@ -831,8 +828,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
   pmr_vector<pmr_string> values(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(from_view.size());
-         ++chunk_offset) {
+    const auto from_view_size = from_view.size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         DebugAssert(from_view.value(chunk_offset).size() == 10u,
                     "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
