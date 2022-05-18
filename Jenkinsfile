@@ -78,6 +78,8 @@ try {
             sh "./install_dependencies.sh"
 
             cmake = 'cmake -DCI_BUILD=ON'
+
+            // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
             unity = '-DCMAKE_UNITY_BUILD=ON'
  
             // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to

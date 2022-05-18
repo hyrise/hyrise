@@ -62,8 +62,8 @@
 }
 
 # Similar to the suppression introduced via https://github.com/hyrise/hyrise/pull/1851#issuecomment-618937388, we need
-# suppress a conditional jump warning. We have removed the previous suppression as it has not been triggered by
-# GoogleTest anymore.
+# to suppress a conditional jump check. We removed the previous suppression as it has not been triggered by GoogleTest
+# anymore.
 {
    <PR_2458_memcheck>
    Memcheck:Cond

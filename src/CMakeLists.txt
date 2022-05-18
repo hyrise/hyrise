@@ -26,7 +26,7 @@ option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking
 if (${ENABLE_COVERAGE})
     add_compile_options(-O0 -fno-inline)
 
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_compile_options(-fprofile-arcs -ftest-coverage)
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -62,7 +62,7 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 13.99)
-	message(WARNING "Disabling 'reserved-identifier' warning for clang 13 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
+        message(WARNING "Disabling 'reserved-identifier' warning for clang 13 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
         add_compile_options(-Wno-reserved-identifier)
     endif()
 endif()
