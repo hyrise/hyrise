@@ -16,7 +16,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
 
   KeyConstraintType key_type() const;
 
-  size_t hash() const final override;
+  size_t hash() const override;
   bool operator<(const TableKeyConstraint& rhs) const;
 
  protected:
@@ -25,12 +25,6 @@ class TableKeyConstraint final : public AbstractTableConstraint {
  private:
   KeyConstraintType _key_type;
 };
-
-/*
-struct TableKeyConstraintLess {
-  constexpr bool operator()(const TableKeyConstraint& lhs, const TableKeyConstraint& rhs) const { return lhs < rhs; }
-};
-*/
 
 using TableKeyConstraints = std::set<TableKeyConstraint>;
 
