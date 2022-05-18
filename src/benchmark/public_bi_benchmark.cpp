@@ -153,7 +153,7 @@ int main(int argc, char* argv[]) {
 
     std::sort(tables.begin(), tables.end());    for (const auto& table_name : tables) {
       //std::cout << "    " << table_name << std::endl;
-      const auto table_meta_path = data_dir + "/samples/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
+      const auto table_meta_path = data_dir + "/tables/" + std::string{table_name} + ".csv" + CsvMeta::META_FILE_EXTENSION;
       //std::cout << table_meta_path << std::endl;
       std::ifstream file(table_meta_path);
       const auto exists = file.is_open();
@@ -208,7 +208,7 @@ int main(int argc, char* argv[]) {
   // as they do not contains actual queries
   const auto non_query_file_names = std::unordered_set<std::string>{"fkindexes.sql", "schema.sql"};
   const auto query_path = data_dir + "/queries";
-  const auto table_path = data_dir + "/samples";
+  const auto table_path = data_dir + "/tables";
 
   std::cout << "- Benchmarking queries from " << query_path << std::endl;
   std::cout << "- Running on tables from " << table_path << std::endl;
