@@ -1,5 +1,3 @@
-HeaderFilterRegex: '.*cpp$' # https://gitlab.kitware.com/cmake/cmake/issues/20058
-
 Checks: '
          *,
          -*-default-arguments*,
