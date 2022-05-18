@@ -21,4 +21,14 @@ bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constra
   return key_type() == static_cast<const TableKeyConstraint&>(table_constraint).key_type();
 }
 
+bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
+  if (_key_type < rhs.key_type()) {
+    return true;
+  }
+  const auto& columns = this->columns();
+  const auto& rhs_columns = rhs.columns();
+  // The columns are stored as std::set, and thus are sorted
+  return std::lexicographical_compare(columns.cbegin(), columns.cend(), rhs_columns.cbegin(), rhs_columns.cend());
+}
+
 }  // namespace opossum

@@ -133,4 +133,40 @@ TEST_F(TableKeyConstraintTest, Hash) {
   EXPECT_FALSE(key_constraint_a.hash() == key_constraint_c.hash());
 }
 
+TEST_F(TableKeyConstraintTest, Less) {
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_reordered = TableKeyConstraint{{ColumnID{2}, ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto primary_key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_FALSE(key_constraint_a < key_constraint_a);
+  EXPECT_FALSE(key_constraint_a < key_constraint_a_reordered);
+
+  EXPECT_TRUE(primary_key_constraint_a < key_constraint_a);
+
+  EXPECT_TRUE(key_constraint_a < key_constraint_b);
+
+  EXPECT_TRUE(key_constraint_c < key_constraint_a);
+}
+
+TEST_F(TableKeyConstraintTest, OrderIndependence) {
+  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+
+  auto key_constraints_a = TableKeyConstraints{};
+  auto key_constraints_b = TableKeyConstraints{};
+
+  key_constraints_a.insert(key_constraint_1);
+  key_constraints_a.insert(key_constraint_2);
+
+  key_constraints_b.insert(key_constraint_2);
+  key_constraints_b.insert(key_constraint_1);
+
+  EXPECT_EQ(key_constraints_a, key_constraints_b);
+  EXPECT_EQ(*key_constraints_a.begin(), *key_constraints_b.begin());
+  EXPECT_EQ(*std::next(key_constraints_a.begin()), *std::next(key_constraints_b.begin()));
+}
+
 }  // namespace opossum

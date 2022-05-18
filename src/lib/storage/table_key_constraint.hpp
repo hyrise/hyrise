@@ -17,6 +17,7 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType key_type() const;
 
   size_t hash() const final override;
+  bool operator<(const TableKeyConstraint& rhs) const;
 
  protected:
   bool _on_equals(const AbstractTableConstraint& table_constraint) const override;
@@ -25,6 +26,12 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType _key_type;
 };
 
-using TableKeyConstraints = std::unordered_set<TableKeyConstraint, std::hash<AbstractTableConstraint>>;
+/*
+struct TableKeyConstraintLess {
+  constexpr bool operator()(const TableKeyConstraint& lhs, const TableKeyConstraint& rhs) const { return lhs < rhs; }
+};
+*/
+
+using TableKeyConstraints = std::set<TableKeyConstraint>;
 
 }  // namespace opossum
