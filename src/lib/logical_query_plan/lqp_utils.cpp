@@ -589,7 +589,9 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
         is_diamond = false;
       }
       return LQPVisitation::DoNotVisitInputs;
-    } else if (!diamond_node->left_input()) {
+    }
+
+    if (!diamond_node->left_input()) {
       // The traversal ends because we reached a MockNode, StoredTableNode or StaticTableNode. Since we did not find a
       // node with multiple outputs yet, union_root_node cannot be considered the root of a diamond.
       is_diamond = false;
