@@ -28,7 +28,6 @@ struct ParseConfig {
   char quote = '"';
   char escape = '"';
   char delimiter_escape = '\\';
-  char separator_escape = '\0';
 
   // If this is set to true, "4.3" will not be accepted as a value for a float column.
   bool reject_quoted_nonstrings = true;

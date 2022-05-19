@@ -128,7 +128,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     return false;
   }
 
-  const auto search_for = meta.config.no_escape ? std::string{meta.config.separator, meta.config.delimiter} : std::string{meta.config.separator, meta.config.delimiter, meta.config.quote};
+  const auto search_for = std::string{meta.config.separator, meta.config.delimiter, meta.config.quote};
 
   size_t from = 0;
   unsigned int rows = 0;
@@ -167,9 +167,11 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
       continue;
     }
 
-    if (elem == meta.config.separator && meta.config.separator_escape != 0 && csv_content[pos - 1] == meta.config.separator_escape) {
-      std::cout << "escape " << std::string(csv_content.begin() + pos - 10, csv_content.begin() + pos + 10) << std::endl;
-      continue;
+    if (elem == meta.config.separator && pos != 0 & csv_content[pos - 1] == meta.config.escape) {
+      auto escape_is_escaped = pos != 1 && csv_content[pos - 2] == meta.config.escape;
+      if (!escape_is_escaped) {
+        continue;
+      }
     }
 
     ++field_count;
