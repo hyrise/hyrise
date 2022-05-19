@@ -17,6 +17,11 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType key_type() const;
 
   size_t hash() const override;
+
+  /**
+   * Required for storing TableKeyConstraints in a sort-based std::set.
+   * The comparison result does not need to be meaningful as long as it is consistent.
+   */
   bool operator<(const TableKeyConstraint& rhs) const;
 
  protected:
@@ -26,6 +31,9 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType _key_type;
 };
 
+/**
+ * We use std::set here to have a well-defined iteration order when hashing StaticTableNode.
+ */
 using TableKeyConstraints = std::set<TableKeyConstraint>;
 
 }  // namespace opossum

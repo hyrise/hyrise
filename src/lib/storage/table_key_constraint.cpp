@@ -27,7 +27,8 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   }
   const auto& columns = this->columns();
   const auto& rhs_columns = rhs.columns();
-  // The columns are stored as std::set, and thus are sorted
+  // As the columns are stored in a std::set, iteration is sorted and the result is not ambiguous.
+  // We do not use the < operator for the column sets because it is deprecated in C++20.
   return std::lexicographical_compare(columns.cbegin(), columns.cend(), rhs_columns.cbegin(), rhs_columns.cend());
 }
 
