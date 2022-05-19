@@ -35,18 +35,26 @@
 #include "memory/umap_memory_resource.hpp"
 //#include "memory/nvm_memory_resource.hpp"
 
+#include "umap/RegionManager.hpp"
+#include "umap/Buffer.hpp"
+
 using namespace opossum::expression_functional;  // NOLINT
 
 using namespace opossum;  // NOLINT
 
 // Import
 
-constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
+//constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
+constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
-constexpr auto CHUNK_SIZE = size_t{1'000'000};
+constexpr auto CHUNK_SIZE = size_t{40'000'000};
 //constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
+
+constexpr auto BUFFER_EVICTION_TABLE_NAME = "BUFFERTABLE";
+constexpr auto BUFFER_EVICTION_CHUNK_SIZE = size_t{400'000'000};
+
 constexpr auto SORT_MODE = SortMode::Ascending;
 constexpr auto EXECUTION_COUNT = 100;
 
@@ -184,6 +192,27 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
 }
 
 /**
+ * This function executes a table scan on the timestamp column of the buffer eviction table to pollute
+ * the umap buffer
+ */
+void execute_buffer_eviction_query() {
+  // Create initial node 
+  auto stored_table_node = StoredTableNode::make(BUFFER_EVICTION_TABLE_NAME);
+  auto node = PredicateNode::make(less_than_equals_(stored_table_node->get_column("timestamp"), 1548975682), stored_table_node);
+
+  const auto root_node = LogicalPlanRootNode::make(std::move(node));
+
+  const auto optimized_node = root_node->left_input();
+  root_node->set_left_input(nullptr);
+
+  const auto pqp = LQPTranslator{}.translate_node(optimized_node);
+
+  // Execute pgp 
+  const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
+  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+}
+
+/**
  * Takes a pair of an LQP-based query and the frequency, partially optimizes the query (only chunk and column pruning
  * for now), translates the query, and executes the query (single-threaded).
  */
@@ -210,8 +239,26 @@ float partially_optimize_translate_and_execute_query(const std::shared_ptr<Abstr
   const auto optimized_node = root_node->left_input();
   root_node->set_left_input(nullptr);
 
+  // Umap storage device
+  //auto const tiering_dev = getenv("TIERING_DEV");  
+
   std::vector<size_t> runtimes;
   for (auto count = size_t{0}; count < EXECUTION_COUNT; ++count) {
+    
+    auto& umap_region = Umap::RegionManager::getInstance();
+    std::cout << "Start: " << umap_region.get_buffer_h() << std::endl;
+
+    // evict umap region
+    //auto umap_region_descriptor = umap_region.containing_region(tiering_dev);
+    //umap_region.get_buffer_h()->evict_region(umap_region_descriptor);
+    
+    //umap_region.get_evict_manager()->EvictAll();
+
+    // flush umap buffer
+    //umap_region.flush_buffer();
+
+    //std::cout << "Evict: "<< Umap::RegionManager::getInstance().get_buffer_h() << std::endl;
+
     Timer timer;
     const auto pqp = LQPTranslator{}.translate_node(optimized_node);
 
@@ -224,12 +271,19 @@ float partially_optimize_translate_and_execute_query(const std::shared_ptr<Abstr
     const auto runtime = static_cast<size_t>(timer.lap().count());
     runtimes.push_back(runtime);
 
+    std::cout << "Query Executed: " << Umap::RegionManager::getInstance().get_buffer_h() << std::endl;
+
     // visualize pqp
     //auto pqps = {pqp};
     //GraphvizConfig graphviz_config;
     //graphviz_config.format = "svg";
     //std::string path = conf_name + "_" + query_id + "_pqp.svg";
     //PQPVisualizer{graphviz_config, {}, {}, {}}.visualize(pqps, path);
+    
+    //std::cout << Umap::RegionManager::getInstance().get_buffer_h() << std::endl;
+    execute_buffer_eviction_query();
+
+    std::cout << "Inter Query Executed: " << Umap::RegionManager::getInstance().get_buffer_h() << std::endl;
   }
 
   auto runtime_accumulated = size_t{0};
@@ -253,11 +307,32 @@ int main() {
   performance_csv_file << "CONFIG_NAME,QUERY_ID,EXECUTION_TIME\n";
 
   Assert(getenv("UMAP_BUFSIZE") != NULL, "Environment variable UMAP_BUFSIZE should be set for umap to work as expected");
+  Assert(getenv("UMAP_PAGESIZE") != NULL, "Environment variable UMAP_PAGESIZE should be set for umap to work as expected");
   Assert(getenv("TIERING_DEV") != NULL, "Environment variable TIERING_DEV should be set to specify the device");
 
   // Create new ploymorphic resource
   static auto global_umap_resource = new UmapMemoryResource("global");
   (void) global_umap_resource;
+
+  std::cout << "Loading buffer eviction table ... ";
+  // Create new table to evict buffer during query executions
+  const auto buffer_table = load_table(TBL_FILE, BUFFER_EVICTION_CHUNK_SIZE);
+  // move all segments on SSD
+  const auto buffer_table_chunk_count = buffer_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < buffer_table_chunk_count; ++chunk_id) {
+    auto chunk = std::make_shared<Chunk>(get_segments_of_chunk(buffer_table, chunk_id));
+    for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
+      const auto segment = chunk->get_segment(column_id);
+
+      auto resource = global_umap_resource;
+      auto allocator = PolymorphicAllocator<void>{resource};
+
+      const auto migrated_segment = segment->copy_using_allocator(allocator);
+      buffer_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+    }
+  }
+  storage_manager.add_table(BUFFER_EVICTION_TABLE_NAME, buffer_table);
+  std::cout << "done " << std::endl;
 
   for (const auto& entry : std::filesystem::directory_iterator(CONFIG_PATH)) {
     const auto conf_path = entry.path();
