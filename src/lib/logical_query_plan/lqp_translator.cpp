@@ -362,14 +362,32 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   auto right_table_type = TableType::References;
 
   auto index_side = std::optional<IndexSide>{};
+  std::vector<ColumnID> pruned_column_ids{};
+
   if (left_input_type == LQPNodeType::StoredTable) {
     left_table_type = TableType::Data;
     index_side = IndexSide::Left;
-  }
 
-  if (right_input_type == LQPNodeType::StoredTable) {
+    auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+    pruned_column_ids = stored_table_node->pruned_column_ids();
+  } else if (right_input_type == LQPNodeType::StoredTable) {
     right_table_type = TableType::Data;
     index_side = IndexSide::Right;
+
+    auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
+    pruned_column_ids = stored_table_node->pruned_column_ids();
+  } else {
+    while (true) {
+      auto temporay_lqp_node = node->right_input();
+
+      if (temporay_lqp_node->type == LQPNodeType::StoredTable) {
+        auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
+        pruned_column_ids = stored_table_node->pruned_column_ids();
+        break;
+      }
+
+      temporay_lqp_node = temporay_lqp_node->right_input();
+    }
   }
 
   Assert(left_table_type != TableType::Data || right_table_type != TableType::Data,
@@ -379,8 +397,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
       JoinIndex::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                            right_data_type, !secondary_join_predicates.empty(), left_table_type, right_table_type,
                            index_side})) {
+
     return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
-                                       primary_join_predicate, std::move(secondary_join_predicates), *index_side);
+                                       primary_join_predicate, std::move(secondary_join_predicates), *index_side, pruned_column_ids);
   }
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than

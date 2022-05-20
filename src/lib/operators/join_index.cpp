@@ -100,10 +100,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   }
 
   auto column_count_before_pruning = _index_input_table->column_count() + _pruned_column_ids.size();
+  auto map_index = ColumnID{0};
 
   for (auto column_id = ColumnID{0}; column_id < column_count_before_pruning; ++column_id) {
     if(std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), column_id) == _pruned_column_ids.end()) {
-      _column_id_mapping.emplace_back(column_id);
+      _column_id_mapping[column_id] = map_index;
+      ++map_index;
     }
   }
 
@@ -206,7 +208,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // Here we prefer to use table indexes if the join supports them. If no table index exists or other predicates than
     // Equals or NotEquals are requested, chunk indexes are used. If no chunk index exists, NestedLoopJoin is used as a
     // fallback solution.
-    const auto& table_indexes = _index_input_table->get_table_indexes(_column_id_mapping.at(_adjusted_primary_predicate.column_ids.second));
+    const auto& table_indexes = _index_input_table->get_table_indexes((_adjusted_primary_predicate.column_ids.second));
+    std::cout << "map start" << std::endl;
+    for(auto it = _column_id_mapping.cbegin(); it != _column_id_mapping.cend(); ++it) {
+      std::cout << it->first << "---" << it->second << std::endl;
+    }
+    std::cout << std::to_string(_adjusted_primary_predicate.column_ids.second) + "+" + std::to_string(_column_id_mapping[_adjusted_primary_predicate.column_ids.second]) << std::endl;
     if (!table_indexes.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
          _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join

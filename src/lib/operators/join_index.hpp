@@ -122,7 +122,7 @@ class JoinIndex : public AbstractJoinOperator {
 
 
   const std::vector<ColumnID> _pruned_column_ids;
-  std::vector<ColumnID> _column_id_mapping;
+  std::map<ColumnID, ColumnID> _column_id_mapping;
 };
 
 }  // namespace opossum
