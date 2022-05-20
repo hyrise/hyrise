@@ -377,8 +377,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
     auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
     pruned_column_ids = stored_table_node->pruned_column_ids();
   } else {
+
+    auto temporay_lqp_node = node->right_input();   
     while (true) {
-      auto temporay_lqp_node = node->right_input();
 
       if (temporay_lqp_node->type == LQPNodeType::StoredTable) {
         auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
@@ -386,7 +387,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
         break;
       }
 
-      temporay_lqp_node = temporay_lqp_node->right_input();
+      temporay_lqp_node = temporay_lqp_node->left_input();
     }
   }
 
