@@ -389,7 +389,6 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       lqp_insert_node_above(diamond_origin_node, temporary_root_node);
       _push_down_traversal(temporary_root_node, LQPInputSide::Left, updated_push_down_nodes, estimator);
       lqp_remove_node(temporary_root_node);
-
     } break;
 
     default: {
