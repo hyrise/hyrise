@@ -467,9 +467,9 @@ set(
     storage/index/b_tree/b_tree_index.hpp
     storage/index/b_tree/b_tree_index_impl.cpp
     storage/index/b_tree/b_tree_index_impl.hpp
+]]
     storage/index/group_key/composite_group_key_index.cpp
     storage/index/group_key/composite_group_key_index.hpp
-]]
     storage/index/group_key/group_key_index.cpp
     storage/index/group_key/group_key_index.hpp
     storage/index/group_key/variable_length_key.cpp

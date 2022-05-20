@@ -25,6 +25,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "utils/load_table.hpp"
 #include "utils/format_duration.hpp"
@@ -317,8 +318,32 @@ int main() {
   std::cout << "Loading buffer eviction table ... ";
   // Create new table to evict buffer during query executions
   const auto buffer_table = load_table(TBL_FILE, BUFFER_EVICTION_CHUNK_SIZE);
-  // move all segments on SSD
+
+
+///////////////////////////
+//////////////////////////
+
+  std::cout << "Encoding table using dictionary encoding ... ";
+  ChunkEncoder::encode_all_chunks(buffer_table, SegmentEncodingSpec{EncodingType::Dictionary});
+  std::cout << "done" << std::endl;
+
+  std::cout << "Creating and migrating composite indexes ... ";
   const auto buffer_table_chunk_count = buffer_table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < buffer_table_chunk_count; ++chunk_id) {
+    auto index = buffer_table->get_chunk(chunk_id)->create_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{2}});
+
+    auto resource = global_umap_resource;
+    auto allocator = PolymorphicAllocator<void>{resource};
+
+    auto migrated_index = index->copy_using_allocator(allocator);
+    buffer_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
+  }
+  std::cout << "done" << std::endl;
+
+///////////////////////////
+////////////////////////////
+
+  // move all segments on SSD
   for (auto chunk_id = ChunkID{0}; chunk_id < buffer_table_chunk_count; ++chunk_id) {
     auto chunk = std::make_shared<Chunk>(get_segments_of_chunk(buffer_table, chunk_id));
     for (ColumnID column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {

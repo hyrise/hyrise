@@ -10,24 +10,23 @@ namespace opossum {
 
 namespace hana = boost::hana;
 
-// TODO(Keven) ... begründen
-// Due to the usage of pmr_vector within the GroupKeyIndex, 
-// waren zu faul alles glatt zu ziehen. nur GruopKey angepasst. anderen wären aber relative einfach ... aber fließarbeit
-enum class SegmentIndexType : uint8_t { Invalid, GroupKey,
-	                                // CompositeGroupKey, AdaptiveRadixTree, BTree
+// Due to the usage of pmr_vector within the GroupKeyIndex and adding a copy_with_allocator method in two mainly used
+// indexes, we simply disable indexes not of relevance for this project. We simply lak the time to adopt them.
+// Adopting would probably take a couple of hours, but shouldn't be too hard.
+enum class SegmentIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey //, AdaptiveRadixTree, BTree
 				      };
 
 class GroupKeyIndex;
-//class CompositeGroupKeyIndex;
+class CompositeGroupKeyIndex;
 //class AdaptiveRadixTreeIndex;
 //class BTreeIndex;
 
 namespace detail {
 
 constexpr auto segment_index_map =
-    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey)//,
+    hana::make_map(hana::make_pair(hana::type_c<GroupKeyIndex>, SegmentIndexType::GroupKey),
+                   hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, SegmentIndexType::CompositeGroupKey)//,
 		   /*
-                   hana::make_pair(hana::type_c<CompositeGroupKeyIndex>, SegmentIndexType::CompositeGroupKey),
                    hana::make_pair(hana::type_c<AdaptiveRadixTreeIndex>, SegmentIndexType::AdaptiveRadixTree),
                    hana::make_pair(hana::type_c<BTreeIndex>, SegmentIndexType::BTree) */);
 

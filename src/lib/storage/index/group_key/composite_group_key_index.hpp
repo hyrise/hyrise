@@ -54,6 +54,12 @@ class CompositeGroupKeyIndex : public AbstractIndex {
 
   explicit CompositeGroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
+  CompositeGroupKeyIndex(pmr_vector<std::shared_ptr<const BaseDictionarySegment>> indexed_segments,
+                         VariableLengthKeyStore keys, pmr_vector<ChunkOffset> key_offsets,
+                         pmr_vector<ChunkOffset> position_list);
+
+  std::shared_ptr<AbstractIndex> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+
  private:
   Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const final;
   Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const final;
@@ -104,15 +110,15 @@ class CompositeGroupKeyIndex : public AbstractIndex {
 
  private:
   // the segments the index is based on
-  std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
+  pmr_vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
 
   // contains concatenated value-ids
   VariableLengthKeyStore _keys;
 
   // the start positions within _position_list for every key
-  std::vector<ChunkOffset> _key_offsets;
+  pmr_vector<ChunkOffset> _key_offsets;
 
   // contains positions, ie ChunkOffsets, for the concatenated value-ids
-  std::vector<ChunkOffset> _position_list;
+  pmr_vector<ChunkOffset> _position_list;
 };
 }  // namespace opossum
