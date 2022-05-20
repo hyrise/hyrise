@@ -61,7 +61,7 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 
-  // Check whether the added semi join is marked as a reducer
+  // Check whether the added semi join was also marked as a semi reduction.
   auto join_node = std::static_pointer_cast<JoinNode>(actual_lqp->left_input());
   ASSERT_TRUE(join_node->is_semi_reduction());
   EXPECT_EQ(join_node->get_or_find_reduced_join_node(), std::static_pointer_cast<JoinNode>(actual_lqp));
