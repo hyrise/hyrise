@@ -243,7 +243,10 @@ void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_j
   _reduced_join_node = std::weak_ptr<JoinNode>(reduced_join_node);
 }
 
-bool JoinNode::is_semi_reduction() const { return _is_semi_reduction; }
+bool JoinNode::is_semi_reduction() const {
+  DebugAssert(!_is_semi_reduction || join_mode == JoinMode::Semi, "Non-semi join is marked as a semi reduction.");
+  return _is_semi_reduction;
+}
 
 std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
   if (!_is_semi_reduction) {
