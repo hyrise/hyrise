@@ -368,17 +368,17 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         return;
       }
 
-      // Apply predicate pushdown to the diamond's nodes
+      // Apply predicate pushdown to the diamond's nodes.
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       _push_down_traversal(union_node, LQPInputSide::Left, left_push_down_nodes, estimator);
       _push_down_traversal(union_node, LQPInputSide::Right, right_push_down_nodes, estimator);
 
-      // Continue predicate pushdown below the diamond
+      // Continue predicate pushdown below the diamond.
       auto updated_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       for (const auto& push_down_node : push_down_nodes) {
         if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
-          // Save for next _push_down_traversal recursion
+          // Save for next _push_down_traversal recursion.
           updated_push_down_nodes.emplace_back(push_down_node);
         } else {
           // The diamond is a barrier for push_down_node.
