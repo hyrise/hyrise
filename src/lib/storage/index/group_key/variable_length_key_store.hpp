@@ -55,6 +55,9 @@ class VariableLengthKeyStore {
    */
   explicit VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key);
 
+  VariableLengthKeyStore(CompositeKeyLength bytes_per_key, CompositeKeyLength key_alignment, pmr_vector<VariableLengthKeyWord> data)
+    : _bytes_per_key{bytes_per_key}, _key_alignment{key_alignment}, _data{std::move(data)} {}
+
   /**
    * Mimics the operator[] as used in std::vector with the difference that proxy objects are returned instead of
    * references. Although proxy objects are returned, they can be nearly used as if they would be references to
@@ -87,6 +90,11 @@ class VariableLengthKeyStore {
    */
   void shrink_to_fit();
 
+  VariableLengthKeyStore copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+    auto new_data = pmr_vector<VariableLengthKeyWord>(std::begin(_data), std::end(_data), alloc);
+    return VariableLengthKeyStore(_bytes_per_key, _key_alignment, std::move(new_data));
+  }
+
   /**
    * Removes elements in range [first; last).
    */
@@ -102,7 +110,7 @@ class VariableLengthKeyStore {
  private:
   CompositeKeyLength _bytes_per_key;
   CompositeKeyLength _key_alignment;
-  std::vector<VariableLengthKeyWord> _data;
+  pmr_vector<VariableLengthKeyWord> _data;
 
  private:
   /**

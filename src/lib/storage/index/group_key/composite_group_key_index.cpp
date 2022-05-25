@@ -110,6 +110,42 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _keys.shrink_to_fit();
 }
 
+CompositeGroupKeyIndex::CompositeGroupKeyIndex(pmr_vector<std::shared_ptr<const BaseDictionarySegment>> indexed_segments,
+                                               VariableLengthKeyStore keys, pmr_vector<ChunkOffset> key_offsets,
+                                               pmr_vector<ChunkOffset> position_list)
+                                               : AbstractIndex{get_index_type_of<CompositeGroupKeyIndex>()},
+                                                 _indexed_segments{indexed_segments},
+                                                 _keys{keys}, _key_offsets{key_offsets},
+                                                 _position_list{position_list} { }
+
+std::shared_ptr<AbstractIndex> CompositeGroupKeyIndex::copy_using_allocator(
+    const PolymorphicAllocator<size_t>& alloc) const {
+  auto compare = [](const auto& original_vector, const auto& new_vector) {
+    return; // Disabled for normal use.
+    const auto vector_size = original_vector.size();
+    Assert(vector_size == new_vector.size(), "Size differs.");
+    for (auto index = size_t{0}; index < vector_size; ++index) {
+      Assert(original_vector[index] == new_vector[index], "Element in vectors differs.");
+    }
+    std::cout << std::endl;
+  };
+  auto new_indexed_segments = pmr_vector<std::shared_ptr<const BaseDictionarySegment>>(std::begin(_indexed_segments), std::end(_indexed_segments));
+  compare(_indexed_segments, new_indexed_segments);
+  auto new_keys = _keys.copy_using_allocator(alloc);
+  compare(_keys, new_keys);
+  auto new_key_offsets = pmr_vector<ChunkOffset>(std::begin(_key_offsets), std::end(_key_offsets), alloc);
+  compare(_key_offsets, new_key_offsets);
+  auto new_position_list = pmr_vector<ChunkOffset>(std::begin(_position_list), std::end(_position_list), alloc);
+  compare(_position_list, new_position_list);
+
+  auto copy = std::make_shared<CompositeGroupKeyIndex>(std::move(new_indexed_segments),
+                                                       std::move(new_keys),
+                                                       std::move(new_key_offsets),
+                                                       std::move(new_position_list));
+
+  return copy;
+}
+
 AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
 
 AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
