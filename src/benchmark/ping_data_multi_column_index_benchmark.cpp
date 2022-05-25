@@ -216,9 +216,8 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
               }
               
               for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-		Fail("Disabled other index types");
-                //const auto& index = new_table->get_chunk(chunk_id)->create_index<CompositeGroupKeyIndex>(column_ids);
-                //index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_ids[0]) << "," << new_table->column_name(column_ids[1]) << "," << order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << index->memory_consumption() << "\n";
+                const auto& index = new_table->get_chunk(chunk_id)->create_index<CompositeGroupKeyIndex>(column_ids);
+                index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_ids[0]) << "," << new_table->column_name(column_ids[1]) << "," << order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << index->memory_consumption() << "\n";
               }
               std::cout << "done " << std::endl;
             }
@@ -284,10 +283,9 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
   }
 
   for (auto _ : state) {
-    Fail("Diabled index types");
-    //const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::CompositeGroupKey, scan_column_ids, PredicateCondition::LessThanEquals, right_values);
-    //index_scan->included_chunk_ids = indexed_chunks;
-    //index_scan->execute();
+    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::CompositeGroupKey, scan_column_ids, PredicateCondition::LessThanEquals, right_values);
+    index_scan->included_chunk_ids = indexed_chunks;
+    index_scan->execute();
   }
 }
 
