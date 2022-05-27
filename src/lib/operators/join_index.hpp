@@ -120,7 +120,6 @@ class JoinIndex : public AbstractJoinOperator {
   std::vector<std::vector<bool>> _probe_matches;
   std::vector<std::vector<bool>> _index_matches;
 
-
   ColumnID _index_column_id_before_pruning;
 };
 

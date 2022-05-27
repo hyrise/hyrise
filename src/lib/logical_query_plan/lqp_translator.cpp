@@ -354,7 +354,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   const auto right_data_type = join_node->join_predicates().front()->arguments[1]->data_type();
 
   // comment in if JoinIndex should be tested in benchmarks
-  
+
   const auto& left_input_type = join_node->left_input()->type;
   const auto& right_input_type = join_node->right_input()->type;
 
@@ -370,7 +370,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
     auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
     pruned_column_ids = stored_table_node->pruned_column_ids();
-  } 
+  }
 
   if (right_input_type == LQPNodeType::StoredTable) {
     right_table_type = TableType::Data;
@@ -383,12 +383,15 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   Assert(left_table_type != TableType::Data || right_table_type != TableType::Data,
          "Both input tables are data tables. Add additional logic to make a decision about the IndexSide.");
 
-  if ((primary_join_predicate.predicate_condition == PredicateCondition::Equals || primary_join_predicate.predicate_condition == PredicateCondition::NotEquals) && index_side &&
+  if ((primary_join_predicate.predicate_condition == PredicateCondition::Equals ||
+       primary_join_predicate.predicate_condition == PredicateCondition::NotEquals) &&
+      index_side &&
       JoinIndex::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                            right_data_type, !secondary_join_predicates.empty(), left_table_type, right_table_type,
                            index_side})) {
     return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
-                                       primary_join_predicate, std::move(secondary_join_predicates), *index_side, pruned_column_ids);
+                                       primary_join_predicate, std::move(secondary_join_predicates), *index_side,
+                                       pruned_column_ids);
   }
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than

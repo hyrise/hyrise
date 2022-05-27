@@ -49,7 +49,8 @@ bool JoinIndex::supports(const JoinConfiguration config) {
 JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
-                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side, const std::vector<ColumnID> pruned_column_ids)
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side,
+                     const std::vector<ColumnID> pruned_column_ids)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
@@ -59,7 +60,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
   }
 
   _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
-  for (const auto pruned_column_id: pruned_column_ids) {
+  for (const auto pruned_column_id : pruned_column_ids) {
     if (pruned_column_id > _index_column_id_before_pruning) {
       break;
     }
@@ -274,8 +275,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
         Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-        const auto& indexes =
-            index_chunk->get_indexes(std::vector<ColumnID>{_index_column_id_before_pruning});
+        const auto& indexes = index_chunk->get_indexes(std::vector<ColumnID>{_index_column_id_before_pruning});
         if (!indexes.empty()) {
           // We assume the first index to be efficient for our join as we do not want to spend time on evaluating the
           // best index inside of this join loop.
