@@ -249,20 +249,19 @@ bool JoinNode::is_semi_reduction() const {
 }
 
 std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
-  if (!_is_semi_reduction) {
-    return nullptr;
-  }
+  Assert(_is_semi_reduction, "Expected semi join reduction node.");
 
   if (_reduced_join_node.expired()) {
-    // In deep copies of the LQP, the weak pointer to the reduced join is expired (lazy discovery). In such cases,
+    // In deep copies of the LQP, the weak pointer to the reduced join is unset (lazy discovery). In such cases,
     // find the reduced join by traversing the LQP upwards.
+    const auto& reduction_predicate = *join_predicates()[0];
     visit_lqp_upwards(std::const_pointer_cast<AbstractLQPNode>(shared_from_this()), [&](const auto& current_node) {
       if (current_node->type != LQPNodeType::Join || current_node.get() == this) {
         return LQPUpwardVisitation::VisitOutputs;
       }
       const auto join_node = std::static_pointer_cast<JoinNode>(current_node);
       if (std::none_of(join_node->join_predicates().begin(), join_node->join_predicates().end(),
-                       [&](const auto& predicate) { return *predicate == *join_predicates()[0]; })) {
+                       [&](const auto& predicate) { return *predicate == reduction_predicate; })) {
         return LQPUpwardVisitation::VisitOutputs;
       }
 
