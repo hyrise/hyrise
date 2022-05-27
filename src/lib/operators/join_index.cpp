@@ -68,12 +68,12 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     }
   }
 
-  std::cout << '{';
-  for (const auto temp: pruned_column_ids) {
-    std::cout << std::to_string(temp) << ", ";
-  }
-  std::cout << '}' << std::endl;
-  std::cout << std::to_string(_adjusted_primary_predicate.column_ids.second) + "+++" + std::to_string(_index_column_id_before_pruning) << std::endl;
+  // std::cout << '{';
+  // for (const auto temp: pruned_column_ids) {
+  //   std::cout << std::to_string(temp) << ", ";
+  // }
+  // std::cout << '}' << std::endl;
+  // std::cout << std::to_string(_adjusted_primary_predicate.column_ids.second) + "+++" + std::to_string(_index_column_id_before_pruning) << std::endl;
 }
 
 const std::string& JoinIndex::name() const {
