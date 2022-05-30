@@ -749,8 +749,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   cached_output_configuration.radix_bits = {};
   cached_output_configuration.index_side = {};
 
-  auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
-
   const auto join_verification =
       std::make_shared<JoinVerification>(input_operator_left, input_operator_right, configuration.join_mode,
                                          primary_predicate, configuration.secondary_predicates);
@@ -809,6 +807,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   };
 
   try {
+    auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
+
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {
       join_verification->execute();

@@ -37,7 +37,7 @@ table_dir = sys.argv[1]
 
 # This file contains the IMDB dataset and is based on the specifications of the
 # original JOB repository: https://github.com/gregrahn/join-order-benchmark
-LOCATION = "https://www.dropbox.com/s/lyo2rnbo2jkl54w/imdb_data.zip?dl=1"
+LOCATION = "https://www.dropbox.com/s/177u7apsx7aqvh7/imdb_data.zip?dl=1"
 FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",

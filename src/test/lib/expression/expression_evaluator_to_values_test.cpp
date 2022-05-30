@@ -813,4 +813,12 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
       test_expression<pmr_string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
 }
 
+TEST_F(ExpressionEvaluatorToValuesTest, CastNullableStrings) {
+  auto table_string_nullable = load_table("resources/test_data/tbl/string_numbers_null.tbl");
+  auto string_column = PQPColumnExpression::from_table(*table_string_nullable, "a");
+
+  EXPECT_TRUE(test_expression<int32_t>(table_string_nullable, *cast_(string_column, DataType::Int),
+                                       {12, std::nullopt, 1234, std::nullopt}));
+}
+
 }  // namespace opossum
