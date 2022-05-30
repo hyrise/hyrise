@@ -14,8 +14,6 @@
 
 namespace opossum {
 
-//class JoinIndex;
-
 class JoinNestedLoop : public AbstractJoinOperator {
  public:
   static bool supports(const JoinConfiguration config);

@@ -193,7 +193,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
-    const auto pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
+    const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
 
     // clang-format off
     JoinTestConfiguration default_configuration{
@@ -239,7 +239,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
         std::vector<JoinTestConfiguration> variations{};
         variations.reserve(all_index_sides.size() * indexed_segment_shares.size() * all_index_scopes.size() *
-                           pruning_configurations.size());
+                           column_pruning_configurations.size());
         for (const auto& index_side : all_index_sides) {
           // calculate index chunk counts, eliminate duplicates by using the unordered set
           auto& indexed_input = index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
@@ -256,11 +256,45 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
           for (const auto& indexed_chunk_range : indexed_chunk_ranges) {
             for (const auto& index_scope : all_index_scopes) {
-              for (const auto& pruned_column_ids : pruning_configurations) {
+              for (const auto& pruned_column_ids : column_pruning_configurations) {
+                // If a pruned column id equals the join column id, we cannot join on the column. Thus, we do not
+                // create a JoinTestConfiguration in this case.
+                auto indexed_column_id_pruned = [&]() {
+                  if (pruned_column_ids.empty()) {
+                    return false;
+                  }
+                  auto indexed_join_column_id = ColumnID{};
+                  switch (index_side) {
+                    case IndexSide::Left:
+                      indexed_join_column_id = ColumnID{
+                          static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_left) +
+                                                           (configuration.nullable_left ? 1 : 0))};
+                      break;
+                    case IndexSide::Right:
+                      indexed_join_column_id = ColumnID{
+                          static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_right) +
+                                                           (configuration.nullable_right ? 1 : 0))};
+                      break;
+                  }
+                  const auto search_iter =
+                      std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
+                  return search_iter != pruned_column_ids.cend();
+                };
+
+                if (indexed_column_id_pruned()) {
+                  continue;
+                }
+
                 auto variation = configuration;
                 auto& variation_indexed_input =
                     index_side == IndexSide::Left ? variation.left_input : variation.right_input;
                 variation.index_side = index_side;
+
+                // We only apply column pruning on data tables.
+                if (variation_indexed_input.table_type != InputTableType::Data && !pruned_column_ids.empty()) {
+                  continue;
+                }
+
                 variation_indexed_input.index_scope = index_scope;
                 variation_indexed_input.indexed_chunk_range = indexed_chunk_range;
                 variation_indexed_input.pruned_column_ids = pruned_column_ids;
@@ -669,10 +703,22 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto input_operator_left = std::make_shared<TableWrapper>(left_input_table);
   const auto input_operator_right = std::make_shared<TableWrapper>(right_input_table);
 
-  const auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(
-      2 * data_type_order.at(configuration.data_type_left) + (configuration.nullable_left ? 1 : 0))};
-  const auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(
+  auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_left) +
+                                                                  (configuration.nullable_left ? 1 : 0))};
+  auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(
       2 * data_type_order.at(configuration.data_type_right) + (configuration.nullable_right ? 1 : 0))};
+
+  // If columns are pruned, we have to adjust the corresponding column IDs.
+  auto adjust_column_id = [](auto& column_id, const auto original_column_id, const auto& pruned_column_ids) {
+    for (const auto pruned_column_id : pruned_column_ids) {
+      if (pruned_column_id < original_column_id) {
+        --column_id;
+      }
+    }
+  };
+
+  adjust_column_id(column_id_left, column_id_left, configuration.left_input.pruned_column_ids);
+  adjust_column_id(column_id_right, column_id_right, configuration.right_input.pruned_column_ids);
 
   const auto primary_predicate =
       OperatorJoinPredicate{{column_id_left, column_id_right}, configuration.predicate_condition};
