@@ -138,8 +138,11 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
                                             configuration.secondary_predicates, configuration.radix_bits);
     } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
+      const auto& indexed_input =
+          configuration.index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
-                                         configuration.secondary_predicates, *configuration.index_side);
+                                         configuration.secondary_predicates, *configuration.index_side,
+                                         indexed_input.pruned_column_ids);
     } else {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates);

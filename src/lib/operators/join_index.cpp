@@ -219,49 +219,29 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
          _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-      auto indexed_chunk_ids = std::set<ChunkID>{};
+      auto total_indexed_chunk_ids = std::set<ChunkID>{};
 
-      // We assume the first table index to be efficient for an indexed chunk as we do not want to spend time evaluating
-      // the best index inside of this join loop. Thus, the first table index is selected and if a table index follows
-      // that indexes an already seen chunk, this table index is ignored.
-      for (const auto& table_index : table_indexes) {
-        const auto& indexed_chunk_ids_in_index = table_index->get_indexed_chunk_ids();
+      // We do not take multiple table indexes created for the same column into account. For now, we only use the first
+      // available table index. Theoretically, multiple table index storing index entries for different chunk subsets,
+      // e.g., ChunkIDs{1,3} and ChunkIDs{0,2,7}, can be used in combination.
+      const auto& table_index = table_indexes[0];
+      const auto& indexed_chunk_ids = table_index->get_indexed_chunk_ids();
+      total_indexed_chunk_ids.insert(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
 
-        if (!indexed_chunk_ids.empty()) {
-          // We iterate through the sorted sets step-by-step until we find one entry that both sets share. If this is
-          // the case, we can stop the search early, because the sets are not disjoint. Using std::set_intersection is
-          // not optimal, because this method would not stop early and also create a collection of the intersection.
-          auto indexed_chunk_ids_iter = indexed_chunk_ids.begin();
-          auto indexed_chunk_ids_in_index_iter = indexed_chunk_ids_in_index.begin();
-          while (indexed_chunk_ids_iter != indexed_chunk_ids.end() &&
-                 indexed_chunk_ids_in_index_iter != indexed_chunk_ids_in_index.end()) {
-            if (*indexed_chunk_ids_iter < *indexed_chunk_ids_in_index_iter) {
-              indexed_chunk_ids_iter++;
-            } else if (*indexed_chunk_ids_in_index_iter < *indexed_chunk_ids_iter) {
-              indexed_chunk_ids_in_index_iter++;
-            } else {
-              // sets are not disjoint => at least one chunk would be indexed twice => do not use this table index
-              break;
-            }
-          }
-        }
+      _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
+        _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
+      });
 
-        indexed_chunk_ids.insert(indexed_chunk_ids_in_index.begin(), indexed_chunk_ids_in_index.end());
-
-        _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-          _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
-        });
-
-        index_joining_duration += timer.lap();
-        join_index_performance_data.chunks_scanned_with_index++;
-      }
+      index_joining_duration += timer.lap();
+      ++join_index_performance_data.chunks_scanned_with_index;
 
       // Check if chunk was indexed in one of the table indexes, thus no need to join it again. Otherwise perform
       // NestedLoopJoin on the not-indexed chunk.
-      auto indexed_chunk_ids_iter = indexed_chunk_ids.begin();
-      for (ChunkID index_side_chunk_id{0}; index_side_chunk_id < chunk_count_index_input_table; ++index_side_chunk_id) {
-        if (*indexed_chunk_ids_iter == index_side_chunk_id && indexed_chunk_ids_iter != indexed_chunk_ids.end()) {
-          indexed_chunk_ids_iter++;
+      auto total_indexed_iter = total_indexed_chunk_ids.begin();
+      for (auto index_side_chunk_id = ChunkID{0}; index_side_chunk_id < chunk_count_index_input_table;
+           ++index_side_chunk_id) {
+        if (*total_indexed_iter == index_side_chunk_id && total_indexed_iter != total_indexed_chunk_ids.end()) {
+          ++total_indexed_iter;
           continue;
         } else {
           _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
