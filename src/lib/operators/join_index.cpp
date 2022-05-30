@@ -66,13 +66,6 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     }
     ++_index_column_id_before_pruning;
   }
-
-  // std::cout << '{';
-  // for (const auto temp: pruned_column_ids) {
-  //   std::cout << std::to_string(temp) << ", ";
-  // }
-  // std::cout << '}' << std::endl;
-  // std::cout << std::to_string(_adjusted_primary_predicate.column_ids.second) + "+++" + std::to_string(_index_column_id_before_pruning) << std::endl;
 }
 
 const std::string& JoinIndex::name() const {
@@ -255,7 +248,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
         Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-        const auto& indexes = index_chunk->get_indexes(std::vector<ColumnID>{_index_column_id_before_pruning});
+        const auto& indexes = index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
         if (!indexes.empty()) {
           // We assume the first index to be efficient for our join as we do not want to spend time on evaluating the
           // best index inside of this join loop.
@@ -336,7 +329,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
   Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-  const auto& index_segment = index_chunk->get_segment(_index_column_id_before_pruning);
+  const auto& index_segment = index_chunk->get_segment(_adjusted_primary_predicate.column_ids.second);
   const auto& index_pos_list_size_pre_fallback = _index_pos_list->size();
 
   const auto chunk_count = _probe_input_table->chunk_count();
