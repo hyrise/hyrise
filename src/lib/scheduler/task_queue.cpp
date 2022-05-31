@@ -12,8 +12,9 @@ TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
 
 bool TaskQueue::empty() const {
   for (const auto& queue : _queues) {
-    if (!queue.empty())
+    if (!queue.empty()) {
       return false;
+    }
   }
   return true;
 }
@@ -26,8 +27,9 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, uint32_t priorit
   DebugAssert((priority < NUM_PRIORITY_LEVELS), "Illegal priority level");
 
   // Someone else was first to enqueue this task? No problem!
-  if (!task->try_mark_as_enqueued())
+  if (!task->try_mark_as_enqueued()) {
     return;
+  }
 
   task->set_node_id(_node_id);
   _queues[priority].push(task);

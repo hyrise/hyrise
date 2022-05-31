@@ -29,32 +29,20 @@
       t = other;                                                                                                  \
       return *this;                                                                                               \
     }                                                                                                             \
-    operator const T&() const {                                                                                   \
-      return t;                                                                                                   \
-    }                                                                                                             \
-    operator T&() {                                                                                               \
-      return t;                                                                                                   \
-    }                                                                                                             \
-    bool operator==(const D& other) const {                                                                       \
-      return t == other.t;                                                                                        \
-    }                                                                                                             \
-    bool operator<(const D& other) const {                                                                        \
-      return t < other.t;                                                                                         \
-    }                                                                                                             \
+    operator const T&() const { return t; }                                                                       \
+    operator T&() { return t; }                                                                                   \
+    bool operator==(const D& other) const { return t == other.t; }                                                \
+    bool operator<(const D& other) const { return t < other.t; }                                                  \
   };                                                                                                              \
                                                                                                                   \
-  inline std::ostream& operator<<(std::ostream& stream, const D& value) {                                         \
-    return stream << value.t;                                                                                     \
-  }                                                                                                               \
+  inline std::ostream& operator<<(std::ostream& stream, const D& value) { return stream << value.t; }             \
                                                                                                                   \
   } /* NOLINT */                                                                                                  \
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \
   struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
-    size_t operator()(const ::opossum::D& x) const {                                                              \
-      return hash<T>{}(x);                                                                                        \
-    }                                                                                                             \
+    size_t operator()(const ::opossum::D& x) const { return hash<T>{}(x); }                                       \
   };                                                                                                              \
   template <>                                                                                                     \
                                                                                                                   \
@@ -68,8 +56,6 @@
   };                                                                                                              \
   } /* NOLINT */                                                                                                  \
   namespace opossum {                                                                                             \
-  inline std::size_t hash_value(const D& d) {                                                                     \
-    return std::hash<D>()(d);                                                                                     \
-  }                                                                                                               \
+  inline std::size_t hash_value(const D& d) { return std::hash<D>()(d); }                                         \
   } /* NOLINT */                                                                                                  \
   static_assert(true, "End call of macro with a semicolon")

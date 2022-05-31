@@ -10,12 +10,15 @@ const std::unordered_set<ColumnID>& AbstractTableConstraint::columns() const {
 }
 
 bool AbstractTableConstraint::operator==(const AbstractTableConstraint& rhs) const {
-  if (this == &rhs)
+  if (this == &rhs) {
     return true;
-  if (typeid(*this) != typeid(rhs))
+  }
+  if (typeid(*this) != typeid(rhs)) {
     return false;
-  if (columns() != rhs.columns())
+  }
+  if (columns() != rhs.columns()) {
     return false;
+  }
   return _on_equals(rhs);
 }
 

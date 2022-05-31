@@ -102,8 +102,9 @@ class Chunk : private Noncopyable {
     DebugAssert(([&]() {
                   for (auto segment : segments_to_index) {
                     const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
-                    if (segment_it == _segments.cend())
+                    if (segment_it == _segments.cend()) {
                       return false;
+                    }
                   }
                   return true;
                 }()),

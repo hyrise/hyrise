@@ -38,8 +38,9 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
   // Check all tables
   for (auto& [table_name, table] : tables) {
-    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes)
+    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
       continue;
+    }
     size_t saved_memory = 0;
     size_t num_chunks = 0;
 

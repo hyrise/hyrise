@@ -278,8 +278,9 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
       const auto value2 = boost::get<T>(*variant_value2);
 
       // a BETWEEN 5 AND 4 will always be empty
-      if (value2 < value)
+      if (value2 < value) {
         return true;
+      }
 
       // Smaller than the segment's minimum.
       if (does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {

@@ -20,8 +20,9 @@ FixedString::FixedString(const FixedString& other)
 }
 
 FixedString::~FixedString() {
-  if (_owns_memory)
+  if (_owns_memory) {
     delete[] _mem;
+  }
 }
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp): Tested by FixedStringTest.Assign
@@ -60,8 +61,9 @@ std::string_view FixedString::string_view() const {
 bool FixedString::operator<(const FixedString& other) const {
   const auto smallest_length = std::min(size(), other.size());
   const auto result = memcmp(_mem, other._mem, smallest_length);
-  if (result == 0)
+  if (result == 0) {
     return size() < other.size();
+  }
   return result < 0;
 }
 
@@ -90,8 +92,9 @@ bool operator<(const char* lhs, const FixedString& rhs) {
 }
 
 bool FixedString::operator==(const FixedString& other) const {
-  if (size() != other.size())
+  if (size() != other.size()) {
     return false;
+  }
   return memcmp(_mem, other._mem, size()) == 0;
 }
 

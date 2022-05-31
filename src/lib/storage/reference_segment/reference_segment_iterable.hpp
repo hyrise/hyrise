@@ -98,8 +98,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
       }
 
-      if (functor_was_called)
+      if (functor_was_called) {
         return;
+      }
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
 
@@ -180,8 +181,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
-      if (_pos_list_it->is_null())
+      if (_pos_list_it->is_null()) {
         return SegmentPosition<T>{T{}, true, pos_list_offset};
+      }
 
       const auto chunk_id = _pos_list_it->chunk_id;
 

@@ -46,8 +46,9 @@ std::string LQPSubqueryExpression::description(const DescriptionMode mode) const
     stream << ", Parameters: ";
     for (auto parameter_idx = size_t{0}; parameter_idx < arguments.size(); ++parameter_idx) {
       stream << "[" << arguments[parameter_idx]->description(mode) << ", id=" << parameter_ids[parameter_idx] << "]";
-      if (parameter_idx + 1 < arguments.size())
+      if (parameter_idx + 1 < arguments.size()) {
         stream << ", ";
+      }
     }
   }
 

@@ -41,8 +41,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  if (!input_node)
+  if (!input_node) {
     return;  // Allow calling without checks
+  }
 
   // A helper method for cases where the input_node does not allow us to proceed
   const auto handle_barrier = [&]() {
@@ -217,8 +218,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
               const auto add_disjunction_if_beneficial =
                   [&](const auto& disjunction, const auto& disjunction_input_node, auto& predicate_nodes) {
-                    if (disjunction.empty())
+                    if (disjunction.empty()) {
                       return;
+                    }
 
                     const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
                     const auto predicate_node = PredicateNode::make(expression, disjunction_input_node);
@@ -226,8 +228,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     // Determine the selectivity of the predicate if executed on disjunction_input_node
                     const auto cardinality_in = estimator.estimate_cardinality(disjunction_input_node);
                     const auto cardinality_out = estimator.estimate_cardinality(predicate_node);
-                    if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE)
+                    if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) {
                       return;
+                    }
 
                     // predicate_node was found to be beneficial. Add it to predicate_nodes so that _insert_nodes will
                     // insert it as low as possible in the left/right input of the join. As predicate_nodes might have
@@ -247,10 +250,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
             // it might make more sense to duplicate the predicate and push it down on both sides.
             lqp_insert_node(current_node, input_side, push_down_node, AllowRightInput::Yes);
           } else {
-            if (move_to_left)
+            if (move_to_left) {
               left_push_down_nodes.emplace_back(push_down_node);
-            if (move_to_right)
+            }
+            if (move_to_right) {
               right_push_down_nodes.emplace_back(push_down_node);
+            }
           }
         }
       } else {
@@ -339,10 +344,12 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
        */
       size_t union_node_count = 0;
       visit_lqp(union_node, [&](const auto& diamond_node) {
-        if (diamond_node == diamond_origin_node)
+        if (diamond_node == diamond_origin_node) {
           return LQPVisitation::DoNotVisitInputs;
-        if (diamond_node->type == LQPNodeType::Union)
+        }
+        if (diamond_node->type == LQPNodeType::Union) {
           union_node_count++;
+        }
         return LQPVisitation::VisitInputs;
       });
       if (diamond_origin_node->output_count() != union_node_count + 1) {
@@ -408,11 +415,13 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
 std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_traversal(
     const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
-  if (!current_node)
+  if (!current_node) {
     return {};
+  }
   const auto input_node = current_node->input(input_side);
-  if (!input_node)
+  if (!input_node) {
     return {};
+  }
 
   auto candidate_nodes = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Left);
   auto candidate_nodes_tmp = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
@@ -517,8 +526,9 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = static_cast<PredicateNode&>(*node);
-      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp))
+      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) {
         return false;
+      }
 
       auto has_uncomputed_aggregate = false;
       const auto predicate = predicate_node.predicate();

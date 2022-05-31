@@ -38,8 +38,9 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
       const auto vertex_count = edge.vertex_set.count();
 
       // Single-vertex edges are local predicates. We already visualized those above
-      if (vertex_count <= 1)
+      if (vertex_count <= 1) {
         continue;
+      }
 
       // Binary vertex edges: render a simple edge between the two vertices with the predicates as the edge label
       if (vertex_count == 2) {
@@ -118,8 +119,9 @@ std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_pt
 
   for (auto node_idx = size_t{0}; node_idx < stored_table_nodes.size(); ++node_idx) {
     stream << stored_table_nodes[node_idx]->table_name;
-    if (node_idx + 1u < stored_table_nodes.size())
+    if (node_idx + 1u < stored_table_nodes.size()) {
       stream << ", ";
+    }
   }
 
   return stream.str();

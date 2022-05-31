@@ -28,8 +28,9 @@ std::string SortNode::description(const DescriptionMode mode) const {
     stream << node_expressions[expression_idx]->description(expression_mode) << " ";
     stream << "(" << sort_modes[expression_idx] << ")";
 
-    if (expression_idx + 1 < node_expressions.size())
+    if (expression_idx + 1 < node_expressions.size()) {
       stream << ", ";
+    }
   }
   return stream.str();
 }

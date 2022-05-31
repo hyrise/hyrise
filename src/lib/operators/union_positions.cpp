@@ -352,10 +352,12 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 bool UnionPositions::_compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
                                                     const ReferenceMatrix& right_matrix, size_t right_row_idx) {
   for (size_t column_idx = 0; column_idx < left_matrix.size(); ++column_idx) {
-    if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx])
+    if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) {
       return true;
-    if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx])
+    }
+    if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) {
       return false;
+    }
   }
   return false;
 }
@@ -365,10 +367,12 @@ bool UnionPositions::VirtualPosListCmpContext::operator()(size_t left, size_t ri
     const auto left_row_id = reference_matrix_column[left];
     const auto right_row_id = reference_matrix_column[right];
 
-    if (left_row_id < right_row_id)
+    if (left_row_id < right_row_id) {
       return true;
-    if (right_row_id < left_row_id)
+    }
+    if (right_row_id < left_row_id) {
       return false;
+    }
   }
   return false;
 }

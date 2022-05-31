@@ -140,8 +140,9 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
-  if (!HYRISE_DEBUG)
+  if (!HYRISE_DEBUG) {
     GTEST_SKIP();
+  }
 
   auto snapshot_cid = CommitID{1};
   auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, ChunkOffset{0}}}));
@@ -265,8 +266,9 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);
-    if (!chunk)
+    if (!chunk) {
       continue;
+    }
     chunk->set_individually_sorted_by(sort_column_definition);
   }
   const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);

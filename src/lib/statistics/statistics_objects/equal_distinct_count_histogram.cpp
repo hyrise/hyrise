@@ -31,8 +31,9 @@ template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
-    if (iterator_value.is_null())
+    if (iterator_value.is_null()) {
       return;
+    }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
@@ -55,8 +56,9 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk)
+    if (!chunk) {
       continue;
+    }
 
     add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
   }

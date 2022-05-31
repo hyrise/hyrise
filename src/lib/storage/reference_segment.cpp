@@ -32,8 +32,9 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
 
   const auto row_id = (*_pos_list)[chunk_offset];
 
-  if (row_id.is_null())
+  if (row_id.is_null()) {
     return NULL_VALUE;
+  }
 
   const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
 

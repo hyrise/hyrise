@@ -40,15 +40,19 @@ bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
-  if (this == &other)
+  if (this == &other) {
     return true;
+  }
 
-  if (type != other.type)
+  if (type != other.type) {
     return false;
-  if (!_shallow_equals(other))
+  }
+  if (!_shallow_equals(other)) {
     return false;
-  if (!expressions_equal(arguments, other.arguments))
+  }
+  if (!expressions_equal(arguments, other.arguments)) {
     return false;
+  }
 
   return true;
 }

@@ -35,8 +35,9 @@ EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding
 }
 
 std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(const std::string& compression_str) {
-  if (compression_str.empty())
+  if (compression_str.empty()) {
     return std::nullopt;
+  }
 
   const auto compression = vector_compression_type_to_string.right.find(compression_str);
   Assert(compression != vector_compression_type_to_string.right.end(),

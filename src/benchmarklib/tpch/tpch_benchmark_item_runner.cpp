@@ -365,8 +365,9 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       parameters.emplace_back("'Brand#"s + std::to_string(brand) + "'");
       parameters.emplace_back("'"s + partial_type + "%'");
-      for (auto i = 0; i < 8; ++i)
+      for (auto i = 0; i < 8; ++i) {
         parameters.emplace_back(std::to_string(sizes_copy[i]));
+      }
       break;
     }
 
@@ -438,10 +439,12 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       std::shuffle(country_codes_copy.begin(), country_codes_copy.end(), random_engine);
 
       // We need the same country code twice - have a look at the query
-      for (auto i = 0; i < 7; ++i)
+      for (auto i = 0; i < 7; ++i) {
         parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
-      for (auto i = 0; i < 7; ++i)
+      }
+      for (auto i = 0; i < 7; ++i) {
         parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
+      }
       break;
     }
 

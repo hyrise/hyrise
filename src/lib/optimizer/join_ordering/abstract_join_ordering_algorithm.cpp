@@ -20,8 +20,9 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
    * directly on top of `lqp`
    */
 
-  if (predicates.empty())
+  if (predicates.empty()) {
     return lqp;
+  }
 
   auto predicate_nodes_and_cost = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cost>>{};
   predicate_nodes_and_cost.reserve(predicates.size());

@@ -26,15 +26,17 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
 bool expressions_equal_to_expressions_in_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right, const LQPNodeMapping& node_mapping) {
-  if (expressions_left.size() != expressions_right.size())
+  if (expressions_left.size() != expressions_right.size()) {
     return false;
+  }
 
   for (auto expression_idx = size_t{0}; expression_idx < expressions_left.size(); ++expression_idx) {
     const auto& expression_left = *expressions_left[expression_idx];
     const auto& expression_right = *expressions_right[expression_idx];
 
-    if (!expression_equal_to_expression_in_different_lqp(expression_left, expression_right, node_mapping))
+    if (!expression_equal_to_expression_in_different_lqp(expression_left, expression_right, node_mapping)) {
       return false;
+    }
   }
 
   return true;
@@ -105,8 +107,9 @@ std::shared_ptr<AbstractExpression> expression_copy_and_adapt_to_different_lqp(c
 void expression_adapt_to_different_lqp(std::shared_ptr<AbstractExpression>& expression,
                                        const LQPNodeMapping& node_mapping) {
   visit_expression(expression, [&](auto& expression_ptr) {
-    if (expression_ptr->type != ExpressionType::LQPColumn)
+    if (expression_ptr->type != ExpressionType::LQPColumn) {
       return ExpressionVisitation::VisitArguments;
+    }
 
     const auto lqp_column_expression_ptr = std::dynamic_pointer_cast<LQPColumnExpression>(expression_ptr);
     Assert(lqp_column_expression_ptr, "Asked to adapt expression in LQP, but encountered non-LQP ColumnExpression");
@@ -132,8 +135,9 @@ std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractEx
                                     const AbstractExpression::DescriptionMode mode) {
   std::stringstream stream;
 
-  if (!expressions.empty())
+  if (!expressions.empty()) {
     stream << expressions.front()->description(mode);
+  }
   for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
     stream << ", " << expressions[expression_idx]->description(mode);
   }
@@ -146,24 +150,29 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   Assert((lhs == DataType::String) == (rhs == DataType::String), "Strings only compatible with strings");
 
   // Long+NULL -> Long; NULL+Long -> Long
-  if (lhs == DataType::Null)
+  if (lhs == DataType::Null) {
     return rhs;
-  if (rhs == DataType::Null)
+  }
+  if (rhs == DataType::Null) {
     return lhs;
+  }
 
-  if (lhs == DataType::String)
+  if (lhs == DataType::String) {
     return DataType::String;
+  }
 
-  if (lhs == DataType::Double || rhs == DataType::Double)
+  if (lhs == DataType::Double || rhs == DataType::Double) {
     return DataType::Double;
+  }
   if (lhs == DataType::Long) {
     return is_floating_point_data_type(rhs) ? DataType::Double : DataType::Long;
   }
   if (rhs == DataType::Long) {
     return is_floating_point_data_type(lhs) ? DataType::Double : DataType::Long;
   }
-  if (lhs == DataType::Float || rhs == DataType::Float)
+  if (lhs == DataType::Float || rhs == DataType::Float) {
     return DataType::Float;
+  }
 
   return DataType::Int;
 }
@@ -172,8 +181,9 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
   auto evaluable = true;
 
   visit_expression(expression, [&](const auto& sub_expression) {
-    if (lqp.find_column_id(*sub_expression))
+    if (lqp.find_column_id(*sub_expression)) {
       return ExpressionVisitation::DoNotVisitArguments;
+    }
 
     if (AggregateExpression::is_count_star(*sub_expression)) {
       // COUNT(*) needs special treatment. Because its argument is the invalid column id, it is not part of any node's
@@ -196,8 +206,9 @@ bool expression_evaluable_on_lqp(const std::shared_ptr<AbstractExpression>& expr
       return ExpressionVisitation::DoNotVisitArguments;
     }
 
-    if (sub_expression->type == ExpressionType::LQPColumn)
+    if (sub_expression->type == ExpressionType::LQPColumn) {
       evaluable = false;
+    }
 
     return ExpressionVisitation::VisitArguments;
   });
@@ -212,8 +223,9 @@ std::vector<std::shared_ptr<AbstractExpression>> flatten_logical_expressions(
   visit_expression(expression, [&](const auto& sub_expression) {
     if (sub_expression->type == ExpressionType::Logical) {
       const auto logical_expression = std::static_pointer_cast<LogicalExpression>(sub_expression);
-      if (logical_expression->logical_operator == logical_operator)
+      if (logical_expression->logical_operator == logical_operator) {
         return ExpressionVisitation::VisitArguments;
+      }
     }
     flattened_expressions.emplace_back(sub_expression);
     return ExpressionVisitation::DoNotVisitArguments;
@@ -226,8 +238,9 @@ std::shared_ptr<AbstractExpression> inflate_logical_expressions(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions, const LogicalOperator logical_operator) {
   auto inflated = std::shared_ptr<AbstractExpression>{};
 
-  if (!expressions.empty())
+  if (!expressions.empty()) {
     inflated = expressions.front();
+  }
 
   for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
     inflated = std::make_shared<LogicalExpression>(logical_operator, inflated, expressions[expression_idx]);
@@ -268,8 +281,9 @@ void expressions_set_parameters(const std::vector<std::shared_ptr<AbstractExpres
 void expression_set_transaction_context(const std::shared_ptr<AbstractExpression>& expression,
                                         const std::weak_ptr<TransactionContext>& transaction_context) {
   visit_expression(expression, [&](auto& sub_expression) {
-    if (sub_expression->type != ExpressionType::PQPSubquery)
+    if (sub_expression->type != ExpressionType::PQPSubquery) {
       return ExpressionVisitation::VisitArguments;
+    }
 
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
     Assert(pqp_subquery_expression, "Expected a PQPSubqueryExpression here");
@@ -320,13 +334,15 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined");
     // More complicated casts  should be resolved by ExpressionEvaluator.
     // E.g., CAST(any_column AS INT) cannot and should not be evaluated here.
-    if (cast_expression.argument()->type != ExpressionType::Value)
+    if (cast_expression.argument()->type != ExpressionType::Value) {
       return std::nullopt;
+    }
     const auto& value_expression = static_cast<const ValueExpression&>(*cast_expression.argument());
 
     // Casts from NULL are NULL
-    if (variant_is_null(value_expression.value))
+    if (variant_is_null(value_expression.value)) {
       return NULL_VALUE;
+    }
     std::optional<AllTypeVariant> result;
     resolve_data_type(expression.data_type(), [&](auto type) {
       using TargetDataType = typename decltype(type)::type;

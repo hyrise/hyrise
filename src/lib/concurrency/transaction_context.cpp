@@ -131,8 +131,9 @@ void TransactionContext::_mark_as_conflicted() {
 void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::RolledBack)
+                  if (op->state() != ReadWriteOperatorState::RolledBack) {
                     return false;
+                  }
                 }
                 return true;
               }()),
@@ -149,8 +150,9 @@ void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
 void TransactionContext::_prepare_commit() {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::Executed)
+                  if (op->state() != ReadWriteOperatorState::Executed) {
                     return false;
+                  }
                 }
                 return true;
               }()),
@@ -166,8 +168,9 @@ void TransactionContext::_prepare_commit() {
 void TransactionContext::_mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback) {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::Committed)
+                  if (op->state() != ReadWriteOperatorState::Committed) {
                     return false;
+                  }
                 }
                 return true;
               }()),
@@ -180,8 +183,9 @@ void TransactionContext::_mark_as_pending_and_try_commit(const std::function<voi
       context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Committed);
     }
 
-    if (callback)
+    if (callback) {
       callback(transaction_id);
+    }
   });
 
   Hyrise::get().transaction_manager._try_increment_last_commit_id(_commit_context);
@@ -206,8 +210,9 @@ bool TransactionContext::is_auto_commit() {
 
 void TransactionContext::_wait_for_active_operators_to_finish() const {
   std::unique_lock<std::mutex> lock(_active_operators_mutex);
-  if (_num_active_operators == 0)
+  if (_num_active_operators == 0) {
     return;
+  }
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
 }
 

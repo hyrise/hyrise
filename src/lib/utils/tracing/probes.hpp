@@ -10,10 +10,12 @@
 // In order to be compatible with Mac dtrace probes, both provider and probe name have to be uppercase
 constexpr bool is_valid_name(const char* name) {
   do {
-    if (*name >= 'a' && *name <= 'z')
+    if (*name >= 'a' && *name <= 'z') {
       return false;
-    if (*name == '-')
+    }
+    if (*name == '-') {
       return false;
+    }
   } while (*++name != '\0');
   return true;
 }

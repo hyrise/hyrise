@@ -97,12 +97,15 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     using ColumnDataType = typename decltype(begin)::ValueType;
 
     const auto is_sorted = std::is_sorted(begin, end, [](const auto& a, const auto& b) {
-      if (a.is_null() && b.is_null())
+      if (a.is_null() && b.is_null()) {
         return false;
-      if (a.is_null() && !b.is_null())
+      }
+      if (a.is_null() && !b.is_null()) {
         return false;
-      if (!a.is_null() && b.is_null())
+      }
+      if (!a.is_null() && b.is_null()) {
         return true;
+      }
       return a.value() < b.value();
     });
     ASSERT_TRUE(is_sorted);
@@ -115,8 +118,9 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     }
 
     const auto lower_bound_iter = std::lower_bound(begin, end, search_value, [](const auto& a, const auto& b) {
-      if (a.is_null())
+      if (a.is_null()) {
         return false;
+      }
       return a.value() < b;
     });
     ASSERT_NE(lower_bound_iter, end);

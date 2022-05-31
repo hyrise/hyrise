@@ -67,8 +67,9 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
 
   auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), output_expressions.begin());
 
-  if (output_both_inputs)
+  if (output_both_inputs) {
     std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+  }
 
   return output_expressions;
 }
@@ -245,8 +246,9 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
-  if (join_mode != join_node.join_mode)
+  if (join_mode != join_node.join_mode) {
     return false;
+  }
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
 }

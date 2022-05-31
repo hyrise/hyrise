@@ -184,11 +184,13 @@ uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) co
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
                 const AdaptiveRadixTreeIndex::BinaryComparable& right) {
-  if (left.size() != right.size())
+  if (left.size() != right.size()) {
     return false;
+  }
   for (size_t i = 0; i < left.size(); ++i) {
-    if (left[i] != right[i])
+    if (left[i] != right[i]) {
       return false;
+    }
   }
   return true;
 }

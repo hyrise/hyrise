@@ -7,8 +7,9 @@ namespace opossum {
 std::optional<boost::gregorian::date> string_to_date(const std::string& date_string) {
   try {
     const auto date = boost::gregorian::from_string(date_string);
-    if (date.is_not_a_date())
+    if (date.is_not_a_date()) {
       return std::nullopt;
+    }
     return date;
   } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>&) {
   } catch (const boost::wrapexcept<boost::gregorian::bad_month>&) {

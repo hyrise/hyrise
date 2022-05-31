@@ -180,8 +180,9 @@ TEST_F(StorageTableTest, EmplaceEmptyChunk) {
 }
 
 TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
-  if (!HYRISE_DEBUG)
+  if (!HYRISE_DEBUG) {
     GTEST_SKIP();
+  }
 
   EXPECT_EQ(t->chunk_count(), 0u);
 
@@ -239,8 +240,9 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
-  if (!HYRISE_DEBUG)
+  if (!HYRISE_DEBUG) {
     GTEST_SKIP();
+  }
   TableColumnDefinitions column_definitions{};
   EXPECT_THROW(Table(column_definitions, TableType::Data, ChunkOffset{0}), std::logic_error);
 }

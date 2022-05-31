@@ -119,8 +119,9 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
 
 bool SegmentAccessCounter::operator==(const SegmentAccessCounter& other) const {
   for (auto counter_index = 0ul, size = _counters.size(); counter_index < size; ++counter_index) {
-    if (_counters[counter_index] != other._counters[counter_index])
+    if (_counters[counter_index] != other._counters[counter_index]) {
       return false;
+    }
   }
   return true;
 }

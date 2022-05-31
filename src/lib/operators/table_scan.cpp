@@ -51,8 +51,9 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
    */
   auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
   for (const auto& subquery_expression : pqp_subquery_expressions) {
-    if (subquery_expression->is_correlated())
+    if (subquery_expression->is_correlated()) {
       continue;
+    }
     /**
      * Uncorrelated subqueries will be resolved when TableScan::create_impl is called. Therefore, we
      * 1. register as a consumer and
@@ -117,8 +118,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
   const auto chunk_count = in_table->chunk_count();
   for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
-    if (excluded_chunk_set.count(chunk_id))
+    if (excluded_chunk_set.count(chunk_id)) {
       continue;
+    }
     const auto chunk_in = in_table->get_chunk(chunk_id);
     Assert(chunk_in, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -126,8 +128,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
     auto perform_table_scan = [this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
       // The actual scan happens in the sub classes of BaseTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
-      if (matches_out->empty())
+      if (matches_out->empty()) {
         return;
+      }
 
       Segments out_segments;
       out_segments.reserve(in_table->column_count());
@@ -286,8 +289,9 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
               "Expected to resolve all uncorrelated subqueries.");
 
   // Return original predicate if we did not compute any subquery results
-  if (computed_subqueries_count == 0)
+  if (computed_subqueries_count == 0) {
     return predicate;
+  }
 
   /**
    * (2) Create new predicate with arguments from step (1)

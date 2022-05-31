@@ -656,8 +656,9 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
-  if (!HYRISE_DEBUG || std::is_same_v<TypeParam, BTreeIndex>)
+  if (!HYRISE_DEBUG || std::is_same_v<TypeParam, BTreeIndex>) {
     GTEST_SKIP();
+  }
   auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 

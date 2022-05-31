@@ -127,12 +127,14 @@ JoinMode translate_join_mode(const hsql::JoinType join_type) {
  */
 bool is_trivial_join_predicate(const AbstractExpression& expression, const AbstractLQPNode& left_input,
                                const AbstractLQPNode& right_input) {
-  if (expression.type != ExpressionType::Predicate)
+  if (expression.type != ExpressionType::Predicate) {
     return false;
+  }
 
   const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
-  if (!binary_predicate_expression)
+  if (!binary_predicate_expression) {
     return false;
+  }
 
   const auto left_in_left = left_input.find_column_id(*binary_predicate_expression->left_operand());
   const auto right_in_right = right_input.find_column_id(*binary_predicate_expression->right_operand());
@@ -271,10 +273,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
   _translate_select_groupby_having(select, select_list_elements);
 
   // Translate ORDER BY and LIMIT
-  if (select.order)
+  if (select.order) {
     _translate_order_by(*select.order);
-  if (select.limit)
+  }
+  if (select.limit) {
     _translate_limit(*select.limit);
+  }
 
   /**
    * Name, select and arrange the Columns as specified in the SELECT clause
@@ -314,10 +318,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
       _translate_set_operation(*set_operator);
 
       // In addition to local ORDER BY and LIMIT clauses, the result of the set operation(s) may have final clauses too.
-      if (set_operator->resultOrder)
+      if (set_operator->resultOrder) {
         _translate_order_by(*set_operator->resultOrder);
-      if (set_operator->resultLimit)
+      }
+      if (set_operator->resultLimit) {
         _translate_limit(*set_operator->resultLimit);
+      }
     }
   }
 
@@ -1009,11 +1015,13 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
      * considered an "Aggregate" in the current SELECT list. Handling this as a special case seems hacky to me as well,
      * but it's the best solution I can come up with right now.
      */
-    if (_current_lqp->find_column_id(*sub_expression))
+    if (_current_lqp->find_column_id(*sub_expression)) {
       return ExpressionVisitation::DoNotVisitArguments;
+    }
 
-    if (sub_expression->type != ExpressionType::Aggregate)
+    if (sub_expression->type != ExpressionType::Aggregate) {
       return ExpressionVisitation::VisitArguments;
+    }
 
     auto aggregate_expression = std::static_pointer_cast<AggregateExpression>(sub_expression);
     if (aggregate_expression_set.emplace(aggregate_expression).second) {
@@ -1212,8 +1220,9 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 }
 
 void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription*>& order_list) {
-  if (order_list.empty())
+  if (order_list.empty()) {
     return;
+  }
 
   // So we can later reset the available Expressions to the Expressions of this LQP
   const auto input_lqp = _current_lqp;
@@ -1447,8 +1456,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::Ex
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(
     const std::shared_ptr<AbstractLQPNode>& input_node) {
-  if (_use_mvcc == UseMvcc::No)
+  if (_use_mvcc == UseMvcc::No) {
     return input_node;
+  }
 
   return ValidateNode::make(input_node);
 }
@@ -1489,8 +1499,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_predicate_expression(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
     const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  if (expressions_equal(node->output_expressions(), expressions))
+  if (expressions_equal(node->output_expressions(), expressions)) {
     return node;
+  }
   return ProjectionNode::make(expressions, node);
 }
 
@@ -1500,14 +1511,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
 
   for (const auto& expression : expressions) {
     // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
-    if (!expression->requires_computation() || node->find_column_id(*expression))
+    if (!expression->requires_computation() || node->find_column_id(*expression)) {
       continue;
+    }
     projection_expressions.emplace_back(expression);
   }
 
   // If all requested expressions are available, no need to create a projection
-  if (projection_expressions.empty())
+  if (projection_expressions.empty()) {
     return node;
+  }
 
   const auto output_expressions = node->output_expressions();
   projection_expressions.insert(projection_expressions.end(), output_expressions.cbegin(), output_expressions.cend());
@@ -1564,8 +1577,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprLiteralDate: {
       const auto date = string_to_date(name);
-      if (date)
+      if (date) {
         return value_(pmr_string{name});
+      }
       FailInput("'" + name + "' is not a valid date");
     }
 
@@ -1807,8 +1821,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as Date");
         const auto date_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
         const auto date = string_to_date(std::string{date_string});
-        if (date)
+        if (date) {
           return std::const_pointer_cast<AbstractExpression>(left);
+        }
         FailInput("'" + std::string{date_string} + "' is not a valid date");
       }
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
@@ -1816,8 +1831,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                   "CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
       const auto target_data_type = data_type_iter->second;
       // Omit redundant casts
-      if (source_data_type == target_data_type)
+      if (source_data_type == target_data_type) {
         return std::const_pointer_cast<AbstractExpression>(left);
+      }
       return cast_(left, target_data_type);
     }
 
@@ -1871,8 +1887,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_case(
 
   // "a + b" in "CASE a + b WHEN ... THEN ... END", or nullptr when using the "searched" CASE syntax
   auto simple_case_left_operand = std::shared_ptr<AbstractExpression>{};
-  if (expr.expr)
+  if (expr.expr) {
     simple_case_left_operand = _translate_hsql_expr(*expr.expr, sql_identifier_resolver);
+  }
 
   // Initialize CASE with the ELSE expression and then put the remaining WHEN...THEN... clauses on top of that
   // in reverse order

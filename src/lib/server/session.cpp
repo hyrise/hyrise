@@ -25,7 +25,9 @@ void Session::run() {
   while (!_terminate_session) {
     try {
       _handle_request();
-    } catch (const ClientDisconnectException&) { return; } catch (const std::exception& e) {
+    } catch (const ClientDisconnectException&) {
+      return;
+    } catch (const std::exception& e) {
       std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
                 << e.what() << std::endl;
       const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, e.what()}};
@@ -189,8 +191,9 @@ void Session::_handle_execute() {
 
   const auto physical_plan = portal_it->second;
 
-  if (portal_name.empty())
+  if (portal_name.empty()) {
     _portals.erase(portal_it);
+  }
 
   if (!_transaction_context) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

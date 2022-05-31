@@ -69,10 +69,12 @@ struct TernaryAndEvaluator {
     result_value = a_is_true && b_is_true;
     result_null = a_null && b_null;
 
-    if constexpr (!std::is_same_v<NullValue, ArgA>)
+    if constexpr (!std::is_same_v<NullValue, ArgA>) {
       result_null |= a_value && b_null;
-    if constexpr (!std::is_same_v<NullValue, ArgB>)
+    }
+    if constexpr (!std::is_same_v<NullValue, ArgB>) {
       result_null |= b_value && a_null;
+    }
   }
 };
 
@@ -152,8 +154,9 @@ struct ModuloEvaluator {
   void operator()(Result& result_value, bool& result_null, const ArgA& a_value, const bool a_null, const ArgB& b_value,
                   const bool b_null) {
     result_null = a_null || b_null;
-    if (result_null)
+    if (result_null) {
       return;
+    }
 
     if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
                   std::is_same_v<NullValue, ArgB>) {

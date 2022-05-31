@@ -52,19 +52,24 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
       empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{0});
       // original_segment contains the numbers from 0 to 99, then 100x100, then the numbers from 200 to 299.
       // This way, we can check if, e.g., run-length encoding properly handles the duplicate values
-      for (auto i = 0; i <= 99; ++i)
+      for (auto i = 0; i <= 99; ++i) {
         original_segment->append(convert_value(i));
-      if (contains_null_values) {
-        for (auto i = 0; i < 80; ++i)
-          original_segment->append(convert_value(100));
-        for (auto i = 0; i < 20; ++i)
-          original_segment->append(opossum::NULL_VALUE);
-      } else {
-        for (auto i = 0; i < 100; ++i)
-          original_segment->append(convert_value(100));
       }
-      for (auto i = 200; i <= 299; ++i)
+      if (contains_null_values) {
+        for (auto i = 0; i < 80; ++i) {
+          original_segment->append(convert_value(100));
+        }
+        for (auto i = 0; i < 20; ++i) {
+          original_segment->append(opossum::NULL_VALUE);
+        }
+      } else {
+        for (auto i = 0; i < 100; ++i) {
+          original_segment->append(convert_value(100));
+        }
+      }
+      for (auto i = 200; i <= 299; ++i) {
         original_segment->append(convert_value(i));
+      }
     });
   }
 

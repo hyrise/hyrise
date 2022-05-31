@@ -155,8 +155,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
     reduce_constant_expression(argument);
   }
 
-  if (input_expression->arguments.empty())
+  if (input_expression->arguments.empty()) {
     return;
+  }
 
   // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
   if (input_expression->type != ExpressionType::Predicate && input_expression->type != ExpressionType::Arithmetic &&
@@ -168,8 +169,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
       std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
                   [&](const auto& argument) { return argument->type == ExpressionType::Value; });
 
-  if (!all_arguments_are_values)
+  if (!all_arguments_are_values) {
     return;
+  }
 
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
@@ -222,8 +224,9 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   const auto bounds = LikeMatcher::bounds(pattern);
 
   // In case of an ASCII overflow
-  if (!bounds)
+  if (!bounds) {
     return;
+  }
 
   const auto [lower_bound, upper_bound] = *bounds;
 
@@ -243,8 +246,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate)
+    if (input_expression->type != ExpressionType::Aggregate) {
       continue;
+    }
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
     switch (aggregate_expression.aggregate_function) {
       case AggregateFunction::Sum: {
@@ -304,8 +308,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 
   // No replacements possible
-  if (replacements.empty())
+  if (replacements.empty()) {
     return;
+  }
 
   // Back up the current column names
   const auto& root_expressions = root_node->output_expressions();
@@ -335,8 +340,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       expression_deep_replace(expression, replacements);
     }
 
-    if (node->type == LQPNodeType::Alias)
+    if (node->type == LQPNodeType::Alias) {
       updated_an_alias = true;
+    }
 
     return LQPUpwardVisitation::VisitOutputs;
   });

@@ -115,8 +115,9 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
   const auto exclusion_set = _exclusion_set(primary_vertex_set.find_first()) | primary_vertex_set;
   const auto neighborhood = _neighborhood(primary_vertex_set, exclusion_set);
 
-  if (neighborhood.none())
+  if (neighborhood.none()) {
     return;
+  }
 
   std::vector<size_t> reverse_vertex_indices;
   auto current_vertex_idx = neighborhood.find_first();
@@ -163,8 +164,9 @@ JoinGraphVertexSet EnumerateCcp::_neighborhood(const JoinGraphVertexSet& vertex_
   JoinGraphVertexSet neighborhood(_num_vertices);
 
   for (auto current_vertex_idx = size_t{0}; current_vertex_idx < _num_vertices; ++current_vertex_idx) {
-    if (!vertex_set[current_vertex_idx])
+    if (!vertex_set[current_vertex_idx]) {
       continue;
+    }
 
     neighborhood |= _vertex_neighborhoods[current_vertex_idx];
   }
@@ -199,8 +201,9 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
    * Neither can I convincingly explain the bit-magic here, but it works nicely.
    */
 
-  if (vertex_set.none())
+  if (vertex_set.none()) {
     return {};
+  }
 
   std::vector<JoinGraphVertexSet> subsets;
 

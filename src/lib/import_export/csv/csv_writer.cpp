@@ -84,8 +84,9 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
 }
 
 void CsvWriter::_write(const AllTypeVariant& value, std::ofstream& ofstream, const ParseConfig& config) {
-  if (variant_is_null(value))
+  if (variant_is_null(value)) {
     return;
+  }
 
   if (value.type() == typeid(pmr_string)) {
     _write_string_value(boost::get<pmr_string>(value), ofstream, config);

@@ -170,8 +170,9 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       //                        | min >= tesu   |         |           | min >= test\0  | min >= '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto bounds = LikeMatcher::bounds(value);
-        if (!bounds)
+        if (!bounds) {
           return false;
+        }
 
         const auto [lower_bound, upper_bound] = *bounds;
 
@@ -188,8 +189,9 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       //                          | max < tesu      |         |           | max < test\0     | max < '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto bounds = LikeMatcher::bounds(value);
-        if (!bounds)
+        if (!bounds) {
           return false;
+        }
 
         const auto [lower_bound, upper_bound] = *bounds;
 

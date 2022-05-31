@@ -62,32 +62,39 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_statistics,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_is_single_segment_index(index_statistics))
+  if (!_is_single_segment_index(index_statistics)) {
     return false;
+  }
 
-  if (index_statistics.type != SegmentIndexType::GroupKey)
+  if (index_statistics.type != SegmentIndexType::GroupKey) {
     return false;
+  }
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
-  if (!operator_predicates)
+  if (!operator_predicates) {
     return false;
-  if (operator_predicates->size() != 1)
+  }
+  if (operator_predicates->size() != 1) {
     return false;
+  }
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
   // Currently, we do not support two-column predicates
-  if (is_column_id(operator_predicate.value))
+  if (is_column_id(operator_predicate.value)) {
     return false;
+  }
 
-  if (index_statistics.column_ids[0] != operator_predicate.column_id)
+  if (index_statistics.column_ids[0] != operator_predicate.column_id) {
     return false;
+  }
 
   const auto row_count_table =
       cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
-  if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD)
+  if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) {
     return false;
+  }
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
   const float selectivity = row_count_predicate / row_count_table;

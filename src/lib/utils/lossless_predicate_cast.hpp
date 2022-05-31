@@ -24,22 +24,25 @@ std::optional<std::pair<PredicateCondition, Output>> lossless_predicate_cast(con
     return ResultPair{condition, *losslessly_casted_value};
   }
 
-  if (!is_binary_numeric_predicate_condition(condition))
+  if (!is_binary_numeric_predicate_condition(condition)) {
     return std::nullopt;
+  }
 
   if constexpr (std::is_same_v<Input, double> && std::is_same_v<Output, float>) {
     // Equal comparisons where the value to compare to is a double that cannot be expressed as a float are a case that
     // we do not wish to handle for now.
-    if (condition == PredicateCondition::Equals)
+    if (condition == PredicateCondition::Equals) {
       return std::nullopt;
+    }
 
     // Let prev(double input) be the largest float that is smaller than input
     // x < input <=> x <= prev(input)
     // x <= input <=> x <= prev(input) (because there is no representable value between prev(input) and input)
     if (condition == PredicateCondition::LessThan || condition == PredicateCondition::LessThanEquals) {
       const auto adjusted_input = next_float_towards(input, std::numeric_limits<double>::lowest());
-      if (!adjusted_input)
+      if (!adjusted_input) {
         return std::nullopt;
+      }
       return ResultPair{PredicateCondition::LessThanEquals, *adjusted_input};
     }
 
@@ -47,8 +50,9 @@ std::optional<std::pair<PredicateCondition, Output>> lossless_predicate_cast(con
     // x >= input <=> x >= next(input) (because there is no representable value between input and next(input))
     if (condition == PredicateCondition::GreaterThan || condition == PredicateCondition::GreaterThanEquals) {
       const auto adjusted_input = next_float_towards(input, std::numeric_limits<double>::max());
-      if (!adjusted_input)
+      if (!adjusted_input) {
         return std::nullopt;
+      }
       return ResultPair{PredicateCondition::GreaterThanEquals, *adjusted_input};
     }
   }

@@ -25,8 +25,9 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::_on_deep_copy(
 std::string LQPColumnExpression::description(const DescriptionMode mode) const {
   // Even if the LQP is invalid, we still want to be able to print it as good as possible
   const auto original_node_locked = original_node.lock();
-  if (!original_node_locked)
+  if (!original_node_locked) {
     return "<Expired Column>";
+  }
 
   std::stringstream output;
   if (mode == AbstractExpression::DescriptionMode::Detailed) {

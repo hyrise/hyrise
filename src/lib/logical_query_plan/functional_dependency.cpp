@@ -15,18 +15,21 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 
   // Quick check for cardinality
-  if (determinants.size() != other.determinants.size() || dependents.size() != other.dependents.size())
+  if (determinants.size() != other.determinants.size() || dependents.size() != other.dependents.size()) {
     return false;
+  }
 
   // Compare determinants
   for (const auto& expression : other.determinants) {
-    if (!determinants.contains(expression))
+    if (!determinants.contains(expression)) {
       return false;
+    }
   }
   // Compare dependants
   for (const auto& expression : other.dependents) {
-    if (!dependents.contains(expression))
+    if (!dependents.contains(expression)) {
       return false;
+    }
   }
 
   return true;
@@ -68,8 +71,9 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
 }
 
 std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds) {
-  if (fds.empty())
+  if (fds.empty()) {
     return {};
+  }
 
   auto inflated_fds = std::unordered_set<FunctionalDependency>();
   inflated_fds.reserve(fds.size());
@@ -88,8 +92,9 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
 }
 
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds) {
-  if (fds.empty())
+  if (fds.empty()) {
     return {};
+  }
 
   auto deflated_fds = std::vector<FunctionalDependency>();
   deflated_fds.reserve(fds.size());
@@ -100,13 +105,15 @@ std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDepend
       // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 
       // Quick check for cardinality
-      if (fd.determinants.size() != fd_to_add.determinants.size())
+      if (fd.determinants.size() != fd_to_add.determinants.size()) {
         return false;
+      }
 
       // Compare determinants
       for (const auto& expression : fd_to_add.determinants) {
-        if (!fd.determinants.contains(expression))
+        if (!fd.determinants.contains(expression)) {
           return false;
+        }
       }
 
       return true;
@@ -131,10 +138,12 @@ std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependen
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
            "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
-  if (fds_a.empty())
+  if (fds_a.empty()) {
     return fds_b;
-  if (fds_b.empty())
+  }
+  if (fds_b.empty()) {
     return fds_a;
+  }
 
   auto fds_unified = std::vector<FunctionalDependency>();
   fds_unified.reserve(fds_a.size() + fds_b.size());
@@ -147,8 +156,9 @@ std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependen
 
 std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDependency>& fds_a,
                                                 const std::vector<FunctionalDependency>& fds_b) {
-  if (fds_a.empty() || fds_b.empty())
+  if (fds_a.empty() || fds_b.empty()) {
     return {};
+  }
 
   const auto& inflated_fds_a = inflate_fds(fds_a);
   const auto& inflated_fds_b = inflate_fds(fds_b);

@@ -50,8 +50,9 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
           dense_values.push_back(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-            if (segment_value.size() > max_string_length)
+            if (segment_value.size() > max_string_length) {
               max_string_length = segment_value.size();
+            }
           }
         } else {
           null_values[current_position] = true;

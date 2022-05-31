@@ -836,14 +836,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     column_statistics[left_column_count + right_column_id] = join_columns_output_statistics;
 
     for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
-      if (column_statistics[column_id])
+      if (column_statistics[column_id]) {
         continue;
+      }
 
       column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
     }
     for (auto column_id = ColumnID{0}; column_id < right_input_table_statistics.column_statistics.size(); ++column_id) {
-      if (column_statistics[left_column_count + column_id])
+      if (column_statistics[left_column_count + column_id]) {
         continue;
+      }
 
       column_statistics[left_column_count + column_id] =
           right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
@@ -928,8 +930,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     column_statistics[left_column_id] = join_columns_output_statistics;
 
     for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
-      if (column_statistics[column_id])
+      if (column_statistics[column_id]) {
         continue;
+      }
 
       column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
     }

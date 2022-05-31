@@ -45,8 +45,9 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   export_values(ofstream, string_lengths);
 
   // We do not have to iterate over values if all strings are empty.
-  if (total_length == 0)
+  if (total_length == 0) {
     return;
+  }
 
   // Write all string contents into to buffer.
   pmr_vector<char> buffer(total_length);
@@ -173,8 +174,9 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
   // We materialize reference segments and save them as value segments
   export_value(ofstream, EncodingType::Unencoded);
 
-  if (reference_segment.size() == 0)
+  if (reference_segment.size() == 0) {
     return;
+  }
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
     auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};

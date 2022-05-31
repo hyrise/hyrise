@@ -130,8 +130,9 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
-        if (!dummy_table)
+        if (!dummy_table) {
           dummy_table = Table::create_dummy_table(input_table->column_definitions());
+        }
         output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {

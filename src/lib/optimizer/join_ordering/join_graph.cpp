@@ -10,10 +10,12 @@ using namespace opossum;  // NOLINT
 
 void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vector<JoinGraph>& join_graphs,
                            std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!lqp)
+  if (!lqp) {
     return;
-  if (!visited_nodes.emplace(lqp).second)
+  }
+  if (!visited_nodes.emplace(lqp).second) {
     return;
+  }
 
   const auto join_graph = JoinGraph::build_from_lqp(lqp);
   if (join_graph) {
@@ -58,8 +60,9 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_local_predicate
   vertex_set.set(vertex_idx);
 
   for (const auto& edge : edges) {
-    if (edge.vertex_set != vertex_set)
+    if (edge.vertex_set != vertex_set) {
       continue;
+    }
 
     for (const auto& predicate : edge.predicates) {
       predicates.emplace_back(predicate);
@@ -76,10 +79,12 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_join_predicates
   std::vector<std::shared_ptr<AbstractExpression>> predicates;
 
   for (const auto& edge : edges) {
-    if ((edge.vertex_set & vertex_set_a).none() || (edge.vertex_set & vertex_set_b).none())
+    if ((edge.vertex_set & vertex_set_a).none() || (edge.vertex_set & vertex_set_b).none()) {
       continue;
-    if (!edge.vertex_set.is_subset_of(vertex_set_a | vertex_set_b))
+    }
+    if (!edge.vertex_set.is_subset_of(vertex_set_a | vertex_set_b)) {
       continue;
+    }
 
     for (const auto& predicate : edge.predicates) {
       predicates.emplace_back(predicate);

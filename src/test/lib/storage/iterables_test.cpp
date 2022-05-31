@@ -30,8 +30,9 @@ struct SumUpWithIterator {
     for (; begin != end; ++begin) {
       --distance;
       _accessed_offsets.emplace_back(begin->chunk_offset());
-      if (begin->is_null())
+      if (begin->is_null()) {
         continue;
+      }
       _sum += begin->value();
     }
 
@@ -47,8 +48,9 @@ struct CountNullsWithIterator {
   void operator()(Iterator begin, Iterator end) const {
     for (; begin != end; ++begin) {
       _accessed_offsets.emplace_back(begin->chunk_offset());
-      if (begin->is_null())
+      if (begin->is_null()) {
         _nulls++;
+      }
     }
   }
 
@@ -60,8 +62,9 @@ template <typename DataType>
 struct SumUp {
   template <typename T>
   void operator()(const T& position) const {
-    if (position.is_null())
+    if (position.is_null()) {
       return;
+    }
     _sum += position.value();
   }
 
@@ -72,8 +75,9 @@ struct AppendWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     for (; begin != end; ++begin) {
-      if ((*begin).is_null())
+      if ((*begin).is_null()) {
         continue;
+      }
       _concatenate += (*begin).value();
     }
   }
@@ -159,8 +163,9 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id == ColumnID{0})
+      if (column_id == ColumnID{0}) {
         return;
+      }
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
@@ -266,8 +271,9 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id == ColumnID{0})
+      if (column_id == ColumnID{0}) {
         return;
+      }
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
@@ -330,8 +336,9 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id == ColumnID{0})
+      if (column_id == ColumnID{0}) {
         return;
+      }
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);

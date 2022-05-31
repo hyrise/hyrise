@@ -146,8 +146,9 @@ class AbstractTableScanImpl {
         }
 
         ++left_it;
-        if constexpr (!std::is_same_v<RightIterator, std::false_type>)
+        if constexpr (!std::is_same_v<RightIterator, std::false_type>) {
           ++right_it;
+        }
       }
 
       if (!mask) {

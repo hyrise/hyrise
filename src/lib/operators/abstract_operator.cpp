@@ -26,10 +26,12 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
   // Tell input operators that we want to consume their output
-  if (_left_input)
+  if (_left_input) {
     mutable_left_input()->register_consumer();
-  if (_right_input)
+  }
+  if (_right_input) {
     mutable_right_input()->register_consumer();
+  }
 }
 
 AbstractOperator::~AbstractOperator() {
@@ -68,8 +70,9 @@ void AbstractOperator::execute() {
    *    b) because there are no more consumers that need the operator's result.
    * For detailed scenarios see: https://github.com/hyrise/hyrise/pull/2254#discussion_r565253226
    */
-  if (executed())
+  if (executed()) {
     return;
+  }
   _transition_to(OperatorState::Running);
 
   if constexpr (HYRISE_DEBUG) {
@@ -111,10 +114,12 @@ void AbstractOperator::execute() {
   _transition_to(OperatorState::ExecutedAndAvailable);
 
   // Tell input operators that we no longer need their output.
-  if (_left_input)
+  if (_left_input) {
     mutable_left_input()->deregister_consumer();
-  if (_right_input)
+  }
+  if (_right_input) {
     mutable_right_input()->deregister_consumer();
+  }
 
   DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
                 _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
@@ -179,8 +184,9 @@ std::shared_ptr<const Table> AbstractOperator::get_output() const {
 
 void AbstractOperator::clear_output() {
   Assert(_consumer_count == 0, "Cannot clear output since there are still consuming operators.");
-  if (_never_clear_output)
+  if (_never_clear_output) {
     return;
+  }
   _transition_to(OperatorState::ExecutedAndCleared);
   _output = nullptr;
 }
@@ -197,8 +203,9 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto copied_ops_iter = copied_ops.find(this);
-  if (copied_ops_iter != copied_ops.end())
+  if (copied_ops_iter != copied_ops.end()) {
     return copied_ops_iter->second;
+  }
 
   const auto copied_left_input =
       left_input() ? left_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
@@ -211,8 +218,9 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
    * Set the transaction context so that we can execute the copied plan in the current transaction
    * (see, e.g., ExpressionEvaluator::_evaluate_subquery_expression_for_row)
    */
-  if (_transaction_context)
+  if (_transaction_context) {
     copied_op->set_transaction_context(*_transaction_context);
+  }
 
   copied_ops.emplace(this, copied_op);
 
@@ -249,8 +257,9 @@ void AbstractOperator::deregister_consumer() {
   std::lock_guard<std::mutex> lock(_deregister_consumer_mutex);
 
   _consumer_count--;
-  if (_consumer_count == 0)
+  if (_consumer_count == 0) {
     clear_output();
+  }
 }
 
 void AbstractOperator::never_clear_output() {
@@ -278,10 +287,12 @@ void AbstractOperator::set_transaction_context_recursively(
     const std::weak_ptr<TransactionContext>& transaction_context) {
   set_transaction_context(transaction_context);
 
-  if (_left_input)
+  if (_left_input) {
     mutable_left_input()->set_transaction_context_recursively(transaction_context);
-  if (_right_input)
+  }
+  if (_right_input) {
     mutable_right_input()->set_transaction_context_recursively(transaction_context);
+  }
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::mutable_left_input() const {
@@ -302,13 +313,16 @@ std::shared_ptr<const AbstractOperator> AbstractOperator::right_input() const {
 
 void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {
   Assert(_state == OperatorState::Created, "Setting parameters is allowed for OperatorState::Created only.");
-  if (parameters.empty())
+  if (parameters.empty()) {
     return;
+  }
   _on_set_parameters(parameters);
-  if (left_input())
+  if (left_input()) {
     mutable_left_input()->set_parameters(parameters);
-  if (right_input())
+  }
+  if (right_input()) {
     mutable_right_input()->set_parameters(parameters);
+  }
 }
 
 OperatorState AbstractOperator::state() const {
@@ -318,8 +332,9 @@ OperatorState AbstractOperator::state() const {
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   std::lock_guard<std::mutex> lock(_operator_task_mutex);
   // Return the OperatorTask that owns this operator if it already exists.
-  if (!_operator_task.expired())
+  if (!_operator_task.expired()) {
     return _operator_task.lock();
+  }
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether _operator_task points to NULL, which means it was never initialized before.
@@ -348,10 +363,12 @@ void AbstractOperator::_on_cleanup() {}
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {
     std::vector<std::shared_ptr<const AbstractOperator>> children;
-    if (op->left_input())
+    if (op->left_input()) {
       children.emplace_back(op->left_input());
-    if (op->right_input())
+    }
+    if (op->right_input()) {
       children.emplace_back(op->right_input());
+    }
     return children;
   };
 

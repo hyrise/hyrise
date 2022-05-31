@@ -29,14 +29,16 @@ template <typename T>
 class HistogramDomain<T, std::enable_if_t<std::is_integral_v<T>>> {
  public:
   T next_value_clamped(T v) const {
-    if (v == std::numeric_limits<T>::max())
+    if (v == std::numeric_limits<T>::max()) {
       return v;
+    }
     return v + 1;
   }
 
   T previous_value_clamped(T v) const {
-    if (v == std::numeric_limits<T>::min())
+    if (v == std::numeric_limits<T>::min()) {
       return v;
+    }
     return v - 1;
   }
 };

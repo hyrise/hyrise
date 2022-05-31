@@ -45,8 +45,9 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
-      if (!chunk)
+      if (!chunk) {
         continue;
+      }
 
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
              "Empty chunk other than mutable chunk at the end was found");
@@ -166,8 +167,9 @@ uint64_t Table::row_count() const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (chunk)
+    if (chunk) {
       row_count += chunk->size();
+    }
   }
 
   if (_type == TableType::References) {
@@ -253,8 +255,9 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
-      if (!chunk)
+      if (!chunk) {
         continue;
+      }
 
       // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
       DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
@@ -275,8 +278,9 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk)
+    if (!chunk) {
       continue;
+    }
 
     if (row_idx < chunk->size()) {
       auto row = std::vector<AllTypeVariant>(column_count());
@@ -309,8 +313,9 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk)
+    if (!chunk) {
       continue;
+    }
 
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
       segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
@@ -386,8 +391,9 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk)
+    if (!chunk) {
       continue;
+    }
 
     Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
   }
@@ -427,8 +433,9 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk)
+    if (!chunk) {
       continue;
+    }
 
     bytes += chunk->memory_usage(mode);
   }

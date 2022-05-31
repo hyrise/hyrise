@@ -22,16 +22,18 @@ using namespace opossum;  // NOLINT
 
 void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr<AbstractLQPNode>& lhs,
                                   const std::shared_ptr<AbstractLQPNode>& rhs) {
-  if (!lhs && !rhs)
+  if (!lhs && !rhs) {
     return;
+  }
 
   Assert(lhs && rhs, "LQPs aren't equally structured, can't create mapping");
   Assert(lhs->type == rhs->type, "LQPs aren't equally structured, can't create mapping");
 
   // To avoid traversing subgraphs of ORs twice, check whether we've been here already
   const auto mapping_iter = mapping.find(lhs);
-  if (mapping_iter != mapping.end())
+  if (mapping_iter != mapping.end()) {
     return;
+  }
 
   mapping[lhs] = rhs;
 
@@ -41,14 +43,17 @@ void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr
 
 std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                        const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  if (!lhs && !rhs)
+  if (!lhs && !rhs) {
     return std::nullopt;
-  if (!(lhs && rhs) || lhs->type != rhs->type)
+  }
+  if (!(lhs && rhs) || lhs->type != rhs->type) {
     return LQPMismatch(lhs, rhs);
+  }
 
   auto mismatch_left = lqp_find_structure_mismatch(lhs->left_input(), rhs->left_input());
-  if (mismatch_left)
+  if (mismatch_left) {
     return mismatch_left;
+  }
 
   return lqp_find_structure_mismatch(lhs->right_input(), rhs->right_input());
 }
@@ -56,14 +61,17 @@ std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<con
 std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& node_mapping,
                                                           const std::shared_ptr<const AbstractLQPNode>& lhs,
                                                           const std::shared_ptr<const AbstractLQPNode>& rhs) {
-  if (!lhs && !rhs)
+  if (!lhs && !rhs) {
     return std::nullopt;
-  if (!lhs->shallow_equals(*rhs, node_mapping))
+  }
+  if (!lhs->shallow_equals(*rhs, node_mapping)) {
     return LQPMismatch(lhs, rhs);
+  }
 
   auto mismatch_left = lqp_find_subplan_mismatch_impl(node_mapping, lhs->left_input(), rhs->left_input());
-  if (mismatch_left)
+  if (mismatch_left) {
     return mismatch_left;
+  }
 
   return lqp_find_subplan_mismatch_impl(node_mapping, lhs->right_input(), rhs->right_input());
 }
@@ -74,8 +82,9 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
   root_nodes.emplace_back(lqp);
 
   visit_lqp(lqp, [&](const auto& sub_node) {
-    if (!visited_nodes.emplace(sub_node).second)
+    if (!visited_nodes.emplace(sub_node).second) {
       return LQPVisitation::DoNotVisitInputs;
+    }
 
     for (const auto& expression : sub_node->node_expressions) {
       visit_expression(expression, [&](const auto sub_expression) {
@@ -94,16 +103,19 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node)
+  if (!node) {
     return;
-  if (!visited_nodes.emplace(node).second)
+  }
+  if (!visited_nodes.emplace(node).second) {
     return;
+  }
 
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression)
+      if (!subquery_expression) {
         return ExpressionVisitation::VisitArguments;
+      }
 
       for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
         if (*lqp == *subquery_expression->lqp) {
@@ -149,8 +161,9 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch(const std::shared_ptr<const
                                                      const std::shared_ptr<const AbstractLQPNode>& rhs) {
   // Check for type/structural mismatched
   auto mismatch = lqp_find_structure_mismatch(lhs, rhs);
-  if (mismatch)
+  if (mismatch) {
     return mismatch;
+  }
 
   // For lqp_create_node_mapping() we need mutable pointers - but won't use them to manipulate, promised.
   // It's just that NodeMapping has takes a mutable ptr in as the value type
@@ -248,13 +261,16 @@ void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  if (!lqp)
+  if (!lqp) {
     return true;
-  if (lqp->type == LQPNodeType::Validate)
+  }
+  if (lqp->type == LQPNodeType::Validate) {
     return true;
+  }
 
-  if (!lqp->left_input() && !lqp->right_input())
+  if (!lqp->left_input() && !lqp->right_input()) {
     return false;
+  }
 
   return lqp_is_validated(lqp->left_input()) && lqp_is_validated(lqp->right_input());
 }
@@ -327,8 +343,9 @@ namespace {
 std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
     const std::shared_ptr<AbstractLQPNode>& begin, const std::optional<const std::shared_ptr<AbstractLQPNode>>& end,
     const std::optional<const std::shared_ptr<AbstractExpression>>& subsequent_expression) {
-  if (end && begin == *end)
+  if (end && begin == *end) {
     return nullptr;
+  }
 
   switch (begin->type) {
     case LQPNodeType::Predicate: {
@@ -482,14 +499,16 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
     // (2) Collect the dependent output expressions
     auto dependents = ExpressionUnorderedSet();
     for (const auto& output_expression : output_expressions) {
-      if (determinants.contains(output_expression))
+      if (determinants.contains(output_expression)) {
         continue;
+      }
       dependents.insert(output_expression);
     }
 
     // (3) Add FD to output
-    if (dependents.empty())
+    if (dependents.empty()) {
       continue;
+    }
     DebugAssert(std::find_if(fds.cbegin(), fds.cend(),
                              [&determinants, &dependents](const auto& fd) {
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
@@ -501,8 +520,9 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
 }
 
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds) {
-  if (fds.empty())
+  if (fds.empty()) {
     return;
+  }
   const auto& output_expressions = lqp->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
@@ -518,8 +538,9 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   fds.erase(std::remove_if(fds.begin(), fds.end(),
                            [&lqp, &output_expressions_set](auto& fd) {
                              // If there are no dependents left, we can discard the FD altogether
-                             if (fd.dependents.empty())
+                             if (fd.dependents.empty()) {
                                return true;
+                             }
 
                              /**
                               * Remove FDs with determinant expressions that are
@@ -553,10 +574,12 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   bool is_diamond = true;
   std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
-    if (diamond_node == union_root_node)
+    if (diamond_node == union_root_node) {
       return LQPVisitation::VisitInputs;
-    if (!is_diamond)
+    }
+    if (!is_diamond) {
       return LQPVisitation::DoNotVisitInputs;
+    }
 
     if (diamond_node->output_count() > 1) {
       if (!diamond_origin_node) {
@@ -576,8 +599,9 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
     return LQPVisitation::VisitInputs;
   });
 
-  if (is_diamond && diamond_origin_node)
+  if (is_diamond && diamond_origin_node) {
     return *diamond_origin_node;
+  }
   return nullptr;
 }
 

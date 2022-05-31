@@ -97,8 +97,9 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
       const auto current_c = _nurand_constants_c.at(255);
       const auto diff = std::abs(static_cast<long>(current_c - old_c));  // NOLINT
 
-      if (current_c != old_c && diff >= 64 && diff <= 120 && diff != 96 && diff != 112)
+      if (current_c != old_c && diff >= 64 && diff <= 120 && diff != 96 && diff != 112) {
         break;
+      }
     }
   }
 

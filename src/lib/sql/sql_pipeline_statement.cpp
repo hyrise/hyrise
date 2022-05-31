@@ -194,8 +194,9 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   done = std::chrono::steady_clock::now();
 
-  if (_use_mvcc == UseMvcc::Yes)
+  if (_use_mvcc == UseMvcc::Yes) {
     _physical_plan->set_transaction_context_recursively(_transaction_context);
+  }
 
   // Cache newly created plan for the according sql statement (only if not already cached)
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
@@ -304,8 +305,9 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     if constexpr (HYRISE_DEBUG) {
       for (const auto& task : tasks) {
         const auto operator_task = std::static_pointer_cast<OperatorTask>(task);
-        if (operator_task == _root_operator_task)
+        if (operator_task == _root_operator_task) {
           continue;
+        }
         Assert(operator_task->get_operator()->state() == OperatorState::ExecutedAndCleared,
                "Expected non-root operator to be in OperatorState::ExecutedAndCleared.");
       }
@@ -314,8 +316,9 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     _root_operator_task->get_operator()->clear_output();
   }
 
-  if (!_result_table)
+  if (!_result_table) {
     _query_has_output = false;
+  }
 
   DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
                 _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),

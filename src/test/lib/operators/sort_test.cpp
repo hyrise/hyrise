@@ -111,18 +111,21 @@ inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestPara
   const auto& param = param_info.param;
 
   std::stringstream stream;
-  if (param.input_is_empty)
+  if (param.input_is_empty) {
     stream << "Empty";
+  }
   stream << (param.input_is_reference ? "Reference" : "Data") << "Input";
   for (const auto& sort_column : param.sort_columns) {
     stream << "Col" << sort_column.column << sort_mode_to_string.left.at(sort_column.sort_mode);
   }
 
-  if (param.output_chunk_size != Chunk::DEFAULT_SIZE)
+  if (param.output_chunk_size != Chunk::DEFAULT_SIZE) {
     stream << "ChunkSize" << param.output_chunk_size;
+  }
 
-  if (param.force_materialization == Sort::ForceMaterialization::Yes)
+  if (param.force_materialization == Sort::ForceMaterialization::Yes) {
     stream << "ForcedMaterialization";
+  }
 
   return stream.str();
 }
