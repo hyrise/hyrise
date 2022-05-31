@@ -5,7 +5,7 @@ if [[ "$unamestr" == 'Darwin' ]]; then
 	clang_format="/usr/local/opt/llvm/bin/clang-format"
 	format_cmd="$clang_format -i -style=file '{}'"
 elif [[ "$unamestr" == 'Linux' ]]; then
-	format_cmd="clang-format-15 -i -style=file '{}'"
+	format_cmd="clang-format -i -style=file '{}'"
 fi
 
 
@@ -23,4 +23,4 @@ else
 fi
 
 # Python formatting
-#black --line-length 120 scripts -q
+black --line-length 120 scripts -q
