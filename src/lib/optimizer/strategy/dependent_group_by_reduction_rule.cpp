@@ -83,7 +83,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     // Early exit: If there are no functional dependencies, we can skip this rule.
     auto fds = aggregate_node.functional_dependencies();
-    if (fds.empty()) return LQPVisitation::VisitInputs;
+    if (fds.empty())
+      return LQPVisitation::VisitInputs;
 
     // --- Preparation ---
     // Store a copy of the root's output expressions before applying the rule
@@ -111,7 +112,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     auto group_by_list_changed = false;
     for (const auto& fd : fds) {
       // Early exit: The FD's left column set has to be a subset of the group-by columns
-      if (group_by_columns.size() < fd.determinants.size()) continue;
+      if (group_by_columns.size() < fd.determinants.size())
+        continue;
 
       bool success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {

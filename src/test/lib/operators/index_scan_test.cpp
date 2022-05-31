@@ -282,7 +282,8 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   // Test correct LQP-Translation. For some reason, only GroupKeyIndexes are currently used.
-  if (this->_index_type != SegmentIndexType::GroupKey) return;
+  if (this->_index_type != SegmentIndexType::GroupKey)
+    return;
   const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
 
   auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);

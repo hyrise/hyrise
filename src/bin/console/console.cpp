@@ -198,7 +198,9 @@ int Console::read() {
   return _eval(input);
 }
 
-int Console::execute_script(const std::string& filepath) { return _exec_script(filepath); }
+int Console::execute_script(const std::string& filepath) {
+  return _exec_script(filepath);
+}
 
 int Console::_eval(const std::string& input) {
   // Do nothing if no input was given
@@ -279,7 +281,8 @@ bool Console::_initialize_pipeline(const std::string& sql) {
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  if (!_initialize_pipeline(sql))
+    return ReturnCode::Error;
 
   try {
     _sql_pipeline->get_result_tables();
@@ -321,9 +324,13 @@ int Console::_eval_sql(const std::string& sql) {
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
+void Console::register_command(const std::string& name, const CommandFunction& func) {
+  _commands[name] = func;
+}
 
-Console::RegisteredCommands Console::commands() { return _commands; }
+Console::RegisteredCommands Console::commands() {
+  return _commands;
+}
 
 void Console::set_prompt(const std::string& prompt) {
   if (HYRISE_DEBUG) {
@@ -405,7 +412,9 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 // Command functions
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
-int Console::_exit(const std::string& /*args*/) { return Console::ReturnCode::Quit; }
+int Console::_exit(const std::string& /*args*/) {
+  return Console::ReturnCode::Quit;
+}
 
 int Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
@@ -711,7 +720,8 @@ int Console::_visualize(const std::string& input) {
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
   if (!sql.empty()) {
-    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+    if (!_initialize_pipeline(sql))
+      return ReturnCode::Error;
   }
 
   // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
@@ -1077,8 +1087,7 @@ int main(int argc, char** argv) {
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details
-  while (sigsetjmp(jmp_env, 1) != 0) {
-  }
+  while (sigsetjmp(jmp_env, 1) != 0) {}
 
   // Main REPL loop
   while (return_code != Return::Quit) {

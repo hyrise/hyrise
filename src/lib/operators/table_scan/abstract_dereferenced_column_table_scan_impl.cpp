@@ -57,7 +57,8 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
   for (auto referenced_chunk_id = ChunkID{0}; referenced_chunk_id < referenced_chunk_count; ++referenced_chunk_id) {
     const auto& sub_pos_list = chunk_offsets_by_chunk_id[referenced_chunk_id];
     const auto& position_filter = sub_pos_list.row_ids;
-    if (!position_filter || position_filter->empty()) continue;
+    if (!position_filter || position_filter->empty())
+      continue;
 
     const auto chunk = segment.referenced_table()->get_chunk(referenced_chunk_id);
     auto referenced_segment = chunk->get_segment(segment.referenced_column_id());

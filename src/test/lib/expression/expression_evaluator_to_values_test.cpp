@@ -89,7 +89,8 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     result.as_view([&](const auto& resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
-        if (!resolved.is_null(idx)) normalized[idx] = resolved.value(idx);
+        if (!resolved.is_null(idx))
+          normalized[idx] = resolved.value(idx);
       }
     });
 
@@ -116,7 +117,8 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
         ExpressionEvaluator{table, ChunkID{0}, uncorrelated_subquery_results}.evaluate_expression_to_result<R>(
             expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
-    if (actual_normalized == expected) return true;
+    if (actual_normalized == expected)
+      return true;
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
@@ -132,7 +134,8 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
   bool test_expression(const AbstractExpression& expression, const std::vector<std::optional<R>>& expected) {
     const auto actual_result = ExpressionEvaluator{}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
-    if (actual_normalized == expected) return true;
+    if (actual_normalized == expected)
+      return true;
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
@@ -600,7 +603,8 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated)
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalculated) {
   // Make sure the expression evaluator complains if it has been given a list of preevaluated sub queries but one is
   // missing
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG)
+    GTEST_SKIP();
 
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);

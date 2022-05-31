@@ -43,7 +43,8 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   stream << "GroupBy: [";
   for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
-    if (expression_idx + 1 < aggregate_expressions_begin_idx) stream << ", ";
+    if (expression_idx + 1 < aggregate_expressions_begin_idx)
+      stream << ", ";
   }
   stream << "] ";
 
@@ -51,7 +52,8 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < node_expressions.size();
        ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
-    if (expression_idx + 1 < node_expressions.size()) stream << ", ";
+    if (expression_idx + 1 < node_expressions.size())
+      stream << ", ";
   }
   stream << "]";
 
@@ -115,7 +117,8 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   // Check each constraint for applicability
   const auto& input_unique_constraints = left_input()->unique_constraints();
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) continue;
+    if (!has_output_expressions(input_unique_constraint.expressions))
+      continue;
 
     // Forward constraint
     unique_constraints->emplace_back(input_unique_constraint);
@@ -158,7 +161,9 @@ std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependen
   return non_trivial_fds;
 }
 
-size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
+size_t AggregateNode::_on_shallow_hash() const {
+  return aggregate_expressions_begin_idx;
+}
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{

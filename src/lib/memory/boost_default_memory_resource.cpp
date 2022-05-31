@@ -9,11 +9,17 @@ namespace boost::container::pmr {
 
 class default_resource_impl : public memory_resource {  // NOLINT
  public:
-  void* do_allocate(std::size_t bytes, std::size_t alignment) override { return std::malloc(bytes); }  // NOLINT
+  void* do_allocate(std::size_t bytes, std::size_t alignment) override {
+    return std::malloc(bytes);
+  }  // NOLINT
 
-  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override { std::free(p); }  // NOLINT
+  void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
+    std::free(p);
+  }  // NOLINT
 
-  [[nodiscard]] bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT override { return &other == this; }
+  [[nodiscard]] bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT override {
+    return &other == this;
+  }
 };
 
 memory_resource* get_default_resource() BOOST_NOEXCEPT {
@@ -24,7 +30,9 @@ memory_resource* get_default_resource() BOOST_NOEXCEPT {
   return default_resource_instance;
 }
 
-memory_resource* new_delete_resource() BOOST_NOEXCEPT { return get_default_resource(); }
+memory_resource* new_delete_resource() BOOST_NOEXCEPT {
+  return get_default_resource();
+}
 
 memory_resource* set_default_resource(memory_resource* r) BOOST_NOEXCEPT {
   // Do nothing

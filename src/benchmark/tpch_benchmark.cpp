@@ -63,7 +63,8 @@ int main(int argc, char* argv[]) {
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
-  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result))
+    return 0;
 
   if (cli_parse_result.count("queries")) {
     comma_separated_queries = cli_parse_result["queries"].as<std::string>();

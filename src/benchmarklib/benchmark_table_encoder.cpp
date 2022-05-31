@@ -32,7 +32,8 @@ ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
 
 bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_encoding_spec,
                                       const ChunkEncodingSpec& actual_chunk_encoding_spec) {
-  if (expected_chunk_encoding_spec.size() != actual_chunk_encoding_spec.size()) return false;
+  if (expected_chunk_encoding_spec.size() != actual_chunk_encoding_spec.size())
+    return false;
 
   for (auto column_id = ColumnID{0}; column_id < actual_chunk_encoding_spec.size(); ++column_id) {
     if (expected_chunk_encoding_spec[column_id].encoding_type != actual_chunk_encoding_spec[column_id].encoding_type) {

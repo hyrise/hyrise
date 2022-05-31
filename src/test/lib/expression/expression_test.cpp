@@ -200,7 +200,8 @@ TEST_F(ExpressionTest, DeepCopySubplanDeduplication) {
       const auto& copied_pqp_subquery_expression =
           std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_arguments.at(argument_idx));
       // Skip e.g. ValueExpressions
-      if (!copied_pqp_subquery_expression) continue;
+      if (!copied_pqp_subquery_expression)
+        continue;
 
       // (1) Check for TableWrapper / subplan reuse inside a PQPSubqueryExpression
       const auto& copied_projection = copied_pqp_subquery_expression->pqp;

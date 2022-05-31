@@ -63,10 +63,13 @@ AbstractIndex::Iterator ARTNode4::_delegate_to_child(const AdaptiveRadixTreeInde
                                                      const std::function<Iterator(size_t, size_t)>& function) const {
   auto partial_key = key[depth];
   for (uint8_t partial_key_id = 0; partial_key_id < 4; ++partial_key_id) {
-    if (_partial_keys[partial_key_id] < partial_key) continue;                                   // key not found yet
-    if (_partial_keys[partial_key_id] == partial_key) return function(partial_key_id, ++depth);  // case0
-    if (!_children[partial_key_id]) return end();  // no more keys available, case1b
-    return _children[partial_key_id]->begin();     // case2
+    if (_partial_keys[partial_key_id] < partial_key)
+      continue;  // key not found yet
+    if (_partial_keys[partial_key_id] == partial_key)
+      return function(partial_key_id, ++depth);  // case0
+    if (!_children[partial_key_id])
+      return end();                             // no more keys available, case1b
+    return _children[partial_key_id]->begin();  // case2
   }
   return end();  // case1a
 }
@@ -81,7 +84,9 @@ AbstractIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::Bina
       key, depth, [&key, this](size_t i, size_t new_depth) { return _children[i]->upper_bound(key, new_depth); });
 }
 
-AbstractIndex::Iterator ARTNode4::begin() const { return _children[0]->begin(); }
+AbstractIndex::Iterator ARTNode4::begin() const {
+  return _children[0]->begin();
+}
 
 AbstractIndex::Iterator ARTNode4::end() const {
   for (uint8_t i = 4; i > 0; --i) {
@@ -172,7 +177,9 @@ AbstractIndex::Iterator ARTNode16::upper_bound(const AdaptiveRadixTreeIndex::Bin
                    size_t new_depth) { return _children[partial_key_pos]->upper_bound(key, new_depth); });
 }
 
-AbstractIndex::Iterator ARTNode16::begin() const { return _children[0]->begin(); }
+AbstractIndex::Iterator ARTNode16::begin() const {
+  return _children[0]->begin();
+}
 
 /**
  * _end searches the child with the largest partial key == the last child in the _children array.
@@ -386,8 +393,12 @@ AbstractIndex::Iterator Leaf::upper_bound(const AdaptiveRadixTreeIndex::BinaryCo
   return _end;
 }
 
-AbstractIndex::Iterator Leaf::begin() const { return _begin; }
+AbstractIndex::Iterator Leaf::begin() const {
+  return _begin;
+}
 
-AbstractIndex::Iterator Leaf::end() const { return _end; }
+AbstractIndex::Iterator Leaf::end() const {
+  return _end;
+}
 
 }  // namespace opossum

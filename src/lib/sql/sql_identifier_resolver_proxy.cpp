@@ -30,7 +30,8 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolverProxy::resolve_identifi
 
     return std::make_shared<CorrelatedParameterExpression>(parameter_id, *expression);
   } else {
-    if (_outer_context_proxy) return _outer_context_proxy->resolve_identifier_relaxed(identifier);
+    if (_outer_context_proxy)
+      return _outer_context_proxy->resolve_identifier_relaxed(identifier);
   }
 
   return nullptr;

@@ -187,7 +187,8 @@ void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>
   // Step 3: Try to merge other nodes
   // There could be a diamond that just became simple so that it can be merged.
   const auto parent_union_node = std::dynamic_pointer_cast<UnionNode>(merged_predicate_node->outputs().front());
-  if (parent_union_node) _merge_disjunction(parent_union_node);
+  if (parent_union_node)
+    _merge_disjunction(parent_union_node);
 }
 
 }  // namespace opossum

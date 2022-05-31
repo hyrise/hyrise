@@ -81,7 +81,9 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   const LZ4Segment<T>& _segment;
@@ -107,22 +109,27 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     void increment() {
       ++_chunk_offset;
       ++_data_it;
-      if (_null_value_it) ++(*_null_value_it);
+      if (_null_value_it)
+        ++(*_null_value_it);
     }
 
     void decrement() {
       --_chunk_offset;
       --_data_it;
-      if (_null_value_it) --(*_null_value_it);
+      if (_null_value_it)
+        --(*_null_value_it);
     }
 
     void advance(std::ptrdiff_t n) {
       _chunk_offset += n;
       _data_it += n;
-      if (_null_value_it) *_null_value_it += n;
+      if (_null_value_it)
+        *_null_value_it += n;
     }
 
-    bool equal(const Iterator& other) const { return _data_it == other._data_it; }
+    bool equal(const Iterator& other) const {
+      return _data_it == other._data_it;
+    }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
       return std::ptrdiff_t{other._chunk_offset} - std::ptrdiff_t{_chunk_offset};

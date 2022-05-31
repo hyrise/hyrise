@@ -264,7 +264,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     case 16 - 1: {
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      for (auto i = 0; i < 8; ++i) parameters.emplace_back(raw_params_iter->at(2 + i));
+      for (auto i = 0; i < 8; ++i)
+        parameters.emplace_back(raw_params_iter->at(2 + i));
       break;
     }
 
@@ -322,8 +323,10 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 22 - 1: {
       // We need the same country code twice - have a look at the query
-      for (auto i = 0; i < 7; ++i) parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
-      for (auto i = 0; i < 7; ++i) parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
+      for (auto i = 0; i < 7; ++i)
+        parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
+      for (auto i = 0; i < 7; ++i)
+        parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
       break;
     }
 
@@ -331,7 +334,8 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       Fail("There are only 22 JCC-H queries");
   }
 
-  if (sql.empty()) sql = _substitute_placeholders(item_id, parameters);
+  if (sql.empty())
+    sql = _substitute_placeholders(item_id, parameters);
 
   const auto [status, table] = sql_executor.execute(sql, nullptr);
   Assert(status == SQLPipelineStatus::Success, "JCC-H items should not fail");

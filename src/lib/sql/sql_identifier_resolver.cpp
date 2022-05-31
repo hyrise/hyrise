@@ -19,7 +19,8 @@ void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpres
 void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<opossum::AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
-  if (entry_iter == _entries.end()) return;
+  if (entry_iter == _entries.end())
+    return;
   entry_iter->column_names.clear();
 }
 
@@ -44,7 +45,8 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
     }
   }
 
-  if (matching_expressions.size() != 1) return nullptr;  // Identifier is ambiguous/not existing
+  if (matching_expressions.size() != 1)
+    return nullptr;  // Identifier is ambiguous/not existing
 
   return matching_expressions[0];
 }
@@ -55,7 +57,8 @@ std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
                                  [&](const auto& entry) { return *entry.expression == *expression; });
 
   std::vector<SQLIdentifier> identifiers;
-  if (entry_iter == _entries.end()) return identifiers;
+  if (entry_iter == _entries.end())
+    return identifiers;
   for (const auto& column_name : entry_iter->column_names) {
     identifiers.emplace_back(SQLIdentifier(column_name, entry_iter->table_name));
   }

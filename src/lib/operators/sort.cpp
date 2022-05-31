@@ -46,7 +46,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       {
         const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
         value_segment_value_vector.reserve(next_chunk_size);
-        if (column_is_nullable) value_segment_null_vector.reserve(next_chunk_size);
+        if (column_is_nullable)
+          value_segment_null_vector.reserve(next_chunk_size);
       }
 
       auto accessor_by_chunk_id =
@@ -63,7 +64,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         const auto typed_value = accessor->access(chunk_offset);
         const auto is_null = !typed_value;
         value_segment_value_vector.push_back(is_null ? ColumnDataType{} : typed_value.value());
-        if (column_is_nullable) value_segment_null_vector.push_back(is_null);
+        if (column_is_nullable)
+          value_segment_null_vector.push_back(is_null);
 
         ++current_segment_size;
 
@@ -86,7 +88,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           const auto next_chunk_size =
               std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
           value_segment_value_vector.reserve(next_chunk_size);
-          if (column_is_nullable) value_segment_null_vector.reserve(next_chunk_size);
+          if (column_is_nullable)
+            value_segment_null_vector.reserve(next_chunk_size);
 
           ++chunk_it;
         }
@@ -229,7 +232,9 @@ Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<
   DebugAssert(!_sort_definitions.empty(), "Expected at least one sort criterion");
 }
 
-const std::vector<SortColumnDefinition>& Sort::sort_definitions() const { return _sort_definitions; }
+const std::vector<SortColumnDefinition>& Sort::sort_definitions() const {
+  return _sort_definitions;
+}
 
 const std::string& Sort::name() const {
   static const auto name = std::string{"Sort"};
@@ -322,7 +327,8 @@ std::shared_ptr<const Table> Sort::_on_execute() {
           break;
         }
       }
-      if (must_materialize) break;
+      if (must_materialize)
+        break;
     }
   }
 

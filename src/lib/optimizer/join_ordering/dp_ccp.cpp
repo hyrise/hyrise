@@ -36,7 +36,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
    */
   std::vector<std::shared_ptr<AbstractExpression>> uncorrelated_predicates;
   for (const auto& edge : join_graph.edges) {
-    if (!edge.vertex_set.none()) continue;
+    if (!edge.vertex_set.none())
+      continue;
     uncorrelated_predicates.insert(uncorrelated_predicates.end(), edge.predicates.begin(), edge.predicates.end());
   }
 
@@ -89,7 +90,8 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
   std::vector<std::pair<size_t, size_t>> enumerate_ccp_edges;
   for (const auto& edge : join_graph.edges) {
     // EnumerateCcp only deals with binary join predicates
-    if (edge.vertex_set.count() != 2) continue;
+    if (edge.vertex_set.count() != 2)
+      continue;
 
     const auto first_vertex_idx = edge.vertex_set.find_first();
     const auto second_vertex_idx = edge.vertex_set.find_next(first_vertex_idx);

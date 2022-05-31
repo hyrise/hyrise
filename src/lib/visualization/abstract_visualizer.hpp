@@ -54,7 +54,9 @@ struct VizEdgeInfo {
 
 // Custom facet for creating a custom locale with thousands separator.
 struct SeparateThousandsFacet : std::numpunct<char> {
-  string_type do_grouping() const override { return "\3"; }  // groups of 3 digits
+  string_type do_grouping() const override {
+    return "\3";
+  }  // groups of 3 digits
 };
 
 template <typename GraphBase>
@@ -208,7 +210,8 @@ class AbstractVisualizer {
     }
 
     vertex_info.id = vertex_id;
-    if (wrap_label == WrapLabel::On) vertex_info.label = _wrap_label(vertex_info.label);
+    if (wrap_label == WrapLabel::On)
+      vertex_info.label = _wrap_label(vertex_info.label);
     boost::add_vertex(vertex_info, _graph);
   }
 
@@ -243,7 +246,8 @@ class AbstractVisualizer {
   }
 
   std::string _wrap_label(const std::string& label) {
-    if (label.length() <= MAX_LABEL_WIDTH) return label;
+    if (label.length() <= MAX_LABEL_WIDTH)
+      return label;
     std::stringstream label_stream;
 
     // 1. Split label into lines
@@ -251,7 +255,8 @@ class AbstractVisualizer {
     boost::split(lines, label, boost::is_any_of("\n"));
     const auto line_count = lines.size();
     for (auto line_idx = size_t{0}; line_idx < line_count; ++line_idx) {
-      if (line_idx > 0) label_stream << '\n';
+      if (line_idx > 0)
+        label_stream << '\n';
       const auto& line = lines[line_idx];
       if (line.length() <= MAX_LABEL_WIDTH) {
         label_stream << line;
@@ -267,7 +272,8 @@ class AbstractVisualizer {
         line_length += line_words.at(word_idx).length();
 
         // Exit on last word
-        if (word_idx == line_words.size() - 1) break;
+        if (word_idx == line_words.size() - 1)
+          break;
 
         line_length++;  // include whitespace
         word_idx++;

@@ -77,7 +77,8 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
-  if (visualized_ops.find(op) != visualized_ops.end()) return;
+  if (visualized_ops.find(op) != visualized_ops.end())
+    return;
   visualized_ops.insert(op);
 
   _add_operator(op);
@@ -122,7 +123,8 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
                                           std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-    if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;
+    if (!pqp_subquery_expression)
+      return ExpressionVisitation::VisitArguments;
 
     _build_subtree(pqp_subquery_expression->pqp, visualized_ops);
 

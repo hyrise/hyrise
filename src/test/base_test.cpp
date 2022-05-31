@@ -189,7 +189,8 @@ bool compare_files(const std::string& original_file, const std::string& created_
   std::istreambuf_iterator<char> end;
 
   while (iterator_original != end && iterator_created != end) {
-    if (*iterator_original != *iterator_created) return false;
+    if (*iterator_original != *iterator_created)
+      return false;
     ++iterator_original;
     ++iterator_created;
   }

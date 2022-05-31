@@ -55,25 +55,30 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
           // compile time during development. While new segment types should be added here,
 #ifdef HYRISE_ERASE_DICTIONARY
-          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) return;
+          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>)
+            return;
 #endif
 
 #ifdef HYRISE_ERASE_RUNLENGTH
-          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) return;
+          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>)
+            return;
 #endif
 
 #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) return;
+          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>)
+            return;
 #endif
 
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
           if constexpr (std::is_same_v<T, int32_t>) {
-            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) return;
+            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>)
+              return;
           }
 #endif
 
           // Always erase LZ4Segment accessors
-          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) return;
+          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>)
+            return;
 
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
             const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
@@ -93,7 +98,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         PerformanceWarning("Using type-erased accessor as the ReferenceSegmentIterable is type-erased itself");
       }
 
-      if (functor_was_called) return;
+      if (functor_was_called)
+        return;
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
 
@@ -120,7 +126,9 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   const ReferenceSegment& _segment;
@@ -148,21 +156,32 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() { ++_pos_list_it; }
+    void increment() {
+      ++_pos_list_it;
+    }
 
-    void decrement() { --_pos_list_it; }
+    void decrement() {
+      --_pos_list_it;
+    }
 
-    void advance(std::ptrdiff_t n) { _pos_list_it += n; }
+    void advance(std::ptrdiff_t n) {
+      _pos_list_it += n;
+    }
 
-    bool equal(const MultipleChunkIterator& other) const { return _pos_list_it == other._pos_list_it; }
+    bool equal(const MultipleChunkIterator& other) const {
+      return _pos_list_it == other._pos_list_it;
+    }
 
-    std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const { return other._pos_list_it - _pos_list_it; }
+    std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const {
+      return other._pos_list_it - _pos_list_it;
+    }
 
     // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
       const auto pos_list_offset = static_cast<ChunkOffset>(_pos_list_it - _begin_pos_list_it);
 
-      if (_pos_list_it->is_null()) return SegmentPosition<T>{T{}, true, pos_list_offset};
+      if (_pos_list_it->is_null())
+        return SegmentPosition<T>{T{}, true, pos_list_offset};
 
       const auto chunk_id = _pos_list_it->chunk_id;
 

@@ -44,7 +44,8 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   }
 
   size_t distance_to(FixedStringIterator const& other) const {  // NOLINT
-    if (_string_length == 0) return 0;
+    if (_string_length == 0)
+      return 0;
     return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
   }
 

@@ -43,11 +43,17 @@ class AnySegmentIteratorWrapper : public AnySegmentIteratorWrapperBase<T> {
  public:
   explicit AnySegmentIteratorWrapper(const Iterator& iterator) : _iterator{iterator} {}
 
-  void increment() final { ++_iterator; }
+  void increment() final {
+    ++_iterator;
+  }
 
-  void decrement() final { --_iterator; }
+  void decrement() final {
+    --_iterator;
+  }
 
-  void advance(std::ptrdiff_t n) final { _iterator += n; }
+  void advance(std::ptrdiff_t n) final {
+    _iterator += n;
+  }
 
   /**
    * Although `other` could have a different type, it is practically impossible,
@@ -120,7 +126,8 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
  public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
-    if (this == &other) return *this;
+    if (this == &other)
+      return *this;
     _wrapper = other._wrapper->clone();
     return *this;
   }
@@ -128,19 +135,29 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { _wrapper->increment(); }
+  void increment() {
+    _wrapper->increment();
+  }
 
-  void decrement() { _wrapper->decrement(); }
+  void decrement() {
+    _wrapper->decrement();
+  }
 
-  void advance(std::ptrdiff_t n) { _wrapper->advance(n); }
+  void advance(std::ptrdiff_t n) {
+    _wrapper->advance(n);
+  }
 
-  bool equal(const AnySegmentIterator<T>& other) const { return _wrapper->equal(other._wrapper.get()); }
+  bool equal(const AnySegmentIterator<T>& other) const {
+    return _wrapper->equal(other._wrapper.get());
+  }
 
   std::ptrdiff_t distance_to(const AnySegmentIterator& other) const {
     return _wrapper->distance_to(other._wrapper.get());
   }
 
-  SegmentPosition<T> dereference() const { return _wrapper->dereference(); }
+  SegmentPosition<T> dereference() const {
+    return _wrapper->dereference();
+  }
 
  private:
   std::unique_ptr<opossum::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;

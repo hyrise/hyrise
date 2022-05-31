@@ -21,7 +21,8 @@ BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>&
 std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor::execute(
     const std::string& sql, const std::shared_ptr<const Table>& expected_result_table) {
   auto pipeline_builder = SQLPipelineBuilder{sql};
-  if (transaction_context) pipeline_builder.with_transaction_context(transaction_context);
+  if (transaction_context)
+    pipeline_builder.with_transaction_context(transaction_context);
 
   auto pipeline = pipeline_builder.create_pipeline();
 
@@ -95,7 +96,8 @@ void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   // which table has been modified. Extracting that info from the plan and verifying the entire table would take way
   // too long. As such, we rely on any errors here to be found when the potentially corrupted data is SELECTed the
   // next time.
-  if (!result_table) return;
+  if (!result_table)
+    return;
 
   _compare_tables(result_table, sqlite_result, "Using SQLite's result table as expected result table");
 }

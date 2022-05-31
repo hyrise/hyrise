@@ -127,7 +127,8 @@ void Delete::_on_rollback_records() {
       // If the above operation fails, it means the row is locked by another transaction. This must have been
       // the reason why the rollback was initiated. Since _on_execute stopped at this row, we can stop
       // unlocking rows here as well.
-      if (!result) return;
+      if (!result)
+        return;
     }
   }
 }

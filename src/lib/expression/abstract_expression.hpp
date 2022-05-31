@@ -156,8 +156,12 @@ inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& 
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {
-  size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }
-  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const { return expression->hash(); }
+  size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const {
+    return expression->hash();
+  }
+  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const {
+    return expression->hash();
+  }
 };
 
 // Wrapper around AbstractExpression::operator==(), to enable hash based containers containing

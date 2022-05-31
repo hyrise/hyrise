@@ -33,14 +33,26 @@ VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKey& other) 
   return *this;
 }
 
-bool VariableLengthKey::operator==(const VariableLengthKey& other) const { return _impl == other._impl; }
-bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& other) const { return _impl == other._impl; }
+bool VariableLengthKey::operator==(const VariableLengthKey& other) const {
+  return _impl == other._impl;
+}
+bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& other) const {
+  return _impl == other._impl;
+}
 
-bool VariableLengthKey::operator!=(const VariableLengthKey& other) const { return _impl != other._impl; }
-bool VariableLengthKey::operator!=(const VariableLengthKeyConstProxy& other) const { return _impl != other._impl; }
+bool VariableLengthKey::operator!=(const VariableLengthKey& other) const {
+  return _impl != other._impl;
+}
+bool VariableLengthKey::operator!=(const VariableLengthKeyConstProxy& other) const {
+  return _impl != other._impl;
+}
 
-bool VariableLengthKey::operator<(const VariableLengthKey& other) const { return _impl < other._impl; }
-bool VariableLengthKey::operator<(const VariableLengthKeyConstProxy& other) const { return _impl < other._impl; }
+bool VariableLengthKey::operator<(const VariableLengthKey& other) const {
+  return _impl < other._impl;
+}
+bool VariableLengthKey::operator<(const VariableLengthKeyConstProxy& other) const {
+  return _impl < other._impl;
+}
 
 VariableLengthKey& VariableLengthKey::operator<<=(CompositeKeyLength shift) {
   _impl <<= shift;
@@ -57,7 +69,9 @@ VariableLengthKey& VariableLengthKey::shift_and_set(uint64_t value, uint8_t bits
   return *this;
 }
 
-CompositeKeyLength VariableLengthKey::bytes_per_key() const { return _impl._size; }
+CompositeKeyLength VariableLengthKey::bytes_per_key() const {
+  return _impl._size;
+}
 
 std::ostream& operator<<(std::ostream& os, const VariableLengthKey& key) {
   os << key._impl;

@@ -7,7 +7,8 @@ namespace opossum {
 
 void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {
   // String does not contain escaping if it is not surrounded with quotes
-  if (field.empty() || field.front() != config.quote) return;
+  if (field.empty() || field.front() != config.quote)
+    return;
 
   std::string unescaped_string;
   unescaped_string.reserve(field.size());

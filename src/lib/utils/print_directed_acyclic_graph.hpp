@@ -73,7 +73,8 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
    * Recursively progress to children
    */
   for (size_t child_idx = 0; child_idx < children.size(); ++child_idx) {
-    if (child_idx + 1 == children.size()) indentation.back() = false;
+    if (child_idx + 1 == children.size())
+      indentation.back() = false;
     print_directed_acyclic_graph_impl<Node>(children[child_idx], get_children_fn, node_print_fn, stream, indentation,
                                             id_by_node, id_counter);
   }

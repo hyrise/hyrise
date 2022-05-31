@@ -147,7 +147,8 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
         break;
       }
       const auto& value_expression = static_cast<ValueExpression&>(*element);
-      if (variant_is_null(value_expression.value)) continue;
+      if (variant_is_null(value_expression.value))
+        continue;
       if (value_expression.data_type() != *common_data_type) {
         common_data_type = std::nullopt;
         break;

@@ -45,13 +45,12 @@ size_t MetaSystemInformationTable::_cpu_count() {
     cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
     std::string cpu_info_line;
     while (std::getline(cpu_info_file, cpu_info_line)) {
-      if (cpu_info_line.starts_with("processor")) ++processors;
+      if (cpu_info_line.starts_with("processor"))
+        ++processors;
     }
 
     cpu_info_file.close();
-  } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
-  }
+  } catch (std::ios_base::failure& fail) { Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")"); }
 
   return processors;
 #endif
@@ -105,9 +104,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
         return cpuinfo_line;
       }
     }
-  } catch (std::ios_base::failure& fail) {
-    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
-  }
+  } catch (std::ios_base::failure& fail) { Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")"); }
 
   Fail("Could not read CPU model.");
 #endif

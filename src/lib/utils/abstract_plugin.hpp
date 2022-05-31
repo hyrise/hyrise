@@ -9,8 +9,10 @@ namespace opossum {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
-#define EXPORT_PLUGIN(PluginName) \
-  extern "C" AbstractPlugin* factory() { return new PluginName(); }
+#define EXPORT_PLUGIN(PluginName)        \
+  extern "C" AbstractPlugin* factory() { \
+    return new PluginName();             \
+  }
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;

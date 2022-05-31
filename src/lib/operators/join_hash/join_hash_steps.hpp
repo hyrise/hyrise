@@ -192,7 +192,9 @@ class PosHashTable {
   }
 
   // Return the number of distinct values (i.e., the size of the hash table).
-  size_t distinct_value_count() const { return _offset_hash_table.size(); }
+  size_t distinct_value_count() const {
+    return _offset_hash_table.size();
+  }
 
   // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
   // table. For other join types, we return the size of the unified position list that is created in finalize().
@@ -291,7 +293,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in)
+      continue;
 
     const auto num_rows = chunk_in->size();
 
@@ -305,7 +308,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       }
 
       // Skip chunks that were physically deleted
-      if (!chunk_in) return;
+      if (!chunk_in)
+        return;
 
       auto& elements = radix_container[chunk_id].elements;
       auto& null_values = radix_container[chunk_id].null_values;
@@ -426,7 +430,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
                                                            const BloomFilter& input_bloom_filter) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
-  if (radix_container.empty()) return {};
+  if (radix_container.empty())
+    return {};
 
   /*
   NUMA notes:
@@ -494,7 +499,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, finalize is called above.
-  if (radix_bits == 0) hash_tables[0]->finalize();
+  if (radix_bits == 0)
+    hash_tables[0]->finalize();
 
   return hash_tables;
 }
@@ -503,7 +509,8 @@ template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
-  if (radix_container.empty()) return radix_container;
+  if (radix_container.empty())
+    return radix_container;
 
   if constexpr (keep_null_values) {
     Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),

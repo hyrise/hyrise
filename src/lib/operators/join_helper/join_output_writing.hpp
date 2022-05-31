@@ -24,7 +24,9 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   struct PosListsHasher {
-    size_t operator()(const PosLists& pos_lists) const { return boost::hash_range(pos_lists.begin(), pos_lists.end()); }
+    size_t operator()(const PosLists& pos_lists) const {
+      return boost::hash_range(pos_lists.begin(), pos_lists.end());
+    }
   };
 
   std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher> shared_pos_lists_by_pos_lists;
@@ -128,7 +130,8 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
-        if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
+        if (!dummy_table)
+          dummy_table = Table::create_dummy_table(input_table->column_definitions());
         output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {

@@ -67,7 +67,8 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
 
   auto right_begin = std::copy(left_expressions.begin(), left_expressions.end(), output_expressions.begin());
 
-  if (output_both_inputs) std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
+  if (output_both_inputs)
+    std::copy(right_expressions.begin(), right_expressions.end(), right_begin);
 
   return output_expressions;
 }
@@ -226,9 +227,13 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
   }
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
+const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const {
+  return node_expressions;
+}
 
-size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
+size_t JoinNode::_on_shallow_hash() const {
+  return boost::hash_value(join_mode);
+}
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (!join_predicates().empty()) {
@@ -240,7 +245,8 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
-  if (join_mode != join_node.join_mode) return false;
+  if (join_mode != join_node.join_mode)
+    return false;
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
                                                            node_mapping);
 }

@@ -15,11 +15,17 @@ InExpression::InExpression(const PredicateCondition init_predicate_condition,
               "Expected either IN or NOT IN as PredicateCondition");
 }
 
-bool InExpression::is_negated() const { return predicate_condition == PredicateCondition::NotIn; }
+bool InExpression::is_negated() const {
+  return predicate_condition == PredicateCondition::NotIn;
+}
 
-const std::shared_ptr<AbstractExpression>& InExpression::value() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& InExpression::value() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& InExpression::set() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& InExpression::set() const {
+  return arguments[1];
+}
 
 std::shared_ptr<AbstractExpression> InExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {

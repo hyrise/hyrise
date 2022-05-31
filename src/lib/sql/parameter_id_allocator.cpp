@@ -2,7 +2,9 @@
 
 namespace opossum {
 
-ParameterID ParameterIDAllocator::allocate() { return static_cast<ParameterID>(_parameter_id_counter++); }
+ParameterID ParameterIDAllocator::allocate() {
+  return static_cast<ParameterID>(_parameter_id_counter++);
+}
 
 ParameterID ParameterIDAllocator::allocate_for_value_placeholder(const ValuePlaceholderID value_placeholder_id) {
   const auto parameter_id = allocate();

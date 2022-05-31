@@ -51,7 +51,8 @@ int main(int argc, char* argv[]) {
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
-  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result))
+    return 0;
 
   num_warehouses = cli_parse_result["scale"].as<size_t>();
   consistency_checks = cli_parse_result["consistency_checks"].as<bool>();
@@ -85,7 +86,8 @@ int main(int argc, char* argv[]) {
 namespace {
 template <typename T, typename = std::enable_if<std::is_floating_point_v<T>>>
 bool floats_near(T a, T b) {
-  if (a == b) return true;
+  if (a == b)
+    return true;
   // Tolerate 0.1% discrepancy due to float variations
   return std::max(a, b) / std::min(a, b) <= 1.001;
 }

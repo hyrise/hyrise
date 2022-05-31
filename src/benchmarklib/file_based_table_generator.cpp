@@ -34,7 +34,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
   for (const auto& directory_entry : list_directory(_path)) {
     const auto extension = directory_entry.extension();
 
-    if (table_extensions.find(extension) == table_extensions.end()) continue;
+    if (table_extensions.find(extension) == table_extensions.end())
+      continue;
 
     auto table_name = directory_entry.filename();
     table_name.replace_extension("");
@@ -111,7 +112,8 @@ void FileBasedTableGenerator::set_add_constraints_callback(
 
 void FileBasedTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
-  if (_add_constraints_callback) _add_constraints_callback(table_info_by_name);
+  if (_add_constraints_callback)
+    _add_constraints_callback(table_info_by_name);
 }
 
 }  // namespace opossum

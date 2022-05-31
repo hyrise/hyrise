@@ -31,15 +31,20 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
     auto op = operator_queue.front();
     operator_queue.pop();
 
-    if (!visited_operators.emplace(op).second) continue;
+    if (!visited_operators.emplace(op).second)
+      continue;
 
     if (visitor(op) == PQPVisitation::VisitInputs) {
       if constexpr (std::is_const_v<AbstractOperatorType>) {
-        if (op->left_input()) operator_queue.push(op->left_input());
-        if (op->right_input()) operator_queue.push(op->right_input());
+        if (op->left_input())
+          operator_queue.push(op->left_input());
+        if (op->right_input())
+          operator_queue.push(op->right_input());
       } else {
-        if (op->left_input()) operator_queue.push(op->mutable_left_input());
-        if (op->right_input()) operator_queue.push(op->mutable_right_input());
+        if (op->left_input())
+          operator_queue.push(op->mutable_left_input());
+        if (op->right_input())
+          operator_queue.push(op->mutable_right_input());
       }
     }
   }

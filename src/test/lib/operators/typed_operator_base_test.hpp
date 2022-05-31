@@ -33,7 +33,8 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
     for (auto encoding_it = encoding_type_to_string.begin(); encoding_it != encoding_type_to_string.end();
          ++encoding_it) {
       const auto& encoding = encoding_it->left;
-      if (!encoding_supports_data_type(encoding, data_type)) continue;
+      if (!encoding_supports_data_type(encoding, data_type))
+        continue;
       for (auto sorted_by_it = sort_mode_to_string.begin(); sorted_by_it != sort_mode_to_string.end(); ++sorted_by_it) {
         const auto& sort_mode = sorted_by_it->left;
         pairs.emplace_back(data_type, encoding, sort_mode, true);

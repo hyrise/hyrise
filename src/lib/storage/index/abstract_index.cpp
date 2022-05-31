@@ -31,11 +31,14 @@ AbstractIndex::AbstractIndex(const SegmentIndexType type) : _type{type} {}
 
 bool AbstractIndex::is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto indexed_segments = _get_indexed_segments();
-  if (segments.size() > indexed_segments.size()) return false;
-  if (segments.empty()) return false;
+  if (segments.size() > indexed_segments.size())
+    return false;
+  if (segments.empty())
+    return false;
 
   for (size_t i = 0; i < segments.size(); ++i) {
-    if (segments[i] != indexed_segments[i]) return false;
+    if (segments[i] != indexed_segments[i])
+      return false;
   }
   return true;
 }
@@ -56,15 +59,25 @@ AbstractIndex::Iterator AbstractIndex::upper_bound(const std::vector<AllTypeVari
   return _upper_bound(values);
 }
 
-AbstractIndex::Iterator AbstractIndex::cbegin() const { return _cbegin(); }
+AbstractIndex::Iterator AbstractIndex::cbegin() const {
+  return _cbegin();
+}
 
-AbstractIndex::Iterator AbstractIndex::cend() const { return _cend(); }
+AbstractIndex::Iterator AbstractIndex::cend() const {
+  return _cend();
+}
 
-AbstractIndex::Iterator AbstractIndex::null_cbegin() const { return _null_positions.cbegin(); }
+AbstractIndex::Iterator AbstractIndex::null_cbegin() const {
+  return _null_positions.cbegin();
+}
 
-AbstractIndex::Iterator AbstractIndex::null_cend() const { return _null_positions.cend(); }
+AbstractIndex::Iterator AbstractIndex::null_cend() const {
+  return _null_positions.cend();
+}
 
-SegmentIndexType AbstractIndex::type() const { return _type; }
+SegmentIndexType AbstractIndex::type() const {
+  return _type;
+}
 
 size_t AbstractIndex::memory_consumption() const {
   size_t bytes{0u};

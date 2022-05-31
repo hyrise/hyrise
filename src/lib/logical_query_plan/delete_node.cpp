@@ -11,9 +11,13 @@ namespace opossum {
 
 DeleteNode::DeleteNode() : AbstractNonQueryNode(LQPNodeType::Delete) {}
 
-std::string DeleteNode::description(const DescriptionMode mode) const { return "[Delete]"; }
+std::string DeleteNode::description(const DescriptionMode mode) const {
+  return "[Delete]";
+}
 
-bool DeleteNode::is_column_nullable(const ColumnID column_id) const { Fail("Delete does not output any columns"); }
+bool DeleteNode::is_column_nullable(const ColumnID column_id) const {
+  Fail("Delete does not output any columns");
+}
 
 std::vector<std::shared_ptr<AbstractExpression>> DeleteNode::output_expressions() const {
   static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;

@@ -102,7 +102,8 @@ class Chunk : private Noncopyable {
     DebugAssert(([&]() {
                   for (auto segment : segments_to_index) {
                     const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
-                    if (segment_it == _segments.cend()) return false;
+                    if (segment_it == _segments.cend())
+                      return false;
                   }
                   return true;
                 }()),
@@ -161,7 +162,9 @@ class Chunk : private Noncopyable {
    * However, `size() - invalid_row_count()` does not necessarily tell you how many rows are visible for
    * the current transaction.
    */
-  ChunkOffset invalid_row_count() const { return ChunkOffset{_invalid_row_count}; }
+  ChunkOffset invalid_row_count() const {
+    return ChunkOffset{_invalid_row_count};
+  }
 
   /**
    * Atomically increases the counter of deleted/invalidated rows within this chunk.

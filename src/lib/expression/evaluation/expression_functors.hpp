@@ -15,8 +15,12 @@ template <typename T>
 constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v<NullValue, T>;
 
 // Turn a bool into itself and a NULL into false
-bool to_bool(const bool value) { return value; }
-bool to_bool(const NullValue& value) { return false; }
+bool to_bool(const bool value) {
+  return value;
+}
+bool to_bool(const NullValue& value) {
+  return false;
+}
 
 // Cast a value/NULL into another type
 template <typename T, typename V>
@@ -65,8 +69,10 @@ struct TernaryAndEvaluator {
     result_value = a_is_true && b_is_true;
     result_null = a_null && b_null;
 
-    if constexpr (!std::is_same_v<NullValue, ArgA>) result_null |= a_value && b_null;
-    if constexpr (!std::is_same_v<NullValue, ArgB>) result_null |= b_value && a_null;
+    if constexpr (!std::is_same_v<NullValue, ArgA>)
+      result_null |= a_value && b_null;
+    if constexpr (!std::is_same_v<NullValue, ArgB>)
+      result_null |= b_value && a_null;
   }
 };
 
@@ -146,7 +152,8 @@ struct ModuloEvaluator {
   void operator()(Result& result_value, bool& result_null, const ArgA& a_value, const bool a_null, const ArgB& b_value,
                   const bool b_null) {
     result_null = a_null || b_null;
-    if (result_null) return;
+    if (result_null)
+      return;
 
     if constexpr (std::is_same_v<NullValue, Result> || std::is_same_v<NullValue, ArgA> ||
                   std::is_same_v<NullValue, ArgB>) {

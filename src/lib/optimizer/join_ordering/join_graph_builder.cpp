@@ -17,7 +17,8 @@ namespace opossum {
 
 std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
   // No need to create a join graph consisting of just one vertex and no predicates
-  if (_lqp_node_type_is_vertex(lqp->type)) return std::nullopt;
+  if (_lqp_node_type_is_vertex(lqp->type))
+    return std::nullopt;
 
   _traverse(lqp);
 
@@ -30,14 +31,16 @@ std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<Abst
   edges.insert(edges.end(), cross_edges.begin(), cross_edges.end());
 
   // A single vertex without predicates is not considered a JoinGraph
-  if (_vertices.size() <= 1u && edges.empty()) return std::nullopt;
+  if (_vertices.size() <= 1u && edges.empty())
+    return std::nullopt;
 
   return JoinGraph{_vertices, edges};
 }
 
 void JoinGraphBuilder::_traverse(const std::shared_ptr<AbstractLQPNode>& node) {
   // Makes it possible to call _traverse() on inputs without checking whether they exist first.
-  if (!node) return;
+  if (!node)
+    return;
 
   if (_lqp_node_type_is_vertex(node->type)) {
     _vertices.emplace_back(node);
@@ -187,7 +190,8 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
 
         auto connected_vertex_idx = edge.vertex_set.find_first();
         while (connected_vertex_idx != JoinGraphVertexSet::npos) {
-          if (connected_vertex_idx != vertex_idx2) bfs_stack.push(connected_vertex_idx);
+          if (connected_vertex_idx != vertex_idx2)
+            bfs_stack.push(connected_vertex_idx);
           connected_vertex_idx = edge.vertex_set.find_next(connected_vertex_idx);
         }
 
@@ -196,7 +200,8 @@ std::vector<JoinGraphEdge> JoinGraphBuilder::_cross_edges_between_components(
     }
   }
 
-  if (one_vertex_per_component.size() < 2) return {};
+  if (one_vertex_per_component.size() < 2)
+    return {};
 
   std::vector<JoinGraphEdge> inter_component_edges;
   inter_component_edges.reserve(one_vertex_per_component.size() - 1);

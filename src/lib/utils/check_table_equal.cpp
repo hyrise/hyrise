@@ -132,9 +132,12 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode,
                                              IgnoreNullable ignore_nullable) {
-  if (!actual_table && expected_table) return "No 'actual' table given";
-  if (actual_table && !expected_table) return "No 'expected' table given";
-  if (!actual_table && !expected_table) return "No 'expected' table and no 'actual' table given";
+  if (!actual_table && expected_table)
+    return "No 'actual' table given";
+  if (actual_table && !expected_table)
+    return "No 'expected' table given";
+  if (!actual_table && !expected_table)
+    return "No 'expected' table and no 'actual' table given";
 
   auto stream = std::stringstream{};
 
@@ -201,7 +204,8 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
           break;
         }
       }
-      if (all_null) expected_column_type = actual_column_type;
+      if (all_null)
+        expected_column_type = actual_column_type;
     }
 
     if (!boost::iequals(actual_table->column_name(column_id), expected_table->column_name(column_id))) {

@@ -23,10 +23,12 @@ using namespace opossum;  // NOLINT
 // Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
 // chain.
 bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type == LQPNodeType::Predicate) return true;
+  if (node->type == LQPNodeType::Predicate)
+    return true;
 
   // Validate can be seen as a Predicate on the MVCC column
-  if (node->type == LQPNodeType::Validate) return true;
+  if (node->type == LQPNodeType::Validate)
+    return true;
 
   // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
   // might place the join below a ValidateNode, but since it is not a "proper" join (i.e., one that returns columns
