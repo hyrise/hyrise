@@ -246,13 +246,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
     const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // For AliasNodes, just reorder/remove AttributeStatistics from the input
 
-  auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{alias_node.output_expressions().size()};
+  const auto& output_expressions = alias_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = alias_node.left_input()->output_expressions();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < alias_node.output_expressions().size(); ++expression_idx) {
-    const auto& expression = *alias_node.output_expressions()[expression_idx];
-    const auto input_column_id = alias_node.left_input()->get_column_id(expression);
-    column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
+    Assert(input_column_id, "Could not resolve " + expression.as_column_name());
+    column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
   }
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
@@ -265,12 +268,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
   // TODO(anybody) For columns newly created by a Projection no meaningful statistics can be generated yet, hence an
   //               empty AttributeStatistics object is created.
 
-  auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{projection_node.output_expressions().size()};
+  const auto& output_expressions = projection_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = projection_node.left_input()->output_expressions();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < projection_node.output_expressions().size(); ++expression_idx) {
-    const auto& expression = *projection_node.output_expressions()[expression_idx];
-    const auto input_column_id = projection_node.left_input()->find_column_id(expression);
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
@@ -289,12 +294,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
   // For AggregateNodes, statistics from group-by columns are forwarded and for the aggregate columns
   // dummy statistics are created for now.
 
-  auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{aggregate_node.output_expressions().size()};
+  const auto& output_expressions = aggregate_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = aggregate_node.left_input()->output_expressions();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < aggregate_node.output_expressions().size(); ++expression_idx) {
-    const auto& expression = *aggregate_node.output_expressions()[expression_idx];
-    const auto input_column_id = aggregate_node.left_input()->find_column_id(expression);
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
