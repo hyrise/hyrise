@@ -617,9 +617,8 @@ std::shared_ptr<AbstractExpression> LQPTranslator::_translate_expression(
       }
 
       auto subquery_parameters = PQPSubqueryExpression::Parameters{};
-      subquery_parameters.resize(subquery_expression->parameter_count());
-
       const auto parameter_count = subquery_expression->parameter_count();
+      subquery_parameters.resize(parameter_count);
 
       for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
         const auto& expression = output_expressions[column_id];

@@ -478,7 +478,9 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   fds.erase(std::remove_if(fds.begin(), fds.end(),
                            [&](auto& fd) {
                              // If there are no dependents left, we can discard the FD altogether
-                             if (fd.dependents.empty()) return true;
+                             if (fd.dependents.empty()) {
+                               return true;
+                             }
 
                              /**
                               * Remove FDs with determinant expressions that are

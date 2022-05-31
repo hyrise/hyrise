@@ -240,14 +240,14 @@ TEST_F(ExpressionUtilsTest, FindExpressionIDx) {
   EXPECT_EQ(find_expression_idx(*a_c, expression_vector), std::nullopt);
 
   EXPECT_NE(find_expression_idx(*a_a, expression_vector), std::nullopt);
-  EXPECT_EQ(*find_expression_idx(*a_a, expression_vector), size_t{0});
+  EXPECT_EQ(*find_expression_idx(*a_a, expression_vector), ColumnID{0});
 
   EXPECT_NE(find_expression_idx(*a_b, expression_vector), std::nullopt);
-  EXPECT_EQ(*find_expression_idx(*a_b, expression_vector), size_t{1});
+  EXPECT_EQ(*find_expression_idx(*a_b, expression_vector), ColumnID{1});
 
   const auto a_a_copy = a_a->deep_copy();
   EXPECT_NE(find_expression_idx(*a_a_copy, expression_vector), std::nullopt);
-  EXPECT_EQ(*find_expression_idx(*a_a_copy, expression_vector), size_t{0});
+  EXPECT_EQ(*find_expression_idx(*a_a_copy, expression_vector), ColumnID{0});
 }
 
 }  // namespace opossum

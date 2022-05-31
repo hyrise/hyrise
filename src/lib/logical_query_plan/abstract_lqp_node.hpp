@@ -156,9 +156,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
 
   /**
    * Calls the passed @param visitor on each of the output expressions.
-   * The visitor returns `ExpressionIteration`, indicating whether the remaining expressions should be visited
-   * as well.
-   * Prefer this method over multiple calls of `find_column_id()` or `get_column_id`, as it computes the output
+   * The visitor returns `ExpressionIteration`, indicating whether the remaining expressions should be visited as well.
+   * Prefer this method over multiple calls of `find_column_id()` or `get_column_id()`, as it computes the output
    * expressions only once.
    *
    * @tparam Visitor      Functor called with ColumnID and the expression as a param.
