@@ -4,11 +4,6 @@
 
 namespace opossum {
 
-size_t PartialHashIndex::estimate_memory_consumption(const ChunkOffset row_count, const ChunkOffset distinct_count,
-                                                     const uint32_t value_bytes) {
-  Fail("PartialHashIndex::estimate_memory_consumption() is not implemented yet");
-}
-
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
                                    const ColumnID column_id)
     : AbstractTableIndex{get_table_index_type_of<PartialHashIndex>()}, _column_id(column_id) {

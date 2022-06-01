@@ -20,13 +20,6 @@ class PartialHashIndex : public AbstractTableIndex {
   friend PartialHashIndexTest;
 
  public:
-  /**
-   * Predicts the memory consumption in bytes of creating this index.
-   * See AbstractChunkIndex::estimate_memory_consumption()
-   */
-  static size_t estimate_memory_consumption(const ChunkOffset row_count, const ChunkOffset distinct_count,
-                                            const uint32_t value_bytes);
-
   PartialHashIndex() = delete;
   PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID);
   PartialHashIndex(const DataType data_type, const ColumnID);
