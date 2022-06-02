@@ -12,6 +12,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 
+#include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 #include "operators/print.hpp"
 #include "operators/sort.hpp"
@@ -28,7 +29,7 @@ using namespace opossum;
 // input and output settings 
 ///////////////////////////////
 constexpr auto INDEX_META_DATA_FILE = "../../out/400mio/index_meta_data_multi_index.csv";
-constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
+constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
 
 // table and compression settings
 ///////////////////////////////
@@ -62,7 +63,7 @@ const std::vector<std::vector<int>> BM_BETWEEN_VAL_LONGITUDE {{552444244, 552444
 const std::vector<std::vector<int>> BM_BETWEEN_VAL_TIMESTAMP {{1545152588, 1545153213}, {1545125220, 1545195923}, {1545101636, 1545220279}, {1544986222, 1545315256}, {1544806072, 1545537953}, {1544611869, 1545697161}, {1544417407, 1545879041}, {1544199073, 1546078740}, {1544001704, 1546335968}, {1543613596, 1546772391}, {1543132978, 1547148186}, {1542701374, 1547525107}, {1542301289, 1547873717}, {1542094512, 1548046293}, {1541871716, 1548196911}, {1541473344, 1548555299}, {1541026811, 1548975682}};
 
 //const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 4}, {1, 2}, {1, 2, 3}, {3, 1, 2}, {2, 1, 3}, {1, 2, 3, 4}, {1, 2, 0}};
-const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 4}};
+const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 4}, {1, 2}};
 std::map<std::vector<int> ,std::shared_ptr<AbstractIndex>> multi_indexes; 
 //const std::vector<int> SCAN_VALUES = {4, 1, 1, 1, 1};
 const auto INDEX_VALUES = MULTI_COLUMN_INDEXES.size();
@@ -265,7 +266,81 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
 }
 
 BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan_04)(benchmark::State& state) {
-  
+  std::vector<std::vector<std::tuple<ColumnID, int32_t, int32_t>>> workload{
+                                                                            {{ColumnID{0}, 0, 4},
+                                                                             {ColumnID{4}, 0, 1}
+                                                                            },
+                                                                            {{ColumnID{1}, 251111686, 251424324},
+                                                                             {ColumnID{2}, 552219192, 552585334},
+                                                                             {ColumnID{3}, 1544417407, 1545879041},
+                                                                             {ColumnID{4}, 0, 1}
+                                                                            },
+                                                                            {{ColumnID{0}, 0, 511},
+                                                                             {ColumnID{1}, 250916446, 251875782},
+                                                                             {ColumnID{2}, 551944417, 552758956}
+                                                                            }};
+
+  for (const auto& multi_column_def : MULTI_COLUMN_INDEXES) {
+    std::cout << "Multi column index: ";
+    for (const auto column_id : multi_column_def) {
+      std::cout << column_id << " ";
+    }
+    std::cout << std::endl;
+
+    const auto& index = multi_indexes[multi_column_def];
+    std::cout << "Memory consumption is: " << index->memory_consumption() << std::endl;
+
+    for (const auto& query : workload) {
+      std::cout << "############\n############ Query: ";
+      for (const auto& scan : query) std::cout << std::get<0>(scan) << " ";
+      std::cout << "\n############" << std::endl;
+
+      std::vector<AllTypeVariant> lower_bounds;
+      std::vector<AllTypeVariant> upper_bounds;
+
+      // Starting from the index' first column, check how many scans we can cover.
+      auto found_match = false;
+      for (const auto column_id : multi_column_def) {
+        // For every scan column, check if it is the currently checked index column. If so, append search values and continue
+        for (const auto& scan : query) {
+          const auto scan_column_id = std::get<0>(scan);
+          if (column_id == scan_column_id) {
+            const auto lower_bound = std::get<1>(scan);
+            const auto upper_bound = std::get<2>(scan);
+
+            found_match = true;
+            lower_bounds.push_back(lower_bound);
+            upper_bounds.push_back(upper_bound);
+          }
+        }
+
+        if (!found_match) {
+          // If the currently scan column is not part of the index, neglect all other scans
+          // (composite index has to be used from start without "holes"). 
+          break;
+        }
+      }
+
+      std::cout << "For the current query, we found the following search values:\n\tlower: ";
+      for (const auto lower : lower_bounds) std::cout << lower << " ";
+      std::cout << "\n\tupper: ";
+      for (const auto upper : upper_bounds) std::cout << upper << " ";
+      std::cout << std::endl;
+      
+      Assert(lower_bounds.size() == upper_bounds.size(), "Narf");
+      if (!lower_bounds.empty()) {
+        auto range_begin = index->lower_bound(lower_bounds);
+        auto range_end = index->upper_bound(upper_bounds);
+   
+        // TODO: for fair evaluation, push_back to std::vector<RowID> ...
+        //for (; range_begin < range_end; ++range_begin) {
+         // std::cout << *range_begin << std::endl;
+        //}
+        std::cout << "Found " << std::distance(range_begin, range_end) << " matches." << std::endl;
+      }
+    }
+  }
+
 }
 
 static void MultiIndexCustomArguments(benchmark::internal::Benchmark* b) {
