@@ -38,14 +38,8 @@ def queries_are_setup(query_dir, queries_per_benchmark):
 
 def parse_args():
     ap = argparse.ArgumentParser(description="Setup data and queries for the Public BI Benchmark")
+    ap.add_argument("benchmark_source", type=str, help="Path to the Public BI Benchmark repository")
     ap.add_argument("data_dir", type=str, help="Directory where tables and queries will be located")
-    ap.add_argument(
-        "-b",
-        "--benchmark_source",
-        type=str,
-        help="Path to the public_bi_benchmark repository",
-        default="third_party/public_bi_benchmark",
-    )
     return ap.parse_args()
 
 
