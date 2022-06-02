@@ -68,8 +68,10 @@ class LQPTranslator {
       const std::shared_ptr<AbstractLQPNode>& node) const;
 
   // Translate LQP- to PQPExpressions
-  std::shared_ptr<AbstractExpression> _translate_expression(const std::shared_ptr<AbstractExpression>& lqp_expression,
-                                                            const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractExpression> _translate_expression(
+      const std::shared_ptr<AbstractExpression>& lqp_expression, const std::shared_ptr<AbstractLQPNode>& node,
+      const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions) const;
+
   std::vector<std::shared_ptr<AbstractExpression>> _translate_expressions(
       const std::vector<std::shared_ptr<AbstractExpression>>& lqp_expressions,
       const std::shared_ptr<AbstractLQPNode>& node) const;
