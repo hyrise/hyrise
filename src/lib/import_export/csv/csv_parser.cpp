@@ -167,7 +167,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
       continue;
     }
 
-    if (elem == meta.config.separator && pos != 0 & csv_content[pos - 1] == meta.config.escape) {
+    if (!meta.config.rfc_mode && elem == meta.config.separator && pos != 0 & csv_content[pos - 1] == meta.config.escape) {
       auto escape_is_escaped = pos != 1 && csv_content[pos - 2] == meta.config.escape;
       if (!escape_is_escaped) {
         continue;

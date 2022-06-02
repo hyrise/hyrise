@@ -176,6 +176,7 @@ int main(int argc, char* argv[]) {
       csv_meta.config.null_handling = NullHandling::NullStringAsNull;
       csv_meta.config.quote = '\0';
       csv_meta.config.escape = '\\';
+      csv_meta.config.rfc_mode = false;
       CsvWriter::generate_meta_info_file(*static_table_node.table, table_meta_path, csv_meta);
     }
   }
