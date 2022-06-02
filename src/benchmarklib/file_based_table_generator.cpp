@@ -16,7 +16,8 @@ using namespace std::string_literals;  // NOLINT
 namespace opossum {
 
 FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config,
-                                                 const std::string& path, const std::optional<std::unordered_set<std::string>>& table_subset)
+                                                 const std::string& path,
+                                                 const std::optional<std::unordered_set<std::string>>& table_subset)
     : AbstractTableGenerator(benchmark_config), _path(path), _table_subset(table_subset) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::generate() {

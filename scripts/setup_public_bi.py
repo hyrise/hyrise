@@ -1,11 +1,10 @@
 #!/usr/bin/python3
 
-# This script is meant to be called by hyriseBenchmarkJoinOrder, but nothing stops you from calling it yourself.
-# It downloads the IMDB used by the JoinOrderBenchmark and unzips it. We do this in Python and not in C++ because
-# downloading and unzipping is straight forward in Python.
+# This script is meant to be called by hyriseBenchmarkPublicBI, but nothing stops you from calling it yourself.
+# It downloads the datasets used by the Public BI Benchmark, unpacks it, and copies the queries to a single place.
+# We do this in Python and not in C++ because downloading and unpacking is straight forward in Python.
 
 import argparse
-import hashlib
 import os
 import sys
 import urllib.request
@@ -44,7 +43,6 @@ def parse_args():
 
 
 def main(data_dir, benchmark_source):
-
     tables_per_benchmark = dict()
     queries_per_benchmark = dict()
 
@@ -53,28 +51,22 @@ def main(data_dir, benchmark_source):
 
     for benchmark in benchmarks:
         current_benchmark_dir = os.path.join(benchmark_dir, benchmark)
-        tables_per_benchmark[benchmark] = [
-            table_name[: -len(".table.sql")] for table_name in os.listdir(os.path.join(current_benchmark_dir, "tables"))
-        ]
+        tables = os.listdir(os.path.join(current_benchmark_dir, "tables"))
+        tables_per_benchmark[benchmark] = [table_name[: -len(".table.sql")] for table_name in tables]
         queries_per_benchmark[benchmark] = os.listdir(os.path.join(current_benchmark_dir, "queries"))
 
     print("- Retrieving the Public BI dataset.")
-    num_files = sum([len(tables) for tables in tables_per_benchmark.values()])
     table_dir = os.path.join(data_dir, "tables")
-    query_dir = os.path.join(data_dir, "queries")
-    abort = (False, 0)
-
     if tables_are_setup(table_dir, tables_per_benchmark) or True:
         print("- Public BI tables already complete, no setup action required")
     else:
+        num_files = sum([len(tables) for tables in tables_per_benchmark.values()])
         print(f"- Downloading {num_files} tables")
 
         url_file_name = "data-urls.txt"
         if not os.path.isdir(table_dir):
             os.makedirs(table_dir)
         for benchmark in benchmarks:
-            if abort[0]:
-                break
             table_name_regex = re.compile(f"(?<={benchmark}/).+(?=\\.csv.bz2)")
             with open(os.path.join(benchmark_dir, benchmark, url_file_name)) as url_file:
                 for line in url_file:
@@ -90,8 +82,8 @@ def main(data_dir, benchmark_source):
                         file_size = int(meta["Content-Length"])
                     else:
                         print(f"- Aborting. Could not retrieve the file size for {benchmark}/{table_name}")
-                        abort = (True, 1)
-                        break
+                        clean_up(table_dir, including_tables=True)
+                        sys.exit(1)
 
                     table_path = os.path.join(table_dir, f"{table_name}.csv.bz2")
                     if os.path.exists(table_path) and os.path.getsize(table_path) == file_size:
@@ -116,9 +108,9 @@ def main(data_dir, benchmark_source):
                                     status = status + chr(8) * (len(status) + 1)
                                     print(status, end="\r")
                             except Exception:
-                                print("- Aborting. Something went wrong during the download. Cleaning up.")
-                                abort = (True, 2)
-                                break
+                                print("- Aborting. Something went wrong during the download. Cleaning up")
+                                clean_up(table_dir, including_tables=True)
+                                sys.exit(2)
                         print()
                     print(" - Decompressing the file...")
                     try:
@@ -126,10 +118,12 @@ def main(data_dir, benchmark_source):
                             with open(table_path[: -len(".bz2")], "w") as decompressed_file:
                                 decompressed_file.write(compressed_file.read().decode())
                     except Exception:
-                        print("- Aborting. Something went wrong during decompression. Cleaning up.")
-                        abort = (True, 3)
+                        print("- Aborting. Something went wrong during decompression. Cleaning up")
+                        clean_up(table_dir, including_tables=True)
+                        sys.exit(3)
 
     print("- Preparing the Public BI queries.")
+    query_dir = os.path.join(data_dir, "queries")
     if queries_are_setup(query_dir, queries_per_benchmark):
         print("- Public BI queries already complete, no setup action required")
     else:
@@ -143,12 +137,7 @@ def main(data_dir, benchmark_source):
                     with open(target_path, "w") as target_file:
                         target_file.write(source_file.read())
 
-    if not abort[0]:
-        clean_up(table_dir)
-    else:
-        clean_up(table_dir, including_tables=True)
-        sys.exit(abort[1])
-
+    clean_up(table_dir)
     print(f"- {os.path.basename(__file__)} ran sucessfully.")
 
 

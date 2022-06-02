@@ -12,7 +12,8 @@ void CsvWriter::write(const Table& table, const std::string& filename, const Par
   _generate_content_file(table, filename, config);
 }
 
-void CsvWriter::generate_meta_info_file(const Table& table, const std::string& filename, const std::optional<CsvMeta>& csv_meta) {
+void CsvWriter::generate_meta_info_file(const Table& table, const std::string& filename,
+                                        const std::optional<CsvMeta>& csv_meta) {
   auto meta = csv_meta ? *csv_meta : CsvMeta{};
 
   // Column Types

@@ -10,7 +10,8 @@ namespace opossum {
 
 class FileBasedTableGenerator : virtual public AbstractTableGenerator {
  public:
-  FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string& path, const std::optional<std::unordered_set<std::string>>& table_subset = std::nullopt);
+  FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config, const std::string& path,
+                          const std::optional<std::unordered_set<std::string>>& table_subset = std::nullopt);
 
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
