@@ -25,9 +25,7 @@ void Session::run() {
   while (!_terminate_session) {
     try {
       _handle_request();
-    } catch (const ClientDisconnectException&) {
-      return;
-    } catch (const std::exception& e) {
+    } catch (const ClientDisconnectException&) { return; } catch (const std::exception& e) {
       std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
                 << e.what() << std::endl;
       const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, e.what()}};
