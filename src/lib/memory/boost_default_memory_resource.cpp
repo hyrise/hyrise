@@ -14,7 +14,7 @@ namespace boost::container::pmr {
 class default_resource_impl : public memory_resource {
  public:
   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-    We discourage manual allocation in Hyrise, return std::malloc(bytes);
+    return std::malloc(bytes);
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
