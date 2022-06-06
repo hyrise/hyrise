@@ -805,11 +805,12 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
       return _evaluate_extract_substr<5, 2>(*from_result);
     case DatetimeComponent::Day:
       return _evaluate_extract_substr<8, 2>(*from_result);
-
     case DatetimeComponent::Hour:
+      return _evaluate_extract_substr<11, 2>(*from_result);
     case DatetimeComponent::Minute:
+      return _evaluate_extract_substr<14, 2>(*from_result);
     case DatetimeComponent::Second:
-      Fail("Hour, Minute and Second not available in String Datetimes");
+      return _evaluate_extract_substr<17, 2>(*from_result);
   }
   Fail("Invalid enum value");
 }
@@ -817,7 +818,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract_expression(
     const ExtractExpression& extract_expression) {
-  Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
+  Fail("Only Strings (YYYY-MM-DD HH:MM:SS) supported for Datetimes right now");
 }
 
 template <size_t offset, size_t count>
@@ -831,8 +832,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
     const auto from_view_size = from_view.size();
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
-        DebugAssert(from_view.value(chunk_offset).size() == 10u,
-                    "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
+        DebugAssert((from_view.value(chunk_offset).size() == 10u || from_view.value(chunk_offset).size() == 19u) && from_view.value(chunk_offset).size() > offset + count,
+                    "Invalid DatetimeString '" + std::string{from_view.value(chunk_offset)} + "'");
         values[chunk_offset] = from_view.value(chunk_offset).substr(offset, count);
       }
     }
