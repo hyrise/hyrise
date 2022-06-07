@@ -6,7 +6,6 @@ namespace opossum {
 
 class LQPParsePlugin : public AbstractPlugin {
  public:
-
   std::string description() const final;
 
   void start() final;
