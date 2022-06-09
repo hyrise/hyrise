@@ -84,6 +84,24 @@ TEST_F(UnionNodeTest, Copy) { EXPECT_EQ(*_union_node->deep_copy(), *_union_node)
 
 TEST_F(UnionNodeTest, NodeExpressions) { ASSERT_EQ(_union_node->node_expressions.size(), 0u); }
 
+TEST_F(UnionNodeTest, InvalidInputExpressions) {
+  // Ensure to forbid a union of nodes with different expressions, i.e., different columns.
+  {
+    auto union_node = UnionNode::make(SetOperationMode::Positions);
+    union_node->set_left_input(_mock_node1);
+    union_node->set_right_input(_mock_node2);
+
+    EXPECT_THROW(union_node->output_expressions(), std::logic_error);
+  }
+  {
+    auto union_node = UnionNode::make(SetOperationMode::All);
+    union_node->set_left_input(_mock_node1);
+    union_node->set_right_input(_mock_node2);
+
+    EXPECT_THROW(union_node->output_expressions(), std::logic_error);
+  }
+}
+
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});

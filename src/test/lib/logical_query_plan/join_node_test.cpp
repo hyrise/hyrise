@@ -74,6 +74,11 @@ TEST_F(JoinNodeTest, OutputColumnExpressions) {
   EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
   EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
   EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
+
+  ASSERT_EQ(_semi_join_node->output_expressions().size(), 3u);
+  EXPECT_EQ(*_semi_join_node->output_expressions().at(0), *_t_a_a);
+  EXPECT_EQ(*_semi_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_semi_join_node->output_expressions().at(2), *_t_a_c);
 }
 
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
