@@ -86,9 +86,16 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {  
+  auto pruned_column_ids = std::vector<ColumnID>{};
+  auto number_of_pruned_column_ids = _index_column_id_before_pruning - _adjusted_primary_predicate.column_ids.second;
+
+  for (auto pruned_index = ColumnID{0}; pruned_index < number_of_pruned_column_ids; ++pruned_index) {
+    pruned_column_ids.emplace_back(pruned_index);
+  }
+
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                     _secondary_predicates, _index_side);
+                                     _secondary_predicates, _index_side, pruned_column_ids);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
