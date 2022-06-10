@@ -1813,17 +1813,17 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         // values, and we cannot check this later due to the lack of proper data types.
         AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as " +
                                                              std::string{magic_enum::enum_name(target_hsql_data_type)});
-        const auto input_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
+        const auto input_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
 
         if (target_hsql_data_type == hsql::DataType::DATE) {
-          const auto date = string_to_date(std::string{input_string});
-          AssertInput(date, "'" + std::string{input_string} + "' is not a valid date");
+          const auto date = string_to_date(input_string);
+          AssertInput(date, "'" + input_string + "' is not a valid date");
           return std::const_pointer_cast<AbstractExpression>(left);
         }
 
         if (target_hsql_data_type == hsql::DataType::DATETIME) {
-          const auto date_time = string_to_date_time(std::string{input_string});
-          AssertInput(date_time, "'" + std::string{input_string} + "' is not a valid date time");
+          const auto date_time = string_to_date_time(input_string);
+          AssertInput(date_time, "'" + input_string + "' is not a valid date time");
           // Overflowing time components are added to the subsequent unit while parsing, and we want to get a
           // semantically correct value.
           return value_(pmr_string{date_time_to_string(*date_time)});
