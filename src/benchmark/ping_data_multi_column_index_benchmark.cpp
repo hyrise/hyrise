@@ -29,7 +29,7 @@ using namespace opossum;
 // input and output settings 
 ///////////////////////////////
 constexpr auto INDEX_META_DATA_FILE = "../../out/400mio/index_meta_data_multi_index.csv";
-constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
+constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
 
 // table and compression settings
 ///////////////////////////////
@@ -38,6 +38,8 @@ const auto CHUNK_SIZE = size_t{40'000'000};
 const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 //const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
 const auto ORDER_COLUMNS = std::vector{"unsorted"};
+
+// Workload
 
 std::vector<std::vector<std::tuple<ColumnID, int32_t, int32_t>>> WORKLOAD{
                                                                           {{ColumnID{0}, 0, 4},
@@ -51,13 +53,30 @@ std::vector<std::vector<std::tuple<ColumnID, int32_t, int32_t>>> WORKLOAD{
                                                                           {{ColumnID{0}, 0, 511},
                                                                            {ColumnID{1}, 250916446, 251875782},
                                                                            {ColumnID{2}, 551944417, 552758956}
+                                                                          },
+                                                                          {{ColumnID{3}, 0, 1541473344},
+                                                                           {ColumnID{1}, 250552193, 252294631},
+                                                                           {ColumnID{2}, 551467322, 553438739}
+                                                                          },
+                                                                          {{ColumnID{0}, 0, 511},
+                                                                           {ColumnID{3}, 0, 1544417407}
+                                                                          },
+                                                                          {{ColumnID{1}, 251186996, 251229239},
+                                                                           {ColumnID{2}, 552421152, 552466309},
+                                                                           {ColumnID{3}, 1543132978, 1547148186}
                                                                           }};
 
-const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 4}, {1, 2}};
+// Index candidates
+
+const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 1}, {1, 0}, {0, 4}, {4, 0}, {0, 3}, {3, 0}, {1, 2}, {2, 1}, {1, 3}, {3, 1}, 
+                                                          {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0},
+                                                          {1, 2, 3}, {1, 3, 2}, {2, 1, 3}, {2, 3, 1}, {3, 1, 2}, {3, 2, 1},
+                                                          {1, 2, 3, 4}, {1, 3, 2, 4}, {2, 1, 3, 4}, {2, 3, 1, 4}, {3, 1, 2, 4}, {3, 2, 1, 4},
+                                                          {4, 2, 3, 1}, {4, 3, 2, 1}, {2, 4, 3, 1}, {2, 3, 4, 1}, {3, 4, 2, 1}, {3, 2, 4, 1},
+                                                          {1, 4, 3, 2}, {1, 3, 4, 2}, {4, 1, 3, 2}, {4, 3, 1, 2}, {3, 1, 4, 2}, {3, 4, 1, 2},
+                                                          {1, 2, 4, 3}, {1, 4, 2, 3}, {2, 1, 4, 3}, {2, 4, 1, 3}, {4, 1, 2, 3}, {4, 2, 1, 3} 
+                                                         };
 std::map<std::pair<std::vector<int>, ChunkID>, std::shared_ptr<AbstractIndex>> multi_indexes; 
-//const std::vector<int> SCAN_VALUES = {4, 1, 1, 1, 1};
-const auto INDEX_VALUES = MULTI_COLUMN_INDEXES.size();
-const auto INDEX_LENGTH = 2;
 
 ///////////////////////////////
 // methods
@@ -138,7 +157,7 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
       // file for table stats
 
       std::ofstream index_meta_data_csv_file(INDEX_META_DATA_FILE);
-      index_meta_data_csv_file << "TABLE_NAME,COLUMN_ID,SECOND_COLUMN_ID,ORDER_BY,ENCODING,CHUNK_ID,ROW_COUNT,SIZE_IN_BYTES\n"; 
+      index_meta_data_csv_file << "TABLE_NAME,INDEX_ID,ORDER_BY,ENCODING,CHUNK_ID,ROW_COUNT,SIZE_IN_BYTES\n"; 
       
       // Sort table and add sorted tables to the storage manager
       // Load origninal table from tbl file with specified chunk size
@@ -170,7 +189,7 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
         // create index for each chunk and each segment 
         if (encoding.encoding_type == EncodingType::Dictionary) {
-          for (size_t index_config_id = 0; index_config_id < INDEX_VALUES; ++index_config_id) {
+          for (size_t index_config_id = 0; index_config_id < MULTI_COLUMN_INDEXES.size(); ++index_config_id) {
 
             std::cout << "Creating indexes: ";
 
@@ -184,7 +203,7 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& index = new_table->get_chunk(chunk_id)->create_index<CompositeGroupKeyIndex>(column_ids);
               multi_indexes.insert({{MULTI_COLUMN_INDEXES[index_config_id], chunk_id}, index});
-              index_meta_data_csv_file << new_table_name << "," << new_table->column_name(column_ids[0]) << "," << new_table->column_name(column_ids[1]) << "," << order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << index->memory_consumption() << "\n";
+              index_meta_data_csv_file << new_table_name << "," << index_config_id << "," << order_by_column << ","<< encoding << ","<< chunk_id << "," << CHUNK_SIZE << "," << index->memory_consumption() << "\n";
             }
             std::cout << "done " << std::endl;
           }
@@ -208,56 +227,7 @@ class PingDataMultiIndexBenchmarkFixture : public MicroBenchmarkBasicFixture {
 // benchmarks
 ///////////////////////////////
 
-/*
 BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(benchmark::State& state) {
-  auto& storage_manager = Hyrise::get().storage_manager;
-
-  const auto order_by_column = ORDER_COLUMNS[state.range(0)];
-  const auto index_config = MULTI_COLUMN_INDEXES[state.range(1)];
-  const auto search_value_index = state.range(2);
-  const auto scan_op = state.range(3);
-
-  const auto encoding = SegmentEncodingSpec{EncodingType::Dictionary};
-  const auto encoding_type = encoding_type_to_string.left.at(encoding.encoding_type);
-  const auto table_name = get_table_name(TABLE_NAME_PREFIX, order_by_column, encoding_type);
-  
-  auto table = storage_manager.get_table(table_name);
-  auto table_wrapper = std::make_shared<TableWrapper>(table);
-  table_wrapper->execute();
-
-  auto scan_column_ids = std::vector<ColumnID>{};
-  if (scan_op == 0) {
-    scan_column_ids.emplace_back(index_config[0]);
-  } else {
-    for (const auto& index_column : index_config) {
-      scan_column_ids.emplace_back(index_column);
-    }
-  }
-
-  // setting up right value (i.e., the search value)
-  std::vector<AllTypeVariant> right_values;
-  for (const auto& scan_column_index : scan_column_ids) {
-    if (scan_column_index == 0) { right_values.emplace_back(BM_VAL_CAPTAIN_ID[search_value_index]); }
-    if (scan_column_index == 1) { right_values.emplace_back(BM_VAL_LATITUDE[search_value_index]); }
-    if (scan_column_index == 2) { right_values.emplace_back(BM_VAL_LONGITUDE[search_value_index]); }
-    if (scan_column_index == 3) { right_values.emplace_back(BM_VAL_TIMESTAMP[search_value_index]); }
-    if (scan_column_index == 4) { right_values.emplace_back(BM_VAL_CAPTAIN_STATUS[search_value_index]); }
-  }
-
-  std::vector<ChunkID> indexed_chunks;
-  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-    indexed_chunks.emplace_back(chunk_id);
-  }
-
-  for (auto _ : state) {
-    const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::CompositeGroupKey, scan_column_ids, PredicateCondition::LessThanEquals, right_values);
-    index_scan->included_chunk_ids = indexed_chunks;
-    index_scan->execute();
-  }
-}
-*/
-
-BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan_04)(benchmark::State& state) {
   const auto multi_column_index_id = state.range(0);
   const auto query_id = state.range(1);
 
@@ -270,11 +240,11 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan_0
   //}
   //std::cout << " ]" << std::endl;
 
-  std::cout << "############ Index: ";
-  for (const auto& column_id : multi_column_def) std::cout << column_id << " ";
-  std::cout << "\t\t  Query: ";
-  for (const auto& scan : query) std::cout << std::get<0>(scan) << " ";
-  std::cout << std::endl;
+  //std::cout << "############ Index: ";
+  //for (const auto& column_id : multi_column_def) std::cout << column_id << " ";
+  //std::cout << "\t\t  Query: ";
+  //for (const auto& scan : query) std::cout << std::get<0>(scan) << " ";
+  //std::cout << std::endl;
 
   std::vector<AllTypeVariant> lower_bounds;
   std::vector<AllTypeVariant> upper_bounds;
@@ -308,14 +278,15 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan_0
   //for (const auto upper : upper_bounds) std::cout << upper << " ";
   //std::cout << std::endl;
 
-  Assert(lower_bounds.size() == upper_bounds.size(), "Narf");
+  Assert(lower_bounds.size() == upper_bounds.size(), "Cardinality of lower_bounds and upper_bounds should be equal");
   
   auto& storage_manager = Hyrise::get().storage_manager;
 
   if (!lower_bounds.empty()) {
+    const auto& table = storage_manager.get_table("ping_orderby_unsorted_encoding_Dictionary");
+    const auto chunk_count = table->chunk_count();
+
     for (auto _ : state) {
-      const auto& table = storage_manager.get_table("ping_orderby_unsorted_encoding_Dictionary");
-      const auto chunk_count = table->chunk_count();
       auto position_list = std::vector<RowID>{};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& index = multi_indexes[{multi_column_def, chunk_id}];
@@ -340,7 +311,6 @@ static void MultiIndexCustomArguments(benchmark::internal::Benchmark* b) {
   }
 }
 
-BENCHMARK_REGISTER_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan_04)->Apply(MultiIndexCustomArguments);
-//BENCHMARK_REGISTER_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)->Apply(MultiIndexCustomArguments);
+BENCHMARK_REGISTER_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)->Apply(MultiIndexCustomArguments);
 
 }  // namespace opossum
