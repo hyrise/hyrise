@@ -61,7 +61,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
-#include "utils/date_utils.hpp"
+#include "utils/date_time_utils.hpp"
 #include "utils/meta_table_manager.hpp"
 
 #include "SQLParser.h"

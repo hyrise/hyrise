@@ -1,4 +1,4 @@
-#include "date_utils.hpp"
+#include "date_time_utils.hpp"
 
 #include <magic_enum.hpp>
 
@@ -28,6 +28,7 @@ std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& d
   } catch (const boost::wrapexcept<boost::gregorian::bad_month>&) {
   } catch (const boost::wrapexcept<boost::gregorian::bad_year>&) {
   } catch (const boost::wrapexcept<boost::bad_lexical_cast>&) {
+  } catch (const std::out_of_range&) {
   }
   return std::nullopt;
 }
