@@ -7,18 +7,14 @@
 
 namespace boost::container::pmr {
 
-// We discourage manual memory management in Hyrise (such as malloc, or new), but in case of allocator/memory resource
-// implementations, it is fine.
-// NOLINTBEGIN(cppcoreguidelines-owning-memory,hicpp-no-malloc)
-
-class default_resource_impl : public memory_resource {
+class default_resource_impl : public memory_resource {  // NOLINT(readability-identifier-naming)
  public:
   void* do_allocate(std::size_t bytes, std::size_t alignment) override {
-    return std::malloc(bytes);
+    return std::malloc(bytes);  // NOLINT(cppcoreguidelines-owning-memory,hicpp-no-malloc)
   }
 
   void do_deallocate(void* p, std::size_t bytes, std::size_t alignment) override {
-    std::free(p);
+    std::free(p);  // NOLINT(cppcoreguidelines-owning-memory,hicpp-no-malloc)
   }
 
   [[nodiscard]] bool do_is_equal(const memory_resource& other) const BOOST_NOEXCEPT override {
