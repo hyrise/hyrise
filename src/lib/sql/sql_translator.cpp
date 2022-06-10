@@ -1370,6 +1370,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           std::cout << "WARNING: Parsing TIME to string since date and time data types are not yet supported\n";
           column_definition.data_type = DataType::String;
           break;
+        case hsql::DataType::BOOLEAN:
+          std::cout << "WARNING: Parsing BOOLEAN to string\n";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
@@ -1799,16 +1803,33 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprCast: {
       const auto source_data_type = left->data_type();
-      if (expr.columnType.data_type == hsql::DataType::DATE) {
-        AssertInput(source_data_type == DataType::String, "Cannot cast " + left->as_column_name() + " as Date");
-        // We do not know if an expression to be casted other than a ValueExpression actually contains dates, and we
-        // cannot check this later due to the lack of a Date data type
-        AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as Date");
-        const auto date_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
-        const auto date = string_to_date(std::string{date_string});
-        if (date) return std::const_pointer_cast<AbstractExpression>(left);
-        FailInput("'" + std::string{date_string} + "' is not a valid date");
+      const auto target_hsql_data_type = expr.columnType.data_type;
+
+      if (target_hsql_data_type == hsql::DataType::DATE || target_hsql_data_type == hsql::DataType::DATETIME) {
+        AssertInput(source_data_type == DataType::String,
+                    "Cannot cast " + left->as_column_name() + " as " +
+                        std::string{magic_enum::enum_name(target_hsql_data_type)});
+        // We do not know if an expression to be casted other than a ValueExpression actually contains date time
+        // values, and we cannot check this later due to the lack of proper data types.
+        AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as " +
+                                                             std::string{magic_enum::enum_name(target_hsql_data_type)});
+        const auto input_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
+
+        if (target_hsql_data_type == hsql::DataType::DATE) {
+          const auto date = string_to_date(std::string{input_string});
+          AssertInput(date, "'" + std::string{input_string} + "' is not a valid date");
+          return std::const_pointer_cast<AbstractExpression>(left);
+        }
+
+        if (target_hsql_data_type == hsql::DataType::DATETIME) {
+          const auto date_time = string_to_date_time(std::string{input_string});
+          AssertInput(date_time, "'" + std::string{input_string} + "' is not a valid date time");
+          // Overflowing time components are added to the subsequent unit while parsing, and we want to get a
+          // semantically correct value.
+          return value_(pmr_string{date_time_to_string(*date_time)});
+        }
       }
+
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
       AssertInput(data_type_iter != supported_hsql_data_types.cend(),
                   "CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
