@@ -61,10 +61,10 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(date_time_with_microseconds->time_of_day().total_microseconds(), total_microseconds + 500'000);
 
   const auto date_time_without_time = string_to_date_time("2000-01-01 00:00:00");
-  EXPECT_EQ(string_to_date_time("2000-01-01 00:"), date_time_without_time);
-  EXPECT_EQ(string_to_date_time("2000-01-01 00:00"), date_time_without_time);
-  EXPECT_EQ(string_to_date_time("2000-01-01 00:00:00.000000"), date_time_without_time);
-  EXPECT_EQ(string_to_date_time("2000-01-01 0:0:0"), date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 00:"), date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 00:00"), date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 00:00:00.000000"), date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 0:0:0"), date_time_without_time);
 
   const auto date_time_with_overflow = string_to_date_time("2000-12-31 25:61:61");
   EXPECT_NE(date_time_with_overflow, std::nullopt);
@@ -75,7 +75,6 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(date_time_with_overflow->time_of_day().minutes(), 2);
   EXPECT_EQ(date_time_with_overflow->time_of_day().seconds(), 1);
 }
-
 
 TEST_F(DateTimeUtilsTest, DateInterval) {
   const auto date = boost::gregorian::date{2000, 1, 31};
