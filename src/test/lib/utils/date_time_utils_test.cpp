@@ -47,7 +47,7 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(date_time_without_microseconds->time_of_day().hours(), 12);
   EXPECT_EQ(date_time_without_microseconds->time_of_day().minutes(), 13);
   EXPECT_EQ(date_time_without_microseconds->time_of_day().seconds(), 14);
-  const long total_microseconds = ((12 * 3600) + (13 * 60) + 14) * 1'000'000l;
+  const auto total_microseconds = ((12 * 3600) + (13 * 60) + 14) * 1'000'000l;
   EXPECT_EQ(date_time_without_microseconds->time_of_day().total_microseconds(), total_microseconds);
 
   const auto date_time_with_microseconds = string_to_date_time("2000-01-31 12:13:14.5");
@@ -61,10 +61,10 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(date_time_with_microseconds->time_of_day().total_microseconds(), total_microseconds + 500'000);
 
   const auto date_time_without_time = string_to_date_time("2000-01-01 00:00:00");
-  EXPECT_EQ(*string_to_date_time("2000-01-01 00:"), date_time_without_time);
-  EXPECT_EQ(*string_to_date_time("2000-01-01 00:00"), date_time_without_time);
-  EXPECT_EQ(*string_to_date_time("2000-01-01 00:00:00.000000"), date_time_without_time);
-  EXPECT_EQ(*string_to_date_time("2000-01-01 0:0:0"), date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 00:"), *date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 00:00"), *date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 00:00:00.000000"), *date_time_without_time);
+  EXPECT_EQ(*string_to_date_time("2000-01-01 0:0:0"), *date_time_without_time);
 
   const auto date_time_with_overflow = string_to_date_time("2000-12-31 25:61:61");
   EXPECT_NE(date_time_with_overflow, std::nullopt);
