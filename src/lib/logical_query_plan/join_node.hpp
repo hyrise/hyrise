@@ -53,10 +53,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
   /**
-   * There are two types of joins in LQPs: First, joins resulting from the SQL query translation, and second,
-   * artificial semi joins added by the SemiJoinReductionRule to pre-filter join tables.
-   *
-   * @returns true if this JoinNode was added artificially by the SemiJoinReductionRule for pre-filtering purposes.
+   * @returns true if this JoinNode was added added by the SemiJoinReductionRule for increased performance.
    */
   bool is_semi_reduction() const;
 

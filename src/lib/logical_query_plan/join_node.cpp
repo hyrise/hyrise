@@ -231,12 +231,12 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const { return node_expressions; }
 
 void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join_node) {
-  Assert(!_is_semi_reduction, "The semi reducer status should be set once only.");
+  Assert(!_is_semi_reduction, "The semi reduction status should be set once only.");
   Assert(reduced_join_node, "Reduced JoinNode must be provided.");
   Assert(join_mode == JoinMode::Semi, "Semi join reductions require JoinMode::Semi.");
   DebugAssert(join_predicates().size() == 1,
               "Currently, semi join reductions are expected to have a single join predicate.");
-  DebugAssert(std::any_of(reduced_join_node->join_predicates().begin(), reduced_join_node->join_predicates().end(),
+  DebugAssert(std::any_of(reduced_join_node->join_predicates().cbegin(), reduced_join_node->join_predicates().cend(),
                           [&](const auto predicate) { return *predicate == *join_predicates()[0]; }),
               "Both semi join reduction node and the reduced join should have a common join predicate.");
   _is_semi_reduction = true;
