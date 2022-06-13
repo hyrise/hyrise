@@ -275,7 +275,11 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
   return _reduced_join_node.lock();
 }
 
-size_t JoinNode::_on_shallow_hash() const { return boost::hash_value(join_mode); }
+size_t JoinNode::_on_shallow_hash() const {
+  size_t hash = boost::hash_value(join_mode);
+  boost::hash_combine(&hash, _is_semi_reduction);
+  return hash;
+}
 
 std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   if (join_predicates().empty()) {
@@ -293,6 +297,9 @@ bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMappi
   // We do not consider the _is_semi_reduction attribute in this comparison, because we want the LQPTranslator to
   // translate identical semi joins into a single operator, regardless of the `is_semi_reduction` property.
   if (join_mode != join_node.join_mode) {
+    return false;
+  }
+  if (_is_semi_reduction != join_node._is_semi_reduction) {
     return false;
   }
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
