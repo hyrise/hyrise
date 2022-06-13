@@ -277,7 +277,7 @@ std::shared_ptr<JoinNode> JoinNode::get_or_find_reduced_join_node() const {
 
 size_t JoinNode::_on_shallow_hash() const {
   size_t hash = boost::hash_value(join_mode);
-  boost::hash_combine(&hash, _is_semi_reduction);
+  boost::hash_combine(hash, _is_semi_reduction);
   return hash;
 }
 
