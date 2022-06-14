@@ -15,8 +15,8 @@ class MemoryResourceManager : public Noncopyable {
 
   // TODO comment
   const std::unordered_map<std::string, std::shared_ptr<TrackingMemoryResource>>& memory_resources() const;
-  const std::unordered_map<std::string, uint_64> get_current_memory_usage() const;
-  std::shared_ptr<TrackingMemoryResource> get_memory_resource(const std::string& purpose) const;
+  const std::unordered_map<std::string, int64_t> get_current_memory_usage() const;
+  std::shared_ptr<TrackingMemoryResource> get_memory_resource(const std::string& purpose);
 
  protected:
   // make sure that only Hyrise can create new instances

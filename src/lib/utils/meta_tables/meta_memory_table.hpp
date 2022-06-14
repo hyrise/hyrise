@@ -5,16 +5,14 @@
 namespace opossum {
 
 /**
- * This is a class for showing all stored tables via a meta table.
+ * TODO
  */
-class MetaTablesTable : public AbstractMetaTable {
+class MetaMemoryTable : public AbstractMetaTable {
  public:
-  MetaTablesTable();
+  MetaMemoryTable();
   const std::string& name() const final;
 
  protected:
-  friend class MetaTableManager;
-
   std::shared_ptr<Table> _on_generate() const final;
 };
 
