@@ -584,6 +584,8 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/memory_resource_manager.cpp
+    utils/memory_resource_manager.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
@@ -598,6 +600,8 @@ set(
     utils/meta_tables/meta_exec_table.hpp
     utils/meta_tables/meta_log_table.cpp
     utils/meta_tables/meta_log_table.hpp
+    utils/meta_tables/meta_memory_table.cpp
+    utils/meta_tables/meta_memory_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
     utils/meta_tables/meta_plugins_table.hpp
     utils/meta_tables/meta_segments_accurate_table.cpp
