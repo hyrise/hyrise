@@ -349,4 +349,15 @@ std::vector<std::shared_ptr<PQPSubqueryExpression>> find_pqp_subquery_expression
   return pqp_subquery_expressions;
 }
 
+std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_expression,
+                                            const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector) {
+  const auto num_expressions = expression_vector.size();
+  for (auto expression_id = ColumnID{0}; expression_id < num_expressions; ++expression_id) {
+    if (search_expression == *expression_vector[expression_id]) {
+      return expression_id;
+    }
+  }
+  return std::nullopt;
+}
+
 }  // namespace opossum
