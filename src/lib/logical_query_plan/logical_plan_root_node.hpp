@@ -9,7 +9,7 @@ namespace opossum {
 /**
  * This node is used in the Optimizer to have an explicit root node that holds an LQP. Optimizer rules are not allowed
  * to remove this node or add nodes above it. By that, optimizer rules don't have to worry whether they change the
- * tree-identifying root node, e.g. by removing the Projection at the top of the tree.
+ * tree-identifying root node, e.g., by removing the Projection at the top of the tree.
  *
  * Moreover, optimizer rules can utilize this node during their runtime for, e.g., recursion purposes.
  * (See PredicatePlacementRule, for example)

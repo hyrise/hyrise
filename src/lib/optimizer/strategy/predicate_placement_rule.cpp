@@ -66,8 +66,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     auto next_push_down_traversal_root = barrier_node;
     if (barrier_node_is_pushdown_predicate) {
       // The barrier node is a predicate eligible for pushdown. Therefore, we would like it to be covered by the next
-      // recursion of _push_down_traversal. However, since _push_down_traversal looks at the inputs of a given
-      // root node only, barrier_node would not be pushed down.
+      // recursion of _push_down_traversal. However, since _push_down_traversal looks at the inputs of a given root node
+      // only, barrier_node would not be pushed down.
       // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. Afterwards, the temporary
       // root node is used as a root for the next _push_down_traversal recursion. As a result, barrier_node will be seen
       // as an input of the temporary root node, and thus be pushed down by the rule, if possible.
@@ -79,6 +79,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
       _push_down_traversal(next_push_down_traversal_root, LQPInputSide::Left, left_push_down_nodes, estimator);
 
+      // Check for the left input node first because there cannot be a right input node otherwise.
       if (next_push_down_traversal_root->right_input()) {
         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
         _push_down_traversal(next_push_down_traversal_root, LQPInputSide::Right, right_push_down_nodes, estimator);
@@ -86,7 +87,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     }
 
     // The recursion calls to _push_down_traversal have returned. Therefore, we must remove the temporary root node, we
-    // might have inserted previously. (see comment above)
+    // might have inserted previously (see comment above).
     if (next_push_down_traversal_root->type == LQPNodeType::Root && next_push_down_traversal_root->output_count() > 0) {
       lqp_remove_node(next_push_down_traversal_root);
     }
