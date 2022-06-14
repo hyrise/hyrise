@@ -50,13 +50,17 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReduction) {
     _node_a,
     _node_b);
 
+  const auto expected_reduction =
+  JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
+    _node_a,
+    _node_b);
+
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
-      _node_a,
-      _node_b),
+    expected_reduction,
     _node_b);
   // clang-format on
+  expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -77,13 +81,17 @@ TEST_F(SemiJoinReductionRuleTest, CreateSimpleReductionRightSide) {
     _node_b,
     _node_a);
 
+  const auto expected_reduction =
+  JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
+    _node_a,
+    _node_b);
+
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
     _node_b,
-    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
-      _node_a,
-      _node_b));
+    expected_reduction);
   // clang-format on
+  expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -137,13 +145,17 @@ TEST_F(SemiJoinReductionRuleTest, ReductionOnlyForEquals) {
     _node_a,
     _node_b);
 
+  const auto expected_reduction =
+  JoinNode::make(JoinMode::Semi, equals_(_b_a, _a_a),
+    _node_a,
+    _node_b);
+
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, predicates,
-    JoinNode::make(JoinMode::Semi, equals_(_b_a, _a_a),
-      _node_a,
-      _node_b),
+    expected_reduction,
     _node_b);
   // clang-format on
+  expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -177,15 +189,19 @@ TEST_F(SemiJoinReductionRuleTest, TraverseRightInput) {
       _node_b,
       _node_c));
 
+  const auto expected_reduction =
+  JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
+    _node_a,
+    _node_b);
+
   const auto expected_lqp =
   JoinNode::make(JoinMode::Inner, equals_(_a_a, _b_a),
-    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),
-      _node_a,
-      _node_b),
+    expected_reduction,
     JoinNode::make(JoinMode::Inner, equals_(_a_b, _c_a),
       _node_b,
       _node_c));
   // clang-format on
+  expected_reduction->mark_as_semi_reduction(expected_lqp);
 
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);

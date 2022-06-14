@@ -85,9 +85,6 @@ TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node);
   EXPECT_EQ(*_semi_join_node, *_semi_join_node);
   EXPECT_EQ(*_semi_join_reduction_node, *_semi_join_reduction_node);
-  // The `is_semi_reduction` property does not play a role in the equality check. See JoinNode::_on_shallow_equals for
-  // more details on this. As a result, we expect _semi_join_node and _semi_join_reduction_node to be considered as equal.
-  EXPECT_EQ(*_semi_join_reduction_node, *_semi_join_node);
 
   const auto other_join_node_a = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_x), _mock_node_a, _mock_node_b);
   const auto other_join_node_b = JoinNode::make(JoinMode::Inner, not_like_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -103,6 +100,9 @@ TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(other_join_node_b->hash(), _inner_join_node->hash());
   EXPECT_NE(other_join_node_c->hash(), _inner_join_node->hash());
   EXPECT_EQ(other_join_node_d->hash(), _inner_join_node->hash());
+
+  EXPECT_NE(_semi_join_node->hash(), _semi_join_reduction_node->hash());
+  EXPECT_NE(*_semi_join_reduction_node, *_semi_join_node);
 }
 
 TEST_F(JoinNodeTest, Copy) {
@@ -110,7 +110,6 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_inner_join_node, *_inner_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_reduction_node, *_semi_join_reduction_node->deep_copy());
-  EXPECT_TRUE(std::static_pointer_cast<JoinNode>(_semi_join_reduction_node->deep_copy())->is_semi_reduction());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
 }
 
