@@ -305,7 +305,7 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   // Back up the current column names
   const auto& root_expressions = root_node->output_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
-  for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < root_expressions.size(); ++expression_idx) {
     old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
   }
 
