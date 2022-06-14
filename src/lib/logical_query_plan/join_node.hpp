@@ -78,7 +78,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
  protected:
   /**
    * The following data members are only relevant for semi joins added by the SemiJoinReductionRule. For details,
-   * read the documentation of ::is_semi_reduction and ::get_or_find_reduced_join_node.
+   * read the documentation of ::mark_as_semi_reduction and ::get_or_find_reduced_join_node.
    */
   bool _is_semi_reduction = false;
   mutable std::weak_ptr<JoinNode> _reduced_join_node;
