@@ -67,6 +67,18 @@ const auto CHUNK_ENCODINGS = std::vector{
   SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}
 };
 
+// multi column index candidates
+const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 1}, {1, 0}, {0, 4}, {4, 0}, {0, 3}, {3, 0}, {1, 2}, {2, 1}, {1, 3}, {3, 1}, 
+                                                          {0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0},
+                                                          {1, 2, 3}, {1, 3, 2}, {2, 1, 3}, {2, 3, 1}, {3, 1, 2}, {3, 2, 1},
+                                                          {1, 2, 3, 4}, {1, 3, 2, 4}, {2, 1, 3, 4}, {2, 3, 1, 4}, {3, 1, 2, 4}, {3, 2, 1, 4},
+                                                          {4, 2, 3, 1}, {4, 3, 2, 1}, {2, 4, 3, 1}, {2, 3, 4, 1}, {3, 4, 2, 1}, {3, 2, 4, 1},
+                                                          {1, 4, 3, 2}, {1, 3, 4, 2}, {4, 1, 3, 2}, {4, 3, 1, 2}, {3, 1, 4, 2}, {3, 4, 1, 2},
+                                                          {1, 2, 4, 3}, {1, 4, 2, 3}, {2, 1, 4, 3}, {2, 4, 1, 3}, {4, 1, 2, 3}, {4, 2, 1, 3} 
+                                                         };
+
+std::map<std::pair<std::vector<int>, ChunkID>, std::shared_ptr<AbstractIndex>> multi_indexes;
+
 // Export 
 
 constexpr auto MEMORY_CONSUMPTION_FILE = "../../out/config_results/memory_consumption.csv";
@@ -353,29 +365,6 @@ int main() {
   // Load buffer eviction table 
   //load_buffer_eviction_table(global_umap_resource);
 
-///////////////////////////
-//////////////////////////
-
-//  std::cout << "Encoding table using dictionary encoding ... ";
-//  ChunkEncoder::encode_all_chunks(buffer_table, SegmentEncodingSpec{EncodingType::Dictionary});
-//  std::cout << "done" << std::endl;
-
-//  std::cout << "Creating and migrating composite indexes ... ";
-//  const auto buffer_table_chunk_count = buffer_table->chunk_count();
-//  for (auto chunk_id = ChunkID{0}; chunk_id < buffer_table_chunk_count; ++chunk_id) {
-//    auto index = buffer_table->get_chunk(chunk_id)->create_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{2}});
-
-//    auto resource = global_umap_resource;
-//    auto allocator = PolymorphicAllocator<void>{resource};
-
-//    auto migrated_index = index->copy_using_allocator(allocator);
-//    buffer_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
-//  }
-//  std::cout << "done" << std::endl;
-
-///////////////////////////
-////////////////////////////
-
   for (const auto& entry : std::filesystem::directory_iterator(CONFIG_PATH)) {
     const auto conf_path = entry.path();
     const auto conf_name = conf_path.stem();
@@ -487,6 +476,7 @@ int main() {
         //Store index columns 
 
         const auto index_conf = static_cast<uint16_t>(std::stoi(conf[conf_line_count][4]));
+        // Create single column index 
         if (index_conf == 1) {
           Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
           const auto added_index = added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
@@ -500,9 +490,38 @@ int main() {
             sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
             //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
           }
-        }
 
-        ++conf_line_count;
+        // Create multi column index
+        if (index_conf > 1) {
+          Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
+          const auto multi_column_index_id = index_conf - 2;
+
+          // Check if index was already created 
+          if (multi_indexes.count({MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}) == 0) {
+            auto column_ids = std::vector<ColumnID>{};
+            
+            for (const auto& index_column : MULTI_COLUMN_INDEXES[multi_column_index_id]) {
+              column_ids.emplace_back(index_column);
+            }
+
+            const auto& index = added_chunk->create_index<CompositeGroupKeyIndex>(column_ids);
+            index_memory_consumption += added_index->memory_consumption();
+
+            multi_indexes.insert({{MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}, index});
+
+            if (storage_id > 0) {
+              auto resource = global_umap_resource;
+              auto allocator = PolymorphicAllocator<void>{resource};
+
+              const auto  migrated_index = added_index->copy_using_allocator(allocator);
+              sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
+              //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
+            }
+          }
+        }
+      }
+
+      ++conf_line_count;
       }
     }
 
