@@ -55,30 +55,35 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           // This is ugly, but it allows us to define segment types that we are not interested in and save a lot of
           // compile time during development. While new segment types should be added here,
 #ifdef HYRISE_ERASE_DICTIONARY
-          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>)
+          if constexpr (std::is_same_v<SegmentType, DictionarySegment<T>>) {
             return;
+          }
 #endif
 
 #ifdef HYRISE_ERASE_RUNLENGTH
-          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>)
+          if constexpr (std::is_same_v<SegmentType, RunLengthSegment<T>>) {
             return;
+          }
 #endif
 
 #ifdef HYRISE_ERASE_FIXEDSTRINGDICTIONARY
-          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>)
+          if constexpr (std::is_same_v<SegmentType, FixedStringDictionarySegment<T>>) {
             return;
+          }
 #endif
 
 #ifdef HYRISE_ERASE_FRAMEOFREFERENCE
           if constexpr (std::is_same_v<T, int32_t>) {
-            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>)
+            if constexpr (std::is_same_v<SegmentType, FrameOfReferenceSegment<T>>) {
               return;
+            }
           }
 #endif
 
           // Always erase LZ4Segment accessors
-          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>)
+          if constexpr (std::is_same_v<SegmentType, LZ4Segment<T>>) {
             return;
+          }
 
           if constexpr (!std::is_same_v<SegmentType, ReferenceSegment>) {
             const auto segment_iterable = create_iterable_from_segment<T>(typed_segment);
