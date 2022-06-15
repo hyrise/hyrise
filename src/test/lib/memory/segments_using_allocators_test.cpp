@@ -59,6 +59,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
         for (auto i = 0; i < 80; ++i) {
           original_segment->append(convert_value(100));
         }
+
         for (auto i = 0; i < 20; ++i) {
           original_segment->append(opossum::NULL_VALUE);
         }

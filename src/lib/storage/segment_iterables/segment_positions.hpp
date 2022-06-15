@@ -56,9 +56,11 @@ class SegmentPosition final : public AbstractSegmentPosition<T> {
   const T& value() const override {
     return _value;
   }
+
   bool is_null() const override {
     return _null_value;
   }
+
   ChunkOffset chunk_offset() const override {
     return _chunk_offset;
   }
@@ -86,9 +88,11 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
   const T& value() const override {
     return _value;
   }
+
   bool is_null() const override {
     return false;
   }
+
   ChunkOffset chunk_offset() const override {
     return _chunk_offset;
   }
@@ -116,9 +120,11 @@ class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank>
   const boost::blank& value() const override {
     return _blank;
   }
+
   bool is_null() const override {
     return _null_value;
   }
+
   ChunkOffset chunk_offset() const override {
     return _chunk_offset;
   }

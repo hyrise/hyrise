@@ -35,6 +35,7 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
   size_t on_size() const {
     return _data.size();
   }
+
   size_t on_data_size() const {
     return sizeof(UnsignedIntType) * _data.size();
   }

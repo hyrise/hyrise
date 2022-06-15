@@ -100,12 +100,15 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
       if (a.is_null() && b.is_null()) {
         return false;
       }
+
       if (a.is_null() && !b.is_null()) {
         return false;
       }
+
       if (!a.is_null() && b.is_null()) {
         return true;
       }
+
       return a.value() < b.value();
     });
     ASSERT_TRUE(is_sorted);

@@ -84,6 +84,7 @@ class CompressedVector : public BaseCompressedVector {
   auto begin() const {
     return _self().on_begin();
   }
+
   auto cbegin() const {
     return begin();
   }
@@ -95,6 +96,7 @@ class CompressedVector : public BaseCompressedVector {
   auto end() const {
     return _self().on_end();
   }
+
   auto cend() const {
     return end();
   }
@@ -109,6 +111,7 @@ class CompressedVector : public BaseCompressedVector {
   size_t size() const final {
     return _self().on_size();
   }
+
   size_t data_size() const final {
     return _self().on_data_size();
   }
