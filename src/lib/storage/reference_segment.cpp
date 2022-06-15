@@ -44,9 +44,11 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
 const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const {
   return _pos_list;
 }
+
 const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const {
   return _referenced_table;
 }
+
 ColumnID ReferenceSegment::referenced_column_id() const {
   return _referenced_column_id;
 }

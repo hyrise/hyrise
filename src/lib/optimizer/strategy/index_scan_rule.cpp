@@ -75,6 +75,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_stati
   if (!operator_predicates) {
     return false;
   }
+
   if (operator_predicates->size() != 1) {
     return false;
   }

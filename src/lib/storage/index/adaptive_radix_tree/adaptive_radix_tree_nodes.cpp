@@ -66,12 +66,15 @@ AbstractIndex::Iterator ARTNode4::_delegate_to_child(const AdaptiveRadixTreeInde
     if (_partial_keys[partial_key_id] < partial_key) {
       continue;  // key not found yet
     }
+
     if (_partial_keys[partial_key_id] == partial_key) {
       return function(partial_key_id, ++depth);  // case0
     }
+
     if (!_children[partial_key_id]) {
       return end();  // no more keys available, case1b
     }
+
     return _children[partial_key_id]->begin();  // case2
   }
   return end();  // case1a

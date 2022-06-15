@@ -40,6 +40,7 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
         if (op->left_input()) {
           operator_queue.push(op->left_input());
         }
+
         if (op->right_input()) {
           operator_queue.push(op->right_input());
         }
@@ -47,6 +48,7 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
         if (op->left_input()) {
           operator_queue.push(op->mutable_left_input());
         }
+
         if (op->right_input()) {
           operator_queue.push(op->mutable_right_input());
         }

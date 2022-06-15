@@ -36,6 +36,7 @@ VariableLengthKey& VariableLengthKey::operator=(const VariableLengthKey& other) 
 bool VariableLengthKey::operator==(const VariableLengthKey& other) const {
   return _impl == other._impl;
 }
+
 bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& other) const {
   return _impl == other._impl;
 }
@@ -43,6 +44,7 @@ bool VariableLengthKey::operator==(const VariableLengthKeyConstProxy& other) con
 bool VariableLengthKey::operator!=(const VariableLengthKey& other) const {
   return _impl != other._impl;
 }
+
 bool VariableLengthKey::operator!=(const VariableLengthKeyConstProxy& other) const {
   return _impl != other._impl;
 }
@@ -50,6 +52,7 @@ bool VariableLengthKey::operator!=(const VariableLengthKeyConstProxy& other) con
 bool VariableLengthKey::operator<(const VariableLengthKey& other) const {
   return _impl < other._impl;
 }
+
 bool VariableLengthKey::operator<(const VariableLengthKeyConstProxy& other) const {
   return _impl < other._impl;
 }
@@ -77,4 +80,5 @@ std::ostream& operator<<(std::ostream& os, const VariableLengthKey& key) {
   os << key._impl;
   return os;
 }
+
 }  // namespace opossum

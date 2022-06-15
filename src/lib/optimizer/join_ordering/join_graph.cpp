@@ -82,6 +82,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinGraph::find_join_predicates
     if ((edge.vertex_set & vertex_set_a).none() || (edge.vertex_set & vertex_set_b).none()) {
       continue;
     }
+
     if (!edge.vertex_set.is_subset_of(vertex_set_a | vertex_set_b)) {
       continue;
     }

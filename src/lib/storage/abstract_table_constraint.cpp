@@ -13,12 +13,15 @@ bool AbstractTableConstraint::operator==(const AbstractTableConstraint& rhs) con
   if (this == &rhs) {
     return true;
   }
+
   if (typeid(*this) != typeid(rhs)) {
     return false;
   }
+
   if (columns() != rhs.columns()) {
     return false;
   }
+
   return _on_equals(rhs);
 }
 

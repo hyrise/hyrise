@@ -24,6 +24,7 @@ const std::string& CreateView::name() const {
 const std::string& CreateView::view_name() const {
   return _view_name;
 }
+
 bool CreateView::if_not_exists() const {
   return _if_not_exists;
 }

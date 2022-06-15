@@ -95,6 +95,7 @@ void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>
   if (lqp->left_input()) {
     lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input()));
   }
+
   if (lqp->right_input()) {
     lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input()));
   }

@@ -138,9 +138,11 @@ class VariableLengthKeyStore {
     void increment() {
       _data += _key_alignment;
     }
+
     void decrement() {
       _data -= _key_alignment;
     }
+
     void advance(size_t n) {
       _data += n * _key_alignment;
     }
