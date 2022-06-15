@@ -621,6 +621,8 @@ TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {
   const auto copied_join_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp);
   const auto copied_semi_reduction_node = std::dynamic_pointer_cast<JoinNode>(copied_lqp->left_input()->left_input());
   EXPECT_EQ(copied_semi_reduction_node->get_or_find_reduced_join_node(), copied_join_node);
+  // Expect Fail if we do not find the reduced join.
+  EXPECT_THROW(semi_reduction_node->deep_copy()->get_or_find_reduced_join_node(), std::logic_error);
 }
 
 TEST_F(JoinNodeTest, GetOrFindReducedJoinNodeWithMultiplePredicates) {

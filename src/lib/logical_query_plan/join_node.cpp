@@ -293,10 +293,7 @@ std::shared_ptr<AbstractLQPNode> JoinNode::_on_shallow_copy(LQPNodeMapping& node
 
 bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& join_node = static_cast<const JoinNode&>(rhs);
-  if (join_mode != join_node.join_mode) {
-    return false;
-  }
-  if (_is_semi_reduction != join_node._is_semi_reduction) {
+  if (join_mode != join_node.join_mode || _is_semi_reduction != join_node._is_semi_reduction) {
     return false;
   }
   return expressions_equal_to_expressions_in_different_lqp(join_predicates(), join_node.join_predicates(),
