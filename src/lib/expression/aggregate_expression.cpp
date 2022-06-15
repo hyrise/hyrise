@@ -101,18 +101,16 @@ bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
   if (expression.type != ExpressionType::Aggregate) {
     return false;
   }
-  const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
 
-  if (aggregate_expression.aggregate_function != AggregateFunction::Count) {
-    return false;
-  }
-  if (aggregate_expression.argument()->type != ExpressionType::LQPColumn) {
+  const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
+  if (aggregate_expression.aggregate_function != AggregateFunction::Count ||
+      aggregate_expression.argument()->type != ExpressionType::LQPColumn) {
     return false;
   }
 
   const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*aggregate_expression.argument());
   if (lqp_column_expression.original_column_id != INVALID_COLUMN_ID) {
-    return false;  // NOLINT
+    return false;
   }
 
   return true;

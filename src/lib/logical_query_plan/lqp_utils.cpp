@@ -46,6 +46,7 @@ std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<con
   if (!lhs && !rhs) {
     return std::nullopt;
   }
+
   if (!(lhs && rhs) || lhs->type != rhs->type) {
     return LQPMismatch(lhs, rhs);
   }
@@ -64,6 +65,7 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
   if (!lhs && !rhs) {
     return std::nullopt;
   }
+
   if (!lhs->shallow_equals(*rhs, node_mapping)) {
     return LQPMismatch(lhs, rhs);
   }
@@ -106,6 +108,7 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
   if (!node) {
     return;
   }
+
   if (!visited_nodes.emplace(node).second) {
     return;
   }
@@ -264,6 +267,7 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
   if (!lqp) {
     return true;
   }
+
   if (lqp->type == LQPNodeType::Validate) {
     return true;
   }
@@ -530,6 +534,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
     return !output_expressions_set.contains(fd_dependent_expression);
   };
+
   for (auto& fd : fds) {
     std::erase_if(fd.dependents, not_part_of_output_expressions);
   }
@@ -551,6 +556,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                                if (!output_expressions_set.contains(fd_determinant_expression)) {
                                  return true;
                                }
+
                                const auto expression_idx =
                                    find_expression_idx(*fd_determinant_expression, output_expressions);
                                if (expression_idx && lqp->is_column_nullable(*expression_idx)) {

@@ -29,9 +29,11 @@ class ExpressionResultNullableSeries {
   bool is_series() const {
     return true;
   }
+
   bool is_literal() const {
     return false;
   }
+
   bool is_nullable() const {
     return true;
   }
@@ -69,9 +71,11 @@ class ExpressionResultNonNullSeries {
   bool is_series() const {
     return true;
   }
+
   bool is_literal() const {
     return false;
   }
+
   bool is_nullable() const {
     return false;
   }
@@ -107,9 +111,11 @@ class ExpressionResultLiteral {
   bool is_series() const {
     return false;
   }
+
   bool is_literal() const {
     return true;
   }
+
   bool is_nullable() const {
     return _null;
   }
@@ -121,6 +127,7 @@ class ExpressionResultLiteral {
   const T& value(const size_t /*value*/) const {
     return _value;
   }
+
   bool is_null(const size_t /*value*/) const {
     return _null;
   }

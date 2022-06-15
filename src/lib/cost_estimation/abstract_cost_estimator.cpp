@@ -48,6 +48,7 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       if (current_node->left_input()) {
         bfs_queue.push(current_node->left_input());
       }
+
       if (current_node->right_input()) {
         bfs_queue.push(current_node->right_input());
       }

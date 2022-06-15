@@ -29,6 +29,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
   if (_left_input) {
     mutable_left_input()->register_consumer();
   }
+
   if (_right_input) {
     mutable_right_input()->register_consumer();
   }
@@ -94,6 +95,7 @@ void AbstractOperator::execute() {
     if (transaction_context->aborted()) {
       return;
     }
+
     transaction_context->on_operator_started();
     _output = _on_execute(transaction_context);
     transaction_context->on_operator_finished();
@@ -117,6 +119,7 @@ void AbstractOperator::execute() {
   if (_left_input) {
     mutable_left_input()->deregister_consumer();
   }
+
   if (_right_input) {
     mutable_right_input()->deregister_consumer();
   }
@@ -290,6 +293,7 @@ void AbstractOperator::set_transaction_context_recursively(
   if (_left_input) {
     mutable_left_input()->set_transaction_context_recursively(transaction_context);
   }
+
   if (_right_input) {
     mutable_right_input()->set_transaction_context_recursively(transaction_context);
   }
@@ -320,6 +324,7 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (left_input()) {
     mutable_left_input()->set_parameters(parameters);
   }
+
   if (right_input()) {
     mutable_right_input()->set_parameters(parameters);
   }
@@ -366,6 +371,7 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
     if (op->left_input()) {
       children.emplace_back(op->left_input());
     }
+
     if (op->right_input()) {
       children.emplace_back(op->right_input());
     }

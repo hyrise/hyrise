@@ -33,8 +33,4 @@ bool ListExpression::_shallow_equals(const AbstractExpression& expression) const
   return true;
 }
 
-size_t ListExpression::_shallow_hash() const {
-  return AbstractExpression::_shallow_hash();
-}
-
 }  // namespace opossum

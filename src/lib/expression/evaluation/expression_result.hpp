@@ -73,9 +73,11 @@ class ExpressionResult : public BaseExpressionResult {
   bool is_nullable_series() const {
     return size() != 1;
   }
+
   bool is_literal() const {
     return size() == 1;
   }
+ 
   bool is_nullable() const {
     return !nulls.empty();
   }

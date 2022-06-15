@@ -138,6 +138,7 @@ std::string expression_descriptions(const std::vector<std::shared_ptr<AbstractEx
   if (!expressions.empty()) {
     stream << expressions.front()->description(mode);
   }
+
   for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
     stream << ", " << expressions[expression_idx]->description(mode);
   }
@@ -153,6 +154,7 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   if (lhs == DataType::Null) {
     return rhs;
   }
+
   if (rhs == DataType::Null) {
     return lhs;
   }
@@ -164,12 +166,15 @@ DataType expression_common_type(const DataType lhs, const DataType rhs) {
   if (lhs == DataType::Double || rhs == DataType::Double) {
     return DataType::Double;
   }
+
   if (lhs == DataType::Long) {
     return is_floating_point_data_type(rhs) ? DataType::Double : DataType::Long;
   }
+
   if (rhs == DataType::Long) {
     return is_floating_point_data_type(lhs) ? DataType::Double : DataType::Long;
   }
+
   if (lhs == DataType::Float || rhs == DataType::Float) {
     return DataType::Float;
   }
@@ -258,13 +263,13 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       if (value_iter != parameters.end()) {
         correlated_parameter_expression->set_value(value_iter->second);
       }
-      return ExpressionVisitation::DoNotVisitArguments;
 
+      return ExpressionVisitation::DoNotVisitArguments;
     } else if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
                pqp_subquery_expression) {
       pqp_subquery_expression->pqp->set_parameters(parameters);
-      return ExpressionVisitation::DoNotVisitArguments;
 
+      return ExpressionVisitation::DoNotVisitArguments;
     } else {
       return ExpressionVisitation::VisitArguments;
     }

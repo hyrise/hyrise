@@ -71,6 +71,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
     Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
   }
+
   if (_config->indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
@@ -442,6 +443,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       for (auto i = 0; i < 7; ++i) {
         parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
       }
+
       for (auto i = 0; i < 7; ++i) {
         parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
       }

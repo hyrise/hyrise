@@ -327,6 +327,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       for (auto i = 0; i < 7; ++i) {
         parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
       }
+
       for (auto i = 0; i < 7; ++i) {
         parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
       }
