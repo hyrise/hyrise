@@ -44,11 +44,11 @@ using namespace opossum;  // NOLINT
 
 // Import
 
-//constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
-constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
+constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
+//constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
-constexpr auto CHUNK_SIZE = size_t{40'000'000};
+constexpr auto CHUNK_SIZE = size_t{1'000'000};
 //constexpr auto CHUNK_SIZE = size_t{10};
 constexpr auto TABLE_NAME = "PING";
 
@@ -78,6 +78,7 @@ const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 1}, {1, 0}, {0, 4}
                                                          };
 
 std::map<std::pair<std::vector<int>, ChunkID>, std::shared_ptr<AbstractIndex>> multi_indexes;
+std::map<std::pair<ChunkID, ColumnID>, std::shared_ptr<AbstractIndex>> single_indexes;
 
 // Export 
 
@@ -131,6 +132,99 @@ std::vector<ChunkID> get_indexed_chunk_ids(const std::shared_ptr<const Table>& t
   return indexed_chunk_ids;
 } 
 
+std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQPNode> current_node,
+                                                      const std::vector<ColumnID>& column_ids,
+                                                      const std::vector<float>& selectivities,
+                                                      const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+  std::cout << "Optimizing path ..." << std::endl;
+  std::cout << *current_node << std::endl;
+
+  std::cout << column_ids.size() << std::endl;
+  std::cout << selectivities.size() << std::endl;
+
+  // Access Path Selection (APS) per chunk: each chunk will be optimized on its own. This might create a pipeline of
+  // filter (table scan or index scan) operations per chunk, which are later unioned.
+  const auto& table = Hyrise::get().storage_manager.get_table(TABLE_NAME);
+  const auto chunk_count = table->chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
+
+    auto multi_column_index_column_ids = std::vector<ColumnID>{};
+    auto found_multi_column_index = false;
+    auto multi_column_index = std::shared_ptr<AbstractIndex>{};
+    // First, obtain multi column indexes, if applicable, we use it. If not, check for single column indexes.
+    std::cout << "multi count " << multi_indexes.size() << std::endl;
+    for (const auto& [column_ids_chunk_id, index] : multi_indexes) {
+      const auto& column_ids = column_ids_chunk_id.first;
+      const auto index_chunk_id = column_ids_chunk_id.second;
+
+      std::cout << "checking chunk " << chunk_id << " for index on chunk " << index_chunk_id << std::endl;
+
+      if (chunk_id == index_chunk_id) {
+        // We know (let's hope Keven didn't lie) that there is only one multi column index per chunk. We can safely
+        // break here.
+        found_multi_column_index = true;
+        for (const auto column_id : column_ids) {
+          multi_column_index_column_ids.push_back(static_cast<ColumnID>(column_id));
+        }
+        multi_column_index = index;
+
+        break;
+      }
+    }
+
+    auto multi_column_index_is_applicable = false;
+    if (found_multi_column_index) {
+      // There is a multi column index for this chunk. We know check for every covered column, if this column is part
+      // of the query. If we have at least one column that matches, we'll use the multi column index.
+      const auto query_column_ids_set = std::set(column_ids.begin(), column_ids.end());
+
+      auto collected_expression = expressions[0];
+      for (const auto column_id : multi_column_index_column_ids) {
+         // Starting from the first covered column, check for every column of the index it is part of the query.
+         if (query_column_ids_set.contains(column_id)) {
+
+           const auto iter_index_of_scan = std::find(column_ids.begin(), column_ids.end(), column_id);
+           Assert(iter_index_of_scan != column_ids.end(), "ColumnID expected in query, but not found");
+
+           const auto offset = std::distance(column_ids.begin(), iter_index_of_scan);
+           const auto expression_of_scan = expressions[offset];
+
+           if (!multi_column_index_is_applicable) { // First found match
+             collected_expression = expression_of_scan;
+           } else {
+             collected_expression = and_(collected_expression, expression_of_scan);
+           }
+
+           multi_column_index_is_applicable = true;
+           continue;
+         }
+
+        break;
+      }
+
+      if (multi_column_index_is_applicable) {
+        auto new_node = PredicateNode::make(collected_expression, current_node);
+        std::cout << *new_node << std::endl;
+        return new_node;
+      } else std::cout << "NO MULTI APPLICABLE" << std::endl;
+    } else std::cout << "NO MULTI FOUND" << std::endl;
+  }
+
+  /*
+  // Set scan type to index scan if the scan is the first scan of a query and at least one segment 
+  // of the scan column has an index 
+  // Partial index configurations are handeled by LQPTranslater line 215 -231
+  if (scan_id == 0 && !get_indexed_chunk_ids(table, column_id).empty()) {
+    auto index_node = std::dynamic_pointer_cast<PredicateNode>(current_node);
+    index_node->scan_type = ScanType::IndexScan;
+  }
+  */
+
+  return current_node;
+}
+
+
 /**
  * This function takes a file path to a CSV file containing the workload and returns the queries in form of LQP-based
  * queries together with their frequency. The reason to use LQPs is that we can later selectively apply optimizer rules
@@ -144,8 +238,13 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
   const auto csv_lines = read_file(workload_file);
 
   auto previous_query_id = int64_t{-1};
-  auto previous_predicate_selectivity = 17.0;
+  auto previous_predicate_selectivity = 17.0f;
   std::shared_ptr<AbstractLQPNode> current_node;
+
+  // Gathered data per query, later used for access path selection.
+  std::vector<float> query_selectivities{};
+  std::vector<ColumnID> column_ids{};
+  std::vector<std::shared_ptr<AbstractExpression>> expressions{};
   
   const auto& table = Hyrise::get().storage_manager.get_table(TABLE_NAME);
   const auto column_names = table->column_names();
@@ -173,31 +272,38 @@ std::vector<std::shared_ptr<AbstractLQPNode>> load_queries_from_csv(const std::s
 
     // If query id has changed store current node in output queries and create new initial node 
     if (query_id > 0 && query_id != previous_query_id) {
+      // Now that all predicates have been gathered, run access path optimization.
+      current_node = optimize_access_path(current_node, column_ids, query_selectivities, expressions);
+
       output_queries.emplace_back(current_node);
       stored_table_node = StoredTableNode::make(TABLE_NAME);
       previous_node = stored_table_node;
+
+      query_selectivities.clear();
+      column_ids.clear();
+      expressions.clear();
     }
 
     const auto lqp_column = stored_table_node->get_column(column_names[column_id]);
     if (predicate_str == "Between") {
       Assert(search_value_1 > -1, "Between predicate with missing second search value.");
-      current_node = PredicateNode::make(between_inclusive_(lqp_column, search_value_0, search_value_1), previous_node);
+      const auto expression = between_inclusive_(lqp_column, search_value_0, search_value_1);
+      current_node = PredicateNode::make(expression, previous_node);
+      expressions.push_back(expression);
     } else if (predicate_str == "LessThanEquals") {
-      current_node = PredicateNode::make(less_than_equals_(lqp_column, search_value_0), previous_node);
+      const auto expression = less_than_equals_(lqp_column, search_value_0);
+      current_node = PredicateNode::make(expression, previous_node);
+      expressions.push_back(expression);
     }
 
-    // Set scan type to index scan if the scan is the first scan of a query and at least one segment 
-    // of the scan column has an index 
-    // Partial index configurations are handeled by LQPTranslater line 215 -231
-    if (scan_id == 0 && !get_indexed_chunk_ids(table, column_id).empty()) {
-      auto index_node = std::dynamic_pointer_cast<PredicateNode>(current_node);
-      index_node->scan_type = ScanType::IndexScan;
-    }
+    query_selectivities.push_back(predicate_selectivity);
+    column_ids.push_back(column_id);
 
     previous_query_id = query_id;
     previous_predicate_selectivity = predicate_selectivity;
     previous_node = current_node;
   }
+  current_node = optimize_access_path(current_node, column_ids, query_selectivities, expressions);
   output_queries.emplace_back(current_node);  // Store last query
 
   return output_queries;
@@ -395,6 +501,8 @@ int main() {
 
     auto index_memory_consumption = size_t{0};
     auto conf_line_count = 0;
+    auto multi_column_index_conf = int{-1};
+    auto multi_column_index_storage = int{-1};
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][0]))};
       const auto conf_chunk_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][3]))};
@@ -436,7 +544,6 @@ int main() {
       }
      
       // Encode segments of sorted single chunk table
-
       for (ColumnID column_id = ColumnID{0}; column_id < added_chunk->column_count(); ++column_id) {
         const auto conf_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][1]))};
         Assert(column_id == conf_column_id,
@@ -461,12 +568,12 @@ int main() {
         //auto allocator = PolymorphicAllocator<void>{};
 
         if (storage_id > 0) {
-           auto resource = global_umap_resource;
-           auto allocator = PolymorphicAllocator<void>{resource};
+          auto resource = global_umap_resource;
+          auto allocator = PolymorphicAllocator<void>{resource};
 
-           const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
-           sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
-           //std::cout << "Segment (" << chunk_id << "," << column_id << ")" << std::endl;
+          const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
+          sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+          //std::cout << "Segment (" << chunk_id << "," << column_id << ")" << std::endl;
         } else {
           auto allocator = PolymorphicAllocator<void>{};
           const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
@@ -476,11 +583,13 @@ int main() {
         //Store index columns 
 
         const auto index_conf = static_cast<uint16_t>(std::stoi(conf[conf_line_count][4]));
+
         // Create single column index 
         if (index_conf == 1) {
           Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
           const auto added_index = added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
           index_memory_consumption += added_index->memory_consumption();
+          single_indexes.insert({{chunk_id, column_id}, added_index});
 
           if (storage_id > 0) {
             auto resource = global_umap_resource;
@@ -490,38 +599,44 @@ int main() {
             sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
             //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
           }
-
-        // Create multi column index
-        if (index_conf > 1) {
-          Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
-          const auto multi_column_index_id = index_conf - 2;
-
-          // Check if index was already created 
-          if (multi_indexes.count({MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}) == 0) {
-            auto column_ids = std::vector<ColumnID>{};
-            
-            for (const auto& index_column : MULTI_COLUMN_INDEXES[multi_column_index_id]) {
-              column_ids.emplace_back(index_column);
-            }
-
-            const auto& index = added_chunk->create_index<CompositeGroupKeyIndex>(column_ids);
-            index_memory_consumption += added_index->memory_consumption();
-
-            multi_indexes.insert({{MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}, index});
-
-            if (storage_id > 0) {
-              auto resource = global_umap_resource;
-              auto allocator = PolymorphicAllocator<void>{resource};
-
-              const auto  migrated_index = added_index->copy_using_allocator(allocator);
-              sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
-              //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
-            }
-          }
         }
+  
+        if (index_conf > 1) {
+          multi_column_index_conf = index_conf;
+          multi_column_index_storage = storage_id;
+        }
+
+        ++conf_line_count;
       }
 
-      ++conf_line_count;
+      // Create multi column index
+      if (multi_column_index_conf > 0) {
+        const auto multi_column_index_id = multi_column_index_conf - 2;
+       
+        std::cout << "Creating " << multi_column_index_conf << std::endl;
+        
+        // Check if index was already created 
+        if (multi_indexes.count({MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}) == 0) {
+          auto column_ids = std::vector<ColumnID>{};
+
+          for (const auto& index_column : MULTI_COLUMN_INDEXES[multi_column_index_id]) {
+            column_ids.emplace_back(index_column);
+          }
+
+          const auto& index = added_chunk->create_index<CompositeGroupKeyIndex>(column_ids);
+          index_memory_consumption += index->memory_consumption();
+
+          multi_indexes.insert({{MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}, index});
+
+          if (multi_column_index_storage > 0) {
+            auto resource = global_umap_resource;
+            auto allocator = PolymorphicAllocator<void>{resource};
+
+            const auto  migrated_index = index->copy_using_allocator(allocator);
+            sorted_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
+            //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
+          }
+        } else std::cout << "EMPTY " << std::endl;
       }
     }
 
