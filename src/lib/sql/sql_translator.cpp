@@ -108,8 +108,7 @@ const std::unordered_map<hsql::OrderType, SortMode> order_type_to_sort_mode = {
 const std::unordered_map<hsql::DataType, DataType> supported_hsql_data_types = {
     {hsql::DataType::INT, DataType::Int},     {hsql::DataType::LONG, DataType::Long},
     {hsql::DataType::FLOAT, DataType::Float}, {hsql::DataType::DOUBLE, DataType::Double},
-    {hsql::DataType::TEXT, DataType::String},
-};
+    {hsql::DataType::TEXT, DataType::String}, {hsql::DataType::BIGINT, DataType::Long}};
 
 JoinMode translate_join_mode(const hsql::JoinType join_type) {
   static const std::unordered_map<const hsql::JoinType, const JoinMode> join_type_to_mode = {
@@ -133,11 +132,23 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
   const auto* binary_predicate_expression = dynamic_cast<const BinaryPredicateExpression*>(&expression);
   if (!binary_predicate_expression) return false;
 
-  const auto left_in_left = left_input.find_column_id(*binary_predicate_expression->left_operand());
-  const auto right_in_right = right_input.find_column_id(*binary_predicate_expression->right_operand());
-  const auto right_in_left = left_input.find_column_id(*binary_predicate_expression->right_operand());
-  const auto left_in_right = right_input.find_column_id(*binary_predicate_expression->left_operand());
+  const auto find_predicate_in_input = [&](const auto& input) {
+    auto left_argument_found = false;
+    auto right_argument_found = false;
 
+    input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
+      if (*expression == *binary_predicate_expression->left_operand()) {
+        left_argument_found = true;
+      } else if (*expression == *binary_predicate_expression->right_operand()) {
+        right_argument_found = true;
+      }
+      return AbstractLQPNode::ExpressionIteration::Continue;
+    });
+    return std::make_pair(left_argument_found, right_argument_found);
+  };
+
+  const auto [left_in_left, right_in_left] = find_predicate_in_input(left_input);
+  const auto [left_in_right, right_in_right] = find_predicate_in_input(right_input);
   return (left_in_left && right_in_right) || (right_in_left && left_in_right);
 }
 }  // namespace
@@ -1060,9 +1071,10 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   if (is_aggregate) {
     // If needed, add a Projection to evaluate all Expression required for GROUP BY/Aggregates
     if (!pre_aggregate_expressions.empty()) {
-      const auto any_expression_not_yet_available =
-          std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
-                      [&](const auto& expression) { return !_current_lqp->find_column_id(*expression); });
+      const auto& output_expressions = _current_lqp->output_expressions();
+      const auto any_expression_not_yet_available = std::any_of(
+          pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
+          [&](const auto& expression) { return find_expression_idx(*expression, output_expressions) ? false : true; });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
@@ -1174,7 +1186,7 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
               "Mismatching number of input columns for set operation");
 
   // Check to see if both input LQPs use the same data type for each column
-  for (auto expression_idx = size_t{0}; expression_idx < left_output_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < left_output_expressions.size(); ++expression_idx) {
     const auto& left_expression = left_output_expressions[expression_idx];
     const auto& right_expression = right_output_expressions[expression_idx];
 
@@ -1317,6 +1329,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
         case hsql::DataType::INT:
           column_definition.data_type = DataType::Int;
           break;
+        case hsql::DataType::BIGINT:
         case hsql::DataType::LONG:
           column_definition.data_type = DataType::Long;
           break;

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <shared_mutex>
 
 #include <boost/heap/fibonacci_heap.hpp>
@@ -27,7 +28,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
     // The underlying heap is a max-heap.
     // To have the item with lowest priority at the top, we invert the comparison.
-    bool operator<(const GDFSCacheEntry& other) const { return priority > other.priority; }
+    bool operator<(const GDFSCacheEntry& other) const {
+      return priority > other.priority;
+    }
   };
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
@@ -38,7 +41,10 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
   void set(const Key& key, const Value& value, double cost = 1.0, double size = 1.0) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
-    if (this->_capacity == 0) return;
+    if (this->_capacity == 0) {
+      return;
+    }
+
     auto it = _map.find(key);
     if (it != _map.end()) {
       // Update priority.
@@ -70,7 +76,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
   std::optional<Value> try_get(const Key& query) final {
     std::unique_lock<std::shared_mutex> lock(_mutex);
     auto it = _map.find(query);
-    if (it == _map.end()) return std::nullopt;
+    if (it == _map.end()) {
+      return std::nullopt;
+    }
 
     Handle handle = it->second;
     GDFSCacheEntry& entry = (*handle);
@@ -144,3 +152,4 @@ class GDFSCache : public AbstractCache<Key, Value> {
 };
 
 }  // namespace opossum
+

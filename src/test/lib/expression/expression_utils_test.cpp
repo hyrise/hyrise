@@ -234,4 +234,20 @@ TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
   }
 }
 
+TEST_F(ExpressionUtilsTest, FindExpressionIDx) {
+  const auto expression_vector = std::vector<std::shared_ptr<AbstractExpression>>{a_a, a_b};
+
+  EXPECT_EQ(find_expression_idx(*a_c, expression_vector), std::nullopt);
+
+  EXPECT_NE(find_expression_idx(*a_a, expression_vector), std::nullopt);
+  EXPECT_EQ(*find_expression_idx(*a_a, expression_vector), ColumnID{0});
+
+  EXPECT_NE(find_expression_idx(*a_b, expression_vector), std::nullopt);
+  EXPECT_EQ(*find_expression_idx(*a_b, expression_vector), ColumnID{1});
+
+  const auto a_a_copy = a_a->deep_copy();
+  EXPECT_NE(find_expression_idx(*a_a_copy, expression_vector), std::nullopt);
+  EXPECT_EQ(*find_expression_idx(*a_a_copy, expression_vector), ColumnID{0});
+}
+
 }  // namespace opossum
