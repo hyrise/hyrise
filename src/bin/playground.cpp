@@ -501,8 +501,6 @@ int main() {
 
     auto index_memory_consumption = size_t{0};
     auto conf_line_count = 0;
-    auto multi_column_index_conf = int{-1};
-    auto multi_column_index_storage = int{-1};
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][0]))};
       const auto conf_chunk_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][3]))};
@@ -543,6 +541,9 @@ int main() {
         added_chunk->finalize();
       }
      
+      auto multi_column_index_conf = int{-1};
+      auto multi_column_index_storage = int{-1};
+
       // Encode segments of sorted single chunk table
       for (ColumnID column_id = ColumnID{0}; column_id < added_chunk->column_count(); ++column_id) {
         const auto conf_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][1]))};
@@ -613,8 +614,6 @@ int main() {
       if (multi_column_index_conf > 0) {
         const auto multi_column_index_id = multi_column_index_conf - 2;
        
-        std::cout << "Creating " << multi_column_index_conf << std::endl;
-        
         // Check if index was already created 
         if (multi_indexes.count({MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}) == 0) {
           auto column_ids = std::vector<ColumnID>{};
@@ -636,7 +635,7 @@ int main() {
             sorted_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
             //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
           }
-        } else std::cout << "EMPTY " << std::endl;
+        }
       }
     }
 

@@ -42,14 +42,6 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   // cast and check segments
   _indexed_segments.reserve(segments_to_index.size());
   for (const auto& segment : segments_to_index) {
-    if (const auto source_value_segment = std::dynamic_pointer_cast<const BaseValueSegment>(segment)) {
-      std::cout << "Segment is value segment (Unencoded) .. this is going to crash." << std::endl;
-    }
-    /*
-    const auto& encoded_segment = std::dynamic_pointer_cast<const AbstractEncodedSegment>(segment);
-    std::cout << encoding_type_to_string.left.at(encoded_segment->encoding_type()) << std::endl;
-    Assert(encoded_segment, "Not encoded");
-    */
     auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
     Assert(dict_segment, "CompositeGroupKeyIndex only works with dictionary segments.");
     Assert(dict_segment->compressed_vector_type(),
