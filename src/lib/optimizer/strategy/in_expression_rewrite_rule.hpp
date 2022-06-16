@@ -34,10 +34,10 @@ class InExpressionRewriteRule : public AbstractRule {
   // into disjunctive predicates.
   constexpr static auto MAX_ROWS_FOR_EXPRESSION_EVALUATOR = 25'000.f;
 
-  // When checking for input cardinalities, we trust row counts of MIN_ROWS_FOR_EXPRESSION_EVALUATOR and higher only.
+  // When checking for input cardinalities, we only trust row counts of MIN_ROWS_FOR_EXPRESSION_EVALUATOR and higher.
   // For lower row counts, the chances are high that our cardinality estimation is pretty far off. Especially in the JOB
-  // benchmark, we observe row count estimates of < 1.0f for upper parts of many LQPs, where in reality row counts are
-  // much higher (from a hundred thousands to millions).
+  // benchmark, we observe row count estimates of < 1.0f for upper parts of many LQPs where, in reality, row counts are
+  // much higher – from a hundred thousand to millions.
   constexpr static auto MIN_ROWS_FOR_EXPRESSION_EVALUATOR = 1.f;
 
   // Instead of using the automatic behavior described above, the three strategies may be chosen explicitly, too. This
