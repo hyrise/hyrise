@@ -181,7 +181,8 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
           if (right_side_expressions.size() < MIN_ELEMENTS_FOR_EXPRESSION_EVALUATOR) return true;
 
           auto input_node = sub_node->left_input();
-          if (input_node->type == LQPNodeType::Join && std::dynamic_pointer_cast<JoinNode>(input_node)->is_reducer()) {
+          if (input_node->type == LQPNodeType::Join &&
+              std::dynamic_pointer_cast<JoinNode>(input_node)->is_semi_reduction()) {
             // The semi reduction input node might become removed by the SemiJoinReductionRemovalRule. However, the
             // removal decision depends on the outcome of this rule (an ExpressionEvaluator or Join computation of the
             // IN predicate blocks the semi reduction removal, for instance). Therefore, we ignore the semi reduction
