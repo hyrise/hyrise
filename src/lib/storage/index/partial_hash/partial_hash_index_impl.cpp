@@ -170,9 +170,7 @@ size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
   bytes += sizeof(_null_values);
-  // if no NULL values are present, the map is empty; otherwise the map has one element
-  bytes += (8 + sizeof(std::vector<RowID>)) * _null_values.size();
-  bytes += sizeof(RowID) * std::distance(null_cbegin(), null_cend());
+  bytes += sizeof(RowID) * _null_values.size();
 
   return bytes;
 }

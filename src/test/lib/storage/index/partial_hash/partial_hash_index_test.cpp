@@ -332,7 +332,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
 // Index memory consumption depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
-  // +  80 map size NULL values (index NULL positions)
+  // +  24 vector size NULL values (index NULL positions)
   // +  72 number of different non-NULL values (9) * hash size (8)
   // + 216 number of different non-NULL values (9) * vector size (24)
   // +  88 number of non-NULL values (11) * sizeof(RowID) (8)
@@ -343,10 +343,10 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
   // +  16 impl
   // +   1 TableIndexType
-  // = 607
-  EXPECT_EQ(index->memory_consumption(), 607u);
+  // = 551
+  EXPECT_EQ(index->memory_consumption(), 551u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 583u);
+  EXPECT_EQ(index->memory_consumption(), 527u);
 #endif
 }
 
@@ -366,21 +366,20 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
 // Index memory consumption depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
-  // +  80 map size NULL values (index NULL positions)
+  // +  24 vector size NULL values (index NULL positions)
   // +   0 number of different non-NULL values (0) * hash size (8)
   // +   0 number of different non-NULL values (0) * vector size (24)
   // +   0 number of non-NULL values (2) * sizeof(RowID) (8)
-  // +  32 (NULL elements hash size (8) + vector size (24)) * 1
   // +  16 number of NULL elements (2) * sizeof(RowID) (8)
   // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
   // +  48 chunk ids set
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
   // +  16 impl
   // +   1 TableIndexType
-  // = 279
-  EXPECT_EQ(index->memory_consumption(), 279u);
+  // = 191
+  EXPECT_EQ(index->memory_consumption(), 191u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 255u);
+  EXPECT_EQ(index->memory_consumption(), 167u);
 #endif
 }
 
@@ -401,21 +400,20 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
 // Index memory consumption depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
-  // +  80 map size NULL values (index NULL positions)
+  // +  24 vector size NULL values (index NULL positions)
   // +  72 number of different non-NULL values (9) * hash size (8)
   // + 216 number of different non-NULL values (9) * vector size (24)
   // +  88 number of non-NULL values (11) * sizeof(RowID) (8)
-  // +  32 (NULL elements hash size (8) + vector size (24)) * 1
   // +  40 number of NULL elements (5) * sizeof(RowID) (8)
   // +   2 number of indexed columns (1) * sizeof(ColumnID) (2)
   // +  48 chunk ids set
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
   // +  16 impl
   // +   1 TableIndexType
-  // = 679
-  EXPECT_EQ(index->memory_consumption(), 679u);
+  // = 591
+  EXPECT_EQ(index->memory_consumption(), 591u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 655u);
+  EXPECT_EQ(index->memory_consumption(), 567u);
 #endif
 }
 
@@ -434,7 +432,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
 // Index memory consumption depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
-  // +  80 map size NULL values (index NULL positions)
+  // +  24 vector size NULL values (index NULL positions)
   // +   0 number of different non-NULL values (0) * hash size (8)
   // +   0 number of different non-NULL values (0) * vector size (24)
   // +   0 number of non-NULL values (0) * sizeof(RowID) (8)
@@ -445,10 +443,10 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
   // +   4 number of indexed chunks (1) * sizeof(ChunkID) (4)
   // +  16 impl
   // +   1 TableIndexType
-  // = 231
-  EXPECT_EQ(index->memory_consumption(), 231u);
+  // = 175
+  EXPECT_EQ(index->memory_consumption(), 175u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 207u);
+  EXPECT_EQ(index->memory_consumption(), 151u);
 #endif
 }
 
