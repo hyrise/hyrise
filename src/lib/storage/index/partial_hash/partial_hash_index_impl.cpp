@@ -64,10 +64,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
-        if (!_null_values.contains(true)) {
-          _null_values[true] = std::vector<RowID>();
-        }
-        _null_values[true].push_back(row_id);
+        _null_values.push_back(row_id);
       } else {
         if (!_map.contains(position.value())) {
           _map[position.value()] = std::vector<RowID>();
@@ -110,7 +107,7 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
       ++map_iter;
     }
   }
-  auto& nulls = _null_values[true];
+  auto& nulls = _null_values;
   nulls.erase(std::remove_if(nulls.begin(), nulls.end(),
                              [chunks_to_unindex_filtered](RowID& row_id) {
                                return chunks_to_unindex_filtered.end() != std::find(chunks_to_unindex_filtered.begin(),
@@ -154,12 +151,12 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return Iterator(std::make_shared<TableIndexIterator<bool>>(_null_values.cbegin()));
+  return Iterator(std::make_shared<TableIndexNullIterator>(_null_values.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return Iterator(std::make_shared<TableIndexIterator<bool>>(_null_values.cend()));
+  return Iterator(std::make_shared<TableIndexNullIterator>(_null_values.cend()));
 }
 
 template <typename DataType>

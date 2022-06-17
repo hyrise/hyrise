@@ -82,7 +82,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
  private:
   tsl::robin_map<DataType, std::vector<RowID>> _map;
   // We construct a map for NULL-values here to make use of the same iterator type on values and NULL-values.
-  tsl::robin_map<bool, std::vector<RowID>> _null_values;
+  std::vector<RowID> _null_values;
   std::set<ChunkID> _indexed_chunk_ids = {};
 };
 
