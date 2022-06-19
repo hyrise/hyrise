@@ -143,7 +143,7 @@ void JoinToLocalPredicateRewritePlugin::start() {
                                 std::sort(begin(*all_values), end(*all_values));
                             }
 
-                            if (std::unique(begin(*all_values), end(*all_values)) == all_values->end()) {
+                            if (std::adjacent_find(begin(*all_values), end(*all_values)) == all_values->end()) {
                                 // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
                                 std::cout << "Discovered UCC candidate: " << table->column_name(col_id) << std::endl;
                                 table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
