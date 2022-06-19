@@ -80,14 +80,14 @@ void JoinToLocalPredicateRewritePlugin::start() {
                         using VectorIterator = pmr_vector<ColumnDataType>::iterator;
 
                         // We need to remember if the column contains compressed or uncompressed values.
-                        // It is assumed here that compressed and uncompressed segments are not mixed in a single column.
-                        auto compressed = false;
+                       // For mixed compressed and uncompressed segments, we can't benefit from pre-sorted sub-vectors, so we treat these columns the same as uncompressed ones.
+                        auto compressed = true;
                         // We can use an early-out if we find a single dict segment that contains a duplicate.
                         auto ucc_candidate = true;
 
                         // all_values contains the segment values from all chunks.
                         auto all_values = std::unique_ptr<pmr_vector<ColumnDataType>>();
-                        // We remember the start iterators of the sub-vectors in all_values that need to be merged. No random access is needed, so a list is used for performance reasons.
+                        // We remember the start iterators of the sub-vectors in all_values that can be merged for pure compressed columns. No random access is needed, so a list is used for performance reasons.
                         auto start_iterators = std::list<VectorIterator>{};
 
                         for (auto chunk_id = ChunkID{0}; ucc_candidate && chunk_id < chunk_count; chunk_id ++) {
@@ -103,6 +103,8 @@ void JoinToLocalPredicateRewritePlugin::start() {
                                 const auto& val_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment);
                                 const auto& values = val_segment->values();
 
+                                compressed = false;
+
                                 std::copy(begin(values), end(values), std::back_inserter(*all_values));
 
                                 std::cout << values.size() << std::endl;
@@ -111,10 +113,6 @@ void JoinToLocalPredicateRewritePlugin::start() {
                                 const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
                                 const auto& dict = dict_segment->dictionary();
                                 const auto& attr_vector = dict_segment->attribute_vector();
-
-                                if (chunk_id == 0) {
-                                    compressed = true;
-                                }
                                 
                                 start_iterators.push_back(all_values->end());
                                 std::copy(begin(*dict), end(*dict), std::back_inserter(*all_values));
