@@ -97,9 +97,9 @@ std::vector<ColumnID> JoinIndex::get_pruned_column_ids() const {
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {  
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto copied_pruned_column_ids = get_pruned_column_ids();
-  
+
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates, _index_side, copied_pruned_column_ids);
 }
