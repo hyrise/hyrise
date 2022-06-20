@@ -193,8 +193,10 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
   const auto secondary_predicates =
       std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
+  auto pruned_column_ids = std::vector<ColumnID>{};
+  pruned_column_ids.emplace_back(ColumnID{0});
   const auto join_operator =
-      std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Left, primary_predicate, secondary_predicates);
+      std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Left, primary_predicate, secondary_predicates, IndexSide::Left, pruned_column_ids);
   const auto abstract_join_operator_copy = join_operator->deep_copy();
   const auto join_operator_copy = std::dynamic_pointer_cast<JoinIndex>(abstract_join_operator_copy);
 
@@ -203,6 +205,7 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
   EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
   EXPECT_EQ(join_operator_copy->secondary_predicates(), secondary_predicates);
+  EXPECT_EQ(join_operator_copy->get_pruned_column_ids(), pruned_column_ids);
   EXPECT_NE(join_operator_copy->left_input(), nullptr);
   EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }
