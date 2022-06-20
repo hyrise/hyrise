@@ -80,17 +80,32 @@ void JoinToLocalPredicateRewritePlugin::start() {
                         using VectorIterator = pmr_vector<ColumnDataType>::iterator;
 
                         // We need to remember if the column contains compressed or uncompressed values.
-                       // For mixed compressed and uncompressed segments, we can't benefit from pre-sorted sub-vectors, so we treat these columns the same as uncompressed ones.
+                        // For mixed compressed and uncompressed segments, we can't benefit from pre-sorted sub-vectors, so we treat these columns the same as uncompressed ones.
                         auto compressed = true;
-                        // We can use an early-out if we find a single dict segment that contains a duplicate.
-                        auto ucc_candidate = true;
 
                         // all_values contains the segment values from all chunks.
                         auto all_values = std::unique_ptr<pmr_vector<ColumnDataType>>();
                         // We remember the start iterators of the sub-vectors in all_values that can be merged for pure compressed columns. No random access is needed, so a list is used for performance reasons.
                         auto start_iterators = std::list<VectorIterator>{};
 
-                        for (auto chunk_id = ChunkID{0}; ucc_candidate && chunk_id < chunk_count; chunk_id ++) {
+                        // We can use an early-out if we find a single dict segment that contains a duplicate.
+                        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id ++) {
+                            const auto& source_chunk = table->get_chunk(chunk_id);
+                            const auto& source_segment = source_chunk->get_segment(col_id);
+
+                            if (std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
+                                const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+                                const auto& dict = dict_segment->dictionary();
+                                const auto& attr_vector = dict_segment->attribute_vector();
+
+                                if (dict->size() != attr_vector->size()) {
+                                    return;
+                                }
+                            }
+                        }
+
+                        // If we reach here, we have to make a cross-segment duplicate check.
+                        for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id ++) {
                             const auto& source_chunk = table->get_chunk(chunk_id);
                             const auto& source_segment = source_chunk->get_segment(col_id);
 
@@ -120,34 +135,28 @@ void JoinToLocalPredicateRewritePlugin::start() {
                                 std::cout << dict->size() << std::endl;
                                 std::cout << attr_vector->size() << std::endl;
                                 std::cout << "----" << std::endl;
-
-                                // Check for duplicates inside one dict segment.
-                                if (dict->size() != attr_vector->size()) {
-                                    ucc_candidate = false;
-                                }
                             } else {
                                 std::cerr << "The given segment type is not supported for the discovery of UCCs." << std::endl;
                             }
                         }
 
-                        if (ucc_candidate) {
-                            if (compressed) {
-                                // We merge until there is only one sub-vector left. Then, all_values is sorted.
-                                while (start_iterators.size() > 1) {
-                                    for (auto start_it = begin(start_iterators); start_it != start_iterators.end() && std::next(start_it, 1) != start_iterators.end(); start_it ++) {
-                                        std::inplace_merge(*start_it, *(std::next(start_it, 1)), *(std::next(start_it, 2)));
-                                        start_iterators.erase(std::next(start_it, 1));
-                                    }
+                        if (compressed) {
+                            // We merge the sorted sub-vectors until there is only one sub-vector left. Then, all_values is sorted.
+                            while (start_iterators.size() > 1) {
+                                for (auto start_it = begin(start_iterators); start_it != start_iterators.end() && std::next(start_it, 1) != start_iterators.end(); start_it ++) {
+                                    std::inplace_merge(*start_it, *(std::next(start_it, 1)), *(std::next(start_it, 2)));
+                                    start_iterators.erase(std::next(start_it, 1));
                                 }
-                            } else {
-                                std::sort(begin(*all_values), end(*all_values));
                             }
+                        } else {
+                            // There is no guarantee for sorted sub-vectors of a certain length, so we conventionally sort.
+                            std::sort(begin(*all_values), end(*all_values));
+                        }
 
-                            if (std::adjacent_find(begin(*all_values), end(*all_values)) == all_values->end()) {
-                                // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
-                                std::cout << "Discovered UCC candidate: " << table->column_name(col_id) << std::endl;
-                                table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
-                            }
+                        if (std::unique(begin(*all_values), end(*all_values)) == all_values->end()) {
+                            // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
+                            std::cout << "Discovered UCC candidate: " << table->column_name(col_id) << std::endl;
+                            table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
                         }
                         std::cout << std::endl;
                     });
