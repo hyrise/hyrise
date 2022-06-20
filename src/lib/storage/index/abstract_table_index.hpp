@@ -8,7 +8,7 @@
 #include "table_index_type.hpp"
 #include "types.hpp"
 
-#include "tsl/robin_map.h"
+#include "tsl/sparse_map.h"
 
 namespace opossum {
 
@@ -39,7 +39,7 @@ class BaseTableIndexIterator : public std::iterator<std::forward_iterator_tag, c
 template <typename DataType>
 class TableIndexIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename tsl::robin_map<DataType, std::vector<RowID>>::const_iterator;
+  using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
   explicit TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
 

@@ -50,7 +50,7 @@ class PartialHashIndexTest : public BaseTest {
    * Use pointers to inner data structures of PartialHashIndex in order to bypass the
    * private scope. Since the variable is set in setup() references are not possible.
    */
-  tsl::robin_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
+  tsl::sparse_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 };
 
 TEST_F(PartialHashIndexTest, Type) { EXPECT_EQ(index->type(), TableIndexType::PartialHash); }

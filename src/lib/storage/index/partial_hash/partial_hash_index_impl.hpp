@@ -3,10 +3,11 @@
 #include <utility>
 #include <vector>
 
+#include <tsl/sparse_map.h>
+
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/abstract_table_index.hpp"
-#include "tsl/robin_map.h"
 #include "types.hpp"
 
 namespace opossum {
@@ -80,7 +81,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
-  tsl::robin_map<DataType, std::vector<RowID>> _map;
+  tsl::sparse_map<DataType, std::vector<RowID>> _map;
   // We construct a map for NULL-values here to make use of the same iterator type on values and NULL-values.
   std::vector<RowID> _null_values;
   std::set<ChunkID> _indexed_chunk_ids = {};

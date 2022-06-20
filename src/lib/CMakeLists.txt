@@ -744,6 +744,7 @@ target_link_libraries_system(
     nlohmann_json::nlohmann_json
     robin_map
     SQLite::SQLite3
+    tsl::sparse_map
     tbb
 )
 
