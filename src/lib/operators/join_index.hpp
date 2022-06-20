@@ -51,7 +51,10 @@ class JoinIndex : public AbstractJoinOperator {
 
   std::string description(DescriptionMode description_mode) const override;
 
+  std::vector<ColumnID> get_pruned_column_ids() const;
+
  protected:
+  friend class OperatorsJoinIndexTest;
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
