@@ -72,6 +72,37 @@ class TableIndexIterator : public BaseTableIndexIterator {
   size_t _vector_index;
 };
 
+class TableIndexNullIterator : public BaseTableIndexIterator {
+ public:
+  using MapIteratorType = typename std::vector<RowID>::const_iterator;
+
+  explicit TableIndexNullIterator(MapIteratorType itr) : _map_iterator(itr) {}
+
+  reference operator*() const override { return *_map_iterator; }
+
+  TableIndexNullIterator& operator++() override {
+    _map_iterator++;
+    return *this;
+  }
+
+  bool operator==(const BaseTableIndexIterator& other) const override {
+    auto obj = dynamic_cast<const TableIndexNullIterator*>(&other);
+    return obj && _map_iterator == obj->_map_iterator;
+  }
+
+  bool operator!=(const BaseTableIndexIterator& other) const override {
+    auto obj = dynamic_cast<const TableIndexNullIterator*>(&other);
+    return !obj || _map_iterator != obj->_map_iterator;
+  }
+
+  std::shared_ptr<BaseTableIndexIterator> clone() const override {
+    return std::make_shared<TableIndexNullIterator>(*this);
+  }
+
+ private:
+  MapIteratorType _map_iterator;
+};
+
 /**
  * Wrapper class that implements an iterator interface and holds a pointer to a BaseTableIndexIterator. This wrapper is
  * required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
