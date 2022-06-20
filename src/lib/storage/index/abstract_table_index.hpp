@@ -18,8 +18,16 @@ namespace opossum {
  * (like and end-iterator), increments do not make a change, and equality comparisons with other instances of this class
  * always result in true.
  */
-class BaseTableIndexIterator : public std::iterator<std::forward_iterator_tag, const RowID> {
+class BaseTableIndexIterator {
  public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = void;
+  using difference_type = std::ptrdiff_t;
+  using pointer = void;
+  using reference = RowID;
+
+  BaseTableIndexIterator(const BaseTableIndexIterator& itr) = default;
+  BaseTableIndexIterator() = default;
   virtual ~BaseTableIndexIterator() = default;
 
   virtual reference operator*() const { throw std::logic_error("cannot dereference on empty iterator"); }
@@ -111,8 +119,14 @@ class TableIndexNullIterator : public BaseTableIndexIterator {
  * instead of a random access iterator, so if an iterator instance has to be retained before a manipulating call, e.g.,
  * when calling it on std::distance, a copy has to be made beforehand.
  */
-class IteratorWrapper : public std::iterator<std::forward_iterator_tag, const RowID> {
+class IteratorWrapper {
  public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = void;
+  using difference_type = std::ptrdiff_t;
+  using pointer = void;
+  using reference = RowID;
+
   explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
       : _impl(std::move(table_index_iterator_ptr)) {}
 
