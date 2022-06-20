@@ -5,10 +5,9 @@
 
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
+#include "memory/tracking_memory_resource.hpp"
 
 namespace opossum {
-
-class TrackingMemoryResource;
 
 class MemoryResourceManager : public Noncopyable {
  public:
@@ -21,7 +20,7 @@ class MemoryResourceManager : public Noncopyable {
  protected:
   // make sure that only Hyrise can create new instances
   friend class Hyrise;
-  MemoryResourceManager(); // add "= default" ??
+  MemoryResourceManager() = default;
 
   std::unordered_map<std::string, std::shared_ptr<TrackingMemoryResource>> _memory_resources;
 };

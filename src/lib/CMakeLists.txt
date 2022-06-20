@@ -171,6 +171,8 @@ set(
     lossy_cast.hpp
     memory/boost_default_memory_resource.cpp
     memory/zero_allocator.hpp
+    memory/tracking_memory_resource.hpp
+    memory/tracking_memory_resource.cpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
     operators/abstract_aggregate_operator.hpp
