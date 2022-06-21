@@ -294,14 +294,53 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
       }
     }
 
+    const auto guarantees_single_result = [](auto subquery_expression){
+      if (subquery_expression->is_correlated()) {
+        return false;
+      }
+      const auto& lqp = subquery_expression->lqp;
+      auto single_result = false;
+      visit_lqp(lqp, [&single_result](auto& node){
+        switch (node->type) {
+          case LQPNodeType::Projection: {
+              const auto& node_expressions = node->node_expressions;
+              if (std::any_of(node_expressions.cbegin(), node_expressions.cend(), [](const auto& expression){return expression->type != ExpressionType::LQPColumn;})) {
+                return LQPVisitation::DoNotVisitInputs;
+              }
+            }
+            return LQPVisitation::VisitInputs;
+          case LQPNodeType::Validate:
+            return LQPVisitation::VisitInputs;
+          case LQPNodeType::Aggregate: {
+              auto& aggregate_node = static_cast<AggregateNode&>(*node);
+              if (aggregate_node.aggregate_expressions_begin_idx == 0u) {
+                single_result = true;
+                //std::cout << "prevented subquery to join" << std::endl;
+              }
+            }
+            return LQPVisitation::DoNotVisitInputs;
+          default:
+              return LQPVisitation::DoNotVisitInputs;
+        }
+      });
+
+      return single_result;
+    };
+
     if (const auto left_subquery_expression =
             std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->left_operand())) {
+      if (guarantees_single_result(left_subquery_expression)) {
+        return std::nullopt;
+      }
       result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(left_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           flip_predicate_condition(binary_predicate->predicate_condition), binary_predicate->right_operand(),
           result.subquery->lqp->output_expressions()[0]);
     } else if (const auto right_subquery_expression =
                    std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate->right_operand())) {
+      if (guarantees_single_result(right_subquery_expression)) {
+        return std::nullopt;
+      }
       result.subquery = std::static_pointer_cast<LQPSubqueryExpression>(right_subquery_expression->deep_copy());
       result.join_predicate = std::make_shared<BinaryPredicateExpression>(
           binary_predicate->predicate_condition, binary_predicate->left_operand(),
