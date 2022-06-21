@@ -6,10 +6,10 @@ namespace opossum {
     return _memory_resources;
   }
 
-  const std::unordered_map<std::string, int64_t> MemoryResourceManager::get_current_memory_usage() const {
-    auto memory_stats = std::unordered_map<std::string, int64_t>{};
+  const std::unordered_map<std::string, size_t> MemoryResourceManager::get_current_memory_usage() const {
+    auto memory_stats = std::unordered_map<std::string, size_t>{};
     for (const auto& [purpose, memory_resource_ptr] : _memory_resources) {
-      memory_stats.emplace(purpose, 0); //TODO use memory_resource_ptr->get_amount() instead of 0
+      memory_stats.emplace(purpose, memory_resource_ptr->get_amount());
     }
     return memory_stats;
   }

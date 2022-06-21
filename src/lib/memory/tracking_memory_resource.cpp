@@ -19,4 +19,8 @@ void TrackingMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size
   return &other == this;
 }
 
+size_t TrackingMemoryResource::get_amount() const {
+  return static_cast<size_t>(_tracked_memory);
+}
+
 } // namespace opossum
