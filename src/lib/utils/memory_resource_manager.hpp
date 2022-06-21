@@ -15,6 +15,7 @@ class MemoryResourceManager : public Noncopyable {
   // TODO comment
   const std::unordered_map<std::string, std::shared_ptr<TrackingMemoryResource>>& memory_resources() const;
   const std::unordered_map<std::string, size_t> get_current_memory_usage() const;
+  PolymorphicAllocator<std::byte> get_pmr_allocator(const std::string& purpose);
   std::shared_ptr<TrackingMemoryResource> get_memory_resource(const std::string& purpose);
 
  protected:

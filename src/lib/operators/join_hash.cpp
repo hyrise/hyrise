@@ -481,8 +481,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     /**
      * 4. Probe step
      */
-    std::vector<RowIDPosList> build_side_pos_lists;
-    std::vector<RowIDPosList> probe_side_pos_lists;
+    auto memory_resource_ptr = Hyrise::get().memory_resource_manager.get_memory_resource("JoinHash, Probe step");
+    auto pmr_allocator = PolymorphicAllocator<RowIDPosList>{&(*memory_resource_ptr)};
+    auto build_side_pos_lists = pmr_vector<RowIDPosList>(pmr_allocator);
+    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(pmr_allocator);
+
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);

@@ -22,4 +22,9 @@ namespace opossum {
     return _memory_resources[purpose];
   }
 
+  PolymorphicAllocator<std::byte> MemoryResourceManager::get_pmr_allocator(const std::string& purpose) {
+    // TODO: remove &(*..) hack (used to convert smart pointer to normal pointer)
+    return PolymorphicAllocator<std::byte>{&(*get_memory_resource(purpose))};
+  }
+
 }  // namespace opossum
