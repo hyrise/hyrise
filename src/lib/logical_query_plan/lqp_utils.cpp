@@ -268,10 +268,6 @@ bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
     return true;
   }
 
-  if (lqp->type == LQPNodeType::Validate) {
-    return true;
-  }
-
   if (!lqp->left_input() && !lqp->right_input()) {
     return false;
   }
