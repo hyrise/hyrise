@@ -65,7 +65,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    */
   void update_next_row() {
     if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) {
-      return;  // -> if (_counter == 598)...
+      return;
     }
 
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
