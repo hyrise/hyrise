@@ -13,8 +13,9 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
+      // Skip physically deleted chunks
       if (!chunk) {
-        continue;  // Skip physically deleted chunks
+        continue;
       }
 
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
