@@ -72,11 +72,7 @@ bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_stati
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
-  if (!operator_predicates) {
-    return false;
-  }
-
-  if (operator_predicates->size() != 1) {
+  if (!operator_predicates || operator_predicates->size() != 1) {
     return false;
   }
 
