@@ -117,10 +117,7 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
             return true;
           };
 
-          if (try_deeper_reducer_node(LQPInputSide::Left)) {
-            continue;
-          }
-          if (try_deeper_reducer_node(LQPInputSide::Right)) {
+          if (try_deeper_reducer_node(LQPInputSide::Left) || try_deeper_reducer_node(LQPInputSide::Right)) {
             continue;
           }
           break;
