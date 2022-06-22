@@ -64,7 +64,7 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * - Updates stop just before the end of Chunk 3 (at position 598), so that it is "fresh" and not cleaned up.
    */
   void update_next_row() {
-    if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) {
+    if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2 /* 598 */) {
       return;
     }
 
