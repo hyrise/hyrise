@@ -218,7 +218,7 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
                 const auto column_count = static_cast<ColumnID>(column_count());
-                for (const auto column_id : column_ids) {
+                for (const auto& column_id : column_ids) {
                   if (column_id >= column_count) {
                     return false;
                   }
