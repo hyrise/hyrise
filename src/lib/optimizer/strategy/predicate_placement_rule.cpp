@@ -50,6 +50,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
   const auto handle_barrier = [&]() {
     _insert_nodes(current_node, input_side, push_down_nodes);
 
+    // At this point, all pushdown predicates should have been inserted above the barrier node. In the following, we
+    // apply the pushdown traversal logic to the remaining parts of the LQP – including the current barrier node. The
+    // latter might also be a predicate eligible for pushdown. If it is, we try to push it down the LQP, and another
+    // node might become the "new barrier" (having multiple output nodes).
     const auto& barrier_node = input_node;
     const auto barrier_node_is_pushdown_predicate = [&barrier_node]() {
       if (barrier_node->type == LQPNodeType::Predicate) {
@@ -65,12 +69,10 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
     auto next_push_down_traversal_root = barrier_node;
     if (barrier_node_is_pushdown_predicate) {
-      // The barrier node is a predicate eligible for pushdown. Therefore, we would like it to be covered by the next
-      // recursion of _push_down_traversal. However, since _push_down_traversal looks at the inputs of a given root node
-      // only, barrier_node would not be pushed down.
-      // To allow for a pushdown of barrier_node, a temporary root node is inserted above it. Afterwards, the temporary
-      // root node is used as a root for the next _push_down_traversal recursion. As a result, barrier_node will be seen
-      // as an input of the temporary root node, and thus be pushed down by the rule, if possible.
+      // barrier_node is a predicate, and we would like to cover it in the next recursion of _push_down_traversal.
+      // However, if we simply call _push_down_traversal with barrier_node, the predicate would not become pushed down
+      // since _push_down_traversal looks at input nodes only. To overcome this issue, we insert a temporary root node,
+      // set barrier_node as an input, and call _push_down_traversal with the temporary root node.
       next_push_down_traversal_root = LogicalPlanRootNode::make();
       lqp_insert_node_above(barrier_node, next_push_down_traversal_root);
     }
