@@ -13,7 +13,9 @@
 
 namespace opossum {
 
+class OperatorsJoinIndexTest;
 class MultiPredicateJoinEvaluator;
+
 using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
 using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
 
@@ -30,13 +32,15 @@ using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableInd
    * Note: An index needs to be present on the index side table in order to execute an index join.
    */
 class JoinIndex : public AbstractJoinOperator {
+  friend OperatorsJoinIndexTest;
+ 
  public:
   static bool supports(const JoinConfiguration config);
 
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
-            const IndexSide index_side = IndexSide::Right, const std::vector<ColumnID> pruned_column_ids = {});
+            const IndexSide index_side = IndexSide::Right, const std::vector<ColumnID>& pruned_column_ids = {});
 
   const std::string& name() const override;
 
@@ -51,10 +55,9 @@ class JoinIndex : public AbstractJoinOperator {
 
   std::string description(DescriptionMode description_mode) const override;
 
-  std::vector<ColumnID> get_pruned_column_ids() const;
+  const std::vector<ColumnID> get_pruned_column_ids() const;
 
  protected:
-  friend class OperatorsJoinIndexTest;
   std::shared_ptr<const Table> _on_execute() override;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -70,9 +73,9 @@ class JoinIndex : public AbstractJoinOperator {
                              MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
 
   template <typename ProbeIterator>
-  void _data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+  void _data_join_two_segments_using_chunk_index(ProbeIterator probe_iter, ProbeIterator probe_end,
                                            const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                           const std::shared_ptr<AbstractChunkIndex>& index);
+                                           const std::shared_ptr<AbstractChunkIndex>& chunk_index);
 
   template <typename ProbeIterator>
   void _data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
@@ -80,16 +83,16 @@ class JoinIndex : public AbstractJoinOperator {
                                                  const std::shared_ptr<AbstractTableIndex>& table_index);
 
   template <typename ProbeIterator>
-  void _reference_join_two_segments_using_index(
+  void _reference_join_two_segments_using_chunk_index(
       ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-      const std::shared_ptr<AbstractChunkIndex>& index,
+      const std::shared_ptr<AbstractChunkIndex>& chunk_index,
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  std::vector<ChunkIndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                  const std::shared_ptr<AbstractChunkIndex>& index) const;
+  std::vector<ChunkIndexRange> _chunk_index_ranges_for_value(const SegmentPosition probe_side_position,
+                                                  const std::shared_ptr<AbstractChunkIndex>& chunk_index) const;
 
-  void _append_matches(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,
+  void _append_matches_chunk_index(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,
                        const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                        const ChunkID index_chunk_id);
 

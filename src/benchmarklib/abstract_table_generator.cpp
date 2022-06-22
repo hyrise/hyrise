@@ -1,7 +1,5 @@
 #include "abstract_table_generator.hpp"
 
-#include <numeric>
-
 #include "benchmark_config.hpp"
 #include "benchmark_table_encoder.hpp"
 #include "hyrise.hpp"
