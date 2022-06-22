@@ -217,9 +217,9 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
 std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
-                const auto column_count = static_cast<ColumnID>(column_count());
+                const auto number_of_columns = static_cast<ColumnID>(column_count());
                 for (const auto& column_id : column_ids) {
-                  if (column_id >= column_count) {
+                  if (column_id >= number_of_columns) {
                     return false;
                   }
                 }
