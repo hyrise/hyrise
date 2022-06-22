@@ -41,8 +41,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
+  // Allow calling without checks
   if (!input_node) {
-    return;  // Allow calling without checks
+    return;
   }
 
   // A helper method for cases where the input_node does not allow us to proceed
