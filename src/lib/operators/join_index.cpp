@@ -463,9 +463,9 @@ void JoinIndex::_reference_join_two_segments_using_index(
 }
 
 template <typename SegmentPosition>
-std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
+std::vector<ChunkIndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition probe_side_position,
                                                            const std::shared_ptr<AbstractChunkIndex>& index) const {
-  std::vector<IndexRange> index_ranges{};
+  std::vector<ChunkIndexRange> index_ranges{};
   index_ranges.reserve(2);
 
   // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
@@ -474,8 +474,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   if (_mode == JoinMode::AntiNullAsTrue) {
     const auto indexed_null_values = index->null_cbegin() != index->null_cend();
     if (probe_side_position.is_null() || indexed_null_values) {
-      index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
-      index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
+      index_ranges.emplace_back(ChunkIndexRange{index->cbegin(), index->cend()});
+      index_ranges.emplace_back(ChunkIndexRange{index->null_cbegin(), index->null_cend()});
       return index_ranges;
     }
   }
@@ -494,7 +494,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         // first, get all values less than the search value
         range_begin = index->cbegin();
         range_end = index->lower_bound({probe_side_position.value()});
-        index_ranges.emplace_back(IndexRange{range_begin, range_end});
+        index_ranges.emplace_back(ChunkIndexRange{range_begin, range_end});
 
         // set range for second half to all values greater than the search value
         range_begin = index->upper_bound({probe_side_position.value()});
@@ -525,7 +525,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         Fail("Unsupported comparison type encountered");
       }
     }
-    index_ranges.emplace_back(IndexRange{range_begin, range_end});
+    index_ranges.emplace_back(ChunkIndexRange{range_begin, range_end});
   }
   return index_ranges;
 }

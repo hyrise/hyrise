@@ -14,7 +14,7 @@
 namespace opossum {
 
 class MultiPredicateJoinEvaluator;
-using IndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
+using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
 using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
 
 /**
@@ -86,7 +86,7 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
+  std::vector<ChunkIndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
                                                   const std::shared_ptr<AbstractChunkIndex>& index) const;
 
   void _append_matches(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,
