@@ -40,5 +40,3 @@ memory_resource* set_default_resource(memory_resource* r) BOOST_NOEXCEPT {
 }
 
 }  // namespace boost::container::pmr
-
-// NOLINTEND(cppcoreguidelines-owning-memory,hicpp-no-malloc)
