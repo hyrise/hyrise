@@ -264,7 +264,7 @@ void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  if (!lqp) {
+  if (!lqp || lqp->type == LQPNodeType::Validate) {
     return true;
   }
 
