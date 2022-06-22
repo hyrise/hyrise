@@ -88,7 +88,7 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
-  const auto chunk_indexes = parse_result["indexes"].as<bool>();
+  const auto chunk_indexes = parse_result["chunk_indexes"].as<bool>();
   if (chunk_indexes) {
     std::cout << "- Creating chunk indexes (as defined by the benchmark)" << std::endl;
   }
