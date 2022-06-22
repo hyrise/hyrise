@@ -105,11 +105,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) {
-    return;
-  }
-
-  if (!visited_nodes.emplace(node).second) {
+  if (!node || !visited_nodes.emplace(node).second) {
     return;
   }
 
