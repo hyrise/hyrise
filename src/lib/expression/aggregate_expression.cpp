@@ -109,11 +109,7 @@ bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
   }
 
   const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*aggregate_expression.argument());
-  if (lqp_column_expression.original_column_id != INVALID_COLUMN_ID) {
-    return false;
-  }
-
-  return true;
+  return lqp_column_expression.original_column_id == INVALID_COLUMN_ID;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
