@@ -302,14 +302,8 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
       auto single_result = false;
       visit_lqp(lqp, [&single_result](auto& node){
         switch (node->type) {
-          case LQPNodeType::Projection: {
-              const auto& node_expressions = node->node_expressions;
-              if (std::any_of(node_expressions.cbegin(), node_expressions.cend(), [](const auto& expression){return expression->type != ExpressionType::LQPColumn;})) {
-                return LQPVisitation::DoNotVisitInputs;
-              }
-            }
-            return LQPVisitation::VisitInputs;
           case LQPNodeType::Validate:
+          case LQPNodeType::Projection:
             return LQPVisitation::VisitInputs;
           case LQPNodeType::Aggregate: {
               auto& aggregate_node = static_cast<AggregateNode&>(*node);
@@ -319,6 +313,13 @@ std::optional<SubqueryToJoinRule::PredicateNodeInfo> SubqueryToJoinRule::is_pred
               }
             }
             return LQPVisitation::DoNotVisitInputs;
+          /*case LQPNodeType::Predicate: {
+            auto& predicate_node = static_cast<PredicateNode&>(*node);
+            auto binary_predicate = std::dynamic_pointer_cast<const BinaryPredicateExpression>(predicate_node.predicate());
+            if (binary_predicate && binary_predicate->predicate_condition == PredicateCondition::Equals) {
+              single_result = true;
+            }
+          } return LQPVisitation::DoNotVisitInputs;*/
           default:
               return LQPVisitation::DoNotVisitInputs;
         }
