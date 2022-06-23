@@ -2420,9 +2420,12 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(SQLTranslatorTest, CreateTableNullablePrimaryKey) {
+TEST_F(SQLTranslatorTest, InvalidConstraints) {
+  // PRIMARY KEY must not be nullable.
   EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER NULL, PRIMARY KEY(a_int))"),
                InvalidInputException);
+  // Constraints must not contain unknown columns.
+  EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER, UNIQUE(b_int))"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {

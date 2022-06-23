@@ -1408,7 +1408,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           }
         }
       }
-
+      AssertInput(
+          column_ids.size() == table_constraint->columnNames->size(),
+          "Could not resolve columns of " + std::string{magic_enum::enum_name(constraint_type)} + " table constraint");
       table_key_constraints.emplace(column_ids, constraint_type);
       std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced\n";
     }
