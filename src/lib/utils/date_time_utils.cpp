@@ -5,31 +5,31 @@
 namespace opossum {
 
 std::optional<boost::gregorian::date> string_to_date(const std::string& date_string) {
-  // We catch parsing errors since we return a std::nullopt if the input string is not a valid date.
+  // We catch parsing exceptions since we return a std::nullopt if the input string is not a valid date.
   try {
     const auto date = boost::gregorian::from_string(date_string);
     if (!date.is_not_a_date()) {
       return date;
     }
-  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* unused */) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* unused */) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* unused */) {
-  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* unused */) {}
+  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* exception */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* exception */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* exception */) {
+  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* exception */) {}
   return std::nullopt;
 }
 
 std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& date_time_string) {
-  // We catch parsing errors since we return a std::nullopt if the input string is not a valid timestamp.
+  // We catch parsing exceptions since we return a std::nullopt if the input string is not a valid timestamp.
   try {
     const auto date_time = boost::posix_time::time_from_string(date_time_string);
     if (!date_time.is_not_a_date_time()) {
       return date_time;
     }
-  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* unused */) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* unused */) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* unused */) {
-  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* unused */) {
-  } catch (const std::out_of_range& /* unused */) {}
+  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* exception */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* exception */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* exception */) {
+  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* exception */) {
+  } catch (const std::out_of_range& /* exception */) {}
   return std::nullopt;
 }
 
