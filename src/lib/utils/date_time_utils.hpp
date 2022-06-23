@@ -32,7 +32,7 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
 // ISO 8601 extended format representation of the date.
 std::string date_to_string(const boost::gregorian::date& date);
 
-// ISO 8601 extended format representation of the date without time indicator.
+// ISO 8601 extended format representation of the timestamp without time indicator.
 std::string date_time_to_string(const boost::posix_time::ptime& date_time);
 
 }  // namespace opossum
