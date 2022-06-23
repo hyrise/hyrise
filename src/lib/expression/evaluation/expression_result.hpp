@@ -77,7 +77,7 @@ class ExpressionResult : public BaseExpressionResult {
   bool is_literal() const {
     return size() == 1;
   }
- 
+
   bool is_nullable() const {
     return !nulls.empty();
   }
