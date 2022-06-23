@@ -495,9 +495,11 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
 
   // Remove invalid or unnecessary FDs
   fds.erase(std::remove_if(fds.begin(), fds.end(),
-                           [&lqp, &output_expressions_set](auto& fd) {
+                           [&](auto& fd) {
                              // If there are no dependents left, we can discard the FD altogether
-                             if (fd.dependents.empty()) return true;
+                             if (fd.dependents.empty()) {
+                               return true;
+                             }
 
                              /**
                               * Remove FDs with determinant expressions that are
@@ -505,8 +507,12 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                               *  b) are nullable
                               */
                              for (const auto& fd_determinant_expression : fd.determinants) {
-                               if (!output_expressions_set.contains(fd_determinant_expression) ||
-                                   lqp->is_column_nullable(lqp->get_column_id(*fd_determinant_expression))) {
+                               if (!output_expressions_set.contains(fd_determinant_expression)) {
+                                 return true;
+                               }
+                               const auto expression_idx =
+                                   find_expression_idx(*fd_determinant_expression, output_expressions);
+                               if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
                                  return true;
                                }
                              }

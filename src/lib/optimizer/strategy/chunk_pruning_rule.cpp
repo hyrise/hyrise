@@ -230,14 +230,14 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     std::set<ChunkID> current_excluded_chunk_ids;
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
 
+    const auto stored_table_node_output_expressions = stored_table_node_without_column_pruning->output_expressions();
     for (const auto& operator_predicate : *operator_predicates) {
       // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
       if (!is_variant(operator_predicate.value)) {
         continue;
       }
 
-      const auto column_data_type =
-          stored_table_node_without_column_pruning->output_expressions()[operator_predicate.column_id]->data_type();
+      const auto column_data_type = stored_table_node_output_expressions[operator_predicate.column_id]->data_type();
 
       // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
       // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
