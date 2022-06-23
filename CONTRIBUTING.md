@@ -88,7 +88,7 @@
       preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than
       ~~`set_input_left()`~~.
     * Unused variables: instead of leaving out the parameter name, comment the parameter name out (e.g.,
-      `void function(const size_t /*unused*/) { ... }`).
+      `void function(const size_t /*value*/) { ... }`).
 
 * Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished
   with a full stop.
