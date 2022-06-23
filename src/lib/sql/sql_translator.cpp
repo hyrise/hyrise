@@ -1825,8 +1825,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         if (target_hsql_data_type == hsql::DataType::DATETIME) {
           const auto date_time = string_to_date_time(input_string);
           AssertInput(date_time, "'" + input_string + "' is not a valid ISO 8601 extended timestamp");
-          // Overflowing time components are added to the subsequent unit while parsing, and we want to get a
-          // semantically correct value.
+          // Parsing valid timestamps is also possible for at first glance invalid strings (see
+          // `utils/date_time_utils.hpp` for details). To  always obtain a semantically meaningful result, we retrieve
+          // the created timestamp's string representation.
           return value_(pmr_string{date_time_to_string(*date_time)});
         }
       }
