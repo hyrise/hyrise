@@ -34,6 +34,7 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(string_to_date_time("2001-02-29 00:00:00"), std::nullopt);
   EXPECT_EQ(string_to_date_time("-1-02-29 00:00:00"), std::nullopt);
   EXPECT_EQ(string_to_date_time("2000-01-01"), std::nullopt);
+  EXPECT_EQ(string_to_date_time("2000-01-01T00:00:00"), std::nullopt);
   EXPECT_EQ(string_to_date_time("2000-01-01 00:00:x"), std::nullopt);
   EXPECT_EQ(string_to_date_time("2000-01-01 00:x:00"), std::nullopt);
   EXPECT_EQ(string_to_date_time("2000-01-01 x:00:00"), std::nullopt);

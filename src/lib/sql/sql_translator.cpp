@@ -1816,14 +1816,15 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         const auto input_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
 
         if (target_hsql_data_type == hsql::DataType::DATE) {
+          // We do not have a Date data type, so we check if the date is valid and return its ValueExpression.
           const auto date = string_to_date(input_string);
-          AssertInput(date, "'" + input_string + "' is not a valid date");
-          return std::const_pointer_cast<AbstractExpression>(left);
+          AssertInput(date, "'" + input_string + "' is not a valid ISO 8601 extended date");
+          return left;
         }
 
         if (target_hsql_data_type == hsql::DataType::DATETIME) {
           const auto date_time = string_to_date_time(input_string);
-          AssertInput(date_time, "'" + input_string + "' is not a valid date time");
+          AssertInput(date_time, "'" + input_string + "' is not a valid ISO 8601 extended timestamp");
           // Overflowing time components are added to the subsequent unit while parsing, and we want to get a
           // semantically correct value.
           return value_(pmr_string{date_time_to_string(*date_time)});

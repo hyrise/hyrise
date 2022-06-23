@@ -5,6 +5,7 @@
 namespace opossum {
 
 std::optional<boost::gregorian::date> string_to_date(const std::string& date_string) {
+  // We catch parsing errors since we return a std::nullopt if the input string is not a valid date.
   try {
     const auto date = boost::gregorian::from_string(date_string);
     if (!date.is_not_a_date()) {
@@ -19,6 +20,7 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
 }
 
 std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& date_time_string) {
+  // We catch parsing errors since we return a std::nullopt if the input string is not a valid timestamp.
   try {
     const auto date_time = boost::posix_time::time_from_string(date_time_string);
     if (!date_time.is_not_a_date_time()) {
