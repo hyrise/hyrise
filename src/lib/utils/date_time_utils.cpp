@@ -11,10 +11,10 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
     if (!date.is_not_a_date()) {
       return date;
     }
-  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>&) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_month>&) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_year>&) {
-  } catch (const boost::wrapexcept<boost::bad_lexical_cast>&) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* unused */) {
   }
   return std::nullopt;
 }
@@ -26,11 +26,11 @@ std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& d
     if (!date_time.is_not_a_date_time()) {
       return date_time;
     }
-  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>&) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_month>&) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_year>&) {
-  } catch (const boost::wrapexcept<boost::bad_lexical_cast>&) {
-  } catch (const std::out_of_range&) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* unused */) {
+  } catch (const std::out_of_range& /* unused */) {
   }
   return std::nullopt;
 }
