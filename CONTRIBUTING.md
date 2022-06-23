@@ -56,7 +56,7 @@
   * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
   * Use braced control statements (`if (...) { x(); }` instead of `if (...) x();`). This is even enforced for single
     line blocks (via clang-format). The only exception are empty blocks (e.g., `while (!ready) {}`).
-  * Use braced control statements. This is even enforced for single line blocks (via clang-format). Unless the blocks
+  * Use braced control statements, even for single-line blocks. Unless the blocks
     are empty (e.g., `while (!ready) {}`), add line breaks. Instead of `if (...) x();` (or `if (...) { x(); }`), write:
     
     ```
