@@ -22,12 +22,15 @@ class OperatorsUnionAllTest : public BaseTest {
     _table_wrapper_b =
         std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2}));
 
-    _table_wrapper_a->execute();
-    _table_wrapper_b->execute();
+    _table_wrapper_c =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
+
+    execute_all({_table_wrapper_a, _table_wrapper_b, _table_wrapper_c});
   }
 
   std::shared_ptr<TableWrapper> _table_wrapper_a;
   std::shared_ptr<TableWrapper> _table_wrapper_b;
+  std::shared_ptr<TableWrapper> _table_wrapper_c;
 };
 
 TEST_F(OperatorsUnionAllTest, UnionOfValueTables) {
@@ -66,7 +69,7 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnNumberException) {
 
   auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, gt_c);
 
-  EXPECT_THROW(union_all->execute(), std::exception);
+  EXPECT_THROW(union_all->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
@@ -80,7 +83,13 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnOrderException) {
 
   auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, gt_d);
 
-  EXPECT_THROW(union_all->execute(), std::exception);
+  EXPECT_THROW(union_all->execute(), std::logic_error);
+}
+
+TEST_F(OperatorsUnionAllTest, ThrowWrongColumnDefinitions) {
+  auto union_all = std::make_shared<UnionAll>(_table_wrapper_a, _table_wrapper_c);
+
+  EXPECT_THROW(union_all->execute(), std::logic_error);
 }
 
 }  // namespace opossum

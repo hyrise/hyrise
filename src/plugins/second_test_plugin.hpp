@@ -15,7 +15,7 @@ class SecondTestPlugin : public AbstractPlugin {
 
   void stop() final;
 
-  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const final;
+  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() final;
 
   void a_user_executable_function() const;
 

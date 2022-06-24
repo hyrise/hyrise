@@ -4,6 +4,7 @@
 namespace opossum {
 
 // This plugin does not export its instantiation so that we can test if this case is handled correctly.
+// NOLINTNEXTLINE(fuchsia-multiple-inheritance)
 class TestNonInstantiablePlugin : public AbstractPlugin, public Singleton<TestNonInstantiablePlugin> {
  public:
   std::string description() const final {

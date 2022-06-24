@@ -46,7 +46,7 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   stream << "[Aggregate] ";
 
   stream << "GroupBy: [";
-  for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
     if (expression_idx + 1 < aggregate_expressions_begin_idx) {
       stream << ", ";

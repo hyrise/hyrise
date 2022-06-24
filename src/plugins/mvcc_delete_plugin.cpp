@@ -37,7 +37,7 @@ void MvccDeletePlugin::_logical_delete_loop() {
   const auto tables = Hyrise::get().storage_manager.tables();
 
   // Check all tables
-  for (auto& [table_name, table] : tables) {
+  for (const auto& [table_name, table] : tables) {
     if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
       continue;
     }
