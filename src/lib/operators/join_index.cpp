@@ -200,10 +200,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             PerformanceWarning("There are multiple indexes available, but only the first one is used.");
           }
 
-          const auto& index = indexes.front();
+          const auto& chunk_index = indexes.front();
 
           _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-            _reference_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index,
+            _reference_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, chunk_index,
                                                      reference_segment_pos_list);
           });
 
@@ -266,7 +266,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       }
     } else {  // chunk-based index join
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-      for (ChunkID index_chunk_id{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
+      for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
         const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
         Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -280,10 +280,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
             PerformanceWarning("There are multiple indexes available, but only the first one is used.");
           }
           
-          const auto& index = indexes.front();
+          const auto& chunk_index = indexes.front();
 
           _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-            _data_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, index);
+            _data_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, chunk_index);
           });
 
           index_joining_duration += timer.lap();
@@ -338,7 +338,7 @@ template <typename Functor>
 void JoinIndex::_scan_probe_side_input(const Functor& functor) {
   // Scan all chunks from the probe side input
   const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
-  for (ChunkID probe_chunk_id{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
+  for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
     const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
