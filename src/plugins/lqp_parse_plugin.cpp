@@ -8,66 +8,59 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
-#include "expression/logical_expression.hpp"
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
     std::string LQPParsePlugin::description() const { return "Hyrise LQPParsePlugin"; }
 
-    UCCCandidate* LQPParsePlugin::generate_valid_candidate(std::shared_ptr<AbstractLQPNode> node, std::shared_ptr<AbstractExpression> column, bool validated = false) {
-                UCCCandidate* left_sub_result = nullptr;
-                UCCCandidate* right_sub_result = nullptr;
-                
-                if (!node) {
-                    // input node may already be nullptr in case we try to get right input of node with only one input
-                    return nullptr;
-                } else if (node->type == LQPNodeType::Predicate) {
-                    // when looking at predicate node, check whether the searched column is filtered in this predicate
-                    // -> if so, it is a valid UCC candidate, so pass that info to further search; if not, still continue search
-                    const auto casted_node = std::static_pointer_cast<PredicateNode>(node);
-                    std::cout << "\t\t\t\t" << node->description() << std::endl;
+    UCCCandidate* LQPParsePlugin::generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
+        UCCCandidate* candidate = nullptr;
 
-                    const auto predicate = std::static_pointer_cast<LogicalExpression>(casted_node->predicate());
-                    bool is_valid = predicate->left_operand()->description() == column->description();
-
-                    // recurse through the left and right side of tree, only touch right if left isn't already returning valid UCC candidate
-                    left_sub_result = generate_valid_candidate(node->left_input(), column, is_valid);
-                    if (!left_sub_result) {
-                        right_sub_result = generate_valid_candidate(node->right_input(), column, is_valid);
-                    }
-                } else if (node->type == LQPNodeType::StoredTable) {
-                    // when looking at stored table node, check whether it contains the column searched for
-                    // if so, return the table name and node ID as UCCCandidate object, otherwise return nullptr
-                    // TODO: what happens if we run into two different tables having a colunm with the same name? Probably need to look at that
-                    std::cout << "\t\t\t\t" << node->description() << std::endl;
-                    if (!validated) {
-                        // if column would not be a valid UCC candidate, skip verification
-                        return nullptr;
-                    } else {
-                        const auto casted_node = std::static_pointer_cast<StoredTableNode>(node);
-                        const auto& table_name = casted_node->table_name;
-                        // verify by checking whether the node is able to fetch the column from its table, if not, return nullptr
-                        try {
-                            casted_node->get_column(column->as_column_name());
-                        } catch (const std::exception& exception) {
-                            return nullptr;
-                        }
-                        // get column ID from its Expression
-                        const auto& column_id = casted_node->get_column_id(*column);
-                        return new UCCCandidate(table_name, column_id);
-                    }
-                } else {
-                    // if neither of the special cases handled, simply recurse further through the tree, depth first left to right
-                    // right paths are skipped once a valid UCC is found to improve performance
-                    left_sub_result = generate_valid_candidate(node->left_input(), column, validated);
-                    if (!left_sub_result) {
-                        right_sub_result = generate_valid_candidate(node->right_input(), column, validated);
-                    }
+        if (!root_node) {
+            // input node may already be nullptr in case we try to get right input of node with only one input
+            return nullptr;
+        } else {
+            visit_lqp(root_node, [&](auto& node) {
+                if (node->type != LQPNodeType::Predicate) {
+                    return LQPVisitation::VisitInputs;
                 }
 
-                return (left_sub_result) ? left_sub_result : right_sub_result;
-            }
+                std::cout << "\t\t\t\t" << node->description() << std::endl;
+                
+                // when looking at predicate node, check whether the searched column is filtered in this predicate
+                // -> if so, it is a valid UCC candidate; if not, still continue search
+                const auto casted_node = std::static_pointer_cast<PredicateNode>(node);
+
+                // first, ensure that we look at a binary predicate expression checking for equality (e.g., A==B)
+                const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(casted_node->predicate());
+                if ((!predicate) || (predicate->predicate_condition != PredicateCondition::Equals)) {
+                    return LQPVisitation::VisitInputs;
+                }
+                
+                // get the column expression, should be left, but also check the right operand if the left one is not column
+                auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
+                if (!column_expression) {
+                    column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
+                }
+
+                if ((!column_expression) || (column_expression != column_candidate)) {
+                    return LQPVisitation::VisitInputs;
+                }
+
+                // get the StoredTableNode and ColumnID to build the UCCCandidate
+                const auto table = std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
+                candidate = new UCCCandidate{table->table_name, column_expression->original_column_id};
+
+                return LQPVisitation::DoNotVisitInputs;
+            });
+        }
+
+        return candidate;
+    }
+
 
     void LQPParsePlugin::start() {
         const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
@@ -95,10 +88,15 @@ namespace opossum {
                     auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{aggregate_node.node_expressions.begin(), aggregate_node.node_expressions.begin() + aggregate_node.aggregate_expressions_begin_idx};
                     
                     for (const auto& column_candidate : column_candidates) {
-                        std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
-                        auto candidate = generate_valid_candidate(aggregate_node.left_input(), column_candidate, true);
-                         if (candidate) {
-                            std::cout << "\t\t\tAdding candidate..." << std::endl;
+                        const auto casted_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
+                        if (!casted_candidate) {
+                            continue;
+                        }
+                        // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
+                        const auto table = std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
+                        const auto candidate = new UCCCandidate{table->table_name, casted_candidate->original_column_id};
+                        if (candidate) {
+                            std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
                             ucc_candidates.push_back(*candidate);
                         }
                     }
@@ -109,17 +107,41 @@ namespace opossum {
                 // if not aggregate node, must be a join node
                 auto& join_node = static_cast<JoinNode&>(*node);
                 const auto& join_mode = join_node.join_mode;
-                auto join_predicate = std::static_pointer_cast<LogicalExpression>(join_node.join_predicates().at(0));
+                // get join predicate with equals condition, that's the only one we would want to work on
+                std::shared_ptr<BinaryPredicateExpression> join_predicate = nullptr;
+                for (auto predicate : join_node.join_predicates()) {
+                    join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+                    if (!join_predicate) {
+                        continue;
+                    }
+                    if (join_predicate->predicate_condition != PredicateCondition::Equals) {
+                        join_predicate = nullptr;
+                        continue;
+                    }
+                    break;
+                }
+
+                if (!join_predicate) {
+                    return LQPVisitation::VisitInputs;
+                }
 
                 // we only care about inner (both are potential candidates), right outer (left is potential candidate) and left outer (right is potential candidate) joins
                 switch (join_mode) {
+                    case JoinMode::Semi:
+                        // in Hyrise, it seems as if left-hand side is no longer used -> check that for UCC; ignore right
                     case JoinMode::Right: {
-                        // want to check only the left hand side here, as this is the one that will be removed in the end
-                        auto column_candidate = join_predicate->left_operand();
-                        auto candidate = generate_valid_candidate(join_node.left_input(), column_candidate, false);
+                        // want to check only the left hand side of the predicate here
+                        // this should be the one that will be removed in the end
+                        auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
+                        // determine which subtree (left or right) belongs to the ColumnExpression
+                        auto subtree_root = join_node.left_input();
+                        if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+                            subtree_root = join_node.right_input();
+                        }
                         std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
+                        auto candidate = generate_valid_candidate(subtree_root, column_candidate);
                         if (candidate) {
-                            std::cout << "\t\t\tAdding candidate..." << std::endl;
+                            std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
                             ucc_candidates.push_back(*candidate);
                         }
                         break;
@@ -131,9 +153,14 @@ namespace opossum {
                         for (const auto& column_candidate : column_candidates) {
                             std::cout << "\t\tRunning through " << ((left) ? "left" : "right") << " on InnerJoin" << std::endl;
                             std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
-                            auto candidate = generate_valid_candidate((left) ? join_node.left_input() : join_node.right_input(), column_candidate, false);
+                            // determine which subtree (left or right) belongs to the ColumnExpression
+                            auto subtree_root = join_node.left_input();
+                            if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+                                subtree_root = join_node.right_input();
+                            }
+                            auto candidate = generate_valid_candidate(subtree_root, std::static_pointer_cast<LQPColumnExpression>(column_candidate));
                             if (candidate) {
-                                std::cout << "\t\t\tAdding candidate..." << std::endl;
+                                std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
                                 ucc_candidates.push_back(*candidate);
                             }
                             left = false;
@@ -143,11 +170,16 @@ namespace opossum {
 
                     case JoinMode::Left: {
                         // want to check only the right hand side here, as this is the one that will be removed in the end
-                        auto column_candidate = join_predicate->right_operand();
-                        auto candidate = generate_valid_candidate(join_node.right_input(), column_candidate, false);
+                        auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
                         std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
+                        // determine which subtree (left or right) belongs to the ColumnExpression
+                        auto subtree_root = join_node.left_input();
+                        if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+                            subtree_root = join_node.right_input();
+                        }
+                        auto candidate = generate_valid_candidate(subtree_root, column_candidate);
                         if (candidate) {
-                            std::cout << "\t\t\tAdding candidate..." << std::endl;
+                            std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
                             ucc_candidates.push_back(*candidate);
                         }
                         break;
