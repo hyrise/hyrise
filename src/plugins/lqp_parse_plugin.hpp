@@ -11,6 +11,14 @@ class UCCCandidate {
   UCCCandidate(std::string table_name, ColumnID column_id) : _table_name(table_name), _column_id(column_id)
   {}
   
+  const std::string table_name() const {
+    return this->_table_name;
+  }
+
+  const ColumnID column_id() const {
+    return this->_column_id;
+  }
+
  protected:
   std::string _table_name;
   ColumnID _column_id;
@@ -26,7 +34,7 @@ class LQPParsePlugin : public AbstractPlugin {
   void stop() final;
 
 protected:
-  UCCCandidate* generate_valid_candidate(std::shared_ptr<AbstractLQPNode> node, std::shared_ptr<AbstractExpression> column, bool validated);
+  UCCCandidate* generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate);
 };
 
 using UCCCandidates = std::vector<UCCCandidate>;
