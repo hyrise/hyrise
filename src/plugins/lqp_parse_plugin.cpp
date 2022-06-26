@@ -36,10 +36,11 @@ namespace opossum {
 
                 // first, ensure that we look at a binary predicate expression checking for equality (e.g., A==B)
                 const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(casted_node->predicate());
-                if (!predicate) {
+                if ((!predicate) || (predicate->predicate_condition != PredicateCondition::Equals)) {
                     return LQPVisitation::VisitInputs;
                 }
                 
+                // get the column expression, should be left, but also check the right operand if the left one is not column
                 auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
                 if (!column_expression) {
                     column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
@@ -49,6 +50,7 @@ namespace opossum {
                     return LQPVisitation::VisitInputs;
                 }
 
+                // get the StoredTableNode and ColumnID to build the UCCCandidate
                 const auto table = std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
                 candidate = new UCCCandidate{table->table_name, column_expression->original_column_id};
 
@@ -90,6 +92,7 @@ namespace opossum {
                         if (!casted_candidate) {
                             continue;
                         }
+                        // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
                         const auto table = std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
                         const auto candidate = new UCCCandidate{table->table_name, casted_candidate->original_column_id};
                         if (candidate) {
@@ -104,15 +107,33 @@ namespace opossum {
                 // if not aggregate node, must be a join node
                 auto& join_node = static_cast<JoinNode&>(*node);
                 const auto& join_mode = join_node.join_mode;
-                auto join_predicate = std::static_pointer_cast<BinaryPredicateExpression>(join_node.join_predicates().at(0));
+                // get join predicate with equals condition, that's the only one we would want to work on
+                std::shared_ptr<BinaryPredicateExpression> join_predicate = nullptr;
+                for (auto predicate : join_node.join_predicates()) {
+                    join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+                    if (!join_predicate) {
+                        continue;
+                    }
+                    if (join_predicate->predicate_condition != PredicateCondition::Equals) {
+                        join_predicate = nullptr;
+                        continue;
+                    }
+                    break;
+                }
+
+                if (!join_predicate) {
+                    return LQPVisitation::VisitInputs;
+                }
 
                 // we only care about inner (both are potential candidates), right outer (left is potential candidate) and left outer (right is potential candidate) joins
                 switch (join_mode) {
                     case JoinMode::Semi:
                         // in Hyrise, it seems as if left-hand side is no longer used -> check that for UCC; ignore right
                     case JoinMode::Right: {
-                        // want to check only the left hand side here, as this is the one that will be removed in the end
+                        // want to check only the left hand side of the predicate here
+                        // this should be the one that will be removed in the end
                         auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
+                        // determine which subtree (left or right) belongs to the ColumnExpression
                         auto subtree_root = join_node.left_input();
                         if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
                             subtree_root = join_node.right_input();
@@ -132,6 +153,7 @@ namespace opossum {
                         for (const auto& column_candidate : column_candidates) {
                             std::cout << "\t\tRunning through " << ((left) ? "left" : "right") << " on InnerJoin" << std::endl;
                             std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
+                            // determine which subtree (left or right) belongs to the ColumnExpression
                             auto subtree_root = join_node.left_input();
                             if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
                                 subtree_root = join_node.right_input();
@@ -150,6 +172,7 @@ namespace opossum {
                         // want to check only the right hand side here, as this is the one that will be removed in the end
                         auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
                         std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
+                        // determine which subtree (left or right) belongs to the ColumnExpression
                         auto subtree_root = join_node.left_input();
                         if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
                             subtree_root = join_node.right_input();
