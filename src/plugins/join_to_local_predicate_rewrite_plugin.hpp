@@ -19,12 +19,17 @@ class UCCCandidate {
     return this->_column_id;
   }
 
+  friend bool operator==(const UCCCandidate& lhs, const UCCCandidate& rhs) {
+    return (lhs.column_id() == rhs.column_id()) && (lhs.table_name() == rhs.table_name());
+
+  }
+
  protected:
   std::string _table_name;
   ColumnID _column_id;
 };
 
-using UCCCandidates = std::vector<UCCCandidate>;
+using UCCCandidates = std::unordered_set<UCCCandidate>;
 
 class JoinToLocalPredicateRewritePlugin : public AbstractPlugin {
  public:
@@ -40,3 +45,15 @@ class JoinToLocalPredicateRewritePlugin : public AbstractPlugin {
 };
 
 }  // namespace opossum
+
+
+template<>
+struct std::hash<opossum::UCCCandidate>
+{
+    std::size_t operator()(opossum::UCCCandidate const& s) const noexcept
+    {
+        std::size_t h1 = std::hash<std::string>{}(s.table_name());
+        std::size_t h2 = std::hash<opossum::ColumnID>{}(s.column_id());
+        return h1 ^ (h2 << 1);
+    }
+};

@@ -231,7 +231,7 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
                     const auto candidate = new UCCCandidate{table->table_name, casted_candidate->original_column_id};
                     if (candidate) {
                         std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
-                        ucc_candidates->push_back(*candidate);
+                        ucc_candidates->insert(*candidate);
                     }
                 }
                 
@@ -276,7 +276,7 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
                     auto candidate = generate_valid_candidate(subtree_root, column_candidate);
                     if (candidate) {
                         std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
-                        ucc_candidates->push_back(*candidate);
+                        ucc_candidates->insert(*candidate);
                     }
                     break;
                 }
@@ -295,7 +295,7 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
                         auto candidate = generate_valid_candidate(subtree_root, std::static_pointer_cast<LQPColumnExpression>(column_candidate));
                         if (candidate) {
                             std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
-                            ucc_candidates->push_back(*candidate);
+                            ucc_candidates->insert(*candidate);
                         }
                         left = false;
                     }
@@ -314,7 +314,7 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
                     auto candidate = generate_valid_candidate(subtree_root, column_candidate);
                     if (candidate) {
                         std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
-                        ucc_candidates->push_back(*candidate);
+                        ucc_candidates->insert(*candidate);
                     }
                     break;
                 }
