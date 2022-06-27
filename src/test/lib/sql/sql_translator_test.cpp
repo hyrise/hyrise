@@ -2993,7 +2993,7 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
   // clang-format off
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl';");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); //NOLINT
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
