@@ -344,7 +344,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
   // +  16 impl
   // +   1 TableIndexType
   // = 551
-  EXPECT_EQ(index->memory_consumption(), 551u);
+  EXPECT_EQ(index->memory_consumption(), 559u);
 #else
   EXPECT_EQ(index->memory_consumption(), 535u);
 #endif
@@ -377,7 +377,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
   // +  16 impl
   // +   1 TableIndexType
   // = 191
-  EXPECT_EQ(index->memory_consumption(), 191u);
+  EXPECT_EQ(index->memory_consumption(), 199u);
 #else
   EXPECT_EQ(index->memory_consumption(), 175u);
 #endif
@@ -411,7 +411,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
   // +  16 impl
   // +   1 TableIndexType
   // = 591
-  EXPECT_EQ(index->memory_consumption(), 591u);
+  EXPECT_EQ(index->memory_consumption(), 599u);
 #else
   EXPECT_EQ(index->memory_consumption(), 575u);
 #endif
@@ -444,7 +444,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
   // +  16 impl
   // +   1 TableIndexType
   // = 175
-  EXPECT_EQ(index->memory_consumption(), 175u);
+  EXPECT_EQ(index->memory_consumption(), 183u);
 #else
   EXPECT_EQ(index->memory_consumption(), 159u);
 #endif
