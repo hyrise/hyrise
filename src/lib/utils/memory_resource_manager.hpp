@@ -3,15 +3,14 @@
 #include <functional>
 #include <unordered_map>
 
+#include "memory/tracking_memory_resource.hpp"
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
-#include "memory/tracking_memory_resource.hpp"
 
 namespace opossum {
 
 class MemoryResourceManager : public Noncopyable {
  public:
-
   // TODO comment
   const std::unordered_map<std::string, std::shared_ptr<TrackingMemoryResource>>& memory_resources() const;
   const std::unordered_map<std::string, size_t> get_current_memory_usage() const;

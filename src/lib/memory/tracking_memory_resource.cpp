@@ -4,10 +4,11 @@
 
 namespace opossum {
 
-TrackingMemoryResource::TrackingMemoryResource() {};
+TrackingMemoryResource::TrackingMemoryResource(){};
 
 int64_t TrackingMemoryResource::_get_timestamp() const {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+  return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
+      .count();
 };
 
 void* TrackingMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
@@ -28,4 +29,4 @@ const std::vector<std::pair<int64_t, int64_t>>& TrackingMemoryResource::memory_t
   return _memory_timeseries;
 }
 
-} // namespace opossum
+}  // namespace opossum

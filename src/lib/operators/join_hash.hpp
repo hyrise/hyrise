@@ -3,14 +3,14 @@
 #include <optional>
 
 #include "abstract_join_operator.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
-#include "memory/tracking_allocator.hpp"
 
 namespace opossum {
 
-template <typename T, Purpose P = Purpose::HashJoinMaterialization>
-using tracking_vector = std::vector<T, TrackingAllocator<T, P>>;
+// template <typename T, Purpose P = Purpose::HashJoinMaterialization>
+// using tracking_vector = std::vector<T, TrackingAllocator<T, P>>;
 
 /**
  * This operator joins two tables using one column of each table.
