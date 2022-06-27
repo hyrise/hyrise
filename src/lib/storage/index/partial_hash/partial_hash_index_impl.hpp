@@ -1,9 +1,9 @@
 #pragma once
 
+#include <tsl/sparse_map.h>
+
 #include <utility>
 #include <vector>
-
-#include <tsl/sparse_map.h>
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
