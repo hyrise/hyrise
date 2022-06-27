@@ -4,6 +4,7 @@
 
 #include <boost/functional/hash_fwd.hpp>
 
+#include "memory/tracking_allocator.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -13,6 +14,9 @@ enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, Right
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
+
+template <typename T, Purpose P = Purpose::HashJoinMaterialization>
+using tracking_vector = std::vector<T, TrackingAllocator<T, P>>;
 
 /**
  * Returns a vector where each entry with index i references a PosLists object. The PosLists object
@@ -275,7 +279,7 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 }
 
 inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
-    pmr_vector<RowIDPosList>& pos_lists_left, pmr_vector<RowIDPosList>& pos_lists_right,
+    tracking_vector<RowIDPosList>& pos_lists_left, tracking_vector<RowIDPosList>& pos_lists_right,
     const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
     bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
