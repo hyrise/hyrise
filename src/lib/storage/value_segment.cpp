@@ -55,6 +55,7 @@ AllTypeVariant ValueSegment<T>::operator[](const ChunkOffset chunk_offset) const
 template <typename T>
 bool ValueSegment<T>::is_null(const ChunkOffset chunk_offset) const {
   access_counter[SegmentAccessCounter::AccessType::Point] += 1;
+  (void)access_counter;
   return is_nullable() && (*_null_values)[chunk_offset];
 }
 
