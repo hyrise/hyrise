@@ -61,7 +61,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
   // If some columns have been pruned, the ColumnID to join on may differ from the original index ColumnID.
   // In this step the original index ColumnID is calculated.
   _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
-  for (const auto pruned_column_id : pruned_column_ids) {
+  for (const auto& pruned_column_id : pruned_column_ids) {
     if (pruned_column_id > _index_column_id_before_pruning) {
       break;
     }
