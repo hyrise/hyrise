@@ -257,6 +257,7 @@ void try_join_to_semi_rewrite(
 
   // Early out, if we need output expressions from both input tables.
   if (left_input_is_used && right_input_is_used) return;
+  std::cout << "One input is used" << std::endl;
 
   /**
    * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
@@ -298,6 +299,129 @@ void try_join_to_semi_rewrite(
   if (!right_input_is_used &&
       join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
     join_node->join_mode = JoinMode::Semi;
+  }
+}
+
+void try_join_to_local_predicate_rewrite(
+    const std::shared_ptr<AbstractLQPNode>& node,
+    const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+
+  const auto& join_node = std::dynamic_pointer_cast<JoinNode>(node);
+  // A join that isn't a semi join or can't be transformed to a semi join doesn't fulfill the requirements for this optimization.
+  // We are expecting here that the join to semi join optimization strategy has already been run. This kind of dependency between optimization strategies is potentially problematic, so we may have to do a rewrite to handle all kinds of joins.
+  // We also noticed that apperently the join-to-semi-join strategy though applicable is not performed before a LIMIT node.
+  if (join_node->join_mode == JoinMode::Semi) {
+    auto left_table = std::shared_ptr<StoredTableNode>{};
+    auto right_table = std::shared_ptr<StoredTableNode>{};
+    
+    visit_lqp(node->left_input(), [&left_table](auto& node) {
+      if (node->type == LQPNodeType::StoredTable) {
+        left_table = std::dynamic_pointer_cast<StoredTableNode>(node);
+        return LQPVisitation::DoNotVisitInputs;
+      }
+      
+      return LQPVisitation::VisitInputs;
+    });
+
+    visit_lqp(node->right_input(), [&right_table](auto& node) {
+      if (node->type == LQPNodeType::StoredTable) {
+        right_table = std::dynamic_pointer_cast<StoredTableNode>(node);
+        return LQPVisitation::DoNotVisitInputs;
+      }
+      
+      return LQPVisitation::VisitInputs;
+    });
+
+    std::cout << left_table->description() << std::endl;
+    std::cout << right_table->description() << std::endl;
+
+    const auto& join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_node->join_predicates()[0]);
+
+    std::cout << expression_evaluable_on_lqp(join_predicate->left_operand(), *node->left_input()) << std::endl;
+    std::cout << expression_evaluable_on_lqp(join_predicate->left_operand(), *node->right_input()) << std::endl;
+
+    std::cout << expression_evaluable_on_lqp(join_predicate->right_operand(), *node->left_input()) << std::endl;
+    std::cout << expression_evaluable_on_lqp(join_predicate->right_operand(), *node->right_input()) << std::endl;
+
+    const auto& stored_table_node = std::make_shared<StoredTableNode>(right_table->table_name);
+
+    auto propagatable_predicate = std::shared_ptr<PredicateNode>{};
+
+    // Now, we look for a predicate that can be used inside the substituting table scan node.
+    visit_lqp(node->right_input(), [&node, &propagatable_predicate](auto& current_node) {
+      if (current_node->type != LQPNodeType::Predicate) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      const auto& candidate = std::dynamic_pointer_cast<PredicateNode>(current_node);
+      const auto& candidate_exp = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
+
+      std::cout << candidate->description() << std::endl;
+
+      // Only predicates that filter by the equals condition on a column with a constant value are of use to our optimization, because these conditions have the potential (given that the filtered column is a UCC) to single out a maximum of one result tuple.
+      if (candidate_exp->predicate_condition != PredicateCondition::Equals || !std::dynamic_pointer_cast<LQPColumnExpression>(candidate_exp->left_operand()) || !std::dynamic_pointer_cast<ValueExpression>(candidate_exp->right_operand())) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      const auto& filtered_column_exp = std::dynamic_pointer_cast<LQPColumnExpression>(candidate_exp->left_operand());
+      std::cout << filtered_column_exp->description(AbstractExpression::DescriptionMode::Detailed) << std::endl;
+
+      // If the attribute that is filtered on is projected away (through projections, semi joins) on the way to the join node, we can't use the predicate directly in place of the join node.
+      if (!expression_evaluable_on_lqp(filtered_column_exp, *node->right_input())) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      // Check for uniqueness
+      auto testable_expressions = ExpressionUnorderedSet{};
+      testable_expressions.insert(filtered_column_exp);
+
+      if (!current_node->left_input()->has_matching_unique_constraint(testable_expressions)) {
+        // This line is commented out here for testing purposes, so that the UCC discovery plugin doesn't have to run every time before the optimization.
+        // return LQPVisitation::VisitInputs;
+      }
+
+      propagatable_predicate = candidate;
+
+      // It is potentially wrong to 
+      return LQPVisitation::DoNotVisitInputs;
+    });
+
+    std::cout << "Description: " << propagatable_predicate->description() << std::endl;
+
+    // const auto& predicate_node = std::make_shared<PredicateNode>(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, std::make_shared<LQPColumnExpression>(stored_table_node, ColumnID{1}), std::make_shared<ValueExpression>("BRAZIL")));
+    // predicate_node->set_left_input(stored_table_node);
+
+    // const auto predicate_node = std::make_shared<PredicateNode>(propagatable_predicate->predicate());
+    // predicate_node->set_left_input(propagatable_predicate->left_input());
+
+    propagatable_predicate->clear_outputs();
+
+    auto projections = std::vector<std::shared_ptr<AbstractExpression>>{};
+    projections.push_back(std::make_shared<LQPColumnExpression>(stored_table_node, ColumnID{0}));
+
+    const auto& query_subtree = std::make_shared<ProjectionNode>(projections);
+    query_subtree->set_left_input(propagatable_predicate);
+
+    const auto param_ids = std::vector<ParameterID>{};
+    const auto param_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+    
+    const auto& new_predicate_node = std::make_shared<PredicateNode>(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals, std::make_shared<LQPColumnExpression>(left_table, ColumnID{3}), std::make_shared<LQPSubqueryExpression>(query_subtree, param_ids, param_expressions)));
+    new_predicate_node->set_left_input(node->left_input());
+
+    for (const auto& output: node->outputs()) {
+      if (node->get_input_side(output) == LQPInputSide::Left) {
+        output->set_left_input(new_predicate_node);
+      } else {
+        output->set_right_input(new_predicate_node);
+      }
+    }
+
+    node->left_input()->remove_output(node);
+    // The line below seems to trigger an unwanted situation in which the number of outputs of one node is inconsistent with the outputs_visited_by_node datastructe.
+    // node->right_input()->remove_output(node);
+
+    node->clear_outputs();
+    // std::cout << node->description() << std::endl;
   }
 }
 
@@ -354,6 +478,11 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
   for (const auto& [node, required_expressions] : required_expressions_by_node) {
+    if (outputs_visited_by_node.at(node) != node->output_count()) {
+      std::cout << node->description() << std::endl;
+      std::cout << node->output_count() << std::endl;
+      std::cout << outputs_visited_by_node.at(node) << std::endl;
+    }
     DebugAssert(outputs_visited_by_node.at(node) == node->output_count(),
                 "Not all outputs have been visited - is the input LQP corrupt?");
     switch (node->type) {
@@ -388,7 +517,9 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       } break;
 
       case LQPNodeType::Join: {
+        // Prevent the application of the join-to-semi-join strategy to make our join-to-local-predicate-rewrite strategy applicable.
         try_join_to_semi_rewrite(node, required_expressions_by_node);
+        try_join_to_local_predicate_rewrite(node, required_expressions_by_node);
       } break;
 
       case LQPNodeType::Projection: {
