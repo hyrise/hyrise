@@ -196,6 +196,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
+    // Vectors of pruned ClumnIDs with which the tests should be performed
     const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
 
     // clang-format off
@@ -258,7 +259,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           }
 
           for (const auto& indexed_chunk_range : indexed_chunk_ranges) {
-            for (const auto& index_scope : all_index_scopes) {
+            for (const auto index_scope : all_index_scopes) {
               for (const auto& pruned_column_ids : column_pruning_configurations) {
                 // If a pruned column id equals the join column id, we cannot join on the column. Thus, we do not
                 // create a JoinTestConfiguration in this case.
@@ -661,7 +662,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         }
       } else if (index_scope == IndexScope::Table) {
         // Creates a PartialHashIndex on the defined chunk range of every column of the index side.
-        std::vector<ChunkID> chunk_ids(indexed_chunk_range.second - indexed_chunk_range.first);
+        auto chunk_ids = std::vector<ChunkID>{indexed_chunk_range.second - indexed_chunk_range.first};
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
           chunk_ids.push_back(chunk_id);
         }

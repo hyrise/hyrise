@@ -61,7 +61,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
     // Iterate over the segment to index and populate the index.
     auto indexed_segment = chunk.second->get_segment(column_id);
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
-      auto row_id = RowID{chunk.first, position.chunk_offset()};
+      const auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
         _null_values.push_back(row_id);
@@ -79,7 +79,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks_to_unindex) {
-  size_t size_before = _indexed_chunk_ids.size();
+  const size_t size_before = _indexed_chunk_ids.size();
 
   auto chunks_to_unindex_filtered = std::set<ChunkID>{};
   for (const auto& chunk_id : chunks_to_unindex) {
@@ -122,9 +122,9 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
     const AllTypeVariant& value) const {
-  auto begin = _map.find(boost::get<DataType>(value));
+  const auto begin = _map.find(boost::get<DataType>(value));
   if (begin == _map.end()) {
-    auto end_iter = cend();
+    const auto end_iter = cend();
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
@@ -135,7 +135,7 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
 template <typename DataType>
 std::pair<typename PartialHashIndexImpl<DataType>::IteratorPair, typename PartialHashIndexImpl<DataType>::IteratorPair>
 PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) const {
-  auto range_eq = range_equals(value);
+  const auto range_eq = range_equals(value);
   return std::make_pair(std::make_pair(cbegin(), range_eq.first), std::make_pair(range_eq.second, cend()));
 }
 

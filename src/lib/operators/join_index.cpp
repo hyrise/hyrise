@@ -58,7 +58,6 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     _adjusted_primary_predicate.flip();
   }
 
-
   // If some columns have been pruned, the ColumnID to join on may differ from the original index ColumnID.
   // In this step the original index ColumnID is calculated.
   _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
@@ -86,7 +85,8 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 }
 
 const std::vector<ColumnID> JoinIndex::get_pruned_column_ids() const {
-  const auto number_of_pruned_column_ids = _index_column_id_before_pruning - _adjusted_primary_predicate.column_ids.second;
+  const auto number_of_pruned_column_ids =
+      _index_column_id_before_pruning - _adjusted_primary_predicate.column_ids.second;
   auto pruned_column_ids = std::vector<ColumnID>{static_cast<size_t>(number_of_pruned_column_ids)};
 
   std::iota(std::begin(pruned_column_ids), std::end(pruned_column_ids), 0);
@@ -203,8 +203,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           const auto& chunk_index = indexes.front();
 
           _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-            _reference_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, chunk_index,
-                                                     reference_segment_pos_list);
+            _reference_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id,
+                                                           chunk_index, reference_segment_pos_list);
           });
 
           index_joining_duration += timer.lap();
@@ -279,11 +279,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           if (indexes.size() > 1) {
             PerformanceWarning("There are multiple indexes available, but only the first one is used.");
           }
-          
+
           const auto& chunk_index = indexes.front();
 
           _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-            _data_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id, chunk_index);
+            _data_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id,
+                                                      chunk_index);
           });
 
           index_joining_duration += timer.lap();
@@ -437,13 +438,14 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
 // and an index for the index side.
 template <typename ProbeIterator>
 void JoinIndex::_data_join_two_segments_using_chunk_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                    const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                    const std::shared_ptr<AbstractChunkIndex>& chunk_index) {
+                                                          const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
+                                                          const std::shared_ptr<AbstractChunkIndex>& chunk_index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
     const auto index_ranges = _chunk_index_ranges_for_value(probe_side_position, chunk_index);
     for (const auto& [index_begin, index_end] : index_ranges) {
-      _append_matches_chunk_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id, index_chunk_id);
+      _append_matches_chunk_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id,
+                                  index_chunk_id);
     }
   }
 }
@@ -477,8 +479,8 @@ void JoinIndex::_reference_join_two_segments_using_chunk_index(
 }
 
 template <typename SegmentPosition>
-std::vector<ChunkIndexRange> JoinIndex::_chunk_index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                           const std::shared_ptr<AbstractChunkIndex>& chunk_index) const {
+std::vector<ChunkIndexRange> JoinIndex::_chunk_index_ranges_for_value(
+    const SegmentPosition probe_side_position, const std::shared_ptr<AbstractChunkIndex>& chunk_index) const {
   std::vector<ChunkIndexRange> index_ranges{};
   index_ranges.reserve(2);
 
@@ -545,8 +547,9 @@ std::vector<ChunkIndexRange> JoinIndex::_chunk_index_ranges_for_value(const Segm
 }
 
 void JoinIndex::_append_matches_chunk_index(const AbstractChunkIndex::Iterator& range_begin,
-                                const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                const ChunkID probe_chunk_id, const ChunkID index_chunk_id) {
+                                            const AbstractChunkIndex::Iterator& range_end,
+                                            const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
+                                            const ChunkID index_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);
 
   if (num_index_matches == 0) {

@@ -33,7 +33,7 @@ using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableInd
    */
 class JoinIndex : public AbstractJoinOperator {
   friend OperatorsJoinIndexTest;
- 
+
  public:
   static bool supports(const JoinConfiguration config);
 
@@ -74,8 +74,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   template <typename ProbeIterator>
   void _data_join_two_segments_using_chunk_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                           const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                           const std::shared_ptr<AbstractChunkIndex>& chunk_index);
+                                                 const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
+                                                 const std::shared_ptr<AbstractChunkIndex>& chunk_index);
 
   template <typename ProbeIterator>
   void _data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
@@ -89,12 +89,12 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  std::vector<ChunkIndexRange> _chunk_index_ranges_for_value(const SegmentPosition probe_side_position,
-                                                  const std::shared_ptr<AbstractChunkIndex>& chunk_index) const;
+  std::vector<ChunkIndexRange> _chunk_index_ranges_for_value(
+      const SegmentPosition probe_side_position, const std::shared_ptr<AbstractChunkIndex>& chunk_index) const;
 
-  void _append_matches_chunk_index(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,
-                       const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
-                       const ChunkID index_chunk_id);
+  void _append_matches_chunk_index(const AbstractChunkIndex::Iterator& range_begin,
+                                   const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
+                                   const ChunkID probe_chunk_id, const ChunkID index_chunk_id);
 
   void _append_matches_table_index(const AbstractTableIndex::Iterator& range_begin,
                                    const AbstractTableIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
