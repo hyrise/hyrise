@@ -613,7 +613,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-           pmr_vector<RowIDPosList>& pos_lists_build_side, pmr_vector<RowIDPosList>& pos_lists_probe_side,
+           tracking_vector<RowIDPosList>& pos_lists_build_side, tracking_vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -1056,7 +1056,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
                      const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-                     pmr_vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
+                     tracking_vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
