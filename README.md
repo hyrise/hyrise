@@ -179,6 +179,7 @@ Contact: firstname.lastname@hpi.de
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
+-   Tobias    Jordan
 -   David     Justen
 -   Youri     Kaminsky
 -   Marvin    Keller
@@ -211,4 +212,3 @@ Contact: firstname.lastname@hpi.de
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
--   Tobias    Jordan

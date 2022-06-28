@@ -226,9 +226,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // fallback solution.
     const auto& table_indexes = _index_input_table->get_table_indexes(_index_column_id_before_pruning);
 
+    // table-based index join
     if (!table_indexes.empty() &&
         (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
-         _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {  // table-based index join
+         _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       auto total_indexed_chunk_ids = std::set<ChunkID>{};
 
@@ -250,8 +251,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       index_joining_duration += timer.lap();
       ++join_index_performance_data.chunks_scanned_with_index;
 
-      // Check if chunk was indexed in one of the table indexes, thus no need to join it again. Otherwise perform
-      // NestedLoopJoin on the not-indexed chunk.
+      // If the chunk was indexed in one of the table indexes, there is no need to join it again. Otherwise, perform
+      // a NestedLoopJoin on the not-indexed chunk.
       auto total_indexed_iter = total_indexed_chunk_ids.begin();
       for (auto index_side_chunk_id = ChunkID{0}; index_side_chunk_id < chunk_count_index_input_table;
            ++index_side_chunk_id) {
@@ -264,7 +265,9 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           nested_loop_joining_duration += timer.lap();
         }
       }
-    } else {  // chunk-based index join
+    }
+    // chunk-based index join
+    else {
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
         const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
@@ -337,7 +340,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
 
 template <typename Functor>
 void JoinIndex::_scan_probe_side_input(const Functor& functor) {
-  // Scan all chunks from the probe side input
+  // Scan all chunks of the probe side input.
   const auto chunk_count_probe_input_table = _probe_input_table->chunk_count();
   for (auto probe_chunk_id = ChunkID{0}; probe_chunk_id < chunk_count_probe_input_table; ++probe_chunk_id) {
     const auto chunk = _probe_input_table->get_chunk(probe_chunk_id);

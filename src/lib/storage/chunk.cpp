@@ -197,8 +197,8 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
                   if (column_id >= static_cast<ColumnID>(column_count())) return false;
                 return true;
               }()),
-              "IndexColumnID " + std::to_string(column_ids[column_ids.size() - 1]) +
-                  " exceeds maximal column index which is " + std::to_string(column_count() - 1) + ".");
+              "ColumnID " + std::to_string(column_ids[column_ids.size() - 1]) +
+                  " exceeds the maximum column index which is " + std::to_string(column_count() - 1) + ".");
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());

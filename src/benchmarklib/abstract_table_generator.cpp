@@ -298,7 +298,7 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
-   * Create chunk indexes if requested by the user
+   * Create chunk indexes if requested by the user.
    */
   if (_benchmark_config->chunk_indexes) {
     _create_chunk_indexes(table_info_by_name);
@@ -307,7 +307,7 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
-   * Create table indexes if requested by the user
+   * Create table indexes if requested by the user.
    */
   if (_benchmark_config->table_indexes) {
     _create_table_indexes(table_info_by_name);
