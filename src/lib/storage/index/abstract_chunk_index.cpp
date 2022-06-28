@@ -31,11 +31,17 @@ AbstractChunkIndex::AbstractChunkIndex(const ChunkIndexType type) : _type{type} 
 
 bool AbstractChunkIndex::is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   const auto& indexed_segments = _get_indexed_segments();
-  if (segments.size() > indexed_segments.size()) return false;
-  if (segments.empty()) return false;
+  if (segments.size() > indexed_segments.size()) {
+    return false;
+  }
+  if (segments.empty()) {
+    return false;
+  }
 
-  for (size_t i = 0; i < segments.size(); ++i) {
-    if (segments[i] != indexed_segments[i]) return false;
+  for (auto segment_idx = size_t{0}; segment_idx < segments.size(); ++segment_idx) {
+    if (segments[segment_idx] != indexed_segments[segment_idx]) {
+      return false;
+    }
   }
   return true;
 }
