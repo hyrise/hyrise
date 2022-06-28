@@ -26,16 +26,26 @@ class ExpressionResultNullableSeries {
     DebugAssert(values.size() == nulls.size(), "Need as many values as nulls");
   }
 
-  bool is_series() const { return true; }
-  bool is_literal() const { return false; }
-  bool is_nullable() const { return true; }
+  bool is_series() const {
+    return true;
+  }
+
+  bool is_literal() const {
+    return false;
+  }
+
+  bool is_nullable() const {
+    return true;
+  }
 
   const T& value(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");
     return _values[idx];
   }
 
-  size_t size() const { return _values.size(); }
+  size_t size() const {
+    return _values.size();
+  }
 
   bool is_null(const size_t idx) const {
     DebugAssert(idx < _nulls.size(), "Index out of range");
@@ -58,18 +68,30 @@ class ExpressionResultNonNullSeries {
 
   explicit ExpressionResultNonNullSeries(const pmr_vector<T>& values) : _values(values) {}
 
-  bool is_series() const { return true; }
-  bool is_literal() const { return false; }
-  bool is_nullable() const { return false; }
+  bool is_series() const {
+    return true;
+  }
 
-  size_t size() const { return _values.size(); }
+  bool is_literal() const {
+    return false;
+  }
+
+  bool is_nullable() const {
+    return false;
+  }
+
+  size_t size() const {
+    return _values.size();
+  }
 
   const T& value(const size_t idx) const {
     DebugAssert(idx < _values.size(), "Index out of range");
     return _values[idx];
   }
 
-  bool is_null(const size_t idx) const { return false; }
+  bool is_null(const size_t idx) const {
+    return false;
+  }
 
  private:
   const pmr_vector<T>& _values;
@@ -86,14 +108,29 @@ class ExpressionResultLiteral {
 
   ExpressionResultLiteral(const T& value, const bool null) : _value(value), _null(null) {}
 
-  bool is_series() const { return false; }
-  bool is_literal() const { return true; }
-  bool is_nullable() const { return _null; }
+  bool is_series() const {
+    return false;
+  }
 
-  size_t size() const { return 1u; }
+  bool is_literal() const {
+    return true;
+  }
 
-  const T& value(const size_t /*value*/) const { return _value; }
-  bool is_null(const size_t /*value*/) const { return _null; }
+  bool is_nullable() const {
+    return _null;
+  }
+
+  size_t size() const {
+    return 1u;
+  }
+
+  const T& value(const size_t /*value*/) const {
+    return _value;
+  }
+
+  bool is_null(const size_t /*value*/) const {
+    return _null;
+  }
 
  private:
   T _value;

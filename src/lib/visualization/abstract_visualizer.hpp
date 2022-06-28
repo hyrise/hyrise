@@ -54,7 +54,10 @@ struct VizEdgeInfo {
 
 // Custom facet for creating a custom locale with thousands separator.
 struct SeparateThousandsFacet : std::numpunct<char> {
-  string_type do_grouping() const override { return "\3"; }  // groups of 3 digits
+  string_type do_grouping() const override {
+    // groups of 3 digits
+    return "\3";
+  }
 };
 
 template <typename GraphBase>

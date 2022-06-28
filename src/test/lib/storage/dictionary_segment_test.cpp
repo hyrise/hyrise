@@ -36,7 +36,9 @@ INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          dictionary_segment_test_formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
-  for (int i = 0; i <= 10; i += 2) vs_int->append(i);
+  for (int i = 0; i <= 10; i += 2) {
+    vs_int->append(i);
+  }
 
   auto segment =
       ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});

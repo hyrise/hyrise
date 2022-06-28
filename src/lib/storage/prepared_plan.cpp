@@ -39,7 +39,9 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
                                 std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   visit_lqp(lqp, [&](const auto& node) {
-    if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
+    if (!visited_nodes.emplace(node).second) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
 
     for (auto& expression : node->node_expressions) {
       expression_bind_placeholders_impl(expression, parameters, visited_nodes);
@@ -97,7 +99,9 @@ std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan
   stream << "ParameterIDs: [";
   for (auto parameter_idx = size_t{0}; parameter_idx < prepared_plan.parameter_ids.size(); ++parameter_idx) {
     stream << prepared_plan.parameter_ids[parameter_idx];
-    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) stream << ", ";
+    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) {
+      stream << ", ";
+    }
   }
   stream << "]\n";
   stream << *prepared_plan.lqp;

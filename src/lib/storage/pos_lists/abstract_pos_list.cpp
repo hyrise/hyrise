@@ -10,7 +10,11 @@ AbstractPosList::PosListIterator<> AbstractPosList::end() const {
   return PosListIterator<>(this, static_cast<ChunkOffset>(size()));
 }
 
-AbstractPosList::PosListIterator<> AbstractPosList::cbegin() const { return begin(); }
+AbstractPosList::PosListIterator<> AbstractPosList::cbegin() const {
+  return begin();
+}
 
-AbstractPosList::PosListIterator<> AbstractPosList::cend() const { return end(); }
+AbstractPosList::PosListIterator<> AbstractPosList::cend() const {
+  return end();
+}
 }  // namespace opossum

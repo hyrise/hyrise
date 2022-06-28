@@ -27,21 +27,34 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
  public:
   explicit FixedWidthIntegerVector(pmr_vector<UnsignedIntType> data) : _data{std::move(data)} {}
 
-  const pmr_vector<UnsignedIntType>& data() const { return _data; }
+  const pmr_vector<UnsignedIntType>& data() const {
+    return _data;
+  }
 
  public:
-  size_t on_size() const { return _data.size(); }
-  size_t on_data_size() const { return sizeof(UnsignedIntType) * _data.size(); }
+  size_t on_size() const {
+    return _data.size();
+  }
+
+  size_t on_data_size() const {
+    return sizeof(UnsignedIntType) * _data.size();
+  }
 
   auto on_create_base_decompressor() const {
     return std::make_unique<FixedWidthIntegerDecompressor<UnsignedIntType>>(_data);
   }
 
-  auto on_create_decompressor() const { return FixedWidthIntegerDecompressor<UnsignedIntType>(_data); }
+  auto on_create_decompressor() const {
+    return FixedWidthIntegerDecompressor<UnsignedIntType>(_data);
+  }
 
-  auto on_begin() const { return _data.cbegin(); }
+  auto on_begin() const {
+    return _data.cbegin();
+  }
 
-  auto on_end() const { return _data.cend(); }
+  auto on_end() const {
+    return _data.cend();
+  }
 
   std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};

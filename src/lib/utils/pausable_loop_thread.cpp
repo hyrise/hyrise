@@ -18,11 +18,15 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
       if (_loop_sleep_time > std::chrono::milliseconds(0)) {
         _cv.wait_for(lk, _loop_sleep_time, [&] { return static_cast<bool>(_shutdown_flag); });
       }
-      if (_shutdown_flag) return;
+      if (_shutdown_flag) {
+        return;
+      }
       while (_pause_requested) {
         _is_paused = true;
         _cv.wait(lk, [&] { return !_pause_requested || _shutdown_flag; });
-        if (_shutdown_flag) return;
+        if (_shutdown_flag) {
+          return;
+        }
         lk.unlock();
       }
       _is_paused = false;
@@ -35,14 +39,17 @@ PausableLoopThread::~PausableLoopThread() {
   _pause_requested = true;
   _shutdown_flag = true;
   _cv.notify_one();
-  if (_loop_thread.joinable()) _loop_thread.join();
+  if (_loop_thread.joinable()) {
+    _loop_thread.join();
+  }
 }
 
 void PausableLoopThread::pause() {
-  if (!_loop_thread.joinable()) return;
-  _pause_requested = true;
-  while (!_is_paused) {
+  if (!_loop_thread.joinable()) {
+    return;
   }
+  _pause_requested = true;
+  while (!_is_paused) {}
 }
 
 void PausableLoopThread::resume() {

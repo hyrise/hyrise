@@ -47,7 +47,9 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
       return v;
     });
   }
-  void TearDown(::benchmark::State& state) override { MicroBenchmarkBasicFixture::TearDown(state); }
+  void TearDown(::benchmark::State& state) override {
+    MicroBenchmarkBasicFixture::TearDown(state);
+  }
 
  protected:
   std::vector<ValueT> _vec;

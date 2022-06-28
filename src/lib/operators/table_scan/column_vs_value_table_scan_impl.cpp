@@ -28,7 +28,9 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
          "ExpressionEvaluatorTableScanImpl.");
 }
 
-std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
+std::string ColumnVsValueTableScanImpl::description() const {
+  return "ColumnVsValue";
+}
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
