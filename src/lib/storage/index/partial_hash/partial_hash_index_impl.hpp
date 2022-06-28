@@ -16,6 +16,79 @@ class AbstractSegment;
 class PartialHashIndexTest;
 
 /**
+ * Forward iterator that iterates over a tsl::robin_map which maps a DataType to a vector of RowIDs. The iteration
+ * process is as if the map would have been flattened and then been iterated.
+ *
+ * @tparam DataType The key type of the underlying map.
+ */
+template <typename DataType>
+class TableIndexIterator : public BaseTableIndexIterator {
+ public:
+  using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
+
+  explicit TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
+
+  reference operator*() const override { return _map_iterator->second[_vector_index]; }
+
+  TableIndexIterator& operator++() override {
+    if (++_vector_index >= _map_iterator->second.size()) {
+      _map_iterator++;
+      _vector_index = 0;
+    }
+    return *this;
+  }
+
+  bool operator==(const BaseTableIndexIterator& other) const override {
+    auto obj = dynamic_cast<const TableIndexIterator*>(&other);
+    return obj && _map_iterator == obj->_map_iterator && _vector_index == obj->_vector_index;
+  }
+
+  bool operator!=(const BaseTableIndexIterator& other) const override {
+    auto obj = dynamic_cast<const TableIndexIterator*>(&other);
+    return !obj || _map_iterator != obj->_map_iterator || _vector_index != obj->_vector_index;
+  }
+
+  std::shared_ptr<BaseTableIndexIterator> clone() const override {
+    return std::make_shared<TableIndexIterator<DataType>>(*this);
+  }
+
+ private:
+  MapIteratorType _map_iterator;
+  size_t _vector_index;
+};
+
+class TableIndexNullIterator : public BaseTableIndexIterator {
+ public:
+  using MapIteratorType = typename std::vector<RowID>::const_iterator;
+
+  explicit TableIndexNullIterator(MapIteratorType itr) : _map_iterator(itr) {}
+
+  reference operator*() const override { return *_map_iterator; }
+
+  TableIndexNullIterator& operator++() override {
+    _map_iterator++;
+    return *this;
+  }
+
+  bool operator==(const BaseTableIndexIterator& other) const override {
+    auto obj = dynamic_cast<const TableIndexNullIterator*>(&other);
+    return obj && _map_iterator == obj->_map_iterator;
+  }
+
+  bool operator!=(const BaseTableIndexIterator& other) const override {
+    auto obj = dynamic_cast<const TableIndexNullIterator*>(&other);
+    return !obj || _map_iterator != obj->_map_iterator;
+  }
+
+  std::shared_ptr<BaseTableIndexIterator> clone() const override {
+    return std::make_shared<TableIndexNullIterator>(*this);
+  }
+
+ private:
+  MapIteratorType _map_iterator;
+};
+
+/**
  * Base class that holds a PartialHashIndexImpl object with the correct resolved datatype.
  */
 class BasePartialHashIndexImpl : public Noncopyable {
