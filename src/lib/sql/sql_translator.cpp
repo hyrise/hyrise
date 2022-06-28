@@ -1549,7 +1549,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   auto name = expr.name ? std::string(expr.name) : "";
 
-  const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
+  auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
   const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver) : nullptr;
 
   if (left) {
@@ -1597,7 +1597,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       if (date) {
         return value_(pmr_string{name});
       }
-      FailInput("'" + name + "' is not a valid date");
+      FailInput("'" + name + "' is not a valid ISO 8601 extended date");
     }
 
     case hsql::kExprParameter: {
