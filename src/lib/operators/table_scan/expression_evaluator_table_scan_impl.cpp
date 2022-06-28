@@ -10,7 +10,9 @@ ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(
     const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSubqueryResults>& uncorrelated_subquery_results)
     : _in_table(in_table), _expression(expression), _uncorrelated_subquery_results(uncorrelated_subquery_results) {}
 
-std::string ExpressionEvaluatorTableScanImpl::description() const { return "ExpressionEvaluator"; }
+std::string ExpressionEvaluatorTableScanImpl::description() const {
+  return "ExpressionEvaluator";
+}
 
 std::shared_ptr<RowIDPosList> ExpressionEvaluatorTableScanImpl::scan_chunk(ChunkID chunk_id) {
   return std::make_shared<RowIDPosList>(

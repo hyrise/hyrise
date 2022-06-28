@@ -32,7 +32,9 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
   Assert(column_data_type == data_type_from_all_type_variant(right_value), "Type of upper bound has to match column");
 }
 
-std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
+std::string ColumnBetweenTableScanImpl::description() const {
+  return "ColumnBetween";
+}
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,

@@ -11,7 +11,9 @@ class SettingTest : public BaseTest {
     mock_setting = std::make_shared<MockSetting>("mock_setting");
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   std::shared_ptr<AbstractSetting> mock_setting;
 };

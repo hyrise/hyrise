@@ -24,9 +24,13 @@ std::string PlaceholderExpression::description(const DescriptionMode mode) const
   return stream.str();
 }
 
-bool PlaceholderExpression::requires_computation() const { return false; }
+bool PlaceholderExpression::requires_computation() const {
+  return false;
+}
 
-DataType PlaceholderExpression::data_type() const { Fail("Cannot obtain DataType of placeholder"); }
+DataType PlaceholderExpression::data_type() const {
+  Fail("Cannot obtain DataType of placeholder");
+}
 
 bool PlaceholderExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const PlaceholderExpression*>(&expression),

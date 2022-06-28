@@ -326,7 +326,9 @@ TEST_F(UnionPositionsTest, SameColumnsDifferentTables) {
   /**
    * Ensure that we get an error if we want to union different tables with equal column definitions in debug builds.
    */
-  if constexpr (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto get_table_a_op = std::make_shared<GetTable>("10_ints");
   get_table_a_op->never_clear_output();

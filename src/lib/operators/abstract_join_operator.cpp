@@ -31,9 +31,13 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
          "Unsupported predicate condition");
 }
 
-JoinMode AbstractJoinOperator::mode() const { return _mode; }
+JoinMode AbstractJoinOperator::mode() const {
+  return _mode;
+}
 
-const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const { return _primary_predicate; }
+const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const {
+  return _primary_predicate;
+}
 
 const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predicates() const {
   return _secondary_predicates;
@@ -45,7 +49,9 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     if (state == OperatorState::ExecutedAndAvailable) {
       const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
       // If input table is still available, use name from there
-      if (input_table) return input_table->column_name(column_id);
+      if (input_table) {
+        return input_table->column_name(column_id);
+      }
     }
 
     if (lqp_node) {

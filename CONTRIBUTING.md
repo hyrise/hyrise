@@ -54,8 +54,15 @@
     `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
   * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
-  * Prefer braced control statements (`if (...) { x(); }` over `if (...) x();`). For multi-line statements, this is
-    mandatory.
+  * Use braced control statements, even for single-line blocks. Moreover, unless the block
+    is empty (e.g., `while (!ready) {}`), add line breaks. Instead of `if (...) x();` (or `if (...) { x(); }`), write:
+    
+    ```
+       if (...) {
+         x();
+       }
+    ```
+
 
 # Formatting and Naming
 * Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while
@@ -78,6 +85,9 @@
     * If an identifier contains a verb or an adjective in addition to a noun, the schema [verb|adjective]\[noun] is
       preferred, e.g., use `left_input` rather than ~~`input_left`~~ and `set_left_input()` rather than
       ~~`set_input_left()`~~.
+    * Unused variables: instead of leaving out the parameter name, comment the parameter name out (e.g.,
+      `void function(const size_t /* count */) { ... }`). If the context does not provide a good name (such as
+      `/* count */`), use `/* unused */`.
 
 * Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished
   with a full stop.

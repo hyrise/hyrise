@@ -23,9 +23,13 @@ class MockCostEstimator : public AbstractCostEstimator {
   explicit MockCostEstimator(const MockCosts& init_mock_costs)
       : AbstractCostEstimator(nullptr), mock_costs(init_mock_costs) {}
 
-  std::shared_ptr<AbstractCostEstimator> new_instance() const override { Fail("Shouldn't be called"); }
+  std::shared_ptr<AbstractCostEstimator> new_instance() const override {
+    Fail("Shouldn't be called");
+  }
 
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override { return mock_costs.at(node); }
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override {
+    return mock_costs.at(node);
+  }
 };
 
 }  // namespace

@@ -39,7 +39,9 @@ class AbstractCache {
   virtual void resize(size_t capacity) = 0;
 
   // Return the capacity of the cache.
-  size_t capacity() const { return _capacity; }
+  size_t capacity() const {
+    return _capacity;
+  }
 
   struct SnapshotEntry {
     Value value;

@@ -40,8 +40,12 @@ bool BenchmarkState::keep_running() {
   return true;
 }
 
-void BenchmarkState::set_done() { state = State::Over; }
+void BenchmarkState::set_done() {
+  state = State::Over;
+}
 
-bool BenchmarkState::is_done() const { return state == State::Over; }
+bool BenchmarkState::is_done() const {
+  return state == State::Over;
+}
 
 }  // namespace opossum

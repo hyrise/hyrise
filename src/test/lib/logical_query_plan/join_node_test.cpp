@@ -60,11 +60,17 @@ class JoinNodeTest : public BaseTest {
   std::optional<TableKeyConstraint> _key_constraint_y;
 };
 
-TEST_F(JoinNodeTest, Description) { EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross"); }
+TEST_F(JoinNodeTest, Description) {
+  EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross");
+}
 
-TEST_F(JoinNodeTest, DescriptionInnerJoin) { EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner [a = y]"); }
+TEST_F(JoinNodeTest, DescriptionInnerJoin) {
+  EXPECT_EQ(_inner_join_node->description(), "[Join] Mode: Inner [a = y]");
+}
 
-TEST_F(JoinNodeTest, DescriptionSemiJoin) { EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi [a = y]"); }
+TEST_F(JoinNodeTest, DescriptionSemiJoin) {
+  EXPECT_EQ(_semi_join_node->description(), "[Join] Mode: Semi [a = y]");
+}
 
 TEST_F(JoinNodeTest, DescriptionAntiJoin) {
   EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiNullAsTrue [a = y]");
