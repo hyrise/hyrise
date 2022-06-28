@@ -1741,7 +1741,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto start_date_string =
               std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
           const auto start_date = string_to_date(start_date_string);
-          AssertInput(start_date, "'" + start_date_string + "' is not a valid date");
+          AssertInput(start_date, "'" + start_date_string + "' is not a valid ISO 8601 extended date");
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
           // We already ensured to have either Addition or Substraction right at the beginning
           const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
