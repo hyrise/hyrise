@@ -69,6 +69,19 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
   }
 }
 
+JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
+                     const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
+                     const OperatorJoinPredicate& primary_predicate, ColumnID index_column_id_before_pruning,
+                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side)
+    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
+                           std::make_unique<JoinIndex::PerformanceData>()),
+      _index_side(index_side),
+      _adjusted_primary_predicate(primary_predicate), _index_column_id_before_pruning{index_column_id_before_pruning} {
+  if (_index_side == IndexSide::Left) {
+    _adjusted_primary_predicate.flip();
+  }
+}
+
 const std::string& JoinIndex::name() const {
   static const auto name = std::string{"JoinIndex"};
   return name;
@@ -100,8 +113,8 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   const auto copied_pruned_column_ids = get_pruned_column_ids();
 
-  return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                     _secondary_predicates, _index_side, copied_pruned_column_ids);
+  return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate, _index_column_id_before_pruning,
+                                     _secondary_predicates, _index_side);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
