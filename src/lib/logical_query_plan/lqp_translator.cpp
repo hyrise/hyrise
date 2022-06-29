@@ -400,7 +400,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   //                          right_data_type, !secondary_join_predicates.empty(), left_table_type, right_table_type,
   //                          index_side})) {
   //   return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
-  //                                      primary_join_predicate, std::move(secondary_join_predicates), *index_side, index_column_id);
+  //                                      primary_join_predicate, std::move(secondary_join_predicates), *index_side,
+  //                                      index_column_id);
   // }
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
