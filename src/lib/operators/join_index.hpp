@@ -42,7 +42,8 @@ class JoinIndex : public AbstractJoinOperator {
             const IndexSide index_side = IndexSide::Right, const std::vector<ColumnID>& pruned_column_ids = {});
 
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
-            const JoinMode mode, const OperatorJoinPredicate& primary_predicate, ColumnID index_column_id_before_pruning,
+            const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
+            ColumnID index_column_id_before_pruning,
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
             const IndexSide index_side = IndexSide::Right);
 

@@ -76,7 +76,8 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
-      _adjusted_primary_predicate(primary_predicate), _index_column_id_before_pruning{index_column_id_before_pruning} {
+      _adjusted_primary_predicate(primary_predicate),
+      _index_column_id_before_pruning{index_column_id_before_pruning} {
   if (_index_side == IndexSide::Left) {
     _adjusted_primary_predicate.flip();
   }
@@ -101,8 +102,8 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate, _index_column_id_before_pruning,
-                                     _secondary_predicates, _index_side);
+  return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
+                                     _index_column_id_before_pruning, _secondary_predicates, _index_side);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
@@ -228,9 +229,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     const auto& table_indexes = _index_input_table->get_table_indexes(_index_column_id_before_pruning);
 
     // table-based index join
-    if (!table_indexes.empty() &&
-        (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
-         _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {
+    if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
+                                   _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       auto total_indexed_chunk_ids = std::set<ChunkID>{};
 
