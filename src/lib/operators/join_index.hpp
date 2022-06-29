@@ -13,7 +13,6 @@
 
 namespace opossum {
 
-class OperatorsJoinIndexTest;
 class MultiPredicateJoinEvaluator;
 
 using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
@@ -32,7 +31,7 @@ using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableInd
    * Note: An index needs to be present on the index side table in order to execute an index join.
    */
 class JoinIndex : public AbstractJoinOperator {
-  friend OperatorsJoinIndexTest;
+  friend class OperatorsJoinIndexTest_DeepCopy_Test;
 
  public:
   static bool supports(const JoinConfiguration config);
@@ -59,8 +58,6 @@ class JoinIndex : public AbstractJoinOperator {
   };
 
   std::string description(DescriptionMode description_mode) const override;
-
-  const std::vector<ColumnID> get_pruned_column_ids() const;
 
  protected:
   std::shared_ptr<const Table> _on_execute() override;

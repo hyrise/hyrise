@@ -97,22 +97,10 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
   return stream.str();
 }
 
-const std::vector<ColumnID> JoinIndex::get_pruned_column_ids() const {
-  const auto number_of_pruned_column_ids =
-      _index_column_id_before_pruning - _adjusted_primary_predicate.column_ids.second;
-  auto pruned_column_ids = std::vector<ColumnID>{static_cast<size_t>(number_of_pruned_column_ids)};
-
-  std::iota(std::begin(pruned_column_ids), std::end(pruned_column_ids), 0);
-
-  return pruned_column_ids;
-}
-
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  const auto copied_pruned_column_ids = get_pruned_column_ids();
-
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate, _index_column_id_before_pruning,
                                      _secondary_predicates, _index_side);
 }
