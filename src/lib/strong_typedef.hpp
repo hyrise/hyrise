@@ -51,7 +51,7 @@
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \
-  struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
+  struct hash<::opossum::D> {                                                                                     \
     size_t operator()(const ::opossum::D& x) const {                                                              \
       return hash<T>{}(x);                                                                                        \
     }                                                                                                             \
