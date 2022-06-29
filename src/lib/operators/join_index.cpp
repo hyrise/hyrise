@@ -62,7 +62,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
   // In this step the original index ColumnID is calculated.
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
               "Expected sorted vector of ColumnIDs");
-  
+
   _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
   for (const auto& pruned_column_id : pruned_column_ids) {
     if (pruned_column_id > _index_column_id_before_pruning) {
@@ -269,9 +269,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           nested_loop_joining_duration += timer.lap();
         }
       }
-    }
-    // chunk-based index join
-    else {
+    } else {
+      // chunk-based index join
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
       for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
         const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
