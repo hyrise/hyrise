@@ -19,7 +19,9 @@ namespace opossum {
 
 class BinaryWriterTest : public BaseTest {
  protected:
-  void TearDown() override { std::remove(filename.c_str()); }
+  void TearDown() override {
+    std::remove(filename.c_str());
+  }
 
   std::shared_ptr<Table> table;
   const std::string filename = test_data_path + "export_test.bin";
