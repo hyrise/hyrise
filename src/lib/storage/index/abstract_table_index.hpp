@@ -19,10 +19,10 @@ namespace opossum {
 class BaseTableIndexIterator {
  public:
   using iterator_category = std::forward_iterator_tag;
-  using value_type = void;
+  using value_type = const RowID;
   using difference_type = std::ptrdiff_t;
-  using pointer = void;
-  using reference = RowID;
+  using pointer = const RowID*;
+  using reference = const RowID&;
 
   BaseTableIndexIterator(const BaseTableIndexIterator& itr) = default;
   BaseTableIndexIterator() = default;
@@ -47,10 +47,10 @@ class BaseTableIndexIterator {
 class IteratorWrapper {
  public:
   using iterator_category = std::forward_iterator_tag;
-  using value_type = void;
+  using value_type = const RowID;
   using difference_type = std::ptrdiff_t;
-  using pointer = void;
-  using reference = RowID;
+  using pointer = const RowID*;
+  using reference = const RowID&;
 
   explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
       : _impl(std::move(table_index_iterator_ptr)) {}

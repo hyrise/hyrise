@@ -193,7 +193,7 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
   const auto secondary_predicates =
       std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
-  auto pruned_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}, ColumnID{4}, ColumnID{6}};
+  const auto pruned_column_ids = std::vector<ColumnID>{ColumnID{0}, ColumnID{2}, ColumnID{4}, ColumnID{6}};
   const auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Left, primary_predicate,
                                                          secondary_predicates, IndexSide::Left, pruned_column_ids);
   const auto abstract_join_operator_copy = join_operator->deep_copy();
