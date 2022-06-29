@@ -69,6 +69,7 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
+#include "utils/index_column_id_before_pruning.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -362,44 +363,45 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   // comment in if JoinIndex should be tested in benchmarks
 
-  // const auto& left_input_type = join_node->left_input()->type;
-  // const auto& right_input_type = join_node->right_input()->type;
+  const auto& left_input_type = join_node->left_input()->type;
+  const auto& right_input_type = join_node->right_input()->type;
 
-  // auto left_table_type = TableType::References;
-  // auto right_table_type = TableType::References;
+  auto left_table_type = TableType::References;
+  auto right_table_type = TableType::References;
 
-  // auto index_side = std::optional<IndexSide>{};
-  // std::vector<ColumnID> pruned_column_ids{};
+  auto index_side = std::optional<IndexSide>{};
+  ColumnID index_column_id;
 
-  // if (left_input_type == LQPNodeType::StoredTable) {
-  //   left_table_type = TableType::Data;
-  //   index_side = IndexSide::Left;
+  if (left_input_type == LQPNodeType::StoredTable) {
+    left_table_type = TableType::Data;
+    index_side = IndexSide::Left;
 
-  //   auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
-  //   pruned_column_ids = stored_table_node->pruned_column_ids();
-  // }
+    auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
+    const auto pruned_column_ids = stored_table_node->pruned_column_ids();
+    index_column_id = index_column_id_before_pruning(primary_join_predicate.column_ids.first, pruned_column_ids);
+  }
 
-  // if (right_input_type == LQPNodeType::StoredTable) {
-  //   right_table_type = TableType::Data;
-  //   index_side = IndexSide::Right;
+  if (right_input_type == LQPNodeType::StoredTable) {
+    right_table_type = TableType::Data;
+    index_side = IndexSide::Right;
 
-  //   auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
-  //   pruned_column_ids = stored_table_node->pruned_column_ids();
-  // }
+    auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
+    const auto pruned_column_ids = stored_table_node->pruned_column_ids();
+    index_column_id = index_column_id_before_pruning(primary_join_predicate.column_ids.second, pruned_column_ids);
+  }
 
-  // Assert(left_table_type != TableType::Data || right_table_type != TableType::Data,
-  //        "Both input tables are data tables. Add additional logic to make a decision about the IndexSide.");
+  Assert(left_table_type != TableType::Data || right_table_type != TableType::Data,
+         "Both input tables are data tables. Add additional logic to make a decision about the IndexSide.");
 
-  // if ((primary_join_predicate.predicate_condition == PredicateCondition::Equals ||
-  //      primary_join_predicate.predicate_condition == PredicateCondition::NotEquals) &&
-  //     index_side &&
-  //     JoinIndex::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
-  //                          right_data_type, !secondary_join_predicates.empty(), left_table_type, right_table_type,
-  //                          index_side})) {
-  //   return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
-  //                                      primary_join_predicate, std::move(secondary_join_predicates), *index_side,
-  //                                      pruned_column_ids);
-  // }
+  if ((primary_join_predicate.predicate_condition == PredicateCondition::Equals ||
+       primary_join_predicate.predicate_condition == PredicateCondition::NotEquals) &&
+      index_side &&
+      JoinIndex::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
+                           right_data_type, !secondary_join_predicates.empty(), left_table_type, right_table_type,
+                           index_side})) {
+    return std::make_shared<JoinIndex>(left_input_operator, right_input_operator, join_node->join_mode,
+                                       primary_join_predicate, std::move(secondary_join_predicates), *index_side, index_column_id);
+  }
 
   // Lacking a proper cost model, we assume JoinHash is always faster than JoinSortMerge, which is faster than
   // JoinNestedLoop and thus check for an operator compatible with the JoinNode in that order

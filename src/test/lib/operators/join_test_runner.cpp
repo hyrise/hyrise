@@ -18,6 +18,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/storage_manager.hpp"
+#include "utils/index_column_id_before_pruning.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
@@ -144,11 +145,19 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
                                             configuration.secondary_predicates, configuration.radix_bits);
     } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
-      const auto& indexed_input =
-          configuration.index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
+
+      ColumnID index_column_id;
+      if (configuration.index_side == IndexSide::Left) {
+        const auto& indexed_input = configuration.left_input;
+        index_column_id = index_column_id_before_pruning(primary_predicate.column_ids.first, indexed_input.pruned_column_ids);
+      } else {
+        const auto& indexed_input = configuration.right_input;
+        index_column_id = index_column_id_before_pruning(primary_predicate.column_ids.second, indexed_input.pruned_column_ids);
+      }
+
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
                                          configuration.secondary_predicates, *configuration.index_side,
-                                         indexed_input.pruned_column_ids);
+                                         index_column_id);
     } else {
       return std::make_shared<JoinOperator>(left, right, configuration.join_mode, primary_predicate,
                                             configuration.secondary_predicates);

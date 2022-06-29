@@ -49,7 +49,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side,
-                     const std::vector<ColumnID>& pruned_column_ids)
+                     const std::optional<ColumnID> index_column_id_before_pruning)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
@@ -58,31 +58,10 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     _adjusted_primary_predicate.flip();
   }
 
-  // If some columns have been pruned, the ColumnID to join on may differ from the original index ColumnID.
-  // In this step the original index ColumnID is calculated.
-  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
-              "Expected sorted vector of ColumnIDs");
-
-  _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
-  for (const auto& pruned_column_id : pruned_column_ids) {
-    if (pruned_column_id > _index_column_id_before_pruning) {
-      break;
-    }
-    ++_index_column_id_before_pruning;
-  }
-}
-
-JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
-                     const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
-                     const OperatorJoinPredicate& primary_predicate, ColumnID index_column_id_before_pruning,
-                     const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side)
-    : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
-                           std::make_unique<JoinIndex::PerformanceData>()),
-      _index_side(index_side),
-      _adjusted_primary_predicate(primary_predicate),
-      _index_column_id_before_pruning{index_column_id_before_pruning} {
-  if (_index_side == IndexSide::Left) {
-    _adjusted_primary_predicate.flip();
+  if (index_column_id_before_pruning) {
+    _index_column_id_before_pruning = index_column_id_before_pruning.value();
+  } else {
+    _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
   }
 }
 
@@ -106,7 +85,7 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                     _index_column_id_before_pruning, _secondary_predicates, _index_side);
+                                     _secondary_predicates, _index_side, _index_column_id_before_pruning);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
