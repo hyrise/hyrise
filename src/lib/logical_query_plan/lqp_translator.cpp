@@ -179,111 +179,16 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     case ScanType::IndexScan:
       return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
     case ScanType::MultiColumnIndexScan:
-      return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
+      return _translate_predicate_node_to_multi_column_index_scan(predicate_node, input_operator);
   }
 
   Fail("Invalid enum value");
 }
 
+
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
     const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
   const auto& node_predicate = node->predicate();
-
-  //if (auto logical_expression = std::dynamic_pointer_cast<LogicalExpression>(node_predicate)) {
-  if (node->scan_type == ScanType::MultiColumnIndexScan) {
-    /*     Can be skipped. For such predicates here, we know (only applicable to Krichly project) that only a single
-           chunk will be passed to the multi-column index scan.
-    Assert(node->left_input()->type == LQPNodeType::StoredTable, "Multi-Column Index Scan must follow a StoredTableNode.");
-    const auto stored_table_node = std::static_pointer_cast<StoredTableNode>(node->left_input());
-    const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-    const auto& table_name = stored_table_node->table_name;
-    const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-    const auto chunk_count = table->chunk_count();
-     
-    auto included_chunk_ids = std::vector<ChunkID>{};
-    const auto pruned_chunk_ids_set = std::set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      if (!pruned_chunk_ids_set.contains(chunk_id)) {
-        included_chunk_ids.push_back(chunk_id);
-      }
-    }
-    */
-     
-
-    auto lower_bounds = std::deque<AllTypeVariant>{};
-    auto upper_bounds = std::deque<AllTypeVariant>{};
-    auto column_ids = std::deque<ColumnID>{};
-
-    visit_expression(node_predicate, [&](const auto& sub_expression) {
-      //  Right now, we create a conjunctive expression for a predicate node, e.g., and_(a=5, _and(b=6, c=7)).
-      if (sub_expression->type == ExpressionType::Logical) { // the and_'s
-        return ExpressionVisitation::VisitArguments;
-      }
-
-      if (sub_expression->type == ExpressionType::Predicate) {
-        //std::cout << "Handling inner " << *sub_expression << std::endl;
-        if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(sub_expression)) {
-          const auto value_1 = boost::get<int32_t>(static_pointer_cast<ValueExpression>(between_expression->lower_bound())->value);
-          const auto value_2 = boost::get<int32_t>(static_pointer_cast<ValueExpression>(between_expression->upper_bound())->value);
-
-          Assert(between_expression->value()->type == ExpressionType::LQPColumn, "Expected an LQPColumn expression.");
-          const auto lqp_column = static_pointer_cast<LQPColumnExpression>(between_expression->value());
-
-          // Adding to the front! We are walking the columns the back to front, due to the way AND is nested in the LQP construction.
-          lower_bounds.push_front(value_1);
-          upper_bounds.push_front(value_2);
-          column_ids.push_front(lqp_column->original_column_id);
-        } else if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(sub_expression)) {
-          Assert(binary_predicate_expression->predicate_condition == PredicateCondition::LessThanEquals, "Unexpected predicate condition");
-          const auto value = boost::get<int32_t>(static_pointer_cast<ValueExpression>(binary_predicate_expression->right_operand())->value);
-
-          Assert(binary_predicate_expression->left_operand()->type == ExpressionType::LQPColumn, "Unexpected left operand.");
-          const auto lqp_column = static_pointer_cast<LQPColumnExpression>(binary_predicate_expression->left_operand());
-
-          lower_bounds.push_front(AllTypeVariant{int32_t{0}});
-          upper_bounds.push_front(value);
-          column_ids.push_front(lqp_column->original_column_id);
-        } else {
-          auto sstream = std::stringstream{};
-          sstream << *sub_expression;
-          Assert(between_expression, "Expected a between or less-than-equals predicate expression, but got " + sstream.str());
-        }
-
-        return ExpressionVisitation::VisitArguments;
-      }
-
-      return ExpressionVisitation::VisitArguments;
-    });
-
-    /*
-    std::cout << "Collected values .... lowers: ";
-    for (const auto lower : lower_bounds) std::cout << lower << " ";
-    std::cout << "- uppers: ";
-    for (const auto lower : upper_bounds) std::cout << lower << " ";
-    std::cout << "- column_ids: ";
-    for (const auto lower : column_ids) std::cout << lower << " ";
-    std::cout << std::endl;;
-    */
- 
-    const auto lower_bounds_vector = std::vector<AllTypeVariant>{lower_bounds.begin(), lower_bounds.end()};
-    const auto upper_bounds_vector = std::vector<AllTypeVariant>{upper_bounds.begin(), upper_bounds.end()};
-    const auto column_ids_vector = std::vector<ColumnID>{column_ids.begin(), column_ids.end()};
-
-    /*
-    std::cout << "Collected values .... lowers: ";
-    for (const auto lower : lower_bounds_vector) std::cout << lower << " ";
-    std::cout << "- uppers: ";
-    for (const auto lower : upper_bounds_vector) std::cout << lower << " ";
-    std::cout << "- column_ids: ";
-    for (const auto lower : column_ids_vector) std::cout << lower << " ";
-    std::cout << std::endl;;
-    */
-
-    auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::CompositeGroupKey, column_ids_vector,
-                                       PredicateCondition::BetweenInclusive, lower_bounds_vector, upper_bounds_vector);
-    index_scan->included_chunk_ids = {ChunkID{0}};
-    return index_scan;
-  }
 
   /**
    * Not using OperatorScanPredicate, since it splits up BETWEEN into two scans for some cases that TableScan cannot handle
@@ -370,6 +275,66 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   table_scan->lqp_node = node;
 
   return std::make_shared<UnionAll>(index_scan, table_scan);
+}
+
+std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_multi_column_index_scan(
+    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
+  const auto& node_predicate = node->predicate();
+  auto lower_bounds = std::deque<AllTypeVariant>{};
+  auto upper_bounds = std::deque<AllTypeVariant>{};
+  auto column_ids = std::deque<ColumnID>{};
+
+  visit_expression(node_predicate, [&](const auto& sub_expression) {
+    //  Right now, we create a conjunctive expression for a predicate node, e.g., and_(a=5, _and(b=6, c=7)).
+    if (sub_expression->type == ExpressionType::Logical) { // the and_'s
+      return ExpressionVisitation::VisitArguments;
+    }
+
+    if (sub_expression->type == ExpressionType::Predicate) {
+      if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(sub_expression)) {
+        const auto value_1 = boost::get<int32_t>(static_pointer_cast<ValueExpression>(between_expression->lower_bound())->value);
+        const auto value_2 = boost::get<int32_t>(static_pointer_cast<ValueExpression>(between_expression->upper_bound())->value);
+
+        Assert(between_expression->value()->type == ExpressionType::LQPColumn, "Expected an LQPColumn expression.");
+        const auto lqp_column = static_pointer_cast<LQPColumnExpression>(between_expression->value());
+
+        // Adding to the front! We are walking the columns the back to front, due to the way AND is nested in the LQP construction.
+        lower_bounds.push_front(value_1);
+        upper_bounds.push_front(value_2);
+        column_ids.push_front(lqp_column->original_column_id);
+      } else if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(sub_expression)) {
+        Assert(binary_predicate_expression->predicate_condition == PredicateCondition::LessThanEquals, "Unexpected predicate condition");
+        const auto value = boost::get<int32_t>(static_pointer_cast<ValueExpression>(binary_predicate_expression->right_operand())->value);
+
+        Assert(binary_predicate_expression->left_operand()->type == ExpressionType::LQPColumn, "Unexpected left operand.");
+        const auto lqp_column = static_pointer_cast<LQPColumnExpression>(binary_predicate_expression->left_operand());
+
+        lower_bounds.push_front(AllTypeVariant{int32_t{0}});
+        upper_bounds.push_front(value);
+        column_ids.push_front(lqp_column->original_column_id);
+      } else {
+        auto sstream = std::stringstream{};
+        sstream << *sub_expression;
+        Assert(between_expression, "Expected a between or less-than-equals predicate expression, but got " + sstream.str());
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    }
+
+    return ExpressionVisitation::VisitArguments;
+  });
+
+  const auto lower_bounds_vector = std::vector<AllTypeVariant>{lower_bounds.begin(), lower_bounds.end()};
+  const auto upper_bounds_vector = std::vector<AllTypeVariant>{upper_bounds.begin(), upper_bounds.end()};
+  const auto column_ids_vector = std::vector<ColumnID>{column_ids.begin(), column_ids.end()};
+
+  auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::CompositeGroupKey, column_ids_vector,
+                                     PredicateCondition::BetweenInclusive, lower_bounds_vector, upper_bounds_vector);
+
+  std::cout << "Trying ..." << std::endl;
+  // We only operator on single chunk stored table nodes in the case of multi-column indexes.
+  index_scan->included_chunk_ids = {ChunkID{0}};
+  return index_scan;
 }
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(

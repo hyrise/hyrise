@@ -147,22 +147,18 @@ bool SamePredicateExpressionOnOtherStoredTableNode(const std::shared_ptr<Abstrac
   Assert(predicate_expression_2, "Not a predicate expression");
 
   if (predicate_expression_1->predicate_condition != predicate_expression_2->predicate_condition) {
-    //std::cout << "no preid cond match" << std::endl;
     return false;
   }
 
   if (predicate_expression_1->type != predicate_expression_2->type) {
-    //std::cout << "no type match" << std::endl;
     return false;
   }
 
   if (predicate_expression_1->data_type() != predicate_expression_2->data_type()) {
-    //std::cout << "no data type match" << std::endl;
     return false;
   }
 
   if (predicate_expression_1->arguments.size() != predicate_expression_2->arguments.size()) {
-    //std::cout << "no arguments size match" << std::endl;
     return false;
   }
 
@@ -172,18 +168,14 @@ bool SamePredicateExpressionOnOtherStoredTableNode(const std::shared_ptr<Abstrac
 
     if (const auto value_expression_1 = std::dynamic_pointer_cast<ValueExpression>(argument_1)) {
       const auto value_expression_2 = std::static_pointer_cast<ValueExpression>(argument_2);
-      //std::cout << "Comparing " << *value_expression_1 << " and " << *value_expression_2 << std::endl;
       if (value_expression_1->value != value_expression_2->value) {
-        //std::cout << "no values1  match" << std::endl;
         return false;
       }
     }
 
     if (const auto column_expression_1 = std::dynamic_pointer_cast<LQPColumnExpression>(argument_1)) {
       const auto column_expression_2 = std::static_pointer_cast<LQPColumnExpression>(argument_2);
-      //std::cout << "Comparing " << column_expression_1->original_column_id << " and " << column_expression_2->original_column_id << std::endl;
       if (column_expression_1->original_column_id != column_expression_2->original_column_id) {
-        //std::cout << "no original_column_id match" << std::endl;
         return false;
       }
     }
@@ -235,15 +227,17 @@ void add_all_but_given_chunk_to_pruned_chunks_list(std::shared_ptr<StoredTableNo
 }
 
 /*
- * This function takes a given query and optimizes its access paths. For every chunk, a new path be added to fully
+ * This function takes a given query and optimizes its access paths. For every chunk, a new path MIGHT be added to fully
  * exploit Hyrise's capability to add indexes of various types on a single chunk basis.
  * Please note, that this method should be called after the chunk pruning rule has been executed. It's currently not
  * possible to run chunk pruning afterwards, as the optimizer rule does not handle "complex" predicates (we use such
  * predicates to later construct multi-column index scans; usually those predicates would be broken up into single table
- * scans).
+ * scans by the optimizer).
  * The different access paths each copy and adapt the stored table node, as it is not possible in a LQP to maintain an
  * inclusive/exclusive chunk list (as used in the IndexScan/TableScan operators). Thus, we need to ensure that the
  * access path for each chunk only sees exactly one chunk (thus, a new stored node is being used).
+ * As we use new stored table nodes, all LQP Column Expressions above that new node need to be updated, which is not
+ * solved nicely by making the column_id in the LQPColumnExpression a non-const member and overwriting it.
  */
 std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQPNode>& input_node, const OptimizableQuery& optimizable_query) {
   const auto initial_path_copy = input_node->deep_copy();
@@ -252,9 +246,6 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
   const std::vector<ColumnID>& column_ids = optimizable_query.column_ids;
   //const std::vector<float>& selectivities = optimizable_query.selectivities;
   const std::vector<std::shared_ptr<AbstractExpression>>& expressions = optimizable_query.expressions;
-
-  //std::cout << "\nOptimizing path ..." << std::endl;
-  //std::cout << *new_root << "\n\n" << std::endl;
 
   auto found_stored_table_nodes = size_t{0};
   std::shared_ptr<StoredTableNode> base_stored_table_node;
@@ -271,13 +262,12 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
   const auto& pruned_chunk_ids = base_stored_table_node->pruned_chunk_ids();
   const auto pruned_chunk_ids_set = std::set<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end());
 
-  // Access Path Selection (APS) per chunk: each chunk will be optimized on its own. This might create a pipeline of
+  // Access Path Selection (APS) per chunk: each chunk might be optimized on its own. This might create a pipeline of
   // filter (table scan or index scan) operations per chunk, which are later unioned.
   const auto& table = Hyrise::get().storage_manager.get_table(TABLE_NAME);
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     if (pruned_chunk_ids_set.contains(chunk_id)) {
-      //std::cout << "Skipping access path optimization for chunk #" << chunk_id << " as this chunk is pruned anyways." << std::endl;
       continue;
     }
 
@@ -286,8 +276,6 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
     auto multi_column_index_column_ids = std::vector<ColumnID>{};
     auto found_multi_column_index = false;
     auto multi_column_index = std::shared_ptr<AbstractIndex>{};
-    // First, obtain multi column indexes, if applicable, we use it. If not, check for single column indexes.
-    //std::cout << "Chunk: " << chunk_id << ". Number of multi column indexes: " << multi_indexes.size() << std::endl;
     for (const auto& [column_ids_chunk_id, index] : multi_indexes) {
       const auto& column_ids = column_ids_chunk_id.first;
       const auto index_chunk_id = column_ids_chunk_id.second;
@@ -300,7 +288,6 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
           multi_column_index_column_ids.push_back(static_cast<ColumnID>(column_id));
         }
         multi_column_index = index;
-        //std::cout << "Found multi-column index." << std::endl;
 
         break;
       }
@@ -331,10 +318,10 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
            if (!multi_column_index_is_applicable) { // First found match
              collected_expression = expression_of_scan;
            } else {
-             // We check for the conjunctions because we would like to build (a and (b and (c and d))) for (abcd).
-             // This order makes matching an index scan later on much easier for us.
-             // Without the following if/else, we would construct (a and (b and (d and c))) for (abcd).
-             // Tuned by try and error. Building up those patterns can be surprising.
+             // We check for the conjunctions because we would like to build ((b and a) and c) for (abc). This order
+             // makes matching an index scan later on much easier for us (Hyrise traverses from the outer expressions
+             // (that's c and then the inner expression, where first b and than a is handled; thus we traverse in
+             // reverse order later; if we use have (a and b), we would traverse c,a,b later).
              if (is_first_conjunction) {
                collected_expression = and_(expression_of_scan, collected_expression);
                is_first_conjunction = false;
@@ -342,7 +329,6 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
                collected_expression = and_(collected_expression, expression_of_scan);
              }
            }
-           //std::cout << "COLLECTED EXPRESSION: " << *collected_expression << std::endl;
 
            expressions_for_predicate_removal.push_back(expression_of_scan);
            multi_column_index_is_applicable = true;
@@ -353,7 +339,8 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
       }
 
       if (multi_column_index_is_applicable) {
-        // From top to button: remove is part of removed predicates, rehang nodes
+        // Traversing from top to button: remove predicate if it is part of removed predicates (thus also part of the
+        // new conjunctive predicate).
         // New root is a unionall node. We use the original query as the "left" side and adapt its stored table node
         // to exclude the chunk of the currently added access path. With each new access path, we add a new unionall as
         // the root and attach the new path as "the right side".
@@ -364,13 +351,6 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
         // copy access path, this path is going to be optimized
         auto current_node = initial_path_copy->deep_copy();
 
-        /*
-        std::cout << "###################################" << std::endl;
-        std::cout << "COPIED" << std::endl;
-        std::cout << *current_node << std::endl;
-        std::cout << "###################################" << std::endl;
-        */
-
         auto union_node = UnionNode::make(SetOperationMode::All, current_node, new_root->left_input());
         new_root->set_left_input(union_node);
 
@@ -378,8 +358,6 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
         previous_node = union_node;
         auto index_predicate_node = std::shared_ptr<PredicateNode>{};
         while (current_node->type != LQPNodeType::StoredTable) {
-          //std::cout << "\n\nLoop entry\n" << std::endl;
-          //std::cout << *new_root << "\n\n" << std::endl;
           Assert(!current_node->right_input(), "Cannot handle LQP nodes with multiple inputs");
           Assert(current_node->type == LQPNodeType::Predicate, "This entire optimization method expects chains of predicates and nothing else.");
           if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(current_node)) {
@@ -387,15 +365,7 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
                                            expressions_for_predicate_removal.end(), [&](const auto& expression) {
                const auto predicate = predicate_node->predicate();
                const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
-               //std::cout << "########\t Comparing " << *expression << "\t\t and\t\t " << predicate_expression->predicate_condition << std::endl;
-               //std::cout << "########\t Comparing " << *expression << "\t\t and\t\t " << *(predicate_node->predicate()) << std::endl;
-               //std::cout << "########\t Comparing " << expression->hash() << "\t\t and\t\t " << predicate_node->predicate()->hash() << std::endl;
-               //std::cout << "########\t Comparing " << expression->hash() << "\t\t and\t\t " << predicate_node->predicate()->hash() << std::endl;
-               //std::cout << "Result: " << (expression->hash() == predicate_node->predicate()->hash()) << std::endl;
-               //return *expression == *(predicate_node->predicate());
-               //std::cout << "result of ... SamePredicateExpressionOnOtherStoredTableNode: " << SamePredicateExpressionOnOtherStoredTableNode(expression, predicate_node->predicate()) << std::endl;
                return SamePredicateExpressionOnOtherStoredTableNode(expression, predicate_node->predicate());
-               //return expression->hash() == predicate_node->predicate()->hash();
             });
 
             if (iter != expressions_for_predicate_removal.end()) {
@@ -437,10 +407,7 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
             auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(sub_expression);
             auto original_node = lqp_column_expression->original_node.lock();
             Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
-            //std::cout << "Trying to reset " << *sub_expression << " (orig: " << original_node << ")" << std::endl;
-      
             lqp_column_expression->original_node = new_stored_table_node;
-            //std::cout << "After resetting " << *sub_expression << " (orig: " << original_node << ")" << std::endl;
             return ExpressionVisitation::VisitArguments;
           });
 
@@ -448,102 +415,16 @@ std::shared_ptr<AbstractLQPNode> optimize_access_path(std::shared_ptr<AbstractLQ
         });
 
 
-        //std::cout << "Added a multi-column access path. Breaking." << std::endl;
-      } //else std::cout << "Chunk " << chunk_id << ": no multi-column index applicable." << std::endl;
-    }  //else std::cout << "Chunk " << chunk_id << ": no multi-column index found." << std::endl;
+      }
+    }
 
 
     if constexpr (SKIP_SINGLE_COLUMN_INDEX_OPTIMIZAION) {
       //std::cout << "\n\nFinished with multi-column index for chunk " << chunk_id << "\n" << *new_root << "\n\n";
       continue;
-      //return new_root->left_input();
     }
-
-    /*
-    // Gather single-column index information
-    // The following code is not yet functional. When we decide how to handle single-column indexes, it should be
-    // finished or removed entirely.
-    auto single_column_index_column_id = ColumnID{};
-    auto found_single_column_index = false;
-    auto single_column_index = std::shared_ptr<AbstractIndex>{};
-    for (const auto& [column_id_chunk_id, index] : single_indexes) {
-      const auto column_id = column_id_chunk_id.first;
-      const auto index_chunk_id = column_id_chunk_id.second;
-
-      if (chunk_id == index_chunk_id) {
-        found_single_column_index = true;
-        single_column_index_column_id = column_id;
-        single_column_index = index;
-        std::cout << "Found single-column index." << std::endl;
-
-        break;
-      }
-    }
-
-    if (found_single_column_index) {
-      // There is a multi column index for this chunk. We know check for every covered column, if this column is part
-      // of the query. If we have at least one column that matches, we'll use the multi column index.
-      const auto query_column_ids_set = std::set(column_ids.begin(), column_ids.end());
-
-      if (query_column_ids_set.contains(single_column_index_column_id)) {
-        const auto iter_index_of_scan = std::find(column_ids.begin(), column_ids.end(), single_column_index_column_id);
-        Assert(iter_index_of_scan != column_ids.end(), "ColumnID expected in query, but not found");
-
-        const auto offset = std::distance(column_ids.begin(), iter_index_of_scan);
-        const auto index_scan_expression = expressions[offset];
-
-        // The following does not yet really create a new path ... need to adapt that.
-
-        // Find predicate which is going to get the index scan type.
-        auto current_node = original_query;
-        auto previous_node = std::shared_ptr<AbstractLQPNode>{};
-        auto index_predicate_node = std::shared_ptr<PredicateNode>{};
-        auto found_predicate_node = false;
-        while (current_node->type != LQPNodeType::StoredTable) {
-          Assert(!current_node->right_input(), "Cannot handle LQP nodes with multiple inputs");
-          if (const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(current_node)) {
-            if (*predicate_node->predicate() == *index_scan_expression) {
-              index_predicate_node = predicate_node;
-              lqp_remove_node(index_predicate_node);
-              found_predicate_node = true;
-            }
-            previous_node = current_node;
-            current_node = current_node->left_input();
-          }
-        }
-        Assert(current_node->type == LQPNodeType::StoredTable, "After traversing, expected to be at a stored table node");
-        Assert(found_predicate_node, "Did not find predicate we wanted to replace");
-
-        index_predicate_node->scan_type = ScanType::IndexScan;
-        previous_node->set_left_input(index_predicate_node);
-        index_predicate_node->set_left_input(current_node);
-
-        // Add current chunk to pruned chunks of initial access path
-        add_chunk_to_pruned_chunks_list(base_stored_table_node, chunk_id);
-
-        auto new_stored_table_node = StoredTableNode::make(TABLE_NAME);
-        add_all_but_given_chunk_to_pruned_chunks_list(new_stored_table_node, chunk_id);
-        new_stored_table_node->set_left_input(index_predicate_node);
-
-        auto current_root_copy = current_root;
-        current_root = UnionNode::make(SetOperationMode::All, current_root_copy, new_stored_table_node);
- 
-        std::cout << "Added a multi-column access path. Breaking." << std::endl;
-        std::cout << *current_root << std::endl;
-      } else std::cout << "Chunk " << chunk_id << ": no single-column index applicable." << std::endl;
-    }  else std::cout << "Chunk " << chunk_id << ": no single-column index found." << std::endl;
-    */
   }
 
-  /*
-  // Set scan type to index scan if the scan is the first scan of a query and at least one segment 
-  // of the scan column has an index 
-  // Partial index configurations are handeled by LQPTranslater line 215 -231
-  if (scan_id == 0 && !get_indexed_chunk_ids(table, column_id).empty()) {
-    auto index_node = std::dynamic_pointer_cast<PredicateNode>(current_node);
-    index_node->scan_type = ScanType::IndexScan;
-  }
-  */
   auto optimized_plan = new_root->left_input();
   new_root->set_left_input(nullptr);
 
@@ -730,9 +611,6 @@ void visualize_pqps(const std::vector<std::shared_ptr<AbstractOperator>> pqps, c
 float partially_optimize_translate_and_execute_query(const OptimizableQuery& optimizable_query, const std::string conf_name, const std::string query_id) {
   const auto& lqp_query = optimizable_query.query;
 
-  //std::cout << "LQP Query" << std::endl;
-  //std::cout << *lqp_query << std::endl;
-
   // Run chunk and column pruning rules. Kept it quite simple for now. Take a look at Optimizer::optimize() in case
   // problems occur. The following code is taken from optimizer.cpp. In case the new root is confusing to you, take a
   // look there.
@@ -754,8 +632,8 @@ float partially_optimize_translate_and_execute_query(const OptimizableQuery& opt
   root_node->set_left_input(nullptr);
   auto optimized_node_backup = optimized_node->deep_copy();
 
-  std::cout << "LQP Query" << std::endl;
-  std::cout << *optimized_node << std::endl;
+  //std::cout << "LQP Query" << std::endl;
+  //std::cout << *optimized_node << std::endl;
 
   auto access_path_optimized_node = optimize_access_path(optimized_node, optimizable_query);
   if (const auto env_p = std::getenv("SKIP_ACCESS_PATH_OPTIMIZATION")) {
@@ -778,8 +656,8 @@ float partially_optimize_translate_and_execute_query(const OptimizableQuery& opt
     Timer timer;
     const auto pqp = LQPTranslator{}.translate_node(access_path_optimized_node);
 
-    std::cout << "PQP Query" << std::endl;
-    std::cout << *pqp << std::endl;
+    //std::cout << "PQP Query" << std::endl;
+    //std::cout << *pqp << std::endl;
 
     const auto tasks = OperatorTask::make_tasks_from_operator(pqp);
 
