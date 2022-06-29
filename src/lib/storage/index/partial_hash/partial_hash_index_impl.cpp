@@ -3,6 +3,61 @@
 
 namespace opossum {
 
+template <typename DataType>
+TableIndexFlattenedSparseMapIterator<DataType>::TableIndexFlattenedSparseMapIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
+
+template <typename DataType>
+const RowID& TableIndexFlattenedSparseMapIterator<DataType>::operator*() const { return _map_iterator->second[_vector_index]; }
+
+template <typename DataType>
+TableIndexFlattenedSparseMapIterator<DataType>& TableIndexFlattenedSparseMapIterator<DataType>::operator++() {
+  if (++_vector_index >= _map_iterator->second.size()) {
+    _map_iterator++;
+    _vector_index = 0;
+  }
+  return *this;
+}
+
+template <typename DataType>
+bool TableIndexFlattenedSparseMapIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
+  auto obj = dynamic_cast<const TableIndexFlattenedSparseMapIterator*>(&other);
+  return obj && _map_iterator == obj->_map_iterator && _vector_index == obj->_vector_index;
+}
+
+template <typename DataType>
+bool TableIndexFlattenedSparseMapIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
+  auto obj = dynamic_cast<const TableIndexFlattenedSparseMapIterator*>(&other);
+  return !obj || _map_iterator != obj->_map_iterator || _vector_index != obj->_vector_index;
+}
+
+template <typename DataType>
+std::shared_ptr<BaseTableIndexIterator> TableIndexFlattenedSparseMapIterator<DataType>::clone() const {
+  return std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(*this);
+}
+
+TableIndexVectorIterator::TableIndexVectorIterator(MapIteratorType itr) : _map_iterator(itr) {}
+
+const RowID& TableIndexVectorIterator::operator*() const { return *_map_iterator; }
+
+TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
+  _map_iterator++;
+  return *this;
+}
+
+bool TableIndexVectorIterator::operator==(const BaseTableIndexIterator& other) const {
+  auto obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  return obj && _map_iterator == obj->_map_iterator;
+}
+
+bool TableIndexVectorIterator::operator!=(const BaseTableIndexIterator& other) const {
+  auto obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  return !obj || _map_iterator != obj->_map_iterator;
+}
+
+std::shared_ptr<BaseTableIndexIterator> TableIndexVectorIterator::clone() const {
+  return std::make_shared<TableIndexVectorIterator>(*this);
+}
+
 size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&,
                                                 const ColumnID) {
   return 0;
@@ -128,8 +183,8 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(Iterator(std::make_shared<TableIndexIterator<DataType>>(begin)),
-                        Iterator(std::make_shared<TableIndexIterator<DataType>>(++end)));
+  return std::make_pair(Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(begin)),
+                        Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(++end)));
 }
 
 template <typename DataType>
@@ -141,22 +196,22 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return Iterator(std::make_shared<TableIndexIterator<DataType>>(_map.cbegin()));
+  return Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(_map.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return Iterator(std::make_shared<TableIndexIterator<DataType>>(_map.cend()));
+  return Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(_map.cend()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return Iterator(std::make_shared<TableIndexNullIterator>(_null_values.cbegin()));
+  return Iterator(std::make_shared<TableIndexVectorIterator>(_null_values.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return Iterator(std::make_shared<TableIndexNullIterator>(_null_values.cend()));
+  return Iterator(std::make_shared<TableIndexVectorIterator>(_null_values.cend()));
 }
 
 template <typename DataType>

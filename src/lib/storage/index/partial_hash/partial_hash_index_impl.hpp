@@ -22,67 +22,42 @@ class PartialHashIndexTest;
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexIterator : public BaseTableIndexIterator {
+class TableIndexFlattenedSparseMapIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
+  explicit TableIndexFlattenedSparseMapIterator(MapIteratorType itr);
 
-  reference operator*() const override { return _map_iterator->second[_vector_index]; }
+  reference operator*() const override;
 
-  TableIndexIterator& operator++() override {
-    if (++_vector_index >= _map_iterator->second.size()) {
-      _map_iterator++;
-      _vector_index = 0;
-    }
-    return *this;
-  }
+  TableIndexFlattenedSparseMapIterator& operator++() override;
 
-  bool operator==(const BaseTableIndexIterator& other) const override {
-    auto obj = dynamic_cast<const TableIndexIterator*>(&other);
-    return obj && _map_iterator == obj->_map_iterator && _vector_index == obj->_vector_index;
-  }
+  bool operator==(const BaseTableIndexIterator& other) const override;
 
-  bool operator!=(const BaseTableIndexIterator& other) const override {
-    auto obj = dynamic_cast<const TableIndexIterator*>(&other);
-    return !obj || _map_iterator != obj->_map_iterator || _vector_index != obj->_vector_index;
-  }
+  bool operator!=(const BaseTableIndexIterator& other) const override;
 
-  std::shared_ptr<BaseTableIndexIterator> clone() const override {
-    return std::make_shared<TableIndexIterator<DataType>>(*this);
-  }
+  std::shared_ptr<BaseTableIndexIterator> clone() const override;
 
  private:
   MapIteratorType _map_iterator;
   size_t _vector_index;
 };
 
-class TableIndexNullIterator : public BaseTableIndexIterator {
+class TableIndexVectorIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename std::vector<RowID>::const_iterator;
 
-  explicit TableIndexNullIterator(MapIteratorType itr) : _map_iterator(itr) {}
+  explicit TableIndexVectorIterator(MapIteratorType itr);
 
-  reference operator*() const override { return *_map_iterator; }
+  reference operator*() const override;
 
-  TableIndexNullIterator& operator++() override {
-    _map_iterator++;
-    return *this;
-  }
+  TableIndexVectorIterator& operator++() override;
 
-  bool operator==(const BaseTableIndexIterator& other) const override {
-    auto obj = dynamic_cast<const TableIndexNullIterator*>(&other);
-    return obj && _map_iterator == obj->_map_iterator;
-  }
+  bool operator==(const BaseTableIndexIterator& other) const override;
 
-  bool operator!=(const BaseTableIndexIterator& other) const override {
-    auto obj = dynamic_cast<const TableIndexNullIterator*>(&other);
-    return !obj || _map_iterator != obj->_map_iterator;
-  }
+  bool operator!=(const BaseTableIndexIterator& other) const override;
 
-  std::shared_ptr<BaseTableIndexIterator> clone() const override {
-    return std::make_shared<TableIndexNullIterator>(*this);
-  }
+  std::shared_ptr<BaseTableIndexIterator> clone() const override;
 
  private:
   MapIteratorType _map_iterator;
