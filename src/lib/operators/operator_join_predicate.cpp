@@ -10,7 +10,10 @@ std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(cons
                                                                             const AbstractLQPNode& left_input,
                                                                             const AbstractLQPNode& right_input) {
   const auto* abstract_predicate_expression = dynamic_cast<const AbstractPredicateExpression*>(&predicate);
-  if (!abstract_predicate_expression) return std::nullopt;
+  if (!abstract_predicate_expression) {
+    return std::nullopt;
+  }
+
   switch (abstract_predicate_expression->predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
@@ -70,7 +73,9 @@ void OperatorJoinPredicate::flip() {
   flipped = true;
 }
 
-bool OperatorJoinPredicate::is_flipped() const { return flipped; }
+bool OperatorJoinPredicate::is_flipped() const {
+  return flipped;
+}
 
 bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
   return std::tie(l.column_ids, l.predicate_condition) < std::tie(r.column_ids, r.predicate_condition);

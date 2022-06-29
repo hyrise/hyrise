@@ -15,7 +15,9 @@ const std::string& MetaExecTable::name() const {
   return name;
 }
 
-bool MetaExecTable::can_insert() const { return true; }
+bool MetaExecTable::can_insert() const {
+  return true;
+}
 
 std::shared_ptr<Table> MetaExecTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);

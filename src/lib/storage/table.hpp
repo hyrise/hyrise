@@ -143,7 +143,9 @@ class Table : private Noncopyable {
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
 
       auto current_size = chunk->size();
       row_counter += current_size;

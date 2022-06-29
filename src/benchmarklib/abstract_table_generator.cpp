@@ -57,7 +57,9 @@ void AbstractTableGenerator::generate_and_store() {
     auto& table = table_info_by_name[table_name].table;
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
-      if (chunk->is_mutable()) chunk->finalize();
+      if (chunk->is_mutable()) {
+        chunk->finalize();
+      }
     }
   }
 
@@ -137,7 +139,9 @@ void AbstractTableGenerator::generate_and_store() {
             std::cout << output.str() << std::flush;
             const SortColumnDefinition sort_column{sort_column_id, sort_mode};
 
-            if (_all_chunks_sorted_by(table, sort_column)) return;
+            if (_all_chunks_sorted_by(table, sort_column)) {
+              return;
+            }
 
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto& chunk = table->get_chunk(chunk_id);
@@ -281,7 +285,9 @@ void AbstractTableGenerator::generate_and_store() {
 
       const auto add_table = [&]() {
         Timer per_table_timer;
-        if (storage_manager.has_table(table_name)) storage_manager.drop_table(table_name);
+        if (storage_manager.has_table(table_name)) {
+          storage_manager.drop_table(table_name);
+        }
         storage_manager.add_table(table_name, table_info.table);
         const auto output =
             std::string{"-  Added '"} + table_name + "' " + "(" + per_table_timer.lap_formatted() + ")\n";
@@ -397,9 +403,13 @@ void AbstractTableGenerator::_create_table_indexes(
   std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
 }
 
-AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const { return {}; }
+AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {
+  return {};
+}
 
-AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const { return {}; }
+AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const {
+  return {};
+}
 
 void AbstractTableGenerator::_add_constraints(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {}
@@ -408,7 +418,9 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
                                                    const SortColumnDefinition& sort_column) {
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     const auto& sorted_columns = table->get_chunk(chunk_id)->individually_sorted_by();
-    if (sorted_columns.empty()) return false;
+    if (sorted_columns.empty()) {
+      return false;
+    }
     bool chunk_sorted = false;
     for (const auto& sorted_column : sorted_columns) {
       if (sorted_column.column == sort_column.column) {
@@ -416,7 +428,9 @@ bool AbstractTableGenerator::_all_chunks_sorted_by(const std::shared_ptr<Table>&
         chunk_sorted = true;
       }
     }
-    if (!chunk_sorted) return false;
+    if (!chunk_sorted) {
+      return false;
+    }
   }
   return true;
 }

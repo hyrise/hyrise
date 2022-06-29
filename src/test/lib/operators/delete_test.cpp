@@ -80,9 +80,13 @@ void OperatorsDeleteTest::helper(bool commit) {
   EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{2}), expected_tid);
 }
 
-TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
+TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
+  helper(true);
+}
 
-TEST_F(OperatorsDeleteTest, ExecuteAndAbort) { helper(false); }
+TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
+  helper(false);
+}
 
 TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -300,7 +304,9 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto get_table = std::make_shared<GetTable>(_table_name);
   get_table->execute();

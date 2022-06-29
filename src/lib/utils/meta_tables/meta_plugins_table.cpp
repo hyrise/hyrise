@@ -13,9 +13,13 @@ const std::string& MetaPluginsTable::name() const {
   return name;
 }
 
-bool MetaPluginsTable::can_insert() const { return true; }
+bool MetaPluginsTable::can_insert() const {
+  return true;
+}
 
-bool MetaPluginsTable::can_delete() const { return true; }
+bool MetaPluginsTable::can_delete() const {
+  return true;
+}
 
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);

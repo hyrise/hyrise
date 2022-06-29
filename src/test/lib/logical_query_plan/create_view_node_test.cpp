@@ -64,6 +64,8 @@ TEST_F(CreateViewNodeTest, Copy) {
   EXPECT_EQ(*same_create_view_node, *_create_view_node->deep_copy());
 }
 
-TEST_F(CreateViewNodeTest, NodeExpressions) { ASSERT_EQ(_view_node->node_expressions.size(), 0u); }
+TEST_F(CreateViewNodeTest, NodeExpressions) {
+  ASSERT_EQ(_view_node->node_expressions.size(), 0u);
+}
 
 }  // namespace opossum

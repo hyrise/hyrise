@@ -38,7 +38,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   std::ifstream csvfile{filename};
 
   // return empty table if input file is empty
-  if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
+  if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') {
+    return table;
+  }
 
   {
     std::string line;
@@ -58,7 +60,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   csvfile.read(content.data(), csvfile_size);
 
   // make sure content ends with a delimiter for better row processing later
-  if (content.back() != meta.config.delimiter) content.push_back(meta.config.delimiter);
+  if (content.back() != meta.config.delimiter) {
+    content.push_back(meta.config.delimiter);
+  }
 
   std::string_view content_view{content.c_str(), content.size()};
 

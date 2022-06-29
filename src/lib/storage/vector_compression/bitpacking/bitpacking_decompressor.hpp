@@ -25,9 +25,13 @@ class BitPackingDecompressor : public BaseVectorDecompressor {
 
   ~BitPackingDecompressor() override = default;
 
-  uint32_t get(size_t i) final { return _data[i]; }
+  uint32_t get(size_t i) final {
+    return _data[i];
+  }
 
-  size_t size() const final { return _data.size(); }
+  size_t size() const final {
+    return _data.size();
+  }
 
  private:
   const pmr_compact_vector& _data;

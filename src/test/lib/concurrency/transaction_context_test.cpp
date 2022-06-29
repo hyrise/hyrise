@@ -29,7 +29,9 @@ class TransactionContextTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(table_name, t);
   }
 
-  TransactionManager& manager() { return Hyrise::get().transaction_manager; }
+  TransactionManager& manager() {
+    return Hyrise::get().transaction_manager;
+  }
 };
 
 /**
@@ -47,7 +49,9 @@ class CommitFuncOp : public AbstractReadWriteOperator {
   }
 
  protected:
-  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override { return nullptr; }
+  std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override {
+    return nullptr;
+  }
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -58,7 +62,9 @@ class CommitFuncOp : public AbstractReadWriteOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
 
-  void _on_commit_records(const CommitID cid) override { _func(); }
+  void _on_commit_records(const CommitID cid) override {
+    _func();
+  }
 
   void _on_rollback_records() override {}
 

@@ -105,9 +105,13 @@ GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVar
   return _get_positions_iterator_at(value_id);
 }
 
-GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const { return _positions.cbegin(); }
+GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const {
+  return _positions.cbegin();
+}
 
-GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _positions.cend(); }
+GroupKeyIndex::Iterator GroupKeyIndex::_cend() const {
+  return _positions.cend();
+}
 
 /**
    *
