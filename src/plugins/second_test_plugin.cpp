@@ -4,7 +4,9 @@
 
 namespace opossum {
 
-std::string SecondTestPlugin::description() const { return "This is the Hyrise SecondTestPlugin"; }
+std::string SecondTestPlugin::description() const {
+  return "This is the Hyrise SecondTestPlugin";
+}
 
 void SecondTestPlugin::start() {}
 

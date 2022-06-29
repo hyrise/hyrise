@@ -24,7 +24,9 @@ class MetaPluginsTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
     return table->_generate();

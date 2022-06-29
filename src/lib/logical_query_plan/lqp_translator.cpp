@@ -214,7 +214,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const std::vector<ColumnID> column_ids = {column_id};
   const std::vector<AllTypeVariant> right_values = {value_variant};
   std::vector<AllTypeVariant> right_values2 = {};
-  if (value2_variant) right_values2.emplace_back(*value2_variant);
+  if (value2_variant) {
+    right_values2.emplace_back(*value2_variant);
+  }
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
@@ -366,7 +368,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
   boost::hana::for_each(JOIN_OPERATOR_PREFERENCE_ORDER, [&](const auto join_operator_t) {
     using JoinOperator = typename decltype(join_operator_t)::type;
 
-    if (join_operator) return;
+    if (join_operator) {
+      return;
+    }
 
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {

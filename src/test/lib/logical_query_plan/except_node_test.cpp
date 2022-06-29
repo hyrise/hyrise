@@ -32,7 +32,9 @@ class ExceptNodeTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _c;
 };
 
-TEST_F(ExceptNodeTest, Description) { EXPECT_EQ(_except_node->description(), "[ExceptNode] Mode: Positions"); }
+TEST_F(ExceptNodeTest, Description) {
+  EXPECT_EQ(_except_node->description(), "[ExceptNode] Mode: Positions");
+}
 
 TEST_F(ExceptNodeTest, OutputColumnExpressions) {
   EXPECT_TRUE(_except_node->output_expressions() == _mock_node1->output_expressions());
@@ -60,8 +62,12 @@ TEST_F(ExceptNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_except_node->hash(), different_except_node_3->hash());
 }
 
-TEST_F(ExceptNodeTest, Copy) { EXPECT_EQ(*_except_node->deep_copy(), *_except_node); }
+TEST_F(ExceptNodeTest, Copy) {
+  EXPECT_EQ(*_except_node->deep_copy(), *_except_node);
+}
 
-TEST_F(ExceptNodeTest, NodeExpressions) { EXPECT_EQ(_except_node->node_expressions.size(), 0u); }
+TEST_F(ExceptNodeTest, NodeExpressions) {
+  EXPECT_EQ(_except_node->node_expressions.size(), 0u);
+}
 
 }  // namespace opossum

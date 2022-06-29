@@ -15,7 +15,9 @@ const std::string& MetaSettingsTable::name() const {
   return name;
 }
 
-bool MetaSettingsTable::can_update() const { return true; }
+bool MetaSettingsTable::can_update() const {
+  return true;
+}
 
 std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);

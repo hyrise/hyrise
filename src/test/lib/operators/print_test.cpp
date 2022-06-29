@@ -55,7 +55,9 @@ class PrintWrapper : public Print {
     return _truncate_cell(cell, max_width);
   }
 
-  uint16_t get_max_cell_width() { return _max_cell_width; }
+  uint16_t get_max_cell_width() {
+    return _max_cell_width;
+  }
 
   bool is_printing_mvcc_information() {
     return static_cast<uint32_t>(_flags) & static_cast<uint32_t>(PrintFlags::Mvcc);

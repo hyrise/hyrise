@@ -45,8 +45,13 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       continue;
     } else {
       cost += estimate_node_cost(current_node);
-      if (current_node->left_input()) bfs_queue.push(current_node->left_input());
-      if (current_node->right_input()) bfs_queue.push(current_node->right_input());
+      if (current_node->left_input()) {
+        bfs_queue.push(current_node->left_input());
+      }
+
+      if (current_node->right_input()) {
+        bfs_queue.push(current_node->right_input());
+      }
     }
   }
 
@@ -85,7 +90,9 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
   auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
   for (const auto& current_node_input : {lqp->left_input(), lqp->right_input()}) {
-    if (!current_node_input) continue;
+    if (!current_node_input) {
+      continue;
+    }
 
     visit_lqp(current_node_input, [&](const auto& node) {
       subplan_already_visited |= visited.find(node) != visited.end();

@@ -19,7 +19,9 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
   if (worker) {
     worker->_wait_for_tasks(tasks);
   } else {
-    for (const auto& task : tasks) task->_join();
+    for (const auto& task : tasks) {
+      task->_join();
+    }
   }
 }
 

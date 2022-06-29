@@ -200,12 +200,13 @@ void Pagination::_print_help_screen() {
   wrefresh(help_screen);
 
   int key_pressed;
-  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
-  }
+  while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {}
 
   delwin(help_screen);
 }
 
-void Pagination::push_ctrl_c() { ungetch(CURSES_CTRL_C); }
+void Pagination::push_ctrl_c() {
+  ungetch(CURSES_CTRL_C);
+}
 
 }  // namespace opossum
