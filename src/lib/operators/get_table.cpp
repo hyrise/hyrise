@@ -47,7 +47,9 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   stream << name() << separator << "(" << table_name() << ")";
 
   stream << separator << "pruned:" << separator;
-  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";
+  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s) [ ";
+  for (const auto chunk_id : _pruned_chunk_ids) stream << chunk_id << " ";
+  stream << "], ";
   if (description_mode == DescriptionMode::SingleLine) stream << ",";
   stream << separator << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 

@@ -5,6 +5,8 @@
 #include <sstream>
 #include <string>
 
+#include "magic_enum.hpp"
+
 #include "constant_mappings.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
@@ -24,7 +26,7 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   const auto expression_mode = _expression_description_mode(mode);
 
   std::stringstream stream;
-  stream << "[Predicate] " << predicate()->description(expression_mode);
+  stream << "[Predicate - " << magic_enum::enum_name(scan_type) <<  "] " << predicate()->description(expression_mode);
   return stream.str();
 }
 

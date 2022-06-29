@@ -2,16 +2,14 @@
 
 #include <algorithm>
 
+#include <boost/sort/sort.hpp>
+
 #include "expression/between_expression.hpp"
-
 #include "hyrise.hpp"
-
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-
 #include "storage/index/abstract_index.hpp"
 #include "storage/reference_segment.hpp"
-
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -29,6 +27,24 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const Se
 const std::string& IndexScan::name() const {
   static const auto name = std::string{"IndexScan"};
   return name;
+}
+
+std::string IndexScan::description(DescriptionMode description_mode) const {
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+
+  std::stringstream stream;
+
+  stream << AbstractOperator::description(description_mode) << separator;
+  stream << separator << "IndexType: " << magic_enum::enum_name(_index_type);
+  stream << separator << "Predicate: " << magic_enum::enum_name(_predicate_condition);
+  for (auto column_id = ColumnID{0}; column_id < _left_column_ids.size(); ++column_id) {
+    stream << separator << "Column #" << _left_column_ids[column_id] << ": " << _right_values[column_id];
+    if (!_right_values2.empty()) {
+      stream << "-" << _right_values2[column_id] << separator;
+    }
+  }
+
+  return stream.str();
 }
 
 std::shared_ptr<const Table> IndexScan::_on_execute() {
@@ -78,10 +94,14 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
   auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
-    if (!chunk) return;
+    if (!chunk) {
+      return;
+    }
 
-    const auto matches_out = std::make_shared<RowIDPosList>(_scan_chunk(chunk_id));
-    if (matches_out->empty()) return;
+    const auto matches_out = _scan_chunk(chunk_id);
+    if (matches_out->empty()) {
+      return;
+    }
 
     Segments segments;
 
@@ -91,7 +111,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
     }
 
     std::lock_guard<std::mutex> lock(output_mutex);
-    _out_table->append_chunk(segments, nullptr, chunk->get_allocator());
+    _out_table->append_chunk(segments);
     if (!chunk->individually_sorted_by().empty()) {
        _out_table->last_chunk()->finalize();
        _out_table->last_chunk()->set_individually_sorted_by(chunk->individually_sorted_by());
@@ -115,17 +135,25 @@ void IndexScan::_validate_input() {
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
 
-RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
+std::shared_ptr<AbstractPosList> IndexScan::_scan_chunk(const ChunkID chunk_id) {
   const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
   auto range_begin = AbstractIndex::Iterator{};
   auto range_end = AbstractIndex::Iterator{};
 
   const auto chunk = _in_table->get_chunk(chunk_id);
-  auto matches_out = RowIDPosList{};
+  auto matches_out = std::make_shared<RowIDPosList>();
 
   const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index, "Index of specified type not found for segment (vector).");
+  if (!index) {
+    auto sstream = std::stringstream{};
+    sstream << "Index of specified type not found for segment (vector). Index type: ";
+    sstream << magic_enum::enum_name(_index_type);
+    sstream << ". Column IDs: ";
+    for (const auto column_id : _left_column_ids) sstream << column_id << " ";
+    sstream << std::endl;
+    Assert(index, sstream.str());
+  }
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {
@@ -138,8 +166,8 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
       range_begin = index->cbegin();
       range_end = index->lower_bound(_right_values);
 
-      matches_out.reserve(std::distance(range_begin, range_end));
-      std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
+      matches_out->reserve(std::distance(range_begin, range_end));
+      std::transform(range_begin, range_end, std::back_inserter(*matches_out), to_row_id);
 
       // set range for second half to all values greater than the search value
       range_begin = index->upper_bound(_right_values);
@@ -191,18 +219,25 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   }
 
   DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
-  matches_out.guarantee_single_chunk();
+  matches_out->guarantee_single_chunk();
 
-  const auto current_matches_size = matches_out.size();
-  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
-  matches_out.resize(final_matches_size);
+  const auto match_count = static_cast<size_t>(std::distance(range_begin, range_end));
 
-  for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
-    matches_out[matches_position] = RowID{chunk_id, *range_begin};
-    range_begin++;
+  if (match_count == chunk->size()) {
+    return std::make_shared<EntireChunkPosList>(chunk_id, chunk->size());
   }
 
-  std::sort(matches_out.begin(), matches_out.end());
+  const auto current_matches_size = matches_out->size();
+  const auto final_matches_size = current_matches_size + match_count;
+  matches_out->resize(final_matches_size);
+
+  auto& matches_out_vector = *matches_out;
+  for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+    matches_out_vector[matches_position] = RowID{chunk_id, *range_begin};
+    ++range_begin;
+  }
+
+  boost::sort::pdqsort(matches_out->begin(), matches_out->end());
 
   return matches_out;
 }

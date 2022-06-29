@@ -251,10 +251,12 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
 
   // Starting from the index' first column, check how many scans we can cover.
   auto found_match = false;
+  auto scan_column_ids = std::vector<ColumnID>{};
   for (const auto column_id : multi_column_def) {
     // For every scan column, check if it is the currently checked index column. If so, append search values and continue
     for (const auto& scan : query) {
       const auto scan_column_id = std::get<0>(scan);
+      scan_column_ids.push_back(scan_column_id);
       if (column_id == scan_column_id) {
         const auto lower_bound = std::get<1>(scan);
         const auto upper_bound = std::get<2>(scan);
@@ -284,9 +286,21 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
 
   if (!lower_bounds.empty()) {
     const auto& table = storage_manager.get_table("ping_orderby_unsorted_encoding_Dictionary");
-    const auto chunk_count = table->chunk_count();
+    auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->execute();
 
+    const auto chunk_count = table->chunk_count();
     for (auto _ : state) {
+      auto included_chunk_ids = std::vector<ChunkID>{};
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        included_chunk_ids.push_back(chunk_id);
+      }
+
+      const auto index_scan = std::make_shared<IndexScan>(table_wrapper, SegmentIndexType::CompositeGroupKey, scan_column_ids, PredicateCondition::BetweenInclusive, lower_bounds, upper_bounds);
+      index_scan->included_chunk_ids = included_chunk_ids;
+      index_scan->execute();
+
+      /*
       auto position_list = std::vector<RowID>{};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& index = multi_indexes[{multi_column_def, chunk_id}];
@@ -299,6 +313,7 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
           position_list.emplace_back(chunk_id, *range_begin);
         }
       }
+      */
     }
   }
 }

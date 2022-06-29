@@ -27,6 +27,8 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   const std::string& name() const final;
 
+  std::string description(DescriptionMode description_mode) const;
+
   // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
   std::vector<ChunkID> included_chunk_ids;
 
@@ -40,7 +42,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   void _validate_input();
   std::shared_ptr<AbstractTask> _create_job(const ChunkID chunk_id, std::mutex& output_mutex);
-  RowIDPosList _scan_chunk(const ChunkID chunk_id);
+  std::shared_ptr<AbstractPosList> _scan_chunk(const ChunkID chunk_id);
 
  private:
   const SegmentIndexType _index_type;

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <mutex>
+
 #include <boost/container/pmr/memory_resource.hpp>
 #include <utils/singleton.hpp>
 
@@ -45,6 +47,8 @@ class UmapMemoryResource : public boost::container::pmr::memory_resource {
   extent_hooks_t _hooks{};
   unsigned int _mallocx_flags;
   int _arena_index;
+ 
+  std::mutex _mutex;
 };
 
 #else

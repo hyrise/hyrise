@@ -55,7 +55,9 @@ std::string StoredTableNode::description(const DescriptionMode mode) const {
 
   std::ostringstream stream;
   stream << "[StoredTable] Name: '" << table_name << "' pruned: ";
-  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s), ";
+  stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s) [ ";
+  for (const auto chunk_id : _pruned_chunk_ids) stream << chunk_id << " ";
+  stream << "], ";
   stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();

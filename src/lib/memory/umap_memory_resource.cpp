@@ -98,6 +98,7 @@ UmapMemoryResource::UmapMemoryResource() {
 
 
 void* UmapMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
+  std::lock_guard<std::mutex> guard(_mutex);
   auto p = mallocx(bytes, _mallocx_flags);
 
   return p;
@@ -126,6 +127,7 @@ UmapMemoryResource::UmapMemoryResource(const std::string& filename) : _filename(
 
 void* UmapMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   Assert(_offset + bytes < ALLOCATED_SIZE, "exceeded");
+  std::lock_guard<std::mutex> guard(_mutex);
 
   if (alignment && _offset % alignment) {
     // TODO can be done more efficiently
