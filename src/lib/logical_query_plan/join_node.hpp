@@ -58,6 +58,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_semi_reduction() const;
 
   /**
+   * @returns LQPInputSide* to the input side that is no longer used further up in LQP or nullptr
+   */
+  LQPInputSide* get_unused_input() const;
+
+  /**
    * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns
    *          true.
    * @returns a shared pointer to the JoinNode for which the semi join reduction was added as a pre-filter.
@@ -73,6 +78,13 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    */
   void mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join);
 
+  /**
+   * Sets the `removable_input_side` flag of this JoinNode to the given LQPInputSide.
+   * @param input_side which is no longer used in LQP after the join
+   * Note: This function is meant to be called by the ColumnPruningRule, which already has the information on used/unused expressions in the LQP.
+   */
+  void mark_side_as_removable(LQPInputSide* input_side);
+
   JoinMode join_mode;
 
  protected:
@@ -82,6 +94,15 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    */
   bool _is_semi_reduction = false;
   mutable std::weak_ptr<JoinNode> _reduced_join_node;
+
+  /**
+   * The following flag is set by the ColumnPruningRule. It indicates whether and which input side
+   * of a join is no longer needed in the LQP tree above the join and could therefore be removed
+   * during optimization by other rules such as ... TODO write rule name in here
+   * 
+   * nullptr if both sides are used further up in the LQP
+   */
+  LQPInputSide* _removable_input_side = nullptr;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
