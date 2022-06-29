@@ -43,13 +43,21 @@ std::pair<PartialHashIndex::IteratorPair, PartialHashIndex::IteratorPair> Partia
   return _impl->range_not_equals(value);
 }
 
-PartialHashIndex::Iterator PartialHashIndex::_cbegin() const { return _impl->cbegin(); }
+PartialHashIndex::Iterator PartialHashIndex::_cbegin() const {
+  return _impl->cbegin();
+}
 
-PartialHashIndex::Iterator PartialHashIndex::_cend() const { return _impl->cend(); }
+PartialHashIndex::Iterator PartialHashIndex::_cend() const {
+  return _impl->cend();
+}
 
-PartialHashIndex::Iterator PartialHashIndex::_null_cbegin() const { return _impl->null_cbegin(); }
+PartialHashIndex::Iterator PartialHashIndex::_null_cbegin() const {
+  return _impl->null_cbegin();
+}
 
-PartialHashIndex::Iterator PartialHashIndex::_null_cend() const { return _impl->null_cend(); }
+PartialHashIndex::Iterator PartialHashIndex::_null_cend() const {
+  return _impl->null_cend();
+}
 
 size_t PartialHashIndex::_memory_consumption() const {
   size_t bytes{0u};
@@ -59,8 +67,12 @@ size_t PartialHashIndex::_memory_consumption() const {
   return bytes;
 }
 
-bool PartialHashIndex::_is_index_for(const ColumnID column_id) const { return column_id == _column_id; }
+bool PartialHashIndex::_is_index_for(const ColumnID column_id) const {
+  return column_id == _column_id;
+}
 
-std::set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const { return _impl->get_indexed_chunk_ids(); }
+std::set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const {
+  return _impl->get_indexed_chunk_ids();
+}
 
 }  // namespace opossum

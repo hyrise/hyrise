@@ -62,15 +62,25 @@ AbstractChunkIndex::Iterator AbstractChunkIndex::upper_bound(const std::vector<A
   return _upper_bound(values);
 }
 
-AbstractChunkIndex::Iterator AbstractChunkIndex::cbegin() const { return _cbegin(); }
+AbstractChunkIndex::Iterator AbstractChunkIndex::cbegin() const {
+  return _cbegin();
+}
 
-AbstractChunkIndex::Iterator AbstractChunkIndex::cend() const { return _cend(); }
+AbstractChunkIndex::Iterator AbstractChunkIndex::cend() const {
+  return _cend();
+}
 
-AbstractChunkIndex::Iterator AbstractChunkIndex::null_cbegin() const { return _null_positions.cbegin(); }
+AbstractChunkIndex::Iterator AbstractChunkIndex::null_cbegin() const {
+  return _null_positions.cbegin();
+}
 
-AbstractChunkIndex::Iterator AbstractChunkIndex::null_cend() const { return _null_positions.cend(); }
+AbstractChunkIndex::Iterator AbstractChunkIndex::null_cend() const {
+  return _null_positions.cend();
+}
 
-ChunkIndexType AbstractChunkIndex::type() const { return _type; }
+ChunkIndexType AbstractChunkIndex::type() const {
+  return _type;
+}
 
 size_t AbstractChunkIndex::memory_consumption() const {
   size_t bytes{0u};

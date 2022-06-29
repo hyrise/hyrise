@@ -28,12 +28,22 @@ class BaseTableIndexIterator {
   BaseTableIndexIterator() = default;
   virtual ~BaseTableIndexIterator() = default;
 
-  virtual reference operator*() const { throw std::logic_error("cannot dereference on empty iterator"); }
-  virtual BaseTableIndexIterator& operator++() { return *this; }
-  virtual bool operator==(const BaseTableIndexIterator& other) const { return true; }
-  virtual bool operator!=(const BaseTableIndexIterator& other) const { return false; }
+  virtual reference operator*() const {
+    throw std::logic_error("cannot dereference on empty iterator");
+  }
+  virtual BaseTableIndexIterator& operator++() {
+    return *this;
+  }
+  virtual bool operator==(const BaseTableIndexIterator& other) const {
+    return true;
+  }
+  virtual bool operator!=(const BaseTableIndexIterator& other) const {
+    return false;
+  }
 
-  virtual std::shared_ptr<BaseTableIndexIterator> clone() const { return std::make_shared<BaseTableIndexIterator>(); }
+  virtual std::shared_ptr<BaseTableIndexIterator> clone() const {
+    return std::make_shared<BaseTableIndexIterator>();
+  }
 };
 
 /**
@@ -61,13 +71,19 @@ class IteratorWrapper {
     return *this;
   }
 
-  reference operator*() const { return _impl->operator*(); }
+  reference operator*() const {
+    return _impl->operator*();
+  }
   IteratorWrapper& operator++() {
     _impl->operator++();
     return *this;
   }
-  bool operator==(const IteratorWrapper& other) const { return _impl->operator==(*other._impl); }
-  bool operator!=(const IteratorWrapper& other) const { return _impl->operator!=(*other._impl); }
+  bool operator==(const IteratorWrapper& other) const {
+    return _impl->operator==(*other._impl);
+  }
+  bool operator!=(const IteratorWrapper& other) const {
+    return _impl->operator!=(*other._impl);
+  }
 
  private:
   std::shared_ptr<BaseTableIndexIterator> _impl;

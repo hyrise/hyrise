@@ -4,10 +4,13 @@
 namespace opossum {
 
 template <typename DataType>
-TableIndexFlattenedSparseMapIterator<DataType>::TableIndexFlattenedSparseMapIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
+TableIndexFlattenedSparseMapIterator<DataType>::TableIndexFlattenedSparseMapIterator(MapIteratorType itr)
+    : _map_iterator(itr), _vector_index(0) {}
 
 template <typename DataType>
-const RowID& TableIndexFlattenedSparseMapIterator<DataType>::operator*() const { return _map_iterator->second[_vector_index]; }
+const RowID& TableIndexFlattenedSparseMapIterator<DataType>::operator*() const {
+  return _map_iterator->second[_vector_index];
+}
 
 template <typename DataType>
 TableIndexFlattenedSparseMapIterator<DataType>& TableIndexFlattenedSparseMapIterator<DataType>::operator++() {
@@ -37,7 +40,9 @@ std::shared_ptr<BaseTableIndexIterator> TableIndexFlattenedSparseMapIterator<Dat
 
 TableIndexVectorIterator::TableIndexVectorIterator(MapIteratorType itr) : _map_iterator(itr) {}
 
-const RowID& TableIndexVectorIterator::operator*() const { return *_map_iterator; }
+const RowID& TableIndexVectorIterator::operator*() const {
+  return *_map_iterator;
+}
 
 TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
   _map_iterator++;
@@ -63,7 +68,9 @@ size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<Chun
   return 0;
 }
 
-size_t BasePartialHashIndexImpl::remove_entries(const std::vector<ChunkID>&) { return 0; }
+size_t BasePartialHashIndexImpl::remove_entries(const std::vector<ChunkID>&) {
+  return 0;
+}
 
 BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::cbegin() const {
   return Iterator(std::make_shared<BaseTableIndexIterator>());
@@ -81,7 +88,9 @@ BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::null_cend() const {
   return Iterator(std::make_shared<BaseTableIndexIterator>());
 }
 
-size_t BasePartialHashIndexImpl::memory_consumption() const { return 0; }
+size_t BasePartialHashIndexImpl::memory_consumption() const {
+  return 0;
+}
 
 BasePartialHashIndexImpl::IteratorPair BasePartialHashIndexImpl::range_equals(const AllTypeVariant& value) const {
   return std::make_pair(Iterator(std::make_shared<BaseTableIndexIterator>()),
@@ -93,9 +102,13 @@ BasePartialHashIndexImpl::range_not_equals(const AllTypeVariant& value) const {
   return std::make_pair(range_equals(value), range_equals(value));
 }
 
-bool BasePartialHashIndexImpl::is_index_for(const ColumnID column_id) const { return false; }
+bool BasePartialHashIndexImpl::is_index_for(const ColumnID column_id) const {
+  return false;
+}
 
-std::set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const { return std::set<ChunkID>(); }
+std::set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const {
+  return std::set<ChunkID>();
+}
 
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
@@ -110,7 +123,8 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
   size_t size_before = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
     // We do not allow multiple indexing of one chunk.
-    if (_indexed_chunk_ids.contains(chunk.first)) continue;
+    if (_indexed_chunk_ids.contains(chunk.first))
+      continue;
 
     _indexed_chunk_ids.insert(chunk.first);
     // Iterate over the segment to index and populate the index.
@@ -138,7 +152,8 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 
   auto chunks_to_unindex_filtered = std::set<ChunkID>{};
   for (const auto& chunk_id : chunks_to_unindex) {
-    if (!_indexed_chunk_ids.contains(chunk_id)) continue;
+    if (!_indexed_chunk_ids.contains(chunk_id))
+      continue;
 
     chunks_to_unindex_filtered.insert(chunk_id);
     _indexed_chunk_ids.erase(chunk_id);

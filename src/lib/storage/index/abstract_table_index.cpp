@@ -13,15 +13,25 @@ std::pair<AbstractTableIndex::IteratorPair, AbstractTableIndex::IteratorPair> Ab
   return _range_not_equals(value);
 }
 
-AbstractTableIndex::Iterator AbstractTableIndex::cbegin() const { return _cbegin(); }
+AbstractTableIndex::Iterator AbstractTableIndex::cbegin() const {
+  return _cbegin();
+}
 
-AbstractTableIndex::Iterator AbstractTableIndex::cend() const { return _cend(); }
+AbstractTableIndex::Iterator AbstractTableIndex::cend() const {
+  return _cend();
+}
 
-AbstractTableIndex::Iterator AbstractTableIndex::null_cbegin() const { return _null_cbegin(); }
+AbstractTableIndex::Iterator AbstractTableIndex::null_cbegin() const {
+  return _null_cbegin();
+}
 
-AbstractTableIndex::Iterator AbstractTableIndex::null_cend() const { return _null_cend(); }
+AbstractTableIndex::Iterator AbstractTableIndex::null_cend() const {
+  return _null_cend();
+}
 
-TableIndexType AbstractTableIndex::type() const { return _type; }
+TableIndexType AbstractTableIndex::type() const {
+  return _type;
+}
 
 size_t AbstractTableIndex::memory_consumption() const {
   auto bytes = size_t{0};
@@ -30,8 +40,12 @@ size_t AbstractTableIndex::memory_consumption() const {
   return bytes;
 }
 
-bool AbstractTableIndex::is_index_for(const ColumnID column_id) const { return _is_index_for(column_id); }
+bool AbstractTableIndex::is_index_for(const ColumnID column_id) const {
+  return _is_index_for(column_id);
+}
 
-std::set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const { return _get_indexed_chunk_ids(); }
+std::set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
+  return _get_indexed_chunk_ids();
+}
 
 }  // namespace opossum

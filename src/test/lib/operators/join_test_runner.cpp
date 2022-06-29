@@ -149,10 +149,12 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
       ColumnID index_column_id;
       if (configuration.index_side == IndexSide::Left) {
         const auto& indexed_input = configuration.left_input;
-        index_column_id = index_column_id_before_pruning(primary_predicate.column_ids.first, indexed_input.pruned_column_ids);
+        index_column_id =
+            index_column_id_before_pruning(primary_predicate.column_ids.first, indexed_input.pruned_column_ids);
       } else {
         const auto& indexed_input = configuration.right_input;
-        index_column_id = index_column_id_before_pruning(primary_predicate.column_ids.second, indexed_input.pruned_column_ids);
+        index_column_id =
+            index_column_id_before_pruning(primary_predicate.column_ids.second, indexed_input.pruned_column_ids);
       }
 
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,

@@ -28,7 +28,9 @@ class GDFSCache : public AbstractCache<Key, Value> {
 
     // The underlying heap is a max-heap.
     // To have the item with lowest priority at the top, we invert the comparison.
-    bool operator<(const GDFSCacheEntry& other) const { return priority > other.priority; }
+    bool operator<(const GDFSCacheEntry& other) const {
+      return priority > other.priority;
+    }
   };
 
   using Handle = typename boost::heap::fibonacci_heap<GDFSCacheEntry>::handle_type;
