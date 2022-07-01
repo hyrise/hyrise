@@ -58,7 +58,7 @@ TEST_F(PartialHashIndexTest, Type) {
 }
 
 TEST_F(PartialHashIndexTest, IndexCoverage) {
-  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::set<ChunkID>{ChunkID{0}, ChunkID{1}}));
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{0}, ChunkID{1}}));
 
   EXPECT_TRUE(index->is_index_for(ColumnID{0}));
   EXPECT_FALSE(index->is_index_for(ColumnID{1}));
@@ -164,7 +164,7 @@ TEST_F(PartialHashIndexTest, Add) {
       std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))};
   EXPECT_EQ(index->insert_entries(chunks_to_add), 1);
 
-  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::set<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}}));
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}}));
   EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 21);
   EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 3);
   EXPECT_EQ(*index->range_equals("new1").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
@@ -179,7 +179,7 @@ TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
       std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{0}, table->get_chunk(ChunkID{0}))};
   EXPECT_EQ(empty_index.insert_entries(chunks_to_add), 1);
 
-  EXPECT_EQ(empty_index.get_indexed_chunk_ids(), (std::set<ChunkID>{ChunkID{0}}));
+  EXPECT_EQ(empty_index.get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{0}}));
   EXPECT_EQ(std::distance(empty_index.cbegin(), empty_index.cend()), 7);
   EXPECT_EQ(std::distance(empty_index.null_cbegin(), empty_index.null_cend()), 1);
   EXPECT_EQ(*empty_index.range_equals("hotel").first, (RowID{ChunkID{0}, ChunkOffset{0}}));
@@ -188,7 +188,7 @@ TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
 TEST_F(PartialHashIndexTest, Remove) {
   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
 
-  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::set<ChunkID>{ChunkID{1}}));
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{1}}));
   EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 7);
   EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 1);
   EXPECT_EQ(index->range_equals("hotel").first, index->cend());
@@ -348,7 +348,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
   // = 551
   EXPECT_EQ(index->memory_consumption(), 559u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 535u);
+  EXPECT_EQ(index->memory_consumption(), 551u);
 #endif
 }
 
@@ -381,7 +381,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
   // = 191
   EXPECT_EQ(index->memory_consumption(), 199u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 175u);
+  EXPECT_EQ(index->memory_consumption(), 191u);
 #endif
 }
 
@@ -415,7 +415,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
   // = 591
   EXPECT_EQ(index->memory_consumption(), 599u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 575u);
+  EXPECT_EQ(index->memory_consumption(), 591u);
 #endif
 }
 
@@ -448,7 +448,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
   // = 175
   EXPECT_EQ(index->memory_consumption(), 183u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 159u);
+  EXPECT_EQ(index->memory_consumption(), 175u);
 #endif
 }
 

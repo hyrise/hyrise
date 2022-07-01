@@ -2,6 +2,53 @@
 
 namespace opossum {
 
+BaseTableIndexIterator::reference BaseTableIndexIterator::operator*() const {
+  throw std::logic_error("cannot dereference on empty iterator");
+}
+
+BaseTableIndexIterator& BaseTableIndexIterator::operator++() {
+  return *this;
+}
+
+bool BaseTableIndexIterator::operator==(const BaseTableIndexIterator& other) const {
+  return true;
+}
+
+bool BaseTableIndexIterator::operator!=(const BaseTableIndexIterator& other) const {
+  return false;
+}
+
+std::shared_ptr<BaseTableIndexIterator> BaseTableIndexIterator::clone() const {
+  return std::make_shared<BaseTableIndexIterator>();
+}
+
+IteratorWrapper::IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
+    : _impl(std::move(table_index_iterator_ptr)) {}
+
+IteratorWrapper::IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
+
+IteratorWrapper& IteratorWrapper::operator=(const IteratorWrapper& other) {
+  _impl = other._impl->clone();
+  return *this;
+}
+
+IteratorWrapper::reference IteratorWrapper::operator*() const {
+  return _impl->operator*();
+}
+
+IteratorWrapper& IteratorWrapper::operator++() {
+  _impl->operator++();
+  return *this;
+}
+
+bool IteratorWrapper::operator==(const IteratorWrapper& other) const {
+  return _impl->operator==(*other._impl);
+}
+
+bool IteratorWrapper::operator!=(const IteratorWrapper& other) const {
+  return _impl->operator!=(*other._impl);
+}
+
 AbstractTableIndex::AbstractTableIndex(const TableIndexType type) : _type(type) {}
 
 AbstractTableIndex::IteratorPair AbstractTableIndex::range_equals(const AllTypeVariant& value) const {
@@ -44,7 +91,7 @@ bool AbstractTableIndex::is_index_for(const ColumnID column_id) const {
   return _is_index_for(column_id);
 }
 
-std::set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
+std::unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
   return _get_indexed_chunk_ids();
 }
 

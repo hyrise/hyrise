@@ -100,7 +100,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
 
   virtual bool is_index_for(const ColumnID column_id) const;
-  virtual std::set<ChunkID> get_indexed_chunk_ids() const;
+  virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
 };
 
 /* Implementation of a partial hash index, that can index any chunk in a column. You can add and remove chunks to
@@ -126,13 +126,13 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   IteratorPair range_equals(const AllTypeVariant& value) const override;
   std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override;
 
-  std::set<ChunkID> get_indexed_chunk_ids() const override;
+  std::unordered_set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _map;
   // We construct a map for NULL-values here to make use of the same iterator type on values and NULL-values.
   std::vector<RowID> _null_values;
-  std::set<ChunkID> _indexed_chunk_ids = {};
+  std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };
 
 }  // namespace opossum

@@ -27,23 +27,11 @@ class BaseTableIndexIterator {
   BaseTableIndexIterator(const BaseTableIndexIterator& itr) = default;
   BaseTableIndexIterator() = default;
   virtual ~BaseTableIndexIterator() = default;
-
-  virtual reference operator*() const {
-    throw std::logic_error("cannot dereference on empty iterator");
-  }
-  virtual BaseTableIndexIterator& operator++() {
-    return *this;
-  }
-  virtual bool operator==(const BaseTableIndexIterator& other) const {
-    return true;
-  }
-  virtual bool operator!=(const BaseTableIndexIterator& other) const {
-    return false;
-  }
-
-  virtual std::shared_ptr<BaseTableIndexIterator> clone() const {
-    return std::make_shared<BaseTableIndexIterator>();
-  }
+  virtual reference operator*() const;
+  virtual BaseTableIndexIterator& operator++();
+  virtual bool operator==(const BaseTableIndexIterator& other) const;
+  virtual bool operator!=(const BaseTableIndexIterator& other) const;
+  virtual std::shared_ptr<BaseTableIndexIterator> clone() const;
 };
 
 /**
@@ -62,28 +50,13 @@ class IteratorWrapper {
   using pointer = const RowID*;
   using reference = const RowID&;
 
-  explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
-      : _impl(std::move(table_index_iterator_ptr)) {}
-
-  IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
-  IteratorWrapper& operator=(const IteratorWrapper& other) {
-    _impl = other._impl->clone();
-    return *this;
-  }
-
-  reference operator*() const {
-    return _impl->operator*();
-  }
-  IteratorWrapper& operator++() {
-    _impl->operator++();
-    return *this;
-  }
-  bool operator==(const IteratorWrapper& other) const {
-    return _impl->operator==(*other._impl);
-  }
-  bool operator!=(const IteratorWrapper& other) const {
-    return _impl->operator!=(*other._impl);
-  }
+  explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr);
+  IteratorWrapper(const IteratorWrapper& other);
+  IteratorWrapper& operator=(const IteratorWrapper& other);
+  reference operator*() const;
+  IteratorWrapper& operator++();
+  bool operator==(const IteratorWrapper& other) const;
+  bool operator!=(const IteratorWrapper& other) const;
 
  private:
   std::shared_ptr<BaseTableIndexIterator> _impl;
@@ -174,7 +147,7 @@ class AbstractTableIndex : private Noncopyable {
    *
    * @return An ordered set of the chunk ids.
    */
-  std::set<ChunkID> get_indexed_chunk_ids() const;
+  std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
 
  protected:
   virtual Iterator _cbegin() const = 0;
@@ -184,7 +157,7 @@ class AbstractTableIndex : private Noncopyable {
   virtual IteratorPair _range_equals(const AllTypeVariant& value) const = 0;
   virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
-  virtual std::set<ChunkID> _get_indexed_chunk_ids() const = 0;
+  virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual size_t _memory_consumption() const = 0;
 
  private:

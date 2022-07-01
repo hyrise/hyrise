@@ -1,5 +1,6 @@
 #pragma once
 
+#include <unordered_set>
 #include <utility>
 
 #include "partial_hash_index_impl.hpp"
@@ -49,7 +50,7 @@ class PartialHashIndex : public AbstractTableIndex {
   std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const final;
 
   bool _is_index_for(const ColumnID column_id) const final;
-  std::set<ChunkID> _get_indexed_chunk_ids() const final;
+  std::unordered_set<ChunkID> _get_indexed_chunk_ids() const final;
 
  private:
   const ColumnID _column_id;
