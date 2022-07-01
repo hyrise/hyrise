@@ -298,7 +298,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                     data_type_column_id = data_type_order.at(configuration.data_type_right);
                   }
 
-                  indexed_join_column_id = ColumnID{2 * data_type_column_id + nullable_offset};
+                  indexed_join_column_id = ColumnID{ColumnID{2} * data_type_column_id + nullable_offset};
 
                   const auto search_iter =
                       std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
@@ -727,8 +727,10 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto input_operator_left = std::make_shared<TableWrapper>(left_input_table);
   const auto input_operator_right = std::make_shared<TableWrapper>(right_input_table);
 
-  auto column_id_left = ColumnID{2 * data_type_order.at(configuration.data_type_left) + configuration.nullable_left};
-  auto column_id_right = ColumnID{2 * data_type_order.at(configuration.data_type_right) + configuration.nullable_right};
+  auto column_id_left =
+      ColumnID{ColumnID{2} * data_type_order.at(configuration.data_type_left) + configuration.nullable_left};
+  auto column_id_right =
+      ColumnID{ColumnID{2} * data_type_order.at(configuration.data_type_right) + configuration.nullable_right};
 
   // If columns are pruned, we have to adjust the corresponding column IDs.
   auto adjust_column_id = [](auto& column_id, const auto original_column_id, const auto& pruned_column_ids) {
