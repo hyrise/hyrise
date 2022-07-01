@@ -203,7 +203,7 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
   // we fail with a logic error here
   // the error happens in abstract_lqp_node.cpp line 267
   // it seems to be related to the expression passed to be tested for the unique constraint
-  if (!join_node->has_matching_unique_constraint(testable_expressions)) {
+  if (!removable_subtree->has_matching_unique_constraint(testable_expressions)) {
     return false;
   }
 
