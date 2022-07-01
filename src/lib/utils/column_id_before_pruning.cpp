@@ -10,7 +10,7 @@ ColumnID column_id_before_pruning(ColumnID column_id, const std::vector<ColumnID
 
   for (const auto& pruned_column_id : pruned_column_ids) {
     if (pruned_column_id > column_id) {
-      return index_column_id;
+      return column_id;
     }
     ++column_id;
   }
