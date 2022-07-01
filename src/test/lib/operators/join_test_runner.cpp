@@ -18,7 +18,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/index_column_id_before_pruning.hpp"
+#include "utils/column_id_before_pruning.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
@@ -150,11 +150,11 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
       if (configuration.index_side == IndexSide::Left) {
         const auto& indexed_input = configuration.left_input;
         index_column_id =
-            index_column_id_before_pruning(primary_predicate.column_ids.first, indexed_input.pruned_column_ids);
+            column_id_before_pruning(primary_predicate.column_ids.first, indexed_input.pruned_column_ids);
       } else {
         const auto& indexed_input = configuration.right_input;
         index_column_id =
-            index_column_id_before_pruning(primary_predicate.column_ids.second, indexed_input.pruned_column_ids);
+            column_id_before_pruning(primary_predicate.column_ids.second, indexed_input.pruned_column_ids);
       }
 
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,

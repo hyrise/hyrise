@@ -583,8 +583,8 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
-    utils/index_column_id_before_pruning.cpp
-    utils/index_column_id_before_pruning.hpp
+    utils/column_id_before_pruning.cpp
+    utils/column_id_before_pruning.hpp
     utils/invalid_input_exception.hpp
     utils/list_directory.cpp
     utils/list_directory.hpp

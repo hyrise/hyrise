@@ -69,7 +69,7 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "utils/index_column_id_before_pruning.hpp"
+#include "utils/column_id_before_pruning.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -378,7 +378,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   //   auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   //   const auto pruned_column_ids = stored_table_node->pruned_column_ids();
-  //   index_column_id = index_column_id_before_pruning(primary_join_predicate.column_ids.first, pruned_column_ids);
+  //   index_column_id = column_id_before_pruning(primary_join_predicate.column_ids.first, pruned_column_ids);
   // }
 
   // if (right_input_type == LQPNodeType::StoredTable) {
@@ -387,7 +387,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
 
   //   auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->right_input());
   //   const auto pruned_column_ids = stored_table_node->pruned_column_ids();
-  //   index_column_id = index_column_id_before_pruning(primary_join_predicate.column_ids.second, pruned_column_ids);
+  //   index_column_id = column_id_before_pruning(primary_join_predicate.column_ids.second, pruned_column_ids);
   // }
 
   // Assert(left_table_type != TableType::Data || right_table_type != TableType::Data,
