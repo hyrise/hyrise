@@ -149,6 +149,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
       std::cout << join_node->description() << std::endl;
       if ((removable_side) || (join_node->join_mode == JoinMode::Semi)) {
         std::cout << "Has potential to be rewritten" << std::endl;
+        std::cout << removable_side << std::endl;
         const auto can_rewrite = _check_rewrite_validity(join_node, removable_side);
         if (can_rewrite) {
           _perform_rewrite(join_node, removable_side);
@@ -160,7 +161,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
   });
 }
 
-bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide* removable_side) const {
+bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<JoinNode>& join_node, const std::shared_ptr<LQPInputSide> removable_side) const {
   std::shared_ptr<AbstractLQPNode> removable_subtree = nullptr;
   
   if (removable_side) {
@@ -261,7 +262,7 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
   
   return false;
 }
-void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide* removable_side) const  {
+void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const std::shared_ptr<LQPInputSide> removable_side) const  {
 
 }
 
