@@ -50,12 +50,12 @@ TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
 }
 
 bool TableIndexVectorIterator::operator==(const BaseTableIndexIterator& other) const {
-  const auto obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  const auto *const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
   return obj && _map_iterator == obj->_map_iterator;
 }
 
 bool TableIndexVectorIterator::operator!=(const BaseTableIndexIterator& other) const {
-  const auto obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  const auto *const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
   return !obj || _map_iterator != obj->_map_iterator;
 }
 
