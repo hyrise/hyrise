@@ -150,9 +150,12 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
       if ((removable_side) || (join_node->join_mode == JoinMode::Semi)) {
         std::cout << "Has potential to be rewritten" << std::endl;
         std::cout << removable_side << std::endl;
-        const auto can_rewrite = _check_rewrite_validity(join_node, removable_side);
+
+        std::shared_ptr<PredicateNode> valid_predicate = nullptr;
+        const auto can_rewrite = _check_rewrite_validity(join_node, removable_side, valid_predicate);
         if (can_rewrite) {
-          _perform_rewrite(join_node, removable_side);
+          std::cout << valid_predicate->description() << std::endl;
+          _perform_rewrite(join_node, removable_side, valid_predicate);
         }
       }
     }
@@ -161,7 +164,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
   });
 }
 
-bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<JoinNode>& join_node, const std::shared_ptr<LQPInputSide> removable_side) const {
+bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<JoinNode>& join_node, const std::shared_ptr<LQPInputSide> removable_side, std::shared_ptr<PredicateNode>& valid_predicate) const {
   std::shared_ptr<AbstractLQPNode> removable_subtree = nullptr;
   
   if (removable_side) {
@@ -207,10 +210,8 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
     return false;
   }
 
-  std::shared_ptr<PredicateNode> valid_predicate = nullptr;
-
   // Now, we look for a predicate that can be used inside the substituting table scan node.
-  visit_lqp(removable_subtree, [&exchangable_column_expr, &removable_subtree](auto& current_node) {
+  visit_lqp(removable_subtree, [&exchangable_column_expr, &removable_subtree, &valid_predicate](auto& current_node) {
     if (current_node->type != LQPNodeType::Predicate) return LQPVisitation::VisitInputs;
 
     const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
@@ -242,8 +243,8 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
       return LQPVisitation::VisitInputs;
     }
 
-    return LQPVisitation::VisitInputs;
-
+    valid_predicate = candidate;
+    return LQPVisitation::DoNotVisitInputs;
   });
 
 
@@ -260,10 +261,21 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
         -> otherwise, can't replace
   */
   
-  return false;
-}
-void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const std::shared_ptr<LQPInputSide> removable_side) const  {
+  if (!valid_predicate) {
+    return false;
+  }
 
+  return true;
+}
+
+void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const std::shared_ptr<LQPInputSide> removable_side, const std::shared_ptr<PredicateNode>& valid_predicate) const  {
+  const auto param_ids = std::vector<ParameterID>{};
+  const auto param_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+
+  const auto& new_predicate_node = std::make_shared<PredicateNode>(std::make_shared<BinaryPredicateExpression>(PredicateCondition::Equals,
+    std::make_shared<LQPColumnExpression>(join_node->left_input(), /* referenced column */),
+    std::make_shared<LQPSubqueryExpression>(/* projection node to valid_predicate */, param_ids, param_expressions)));
+    new_predicate_node->set_left_input(join_node->left_input());
 }
 
 }  // namespace opossum
