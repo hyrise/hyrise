@@ -141,7 +141,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
         const auto column_width = widths[column_id];
         const auto sort = chunk->individually_sorted_by();
         if (!sort.empty() && sort.front().column == column_id){
-          _out << "|" << std::setw(column_width) << std::left << "X" << std::right << std::setw(0);
+          _out << "|" << std::setw(column_width) << std::left << "Sorted" << std::right << std::setw(0);
         } else {
           _out << "|" << std::setw(column_width) << std::left << "" << std::right << std::setw(0);
         }
@@ -152,7 +152,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
 
     // print the rows in the chunk
-    /*for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       _out << "|";
       for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
         // well yes, we use AbstractSegment::operator[] here, but since Print is not an operation that should
@@ -179,7 +179,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
         _out << "|";
       }
       _out << std::endl;
-    }*/
+    }
   }
 
   return left_input_table();

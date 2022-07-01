@@ -19,8 +19,14 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
-  Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
-         "Input Expressions must match");
+  // Adaption for Chunk Compression project. Might be useful in general. The previous assert complained about columns
+  // stemming from different stored tables nodes (even though they referred to the same actual table).
+  // Since the chunk-wise access path optimization uses many different stored table nodes, we need to adapt this
+  // assertion.
+  // Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
+  //        "Input Expressions must match");
+  Assert(left_input()->output_expressions().size() == right_input()->output_expressions().size(),
+        "Input Expressions must match");
   return left_input()->output_expressions();
 }
 

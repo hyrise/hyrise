@@ -32,6 +32,17 @@ class IndexScan : public AbstractReadOnlyOperator {
   // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
   std::vector<ChunkID> included_chunk_ids;
 
+  enum class OperatorSteps : uint8_t {
+    IndexSearching,
+    OutputWriting
+  };
+
+  struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
+    void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
+
+    std::atomic_size_t num_chunks_with_binary_search{0};
+  };
+
  protected:
   std::shared_ptr<const Table> _on_execute() final;
 

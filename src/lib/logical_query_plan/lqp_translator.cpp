@@ -331,7 +331,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_mu
   auto index_scan = std::make_shared<IndexScan>(input_operator, SegmentIndexType::CompositeGroupKey, column_ids_vector,
                                      PredicateCondition::BetweenInclusive, lower_bounds_vector, upper_bounds_vector);
 
-  std::cout << "Trying ..." << std::endl;
   // We only operator on single chunk stored table nodes in the case of multi-column indexes.
   index_scan->included_chunk_ids = {ChunkID{0}};
   return index_scan;

@@ -6,8 +6,11 @@
 #pragma GCC diagnostic ignored "-Wattributes"
 #pragma GCC diagnostic pop
 
+#include <chrono>
 #include <iostream>
 #include <fstream>
+#include <mutex>
+#include <thread>
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
@@ -27,9 +30,11 @@
 #include "logical_query_plan/union_node.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_pipeline_statement.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "utils/load_table.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
@@ -41,22 +46,26 @@
 #include "umap/RegionManager.hpp"
 #include "umap/Buffer.hpp"
 
+using namespace std::chrono_literals;
+
 using namespace opossum::expression_functional;  // NOLINT
 
 using namespace opossum;  // NOLINT
 
 // Import
 
-//constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
+constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
 //constexpr auto TBL_FILE = "../../data/10mio_pings_no_id_int.tbl";
-constexpr auto TBL_FILE = "../../data/1mio_pings_no_id_int.tbl";
+//constexpr auto TBL_FILE = "../../data/1mio_pings_no_id_int.tbl";
+//constexpr auto TBL_FILE = "../../data/100_pings_no_id_int.tbl";
 
 constexpr auto WORKLOAD_FILE = "../../data/workload.csv";
 constexpr auto CONFIG_PATH = "../../data/config";
 
-//constexpr auto CHUNK_SIZE = size_t{40'000'000};
+constexpr auto CHUNK_SIZE = size_t{40'000'000};
 //constexpr auto CHUNK_SIZE = size_t{1'000'000};
-constexpr auto CHUNK_SIZE = size_t{100'000};
+//constexpr auto CHUNK_SIZE = size_t{100'000};
+//constexpr auto CHUNK_SIZE = size_t{10};
 
 constexpr auto TABLE_NAME = "PING";
 
@@ -91,6 +100,7 @@ const std::vector<std::vector<int>> MULTI_COLUMN_INDEXES {{0, 1}, {1, 0}, {0, 4}
 
 std::map<std::pair<std::vector<int>, ChunkID>, std::shared_ptr<AbstractIndex>> multi_indexes;
 std::map<std::pair<ChunkID, ColumnID>, std::shared_ptr<AbstractIndex>> single_indexes;
+std::mutex index_map_mutex;
 
 // Export 
 
@@ -712,6 +722,13 @@ int main() {
       continue;
     }
 
+    // Encoding/sorting table data and index creation are time consuming processes. To reduce the required execution
+    // time, we execute these data preparation steps in a multi-threaded way. We store the single-threaded scheduler
+    // heree After data preparation, we switch back to the initially used scheduler.
+    const auto initial_scheduler = Hyrise::get().scheduler();
+    Hyrise::get().topology.use_default_topology();
+    Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
     // Create a new PING table that is used for the actual benchmark configuration
     std::cout << "Loading PING table ... ";
     Timer load_timer;
@@ -729,162 +746,266 @@ int main() {
     std::cout << "Preparing table (encoding, sorting, ...) with given configuration: " << conf_name << " ... ";
     Timer preparation_timer;
 
-    const auto sorted_table = std::make_shared<Table>(table->column_definitions(), 
+    auto sorted_table = std::make_shared<Table>(table->column_definitions(), 
       TableType::Data, CHUNK_SIZE, UseMvcc::No);
     const auto chunk_count = table->chunk_count();
 
-    auto index_memory_consumption = size_t{0};
-    auto conf_line_count = 0;
+    auto preparation_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+    preparation_jobs.reserve(chunk_count);
+
+    auto index_memory_consumption = std::atomic<size_t>{0};
+    const auto column_count = table->column_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][0]))};
-      const auto conf_chunk_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][3]))};
+      const auto conf_line = chunk_id * column_count;
+      auto prepare_chunk = [&, conf_line, chunk_id]() {
+        // Atomically track added multi-column indexes.
+        auto multi_column_index_created = std::vector<std::atomic<bool>>(MULTI_COLUMN_INDEXES.size());
+        for (auto& element : multi_column_index_created) {
+          // I am not sure the default initialization to 'false' is ensured here. Better be safe.
+          element.store(false);
+        }
+
+        const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line][0]))};
+        const auto conf_chunk_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line][3]))};
+        Assert(chunk_id == conf_chunk_id,
+             "Expected chunk id does not match to chunk id in configuration file");
+        
+        // Sort 
+
+        // Create single chunk table
+        auto chunk = std::make_shared<Chunk>(get_segments_of_chunk(table, chunk_id));
+        std::vector<std::shared_ptr<Chunk>> single_chunk_vector = {chunk};
+        auto single_chunk_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::move(single_chunk_vector), UseMvcc::No);
+
+        auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
+        table_wrapper->execute();
+
+        std::shared_ptr<Chunk> added_chunk;
+
+        // Sort single chunk table
+        if (conf_chunk_sort_column_id < single_chunk_table->column_count()) {
+          auto sort = std::make_shared<Sort>(
+            table_wrapper, std::vector<SortColumnDefinition>{
+              SortColumnDefinition{conf_chunk_sort_column_id, SORT_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
+          sort->execute();
+          const auto sorted_single_chunk_table = sort->get_output();
+
+          while (sorted_table->chunk_count() < chunk_id) {
+            std::this_thread::sleep_for(100ms);
+          }
+          // Add sorted chunk to sorted table
+          // Note: we do not care about MVCC at all at the moment
+          sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
+          added_chunk = sorted_table->get_chunk(chunk_id);
+          added_chunk->finalize();
+          // Set order by for chunk 
+          added_chunk->set_individually_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
+        } else {
+          // append unsorted chunk to sorted table 
+          while (sorted_table->chunk_count() < chunk_id) {
+            std::this_thread::sleep_for(100ms);
+          }
+          sorted_table->append_chunk(get_segments_of_chunk(single_chunk_table, ChunkID{0}));
+          added_chunk = sorted_table->get_chunk(chunk_id);
+          added_chunk->finalize();
+        }
+       
+        auto multi_column_index_conf = int{-1};
+        auto multi_column_index_storage = int{-1};
+
+        auto segment_preparation_jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+        segment_preparation_jobs.reserve(column_count);
+
+        // Encode segments of sorted single chunk table
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          const auto segment_conf_line = conf_line + column_id;
+          auto prepare_segment = [&, chunk_id, column_id, conf_line, segment_conf_line]() {
+            const auto conf_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[segment_conf_line][1]))};
+            Assert(column_id == conf_column_id,
+               "Expected column id does not match column id in configuration file");
+
+            const auto conf_segment_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[segment_conf_line][3]))};
+            Assert(conf_chunk_sort_column_id == conf_segment_sort_column_id,
+               "Different sort configurations for a single chunk in configuration file");
+
+            //Encode segment with specified encoding 
+            const auto encoding_id = static_cast<uint16_t>(std::stoi(conf[segment_conf_line][2]));
+            const auto encoding = CHUNK_ENCODINGS[encoding_id];
+            const auto segment = added_chunk->get_segment(column_id);
+
+            Assert(encoding_id < CHUNK_ENCODINGS.size(), 
+              "Undefined encoding specified in configuration file");
+
+            const auto encoded_segment = ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
+
+            // Move segments of sorted single chunk table to defined storage medium
+            const auto storage_id = static_cast<uint16_t>(std::stoi(conf[segment_conf_line][5]));
+            //auto allocator = PolymorphicAllocator<void>{};
+
+            if (storage_id > 0) {
+              auto resource = global_umap_resource;
+              auto allocator = PolymorphicAllocator<void>{resource};
+
+              const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
+              sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
+              //std::cout << "Segment (" << chunk_id << "," << column_id << ")" << std::endl;
+            } else {
+              auto allocator = PolymorphicAllocator<void>{};
+              const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
+              added_chunk->replace_segment(column_id, migrated_segment);
+            }
+
+            //Store index columns 
+
+            const auto index_conf = static_cast<uint16_t>(std::stoi(conf[segment_conf_line][4]));
+
+            // Create single column index 
+            if (index_conf == 1) {
+              Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
+              const auto added_index = added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
+              index_memory_consumption += added_index->memory_consumption();
+
+              {
+                std::lock_guard<std::mutex> lock(index_map_mutex);
+                single_indexes.insert({{chunk_id, column_id}, added_index});
+              }
+
+              if (storage_id > 0) {
+                auto resource = global_umap_resource;
+                auto allocator = PolymorphicAllocator<void>{resource};
+
+                const auto  migrated_index = added_index->copy_using_allocator(allocator);
+                sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
+                //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
+              }
+            }
+      
+            if (index_conf > 1) {
+              multi_column_index_conf = index_conf;
+              multi_column_index_storage = storage_id;
+            }
+          };
+
+          segment_preparation_jobs.emplace_back(std::make_shared<JobTask>(prepare_segment));
+        }
+
+        Hyrise::get().scheduler()->schedule_and_wait_for_tasks(segment_preparation_jobs);
+
+        // Create multi column index
+        if (multi_column_index_conf > 0) {
+          const auto multi_column_index_id = multi_column_index_conf - 2;
+         
+          if (!multi_column_index_created[multi_column_index_id].load()) {
+            multi_column_index_created[multi_column_index_id].store(true);
+
+            auto column_ids = std::vector<ColumnID>{};
+
+            for (const auto& index_column : MULTI_COLUMN_INDEXES[multi_column_index_id]) {
+              column_ids.emplace_back(index_column);
+            }
+
+            const auto& index = added_chunk->create_index<CompositeGroupKeyIndex>(column_ids);
+            index_memory_consumption += index->memory_consumption();
+            //std::cout << "Creating multi-column index #" << multi_column_index_id << " on chunk #" << chunk_id << " and columns: ";
+            //for (const auto column_id : column_ids) std::cout << column_id << " ";
+            //std::cout << std::endl;
+
+            {
+              std::lock_guard<std::mutex> lock(index_map_mutex);
+              multi_indexes.insert({{MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}, index});
+            }
+
+            if (multi_column_index_storage > 0) {
+              auto resource = global_umap_resource;
+              auto allocator = PolymorphicAllocator<void>{resource};
+
+              const auto  migrated_index = index->copy_using_allocator(allocator);
+              sorted_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
+              //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
+            }
+          }
+        }
+      };
+
+      preparation_jobs.emplace_back(std::make_shared<JobTask>(prepare_chunk));
+    }
+ 
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(preparation_jobs);
+    std::cout << " done (" << format_duration(preparation_timer.lap()) << ")" << std::endl;
+
+    Assert(sorted_table->chunk_count() == table->chunk_count(), "Chunk counts differ after preparation");
+    Assert(sorted_table->column_count() == table->column_count(), "Column counts differ after preparation");
+    Assert(sorted_table->row_count() == table->row_count(), "Row counts differ after preparation (previously: " + std::to_string(table->row_count()) + ", now: " + std::to_string(sorted_table->row_count()) + ")");
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = sorted_table->get_chunk(chunk_id);
+
+      const auto conf_line = chunk_id * column_count;
+      const auto conf_chunk_id = ChunkID{static_cast<uint16_t>(std::stoi(conf[conf_line][0]))};
+      const auto conf_chunk_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line][3]))};
       Assert(chunk_id == conf_chunk_id,
            "Expected chunk id does not match to chunk id in configuration file");
       
-      // Sort 
+      // Sorting
+      if (conf_chunk_sort_column_id < sorted_table->column_count()) {
+        Assert(chunk->individually_sorted_by() == std::vector{SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE)}, "Sort mode not found");
+      }     
 
-      // Create single chunk table
-      auto chunk = std::make_shared<Chunk>(get_segments_of_chunk(table, chunk_id));
-      std::vector<std::shared_ptr<Chunk>> single_chunk_vector = {chunk};
-      auto single_chunk_table = std::make_shared<Table>(table->column_definitions(), TableType::Data, std::move(single_chunk_vector), UseMvcc::No);
-
-      auto table_wrapper = std::make_shared<TableWrapper>(single_chunk_table);
-      table_wrapper->execute();
-
-      std::shared_ptr<Chunk> added_chunk;
-
-      // Sort single chunk table
-      if (conf_chunk_sort_column_id < single_chunk_table->column_count()) {
-        auto sort = std::make_shared<Sort>(
-          table_wrapper, std::vector<SortColumnDefinition>{
-            SortColumnDefinition{conf_chunk_sort_column_id, SORT_MODE}},CHUNK_SIZE, Sort::ForceMaterialization::Yes);
-        sort->execute();
-        const auto sorted_single_chunk_table = sort->get_output();
-
-        // Add sorted chunk to sorted table
-        // Note: we do not care about MVCC at all at the moment
-        sorted_table->append_chunk(get_segments_of_chunk(sorted_single_chunk_table, ChunkID{0}));
-        added_chunk = sorted_table->get_chunk(chunk_id);
-        added_chunk->finalize();
-        // Set order by for chunk 
-        added_chunk->set_individually_sorted_by(SortColumnDefinition(conf_chunk_sort_column_id, SORT_MODE));
-      } else {
-        // append unsorted chunk to sorted table 
-        sorted_table->append_chunk(get_segments_of_chunk(single_chunk_table, ChunkID{0}));
-        added_chunk = sorted_table->get_chunk(chunk_id);
-        added_chunk->finalize();
-      }
-     
-      auto multi_column_index_conf = int{-1};
-      auto multi_column_index_storage = int{-1};
-
-      // Encode segments of sorted single chunk table
-      for (ColumnID column_id = ColumnID{0}; column_id < added_chunk->column_count(); ++column_id) {
-        const auto conf_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][1]))};
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto segment_conf_line = conf_line + column_id;
+        const auto conf_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[segment_conf_line][1]))};
         Assert(column_id == conf_column_id,
            "Expected column id does not match column id in configuration file");
 
-        const auto conf_segment_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[conf_line_count][3]))};
+        const auto conf_segment_sort_column_id = ColumnID{static_cast<uint16_t>(std::stoi(conf[segment_conf_line][3]))};
         Assert(conf_chunk_sort_column_id == conf_segment_sort_column_id,
            "Different sort configurations for a single chunk in configuration file");
 
-        //Encode segment with specified encoding 
-        const auto encoding_id = static_cast<uint16_t>(std::stoi(conf[conf_line_count][2]));
+        // Encoding
+        const auto encoding_id = static_cast<uint16_t>(std::stoi(conf[segment_conf_line][2]));
         const auto encoding = CHUNK_ENCODINGS[encoding_id];
-        const auto segment = added_chunk->get_segment(column_id);
+        const auto& segment = chunk->get_segment(column_id);
 
-        Assert(encoding_id < CHUNK_ENCODINGS.size(), 
-          "Undefined encoding specified in configuration file");
+        Assert(get_segment_encoding_spec(segment).encoding_type == encoding.encoding_type, "Encodings do not match");
 
-        const auto encoded_segment = ChunkEncoder::encode_segment(segment, segment->data_type(), encoding);
+        // TODO: store allocator in segments and verify that at least the allocator is set correctly
 
-        // Move segments of sorted single chunk table to defined storage medium
-        const auto storage_id = static_cast<uint16_t>(std::stoi(conf[conf_line_count][5]));
-        //auto allocator = PolymorphicAllocator<void>{};
-
-        if (storage_id > 0) {
-          auto resource = global_umap_resource;
-          auto allocator = PolymorphicAllocator<void>{resource};
-
-          const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
-          sorted_table->get_chunk(chunk_id)->replace_segment(column_id, migrated_segment);
-          //std::cout << "Segment (" << chunk_id << "," << column_id << ")" << std::endl;
-        } else {
-          auto allocator = PolymorphicAllocator<void>{};
-          const auto migrated_segment = encoded_segment->copy_using_allocator(allocator);
-          added_chunk->replace_segment(column_id, migrated_segment);
-        }
-
-        //Store index columns 
-
-        const auto index_conf = static_cast<uint16_t>(std::stoi(conf[conf_line_count][4]));
-
-        // Create single column index 
+        // Indexes
+        const auto index_conf = static_cast<uint16_t>(std::stoi(conf[segment_conf_line][4]));
         if (index_conf == 1) {
-          Assert(encoding_id == 0, "Tried to set index on a not dictionary encoded segment");
-          const auto added_index = added_chunk->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-          index_memory_consumption += added_index->memory_consumption();
-          single_indexes.insert({{chunk_id, column_id}, added_index});
-
-          if (storage_id > 0) {
-            auto resource = global_umap_resource;
-            auto allocator = PolymorphicAllocator<void>{resource};
-
-            const auto  migrated_index = added_index->copy_using_allocator(allocator);
-            sorted_table->get_chunk(chunk_id)->replace_index(added_index, migrated_index);
-            //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
-          }
+          const auto& chunk_indexes = chunk->get_indexes(std::vector{column_id});
+          Assert(!chunk_indexes.empty(), "Expected exactly at least one index on chunk (#1)");
+          Assert(std::any_of(chunk_indexes.begin(), chunk_indexes.end(), [] (const auto& index) {
+            return index->type() == SegmentIndexType::GroupKey;
+          }), "No single-column index found");
         }
   
         if (index_conf > 1) {
-          multi_column_index_conf = index_conf;
-          multi_column_index_storage = storage_id;
-        }
-
-        ++conf_line_count;
-      }
-
-      // Create multi column index
-      if (multi_column_index_conf > 0) {
-        const auto multi_column_index_id = multi_column_index_conf - 2;
-       
-        // Check if index was already created 
-        if (multi_indexes.count({MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}) == 0) {
+          const auto multi_column_index_id = index_conf - 2;
           auto column_ids = std::vector<ColumnID>{};
-
           for (const auto& index_column : MULTI_COLUMN_INDEXES[multi_column_index_id]) {
             column_ids.emplace_back(index_column);
           }
 
-          const auto& index = added_chunk->create_index<CompositeGroupKeyIndex>(column_ids);
-          index_memory_consumption += index->memory_consumption();
-          std::cout << "Creating multi-column index on chunk #" << chunk_id << " and columns: ";
-          for (const auto column_id : column_ids) std::cout << column_id << " ";
-          std::cout << std::endl;
-
-          multi_indexes.insert({{MULTI_COLUMN_INDEXES[multi_column_index_id], chunk_id}, index});
-
-          if (multi_column_index_storage > 0) {
-            auto resource = global_umap_resource;
-            auto allocator = PolymorphicAllocator<void>{resource};
-
-            const auto  migrated_index = index->copy_using_allocator(allocator);
-            sorted_table->get_chunk(chunk_id)->replace_index(index, migrated_index);
-            //std::cout << "Index (" << chunk_id << "," << column_id << ")" << std::endl;
-          }
+          const auto& chunk_indexes = chunk->get_indexes(column_ids);
+          //Assert(!chunk_indexes.empty(), "Expected exactly at least one index on chunk (#2)");
+          Assert(std::any_of(chunk_indexes.begin(), chunk_indexes.end(), [] (const auto& index) {
+            return index->type() == SegmentIndexType::CompositeGroupKey;
+          }), "No multi-column index found on chunk " + std::to_string(chunk_id));
         }
       }
     }
 
     //Print::print(sorted_table);
 
-    std::cout << " done (" << format_duration(preparation_timer.lap()) << ")" << std::endl;
-
     storage_manager.add_table(TABLE_NAME, sorted_table);
 
+    // Set scheduler back to previously used scheduler.
+    Hyrise::get().topology.use_default_topology(1);
+    Hyrise::get().set_scheduler(initial_scheduler);
+
     // Write memory usage of indexes and table to memory consumption csv file 
-    auto mem_usage = sorted_table->memory_usage(MemoryUsageCalculationMode::Full) + index_memory_consumption;
-    memory_consumption_csv_file << conf_name << "," << mem_usage << "," << index_memory_consumption << "," << sorted_table->memory_usage(MemoryUsageCalculationMode::Full) <<"\n";
+    auto mem_usage = sorted_table->memory_usage(MemoryUsageCalculationMode::Full) + index_memory_consumption.load();
+    memory_consumption_csv_file << conf_name << "," << mem_usage << "," << index_memory_consumption.load() << "," << sorted_table->memory_usage(MemoryUsageCalculationMode::Full) <<"\n";
 
     // We load queries here, as the construction of the queries needs the existing actual table
     const auto queries = load_queries_from_csv(WORKLOAD_FILE);
