@@ -50,12 +50,12 @@ TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
 }
 
 bool TableIndexVectorIterator::operator==(const BaseTableIndexIterator& other) const {
-  const auto *const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  const auto* const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
   return obj && _map_iterator == obj->_map_iterator;
 }
 
 bool TableIndexVectorIterator::operator!=(const BaseTableIndexIterator& other) const {
-  const auto *const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  const auto* const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
   return !obj || _map_iterator != obj->_map_iterator;
 }
 
@@ -234,7 +234,7 @@ size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
   bytes += (8 /* hash size */ + sizeof(std::vector<RowID>)) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
-  bytes += sizeof(_null_values); // NOLINT
+  bytes += sizeof(_null_values);  // NOLINT
   bytes += sizeof(RowID) * _null_values.size();
 
   return bytes;

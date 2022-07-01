@@ -2557,7 +2557,9 @@ TEST_F(SQLTranslatorTest, Execute) {
 TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
   // clang-format off
   const auto prepared_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)), stored_table_node_int_float);
+  AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
+    stored_table_node_int_float);
+  // clang-format on
 
   const auto prepared_plan = std::make_shared<PreparedPlan>(prepared_lqp, std::vector<ParameterID>{});
 
@@ -2566,7 +2568,6 @@ TEST_F(SQLTranslatorTest, ExecuteWithoutParams) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("EXECUTE another_prepared_plan ()");
 
   EXPECT_LQP_EQ(actual_lqp, prepared_lqp);
-  // clang-format on
 }
 
 TEST_F(SQLTranslatorTest, IntLimitsAndUnaryMinus) {

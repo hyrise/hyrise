@@ -146,15 +146,15 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     } else if constexpr (std::is_same_v<JoinOperator, JoinIndex>) {  // NOLINT
       Assert(configuration.index_side, "IndexSide should be explicitly defined for the JoinIndex test runs.");
 
-      ColumnID index_column_id;
+      auto index_column_id = ColumnID{};
       if (configuration.index_side == IndexSide::Left) {
-        const auto& indexed_input = configuration.left_input;
-        index_column_id =
-            column_id_before_pruning(primary_predicate.column_ids.first, indexed_input.pruned_column_ids);
+        const auto& pruned_column_ids = configuration.left_input.pruned_column_ids;
+        const auto join_column_id = primary_predicate.column_ids.first;
+        index_column_id = column_id_before_pruning(join_column_id, pruned_column_ids);
       } else {
-        const auto& indexed_input = configuration.right_input;
-        index_column_id =
-            column_id_before_pruning(primary_predicate.column_ids.second, indexed_input.pruned_column_ids);
+        const auto& pruned_column_ids = configuration.right_input.pruned_column_ids;
+        const auto join_column_id = primary_predicate.column_ids.second;
+        index_column_id = column_id_before_pruning(join_column_id, pruned_column_ids);
       }
 
       return std::make_shared<JoinIndex>(left, right, configuration.join_mode, primary_predicate,
@@ -167,8 +167,9 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
   }
 };
 // Order of columns in the input tables
-const std::unordered_map<DataType, size_t> data_type_order = {
-    {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
+const std::unordered_map<DataType, ColumnID> data_type_order = {
+    {DataType::Int, ColumnID{0u}},  {DataType::Float, ColumnID{1u}},  {DataType::Double, ColumnID{2u}},
+    {DataType::Long, ColumnID{3u}}, {DataType::String, ColumnID{4u}},
 };
 
 }  // namespace
@@ -280,29 +281,31 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               for (const auto& pruned_column_ids : column_pruning_configurations) {
                 // If a pruned column id equals the join column id, we cannot join on the column. Thus, we do not
                 // create a JoinTestConfiguration in this case.
-                auto indexed_column_id_pruned = [&]() {
+                auto is_indexed_column_id_pruned = [&]() {
                   if (pruned_column_ids.empty()) {
                     return false;
                   }
+
                   auto indexed_join_column_id = ColumnID{};
-                  switch (index_side) {
-                    case IndexSide::Left:
-                      indexed_join_column_id = ColumnID{
-                          static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_left) +
-                                                           (configuration.nullable_left ? 1 : 0))};
-                      break;
-                    case IndexSide::Right:
-                      indexed_join_column_id = ColumnID{
-                          static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_right) +
-                                                           (configuration.nullable_right ? 1 : 0))};
-                      break;
+                  auto nullable_offset = ColumnID{};
+                  auto data_type_column_id = ColumnID{};
+
+                  if (index_side == IndexSide::Left) {
+                    nullable_offset = configuration.nullable_left;
+                    data_type_column_id = data_type_order.at(configuration.data_type_left);
+                  } else {
+                    nullable_offset = configuration.nullable_right;
+                    data_type_column_id = data_type_order.at(configuration.data_type_right);
                   }
+
+                  indexed_join_column_id = ColumnID{2 * data_type_column_id + nullable_offset};
+
                   const auto search_iter =
                       std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
                   return search_iter != pruned_column_ids.cend();
                 };
 
-                if (indexed_column_id_pruned()) {
+                if (is_indexed_column_id_pruned()) {
                   continue;
                 }
 
@@ -724,10 +727,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto input_operator_left = std::make_shared<TableWrapper>(left_input_table);
   const auto input_operator_right = std::make_shared<TableWrapper>(right_input_table);
 
-  auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_left) +
-                                                                  (configuration.nullable_left ? 1 : 0))};
-  auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(
-      2 * data_type_order.at(configuration.data_type_right) + (configuration.nullable_right ? 1 : 0))};
+  auto column_id_left = ColumnID{2 * data_type_order.at(configuration.data_type_left) + configuration.nullable_left};
+  auto column_id_right = ColumnID{2 * data_type_order.at(configuration.data_type_right) + configuration.nullable_right};
 
   // If columns are pruned, we have to adjust the corresponding column IDs.
   auto adjust_column_id = [](auto& column_id, const auto original_column_id, const auto& pruned_column_ids) {
