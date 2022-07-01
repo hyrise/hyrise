@@ -204,7 +204,7 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
   EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
   EXPECT_EQ(join_operator_copy->secondary_predicates(), secondary_predicates);
-  EXPECT_EQ(join_operator_copy->_index_column_id_before_pruning, ColumnID{1});
+  EXPECT_EQ(join_operator_copy->_index_column_id, ColumnID{1});
   EXPECT_NE(join_operator_copy->left_input(), nullptr);
   EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }

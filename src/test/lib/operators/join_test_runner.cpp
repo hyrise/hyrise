@@ -167,9 +167,8 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
   }
 };
 // Order of columns in the input tables
-const std::unordered_map<DataType, ColumnID> data_type_order = {
-    {DataType::Int, ColumnID{0u}},  {DataType::Float, ColumnID{1u}},  {DataType::Double, ColumnID{2u}},
-    {DataType::Long, ColumnID{3u}}, {DataType::String, ColumnID{4u}},
+const std::unordered_map<DataType, uint16_t> data_type_order = {
+    {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
 };
 
 }  // namespace
@@ -287,7 +286,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                   }
 
                   auto indexed_join_column_id = ColumnID{};
-                  auto nullable_offset = ColumnID{};
+                  auto nullable_offset = bool{};
                   auto data_type_column_id = ColumnID{};
 
                   if (index_side == IndexSide::Left) {
@@ -298,7 +297,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                     data_type_column_id = data_type_order.at(configuration.data_type_right);
                   }
 
-                  indexed_join_column_id = ColumnID{ColumnID{2} * data_type_column_id + nullable_offset};
+                  indexed_join_column_id =
+                      ColumnID{static_cast<ColumnID::base_type>(2 * data_type_column_id + nullable_offset)};
 
                   const auto search_iter =
                       std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
@@ -727,10 +727,10 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto input_operator_left = std::make_shared<TableWrapper>(left_input_table);
   const auto input_operator_right = std::make_shared<TableWrapper>(right_input_table);
 
-  auto column_id_left =
-      ColumnID{ColumnID{2} * data_type_order.at(configuration.data_type_left) + configuration.nullable_left};
-  auto column_id_right =
-      ColumnID{ColumnID{2} * data_type_order.at(configuration.data_type_right) + configuration.nullable_right};
+  auto column_id_left = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_order.at(configuration.data_type_left) +
+                                                                  configuration.nullable_left)};
+  auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(
+      2 * data_type_order.at(configuration.data_type_right) + configuration.nullable_right)};
 
   // If columns are pruned, we have to adjust the corresponding column IDs.
   auto adjust_column_id = [](auto& column_id, const auto original_column_id, const auto& pruned_column_ids) {

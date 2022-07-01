@@ -124,7 +124,9 @@ class JoinIndex : public AbstractJoinOperator {
   std::vector<std::vector<bool>> _probe_matches;
   std::vector<std::vector<bool>> _index_matches;
 
-  ColumnID _index_column_id_before_pruning;
+  // ID of the column on which the index was created on the corresponding base table. If some of the base table's
+  // columns were pruned, _index_column_id represents the column id before the columns were pruned.
+  ColumnID _index_column_id;
 };
 
 }  // namespace opossum

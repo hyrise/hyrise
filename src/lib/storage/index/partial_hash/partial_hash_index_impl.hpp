@@ -130,7 +130,6 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
 
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _map;
-  // We construct a map for NULL-values here to make use of the same iterator type on values and NULL-values.
   std::vector<RowID> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };

@@ -216,17 +216,14 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
 
 std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
-  DebugAssert(([&]() {
-                const auto number_of_columns = static_cast<ColumnID>(column_count());
-                for (const auto& column_id : column_ids) {
-                  if (column_id >= number_of_columns) {
-                    return false;
-                  }
-                }
-                return true;
-              }()),
-              "ColumnID " + std::to_string(column_ids[column_ids.size() - 1]) +
-                  " exceeds the maximum column index which is " + std::to_string(column_count() - 1) + ".");
+  if constexpr (HYRISE_DEBUG) {
+    const auto number_of_columns = static_cast<ColumnID>(column_count());
+    for (const auto& column_id : column_ids) {
+      Assert(column_id < number_of_columns, "ColumnID " + std::to_string(column_id) +
+                                                " exceeds the maximum column index which is " +
+                                                std::to_string(column_count() - 1) + ".");
+    }
+  }
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());

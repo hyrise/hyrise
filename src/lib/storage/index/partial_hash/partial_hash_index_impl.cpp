@@ -120,7 +120,7 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
-  size_t size_before = _indexed_chunk_ids.size();
+  const size_t size_before = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
     // We do not allow multiple indexing of one chunk.
     if (_indexed_chunk_ids.contains(chunk.first))
@@ -128,7 +128,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 
     _indexed_chunk_ids.insert(chunk.first);
     // Iterate over the segment to index and populate the index.
-    auto indexed_segment = chunk.second->get_segment(column_id);
+    const auto& indexed_segment = chunk.second->get_segment(column_id);
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
       const auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.

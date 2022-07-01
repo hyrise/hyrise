@@ -202,8 +202,8 @@ class Table : private Noncopyable {
     TableIndexType table_index_type = get_table_index_type_of<Index>();
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
     chunks_to_index.reserve(chunk_ids.size());
-    for (auto chunk_id : chunk_ids) {
-      auto chunk = get_chunk(chunk_id);
+    for (const auto chunk_id : chunk_ids) {
+      const auto& chunk = get_chunk(chunk_id);
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
       chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
     }
@@ -225,7 +225,7 @@ class Table : private Noncopyable {
     static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
                   "'Index' template argument is not an AbstractChunkIndex");
 
-    ChunkIndexType chunk_index_type = get_chunk_index_type_of<Index>();
+    const auto chunk_index_type = get_chunk_index_type_of<Index>();
 
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {

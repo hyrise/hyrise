@@ -49,7 +49,7 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
                      const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
                      const OperatorJoinPredicate& primary_predicate,
                      const std::vector<OperatorJoinPredicate>& secondary_predicates, const IndexSide index_side,
-                     const std::optional<ColumnID> index_column_id_before_pruning)
+                     const std::optional<ColumnID> index_column_id)
     : AbstractJoinOperator(OperatorType::JoinIndex, left, right, mode, primary_predicate, secondary_predicates,
                            std::make_unique<JoinIndex::PerformanceData>()),
       _index_side(index_side),
@@ -58,10 +58,12 @@ JoinIndex::JoinIndex(const std::shared_ptr<const AbstractOperator>& left,
     _adjusted_primary_predicate.flip();
   }
 
-  if (index_column_id_before_pruning) {
-    _index_column_id_before_pruning = index_column_id_before_pruning.value();
+  // The index column id might be explicitly given if columns of the indexed base table are pruned. In this case, the
+  // given index column id is larger than the join column id if columns are pruned to the left of the join column.
+  if (index_column_id) {
+    _index_column_id = *index_column_id;
   } else {
-    _index_column_id_before_pruning = _adjusted_primary_predicate.column_ids.second;
+    _index_column_id = _adjusted_primary_predicate.column_ids.second;
   }
 }
 
@@ -85,7 +87,7 @@ std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
-                                     _secondary_predicates, _index_side, _index_column_id_before_pruning);
+                                     _secondary_predicates, _index_side, _index_column_id);
 }
 
 std::shared_ptr<const Table> JoinIndex::_on_execute() {
@@ -208,7 +210,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     // Here we prefer to use table indexes if the join supports them. If no table index exists or other predicates than
     // Equals or NotEquals are requested, chunk indexes are used. If no chunk index exists, NestedLoopJoin is used as a
     // fallback solution.
-    const auto& table_indexes = _index_input_table->get_table_indexes(_index_column_id_before_pruning);
+    const auto& table_indexes = _index_input_table->get_table_indexes(_index_column_id);
 
     // table-based index join
     if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
