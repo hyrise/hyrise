@@ -202,7 +202,7 @@ class Table : private Noncopyable {
     TableIndexType table_index_type = get_table_index_type_of<Index>();
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
     chunks_to_index.reserve(chunk_ids.size());
-    for (const auto chunk_id : chunk_ids) {
+    for (const auto& chunk_id : chunk_ids) {
       const auto& chunk = get_chunk(chunk_id);
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
       chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
