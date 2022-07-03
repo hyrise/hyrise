@@ -17,42 +17,67 @@ std::string JoinToPredicateRewriteRule::name() const {
   return name;
 }
 
+/*
+There are multiple options that don't work in different ways:
+
+1. (not currently active): running _perform_rewrite within the visit_lqp method as-is. This will abort the iteration as far as I can tell, so only one rewrite would happen
+    other than that though, this works and spits out a seemingly correct LQP with the SubqueryExpression-based PredicateNode having replaced the join
+2. (not currently active): running _preform_rewrite within the visit_lqp method but running the visit_lqp inside a while loop 
+    the idea here is that we only abort running the while loop (so re-running visit_lqp) once we have visited the full tree once without wanting to rewrite anything
+    this does work in principle, iterating through both the LQP and also the newly inserted SubqueryExpression tree
+    However, this causes an unexplainable segmentation fault later on in the ChunkPruningRule, where a hashing function is failing
+3. (currently active): while visiting the lqp with the visit_lqp method, do not modify it, but instead write down which nodes are rewritable (join node pointer), their removable side and the predicate to use in the replacing subtree
+    This seems like a good idea in theory, but fails for the following query as the rewrite for some reason is told to attach the join node output to the right input of the AggregateNode, which is not allowed
+    SELECT c_name, SUM(o_totalprice) FROM customer, nation, orders WHERE n_name='GERMANY' AND n_nationkey=c_nationkey AND o_custkey=c_custkey AND o_custkey=370 GROUP BY c_name;
+    An attempt to work around this by simply statically setting the input to left (which would not be feasable in production) resulted in a segfault in the PredicateReorderingRule
+*/
+
 void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   auto rewritable_nodes = std::vector<std::shared_ptr<JoinNode>>();
   auto removable_sides = std::vector<std::shared_ptr<LQPInputSide>>();
   auto valid_predicates = std::vector<std::shared_ptr<PredicateNode>>();
-
+/*
+  bool visited_full_tree = false;
+  
+  while (!visited_full_tree) {
+    bool early_abort = false;
+*/
   visit_lqp(lqp_root, [&](const auto& node) {
+    std::cout << node->description() << std::endl;
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
       const auto removable_side = join_node->get_unused_input();
-      std::cout << join_node->description() << std::endl;
       if ((removable_side) || (join_node->join_mode == JoinMode::Semi)) {
         std::cout << "Has potential to be rewritten" << std::endl;
-        std::cout << removable_side << std::endl;
 
         std::shared_ptr<PredicateNode> valid_predicate = nullptr;
         const auto can_rewrite = _check_rewrite_validity(join_node, removable_side, valid_predicate);
         if (can_rewrite) {
           std::cout << "Will rewrite for predicate: " << valid_predicate->description() << std::endl;
-          rewritable_nodes.push_back(std::static_pointer_cast<JoinNode>(node));
+          rewritable_nodes.push_back(join_node);
           removable_sides.push_back(removable_side);
           valid_predicates.push_back(valid_predicate);
+          // _perform_rewrite(join_node, removable_side, valid_predicate);
+          // early_abort = true;
         }
       }
     }
     return LQPVisitation::VisitInputs;
   });
-
-  visit_lqp(lqp_root, [&](const auto& node) {
-    std::cout << node->description() << std::endl;
-    return LQPVisitation::VisitInputs;
-  });
-
+/*
+    visited_full_tree = !early_abort;
+    if (visited_full_tree) {
+      std::cout << "Finished..." << std::endl;
+    } else {
+      std::cout << "Doing another pass..." << std::endl;
+    }
+  }
+*/
   const auto n_rewritables = rewritable_nodes.size();
   for (auto index = size_t{0}; index < n_rewritables; ++index) {
     _perform_rewrite(rewritable_nodes[index], removable_sides[index], valid_predicates[index]);
   }
+
 }
 
 bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<JoinNode>& join_node, std::shared_ptr<LQPInputSide> removable_side, std::shared_ptr<PredicateNode>& valid_predicate) const {
@@ -77,9 +102,6 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
   }
 
   DebugAssert(join_predicate, "A Join must have at least one BinaryPredicateExpression.");
-
-  std::cout << expression_evaluable_on_lqp(join_predicate->left_operand(), *removable_subtree) << std::endl;
-  std::cout << expression_evaluable_on_lqp(join_predicate->right_operand(), *removable_subtree) << std::endl;
 
   std::shared_ptr<AbstractExpression> exchangable_column_expr = nullptr;
 
@@ -108,8 +130,6 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
     const auto candidate_exp = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
 
     DebugAssert(candidate_exp, "Need to get a predicate with a BinaryPredicateExpression.");
-
-    std::cout << "Candidate: " << candidate->description() << std::endl;
 
     // Only predicates that filter by the equals condition on a column with a constant value are of use to our optimization, because these conditions have the potential (given that the filtered column is a UCC) to single out a maximum of one result tuple.
     if (candidate_exp->predicate_condition != PredicateCondition::Equals) return LQPVisitation::VisitInputs;
