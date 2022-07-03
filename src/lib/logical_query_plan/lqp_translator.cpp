@@ -292,11 +292,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_mu
 
     if (sub_expression->type == ExpressionType::Predicate) {
       if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(sub_expression)) {
-        const auto value_1 = boost::get<int32_t>(static_pointer_cast<ValueExpression>(between_expression->lower_bound())->value);
-        const auto value_2 = boost::get<int32_t>(static_pointer_cast<ValueExpression>(between_expression->upper_bound())->value);
+        const auto value_1 = boost::get<int32_t>(std::static_pointer_cast<ValueExpression>(between_expression->lower_bound())->value);
+        const auto value_2 = boost::get<int32_t>(std::static_pointer_cast<ValueExpression>(between_expression->upper_bound())->value);
 
         Assert(between_expression->value()->type == ExpressionType::LQPColumn, "Expected an LQPColumn expression.");
-        const auto lqp_column = static_pointer_cast<LQPColumnExpression>(between_expression->value());
+        const auto lqp_column = std::static_pointer_cast<LQPColumnExpression>(between_expression->value());
 
         // Adding to the front! We are walking the columns the back to front, due to the way AND is nested in the LQP construction.
         lower_bounds.push_front(value_1);
@@ -304,10 +304,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_mu
         column_ids.push_front(lqp_column->original_column_id);
       } else if (const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(sub_expression)) {
         Assert(binary_predicate_expression->predicate_condition == PredicateCondition::LessThanEquals, "Unexpected predicate condition");
-        const auto value = boost::get<int32_t>(static_pointer_cast<ValueExpression>(binary_predicate_expression->right_operand())->value);
+        const auto value = boost::get<int32_t>(std::static_pointer_cast<ValueExpression>(binary_predicate_expression->right_operand())->value);
 
         Assert(binary_predicate_expression->left_operand()->type == ExpressionType::LQPColumn, "Unexpected left operand.");
-        const auto lqp_column = static_pointer_cast<LQPColumnExpression>(binary_predicate_expression->left_operand());
+        const auto lqp_column = std::static_pointer_cast<LQPColumnExpression>(binary_predicate_expression->left_operand());
 
         lower_bounds.push_front(AllTypeVariant{int32_t{0}});
         upper_bounds.push_front(value);

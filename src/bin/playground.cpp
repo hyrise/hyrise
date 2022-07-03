@@ -490,7 +490,7 @@ std::vector<OptimizableQuery> load_queries_from_csv(const std::string workload_f
 
     // If query id has changed store current node in output queries and create new initial node 
     if (query_id > 0 && query_id != previous_query_id) {
-      auto optimizable_query = OptimizableQuery(current_node, column_ids, query_selectivities, expressions);
+      auto optimizable_query = OptimizableQuery{current_node, column_ids, query_selectivities, expressions};
       output.emplace_back(optimizable_query);
       stored_table_node = StoredTableNode::make(TABLE_NAME);
       previous_node = stored_table_node;
@@ -528,7 +528,7 @@ std::vector<OptimizableQuery> load_queries_from_csv(const std::string workload_f
     previous_predicate_selectivity = predicate_selectivity;
     previous_node = current_node;
   }
-  auto optimizable_query = OptimizableQuery(current_node, column_ids, query_selectivities, expressions);
+  auto optimizable_query = OptimizableQuery{current_node, column_ids, query_selectivities, expressions};
   output.emplace_back(optimizable_query);  // Store last query
 
   return output;
