@@ -16,6 +16,8 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "magic_enum.hpp"
 #include "storage/table.hpp"
+#include "utils/timer.hpp"
+#include "utils/format_duration.hpp"
 
 #include "resolve_type.hpp"
 
@@ -26,6 +28,7 @@ std::string JoinToLocalPredicateRewritePlugin::description() const {
 }
 
 void JoinToLocalPredicateRewritePlugin::start() {
+    auto t = Timer();
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was started..." << std::endl;
 
     const auto ucc_candidates = *identify_ucc_candidates();
@@ -57,20 +60,12 @@ void JoinToLocalPredicateRewritePlugin::start() {
             continue;
         }
 
-        const auto num_rows = table->row_count();
-
         resolve_data_type(table->column_data_type(col_id), [&](const auto data_type_t) {
             using ColumnDataType = typename decltype(data_type_t)::type;
-            using VectorIterator = pmr_vector<ColumnDataType>::iterator;
 
-            // We need to remember if the column contains compressed or uncompressed values.
-            // For mixed compressed and uncompressed segments, we can't benefit from pre-sorted sub-vectors, so we treat these columns the same as uncompressed ones.
-            auto compressed = true;
-
-            // all_values contains the segment values from all chunks.
-            auto all_values = std::unique_ptr<pmr_vector<ColumnDataType>>();
-            // We remember the start iterators of the sub-vectors in all_values that can be merged for pure compressed columns. No random access is needed, so a list is used for performance reasons.
-            auto start_iterators = std::list<VectorIterator>{};
+            // all_values collects the segment values from all chunks.
+            auto all_values = std::make_unique<std::unordered_set<ColumnDataType>>();
+            auto all_values_size = all_values->size();
 
             // We can use an early-out if we find a single dict segment that contains a duplicate.
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id ++) {
@@ -93,18 +88,17 @@ void JoinToLocalPredicateRewritePlugin::start() {
                 const auto& source_chunk = table->get_chunk(chunk_id);
                 const auto& source_segment = source_chunk->get_segment(col_id);
 
-                if (chunk_id == 0) {
-                    all_values = std::make_unique<pmr_vector<ColumnDataType>>();
-                    all_values->reserve(num_rows);
-                }
-
                 if (std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment)) {
                     const auto& val_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment);
                     const auto& values = val_segment->values();
 
-                    compressed = false;
-
-                    std::copy(begin(values), end(values), std::back_inserter(*all_values));
+                    all_values->insert(begin(values), end(values));
+                    if (all_values->size() == all_values_size + values.size()) {
+                        all_values_size += values.size();
+                    } else {
+                        // If not all elements have been inserted, there must have occured a duplicate, so the UCC constraint is violated.
+                        return;
+                    }
 
                     std::cout << values.size() << std::endl;
                     std::cout << "----" << std::endl;
@@ -113,8 +107,13 @@ void JoinToLocalPredicateRewritePlugin::start() {
                     const auto& dict = dict_segment->dictionary();
                     const auto& attr_vector = dict_segment->attribute_vector();
                     
-                    start_iterators.push_back(all_values->end());
-                    std::copy(begin(*dict), end(*dict), std::back_inserter(*all_values));
+                    all_values->insert(begin(*dict), end(*dict));
+                    if (all_values->size() == all_values_size + dict->size()) {
+                        all_values_size += dict->size();
+                    } else {
+                        // If not all elements have been inserted, there must have occured a duplicate, so the UCC constraint is violated.
+                        return;
+                    }
 
                     std::cout << dict->size() << std::endl;
                     std::cout << attr_vector->size() << std::endl;
@@ -124,27 +123,14 @@ void JoinToLocalPredicateRewritePlugin::start() {
                 }
             }
 
-            if (compressed) {
-                // We merge the sorted sub-vectors until there is only one sub-vector left. Then, all_values is sorted.
-                while (start_iterators.size() > 1) {
-                    for (auto start_it = begin(start_iterators); start_it != start_iterators.end() && std::next(start_it, 1) != start_iterators.end(); start_it ++) {
-                        std::inplace_merge(*start_it, *(std::next(start_it, 1)), *(std::next(start_it, 2)));
-                        start_iterators.erase(std::next(start_it, 1));
-                    }
-                }
-            } else {
-                // There is no guarantee for sorted sub-vectors of a certain length, so we conventionally sort.
-                std::sort(begin(*all_values), end(*all_values));
-            }
+            // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
+            std::cout << "Discovered UCC candidate: " << table->column_name(col_id) << std::endl;
+            table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
 
-            if (std::unique(begin(*all_values), end(*all_values)) == all_values->end()) {
-                // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
-                std::cout << "Identified uniqueness constraint on: " << table->column_name(col_id) << std::endl;
-                table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
-            }
             std::cout << std::endl;
         });
     }
+    std::cout << "Time with v2 solution: " << format_duration(t.lap()) << std::endl;
 }
 
 void JoinToLocalPredicateRewritePlugin::stop() {
