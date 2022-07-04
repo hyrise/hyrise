@@ -1866,7 +1866,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       const auto target_data_type = data_type_iter->second;
       // Omit redundant casts
       if (source_data_type == target_data_type) {
-        return std::const_pointer_cast<AbstractExpression>(left);
+        return left;
       }
       return cast_(left, target_data_type);
     }

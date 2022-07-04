@@ -44,8 +44,8 @@ std::string ExtractExpression::description(const DescriptionMode mode) const {
 }
 
 DataType ExtractExpression::data_type() const {
-  // Dates are Strings, DateComponents COULD be Ints, but lets leave it at String for now
-  return DataType::String;
+  // Timestamps can contain fractional seconds, so the result must be a floating-point number.
+  return datetime_component == DatetimeComponent::Second ? DataType::Double : DataType::Int;
 }
 
 std::shared_ptr<AbstractExpression> ExtractExpression::from() const {
