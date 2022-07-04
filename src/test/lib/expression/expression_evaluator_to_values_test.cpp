@@ -808,6 +808,13 @@ TEST_F(ExpressionEvaluatorToValuesTest, ExtractSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Day, timestamps),
                                        {6, 5, 3, 3, 2, std::nullopt}));
 
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Hour, dates),
+                                       {0, 0, 0, 0, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Minute, dates),
+                                       {0, 0, 0, 0, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<double>(table_date_time, *extract_(DatetimeComponent::Second, dates),
+                                      {0, 0, 0, 0, std::nullopt, std::nullopt}));
+
   EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Hour, timestamps),
                                        {1, 2, 3, 2, 0, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Minute, timestamps),
