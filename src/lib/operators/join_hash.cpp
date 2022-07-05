@@ -25,9 +25,9 @@ namespace opossum {
 enum Purpose {None, HashStuffTest};
 
 template <typename T>
-PolymorphicAllocator<T> alloc(Purpose P = Purpose::None) {
+PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
   return PolymorphicAllocator<T>{
-    &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, static_cast<std::string>(magic_enum::enum_name(P))))};
+    &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure))};
 }
 
 bool JoinHash::supports(const JoinConfiguration config) {
@@ -491,7 +491,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // demo data structures for memory tracking. Needs to be changed to use the real operator step name.
     auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>());
-    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>(Purpose::HashStuffTest));
+    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("HashStuffTestString"));
 
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
