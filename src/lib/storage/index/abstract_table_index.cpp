@@ -28,7 +28,10 @@ IteratorWrapper::IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table
 IteratorWrapper::IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
 
 IteratorWrapper& IteratorWrapper::operator=(const IteratorWrapper& other) {
-  _impl = other._impl->clone();
+  if (&other != this) {
+    _impl = other._impl->clone();
+  }
+
   return *this;
 }
 
