@@ -44,6 +44,11 @@ class AbstractPosList : private Noncopyable {
     }
 
     DereferenceReturnType dereference() const {
+      // std::cout << "Error. offset " << _chunk_offset << std::endl;
+      // std::cout << "Error. pos list size " <<  _pos_list->size() << std::endl;
+      if (_chunk_offset >= _pos_list->size()) {
+        std::cout << "Error. offset " << _chunk_offset << " and pos list size " <<  _pos_list->size() << std::endl;
+      }
       DebugAssert(_chunk_offset < _pos_list->size(), "past-the-end PosListIterator dereferenced");
       return (*_pos_list)[_chunk_offset];
     }

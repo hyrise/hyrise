@@ -449,4 +449,25 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   EXPECT_EQ(sum, 13'702u);
 }
 
+TEST_F(IterablesTest, Bounce) {
+  auto table = load_table("resources/test_data/tbl/test_anysegmentiterable.tbl", ChunkOffset{5});
+
+  std::cout << "Chunk count is " << table->chunk_count() << std::endl;
+
+  auto pos_list = RowIDPosList{RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{2}, ChunkOffset{3}},
+                               RowID{ChunkID{1}, ChunkOffset{1}}, RowID{ChunkID{3}, ChunkOffset{2}}, NULL_ROW_ID,
+                               RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{2}, ChunkOffset{1}}, NULL_ROW_ID,
+                               RowID{ChunkID{0}, ChunkOffset{4}}, RowID{ChunkID{3}, ChunkOffset{1}}};
+
+  const auto reference_segment =
+      std::make_unique<ReferenceSegment>(table, ColumnID{0}, std::make_shared<RowIDPosList>(std::move(pos_list)));
+
+  const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
+
+  auto sum = int32_t{0};
+  auto accessed_offsets = std::vector<ChunkOffset>{};
+  iterable.with_iterators(SumUpWithIterator<int32_t>{sum, accessed_offsets});
+
+}
+
 }  // namespace opossum
