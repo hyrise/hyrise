@@ -22,12 +22,12 @@
 
 namespace opossum {
 
-enum Purpose {None, HashStuffTest};
+enum Purpose { None, HashStuffTest };
 
 template <typename T>
 PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
   return PolymorphicAllocator<T>{
-    &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure))};
+      &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure))};
 }
 
 bool JoinHash::supports(const JoinConfiguration config) {
