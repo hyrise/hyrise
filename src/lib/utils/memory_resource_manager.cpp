@@ -2,22 +2,17 @@
 
 namespace opossum {
 
-const std::unordered_map<std::string, std::shared_ptr<TrackingMemoryResource>>&
-MemoryResourceManager::memory_resources() const {
+const std::map<std::pair<OperatorType, std::string>, std::shared_ptr<TrackingMemoryResource>>& MemoryResourceManager::memory_resources() const {
   return _memory_resources;
 }
 
-std::shared_ptr<TrackingMemoryResource> MemoryResourceManager::get_memory_resource(const std::string& purpose) {
+std::shared_ptr<TrackingMemoryResource> MemoryResourceManager::get_memory_resource(const OperatorType operator_type, const std::string& operator_data_structure) {
   // TODO: think about concurrency
-  if (!_memory_resources.contains(purpose)) {
-    _memory_resources.emplace(purpose, std::make_shared<TrackingMemoryResource>());
+  const auto key = std::make_pair(operator_type, operator_data_structure);
+  if (!_memory_resources.contains(key)) {
+    _memory_resources.emplace(key, std::make_shared<TrackingMemoryResource>());
   }
-  return _memory_resources[purpose];
-}
-
-PolymorphicAllocator<std::byte> MemoryResourceManager::get_pmr_allocator(const std::string& purpose) {
-  // TODO: remove &(*..) hack (used to convert smart pointer to normal pointer)
-  return PolymorphicAllocator<std::byte>{&(*get_memory_resource(purpose))};
+  return _memory_resources[key];
 }
 
 }  // namespace opossum

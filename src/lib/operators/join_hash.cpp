@@ -27,7 +27,7 @@ enum Purpose {None, HashStuffTest};
 template <typename T>
 PolymorphicAllocator<T> alloc(Purpose P = Purpose::None) {
   return PolymorphicAllocator<T>{
-    &(*Hyrise::get().memory_resource_manager.get_memory_resource(static_cast<std::string>(magic_enum::enum_name(P))))};
+    &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, static_cast<std::string>(magic_enum::enum_name(P))))};
 }
 
 bool JoinHash::supports(const JoinConfiguration config) {

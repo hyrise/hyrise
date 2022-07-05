@@ -4,7 +4,6 @@
 
 #include <boost/functional/hash_fwd.hpp>
 
-#include "memory/tracking_allocator.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
