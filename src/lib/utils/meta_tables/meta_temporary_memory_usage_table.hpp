@@ -7,9 +7,9 @@ namespace opossum {
 /**
  * TODO
  */
-class MetaMemoryTable : public AbstractMetaTable {
+class MetaTemporaryMemoryUsageTable : public AbstractMetaTable {
  public:
-  MetaMemoryTable();
+  MetaTemporaryMemoryUsageTable();
   const std::string& name() const final;
 
  protected:
