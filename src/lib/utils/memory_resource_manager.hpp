@@ -7,6 +7,7 @@
 #include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
+#include <oneapi/tbb/concurrent_vector.h>
 
 namespace opossum {
 
@@ -21,7 +22,7 @@ struct TrackedResource {
 class MemoryResourceManager : public Noncopyable {
  public:
   // TODO comment
-  const std::vector<TrackedResource>& memory_resources() const;
+  const tbb::concurrent_vector<TrackedResource>& memory_resources() const;
   std::shared_ptr<TrackingMemoryResource> get_memory_resource(const OperatorType operator_type, const std::string& operator_data_structure);
 
  protected:
@@ -29,7 +30,7 @@ class MemoryResourceManager : public Noncopyable {
   friend class Hyrise;
   MemoryResourceManager() = default;
 
-  std::vector<TrackedResource> _memory_resources;
+  tbb::concurrent_vector<TrackedResource> _memory_resources;
 };
 
 }  // namespace opossum
