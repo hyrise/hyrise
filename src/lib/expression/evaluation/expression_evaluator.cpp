@@ -809,40 +809,34 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
   const auto from_result = evaluate_expression_to_result<pmr_string>(*extract_expression.from());
 
   if constexpr (std::is_same_v<Result, int32_t>) {
-    Assert(datetime_component != DatetimeComponent::Second, "Anything but SECOND is extracted as Int");
     switch (datetime_component) {
       case DatetimeComponent::Year:
-        return _evaluate_extract_component<int32_t>(
-            *from_result, [](const auto& /*timestamp*/, const auto& date) { return date.year(); });
+        return _evaluate_extract_component<int32_t>(*from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().year(); });
       case DatetimeComponent::Month:
-        return _evaluate_extract_component<int32_t>(
-            *from_result, [](const auto& /*timestamp*/, const auto& date) { return date.month(); });
+        return _evaluate_extract_component<int32_t>(*from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().month(); });
       case DatetimeComponent::Day:
-        return _evaluate_extract_component<int32_t>(
-            *from_result, [](const auto& /*timestamp*/, const auto& date) { return date.day(); });
+        return _evaluate_extract_component<int32_t>(*from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().day(); });
       case DatetimeComponent::Hour:
         return _evaluate_extract_component<int32_t>(
-            *from_result, [](const std::optional<boost::posix_time::ptime>& timestamp, const auto& /*date*/) {
-              return timestamp->time_of_day().hours();
-            });
+            *from_result, [](const auto& timestamp) { return timestamp.time_of_day().hours(); });
       case DatetimeComponent::Minute:
         return _evaluate_extract_component<int32_t>(
-            *from_result, [](const std::optional<boost::posix_time::ptime>& timestamp, const auto& /*date*/) {
-              return timestamp->time_of_day().minutes();
-            });
+            *from_result, [](const auto& timestamp) { return timestamp.time_of_day().minutes(); });
       case DatetimeComponent::Second:
-        Fail("SECOND must be extracted as Float");
+        Fail("SECOND must be extracted as Double");
     }
   } else if constexpr (std::is_same_v<Result, double>) {
-    Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Float");
-    return _evaluate_extract_component<double>(
-        *from_result, [](const std::optional<boost::posix_time::ptime>& timestamp, const auto& /*date*/) {
-          const auto& time_of_day = timestamp->time_of_day();
-          return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
-                                                                  static_cast<double>(time_of_day.ticks_per_second());
-        });
+    Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double");
+    return _evaluate_extract_component<double>(*from_result, [](const auto& timestamp) {
+      const auto& time_of_day = timestamp.time_of_day();
+      return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
+                                                              static_cast<double>(time_of_day.ticks_per_second());
+    });
   } else {
-    Fail("ExtractExpression returns a numeric type");
+    Fail("ExtractExpression returns Int or Double");
   }
 }
 
@@ -859,12 +853,12 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
         if (value.size() > 10u) {
           const auto& timestamp = string_to_date_time(value);
           Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'");
-          values[chunk_offset] = extract_component(timestamp, timestamp->date());
+          values[chunk_offset] = extract_component(*timestamp);
 
         } else {
           const auto& date = string_to_date(value);
           Assert(date, "Invalid ISO 8601 extended date '" + value + "'");
-          values[chunk_offset] = extract_component(std::nullopt, *date);
+          values[chunk_offset] = extract_component(boost::posix_time::ptime{*date, {}});
         }
       }
     }
