@@ -4,7 +4,6 @@
 #include <map>
 
 #include "memory/tracking_memory_resource.hpp"
-#include "operators/abstract_operator.hpp"
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
 #include <oneapi/tbb/concurrent_vector.h>

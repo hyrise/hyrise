@@ -18,41 +18,6 @@ class OperatorTask;
 class Table;
 class TransactionContext;
 
-enum class OperatorType {
-  Aggregate,
-  Alias,
-  ChangeMetaTable,
-  CreateTable,
-  CreatePreparedPlan,
-  CreateView,
-  DropTable,
-  DropView,
-  Delete,
-  Difference,
-  Export,
-  GetTable,
-  Import,
-  IndexScan,
-  Insert,
-  JoinHash,
-  JoinIndex,
-  JoinNestedLoop,
-  JoinSortMerge,
-  JoinVerification,
-  Limit,
-  Print,
-  Product,
-  Projection,
-  Sort,
-  TableScan,
-  TableWrapper,
-  UnionAll,
-  UnionPositions,
-  Update,
-  Validate,
-  Mock  // for Tests that need to Mock operators
-};
-
 // The state enum values are declared in progressive order to allow for comparisons involving the >, >= operators.
 enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 

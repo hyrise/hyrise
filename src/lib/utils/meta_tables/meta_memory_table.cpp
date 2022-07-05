@@ -1,5 +1,7 @@
 #include "meta_memory_table.hpp"
 
+#include <magic_enum.hpp>
+
 #include "hyrise.hpp"
 
 namespace opossum {
