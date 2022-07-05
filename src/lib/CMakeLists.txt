@@ -170,7 +170,6 @@ set(
     lossless_cast.hpp
     lossy_cast.hpp
     memory/boost_default_memory_resource.cpp
-    memory/tracking_allocator.hpp
     memory/tracking_memory_resource.hpp
     memory/tracking_memory_resource.cpp
     memory/zero_allocator.hpp

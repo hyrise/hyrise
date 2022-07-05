@@ -22,6 +22,14 @@
 
 namespace opossum {
 
+enum Purpose {None, HashStuffTest};
+
+template <typename T>
+PolymorphicAllocator<T> alloc(Purpose P = Purpose::None) {
+  return PolymorphicAllocator<T>{
+    &(*Hyrise::get().memory_resource_manager.get_memory_resource(static_cast<std::string>(magic_enum::enum_name(P))))};
+}
+
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
   // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't
@@ -480,8 +488,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     /**
      * 4. Probe step
      */
-    auto build_side_pos_lists = tracking_vector<RowIDPosList>{};
-    auto probe_side_pos_lists = tracking_vector<RowIDPosList>{};
+
+    // demo data structures for memory tracking. Needs to be changed to use the real operator step name.
+    auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>());
+    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>(Purpose::HashStuffTest));
 
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
