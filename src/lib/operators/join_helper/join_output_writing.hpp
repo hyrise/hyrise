@@ -15,8 +15,8 @@ enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, Right
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByChunk = std::vector<std::shared_ptr<PosLists>>;
 
-template <typename T, Purpose P = Purpose::HashJoinMaterialization>
-using tracking_vector = std::vector<T, TrackingAllocator<T, P>>;
+template <typename T>
+using tracking_vector = std::vector<T, TrackingAllocator<T>>;
 
 /**
  * Returns a vector where each entry with index i references a PosLists object. The PosLists object
