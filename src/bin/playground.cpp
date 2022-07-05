@@ -1006,6 +1006,7 @@ int main() {
     // Write memory usage of indexes and table to memory consumption csv file 
     auto mem_usage = sorted_table->memory_usage(MemoryUsageCalculationMode::Full) + index_memory_consumption.load();
     memory_consumption_csv_file << conf_name << "," << mem_usage << "," << index_memory_consumption.load() << "," << sorted_table->memory_usage(MemoryUsageCalculationMode::Full) <<"\n";
+    memory_consumption_csv_file.flush();
 
     // We load queries here, as the construction of the queries needs the existing actual table
     const auto queries = load_queries_from_csv(WORKLOAD_FILE);
@@ -1015,6 +1016,7 @@ int main() {
     for (auto const& query : queries) {
       const auto query_runtime = partially_optimize_translate_and_execute_query(query, conf_name, std::to_string(query_id));
       performance_csv_file << conf_name << "," << query_id << "," << query_runtime << "\n";
+      performance_csv_file.flush();
       query_id += 1;
     }
     std::cout << " done" << std::endl;
