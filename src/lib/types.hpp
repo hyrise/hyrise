@@ -290,11 +290,11 @@ namespace std {
 // The hash method for pmr_string (see above). We explicitly don't use the alias here as this allows us to write
 // `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
 // function.
-template <>
-struct hash<std::basic_string<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>>> {
-  size_t operator()(
-      const std::basic_string<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>>& string) const {
-    return std::hash<std::string_view>{}(string.c_str());
-  }
-};
+// template <>
+// struct hash<std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>> {
+//   size_t operator()(
+//       const std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>& string) const {
+//     return std::hash<std::string_view>{}(string.c_str());
+//   }
+// };
 }  // namespace std
