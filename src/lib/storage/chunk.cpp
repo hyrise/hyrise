@@ -271,6 +271,15 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
         break;
       }
 
+      // segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
+      //   std::cout << "Printing segment" << std::endl;
+      //   while (begin != end) {
+      //     std::cout << begin->value() << " ";
+      //     ++begin;
+      //   }
+      //   std::cout << std::endl;
+      // });
+
       segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
         Assert(std::is_sorted(begin, end,
                               [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
@@ -283,6 +292,7 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
                                   return true;
                                 }
                                 const auto ascending = sort_mode == SortMode::Ascending;
+                                // std::cout << " ascending ? left.value() < right.value() : left.value() > right.value() >>>>> " << ascending << ": " << left.value() << " < " << right.value() << " | "  << left.value() << " > " << right.value() << std::endl;;
                                 return ascending ? left.value() < right.value() : left.value() > right.value();
                               }),
                "Setting a sort order for a segment which is not sorted accordingly.");

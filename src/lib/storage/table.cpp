@@ -320,6 +320,7 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
       segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
         if (!segment_position.is_null()) {
+          std::cout << "Dingsing offset " << segment_position.chunk_offset() << " and value " << segment_position.value() << std::endl;
           rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
         }
       });

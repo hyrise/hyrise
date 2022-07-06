@@ -168,208 +168,138 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         const std::shared_ptr<const Table>& referenced_table, const ColumnID referenced_column_id,
         const std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>>& accessors,
         const PosListIteratorType& begin_pos_list_it, const PosListIteratorType& end_pos_list_it,
-        const PosListIteratorType& pos_list_it, const long pos_list_size, const ChunkOffset chunk_offset)
+        const PosListIteratorType& pos_list_it, const int64_t pos_list_size, const ChunkOffset chunk_offset)
         : _referenced_table{referenced_table},
           _referenced_column_id{referenced_column_id},
           _begin_pos_list_it{begin_pos_list_it},
+          _end_pos_list_it{end_pos_list_it},
           _pos_list_it{pos_list_it},
+          _pos_list_size{pos_list_size},
           _accessors{accessors},
           _chunk_offset{chunk_offset} {
-            // TODO: skip the whole initialization until chunk_offset is moved. Otherwise, end() is too
-            // expensive and we want to ensure that end can be decremented.
-            const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(referenced_table->row_count()) / static_cast<float>(pos_list_size));
-            _positions_by_chunk.reserve(referenced_table->chunk_count());
+      DebugAssert(_referenced_table->type() == TableType::Data, "Referenced table must be a data table.");
 
-            // Create positions by chunk.
-            // Create any segment iterables for every chunk with their current position.
-            // We'll have a pair of <ChunkID, AnySegmentOffset> to 
-            auto temporary_chunk_counters = std::unordered_map<ChunkID, ChunkOffset>{};
-            for (auto iter = begin_pos_list_it; iter != end_pos_list_it; ++iter) {
-              const auto& pos_list_item = *iter;
-
-              if (pos_list_item == NULL_ROW_ID) {
-                // _pos_list_chunk_offsets.emplace_back(NULL_ROW_ID);
-                _pos_list_chunk_offsets.emplace_back(INVALID_CHUNK_ID, ChunkOffset{0});
-                continue;
-              }
-
-              if (!_positions_by_chunk.contains(pos_list_item.chunk_id)) {
-                _positions_by_chunk[pos_list_item.chunk_id] = std::make_shared<RowIDPosList>();
-                _positions_by_chunk[pos_list_item.chunk_id]->reserve(estimated_row_count_per_chunk);
-                temporary_chunk_counters[pos_list_item.chunk_id] = 0;
-              }
-
-              _positions_by_chunk[pos_list_item.chunk_id]->emplace_back(pos_list_item);
-              _pos_list_chunk_offsets.emplace_back(pos_list_item.chunk_id, temporary_chunk_counters[pos_list_item.chunk_id]);
-              ++temporary_chunk_counters[pos_list_item.chunk_id];
-            }
-
-            for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
-              pos_list->guarantee_single_chunk();
-              // std::cout << "\n" << chunk_id;
-              // for (auto item : *pos_list) {
-              //   std::cout << "aaa " << item;
-              // }
-
-              const auto& segment = referenced_table->get_chunk(chunk_id)->get_segment(referenced_column_id);
-              resolve_data_and_segment_type(*segment, [&, chunk_id=chunk_id, pos_list=pos_list](const auto data_type_t, const auto& typed_segment) {
-                // using ColumnDataType = typename decltype(data_type_t)::type;
-
-                const auto iterable = create_any_segment_iterable<T>(typed_segment);
-                iterable.with_iterators(pos_list, [&](auto begin, const auto& end) {
-                  // AnySegmentIterator<T> test = begin;
-                  // AnySegmentIterator<T> test2 = end;
-                  // auto test3 = std::tuple<AnySegmentIterator<T>, AnySegmentIterator<T>, ChunkOffset>{begin, end, ChunkOffset{0}};
-                  // auto testili = Testili<T>(begin, end, ChunkOffset{0});
-                  // std::cout << std::get<2>(test3) << std::endl;
-                  // _iterators_by_chunk[chunk_id] = std::tuple<AnySegmentIterator<T>, AnySegmentIterator<T>, ChunkOffset>{begin, end, ChunkOffset{0}};
-                  // _iterators_by_chunk[chunk_id] = std::make_tuple(begin, end, ChunkOffset{0});
-                  // _iterators_by_chunk[chunk_id] = std::move(test3);
-                  // _iterators_by_chunk.emplace(chunk_id, testili);
-                  // _iterators_by_chunk.emplace(chunk_id, std::make_tuple(begin, end, ChunkOffset{0}));
-                  std::cout << "Adding iterator for chunk #" << chunk_id << " with a pos list size of " << pos_list->size() << std::endl;
-                  _iterators_by_chunk.emplace(chunk_id, std::make_tuple(begin, end, ChunkOffset{0}));
-                  // std::cout << chunk_id << testili.chunk_offset << std::endl;
-                });
-              });
-            }
-
-            std::cout << "POS_LIST:                ";
-            for (auto iter = begin_pos_list_it; iter != end_pos_list_it; ++iter) {
-              const auto& pos_list_item = *iter;
-              std::cout << pos_list_item << " ";
-            }
-            std::cout << std::endl;
-
-            std::cout << "_pos_list_chunk_offsets: ";
-            for (const auto& pos_list_chunk_offset : _pos_list_chunk_offsets) {
-              std::cout << "[" << pos_list_chunk_offset.first << "," << pos_list_chunk_offset.second << "] ";
-            }
-            std::cout << std::endl;
-          }
+      // The setup can be quite expensive. As it is not required for simple end() iterators that are never moved, we
+      // do not initialze all data structures for end() iterators. This comes with the cost, that we now have to check
+      // for every iterator movements whether the data structures are already initialized, because someone might
+      // decrement end().
+      if (_chunk_offset < pos_list_size) {
+        _initialize();
+      }
+    }
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
     void increment() {
-      ++_chunk_offset;
-
-      if (_pos_list_chunk_offsets[_chunk_offset].first == INVALID_CHUNK_ID) {
-        // No need to move an iterator.
-        return;
+      if (!_is_initialized) {
+        _initialize();
       }
 
-      // Get corresponding iterator and increment.
-      const auto& pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
-      ++std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-      ++std::get<2>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
+      ++_chunk_offset;
     }
 
     void decrement() {
-      --_chunk_offset;
-
-      if (_pos_list_chunk_offsets[_chunk_offset].first == INVALID_CHUNK_ID) {
-        // No need to move an iterator.
-        return;
+      if (!_is_initialized) {
+        _initialize();
       }
 
-      // Get corresponding iterator and increment.
-      const auto& pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
-      --std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-      --std::get<2>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-      std::cout << "Decremented" << std::endl;
+      --_chunk_offset;
     }
 
     void advance(std::ptrdiff_t n) {
+      if (!_is_initialized) {
+        _initialize();
+      }
+
       _chunk_offset += n;
-
-      if (_pos_list_chunk_offsets[_chunk_offset].first == INVALID_CHUNK_ID) {
-        // No need to move an iterator.
-        return;
-      }
-
-      // Get corresponding iterator and increment.
-      const auto& pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
-      const auto current_iterator_offset = std::get<2>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-
-      // Move iterator
-      for (auto index = size_t{current_iterator_offset}; index < pos_list_chunk_offset.second; ++index) {
-        ++std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-        ++std::get<2>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-      }
-      for (auto index = int64_t{current_iterator_offset}; index > pos_list_chunk_offset.second; --index) {
-        --std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-        ++std::get<2>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-      }
-      std::cout << "Advanced" << std::endl;
     }
 
     bool equal(const MultipleChunkIterator& other) const {
-      return _pos_list_it == other._pos_list_it;
+      // std::cout << "Comparing " << _chunk_offset << " and " << other._chunk_offset << std::endl;
+      return _chunk_offset == other._chunk_offset;
     }
 
     std::ptrdiff_t distance_to(const MultipleChunkIterator& other) const {
-      return other._chunk_offset - _chunk_offset;
+      return static_cast<std::ptrdiff_t>(other._chunk_offset) - static_cast<std::ptrdiff_t>(_chunk_offset);
     }
 
-    // TODO(anyone): benchmark if using two maps instead doing the dynamic cast every time really is faster.
     SegmentPosition<T> dereference() const {
       if (_pos_list_chunk_offsets[_chunk_offset].first == INVALID_CHUNK_ID) {
-        std::cout << "Return: NULL" << std::endl;
         return SegmentPosition<T>{T{}, true, _chunk_offset};
       }
 
+      DebugAssert(_is_initialized, "Derefencing uninitialized multi-segment iterator.");
+      DebugAssert(_chunk_offset < _pos_list_chunk_offsets.size(), "Invalid access into offsets.");
       const auto& pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
-      std::cout << "Get element at inital_pos_list_pos" << _chunk_offset << " which links chunk #" << pos_list_chunk_offset.first << " and pos " << pos_list_chunk_offset.second << std::endl;
-      std::cout << "Return: " << (*std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first))).value() << " (" << (*std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first))).is_null() << ")" << std::endl;
-      return *std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
+      DebugAssert(_iterators_by_chunk.contains(pos_list_chunk_offset.first), "No stored iterator for chunk.");
+      const auto iter = std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first)) + pos_list_chunk_offset.second;
 
-      // // Get current offset the iterator is positioned at.
-      // const auto pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
-
-      // std::cout << "$$1 " << pos_list_chunk_offset.first << std::endl;
-      // const auto current_iterator_offset = std::get<2>(_iterators_by_chunk.at(pos_list_chunk_offset.first));
-      // std::cout << "$$2 " << current_iterator_offset << std::endl;
-
-      // auto& testili = _iterators_by_chunk.at(pos_list_chunk_offset.first);
-      // auto& iterator = std::get<0>(testili);
-
-      // Move iterator
-      // for (auto index = size_t{current_iterator_offset}; index < pos_list_chunk_offset.second; ++index) {
-      //   ++iterator;
-      // }
-      // for (auto index = int64_t{current_iterator_offset}; index > pos_list_chunk_offset.second; --index) {
-      //   --iterator;
-      // }
-
-      // return *iterator;
-
-      // return SegmentPosition<T>{T{}, true, _chunk_offset};
-      // if (_pos_list_it->is_null()) {
-      //   return SegmentPosition<T>{T{}, true, pos_list_offset};
-      // }
-
-      // const auto chunk_id = _pos_list_it->chunk_id;
-
-      // if (!(*_accessors)[chunk_id]) {
-      //   _create_accessor(chunk_id);
-      // }
-
-      // const auto chunk_offset = _pos_list_it->chunk_offset;
-
-      // const auto typed_value = (*_accessors)[chunk_id]->access(chunk_offset);
-
-      // if (typed_value) {
-      //   return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
-      // } else {
-      //   return SegmentPosition<T>{T{}, true, pos_list_offset};
-      // }
+      std::cout << "Returning value " << iter->value() << " and is it NULL? " << iter->is_null() << std::endl;
+      // We need to adapt the chunk_offset. It might stem from a temporary pos list.
+      return SegmentPosition<T>{iter->value(), iter->is_null(), _chunk_offset};
     }
 
     void _create_accessor(const ChunkID chunk_id) const {
       auto segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
       auto accessor = std::move(create_segment_accessor<T>(segment));
       (*_accessors)[chunk_id] = std::move(accessor);
+    }
+
+    void _initialize() {
+      const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_referenced_table->row_count()) / static_cast<float>(_pos_list_size));
+      _positions_by_chunk.reserve(_referenced_table->chunk_count());
+
+      // Create positions by chunk.
+      // Create any segment iterables for every chunk with their current position.
+      // We'll have a pair of <ChunkID, AnySegmentOffset> to know how far we have to advance begin() for each item
+      // of the inital position list.
+      auto temporary_chunk_counters = std::unordered_map<ChunkID, ChunkOffset>{};
+      for (auto iter = _begin_pos_list_it; iter != _end_pos_list_it; ++iter) {
+        const auto& pos_list_item = *iter;
+
+        if (pos_list_item == NULL_ROW_ID) {
+          _pos_list_chunk_offsets.emplace_back(INVALID_CHUNK_ID, ChunkOffset{0});
+          continue;
+        }
+
+        if (!_positions_by_chunk.contains(pos_list_item.chunk_id)) {
+          _positions_by_chunk[pos_list_item.chunk_id] = std::make_shared<RowIDPosList>();
+          _positions_by_chunk[pos_list_item.chunk_id]->reserve(estimated_row_count_per_chunk);
+          temporary_chunk_counters[pos_list_item.chunk_id] = 0;
+        }
+
+        _positions_by_chunk[pos_list_item.chunk_id]->emplace_back(pos_list_item);
+        _pos_list_chunk_offsets.emplace_back(pos_list_item.chunk_id, temporary_chunk_counters[pos_list_item.chunk_id]);
+        ++temporary_chunk_counters[pos_list_item.chunk_id];
+      }
+
+      for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
+        pos_list->guarantee_single_chunk();
+
+        const auto& segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
+        resolve_data_and_segment_type(*segment, [&, chunk_id=chunk_id, pos_list=pos_list](const auto data_type_t, const auto& typed_segment) {
+          const auto iterable = create_any_segment_iterable<T>(typed_segment);
+          iterable.with_iterators(pos_list, [&](auto begin, const auto& end) {
+            _iterators_by_chunk.emplace(chunk_id, std::make_tuple(begin, end, ChunkOffset{0}));
+          });
+        });
+      }
+
+      // std::cout << "POS_LIST:                ";
+      // for (auto iter = _begin_pos_list_it; iter != _end_pos_list_it; ++iter) {
+      //   const auto& pos_list_item = *iter;
+      //   std::cout << pos_list_item << " ";
+      // }
+      // std::cout << std::endl;
+
+      // std::cout << "_pos_list_chunk_offsets: ";
+      // for (const auto& pos_list_chunk_offset : _pos_list_chunk_offsets) {
+      //   std::cout << "[" << pos_list_chunk_offset.first << "," << pos_list_chunk_offset.second << "] ";
+      // }
+      // std::cout << std::endl;
+
+      _is_initialized = true;
     }
 
    private:
@@ -385,12 +315,17 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::vector<std::pair<ChunkID, ChunkOffset>> _pos_list_chunk_offsets{};
 
     PosListIteratorType _begin_pos_list_it;
+    PosListIteratorType _end_pos_list_it;
     PosListIteratorType _pos_list_it;
+
+    int64_t _pos_list_size;
 
     // PointAccessIterators share vector with one Accessor per Chunk
     std::shared_ptr<std::vector<std::shared_ptr<AbstractSegmentAccessor<T>>>> _accessors;
 
     ChunkOffset _chunk_offset;
+
+    bool _is_initialized{false};
   };
 };
 

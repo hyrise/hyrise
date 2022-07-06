@@ -4,6 +4,13 @@
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 
+
+
+
+
+
+#include "operators/print.hpp"
+
 namespace opossum {
 
 struct SortTestParam {
@@ -227,6 +234,8 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
 
   const auto weird_table_wrapper = std::make_shared<TableWrapper>(weird_table);
   weird_table_wrapper->execute();
+
+  Print::print(weird_table);
 
   auto sort = Sort{weird_table_wrapper, {SortColumnDefinition{ColumnID{0}, SortMode::Descending}}};
   sort.execute();
