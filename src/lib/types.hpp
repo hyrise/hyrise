@@ -291,9 +291,9 @@ namespace std {
 // `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
 // function.
 template <>
-struct hash<std::basic_string<char, std::char_traits<char>, std::pmr::PolymorphicAllocator<char>>> {
+struct hash<std::basic_string<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>>> {
   size_t operator()(
-      const std::basic_string<char, std::char_traits<char>, std::pmr::PolymorphicAllocator<char>>& string) const {
+      const std::basic_string<char, std::char_traits<char>, std::pmr::polymorphic_allocator<char>>& string) const {
     return std::hash<std::string_view>{}(string.c_str());
   }
 };
