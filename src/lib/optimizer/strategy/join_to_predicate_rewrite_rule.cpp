@@ -89,7 +89,7 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
   testable_expressions.insert(exchangable_column_expr);
 
   if (!removable_subtree->has_matching_unique_constraint(testable_expressions)) {
-    std::cout << "No unique constraint matching the given column found..." << std::endl;
+    std::cout << "No unique constraint for join column found..." << exchangable_column_expr->description() << std::endl;
     return false;
   }
 
@@ -121,6 +121,15 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
 
     // in case Predicate column expr != join column expression, check whether the column referenced is still available in join
     if (!expression_evaluable_on_lqp(candidate_column_expr, *removable_subtree)) {
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Check for uniqueness
+    auto testable_expressions = ExpressionUnorderedSet{};
+    testable_expressions.insert(candidate_column_expr);
+
+    if (!removable_subtree->has_matching_unique_constraint(testable_expressions)) {
+      std::cout << "No unique constraint matching the predicate column found..." << candidate_column_expr->description(AbstractExpression::DescriptionMode::Detailed) << std::endl;
       return LQPVisitation::VisitInputs;
     }
 
