@@ -43,6 +43,10 @@ class TableIndexFlattenedSparseMapIterator : public BaseTableIndexIterator {
   size_t _vector_index;
 };
 
+
+/**
+ * Forward iterator that iterates over a std::vector of RowIDs.
+ */
 class TableIndexVectorIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename std::vector<RowID>::const_iterator;
@@ -93,7 +97,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual Iterator cend() const;
   virtual Iterator null_cbegin() const;
   virtual Iterator null_cend() const;
-  virtual size_t memory_consumption() const;
+  virtual size_t memory_usage() const;
 
   virtual IteratorPair range_equals(const AllTypeVariant& value) const;
 
@@ -121,7 +125,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   Iterator cend() const override;
   Iterator null_cbegin() const override;
   Iterator null_cend() const override;
-  size_t memory_consumption() const override;
+  size_t memory_usage() const override;
 
   IteratorPair range_equals(const AllTypeVariant& value) const override;
   std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override;

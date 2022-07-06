@@ -296,12 +296,12 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
 
 /*
   Test cases:
-    MemoryConsumptionNoNulls
-    MemoryConsumptionNulls
-    MemoryConsumptionMixed
-    MemoryConsumptionEmpty
+    MemoryUsageNoNulls
+    MemoryUsageNulls
+    MemoryUsageMixed
+    MemoryUsageEmpty
   Tested functions:
-    size_t memory_consumption() const;
+    size_t memory_usage() const;
 
   |    Characteristic               | Block 1 | Block 2 |
   |---------------------------------|---------|---------|
@@ -319,7 +319,7 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
 */
 
 // A2, B2, C1
-TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
+TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
 
@@ -331,7 +331,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-// Index memory consumption depends on host system.
+// Index memory usage depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
   // +  24 vector size NULL values (index NULL positions)
@@ -346,14 +346,14 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNoNulls) {
   // +  16 impl
   // +   1 TableIndexType
   // = 551
-  EXPECT_EQ(index->memory_consumption(), 567u);
+  EXPECT_EQ(index->memory_usage(), 567u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 551u);
+  EXPECT_EQ(index->memory_usage(), 551u);
 #endif
 }
 
 // A2, B1, C2
-TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
+TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   const auto& dict_segment_string_nulls =
       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
 
@@ -365,7 +365,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-// Index memory consumption depends on host system.
+// Index memory usage depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
   // +  24 vector size NULL values (index NULL positions)
@@ -379,14 +379,14 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionNulls) {
   // +  16 impl
   // +   1 TableIndexType
   // = 191
-  EXPECT_EQ(index->memory_consumption(), 207u);
+  EXPECT_EQ(index->memory_usage(), 207u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 191u);
+  EXPECT_EQ(index->memory_usage(), 191u);
 #endif
 }
 
 // A2, B1, C1
-TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
+TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
                          "b", "z", "x", std::nullopt});
@@ -399,7 +399,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-// Index memory consumption depends on host system.
+// Index memory usage depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
   // +  24 vector size NULL values (index NULL positions)
@@ -413,14 +413,14 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionMixed) {
   // +  16 impl
   // +   1 TableIndexType
   // = 591
-  EXPECT_EQ(index->memory_consumption(), 607u);
+  EXPECT_EQ(index->memory_usage(), 607u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 591u);
+  EXPECT_EQ(index->memory_usage(), 591u);
 #endif
 }
 
 // A1, B2, C2
-TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
+TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
   Segments segments = {dict_segment_string_empty};
@@ -431,7 +431,7 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-// Index memory consumption depends on host system.
+// Index memory usage depends on host system.
 #ifdef __GLIBCXX__
   //    80 map size (index non-NULL positions)
   // +  24 vector size NULL values (index NULL positions)
@@ -446,9 +446,9 @@ TEST_F(PartialHashIndexTest, MemoryConsumptionEmpty) {
   // +  16 impl
   // +   1 TableIndexType
   // = 175
-  EXPECT_EQ(index->memory_consumption(), 191u);
+  EXPECT_EQ(index->memory_usage(), 191u);
 #else
-  EXPECT_EQ(index->memory_consumption(), 175u);
+  EXPECT_EQ(index->memory_usage(), 175u);
 #endif
 }
 

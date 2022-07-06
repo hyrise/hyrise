@@ -44,7 +44,7 @@ class PartialHashIndex : public AbstractTableIndex {
   Iterator _cend() const final;
   Iterator _null_cbegin() const final;
   Iterator _null_cend() const final;
-  size_t _memory_consumption() const final;
+  size_t _memory_usage() const final;
 
   IteratorPair _range_equals(const AllTypeVariant& value) const final;
   std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const final;

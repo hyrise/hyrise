@@ -88,7 +88,7 @@ BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::null_cend() const {
   return Iterator(std::make_shared<BaseTableIndexIterator>());
 }
 
-size_t BasePartialHashIndexImpl::memory_consumption() const {
+size_t BasePartialHashIndexImpl::memory_usage() const {
   return 0;
 }
 
@@ -225,7 +225,7 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 }
 
 template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::memory_consumption() const {
+size_t PartialHashIndexImpl<DataType>::memory_usage() const {
   size_t bytes{0u};
   bytes += (sizeof(std::unordered_set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size());
 
