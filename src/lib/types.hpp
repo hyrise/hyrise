@@ -17,7 +17,6 @@
 
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
-#include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
 
 #include "strong_typedef.hpp"
@@ -79,7 +78,7 @@ using Cost = float;
 //
 // TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = std::pmr::polymorphic_allocator<T>;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
