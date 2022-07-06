@@ -20,18 +20,18 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   void _on_with_iterators(const Functor& functor) const {
     using ValueIterator = typename std::vector<T>::const_iterator;
 
-    auto decompressed_segment = _segment.decompress();
-    _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += decompressed_segment.size();
+    auto decompressed_segment = std::make_shared<std::vector<ValueType>>(_segment.decompress());
+    _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += decompressed_segment->size();
     if (_segment.null_values()) {
       auto begin =
-          Iterator<ValueIterator>{decompressed_segment.cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0u}};
-      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), _segment.null_values()->cend(),
-                                         static_cast<ChunkOffset>(decompressed_segment.size())};
+          Iterator<ValueIterator>{decompressed_segment, decompressed_segment->cbegin(), _segment.null_values()->cbegin(), ChunkOffset{0u}};
+      auto end = Iterator<ValueIterator>{decompressed_segment, decompressed_segment->cend(), _segment.null_values()->cend(),
+                                         static_cast<ChunkOffset>(decompressed_segment->size())};
       functor(begin, end);
     } else {
-      auto begin = Iterator<ValueIterator>{decompressed_segment.cbegin(), std::nullopt, ChunkOffset{0u}};
-      auto end = Iterator<ValueIterator>{decompressed_segment.cend(), std::nullopt,
-                                         static_cast<ChunkOffset>(decompressed_segment.size())};
+      auto begin = Iterator<ValueIterator>{decompressed_segment, decompressed_segment->cbegin(), std::nullopt, ChunkOffset{0u}};
+      auto end = Iterator<ValueIterator>{decompressed_segment, decompressed_segment->cend(), std::nullopt,
+                                         static_cast<ChunkOffset>(decompressed_segment->size())};
       functor(begin, end);
     }
   }
@@ -47,34 +47,35 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     _segment.access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter_size;
 
     // vector storing the uncompressed values
-    auto decompressed_filtered_segment = std::vector<ValueType>(position_filter_size);
+    auto decompressed_filtered_segment = std::make_shared<std::vector<ValueType>>(position_filter_size);
 
     // _segment.decompress() takes the currently cached block (reference) and its id in addition to the requested
     // element. If the requested element is not within that block, the next block will be decompressed and written to
     // `cached_block` while the value and the new block id are returned. In case the requested element is within the
     // cached block, the value and the input block id are returned.
+    auto& decompressed_filtered_segment_ref = *decompressed_filtered_segment;
     for (auto index = size_t{0u}; index < position_filter_size; ++index) {
       const auto& position = (*position_filter)[index];
       // NOLINTNEXTLINE
       auto [value, block_index] = _segment.decompress(position.chunk_offset, cached_block_index, cached_block);
-      decompressed_filtered_segment[index] = std::move(value);
+      decompressed_filtered_segment_ref[index] = std::move(value);
       cached_block_index = block_index;
     }
 
     using PosListIteratorType = decltype(position_filter->cbegin());
     if (_segment.null_values()) {
-      auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
+      auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment,
                                                             _segment.null_values()->cbegin(), position_filter->cbegin(),
                                                             position_filter->cbegin()};
-      auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(),
+      auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment,
                                                           _segment.null_values()->cend(), position_filter->cbegin(),
                                                           position_filter->cend()};
 
       functor(begin, end);
     } else {
-      auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt,
+      auto begin = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment, std::nullopt,
                                                             position_filter->cbegin(), position_filter->cbegin()};
-      auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment.begin(), std::nullopt,
+      auto end = PointAccessIterator<PosListIteratorType>{decompressed_filtered_segment, std::nullopt,
                                                           position_filter->cbegin(), position_filter->cend()};
 
       functor(begin, end);
@@ -100,8 +101,8 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
 
    public:
     // Begin and End Iterator
-    explicit Iterator(ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset)
-        : _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
+    explicit Iterator(std::shared_ptr<std::vector<ValueType>> data, ValueIterator data_it, std::optional<NullValueIterator> null_value_it, ChunkOffset chunk_offset)
+        : _data{data}, _chunk_offset{chunk_offset}, _data_it{std::move(data_it)}, _null_value_it{std::move(null_value_it)} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -143,6 +144,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
 
    private:
+    std::shared_ptr<std::vector<ValueType>> _data;
     ChunkOffset _chunk_offset;
     ValueIterator _data_it;
     std::optional<NullValueIterator> _null_value_it;
@@ -158,12 +160,13 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     using NullValueIterator = typename pmr_vector<bool>::const_iterator;
 
     // Begin Iterator
-    PointAccessIterator(DataIteratorType data_it, std::optional<NullValueIterator> null_value_it,
+    PointAccessIterator(std::shared_ptr<std::vector<ValueType>> data, std::optional<NullValueIterator> null_value_it,
                         PosListIteratorType position_filter_begin, PosListIteratorType position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator<PosListIteratorType>, SegmentPosition<T>,
                                              PosListIteratorType>{std::move(position_filter_begin),
                                                                   std::move(position_filter_it)},
-          _data_it{std::move(data_it)},
+          _data{data},
+          _data_it{data->begin()},
           _null_value_it{std::move(null_value_it)} {}
 
    private:
@@ -177,6 +180,7 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
     }
 
    private:
+    std::shared_ptr<std::vector<ValueType>> _data;
     DataIteratorType _data_it;
     std::optional<NullValueIterator> _null_value_it;
   };

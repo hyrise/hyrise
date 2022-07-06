@@ -39,39 +39,39 @@ Matrix table_to_matrix(const std::shared_ptr<const Table>& table) {
     header[2][column_id] = pmr_string{table->column_is_nullable(column_id) ? "NULL" : "NOT NULL"};
   }
 
-  Print::print(table);
+  // Print::print(table);
 
 
   // set values
   auto matrix = table->get_rows();
 
-  std::cout << "\n#######\n#######\n#######\n";
-  for (auto& column : header) {
-    for (auto& cell : column) {
-      std::cout << cell << " ";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << "\n#######\n#######\n#######\n";
-  std::cout << "\n#######\n#######\n#######\n";
-  for (auto& column : matrix) {
-    for (auto& cell : column) {
-      std::cout << cell << " ";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << "\n#######\n#######\n#######\n";
+  // std::cout << "\n#######\n#######\n#######\n";
+  // for (auto& column : header) {
+  //   for (auto& cell : column) {
+  //     std::cout << cell << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+  // std::cout << "\n#######\n#######\n#######\n";
+  // std::cout << "\n#######\n#######\n#######\n";
+  // for (auto& column : matrix) {
+  //   for (auto& cell : column) {
+  //     std::cout << cell << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+  // std::cout << "\n#######\n#######\n#######\n";
 
   matrix.insert(matrix.begin(), header.begin(), header.end());
 
-  std::cout << "\n#######\n#######\n#######\n";
-  for (auto& column : matrix) {
-    for (auto& cell : column) {
-      std::cout << cell << " ";
-    }
-    std::cout << std::endl;
-  }
-  std::cout << "\n#######\n#######\n#######\n";
+  // std::cout << "\n#######\n#######\n#######\n";
+  // for (auto& column : matrix) {
+  //   for (auto& cell : column) {
+  //     std::cout << cell << " ";
+  //   }
+  //   std::cout << std::endl;
+  // }
+  // std::cout << "\n#######\n#######\n#######\n";
 
   return matrix;
 }
@@ -351,9 +351,9 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
 
     print_table_comparison(error_type, error_msg, mismatched_cells);
 
-    std::cout << "\n\n###############" << std::endl;
-    Print::print(actual_table);
-    std::cout << "\n\n###############" << std::endl;
+    // std::cout << "\n\n###############" << std::endl;
+    // Print::print(actual_table);
+    // std::cout << "\n\n###############" << std::endl;
     return stream.str();
   }
 

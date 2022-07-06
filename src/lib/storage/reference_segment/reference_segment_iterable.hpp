@@ -16,6 +16,9 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
+
+#include "operators/print.hpp"
+
 namespace opossum {
 
 template <typename T>
@@ -119,7 +122,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       }
 
       // The functor was not called yet, because we did not instantiate specialized code for the segment type.
-
       const auto segment_iterable = create_any_segment_iterable<T>(*referenced_segment);
       segment_iterable.with_iterators(position_filter, functor);
     } else {
@@ -177,6 +179,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
           _pos_list_size{pos_list_size},
           _accessors{accessors},
           _chunk_offset{chunk_offset} {
+      // std::cout << "Passed position list (chunk offset is " << _chunk_offset << "): ";
+      // auto iter = begin_pos_list_it;
+      // while (iter != end_pos_list_it) {
+      //   std::cout << *iter << " ";
+      //   ++iter;
+      // }
+      // std::cout << std::endl;
       DebugAssert(_referenced_table->type() == TableType::Data, "Referenced table must be a data table.");
 
       // The setup can be quite expensive. As it is not required for simple end() iterators that are never moved, we
@@ -233,9 +242,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       DebugAssert(_chunk_offset < _pos_list_chunk_offsets.size(), "Invalid access into offsets.");
       const auto& pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
       DebugAssert(_iterators_by_chunk.contains(pos_list_chunk_offset.first), "No stored iterator for chunk.");
-      const auto iter = std::get<0>(_iterators_by_chunk.at(pos_list_chunk_offset.first)) + pos_list_chunk_offset.second;
+      // std::cout << "Trying to obtain iterator of chunk " << pos_list_chunk_offset.first << " with added offset " << pos_list_chunk_offset.second << std::endl;
+      const auto iter = _iterators_by_chunk.at(pos_list_chunk_offset.first) + pos_list_chunk_offset.second;
 
-      std::cout << "Returning value " << iter->value() << " and is it NULL? " << iter->is_null() << std::endl;
+      // std::cout << "Returning value " << iter->value() << " and is it NULL? " << iter->is_null() << " and chunk_offset: (iter: " << iter->chunk_offset() << ", anysegiter: " << _chunk_offset << ")" << std::endl;
       // We need to adapt the chunk_offset. It might stem from a temporary pos list.
       return SegmentPosition<T>{iter->value(), iter->is_null(), _chunk_offset};
     }
@@ -247,6 +257,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
     void _initialize() {
+      // Print::print(_referenced_table);
       const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_referenced_table->row_count()) / static_cast<float>(_pos_list_size));
       _positions_by_chunk.reserve(_referenced_table->chunk_count());
 
@@ -281,7 +292,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         resolve_data_and_segment_type(*segment, [&, chunk_id=chunk_id, pos_list=pos_list](const auto data_type_t, const auto& typed_segment) {
           const auto iterable = create_any_segment_iterable<T>(typed_segment);
           iterable.with_iterators(pos_list, [&](auto begin, const auto& end) {
-            _iterators_by_chunk.emplace(chunk_id, std::make_tuple(begin, end, ChunkOffset{0}));
+            _iterators_by_chunk.emplace(chunk_id, std::move(begin));
           });
         });
       }
@@ -308,7 +319,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     std::unordered_map<ChunkID, std::shared_ptr<RowIDPosList>> _positions_by_chunk{};
     // std::unordered_map<ChunkID, Testili<T>> _iterators_by_chunk{};
-    std::unordered_map<ChunkID, std::tuple<AnySegmentIterator<T>, AnySegmentIterator<T>, ChunkOffset>> _iterators_by_chunk{};
+    std::unordered_map<ChunkID, AnySegmentIterator<T>> _iterators_by_chunk{};
 
     // Stores for every initial item in the pos list: which chunk is referenced and at
     // which offset this item is within the chunk-only pos list. This is NOT a RowID.

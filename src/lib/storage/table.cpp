@@ -17,6 +17,17 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
+
+
+
+
+
+
+
+
+
+#include "operators/print.hpp"
+
 namespace opossum {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
@@ -317,10 +328,22 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
       continue;
     }
 
+    auto single_chunk_table = std::make_shared<Table>(column_definitions(), type());
+    Segments segments;
+    for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
+      segments.push_back(chunk->get_segment(column_id));
+    }
+    single_chunk_table->append_chunk(segments);
+
+
+    // std::cout << "\n#######\n#######\nGET ROWS SINGLE CHUNK\n#######\n#######\n";
+    // Print::print(single_chunk_table);
+    // std::cout << "\n#######\n#######\nGET ROWS SINGLE CHUNK\n#######\n#######\n";
+
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
       segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
         if (!segment_position.is_null()) {
-          std::cout << "Dingsing offset " << segment_position.chunk_offset() << " and value " << segment_position.value() << std::endl;
+          // std::cout << "Dingsing offset " << segment_position.chunk_offset() << " and value " << segment_position.value() << std::endl;
           rows[chunk_begin_row_idx + segment_position.chunk_offset()][column_id] = segment_position.value();
         }
       });
