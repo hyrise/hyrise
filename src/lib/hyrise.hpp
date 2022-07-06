@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/container/pmr/memory_resource.hpp>
+#include <memory_resource>
 
 #include "concurrency/transaction_manager.hpp"
 #include "scheduler/immediate_execution_scheduler.hpp"
