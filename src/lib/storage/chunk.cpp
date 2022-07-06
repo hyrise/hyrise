@@ -38,7 +38,7 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
     }
   }
 
-  if (alloc) _alloc{*alloc};
+  if (alloc) _alloc(*alloc);
 }
 
 bool Chunk::is_mutable() const { return _is_mutable; }
