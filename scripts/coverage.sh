@@ -41,7 +41,7 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler='/usr/local/opt/llvm/bin/'
 fi
 
-cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON -DCMAKE_CXX_FLAGS=-fprofile-instr-generate ..
+cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON -DCMAKE_CXX_FLAGS=-fprofile-instr-generate ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
 make hyriseTest -j $((cores / 2))
