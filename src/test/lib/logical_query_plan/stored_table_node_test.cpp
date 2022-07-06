@@ -30,10 +30,10 @@ class StoredTableNodeTest : public BaseTest {
 
     const auto& table_t_a = Hyrise::get().storage_manager.get_table("t_a");
     ChunkEncoder::encode_all_chunks(table_t_a);
-    table_t_a->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
-    table_t_a->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
-    table_t_a->create_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}}, "i_a2");
-    table_t_a->create_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{0}}, "i_a3");
+    table_t_a->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
+    table_t_a->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
+    table_t_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}}, "i_a2");
+    table_t_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{0}}, "i_a3");
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = _stored_table_node->get_column("a");

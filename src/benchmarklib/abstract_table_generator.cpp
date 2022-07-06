@@ -359,9 +359,9 @@ void AbstractTableGenerator::_create_chunk_indexes(
       Timer per_index_timer;
 
       if (column_ids.size() == 1) {
-        table->create_index<GroupKeyIndex>(column_ids);
+        table->create_chunk_index<GroupKeyIndex>(column_ids);
       } else {
-        table->create_index<CompositeGroupKeyIndex>(column_ids);
+        table->create_chunk_index<CompositeGroupKeyIndex>(column_ids);
       }
 
       std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;

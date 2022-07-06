@@ -207,21 +207,21 @@ class Table : private Noncopyable {
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
       chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
     }
-    std::shared_ptr<AbstractTableIndex> index = nullptr;
+    std::shared_ptr<AbstractTableIndex> table_index = nullptr;
     if (!chunks_to_index.empty()) {
-      index = std::make_shared<Index>(chunks_to_index, column_id);
+      table_index = std::make_shared<Index>(chunks_to_index, column_id);
     } else {
       const auto column_data_type = _column_definitions[column_id].data_type;
-      index = std::make_shared<Index>(column_data_type, column_id);
+      table_index = std::make_shared<Index>(column_data_type, column_id);
     }
-    _table_indexes.emplace_back(index);
+    _table_indexes.emplace_back(table_index);
 
     TableIndexStatistics table_indexes_statistics = {{column_id}, chunks_to_index, name, table_index_type};
     _table_indexes_statistics.emplace_back(table_indexes_statistics);
   }
 
   template <typename Index>
-  void create_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
+  void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
     static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
                   "'Index' template argument is not an AbstractChunkIndex");
 
