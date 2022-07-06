@@ -8,6 +8,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "magic_enum.hpp"
 
 
 namespace opossum {
@@ -17,31 +18,11 @@ std::string JoinToPredicateRewriteRule::name() const {
   return name;
 }
 
-/*
-There are multiple options that don't work in different ways:
-
-1. (not currently active): running _perform_rewrite within the visit_lqp method as-is. This will abort the iteration as far as I can tell, so only one rewrite would happen
-    other than that though, this works and spits out a seemingly correct LQP with the SubqueryExpression-based PredicateNode having replaced the join
-2. (not currently active): running _preform_rewrite within the visit_lqp method but running the visit_lqp inside a while loop 
-    the idea here is that we only abort running the while loop (so re-running visit_lqp) once we have visited the full tree once without wanting to rewrite anything
-    this does work in principle, iterating through both the LQP and also the newly inserted SubqueryExpression tree
-    However, this causes an unexplainable segmentation fault later on in the ChunkPruningRule, where a hashing function is failing
-3. (currently active): while visiting the lqp with the visit_lqp method, do not modify it, but instead write down which nodes are rewritable (join node pointer), their removable side and the predicate to use in the replacing subtree
-    This seems like a good idea in theory, but fails for the following query as the rewrite for some reason is told to attach the join node output to the right input of the AggregateNode, which is not allowed
-    SELECT c_name, SUM(o_totalprice) FROM customer, nation, orders WHERE n_name='GERMANY' AND n_nationkey=c_nationkey AND o_custkey=c_custkey AND o_custkey=370 GROUP BY c_name;
-    An attempt to work around this by simply statically setting the input to left (which would not be feasable in production) resulted in a segfault in the PredicateReorderingRule
-*/
-
 void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   auto rewritable_nodes = std::vector<std::shared_ptr<JoinNode>>();
   auto removable_sides = std::vector<std::shared_ptr<LQPInputSide>>();
   auto valid_predicates = std::vector<std::shared_ptr<PredicateNode>>();
-/*
-  bool visited_full_tree = false;
-  
-  while (!visited_full_tree) {
-    bool early_abort = false;
-*/
+
   visit_lqp(lqp_root, [&](const auto& node) {
     std::cout << node->description() << std::endl;
     if (node->type == LQPNodeType::Join) {
@@ -57,22 +38,12 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
           rewritable_nodes.push_back(join_node);
           removable_sides.push_back(removable_side);
           valid_predicates.push_back(valid_predicate);
-          // _perform_rewrite(join_node, removable_side, valid_predicate);
-          // early_abort = true;
         }
       }
     }
     return LQPVisitation::VisitInputs;
   });
-/*
-    visited_full_tree = !early_abort;
-    if (visited_full_tree) {
-      std::cout << "Finished..." << std::endl;
-    } else {
-      std::cout << "Doing another pass..." << std::endl;
-    }
-  }
-*/
+
   const auto n_rewritables = rewritable_nodes.size();
   for (auto index = size_t{0}; index < n_rewritables; ++index) {
     _perform_rewrite(rewritable_nodes[index], removable_sides[index], valid_predicates[index]);
@@ -170,13 +141,13 @@ void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode
 
   std::cout << "Rewrite of Node: " << join_node->description() << std::endl;
 
-  const auto node_outputs = join_node->outputs();
-  const auto input_sides = join_node->get_input_sides();
-  const auto used_input = (*removable_side == LQPInputSide::Left) ? join_node->right_input() : join_node->left_input();
+  if (*removable_side == LQPInputSide::Left) {
+    join_node->set_left_input(join_node->right_input());
+  }
+  join_node->set_right_input(nullptr);
 
   // get the join predicate, as we need to extract which column to filter on
-  const auto predicate_exp = std::static_pointer_cast<BinaryPredicateExpression>(valid_predicate->predicate());
-   std::shared_ptr<BinaryPredicateExpression> join_predicate = nullptr;
+  std::shared_ptr<BinaryPredicateExpression> join_predicate = nullptr;
   const auto& join_predicates = join_node->join_predicates();
   for (auto& predicate : join_predicates) {
     join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
@@ -188,25 +159,18 @@ void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode
   DebugAssert(join_predicate, "A Join must have at least one BinaryPredicateExpression.");
 
   std::shared_ptr<AbstractExpression> used_join_column = nullptr;
+  std::shared_ptr<AbstractExpression> projection_column = nullptr;
 
-  if (expression_evaluable_on_lqp(join_predicate->left_operand(), *used_input)) {
+  if (expression_evaluable_on_lqp(join_predicate->left_operand(), *join_node->left_input())) {
     used_join_column = join_predicate->left_operand();
-  } else if (expression_evaluable_on_lqp(join_predicate->right_operand(), *used_input)) {
+    projection_column = join_predicate->right_operand();
+  } else if (expression_evaluable_on_lqp(join_predicate->right_operand(), *join_node->left_input())) {
     used_join_column = join_predicate->right_operand();
+    projection_column = join_predicate->left_operand();
   }
-
-  auto candidate_column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(predicate_exp->left_operand());
-  std::shared_ptr<ValueExpression> candidate_value_expr = nullptr;
-  if (candidate_column_expr) {
-    candidate_value_expr = std::dynamic_pointer_cast<ValueExpression>(predicate_exp->right_operand());
-  } else {
-    candidate_column_expr = std::dynamic_pointer_cast<LQPColumnExpression>(predicate_exp->right_operand());
-    candidate_value_expr = std::dynamic_pointer_cast<ValueExpression>(predicate_exp->left_operand());
-  }
-
 
   auto projections = std::vector<std::shared_ptr<AbstractExpression>>{};
-  projections.push_back(candidate_column_expr);
+  projections.push_back(projection_column);
 
   auto projection_node = std::make_shared<ProjectionNode>(projections);
   projection_node->set_left_input(valid_predicate);
@@ -219,21 +183,7 @@ void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode
     )
   );
 
-  // tie replacement node with thie join node's used input
-  replacement_predicate_node->set_left_input(used_input);
-
-  // tie replacement node with the join node's outputs
-  // TODO:
-  // For query SELECT c_name, SUM(o_totalprice) FROM customer, nation, orders WHERE n_name='GERMANY' AND n_nationkey=c_nationkey AND o_custkey=c_custkey AND o_custkey=370 GROUP BY c_name
-  // There is one output - aggregateNode - but the input_sides show "right" -> something is wrong but I don't know what
-  for (size_t output_idx = 0; output_idx < node_outputs.size(); ++output_idx) {
-    std::cout << node_outputs[output_idx]->description() << std::endl;
-    node_outputs[output_idx]->set_input(input_sides[output_idx], replacement_predicate_node);
-  }
-
-  // remove join node from LQP tree
-  join_node->set_left_input(nullptr);
-  join_node->set_right_input(nullptr);
+  lqp_replace_node(join_node, replacement_predicate_node);
 }
 
 }  // namespace opossum
