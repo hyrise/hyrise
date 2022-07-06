@@ -10,7 +10,7 @@
 namespace opossum {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated
-class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
+class SimpleTrackingMemoryResource : public std::pmr::memory_resource {
  public:
   size_t allocated{0};
 

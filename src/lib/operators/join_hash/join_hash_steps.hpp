@@ -210,10 +210,10 @@ class PosHashTable {
   // safe) by design. This way, we can quickly perform a high number of allocations without having to synchronize with
   // other threads for each allocation. Instead, we synchronize only when we refill the underlying
   // monotonic_buffer_resource. This works because each PosHashTable is used by exactly one thread.
-  std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
-      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
-  std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
-      std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
+  std::unique_ptr<std::pmr::monotonic_buffer_resource> _monotonic_buffer =
+      std::make_unique<std::pmr::monotonic_buffer_resource>();
+  std::unique_ptr<std::pmr::unsynchronized_pool_resource> _memory_pool =
+      std::make_unique<std::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
   JoinHashBuildMode _mode{};
   OffsetHashTable _offset_hash_table{};

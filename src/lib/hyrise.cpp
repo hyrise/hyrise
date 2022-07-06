@@ -11,7 +11,7 @@ Hyrise::Hyrise() {
   // destructed before. As objects are destructed in the reverse order of their
   // construction, explicitly initializing the resource first means that it is
   // destructed last.
-  boost::container::pmr::get_default_resource();
+  std::pmr::get_default_resource();
 
   storage_manager = StorageManager{};
   plugin_manager = PluginManager{};
