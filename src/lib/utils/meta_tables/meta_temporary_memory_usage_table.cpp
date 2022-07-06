@@ -1,5 +1,6 @@
 #include "meta_temporary_memory_usage_table.hpp"
 
+#include <chrono>
 #include <magic_enum.hpp>
 
 #include "hyrise.hpp"
@@ -25,7 +26,8 @@ std::shared_ptr<Table> MetaTemporaryMemoryUsageTable::_on_generate() const {
     const auto operator_type = pmr_string{static_cast<std::string>(magic_enum::enum_name(resource.operator_type))};
     const auto operator_data_structure = pmr_string{resource.operator_data_structure};
     for (const auto& [timestamp, amount] : resource.resource_ptr->memory_timeseries()) {
-      output_table->append({operator_type, operator_data_structure, timestamp, static_cast<int64_t>(amount)});
+      const auto timestamp_ns = std::chrono::nanoseconds{timestamp.time_since_epoch()}.count();
+      output_table->append({operator_type, operator_data_structure, timestamp_ns, amount});
     }
   }
 

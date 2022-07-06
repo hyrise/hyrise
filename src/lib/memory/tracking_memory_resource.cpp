@@ -1,14 +1,11 @@
-#include <chrono>
-
 #include "tracking_memory_resource.hpp"
 
 namespace opossum {
 
 TrackingMemoryResource::TrackingMemoryResource(){};
 
-int64_t TrackingMemoryResource::_get_timestamp() const {
-  return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch())
-      .count();
+std::chrono::system_clock::time_point TrackingMemoryResource::_get_timestamp() const {
+  return std::chrono::system_clock::now();
 };
 
 void* TrackingMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
@@ -25,7 +22,7 @@ void TrackingMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size
   return &other == this;
 }
 
-const std::vector<std::pair<int64_t, int64_t>>& TrackingMemoryResource::memory_timeseries() const {
+const std::vector<std::pair<std::chrono::system_clock::time_point, int64_t>>& TrackingMemoryResource::memory_timeseries() const {
   return _memory_timeseries;
 }
 
