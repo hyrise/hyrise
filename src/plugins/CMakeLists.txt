@@ -38,7 +38,6 @@ add_plugin(NAME hyriseSecondTestPlugin SRCS second_test_plugin.cpp second_test_p
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS sqlparser)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 add_plugin(NAME hyriseJoinToLocalPredicateRewritePlugin SRCS join_to_local_predicate_rewrite_plugin.cpp join_to_local_predicate_rewrite_plugin.hpp DEPS sqlparser magic_enum)
-add_plugin(NAME hyriseJoinToLocalPredicateRewriteV2Plugin SRCS join_to_local_predicate_rewrite_v2_plugin.cpp join_to_local_predicate_rewrite_plugin.hpp DEPS sqlparser magic_enum)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
