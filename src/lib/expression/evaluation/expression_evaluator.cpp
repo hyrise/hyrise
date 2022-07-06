@@ -686,9 +686,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
   });
   /**
    * Implements SQL's CAST with the following semantics
-   *    Float/Double -> Int/Long:           Value gets floor()ed
-   *    String -> Int/Long/Float/Double:    Conversion is attempted, on error zero is returned
-   *                                        in accordance with SQLite. (" 5hallo" AS INT) -> 5
+   *    Float/Double -> Int/Long:           Value gets floor()ed.
+   *    String -> Int/Long/Float/Double:    Conversion is attempted, abort on error.
    *    NULL -> Any type                    A nulled value of the requested type is returned.
    */
 
