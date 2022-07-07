@@ -14,7 +14,7 @@ MetaTemporaryMemoryUsageTable::MetaTemporaryMemoryUsageTable()
                                                {"amount", DataType::Long, false}}) {}
 
 const std::string& MetaTemporaryMemoryUsageTable::name() const {
-  static const auto name = std::string{"memory"};
+  static const auto name = std::string{"temporary_memory_usage"};
   return name;
 }
 
