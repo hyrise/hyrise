@@ -9,9 +9,7 @@ namespace opossum {
 class MetaTemporaryMemoryUsageTest : public BaseTest {
  protected:
   std::shared_ptr<AbstractMetaTable> meta_temporary_memory_usage_table;
-  void SetUp() override {
-    meta_temporary_memory_usage_table = std::make_shared<MetaTemporaryMemoryUsageTable>();
-  }
+  void SetUp() override { meta_temporary_memory_usage_table = std::make_shared<MetaTemporaryMemoryUsageTable>(); }
   void TearDown() override { Hyrise::reset(); }
 
   const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
@@ -30,15 +28,15 @@ TEST_F(MetaTemporaryMemoryUsageTest, TableName) {
 }
 
 TEST_F(MetaTemporaryMemoryUsageTest, EmptyTableGeneration) {
-  const auto expected_table = Table::create_dummy_table(TableColumnDefinitions{{"operator_type", DataType::String, false},
-                                                {"operator_data_structure", DataType::String, false},
-                                                {"timestamp", DataType::Long, false},
-                                                {"amount", DataType::Long, false}});
+  const auto expected_table =
+      Table::create_dummy_table(TableColumnDefinitions{{"operator_type", DataType::String, false},
+                                                       {"operator_data_structure", DataType::String, false},
+                                                       {"timestamp", DataType::Long, false},
+                                                       {"amount", DataType::Long, false}});
   EXPECT_TABLE_EQ_UNORDERED(generate_meta_table(meta_temporary_memory_usage_table), expected_table);
 }
 
 TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
-
   // record some allocations and deallocations
   auto& memory_resource_manager = Hyrise::get().memory_resource_manager;
   auto memory_resource_1 = memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure_1");
@@ -56,7 +54,7 @@ TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
 
   const auto timestamp_ns = std::chrono::nanoseconds{std::chrono::system_clock::now().time_since_epoch()}.count();
 
-  // check individual rows (we can't simply compare to a pre-built table 
+  // check individual rows (we can't simply compare to a pre-built table
   // because the timestamp values will vary between test runs)
   const auto row_0 = meta_table->get_row(0);
   const auto row_1 = meta_table->get_row(1);
@@ -103,4 +101,4 @@ TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
   EXPECT_EQ(row_5[3], AllTypeVariant{static_cast<int64_t>(-5)});
 }
 
-} // namespace opossum
+}  // namespace opossum
