@@ -2,8 +2,6 @@
 
 namespace opossum {
 
-TrackingMemoryResource::TrackingMemoryResource(){};
-
 std::chrono::system_clock::time_point TrackingMemoryResource::_get_timestamp() const {
   return std::chrono::system_clock::now();
 };
