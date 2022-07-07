@@ -23,9 +23,13 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
   }
 }
 
-const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_operand() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_operand() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_operand() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_operand() const {
+  return arguments[1];
+}
 
 std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {

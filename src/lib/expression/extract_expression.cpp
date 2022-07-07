@@ -48,7 +48,9 @@ DataType ExtractExpression::data_type() const {
   return DataType::String;
 }
 
-std::shared_ptr<AbstractExpression> ExtractExpression::from() const { return arguments[0]; }
+std::shared_ptr<AbstractExpression> ExtractExpression::from() const {
+  return arguments[0];
+}
 
 bool ExtractExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ExtractExpression*>(&expression),

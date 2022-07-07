@@ -19,9 +19,14 @@ std::string UnionNode::description(const DescriptionMode mode) const {
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
-  Assert(expressions_equal(left_input()->output_expressions(), right_input()->output_expressions()),
-         "Input Expressions must match");
-  return left_input()->output_expressions();
+  const auto& left_expressions = left_input()->output_expressions();
+  /**
+   * Asserting matching table schemas leads to multiple fetches of a subplan's output expressions.
+   * Though this does not have performance implications now, they may arise in the future.
+   * In this case, consider relaxing the check by using `DebugAssert`.
+   */
+  Assert(expressions_equal(left_expressions, right_input()->output_expressions()), "Input Expressions must match");
+  return left_expressions;
 }
 
 bool UnionNode::is_column_nullable(const ColumnID column_id) const {
@@ -92,7 +97,9 @@ std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies
   }
 }
 
-size_t UnionNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
+size_t UnionNode::_on_shallow_hash() const {
+  return boost::hash_value(set_operation_mode);
+}
 
 std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return UnionNode::make(set_operation_mode);

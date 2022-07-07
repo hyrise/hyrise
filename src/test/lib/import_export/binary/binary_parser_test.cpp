@@ -369,7 +369,9 @@ TEST_F(BinaryParserTest, InvalidAttributeVectorWidth) {
   EXPECT_THROW(BinaryParser::parse(filename), std::exception);
 }
 
-TEST_F(BinaryParserTest, FileDoesNotExist) { EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception); }
+TEST_F(BinaryParserTest, FileDoesNotExist) {
+  EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception);
+}
 
 TEST_F(BinaryParserTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;

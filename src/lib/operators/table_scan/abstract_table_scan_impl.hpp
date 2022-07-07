@@ -139,14 +139,16 @@ class AbstractTableScanImpl {
         const auto& left = *left_it;
 
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          mask |= ((!CheckForNull | !left.is_null()) & func(left)) << i;
+          mask |= ((!CheckForNull | !left.is_null()) && func(left)) << i;
         } else {
           const auto& right = *right_it;
           mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << i;
         }
 
         ++left_it;
-        if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
+        if constexpr (!std::is_same_v<RightIterator, std::false_type>) {
+          ++right_it;
+        }
       }
 
       if (!mask) {

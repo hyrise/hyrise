@@ -12,7 +12,9 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) {
+    Hyrise::get().storage_manager.drop_prepared_plan("");
+  }
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
               "Auto-commit transaction contexts should not be passed around this far");

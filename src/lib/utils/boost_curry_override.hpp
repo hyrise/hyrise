@@ -148,11 +148,17 @@ template <typename F>
 struct curry_t<0, F> {
   F f;
 
-  constexpr decltype(auto) operator()() const& { return f(); }
+  constexpr decltype(auto) operator()() const& {
+    return f();
+  }
 
-  constexpr decltype(auto) operator()() & { return f(); }
+  constexpr decltype(auto) operator()() & {
+    return f();
+  }
 
-  constexpr decltype(auto) operator()() && { return std::move(f)(); }
+  constexpr decltype(auto) operator()() && {
+    return std::move(f)();
+  }
 };
 #endif
 BOOST_HANA_NAMESPACE_END

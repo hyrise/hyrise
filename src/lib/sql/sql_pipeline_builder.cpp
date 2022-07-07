@@ -35,7 +35,9 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_lqp_cache(const std::shared_ptr<SQL
   return *this;
 }
 
-SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvcc::No); }
+SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() {
+  return with_mvcc(UseMvcc::No);
+}
 
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));

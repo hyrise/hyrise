@@ -34,7 +34,9 @@ class QueryPlanCacheTest : public BaseTest {
     }
   }
 
-  size_t query_frequency(const std::string& key) const { return (*(cache->_map.find(key)->second)).frequency; }
+  size_t query_frequency(const std::string& key) const {
+    return (*(cache->_map.find(key)->second)).frequency;
+  }
 
   const std::string Q1 = "SELECT * FROM table_a;";
   const std::string Q2 = "SELECT * FROM table_b;";

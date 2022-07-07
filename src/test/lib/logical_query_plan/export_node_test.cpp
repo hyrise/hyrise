@@ -21,7 +21,9 @@ class ExportNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node;
 };
 
-TEST_F(ExportNodeTest, Description) { EXPECT_EQ(_export_node->description(), "[Export] Name: 'table_name'"); }
+TEST_F(ExportNodeTest, Description) {
+  EXPECT_EQ(_export_node->description(), "[Export] Name: 'table_name'");
+}
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
   const auto another_export_node = ExportNode::make("table_name", "file_name", FileType::Csv, _mock_node);
@@ -30,10 +32,16 @@ TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(_export_node->hash(), another_export_node->hash());
 }
 
-TEST_F(ExportNodeTest, NodeExpressions) { EXPECT_TRUE(_export_node->node_expressions.empty()); }
+TEST_F(ExportNodeTest, NodeExpressions) {
+  EXPECT_TRUE(_export_node->node_expressions.empty());
+}
 
-TEST_F(ExportNodeTest, ColumnExpressions) { EXPECT_TRUE(_export_node->output_expressions().empty()); }
+TEST_F(ExportNodeTest, ColumnExpressions) {
+  EXPECT_TRUE(_export_node->output_expressions().empty());
+}
 
-TEST_F(ExportNodeTest, Copy) { EXPECT_EQ(*_export_node, *_export_node->deep_copy()); }
+TEST_F(ExportNodeTest, Copy) {
+  EXPECT_EQ(*_export_node, *_export_node->deep_copy());
+}
 
 }  // namespace opossum

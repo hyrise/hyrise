@@ -28,7 +28,7 @@ constexpr auto SELECTIVITY = 0.2;
 
 namespace opossum {
 
-using namespace opossum::expression_functional;  //NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);

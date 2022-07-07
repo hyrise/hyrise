@@ -84,7 +84,9 @@ class TPCCTest : public BaseTest {
 
 std::unordered_map<std::string, BenchmarkTableInfo> TPCCTest::tables;
 
-TEST_F(TPCCTest, InitialTables) { verify_table_sizes(initial_sizes); }
+TEST_F(TPCCTest, InitialTables) {
+  verify_table_sizes(initial_sizes);
+}
 
 TEST_F(TPCCTest, Delivery) {
   // As the procedures have some internal logic that we do not want to replicate in the tests (e.g., picking a W_ID),
