@@ -5,7 +5,11 @@
 #include <utility>
 #include <vector>
 
+#include <boost/sort/sort.hpp>
+
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "scheduler/job_task.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
@@ -13,6 +17,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/segment_accessor.hpp"
+#include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
@@ -256,6 +261,101 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       (*_accessors)[chunk_id] = std::move(accessor);
     }
 
+    /*
+     * Simple heuristics to determine if a segment should be materialized. For LZ4 segments, this is always the
+     * case as we yield a sequential access pattern.
+     */
+    bool _is_materialization_beneficial(const std::shared_ptr<AbstractSegment>& segment,
+                                        const std::shared_ptr<RowIDPosList>& pos_list) {
+      if (SegmentAccessCounter::access_type(*pos_list) != SegmentAccessCounter::AccessType::Random) {
+        return false;
+      }
+
+      const auto encoding_spec = get_segment_encoding_spec(segment);
+      if (encoding_spec.encoding_type == EncodingType::LZ4) {
+        return true;
+      }
+
+      // TODO: main purpose is a segment's allocator. Do it!
+
+      // const auto segment_size = segment->size();
+      // if (segment_size < 256) {
+      //   return false;
+      // }
+      // if (encoding_spec.encoding_type == EncodingType::Dictionary) {
+      //   const auto* dictionary_segment = static_cast<const DictionarySegment<ValueType>*>(&(*segment));
+      //   std::cout << "Mat with dict? " << (32'000 < dictionary_segment->unique_values_count() * sizeof(ValueType)) << " for dict size of " << dictionary_segment->unique_values_count() << std::endl;
+      //   return 32'000 < dictionary_segment->unique_values_count() * sizeof(ValueType);
+      // }
+
+      return false;
+    }
+
+    void materialize_segment(const ChunkID chunk_id) {
+      const auto& segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
+      const auto& pos_list = *(_positions_by_chunk[chunk_id]);
+      const auto pos_list_size = pos_list.size();
+      auto sortable_pos_list = std::vector<std::pair<RowID, size_t>>{pos_list_size};
+
+      for (auto index = size_t{0}; index < pos_list_size; ++index) {
+        sortable_pos_list[index] = {pos_list[index], index};
+      }
+
+      // std::cout << "#########" << std::endl;
+      // for (const auto& [a, b] : sortable_pos_list) std::cout << "[" << a << " - " << b << "] ";
+      // std::cout << "#########" << std::endl;
+
+      boost::sort::pdqsort(sortable_pos_list.begin(), sortable_pos_list.end(), [](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
+
+      // std::cout << "#########" << std::endl;
+      // for (const auto& [a, b] : sortable_pos_list) std::cout << "[" << a << "," << b << "] ";
+      // std::cout << "#########" << std::endl;
+
+      // TODO: evaluate if we should introduce a new type of "re-sortable" PosList that uses a pair, but can still be
+      // iterated "traditionally".
+      _sorted_pos_lists.emplace(chunk_id, std::make_shared<RowIDPosList>(pos_list_size));
+      auto& sorted_pos_list_ref = *(_sorted_pos_lists[chunk_id]);
+      for (auto index = size_t{0}; index < pos_list_size; ++index) {
+        sorted_pos_list_ref[index] = sortable_pos_list[index].first;
+      }
+
+      pmr_vector<ValueType> values(pos_list_size);
+      pmr_vector<bool> nulls(pos_list_size);
+
+      DebugAssert(_sorted_pos_lists[chunk_id]->size() == pos_list_size,
+                  "Size of sorted position list differs from initial position list.");
+
+      sorted_pos_list_ref.guarantee_single_chunk();
+      resolve_segment_type<ValueType>(*segment, [&](const auto& typed_segment) {
+        const auto iterable = create_any_segment_iterable<T>(typed_segment);
+        iterable.with_iterators(_sorted_pos_lists[chunk_id], [&](auto begin, const auto& end) {
+          auto index = size_t{0};
+          while (begin != end) {
+            // This is a scathered write, which can be very cache unfriendly. But since we need to pass values and
+            // nulls later on as vectors anyways, a composite data structure with sorting might not be much more
+            // efficient either.
+            values[sortable_pos_list[index].second] = begin->value();
+            nulls[sortable_pos_list[index].second] = begin->is_null();
+            ++begin;
+            ++index;
+          }
+        });
+      });
+
+      // std::cout << "#########" << std::endl;
+      // for (const auto& value : values) std::cout << value << " ";
+      // std::cout << "#########" << std::endl;
+
+      const auto value_segment = std::make_shared<ValueSegment<ValueType>>(std::move(values), std::move(nulls));
+      _materialized_segments.emplace(chunk_id, std::move(value_segment));
+      const auto iterable = create_any_segment_iterable<T>(*(_materialized_segments[chunk_id]));
+      iterable.with_iterators([&](auto begin, const auto& end) {
+        DebugAssert(std::distance(begin, end) == pos_list_size, "TODO");
+        DebugAssert(std::distance(begin, end) == _materialized_segments[chunk_id]->size(), "TODO");
+        _iterators_by_chunk.emplace(chunk_id, std::move(begin));
+      });
+    }
+
     void _initialize() {
       // Print::print(_referenced_table);
       const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_referenced_table->row_count()) / static_cast<float>(_pos_list_size));
@@ -285,17 +385,32 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         ++temporary_chunk_counters[pos_list_item.chunk_id];
       }
 
+      const auto referenced_chunk_count = temporary_chunk_counters.size();
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(referenced_chunk_count);
+
       for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
         pos_list->guarantee_single_chunk();
 
         const auto& segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
-        resolve_data_and_segment_type(*segment, [&, chunk_id=chunk_id, pos_list=pos_list](const auto data_type_t, const auto& typed_segment) {
+        resolve_segment_type<ValueType>(*segment, [&, chunk_id=chunk_id, &pos_list=pos_list](const auto& typed_segment) {
+          if (_is_materialization_beneficial(segment, pos_list)) {
+            jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id=chunk_id]() {
+              materialize_segment(chunk_id);
+            }));
+            jobs.back()->schedule();
+            // Hyrise::get().scheduler()->wait_for_tasks(jobs);
+            return;
+          }
+
           const auto iterable = create_any_segment_iterable<T>(typed_segment);
           iterable.with_iterators(pos_list, [&](auto begin, const auto& end) {
             _iterators_by_chunk.emplace(chunk_id, std::move(begin));
           });
         });
       }
+
+      Hyrise::get().scheduler()->wait_for_tasks(jobs);
 
       // std::cout << "POS_LIST:                ";
       // for (auto iter = _begin_pos_list_it; iter != _end_pos_list_it; ++iter) {
@@ -319,7 +434,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
     std::unordered_map<ChunkID, std::shared_ptr<RowIDPosList>> _positions_by_chunk{};
     // std::unordered_map<ChunkID, Testili<T>> _iterators_by_chunk{};
-    std::unordered_map<ChunkID, AnySegmentIterator<T>> _iterators_by_chunk{};
+    tbb::concurrent_unordered_map<ChunkID, AnySegmentIterator<T>> _iterators_by_chunk{};
+
+    tbb::concurrent_unordered_map<ChunkID, std::shared_ptr<RowIDPosList>> _sorted_pos_lists{};
+    tbb::concurrent_unordered_map<ChunkID, std::shared_ptr<ValueSegment<ValueType>>> _materialized_segments{};
 
     // Stores for every initial item in the pos list: which chunk is referenced and at
     // which offset this item is within the chunk-only pos list. This is NOT a RowID.
