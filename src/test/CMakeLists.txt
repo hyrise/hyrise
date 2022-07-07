@@ -71,6 +71,7 @@ set(
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
+    lib/memory/tracking_memory_resource_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
     lib/operators/aggregate_sort_test.cpp

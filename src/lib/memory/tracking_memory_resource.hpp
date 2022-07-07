@@ -16,7 +16,7 @@ class TrackingMemoryResource : public boost::container::pmr::memory_resource {
   const std::vector<std::pair<std::chrono::system_clock::time_point, int64_t>>& memory_timeseries() const;
 
  protected:
-  // TODO: only let memory resource manager create new instances
+  // TODO: only the MemoryResourceManager may create new instances
   //friend class MemoryResourceManager;
   //TrackingMemoryResource();
 
