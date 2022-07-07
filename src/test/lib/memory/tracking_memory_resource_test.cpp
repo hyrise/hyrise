@@ -57,4 +57,16 @@ TEST_F(TrackingMemoryResourceTest, RecordDeallocations) {
     EXPECT_GT(recorded_time_2, std::chrono::system_clock::now() - 100ms);
 }
 
+TEST_F(TrackingMemoryResourceTest, CreateAllocatorFromMemoryResource) {
+  auto allocator = PolymorphicAllocator<int>{&tracking_memory_resource};
+  auto vec = std::vector<int, PolymorphicAllocator<int>>(allocator);
+  vec.reserve(5);
+
+  ASSERT_EQ(tracking_memory_resource.memory_timeseries().size(), 1);
+  const auto& [recorded_time_1, recorded_amount_1] = tracking_memory_resource.memory_timeseries()[0];
+  EXPECT_EQ(recorded_amount_1, sizeof(int)*5);
+  EXPECT_LT(recorded_time_1, std::chrono::system_clock::now());
+  EXPECT_GT(recorded_time_1, std::chrono::system_clock::now() - 100ms);
+}
+
 }  // namespace opossum
