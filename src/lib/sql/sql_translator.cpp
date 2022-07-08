@@ -1175,7 +1175,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   }
 
   // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
-  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes `SELECT a, b ... GROUP BY a, b`.
   //
   // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
   // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
@@ -1854,8 +1854,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto date_time = string_to_date_time(input_string);
           AssertInput(date_time, "'" + input_string + "' is not a valid ISO 8601 extended timestamp");
           // Parsing valid timestamps is also possible for at first glance invalid strings (see
-          // `utils/date_time_utils.hpp` for details). To  always obtain a semantically meaningful result, we retrieve
-          // the created timestamp's string representation.
+          // utils/date_time_utils.hpp for details). To always obtain a semantically meaningful result, we retrieve the
+          // created timestamp's string representation.
           return value_(pmr_string{date_time_to_string(*date_time)});
         }
       }
@@ -1866,7 +1866,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       const auto target_data_type = data_type_iter->second;
       // Omit redundant casts
       if (source_data_type == target_data_type) {
-        return std::const_pointer_cast<AbstractExpression>(left);
+        return left;
       }
       return cast_(left, target_data_type);
     }
