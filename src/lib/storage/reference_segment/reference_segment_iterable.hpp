@@ -243,12 +243,11 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         return SegmentPosition<T>{T{}, true, _chunk_offset};
       }
 
-      DebugAssert(_is_initialized, "Derefencing uninitialized multi-segment iterator.");
+      DebugAssert(_is_initialized, "Dereferencing uninitialized multi-segment iterator.");
       DebugAssert(_chunk_offset < _pos_list_chunk_offsets.size(), "Invalid access into offsets.");
       const auto& pos_list_chunk_offset = _pos_list_chunk_offsets[_chunk_offset];
-      DebugAssert(_iterators_by_chunk.contains(pos_list_chunk_offset.first), "No stored iterator for chunk.");
       // std::cout << "Trying to obtain iterator of chunk " << pos_list_chunk_offset.first << " with added offset " << pos_list_chunk_offset.second << std::endl;
-      const auto iter = _iterators_by_chunk.at(pos_list_chunk_offset.first) + pos_list_chunk_offset.second;
+      const auto iter = *_iterators_by_chunk[pos_list_chunk_offset.first] + pos_list_chunk_offset.second;
 
       // std::cout << "Returning value " << iter->value() << " and is it NULL? " << iter->is_null() << " and chunk_offset: (iter: " << iter->chunk_offset() << ", anysegiter: " << _chunk_offset << ")" << std::endl;
       // We need to adapt the chunk_offset. It might stem from a temporary pos list.
@@ -306,7 +305,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       // TODO: evaluate if we should introduce a new type of "re-sortable" PosList that uses a pair, but can still be
       // iterated "traditionally".
-      _sorted_pos_lists.emplace(chunk_id, std::make_shared<RowIDPosList>(pos_list_size));
+      _sorted_pos_lists[chunk_id] = std::make_shared<RowIDPosList>(pos_list_size);
       auto& sorted_pos_list_ref = *(_sorted_pos_lists[chunk_id]);
       for (auto index = size_t{0}; index < pos_list_size; ++index) {
         sorted_pos_list_ref[index] = sortable_pos_list[index].first;
@@ -340,41 +339,45 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       // std::cout << "#########" << std::endl;
 
       const auto value_segment = std::make_shared<ValueSegment<ValueType>>(std::move(values), std::move(nulls));
-      _materialized_segments.emplace(chunk_id, std::move(value_segment));
+      _materialized_segments[chunk_id] = std::move(value_segment);
       const auto iterable = create_any_segment_iterable<T>(*(_materialized_segments[chunk_id]));
       iterable.with_iterators([&](auto begin, const auto& end) {
-        DebugAssert(std::distance(begin, end) == pos_list_size, "TODO");
+        DebugAssert(std::distance(begin, end) == static_cast<int64_t>(pos_list_size), "TODO");
         DebugAssert(std::distance(begin, end) == _materialized_segments[chunk_id]->size(), "TODO");
-        _iterators_by_chunk.emplace(chunk_id, std::move(begin));
+        _iterators_by_chunk[chunk_id] = std::move(begin);
       });
     }
 
     void _initialize() {
-      // Print::print(_referenced_table);
+      _pos_list_chunk_offsets.resize(_pos_list_size);
+
+      const auto chunk_count = _referenced_table->chunk_count();
+      _positions_by_chunk.resize(chunk_count);
+      _iterators_by_chunk.resize(chunk_count);
+
       const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_referenced_table->row_count()) / static_cast<float>(_pos_list_size));
-      _positions_by_chunk.reserve(_referenced_table->chunk_count());
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        // Allocate half the expected elements to account for some skew and operations that removed chunks altogether.
+        _positions_by_chunk[chunk_id] = std::make_shared<RowIDPosList>();
+        _positions_by_chunk[chunk_id]->reserve(estimated_row_count_per_chunk / 2);
+      }
 
       // Create positions by chunk.
       // Create any segment iterables for every chunk with their current position.
       // We'll have a pair of <ChunkID, AnySegmentOffset> to know how far we have to advance begin() for each item
       // of the inital position list.
-      auto temporary_chunk_counters = std::unordered_map<ChunkID, ChunkOffset>{};
-      for (auto iter = _begin_pos_list_it; iter != _end_pos_list_it; ++iter) {
+      auto temporary_chunk_counters = std::vector<ChunkOffset>(chunk_count);
+      auto insert_index = size_t{0};
+      for (auto iter = _begin_pos_list_it; iter != _end_pos_list_it; ++iter, ++insert_index) {
         const auto& pos_list_item = *iter;
 
         if (pos_list_item == NULL_ROW_ID) {
-          _pos_list_chunk_offsets.emplace_back(INVALID_CHUNK_ID, ChunkOffset{0});
+          _pos_list_chunk_offsets[insert_index] = {INVALID_CHUNK_ID, ChunkOffset{0}};
           continue;
         }
 
-        if (!_positions_by_chunk.contains(pos_list_item.chunk_id)) {
-          _positions_by_chunk[pos_list_item.chunk_id] = std::make_shared<RowIDPosList>();
-          _positions_by_chunk[pos_list_item.chunk_id]->reserve(estimated_row_count_per_chunk);
-          temporary_chunk_counters[pos_list_item.chunk_id] = 0;
-        }
-
         _positions_by_chunk[pos_list_item.chunk_id]->emplace_back(pos_list_item);
-        _pos_list_chunk_offsets.emplace_back(pos_list_item.chunk_id, temporary_chunk_counters[pos_list_item.chunk_id]);
+        _pos_list_chunk_offsets[insert_index] = {pos_list_item.chunk_id, temporary_chunk_counters[pos_list_item.chunk_id]};
         ++temporary_chunk_counters[pos_list_item.chunk_id];
       }
 
@@ -382,12 +385,20 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
       jobs.reserve(referenced_chunk_count);
 
-      for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
+      // for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        auto& pos_list = _positions_by_chunk[chunk_id];
         pos_list->guarantee_single_chunk();
 
         const auto& segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
         resolve_segment_type<ValueType>(*segment, [&, chunk_id=chunk_id, &pos_list=pos_list](const auto& typed_segment) {
           if (_is_materialization_beneficial(segment, pos_list)) {
+            if (_sorted_pos_lists.capacity() < chunk_count) {
+              // Only reserve the full vector (for direct positional access) in case we'll create sorted post lists.
+              _sorted_pos_lists.resize(chunk_count);
+              _materialized_segments.resize(chunk_count);
+            }
+
             jobs.emplace_back(std::make_shared<JobTask>([&, chunk_id=chunk_id]() {
               materialize_segment(chunk_id);
             }));
@@ -398,7 +409,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
           const auto iterable = create_any_segment_iterable<T>(typed_segment);
           iterable.with_iterators(pos_list, [&](auto begin, const auto& end) {
-            _iterators_by_chunk.emplace(chunk_id, std::move(begin));
+            _iterators_by_chunk[chunk_id] = std::move(begin);
           });
         });
       }
@@ -425,12 +436,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     std::shared_ptr<const Table> _referenced_table;
     ColumnID _referenced_column_id;
 
-    std::unordered_map<ChunkID, std::shared_ptr<RowIDPosList>> _positions_by_chunk{};
-    // std::unordered_map<ChunkID, Testili<T>> _iterators_by_chunk{};
-    tbb::concurrent_unordered_map<ChunkID, AnySegmentIterator<T>> _iterators_by_chunk{};
+    std::vector<std::shared_ptr<RowIDPosList>> _positions_by_chunk{};
+    // std::vector<AnySegmentIterator<T>> _iterators_by_chunk{};
+    // std::optional to allow default initialization of vector via resize().
+    std::vector<std::optional<AnySegmentIterator<T>>> _iterators_by_chunk{};
 
-    tbb::concurrent_unordered_map<ChunkID, std::shared_ptr<RowIDPosList>> _sorted_pos_lists{};
-    tbb::concurrent_unordered_map<ChunkID, std::shared_ptr<ValueSegment<ValueType>>> _materialized_segments{};
+    std::vector<std::shared_ptr<RowIDPosList>> _sorted_pos_lists{};
+    std::vector<std::shared_ptr<ValueSegment<ValueType>>> _materialized_segments{};
 
     // Stores for every initial item in the pos list: which chunk is referenced and at
     // which offset this item is within the chunk-only pos list. This is NOT a RowID.
