@@ -267,27 +267,20 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
      */
     bool _is_materialization_beneficial(const std::shared_ptr<AbstractSegment>& segment,
                                         const std::shared_ptr<RowIDPosList>& pos_list) {
+      const auto encoding_spec = get_segment_encoding_spec(segment);
+      if (encoding_spec.encoding_type == EncodingType::Dictionary || encoding_spec.encoding_type == EncodingType::FixedStringDictionary) {
+        return false;
+      }
+
       if (SegmentAccessCounter::access_type(*pos_list) != SegmentAccessCounter::AccessType::Random) {
         return false;
       }
 
-      const auto encoding_spec = get_segment_encoding_spec(segment);
       if (encoding_spec.encoding_type == EncodingType::LZ4) {
         return true;
       }
 
       // TODO: main purpose is a segment's allocator. Do it!
-
-      // const auto segment_size = segment->size();
-      // if (segment_size < 256) {
-      //   return false;
-      // }
-      // if (encoding_spec.encoding_type == EncodingType::Dictionary) {
-      //   const auto* dictionary_segment = static_cast<const DictionarySegment<ValueType>*>(&(*segment));
-      //   std::cout << "Mat with dict? " << (32'000 < dictionary_segment->unique_values_count() * sizeof(ValueType)) << " for dict size of " << dictionary_segment->unique_values_count() << std::endl;
-      //   return 32'000 < dictionary_segment->unique_values_count() * sizeof(ValueType);
-      // }
-
       return false;
     }
 
