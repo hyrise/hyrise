@@ -349,13 +349,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
     }
 
     void _initialize() {
+      // std::cout << "initializing pos list" << std::endl;
       _pos_list_chunk_offsets.resize(_pos_list_size);
 
       const auto chunk_count = _referenced_table->chunk_count();
       _positions_by_chunk.resize(chunk_count);
       _iterators_by_chunk.resize(chunk_count);
 
-      const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_referenced_table->row_count()) / static_cast<float>(_pos_list_size));
+      const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_pos_list_size) / static_cast<float>(_pos_list_size));
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         // Allocate half the expected elements to account for some skew and operations that removed chunks altogether.
         _positions_by_chunk[chunk_id] = std::make_shared<RowIDPosList>();
@@ -426,6 +427,18 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       // std::cout << "_pos_list_chunk_offsets: ";
       // for (const auto& pos_list_chunk_offset : _pos_list_chunk_offsets) {
       //   std::cout << "[" << pos_list_chunk_offset.first << "," << pos_list_chunk_offset.second << "] ";
+      // }
+      // std::cout << std::endl;
+
+      // std::cout << "initial pos list size: " << std::distance(_begin_pos_list_it, _end_pos_list_it) << std::endl;
+      // auto iter = _begin_pos_list_it;
+      // for (auto index = long{0}; index < std::min(long{5}, std::distance(_begin_pos_list_it, _end_pos_list_it)); ++index) {
+      //   std::cout << *iter << " ";
+      //   ++iter;
+      // }
+      // std::cout << "\n sub pos lists: ";
+      // for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      //   std::cout << "(chunk #" << chunk_id << ": " << _positions_by_chunk[chunk_id]->size() << " ";
       // }
       // std::cout << std::endl;
 
