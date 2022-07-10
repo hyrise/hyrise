@@ -41,7 +41,7 @@ class JoinToLocalPredicateRewritePlugin : public AbstractPlugin {
 
  protected:
   UCCCandidates* identify_ucc_candidates();
-  UCCCandidate* generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate);
+  std::shared_ptr<std::vector<UCCCandidate>> generate_valid_candidates(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate);
 };
 
 }  // namespace opossum
