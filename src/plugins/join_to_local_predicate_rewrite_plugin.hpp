@@ -3,6 +3,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "utils/abstract_plugin.hpp"
+#include "utils/pausable_loop_thread.hpp"
 
 namespace opossum {
 
@@ -39,9 +40,15 @@ class JoinToLocalPredicateRewritePlugin : public AbstractPlugin {
 
   void stop() final;
 
+  constexpr static std::chrono::milliseconds IDLE_DELAY_PREDICATE_REWRITE = std::chrono::milliseconds(10000);
+
  protected:
   UCCCandidates* identify_ucc_candidates();
   UCCCandidate* generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate);
+
+  void _start();
+
+  std::unique_ptr<PausableLoopThread> _loop_thread_start;
 };
 
 }  // namespace opossum

@@ -28,6 +28,10 @@ std::string JoinToLocalPredicateRewritePlugin::description() const {
 }
 
 void JoinToLocalPredicateRewritePlugin::start() {
+    _loop_thread_start = std::make_unique<PausableLoopThread>(JoinToLocalPredicateRewritePlugin::IDLE_DELAY_PREDICATE_REWRITE, [&](size_t) { _start(); });
+}
+
+void JoinToLocalPredicateRewritePlugin::_start() {
     auto t = Timer();
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was started..." << std::endl;
 
@@ -135,6 +139,8 @@ void JoinToLocalPredicateRewritePlugin::start() {
 
 void JoinToLocalPredicateRewritePlugin::stop() {
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was stopped..." << std::endl;
+
+    _loop_thread_start.reset();
 }
 
 UCCCandidate* JoinToLocalPredicateRewritePlugin::generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
