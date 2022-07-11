@@ -30,11 +30,13 @@ using namespace opossum;
 ///////////////////////////////
 constexpr auto INDEX_META_DATA_FILE = "../../out/400mio/index_meta_data_multi_index.csv";
 constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
+//constexpr auto TBL_FILE = "../../data/1mio_pings_no_id_int.tbl";
 
 // table and compression settings
 ///////////////////////////////
 constexpr auto TABLE_NAME_PREFIX = "ping";
 const auto CHUNK_SIZE = size_t{40'000'000};
+//const auto CHUNK_SIZE = size_t{100'000};
 const auto SCAN_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status"};
 //const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "timestamp", "captain_status", "unsorted"};
 const auto ORDER_COLUMNS = std::vector{"unsorted"};
@@ -234,17 +236,19 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
   const auto& multi_column_def = MULTI_COLUMN_INDEXES[multi_column_index_id];
   const auto& query = WORKLOAD[query_id];
 
-  //std::cout << "Multi column index on [ ";
-  //for (const auto column_id : multi_column_def) {
-  //  std::cout << column_id << " ";
-  //}
-  //std::cout << " ]" << std::endl;
+  /*
+  std::cout << "Multi column index on [ ";
+  for (const auto column_id : multi_column_def) {
+    std::cout << column_id << " ";
+  }
+  std::cout << " ]" << std::endl;
 
-  //std::cout << "############ Index: ";
-  //for (const auto& column_id : multi_column_def) std::cout << column_id << " ";
-  //std::cout << "\t\t  Query: ";
-  //for (const auto& scan : query) std::cout << std::get<0>(scan) << " ";
-  //std::cout << std::endl;
+  std::cout << "############ Index: ";
+  for (const auto& column_id : multi_column_def) std::cout << column_id << " ";
+  std::cout << "\t\t  Query: ";
+  for (const auto& scan : query) std::cout << std::get<0>(scan) << " ";
+  std::cout << std::endl;
+  */
 
   std::vector<AllTypeVariant> lower_bounds;
   std::vector<AllTypeVariant> upper_bounds;
@@ -256,8 +260,8 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
     // For every scan column, check if it is the currently checked index column. If so, append search values and continue
     for (const auto& scan : query) {
       const auto scan_column_id = std::get<0>(scan);
-      scan_column_ids.push_back(scan_column_id);
       if (column_id == scan_column_id) {
+        scan_column_ids.push_back(scan_column_id);
         const auto lower_bound = std::get<1>(scan);
         const auto upper_bound = std::get<2>(scan);
 
@@ -274,11 +278,15 @@ BENCHMARK_DEFINE_F(PingDataMultiIndexBenchmarkFixture, BM_MultiColumnIndexScan)(
     }
   }
 
-  //std::cout << "For the current query, we found the following search values:\n\tlower: ";
-  //for (const auto lower : lower_bounds) std::cout << lower << " ";
-  //std::cout << "\n\tupper: ";
-  //for (const auto upper : upper_bounds) std::cout << upper << " ";
-  //std::cout << std::endl;
+  /*
+  std::cout << "For the current query on columns [ ";
+  for (const auto lower : scan_column_ids) std::cout << lower << " ";
+  std::cout << "], we found the following search values:\n\tlower: ";
+  for (const auto lower : lower_bounds) std::cout << lower << " ";
+  std::cout << "\n\tupper: ";
+  for (const auto upper : upper_bounds) std::cout << upper << " ";
+  std::cout << std::endl;
+  */
 
   Assert(lower_bounds.size() == upper_bounds.size(), "Cardinality of lower_bounds and upper_bounds should be equal");
   
