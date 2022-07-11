@@ -280,8 +280,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // _radix_bits > 0). Created during materialization step.
 
     // TODO: Track this
-    std::vector<std::vector<size_t>> histograms_build_column;
-    std::vector<std::vector<size_t>> histograms_probe_column;
+    auto histograms_build_column = pmr_vector<std::vector<size_t>>(alloc<std::vector<size_t>>("283 | histograms_build_column"));
+    auto histograms_probe_column = pmr_vector<std::vector<size_t>>(alloc<std::vector<size_t>>("284 | histograms_probe_column"));
 
     // Output containers of materialization step. Uses the same output type as the radix partitioning step to allow
     // shortcut for _radix_bits == 0 (in this case, we can skip the partitioning altogether).
