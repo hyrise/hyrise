@@ -61,7 +61,7 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
-#include "utils/date_utils.hpp"
+#include "utils/date_time_utils.hpp"
 #include "utils/meta_table_manager.hpp"
 
 #include "SQLParser.h"
@@ -1182,7 +1182,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
   }
 
   // For SELECT DISTINCT, we add an aggregate node that groups by all output columns, but doesn't use any aggregate
-  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes  `SELECT a, b ... GROUP BY a, b`.
+  // functions, e.g.: `SELECT DISTINCT a, b ...` becomes `SELECT a, b ... GROUP BY a, b`.
   //
   // This might create unnecessary aggregate nodes when we already have an aggregation that creates unique results:
   // `SELECT DISTINCT a, MIN(b) FROM t GROUP BY a` would have one aggregate that groups by a and calculates MIN(b), and
@@ -1400,6 +1400,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           std::cout << "WARNING: Parsing TIME to string since date and time data types are not yet supported\n";
           column_definition.data_type = DataType::String;
           break;
+        case hsql::DataType::BOOLEAN:
+          std::cout << "WARNING: Parsing BOOLEAN to string\n";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
@@ -1557,7 +1561,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
     const hsql::Expr& expr, const std::shared_ptr<SQLIdentifierResolver>& sql_identifier_resolver) {
   auto name = expr.name ? std::string(expr.name) : "";
 
-  const auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
+  auto left = expr.expr ? _translate_hsql_expr(*expr.expr, sql_identifier_resolver) : nullptr;
   const auto right = expr.expr2 ? _translate_hsql_expr(*expr.expr2, sql_identifier_resolver) : nullptr;
 
   if (left) {
@@ -1605,7 +1609,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       if (date) {
         return value_(pmr_string{name});
       }
-      FailInput("'" + name + "' is not a valid date");
+      FailInput("'" + name + "' is not a valid ISO 8601 extended date");
     }
 
     case hsql::kExprParameter: {
@@ -1750,7 +1754,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto start_date_string =
               std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
           const auto start_date = string_to_date(start_date_string);
-          AssertInput(start_date, "'" + start_date_string + "' is not a valid date");
+          AssertInput(start_date, "'" + start_date_string + "' is not a valid ISO 8601 extended date");
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
           // We already ensured to have either Addition or Substraction right at the beginning
           const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
@@ -1841,25 +1845,42 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprCast: {
       const auto source_data_type = left->data_type();
-      if (expr.columnType.data_type == hsql::DataType::DATE) {
-        AssertInput(source_data_type == DataType::String, "Cannot cast " + left->as_column_name() + " as Date");
-        // We do not know if an expression to be casted other than a ValueExpression actually contains dates, and we
-        // cannot check this later due to the lack of a Date data type
-        AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as Date");
-        const auto date_string = boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value);
-        const auto date = string_to_date(std::string{date_string});
-        if (date) {
-          return std::const_pointer_cast<AbstractExpression>(left);
+      const auto target_hsql_data_type = expr.columnType.data_type;
+
+      if (target_hsql_data_type == hsql::DataType::DATE || target_hsql_data_type == hsql::DataType::DATETIME) {
+        AssertInput(source_data_type == DataType::String,
+                    "Cannot cast " + left->as_column_name() + " as " +
+                        std::string{magic_enum::enum_name(target_hsql_data_type)});
+        // We do not know if an expression to be casted other than a ValueExpression actually contains date time
+        // values, and we cannot check this later due to the lack of proper data types.
+        AssertInput(left->type == ExpressionType::Value, "Only ValueExpressions can be casted as " +
+                                                             std::string{magic_enum::enum_name(target_hsql_data_type)});
+        const auto input_string = std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
+
+        if (target_hsql_data_type == hsql::DataType::DATE) {
+          // We do not have a Date data type, so we check if the date is valid and return its ValueExpression.
+          const auto date = string_to_date(input_string);
+          AssertInput(date, "'" + input_string + "' is not a valid ISO 8601 extended date");
+          return left;
         }
-        FailInput("'" + std::string{date_string} + "' is not a valid date");
+
+        if (target_hsql_data_type == hsql::DataType::DATETIME) {
+          const auto date_time = string_to_date_time(input_string);
+          AssertInput(date_time, "'" + input_string + "' is not a valid ISO 8601 extended timestamp");
+          // Parsing valid timestamps is also possible for at first glance invalid strings (see
+          // utils/date_time_utils.hpp for details). To always obtain a semantically meaningful result, we retrieve the
+          // created timestamp's string representation.
+          return value_(pmr_string{date_time_to_string(*date_time)});
+        }
       }
+
       const auto data_type_iter = supported_hsql_data_types.find(expr.columnType.data_type);
       AssertInput(data_type_iter != supported_hsql_data_types.cend(),
                   "CAST as " + std::string{magic_enum::enum_name(expr.columnType.data_type)} + " is not supported");
       const auto target_data_type = data_type_iter->second;
       // Omit redundant casts
       if (source_data_type == target_data_type) {
-        return std::const_pointer_cast<AbstractExpression>(left);
+        return left;
       }
       return cast_(left, target_data_type);
     }

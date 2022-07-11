@@ -567,8 +567,8 @@ set(
     utils/column_ids_after_pruning.cpp
     utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
-    utils/date_utils.cpp
-    utils/date_utils.hpp
+    utils/date_time_utils.cpp
+    utils/date_time_utils.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
