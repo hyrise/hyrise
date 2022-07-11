@@ -205,6 +205,12 @@ if(NOT APPLE)
     message(FATAL_ERROR "jemalloc cannot be built with whitespaces in the directory path. Please make sure Hyrise is being compiled with a path not containing any whitespaces.")
   endif()
 
+include(ProcessorCount)
+ProcessorCount(CPUCOUNT)
+if(NOT CPUCOUNT EQUAL 0)
+  message("Strange ...")
+endif()
+
   include(ExternalProject)
   set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
   externalproject_add(
@@ -216,7 +222,7 @@ if(NOT APPLE)
       CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
                                  cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
                                  (printf \"$output\\n\" && false)"
-      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
+      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make -j ${CPUCOUNT} 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
       STEP_TARGETS build
       BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
