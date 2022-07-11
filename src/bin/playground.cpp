@@ -490,7 +490,7 @@ std::vector<OptimizableQuery> load_queries_from_csv(const std::string workload_f
 
     // If query id has changed store current node in output queries and create new initial node 
     if (query_id > 0 && query_id != previous_query_id) {
-      auto optimizable_query = OptimizableQuery(current_node, column_ids, query_selectivities, expressions);
+      auto optimizable_query = OptimizableQuery{current_node, column_ids, query_selectivities, expressions};
       output.emplace_back(optimizable_query);
       stored_table_node = StoredTableNode::make(TABLE_NAME);
       previous_node = stored_table_node;
@@ -528,7 +528,7 @@ std::vector<OptimizableQuery> load_queries_from_csv(const std::string workload_f
     previous_predicate_selectivity = predicate_selectivity;
     previous_node = current_node;
   }
-  auto optimizable_query = OptimizableQuery(current_node, column_ids, query_selectivities, expressions);
+  auto optimizable_query = OptimizableQuery{current_node, column_ids, query_selectivities, expressions};
   output.emplace_back(optimizable_query);  // Store last query
 
   return output;
@@ -904,11 +904,12 @@ int main() {
               column_ids.emplace_back(index_column);
             }
 
+            std::cout << "Creating multi-column index #" << multi_column_index_id << " on chunk #" << chunk_id << " and columns: ";
+            for (const auto column_id : column_ids) std::cout << column_id << " ";
+            std::cout << std::endl;
+
             const auto& index = added_chunk->create_index<CompositeGroupKeyIndex>(column_ids);
             index_memory_consumption += index->memory_consumption();
-            //std::cout << "Creating multi-column index #" << multi_column_index_id << " on chunk #" << chunk_id << " and columns: ";
-            //for (const auto column_id : column_ids) std::cout << column_id << " ";
-            //std::cout << std::endl;
 
             {
               std::lock_guard<std::mutex> lock(index_map_mutex);
