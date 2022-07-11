@@ -8,7 +8,6 @@
 #include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
 #include "task_queue.hpp"
-#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"
@@ -129,7 +128,6 @@ void AbstractTask::execute() {
     auto success_started = _try_transition_to(TaskState::Started);
     Assert(success_started, "Expected successful transition to TaskState::Started.");
   }
-  DTRACE_PROBE3(HYRISE, JOB_START, _id.load(), _description.c_str(), reinterpret_cast<uintptr_t>(this));
   DebugAssert(is_ready(), "Task must not be executed before its dependencies are done");
 
   std::atomic_thread_fence(std::memory_order_seq_cst);  // See documentation in AbstractTask::schedule
@@ -158,7 +156,6 @@ void AbstractTask::execute() {
     std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
     _done_condition_variable.notify_all();
   }
-  DTRACE_PROBE2(HYRISE, JOB_END, _id.load(), reinterpret_cast<uintptr_t>(this));
 }
 
 TaskState AbstractTask::state() const {
