@@ -290,7 +290,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     RadixContainer<ProbeColumnType> radix_probe_column;
 
     // HashTables for the build column, one for each partition
-    // Track this [???]
+    // Track this [DONE]
     pmr_vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
     /**

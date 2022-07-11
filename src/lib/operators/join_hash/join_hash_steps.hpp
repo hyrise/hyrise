@@ -66,7 +66,7 @@ struct Partition {
   // Bit vector to store NULL flags - not using uninitialized_vector because it is not specialized for bool.
   // It is stored independently of the elements as adding a single bit to PartitionedElement would cause memory waste
   // due to padding.
-  pmr_vector<bool> null_values = pmr_vector<bool> (alloc<bool>("63 | Partition struct"));
+  pmr_vector<bool> null_values = pmr_vector<bool> (alloc<bool>("69 Steps | Partition struct"));
 };
 
 // This alias is used in two phases:
@@ -76,7 +76,7 @@ struct Partition {
 // As the radix clustering might be skipped (when radix_bits == 0), both the materialization as well as the radix
 // clustering methods yield RadixContainers.
 template <typename T>
-using RadixContainer = std::vector<Partition<T>>;
+using RadixContainer = pmr_vector<Partition<T>>;
 
 // Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it has
 // some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
@@ -274,7 +274,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   const std::hash<HashedType> hash_function;
   // List of all elements that will be partitioned
-  auto radix_container = RadixContainer<T>{};
+  auto radix_container = RadixContainer<T>(alloc<T>("277 Steps | radix_container"));
   radix_container.resize(chunk_count);
 
   // Fan-out
