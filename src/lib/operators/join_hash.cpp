@@ -271,6 +271,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers used to store histograms for (potentially subsequent) radix partitioning step (in cases
     // _radix_bits > 0). Created during materialization step.
+
+    // TODO: Track this
     std::vector<std::vector<size_t>> histograms_build_column;
     std::vector<std::vector<size_t>> histograms_probe_column;
 
