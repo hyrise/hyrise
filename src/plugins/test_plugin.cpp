@@ -30,7 +30,7 @@ void TestPlugin::a_user_executable_function() {
   column_definitions.emplace_back("col_A", DataType::Int, false);
   auto table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-  storage_manager.add_table("TableOfTestPlugin" + std::to_string(_added_tables_count), table);
+  storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count), table);
   ++_added_tables_count;
 }
 
