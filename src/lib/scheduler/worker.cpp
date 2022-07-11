@@ -139,7 +139,7 @@ void Worker::join() {
 
 uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
 
-void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+void Worker::_wait_for_tasks(const pmr_vector<std::shared_ptr<AbstractTask>>& tasks) {
   // This lambda checks if all tasks from the vector (our "own" tasks) have been executed. If they are, it causes
   // _wait_for_tasks to return. If there are remaining tasks, it primarily tries to execute these. If they cannot be
   // executed, the worker performs work for others (i.e., executes tasks from the queue).

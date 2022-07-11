@@ -285,7 +285,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     RadixContainer<ProbeColumnType> materialized_probe_column;
 
     // Containers for potential (skipped when build side small) radix partitioning step
-    // Track this [???]
+    // Track this [DONE]
     RadixContainer<BuildColumnType> radix_build_column;
     RadixContainer<ProbeColumnType> radix_probe_column;
 
@@ -321,7 +321,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * 1.1. Materialize the build partition, which is expected to be smaller. Create a Bloom filter.
      */
 
+    //TODO Track this
     auto build_side_bloom_filter = BloomFilter{};
+    //TODO Track this
     auto probe_side_bloom_filter = BloomFilter{};
 
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
@@ -388,7 +390,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     if (_radix_bits > 0) {
       Timer timer_clustering;
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<std::shared_ptr<AbstractTask>>("393 | jobs"));
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table

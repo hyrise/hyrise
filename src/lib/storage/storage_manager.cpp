@@ -195,7 +195,7 @@ std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::p
 }
 
 void StorageManager::export_all_tables_as_csv(const std::string& path) {
-  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto tasks = pmr_vector<std::shared_ptr<AbstractTask>>{};
   tasks.reserve(_tables.size());
 
   for (const auto& table_item : _tables) {
