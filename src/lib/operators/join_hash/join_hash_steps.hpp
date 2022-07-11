@@ -427,7 +427,7 @@ Build all the hash tables for the partitions of the build column. One job per pa
 */
 
 template <typename BuildColumnType, typename HashedType>
-std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
+pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                            const JoinHashBuildMode mode, const size_t radix_bits,
                                                            const BloomFilter& input_bloom_filter) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
@@ -438,7 +438,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   NUMA notes:
   The hash tables for each partition P should also reside on the same node as the build and probe partitions.
   */
-  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(alloc<std::optional<PosHashTable<HashedType>>>("441 Steps | hash_tables"));
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -618,7 +618,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
-           const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+           const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
            pmr_vector<RowIDPosList>& pos_lists_build_side, pmr_vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
@@ -1103,7 +1103,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
-                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+                     const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -1221,7 +1221,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
-                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+                     const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      pmr_vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;

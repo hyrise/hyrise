@@ -285,11 +285,13 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     RadixContainer<ProbeColumnType> materialized_probe_column;
 
     // Containers for potential (skipped when build side small) radix partitioning step
+    // Track this [???]
     RadixContainer<BuildColumnType> radix_build_column;
     RadixContainer<ProbeColumnType> radix_probe_column;
 
     // HashTables for the build column, one for each partition
-    std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+    // Track this [???]
+    pmr_vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
     /**
      * Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
