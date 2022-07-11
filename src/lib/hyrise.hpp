@@ -8,6 +8,7 @@
 #include "sql/sql_plan_cache.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/log_manager.hpp"
+#include "utils/memory_resource_manager.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/plugin_manager.hpp"
 #include "utils/settings_manager.hpp"
@@ -44,6 +45,7 @@ class Hyrise : public Singleton<Hyrise> {
   PluginManager plugin_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
+  MemoryResourceManager memory_resource_manager;
   SettingsManager settings_manager;
   LogManager log_manager;
   Topology topology;

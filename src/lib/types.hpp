@@ -204,6 +204,41 @@ std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const Pr
 // Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
 PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
 
+enum class OperatorType {
+  Aggregate,
+  Alias,
+  ChangeMetaTable,
+  CreateTable,
+  CreatePreparedPlan,
+  CreateView,
+  DropTable,
+  DropView,
+  Delete,
+  Difference,
+  Export,
+  GetTable,
+  Import,
+  IndexScan,
+  Insert,
+  JoinHash,
+  JoinIndex,
+  JoinNestedLoop,
+  JoinSortMerge,
+  JoinVerification,
+  Limit,
+  Print,
+  Product,
+  Projection,
+  Sort,
+  TableScan,
+  TableWrapper,
+  UnionAll,
+  UnionPositions,
+  Update,
+  Validate,
+  Mock  // for Tests that need to Mock operators
+};
+
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is
 //                      dropped. This behavior mirrors NOT IN.

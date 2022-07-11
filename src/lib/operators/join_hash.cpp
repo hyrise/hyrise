@@ -13,7 +13,6 @@
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
-#include "join_helper/join_output_writing.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
@@ -22,6 +21,14 @@
 #include "utils/timer.hpp"
 
 namespace opossum {
+
+enum Purpose { None, HashStuffTest };
+
+template <typename T>
+PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
+  return PolymorphicAllocator<T>{
+      &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure))};
+}
 
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
@@ -483,8 +490,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     /**
      * 4. Probe step
      */
-    std::vector<RowIDPosList> build_side_pos_lists;
-    std::vector<RowIDPosList> probe_side_pos_lists;
+
+    // demo data structures for memory tracking. Needs to be changed to use the real operator step name.
+    auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>());
+    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("HashStuffTestString"));
+
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);
