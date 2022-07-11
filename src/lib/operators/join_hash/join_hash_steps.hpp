@@ -33,6 +33,12 @@ enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
 
+template <typename T>
+PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
+  return PolymorphicAllocator<T>{
+      &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure))};
+}
+
 /*
 This is how elements of the input relations are saved after materialization.
 The original value is used to detect hash collisions.
@@ -60,7 +66,7 @@ struct Partition {
   // Bit vector to store NULL flags - not using uninitialized_vector because it is not specialized for bool.
   // It is stored independently of the elements as adding a single bit to PartitionedElement would cause memory waste
   // due to padding.
-  std::vector<bool> null_values;
+  pmr_vector<bool> null_values = pmr_vector<bool> (alloc<bool>("63 | Partition struct"));
 };
 
 // This alias is used in two phases:
