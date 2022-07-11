@@ -159,6 +159,7 @@ struct ExpressionSharedPtrHash final {
   size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const {
     return expression->hash();
   }
+
   size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const {
     return expression->hash();
   }

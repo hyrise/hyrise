@@ -66,6 +66,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     if (highlight) {
       coloring = highlight_color_bg;
     }
+
     if (row_id >= HEADER_SIZE) {
       stream << coloring << std::setw(4) << std::to_string(row_id - HEADER_SIZE) << ANSI_COLOR_RESET;
     } else {
@@ -209,6 +210,7 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
           break;
         }
       }
+
       if (all_null) {
         expected_column_type = actual_column_type;
       }

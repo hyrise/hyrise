@@ -40,12 +40,15 @@ size_t MetaMockTable::generate_calls() const {
 const std::vector<AllTypeVariant> MetaMockTable::insert_values() const {
   return _insert_values;
 }
+
 const std::vector<AllTypeVariant> MetaMockTable::remove_values() const {
   return _remove_values;
 }
+
 const std::vector<AllTypeVariant> MetaMockTable::update_selected_values() const {
   return _update_selected_values;
 }
+
 const std::vector<AllTypeVariant> MetaMockTable::update_updated_values() const {
   return _update_updated_values;
 }

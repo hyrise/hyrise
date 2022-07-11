@@ -14,8 +14,9 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
     const auto chunk_count = table->chunk_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
+      // Skip physically deleted chunks
       if (!chunk) {
-        continue;  // Skip physically deleted chunks
+        continue;
       }
 
       const auto column_count = table->column_count();

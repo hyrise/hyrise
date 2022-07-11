@@ -31,15 +31,13 @@ AbstractIndex::AbstractIndex(const SegmentIndexType type) : _type{type} {}
 
 bool AbstractIndex::is_index_for(const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto indexed_segments = _get_indexed_segments();
-  if (segments.size() > indexed_segments.size()) {
-    return false;
-  }
-  if (segments.empty()) {
+  if (segments.empty() || segments.size() > indexed_segments.size()) {
     return false;
   }
 
-  for (size_t i = 0; i < segments.size(); ++i) {
-    if (segments[i] != indexed_segments[i]) {
+  const auto segment_count = segments.size();
+  for (auto index_id = size_t{0}; index_id < segment_count; ++index_id) {
+    if (segments[index_id] != indexed_segments[index_id]) {
       return false;
     }
   }

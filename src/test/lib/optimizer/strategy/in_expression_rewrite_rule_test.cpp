@@ -84,11 +84,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
     std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
 
-    if (values_found_in_predicates == expected_values) {
-      return true;
-    }
-
-    return false;
+    return values_found_in_predicates == expected_values;
   }
 
   std::shared_ptr<MockNode> node, many_row_node;
@@ -315,7 +311,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto index = 0; index < 100; ++index) {
+    for (auto index = int32_t{0}; index < 100; ++index) {
       table->append({index});
     }
     const auto static_table_node = StaticTableNode::make(table);
@@ -335,7 +331,7 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto index = 0; index < 100; ++index) {
+    for (auto index = int32_t{0}; index < 100; ++index) {
       table->append({index});
     }
     const auto static_table_node = StaticTableNode::make(table);

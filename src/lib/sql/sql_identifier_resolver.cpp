@@ -47,7 +47,8 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolver::resolve_identifier_re
   }
 
   if (matching_expressions.size() != 1) {
-    return nullptr;  // Identifier is ambiguous/not existing
+    // Identifier is ambiguous/not existing.
+    return nullptr;
   }
 
   return matching_expressions[0];

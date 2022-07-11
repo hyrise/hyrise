@@ -47,9 +47,11 @@ bool AbstractExpression::operator==(const AbstractExpression& other) const {
   if (type != other.type) {
     return false;
   }
+
   if (!_shallow_equals(other)) {
     return false;
   }
+
   if (!expressions_equal(arguments, other.arguments)) {
     return false;
   }

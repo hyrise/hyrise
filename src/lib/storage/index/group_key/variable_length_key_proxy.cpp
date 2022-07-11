@@ -35,9 +35,11 @@ bool VariableLengthKeyConstProxy::operator<(const VariableLengthKeyConstProxy& o
 bool VariableLengthKeyConstProxy::operator==(const VariableLengthKey& other) const {
   return _impl == other._impl;
 }
+
 bool VariableLengthKeyConstProxy::operator!=(const VariableLengthKey& other) const {
   return _impl != other._impl;
 }
+
 bool VariableLengthKeyConstProxy::operator<(const VariableLengthKey& other) const {
   return _impl < other._impl;
 }
@@ -64,6 +66,7 @@ VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(const VariableLengthKe
   operator=(other._impl);
   return *this;
 }
+
 VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(const VariableLengthKeyProxy& other) {
   operator=(other._impl);
   return *this;

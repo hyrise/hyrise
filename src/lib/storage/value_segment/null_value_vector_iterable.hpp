@@ -51,15 +51,19 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
     void increment() {
       ++_null_value_it;
     }
+
     void decrement() {
       --_null_value_it;
     }
+
     void advance(std::ptrdiff_t n) {
       _null_value_it += n;
     }
+
     bool equal(const Iterator& other) const {
       return _null_value_it == other._null_value_it;
     }
+
     std::ptrdiff_t distance_to(const Iterator& other) const {
       return other._null_value_it - _null_value_it;
     }

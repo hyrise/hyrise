@@ -25,21 +25,27 @@ struct NullValue {};
 inline bool operator==(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
   return false;
 }
+
 inline bool operator!=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
   return false;
 }
+
 inline bool operator<(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
   return false;
 }
+
 inline bool operator<=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
   return false;
 }
+
 inline bool operator>(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
   return false;
 }
+
 inline bool operator>=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
   return false;
 }
+
 inline NullValue operator-(const NullValue& /*value*/) {
   return NullValue{};
 }

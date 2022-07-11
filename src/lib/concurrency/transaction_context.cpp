@@ -57,9 +57,11 @@ TransactionContext::~TransactionContext() {
 TransactionID TransactionContext::transaction_id() const {
   return _transaction_id;
 }
+
 CommitID TransactionContext::snapshot_commit_id() const {
   return _snapshot_commit_id;
 }
+
 AutoCommit TransactionContext::is_auto_commit() const {
   return _is_auto_commit;
 }

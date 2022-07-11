@@ -13,10 +13,12 @@ constexpr bool is_valid_name(const char* name) {
     if (*name >= 'a' && *name <= 'z') {
       return false;
     }
+
     if (*name == '-') {
       return false;
     }
   } while (*++name != '\0');
+
   return true;
 }
 

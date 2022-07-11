@@ -11,10 +11,11 @@ std::optional<boost::gregorian::date> string_to_date(const std::string& date_str
       return std::nullopt;
     }
     return date;
-  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>&) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_month>&) {
-  } catch (const boost::wrapexcept<boost::gregorian::bad_year>&) {
-  } catch (const boost::wrapexcept<boost::bad_lexical_cast>&) {}
+  } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_month>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::gregorian::bad_year>& /* unused */) {
+  } catch (const boost::wrapexcept<boost::bad_lexical_cast>& /* unused */) {}
+
   return std::nullopt;
 }
 

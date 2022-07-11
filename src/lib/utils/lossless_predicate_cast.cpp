@@ -21,7 +21,6 @@ std::optional<float> next_float_towards(const double value, const double towards
   }
 
   const float next = std::nexttowardf(casted_value, towards);
-
   // Maybe someone smarter understands all the edge cases of floats. I'd rather be on the safe side.
   if (!std::isfinite(next)) {
     return std::nullopt;

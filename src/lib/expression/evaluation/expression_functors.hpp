@@ -18,6 +18,7 @@ constexpr bool is_logical_operand = std::is_same_v<int32_t, T> || std::is_same_v
 bool to_bool(const bool value) {
   return value;
 }
+
 bool to_bool(const NullValue& value) {
   return false;
 }
@@ -27,6 +28,7 @@ template <typename T, typename V>
 T to_value(const V& v) {
   return static_cast<T>(v);
 }
+
 template <typename T>
 T to_value(const NullValue& v) {
   return T{};

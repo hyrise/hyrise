@@ -160,6 +160,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
   Derived& _self() {
     return static_cast<Derived&>(*this);
   }
+
   const Derived& _self() const {
     return static_cast<const Derived&>(*this);
   }

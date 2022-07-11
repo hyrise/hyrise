@@ -25,6 +25,7 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
       return false;
     }
   }
+
   // Compare dependants
   for (const auto& expression : other.dependents) {
     if (!dependents.contains(expression)) {
@@ -118,6 +119,7 @@ std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDepend
 
       return true;
     });
+
     if (existing_fd == deflated_fds.end()) {
       deflated_fds.push_back(fd_to_add);
     } else {
@@ -141,6 +143,7 @@ std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependen
   if (fds_a.empty()) {
     return fds_b;
   }
+
   if (fds_b.empty()) {
     return fds_a;
   }

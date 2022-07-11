@@ -223,6 +223,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   if (left_input_table()->row_count() == 0) {
     return right_input_table();
   }
+
   if (right_input_table()->row_count() == 0) {
     return left_input_table();
   }
@@ -355,6 +356,7 @@ bool UnionPositions::_compare_reference_matrix_rows(const ReferenceMatrix& left_
     if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) {
       return true;
     }
+
     if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) {
       return false;
     }
@@ -370,6 +372,7 @@ bool UnionPositions::VirtualPosListCmpContext::operator()(size_t left, size_t ri
     if (left_row_id < right_row_id) {
       return true;
     }
+
     if (right_row_id < left_row_id) {
       return false;
     }

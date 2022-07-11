@@ -18,9 +18,11 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
       if (_loop_sleep_time > std::chrono::milliseconds(0)) {
         _cv.wait_for(lock, _loop_sleep_time, [&] { return static_cast<bool>(_shutdown_flag); });
       }
+
       if (_shutdown_flag) {
         return;
       }
+
       while (_pause_requested) {
         _is_paused = true;
         _cv.wait(lock, [&] { return !_pause_requested || _shutdown_flag; });
@@ -29,6 +31,7 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
         }
         lock.unlock();
       }
+
       _is_paused = false;
       loop_func(counter++);
     }

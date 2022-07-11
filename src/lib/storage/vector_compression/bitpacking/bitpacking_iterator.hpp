@@ -45,6 +45,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   void increment() {
     ++_absolute_index;
   }
+
   void decrement() {
     --_absolute_index;
   }

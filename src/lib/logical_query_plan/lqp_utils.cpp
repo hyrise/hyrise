@@ -46,6 +46,7 @@ std::optional<LQPMismatch> lqp_find_structure_mismatch(const std::shared_ptr<con
   if (!lhs && !rhs) {
     return std::nullopt;
   }
+
   if (!(lhs && rhs) || lhs->type != rhs->type) {
     return LQPMismatch(lhs, rhs);
   }
@@ -64,6 +65,7 @@ std::optional<LQPMismatch> lqp_find_subplan_mismatch_impl(const LQPNodeMapping& 
   if (!lhs && !rhs) {
     return std::nullopt;
   }
+
   if (!lhs->shallow_equals(*rhs, node_mapping)) {
     return LQPMismatch(lhs, rhs);
   }
@@ -103,10 +105,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
     std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (!node) {
-    return;
-  }
-  if (!visited_nodes.emplace(node).second) {
+  if (!node || !visited_nodes.emplace(node).second) {
     return;
   }
 
@@ -263,10 +262,7 @@ void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
 }
 
 bool lqp_is_validated(const std::shared_ptr<AbstractLQPNode>& lqp) {
-  if (!lqp) {
-    return true;
-  }
-  if (lqp->type == LQPNodeType::Validate) {
+  if (!lqp || lqp->type == LQPNodeType::Validate) {
     return true;
   }
 
@@ -533,6 +529,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
     return !output_expressions_set.contains(fd_dependent_expression);
   };
+
   for (auto& fd : fds) {
     std::erase_if(fd.dependents, not_part_of_output_expressions);
   }
@@ -554,6 +551,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                                if (!output_expressions_set.contains(fd_determinant_expression)) {
                                  return true;
                                }
+
                                const auto expression_idx =
                                    find_expression_idx(*fd_determinant_expression, output_expressions);
                                if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
@@ -581,8 +579,12 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   bool is_diamond = true;
   std::optional<std::shared_ptr<AbstractLQPNode>> diamond_origin_node;
   visit_lqp(union_root_node, [&](const auto& diamond_node) {
-    if (diamond_node == union_root_node) return LQPVisitation::VisitInputs;
-    if (!is_diamond) return LQPVisitation::DoNotVisitInputs;
+    if (diamond_node == union_root_node) {
+      return LQPVisitation::VisitInputs;
+    }
+    if (!is_diamond) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
 
     if (diamond_node->output_count() > 1) {
       if (!diamond_origin_node) {
@@ -604,7 +606,9 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
     return LQPVisitation::VisitInputs;
   });
 
-  if (is_diamond && diamond_origin_node) return *diamond_origin_node;
+  if (is_diamond && diamond_origin_node) {
+    return *diamond_origin_node;
+  }
   return nullptr;
 }
 

@@ -24,9 +24,11 @@ bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor cont
   if (!node) {
     return false;
   }
+
   if (contains_fn(node)) {
     return true;
   }
+
   return contained_in_lqp(node->left_input(), contains_fn) || contained_in_lqp(node->right_input(), contains_fn);
 }
 
@@ -35,9 +37,11 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   if (!node) {
     return false;
   }
+
   if (contains_fn(node)) {
     return true;
   }
+
   return contained_in_query_plan(node->left_input(), contains_fn) ||
          contained_in_query_plan(node->right_input(), contains_fn);
 }

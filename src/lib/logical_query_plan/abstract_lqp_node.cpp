@@ -37,6 +37,7 @@ void collect_lqps_from_expression(const std::shared_ptr<AbstractExpression>& exp
     if (!subquery_expression) {
       return ExpressionVisitation::VisitArguments;
     }
+
     lqps.emplace(subquery_expression->lqp);
     collect_lqps_in_plan(*subquery_expression->lqp, lqps);
     return ExpressionVisitation::VisitArguments;
@@ -55,6 +56,7 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
   if (lqp.left_input()) {
     collect_lqps_in_plan(*lqp.left_input(), lqps);
   }
+
   if (lqp.right_input()) {
     collect_lqps_in_plan(*lqp.right_input(), lqps);
   }
@@ -77,6 +79,7 @@ AbstractLQPNode::~AbstractLQPNode() {
   if (_inputs[0]) {
     _inputs[0]->_remove_output_pointer(*this);
   }
+
   if (_inputs[1]) {
     _inputs[1]->_remove_output_pointer(*this);
   }
@@ -365,6 +368,7 @@ std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping
   if (left_input()) {
     copied_left_input = left_input()->_deep_copy_impl(node_mapping);
   }
+
   if (right_input()) {
     copied_right_input = right_input()->_deep_copy_impl(node_mapping);
   }
@@ -458,9 +462,11 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
       if (node2->left_input()) {
         inputs.emplace_back(node2->left_input());
       }
+
       if (node2->right_input()) {
         inputs.emplace_back(node2->right_input());
       }
+
       return inputs;
     };
 

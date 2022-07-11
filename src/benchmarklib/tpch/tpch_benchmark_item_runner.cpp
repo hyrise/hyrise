@@ -71,6 +71,7 @@ void TPCHBenchmarkItemRunner::on_tables_loaded() {
   if (_clustering_configuration == ClusteringConfiguration::Pruning) {
     Assert(!first_chunk->individually_sorted_by().empty(), "Sorting information was lost");
   }
+
   if (_config->indexes) {
     const auto indexed_column_ids = std::vector<ColumnID>{ColumnID{0}};
     Assert(!first_chunk->get_indexes(indexed_column_ids).empty(), "Index was lost");
@@ -439,10 +440,10 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       std::shuffle(country_codes_copy.begin(), country_codes_copy.end(), random_engine);
 
       // We need the same country code twice - have a look at the query
-      for (auto parameter_index = 0; parameter_index < 7; ++parameter_index) {
+      for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
         parameters.emplace_back("'"s + std::to_string(country_codes_copy[parameter_index]) + "'");
       }
-      for (auto parameter_index = 0; parameter_index < 7; ++parameter_index) {
+      for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
         parameters.emplace_back("'"s + std::to_string(country_codes_copy[parameter_index]) + "'");
       }
       break;

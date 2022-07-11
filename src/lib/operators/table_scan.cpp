@@ -133,7 +133,6 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       const auto column_count = in_table->column_count();
-
       Segments out_segments;
       out_segments.reserve(column_count);
 
