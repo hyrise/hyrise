@@ -41,7 +41,7 @@ void JoinToLocalPredicateRewritePlugin::_start() {
         const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name());
         const auto col_id = candidate.column_id();
 
-        std::cout << "Attempting Unique Constraing Validation for:" << std::endl;
+        std::cout << "Attempting Unique Constraint Validation for:" << std::endl;
         std::cout << candidate.table_name() << " -- " << table->column_name(col_id) << std::endl;
 
         std::cout << "Existing Key Constraints:" << std::endl;
@@ -138,9 +138,9 @@ void JoinToLocalPredicateRewritePlugin::_start() {
 }
 
 void JoinToLocalPredicateRewritePlugin::stop() {
-    std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was stopped..." << std::endl;
-
     _loop_thread_start.reset();
+
+    std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was stopped..." << std::endl;
 }
 
 UCCCandidate* JoinToLocalPredicateRewritePlugin::generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
@@ -173,13 +173,25 @@ UCCCandidate* JoinToLocalPredicateRewritePlugin::generate_valid_candidate(std::s
                 column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
             }
 
-            if ((!column_expression) || (column_expression != column_candidate)) {
+            if (!column_expression) {
                 return LQPVisitation::VisitInputs;
             }
 
             // get the StoredTableNode and ColumnID to build the UCCCandidate
-            const auto table = std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
-            candidate = new UCCCandidate{table->table_name, column_expression->original_column_id};
+            const auto table_node = std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
+            const auto col_id = column_expression->original_column_id;
+
+            const auto& table = Hyrise::get().storage_manager.get_table(table_node->table_name);
+            const auto& soft_key_constraints = table->soft_key_constraints();
+
+            if (std::any_of(begin(soft_key_constraints), end(soft_key_constraints), [&col_id](const auto key_constraint) {
+                const auto& columns = key_constraint.columns();
+                return columns.size() == 1 && columns.contains(col_id);
+            })) {
+                return LQPVisitation::VisitInputs;
+            }
+
+            candidate = new UCCCandidate{table_node->table_name, col_id};
 
             return LQPVisitation::DoNotVisitInputs;
         });
@@ -255,6 +267,23 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
             switch (join_mode) {
                 case JoinMode::Semi:
                     // in Hyrise, it seems as if left-hand side is no longer used -> check that for UCC; ignore right
+                case JoinMode::Left: {
+                    // want to check only the right hand side here, as this is the one that will be removed in the end
+                    auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
+                    std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
+                    // determine which subtree (left or right) belongs to the ColumnExpression
+                    auto subtree_root = join_node.right_input();
+                    if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+                        column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
+                    }
+                    auto candidate = generate_valid_candidate(subtree_root, column_candidate);
+                    if (candidate) {
+                        std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
+                        ucc_candidates->insert(*candidate);
+                    }
+                    break;
+                }
+
                 case JoinMode::Right: {
                     // want to check only the left hand side of the predicate here
                     // this should be the one that will be removed in the end
@@ -262,7 +291,7 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
                     // determine which subtree (left or right) belongs to the ColumnExpression
                     auto subtree_root = join_node.left_input();
                     if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
-                        subtree_root = join_node.right_input();
+                        column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
                     }
                     std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
                     auto candidate = generate_valid_candidate(subtree_root, column_candidate);
@@ -290,23 +319,6 @@ UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
                             ucc_candidates->insert(*candidate);
                         }
                         left = false;
-                    }
-                    break;
-                }
-
-                case JoinMode::Left: {
-                    // want to check only the right hand side here, as this is the one that will be removed in the end
-                    auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
-                    std::cout << "\t\tChecking for candidate " << column_candidate->as_column_name() << std::endl;
-                    // determine which subtree (left or right) belongs to the ColumnExpression
-                    auto subtree_root = join_node.left_input();
-                    if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
-                        subtree_root = join_node.right_input();
-                    }
-                    auto candidate = generate_valid_candidate(subtree_root, column_candidate);
-                    if (candidate) {
-                        std::cout << "\t\t\tAdding candidate " << candidate->table_name() << candidate->column_id() << std::endl;
-                        ucc_candidates->insert(*candidate);
                     }
                     break;
                 }

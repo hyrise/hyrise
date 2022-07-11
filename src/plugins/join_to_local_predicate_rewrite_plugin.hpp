@@ -40,7 +40,7 @@ class JoinToLocalPredicateRewritePlugin : public AbstractPlugin {
 
   void stop() final;
 
-  constexpr static std::chrono::milliseconds IDLE_DELAY_PREDICATE_REWRITE = std::chrono::milliseconds(10000);
+  constexpr static std::chrono::milliseconds IDLE_DELAY_PREDICATE_REWRITE = std::chrono::milliseconds(5000);
 
  protected:
   UCCCandidates* identify_ucc_candidates();
