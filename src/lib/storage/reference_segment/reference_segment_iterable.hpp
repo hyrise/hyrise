@@ -357,11 +357,6 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       _iterators_by_chunk.resize(chunk_count);
 
       const auto estimated_row_count_per_chunk = std::lround(static_cast<float>(_pos_list_size) / static_cast<float>(_pos_list_size));
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        // Allocate half the expected elements to account for some skew and operations that removed chunks altogether.
-        _positions_by_chunk[chunk_id] = std::make_shared<RowIDPosList>();
-        _positions_by_chunk[chunk_id]->reserve(estimated_row_count_per_chunk / 2);
-      }
 
       // Create positions by chunk.
       // Create any segment iterables for every chunk with their current position.
@@ -371,15 +366,21 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto insert_index = size_t{0};
       for (auto iter = _begin_pos_list_it; iter != _end_pos_list_it; ++iter, ++insert_index) {
         const auto& pos_list_item = *iter;
+        const auto& chunk_id = pos_list_item.chunk_id;
 
         if (pos_list_item == NULL_ROW_ID) {
           _pos_list_chunk_offsets[insert_index] = {INVALID_CHUNK_ID, ChunkOffset{0}};
           continue;
         }
 
-        _positions_by_chunk[pos_list_item.chunk_id]->emplace_back(pos_list_item);
-        _pos_list_chunk_offsets[insert_index] = {pos_list_item.chunk_id, temporary_chunk_counters[pos_list_item.chunk_id]};
-        ++temporary_chunk_counters[pos_list_item.chunk_id];
+        if (!_positions_by_chunk[chunk_id]) {
+          _positions_by_chunk[chunk_id] = std::make_shared<RowIDPosList>();
+          _positions_by_chunk[chunk_id]->reserve(estimated_row_count_per_chunk / 2);
+        }
+
+        _positions_by_chunk[chunk_id]->emplace_back(pos_list_item);
+        _pos_list_chunk_offsets[insert_index] = {chunk_id, temporary_chunk_counters[chunk_id]};
+        ++temporary_chunk_counters[chunk_id];
       }
 
       const auto referenced_chunk_count = temporary_chunk_counters.size();
@@ -389,6 +390,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       // for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         auto& pos_list = _positions_by_chunk[chunk_id];
+        if (!pos_list) {
+          continue;
+        }
+
         pos_list->guarantee_single_chunk();
 
         const auto& segment = _referenced_table->get_chunk(chunk_id)->get_segment(_referenced_column_id);
