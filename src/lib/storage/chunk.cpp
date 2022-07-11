@@ -245,6 +245,7 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
+
 void Chunk::increase_invalid_row_count(const ChunkOffset count) const {
   _invalid_row_count += count;
 }

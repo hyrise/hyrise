@@ -53,6 +53,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
   return std::make_shared<Table>(left_input_table()->column_definitions(), left_input_table()->type(),
                                  std::move(output_chunks));
 }
+
 std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,

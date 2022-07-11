@@ -19,6 +19,7 @@
 namespace {
 
 using namespace opossum;  // NOLINT
+
 /*
  * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
  */

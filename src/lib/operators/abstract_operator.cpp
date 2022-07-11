@@ -321,7 +321,7 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (parameters.empty()) {
     return;
   }
-  
+
   _on_set_parameters(parameters);
   if (left_input()) {
     mutable_left_input()->set_parameters(parameters);

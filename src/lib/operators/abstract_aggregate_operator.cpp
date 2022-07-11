@@ -26,6 +26,7 @@ AbstractAggregateOperator::AbstractAggregateOperator(
 const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperator::aggregates() const {
   return _aggregates;
 }
+
 const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const {
   return _groupby_column_ids;
 }

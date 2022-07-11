@@ -52,6 +52,7 @@ FixedStringIterator<true> FixedStringVector::cend() const noexcept {
 }
 
 using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
+
 ReverseIterator FixedStringVector::rbegin() noexcept {
   return ReverseIterator(end());
 }

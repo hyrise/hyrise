@@ -112,6 +112,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
    public:
     explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
         : out_of_plan_expression(init_out_of_plan_expression) {}
+
     std::string name() const override {
       return "LQPBreakingRule";
     }
@@ -145,6 +146,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
+
     std::string name() const override {
       return "MockRule";
     }
@@ -227,9 +229,11 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   // to check whether SubqueryExpressions pointing to the same LQP before optimization still point to the same (though
   // deep_copy()ed) LQP afterwards
   size_t counter{0};
+
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
+
     std::string name() const override {
       return "MockRule";
     }

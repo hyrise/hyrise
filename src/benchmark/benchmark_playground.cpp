@@ -47,6 +47,7 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
       return value;
     });
   }
+
   void TearDown(::benchmark::State& state) override {
     MicroBenchmarkBasicFixture::TearDown(state);
   }
