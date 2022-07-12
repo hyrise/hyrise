@@ -322,6 +322,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     //TODO Track this
     auto build_side_bloom_filter = BloomFilter{};
+    auto build_side_bloom_filter_test = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("530 Steps | radix_container"));
+    
     //TODO Track this
     auto probe_side_bloom_filter = BloomFilter{};
 

@@ -17,6 +17,7 @@
 
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
 
@@ -103,6 +104,9 @@ using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
+
+template <typename T>
+using pmr_dynamic_bitset = boost::dynamic_bitset<T, PolymorphicAllocator<T>>;
 
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base_type>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
