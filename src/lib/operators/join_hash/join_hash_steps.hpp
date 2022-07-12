@@ -272,7 +272,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   const std::hash<HashedType> hash_function;
   // List of all elements that will be partitioned
-  auto radix_container = RadixContainer<T>(alloc<T>("277 Steps | radix_container"));
+  auto radix_container = RadixContainer<T>(alloc<T>("Materialization step"));
   radix_container.resize(chunk_count);
 
   // Fan-out
@@ -437,7 +437,7 @@ pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<B
   NUMA notes:
   The hash tables for each partition P should also reside on the same node as the build and probe partitions.
   */
-  auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(alloc<std::optional<PosHashTable<HashedType>>>("441 Steps | hash_tables"));
+  auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(alloc<std::optional<PosHashTable<HashedType>>>("Materialization step"));
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -526,7 +526,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   const size_t radix_mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
-  auto output = RadixContainer<T>(output_partition_count, alloc<T>("530 Steps | radix_container"));
+  auto output = RadixContainer<T>(output_partition_count, alloc<T>("Materialization step"));
 
   Assert(histograms.size() == input_partition_count, "Expected one histogram per input partition");
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
@@ -538,7 +538,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
-      pmr_vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count), alloc<std::vector<size_t>>("542 Steps | output_offsets_by_input_partition"));
+      pmr_vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count), alloc<std::vector<size_t>>("Materialization step"));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {

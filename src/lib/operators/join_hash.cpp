@@ -274,8 +274,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // _radix_bits > 0). Created during materialization step.
 
     // Track this [DONE]
-    auto histograms_build_column = pmr_vector<std::vector<size_t>>(alloc<std::vector<size_t>>("283 | histograms_build_column"));
-    auto histograms_probe_column = pmr_vector<std::vector<size_t>>(alloc<std::vector<size_t>>("284 | histograms_probe_column"));
+    auto histograms_build_column = pmr_vector<std::vector<size_t>>(alloc<std::vector<size_t>>("Materialization step"));
+    auto histograms_probe_column = pmr_vector<std::vector<size_t>>(alloc<std::vector<size_t>>("Materialization step"));
 
     // Output containers of materialization step. Uses the same output type as the radix partitioning step to allow
     // shortcut for _radix_bits == 0 (in this case, we can skip the partitioning altogether).
@@ -285,8 +285,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers for potential (skipped when build side small) radix partitioning step
     // Track this [DONE]
-    auto radix_build_column = RadixContainer<BuildColumnType>(alloc<BuildColumnType>("530 Steps | radix_container"));
-    auto radix_probe_column = RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("530 Steps | radix_container"));
+    auto radix_build_column = RadixContainer<BuildColumnType>(alloc<BuildColumnType>("Materialization Step"));
+    auto radix_probe_column = RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("Materialization Step"));
 
     // HashTables for the build column, one for each partition
     // Track this [DONE]
@@ -321,10 +321,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
     //TODO Track this
+    //auto build_side_bloom_filter_test = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("530 Steps | radix_container"));
+    //auto probe_side_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("530 Steps | radix_container"));
     auto build_side_bloom_filter = BloomFilter{};
-    auto build_side_bloom_filter_test = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("530 Steps | radix_container"));
-    
-    //TODO Track this
     auto probe_side_bloom_filter = BloomFilter{};
 
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
@@ -493,8 +492,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
     // demo data structures for memory tracking. Needs to be changed to use the real operator step name.
-    auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>());
-    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("HashStuffTestString"));
+    auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("Probe step"));
+    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("Probe step"));
 
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
