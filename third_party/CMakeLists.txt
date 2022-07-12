@@ -17,6 +17,7 @@ add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
 
 # Build sql-parser library
