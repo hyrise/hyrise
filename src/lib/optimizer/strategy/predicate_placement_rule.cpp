@@ -60,11 +60,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       if (barrier_node->type == LQPNodeType::Predicate) {
         const auto predicate_node = std::static_pointer_cast<PredicateNode>(barrier_node);
         return !_is_expensive_predicate(predicate_node->predicate());
-      } else if (barrier_node->type == LQPNodeType::Join) {
+      }
+
+      if (barrier_node->type == LQPNodeType::Join) {
         const auto join_mode = std::static_pointer_cast<JoinNode>(barrier_node)->join_mode;
         return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
                join_mode == JoinMode::AntiNullAsFalse;
       }
+
       return false;
     }();
 

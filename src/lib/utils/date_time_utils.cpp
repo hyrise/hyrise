@@ -36,15 +36,15 @@ std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& d
 boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit) {
   switch (unit) {
     case DatetimeComponent::Year: {
-      const auto interval = boost::date_time::year_functor<boost::gregorian::date>(offset);
+      const auto interval = boost::date_time::year_functor<boost::gregorian::date>(static_cast<int>(offset));
       return start_date + interval.get_offset(start_date);
     }
     case DatetimeComponent::Month: {
-      const auto interval = boost::date_time::month_functor<boost::gregorian::date>(offset);
+      const auto interval = boost::date_time::month_functor<boost::gregorian::date>(static_cast<int>(offset));
       return start_date + interval.get_offset(start_date);
     }
     case DatetimeComponent::Day: {
-      const auto interval = boost::date_time::day_functor<boost::gregorian::date>(offset);
+      const auto interval = boost::date_time::day_functor<boost::gregorian::date>(static_cast<int>(offset));
       return start_date + interval.get_offset(start_date);
     }
     default:
