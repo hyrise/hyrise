@@ -51,7 +51,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator()();
   void _work();
 
-  void _wait_for_tasks(const pmr_vector<std::shared_ptr<AbstractTask>>& tasks);
+  void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  private:
   /**

@@ -293,7 +293,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<std::shared_ptr<AbstractTask>>("296 | Jobs"));
+
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
@@ -451,7 +452,7 @@ pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<B
     hash_tables.resize(radix_container.size());
   }
 
-  auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<std::optional<PosHashTable<HashedType>>>("454 Steps | Jobs"));
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(radix_container.size());
 
   for (size_t partition_idx = 0; partition_idx < radix_container.size(); ++partition_idx) {
@@ -527,7 +528,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   const size_t radix_mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
-  auto output = RadixContainer<T>(alloc<T>("530 Steps | radix_container"))(output_partition_count);
+  auto output = RadixContainer<T>(output_partition_count, alloc<T>("530 Steps | radix_container"));
 
   Assert(histograms.size() == input_partition_count, "Expected one histogram per input partition");
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
@@ -539,7 +540,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition =
-      pmr_vector<std::vector<size_t>>(alloc<T>("542 Steps | output_offsets_by_input_partition"))(input_partition_count, std::vector<size_t>(output_partition_count));
+      pmr_vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count), alloc<std::vector<size_t>>("542 Steps | output_offsets_by_input_partition"));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -554,7 +555,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
     }
   }
 
-  auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<T>("557 Steps | jobs"));
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(input_partition_count);
 
   for (auto input_partition_idx = ChunkID{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -622,7 +623,7 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            pmr_vector<RowIDPosList>& pos_lists_build_side, pmr_vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<std::shared_ptr<AbstractTask>>("625 | Jobs"));
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
 
   /*
@@ -781,7 +782,7 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
                      pmr_vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
-  auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<std::shared_ptr<AbstractTask>>("1227 | Jobs"));
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());
 
   for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {

@@ -88,10 +88,10 @@ class SchedulerTest : public BaseTest {
   }
 
   void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
-    pmr_vector<std::shared_ptr<AbstractTask>> tasks;
+    std::vector<std::shared_ptr<AbstractTask>> tasks;
     for (size_t i = 0; i < 10; i++) {
       auto task = std::make_shared<JobTask>([&]() {
-        pmr_vector<std::shared_ptr<AbstractTask>> jobs;
+        std::vector<std::shared_ptr<AbstractTask>> jobs;
         for (size_t j = 0; j < 3; j++) {
           auto job = std::make_shared<JobTask>([&]() { counter++; });
 
@@ -152,7 +152,7 @@ TEST_F(SchedulerTest, Grouping) {
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   auto output = std::vector<size_t>{};
-  auto tasks = pmr_vector<std::shared_ptr<AbstractTask>>{};
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
   constexpr auto TASK_COUNT = 50;
 
@@ -280,11 +280,11 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
     auto subtask = std::make_shared<JobTask>([&task_done]() { task_done = true; });
 
     subtask->schedule();
-    Hyrise::get().scheduler()->wait_for_tasks(pmr_vector<std::shared_ptr<AbstractTask>>{subtask});
+    Hyrise::get().scheduler()->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{subtask});
   });
 
   task->schedule();
-  Hyrise::get().scheduler()->wait_for_tasks(pmr_vector<std::shared_ptr<AbstractTask>>{task});
+  Hyrise::get().scheduler()->wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>{task});
   EXPECT_TRUE(task_done);
 
   Hyrise::get().scheduler()->finish();

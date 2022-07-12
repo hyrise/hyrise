@@ -286,8 +286,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers for potential (skipped when build side small) radix partitioning step
     // Track this [DONE]
-    RadixContainer<BuildColumnType> radix_build_column;
-    RadixContainer<ProbeColumnType> radix_probe_column;
+    auto radix_build_column = RadixContainer<BuildColumnType>(alloc<BuildColumnType>("530 Steps | radix_container"));
+    auto radix_probe_column = RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("530 Steps | radix_container"));
 
     // HashTables for the build column, one for each partition
     // Track this [DONE]
@@ -390,7 +390,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     if (_radix_bits > 0) {
       Timer timer_clustering;
-      auto jobs = pmr_vector<std::shared_ptr<AbstractTask>>(alloc<std::shared_ptr<AbstractTask>>("393 | jobs"));
+      std::vector<std::shared_ptr<AbstractTask>> jobs;
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table

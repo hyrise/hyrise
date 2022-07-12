@@ -43,21 +43,21 @@ class AbstractScheduler : public Noncopyable {
 
   // Schedules the given tasks for execution and returns immediately.
   // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
-  static void schedule_tasks(const pmr_vector<std::shared_ptr<AbstractTask>>& tasks);
+  static void schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
   // Blocks until all specified tasks are completed.
   // If no asynchronicity is needed, prefer schedule_and_wait_for_tasks.
-  static void wait_for_tasks(const pmr_vector<std::shared_ptr<AbstractTask>>& tasks);
+  static void wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
   // Schedules the given tasks for execution and waits for them to complete before returning. Tasks may be reorganized
   // internally, e.g., to reduce the number of tasks being executed in parallel. See the implementation of
   // NodeQueueScheduler::_group_tasks for an example.
-  void schedule_and_wait_for_tasks(const pmr_vector<std::shared_ptr<AbstractTask>>& tasks);
+  void schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 
  protected:
   // Internal helper method that adds predecessor/successor relationships between tasks to limit the degree of
   // parallelism and reduce scheduling overhead.
-  virtual void _group_tasks(const pmr_vector<std::shared_ptr<AbstractTask>>& tasks) const;
+  virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 };
 
 }  // namespace opossum
