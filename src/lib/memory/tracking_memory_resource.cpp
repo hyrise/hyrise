@@ -2,8 +2,6 @@
 
 namespace opossum {
 
-TrackingMemoryResource::TrackingMemoryResource(){};
-
 std::chrono::system_clock::time_point TrackingMemoryResource::_get_timestamp() const {
   return std::chrono::system_clock::now();
 };
@@ -22,7 +20,8 @@ void TrackingMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size
   return &other == this;
 }
 
-const std::vector<std::pair<std::chrono::system_clock::time_point, int64_t>>& TrackingMemoryResource::memory_timeseries() const {
+const std::vector<std::pair<std::chrono::system_clock::time_point, int64_t>>&
+TrackingMemoryResource::memory_timeseries() const {
   return _memory_timeseries;
 }
 
