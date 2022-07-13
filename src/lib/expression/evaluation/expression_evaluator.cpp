@@ -827,16 +827,18 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
       case DatetimeComponent::Second:
         Fail("SECOND must be extracted as Double");
     }
-  } else if constexpr (std::is_same_v<Result, double>) {
+  }
+
+  if constexpr (std::is_same_v<Result, double>) {
     Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double");
     return _evaluate_extract_component<double>(*from_result, [](const auto& timestamp) {
       const auto& time_of_day = timestamp.time_of_day();
       return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
                                                               static_cast<double>(time_of_day.ticks_per_second());
     });
-  } else {
-    Fail("ExtractExpression returns Int or Double");
   }
+
+  Fail("ExtractExpression returns Int or Double");
 }
 
 template <typename Result, typename Functor>
