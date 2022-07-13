@@ -245,7 +245,7 @@ void JoinNode::mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_j
 void JoinNode::mark_side_as_removable(LQPInputSide* input_side) {
   Assert(!_removable_input_side, "An unused input may only be marked once per join node.");
 
-  _removable_input_side = std::make_shared<LQPInputSide>(*input_side);
+  _removable_input_side = *input_side;
 }
 
 bool JoinNode::is_semi_reduction() const {
@@ -253,7 +253,7 @@ bool JoinNode::is_semi_reduction() const {
   return _is_semi_reduction;
 }
 
-std::shared_ptr<LQPInputSide> JoinNode::get_unused_input() const {
+std::optional<LQPInputSide> JoinNode::get_unused_input() const {
   return _removable_input_side;
 }
 

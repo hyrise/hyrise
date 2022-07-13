@@ -60,7 +60,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * @returns LQPInputSide* to the input side that is no longer used further up in LQP or nullptr
    */
-  std::shared_ptr<LQPInputSide> get_unused_input() const;
+  std::optional<LQPInputSide> get_unused_input() const;
 
   /**
    * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns
@@ -102,7 +102,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * 
    * nullptr if both sides are used further up in the LQP
    */
-  std::shared_ptr<LQPInputSide> _removable_input_side = nullptr;
+  std::optional<LQPInputSide> _removable_input_side = std::nullopt;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
