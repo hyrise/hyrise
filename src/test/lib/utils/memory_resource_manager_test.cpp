@@ -42,11 +42,4 @@ TEST_F(MemoryResourceManagerTest, GetMemoryResourceForSamePurposeMultipleTimes) 
   ASSERT_NE(memory_resource_ptr_1, memory_resource_ptr_2);
 }
 
-/**
-for concurrency tests:
-- example stress_tests.cpp server_test_runner.cpp
-- marcel will follow up from hyrise dev meeting
-- this is likely nice-to-have
-*/
-
 }  // namespace opossum
