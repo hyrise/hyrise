@@ -849,6 +849,12 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         const auto& value = std::string{from_view.value(chunk_offset)};
+        // Usually, checking whether the stored values are correct dates/timestamps should be checked on tuple
+        // insertion or when values are loaded from files. However, we do not have proper date/timestamp data types and
+        // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
+        // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
+        // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
+        Assert(value.size() >= 10u, "Invalid ISO 8601 extended timestamp '" + value + "'");
         if (value.size() > 10u) {
           const auto& timestamp = string_to_date_time(value);
           Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'");
