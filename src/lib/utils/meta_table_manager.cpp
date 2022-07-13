@@ -42,7 +42,9 @@ bool MetaTableManager::is_meta_table_name(const std::string& name) {
   return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
 }
 
-const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
+const std::vector<std::string>& MetaTableManager::table_names() const {
+  return _table_names;
+}
 
 void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
   _meta_tables[table->name()] = table;

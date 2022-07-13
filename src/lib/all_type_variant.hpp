@@ -83,7 +83,9 @@ using DataType = detail::DataType;
 using AllTypeVariant = detail::AllTypeVariant;
 
 // Function to check if AllTypeVariant is null
-inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+inline bool variant_is_null(const AllTypeVariant& variant) {
+  return (variant.which() == 0);
+}
 
 bool is_floating_point_data_type(const DataType data_type);
 

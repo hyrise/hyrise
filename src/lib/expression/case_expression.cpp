@@ -11,11 +11,17 @@ CaseExpression::CaseExpression(const std::shared_ptr<AbstractExpression>& when,
                                const std::shared_ptr<AbstractExpression>& otherwise)
     : AbstractExpression(ExpressionType ::Case, {when, then, otherwise}) {}
 
-const std::shared_ptr<AbstractExpression>& CaseExpression::when() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& CaseExpression::when() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& CaseExpression::then() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& CaseExpression::then() const {
+  return arguments[1];
+}
 
-const std::shared_ptr<AbstractExpression>& CaseExpression::otherwise() const { return arguments[2]; }
+const std::shared_ptr<AbstractExpression>& CaseExpression::otherwise() const {
+  return arguments[2];
+}
 
 std::string CaseExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;

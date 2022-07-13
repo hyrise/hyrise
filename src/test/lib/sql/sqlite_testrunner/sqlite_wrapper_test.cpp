@@ -9,7 +9,9 @@ namespace opossum {
 
 class SQLiteWrapperTest : public BaseTest {
  public:
-  void SetUp() override { sqlite_wrapper.emplace(); }
+  void SetUp() override {
+    sqlite_wrapper.emplace();
+  }
 
   std::optional<SQLiteWrapper> sqlite_wrapper;
 };

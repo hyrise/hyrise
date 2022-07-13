@@ -125,6 +125,8 @@ void PluginManager::_clean_up() {
   }
 }
 
-PluginManager::~PluginManager() { _clean_up(); }
+PluginManager::~PluginManager() {
+  _clean_up();
+}
 
 }  // namespace opossum

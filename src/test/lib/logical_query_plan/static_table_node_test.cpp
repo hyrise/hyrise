@@ -32,7 +32,9 @@ TEST_F(StaticTableNodeTest, Description) {
             "[StaticTable]: (a int not nullable, b float nullable, PRIMARY_KEY(a), UNIQUE(b))");
 }
 
-TEST_F(StaticTableNodeTest, NodeExpressions) { ASSERT_EQ(static_table_node->node_expressions.size(), 0u); }
+TEST_F(StaticTableNodeTest, NodeExpressions) {
+  ASSERT_EQ(static_table_node->node_expressions.size(), 0u);
+}
 
 TEST_F(StaticTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*static_table_node, *static_table_node);
@@ -74,7 +76,9 @@ TEST_F(StaticTableNodeTest, HashingAndEqualityConstraintOrder) {
   EXPECT_EQ(same_static_table_node->hash(), static_table_node->hash());
 }
 
-TEST_F(StaticTableNodeTest, Copy) { EXPECT_EQ(*static_table_node, *static_table_node->deep_copy()); }
+TEST_F(StaticTableNodeTest, Copy) {
+  EXPECT_EQ(*static_table_node, *static_table_node->deep_copy());
+}
 
 TEST_F(StaticTableNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());

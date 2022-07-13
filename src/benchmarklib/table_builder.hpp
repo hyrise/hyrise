@@ -28,7 +28,9 @@ class OptionalConstexpr {
   static_assert(_has_value);
   static constexpr bool has_value = true;
 
-  T& value() { return _value; }
+  T& value() {
+    return _value;
+  }
 
  private:
   T _value;
@@ -191,7 +193,9 @@ class TableBuilder {
     }
   }
 
-  size_t row_count() const { return _row_count; }
+  size_t row_count() const {
+    return _row_count;
+  }
 
  private:
   std::shared_ptr<Table> _table;
@@ -204,7 +208,9 @@ class TableBuilder {
   boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>
       _null_value_vectors;
 
-  size_t _current_chunk_row_count() const { return _value_vectors[boost::hana::llong_c<0>].size(); }
+  size_t _current_chunk_row_count() const {
+    return _value_vectors[boost::hana::llong_c<0>].size();
+  }
 
   void _emit_chunk() {
     auto segments = Segments{};

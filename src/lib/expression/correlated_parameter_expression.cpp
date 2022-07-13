@@ -39,11 +39,17 @@ std::string CorrelatedParameterExpression::description(const DescriptionMode mod
   return stream.str();
 }
 
-bool CorrelatedParameterExpression::requires_computation() const { return false; }
+bool CorrelatedParameterExpression::requires_computation() const {
+  return false;
+}
 
-DataType CorrelatedParameterExpression::data_type() const { return _referenced_expression_info.data_type; }
+DataType CorrelatedParameterExpression::data_type() const {
+  return _referenced_expression_info.data_type;
+}
 
-const std::optional<AllTypeVariant>& CorrelatedParameterExpression::value() const { return _value; }
+const std::optional<AllTypeVariant>& CorrelatedParameterExpression::value() const {
+  return _value;
+}
 
 void CorrelatedParameterExpression::set_value(const std::optional<AllTypeVariant>& value) {
   Assert(!value || data_type_from_all_type_variant(*value) == _referenced_expression_info.data_type ||

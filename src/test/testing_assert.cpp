@@ -21,6 +21,7 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInpu
     if (!output2) {
       return false;
     }
+
     if (output == output2 && output2->input(input_side) == input) {
       return true;
     }

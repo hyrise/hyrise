@@ -3004,7 +3004,7 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
   // clang-format off
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl';");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); //NOLINT
+    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
@@ -3110,8 +3110,11 @@ TEST_F(SQLTranslatorTest, CastStatement) {
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(a AS DATE) FROM int_string"), InvalidInputException);
   // We do not have a real Date data type, so we cannot pass this cast anywhere else.
   EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(b AS DATE) FROM int_string"), InvalidInputException);
-  // This is valid SQL, but we do not have a DateTime data type
-  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('2000-01-01 00:00:00' AS DATETIME)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('2000-01-01' AS DATETIME)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('2000-01-01 00:00:x' AS DATETIME)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('10-01-01 00:00:00' AS DATETIME)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST('not_a_datetime' AS DATETIME)"), InvalidInputException);
+  EXPECT_THROW(sql_to_lqp_helper("SELECT CAST(b AS DATETIME) FROM int_string"), InvalidInputException);
 
   {
     const auto cast_expression = expression_vector(cast_(value_(pmr_string{'1'}), DataType::Int));
@@ -3135,7 +3138,7 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    // Dates need to be resolved, as we do not have a Date DataType
+    // Dates need to be translated to a value expression, as we do not have a Date DataType
     const auto value_expression = expression_vector(value_(pmr_string{"2000-01-01"}));
     // clang-format off
     const auto expected_lqp =
@@ -3144,6 +3147,22 @@ TEST_F(SQLTranslatorTest, CastStatement) {
     // clang-format on
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT CAST('2000-01-01' as DATE);");
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+  {
+    // Date times need to be translated to a value expression, as we do not have a DateTime DataType
+    const auto value_expression = expression_vector(value_(pmr_string{"2000-01-02 02:02:01"}));
+    // clang-format off
+    const auto expected_lqp =
+    ProjectionNode::make(value_expression,
+      DummyTableNode::make());
+    // clang-format on
+    const auto [actual_lqp_1, translation_info_1] =
+        sql_to_lqp_helper("SELECT CAST('2000-01-02 02:02:01' as DATETIME);");
+    EXPECT_LQP_EQ(actual_lqp_1, expected_lqp);
+    // Resolve overflowing time components
+    const auto [actual_lqp_2, translation_info_2] =
+        sql_to_lqp_helper("SELECT CAST('2000-01-01 25:61:61' as DATETIME);");
+    EXPECT_LQP_EQ(actual_lqp_2, expected_lqp);
   }
   {
     // BIGINT is an alias for LONG

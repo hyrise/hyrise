@@ -34,7 +34,9 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
 #pragma GCC diagnostic pop
   }
 
-  size_t size() const final { return _data.size(); }
+  size_t size() const final {
+    return _data.size();
+  }
 
  private:
   const pmr_vector<UnsignedIntType>& _data;

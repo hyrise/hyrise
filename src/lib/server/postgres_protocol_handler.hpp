@@ -68,7 +68,9 @@ class PostgresProtocolHandler {
   void send_execution_info(const std::string& execution_information);
 
   // This method is required for testing. Otherwise we cannot make the protocol handler flush its data.
-  void force_flush() { _write_buffer.flush(); }
+  void force_flush() {
+    _write_buffer.flush();
+  }
 
  private:
   void _ssl_deny();
