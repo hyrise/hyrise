@@ -24,6 +24,7 @@ bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constra
 }
 
 bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
+  // PRIMARY_KEY constraints are "smaller" than UNIQUE constraints, thus they are listed first (e.g., for printing).
   if (_key_type < rhs.key_type()) {
     return true;
   }
