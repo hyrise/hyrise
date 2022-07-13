@@ -54,8 +54,7 @@ TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
 
   const auto timestamp_ns = std::chrono::nanoseconds{std::chrono::system_clock::now().time_since_epoch()}.count();
 
-  // check individual rows (we can't simply compare to a pre-built table
-  // because the timestamp values will vary between test runs)
+  // Check individual rows (we can't simply compare to a pre-built table because the timestamp values will vary between test runs).
   const auto row_0 = meta_table->get_row(0);
   const auto row_1 = meta_table->get_row(1);
   const auto row_2 = meta_table->get_row(2);
@@ -65,7 +64,7 @@ TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
 
   EXPECT_EQ(row_0[0], AllTypeVariant{pmr_string{"Mock"}});
   EXPECT_EQ(row_0[1], AllTypeVariant{pmr_string{"my_data_structure_1"}});
-  // recorded timestamp should be within the last second, but before the table was generated
+  // Recorded timestamp should be within the last second, but before the table was generated.
   EXPECT_GT(boost::get<int64_t>(row_0[2]), timestamp_ns - static_cast<int64_t>(60e9));
   EXPECT_LE(boost::get<int64_t>(row_0[2]), timestamp_ns);
   EXPECT_EQ(row_0[3], AllTypeVariant{static_cast<int64_t>(10)});

@@ -35,6 +35,12 @@ TEST_F(TrackingMemoryResourceTest, RecordAllocations) {
   EXPECT_GT(recorded_time_float, std::chrono::system_clock::now() - std::chrono::milliseconds(100));
 }
 
+/**
+ * Test that free was called by using mock
+ *   (expect that was called exactly once with right pointer)
+ * necessary test (not just nice-to-have)
+ */
+
 TEST_F(TrackingMemoryResourceTest, RecordDeallocations) {
   ASSERT_EQ(tracking_memory_resource.memory_timeseries().size(), 0);
 
