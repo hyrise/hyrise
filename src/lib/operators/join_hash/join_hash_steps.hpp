@@ -330,6 +330,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto reference_chunk_offset = ChunkOffset{0};
 
       const auto segment = chunk_in->get_segment(column_id);
+      // std::cout << "materialize chunk #" << chunk_id << " of  table " << *&in_table << " (rows: " << in_table->row_count() << ")." << std::endl;
       segment_with_iterators<T>(*segment, [&](auto iter, auto end) {
         using IterableType = typename decltype(iter)::IterableType;
 

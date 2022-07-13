@@ -135,11 +135,10 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
       resolve_pos_list_type(position_filter, [&](auto resolved_position_filter) {
-        const auto position_begin_it = resolved_position_filter->begin();
-        const auto position_end_it = resolved_position_filter->end();
-
         using PosListIteratorType = std::decay_t<decltype(position_begin_it)>;
 
+        const auto position_begin_it = resolved_position_filter->begin();
+        const auto position_end_it = resolved_position_filter->end();
         const auto pos_list_size = std::distance(position_begin_it, position_end_it);
 
         auto begin = MultipleChunkIterator<PosListIteratorType>{referenced_table, referenced_column_id, accessors,
@@ -375,7 +374,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
         if (!_positions_by_chunk[chunk_id]) {
           _positions_by_chunk[chunk_id] = std::make_shared<RowIDPosList>();
-          _positions_by_chunk[chunk_id]->reserve(estimated_row_count_per_chunk / 2);
+          _positions_by_chunk[chunk_id]->reserve(estimated_row_count_per_chunk);
         }
 
         _positions_by_chunk[chunk_id]->emplace_back(pos_list_item);
@@ -383,9 +382,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         ++temporary_chunk_counters[chunk_id];
       }
 
-      const auto referenced_chunk_count = temporary_chunk_counters.size();
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      jobs.reserve(referenced_chunk_count);
+      jobs.reserve(chunk_count);
 
       // for (auto& [chunk_id, pos_list] : _positions_by_chunk) {
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -437,13 +435,13 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       // std::cout << "initial pos list size: " << std::distance(_begin_pos_list_it, _end_pos_list_it) << std::endl;
       // auto iter = _begin_pos_list_it;
-      // for (auto index = long{0}; index < std::min(long{5}, std::distance(_begin_pos_list_it, _end_pos_list_it)); ++index) {
+      // for (auto index = long{0}; index < std::min(long{20}, std::distance(_begin_pos_list_it, _end_pos_list_it)); ++index) {
       //   std::cout << *iter << " ";
       //   ++iter;
       // }
       // std::cout << "\n sub pos lists: ";
       // for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      //   std::cout << "(chunk #" << chunk_id << ": " << _positions_by_chunk[chunk_id]->size() << " ";
+      //   std::cout << "[chunk #" << chunk_id << ": " << _positions_by_chunk[chunk_id]->size() << "] ";
       // }
       // std::cout << std::endl;
 

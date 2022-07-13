@@ -63,6 +63,8 @@ bool AbstractOperator::executed() const {
 }
 
 void AbstractOperator::execute() {
+  // std::cout << name() << " starting." << std::endl;
+
   DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
 
   /**
@@ -177,6 +179,8 @@ void AbstractOperator::execute() {
       }
     }
   }
+
+  // std::cout << name() << " done." << std::endl;
 }
 
 std::shared_ptr<const Table> AbstractOperator::get_output() const {
