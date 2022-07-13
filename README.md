@@ -127,7 +127,7 @@ Subsets of all available tests can be selected via `--gtest_filter=`.
 ### Coverage
 `./scripts/coverage.sh` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
-*Supports only clang on MacOS and only gcc on linux*
+*Supports only clang on MacOS and linux*
 
 ### Address/UndefinedBehavior Sanitizers
 `cmake -DENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
