@@ -1,9 +1,10 @@
 #pragma once
 
 #include <atomic>
+#include <chrono>
+
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/core/no_exceptions_support.hpp>
-#include <chrono>
 
 namespace opossum {
 

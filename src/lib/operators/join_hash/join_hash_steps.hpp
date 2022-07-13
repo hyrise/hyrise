@@ -855,7 +855,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 //               }
 //             }
 
-//             // If NULL values are discarded, the matching probe_column_element pairs will be written to the result pos
+//             // If NULL values are discarded, the matching probe_column_elem
+//     nt pairs will be written to the result pos
 //             // lists.
 //             if (!multi_predicate_join_evaluator) {
 //               for (; primary_predicate_matching_rows_iter != primary_predicate_matching_rows_end;
@@ -902,7 +903,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 //         if constexpr (keep_null_values) {
 //           // We assume that the relations have been swapped previously, so that the outer relation is the probing
 //           // relation.
-//           // Since we did not find a hash table, we know that there is no match in the build column for this partition.
+//           // Since we did not find a hash table, we know that there is no match in th
+//  e build column for this partition.
 //           // Hence we are going to write NULL values for each row.
 
 //           pos_list_build_side_local.reserve(elements_count);

@@ -1,9 +1,9 @@
 #pragma once
 
+#include <oneapi/tbb/concurrent_vector.h>
 #include <functional>
 #include <map>
 
-#include <oneapi/tbb/concurrent_vector.h>
 #include "memory/tracking_memory_resource.hpp"
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"

@@ -4,7 +4,7 @@ namespace opossum {
 
 std::chrono::system_clock::time_point TrackingMemoryResource::_get_timestamp() const {
   return std::chrono::system_clock::now();
-};
+}
 
 void* TrackingMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   _memory_timeseries.emplace_back(std::make_pair(_get_timestamp(), bytes));
