@@ -8,9 +8,9 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
@@ -373,4 +373,4 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

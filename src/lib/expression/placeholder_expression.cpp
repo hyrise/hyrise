@@ -8,7 +8,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PlaceholderExpression::PlaceholderExpression(const ParameterID init_parameter_id)
     : AbstractExpression(ExpressionType::Placeholder, {}), parameter_id(init_parameter_id) {}
@@ -48,4 +48,4 @@ bool PlaceholderExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) c
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 #include "storage/table.hpp"
 #include "typed_operator_base_test.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableScanBetweenTest : public TypedOperatorBaseTest {
  protected:
@@ -233,4 +233,4 @@ TEST_P(TableScanBetweenTest, Exclusive) {
 INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
                          TypedOperatorBaseTest::format);
 
-}  // namespace opossum
+}  // namespace hyrise

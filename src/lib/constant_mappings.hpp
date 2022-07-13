@@ -14,7 +14,7 @@
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class EncodingType : uint8_t;
 enum class VectorCompressionType : uint8_t;
@@ -39,4 +39,4 @@ std::ostream& operator<<(std::ostream& stream, const LogLevel log_level);
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
 
-}  // namespace opossum
+}  // namespace hyrise

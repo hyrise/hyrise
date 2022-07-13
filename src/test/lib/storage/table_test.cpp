@@ -11,7 +11,7 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageTableTest : public BaseTest {
  protected:
@@ -283,4 +283,4 @@ TEST_F(StorageTableTest, StableChunks) {
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

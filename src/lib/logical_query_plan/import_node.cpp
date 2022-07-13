@@ -4,7 +4,7 @@
 
 #include "constant_mappings.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ImportNode::ImportNode(const std::string& init_table_name, const std::string& init_file_name,
                        const FileType init_file_type)
@@ -36,4 +36,4 @@ bool ImportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
          file_type == import_node.file_type;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -13,7 +13,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 FileBasedTableGenerator::FileBasedTableGenerator(const std::shared_ptr<BenchmarkConfig>& benchmark_config,
                                                  const std::string& path)
@@ -118,4 +118,4 @@ void FileBasedTableGenerator::_add_constraints(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

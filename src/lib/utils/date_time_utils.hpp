@@ -5,7 +5,7 @@
 #include <boost/date_time/gregorian/gregorian.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Takes delimited date string with order year-month-day (ISO 8601 extended format), e.g., "2001-01-01".
@@ -35,4 +35,4 @@ std::string date_to_string(const boost::gregorian::date& date);
 // ISO 8601 extended format representation of the timestamp without time indicator.
 std::string date_time_to_string(const boost::posix_time::ptime& date_time);
 
-}  // namespace opossum
+}  // namespace hyrise

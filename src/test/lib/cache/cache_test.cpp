@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Test for the cache implementation in lib/cache.
 // Not using SQL types in this test, only testing cache eviction.
@@ -191,4 +191,4 @@ TEST_F(CacheTest, Snapshot) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,6 +1,6 @@
 #include "change_meta_table_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,
                                          const MetaTableChangeType& init_change_type)
@@ -29,4 +29,4 @@ bool ChangeMetaTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const L
   return table_name == change_meta_table_node.table_name && change_type == change_meta_table_node.change_type;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

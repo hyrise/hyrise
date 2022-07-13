@@ -55,7 +55,7 @@ try {
   
     // The empty '' results in using the default registry: https://index.docker.io/v1/
     docker.withRegistry('', 'docker') {
-      def oppossumCI = docker.image('hyrise/opossum-ci:20.04');
+      def oppossumCI = docker.image('hyrise/hyrise-ci:20.04');
       oppossumCI.pull()
 
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.

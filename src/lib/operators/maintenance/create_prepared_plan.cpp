@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "storage/prepared_plan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreatePreparedPlan::CreatePreparedPlan(const std::string& prepared_plan_name,
                                        const std::shared_ptr<PreparedPlan>& prepared_plan)
@@ -47,4 +47,4 @@ std::shared_ptr<AbstractOperator> CreatePreparedPlan::_on_deep_copy(
   return std::make_shared<CreatePreparedPlan>(_prepared_plan_name, _prepared_plan->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

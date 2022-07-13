@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 TableWrapper::TableWrapper(const std::shared_ptr<const Table>& init_table)
     : AbstractReadOnlyOperator(OperatorType::TableWrapper), table(init_table) {}
@@ -26,4 +26,4 @@ void TableWrapper::_on_set_parameters(const std::unordered_map<ParameterID, AllT
 std::shared_ptr<const Table> TableWrapper::_on_execute() {
   return table;
 }
-}  // namespace opossum
+}  // namespace hyrise

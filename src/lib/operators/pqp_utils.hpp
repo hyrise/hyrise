@@ -5,7 +5,7 @@
 
 #include "operators/abstract_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class PQPVisitation { VisitInputs, DoNotVisitInputs };
 
@@ -57,4 +57,4 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

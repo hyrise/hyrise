@@ -6,7 +6,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "viz_record_layout.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
   for (const auto& graph : graphs) {
@@ -127,4 +127,4 @@ std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_pt
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

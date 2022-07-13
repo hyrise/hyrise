@@ -6,7 +6,7 @@
 
 #include "expression/expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                      const std::vector<std::string>& init_aliases)
@@ -60,4 +60,4 @@ bool AliasNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapp
          aliases == alias_node.aliases;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

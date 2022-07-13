@@ -4,7 +4,7 @@
 #include "operators/insert.hpp"
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // maintenance operator for the "CREATE TABLE" sql statement
 class CreateTable : public AbstractReadWriteOperator {
@@ -37,4 +37,4 @@ class CreateTable : public AbstractReadWriteOperator {
 
   std::shared_ptr<Insert> _insert;
 };
-}  // namespace opossum
+}  // namespace hyrise

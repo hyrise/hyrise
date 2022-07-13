@@ -19,7 +19,7 @@
 #include "utils/timer.hpp"
 #include "utils/tracing/probes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
@@ -419,4 +419,4 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

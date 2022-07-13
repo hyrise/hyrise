@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class for calling user executable functions provided by plugins.
@@ -22,4 +22,4 @@ class MetaExecTable : public AbstractMetaTable {
   void _on_insert(const std::vector<AllTypeVariant>& values) final;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

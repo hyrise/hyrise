@@ -1,6 +1,6 @@
 #include "row_id_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void RowIDPosList::guarantee_single_chunk() {
   _references_single_chunk = true;
@@ -36,4 +36,4 @@ size_t RowIDPosList::memory_usage(const MemoryUsageCalculationMode mode) const {
   return size() * sizeof(Vector::value_type);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

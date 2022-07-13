@@ -7,7 +7,7 @@
 #include "type_comparison.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MultiPredicateJoinEvaluator::MultiPredicateJoinEvaluator(const Table& left, const Table& right,
                                                          const JoinMode join_mode,
@@ -70,4 +70,4 @@ std::vector<std::unique_ptr<AbstractSegmentAccessor<T>>> MultiPredicateJoinEvalu
   return accessors;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

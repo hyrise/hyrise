@@ -7,7 +7,7 @@
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const MemoryUsageCalculationMode mode) {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
@@ -93,4 +93,4 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
   return distinct_value_count;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

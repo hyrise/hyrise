@@ -2,7 +2,7 @@
 
 #include "storage/reference_segment/reference_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, bool EraseSegmentType, EraseReferencedSegmentType erase_referenced_segment_type>
 auto create_iterable_from_segment(const ReferenceSegment& segment) {
@@ -13,4 +13,4 @@ auto create_iterable_from_segment(const ReferenceSegment& segment) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

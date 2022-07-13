@@ -5,9 +5,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorJoinPredicateTest : public BaseTest {
  public:
@@ -49,4 +49,4 @@ TEST_F(OperatorJoinPredicateTest, FromExpressionImpossible) {
   ASSERT_FALSE(predicate_b);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

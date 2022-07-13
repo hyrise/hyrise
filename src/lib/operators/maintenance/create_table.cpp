@@ -7,7 +7,7 @@
 #include "operators/insert.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreateTable::CreateTable(const std::string& init_table_name, const bool init_if_not_exists,
                          const std::shared_ptr<const AbstractOperator>& input_operator)
@@ -83,4 +83,4 @@ void CreateTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTy
   // No parameters possible for CREATE TABLE
 }
 
-}  // namespace opossum
+}  // namespace hyrise

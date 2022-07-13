@@ -12,10 +12,10 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /**
  * This function reduces the group-by columns of @param aggregate_node for a given functional dependency (@param fd).
@@ -66,7 +66,7 @@ bool remove_dependent_group_by_columns(const FunctionalDependency& fd, Aggregate
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string DependentGroupByReductionRule::name() const {
   static const auto name = std::string{"DependentGroupByReductionRule"};
@@ -141,4 +141,4 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

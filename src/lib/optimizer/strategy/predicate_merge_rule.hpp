@@ -6,7 +6,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * The PredicateSplitUpRule might have rewritten disjunctions into complex predicate/union chains. If no rule between
@@ -32,4 +32,4 @@ class PredicateMergeRule : public AbstractRule {
   void _merge_conjunction(const std::shared_ptr<PredicateNode>& predicate_node) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

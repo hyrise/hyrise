@@ -8,7 +8,7 @@
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 UpdateNode::UpdateNode(const std::string& init_table_name)
     : AbstractNonQueryNode(LQPNodeType::Update), table_name(init_table_name) {}
@@ -42,4 +42,4 @@ bool UpdateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
   return table_name == update_node_rhs.table_name;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

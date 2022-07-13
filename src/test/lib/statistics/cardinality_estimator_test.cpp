@@ -34,9 +34,9 @@
 #include "storage/table_column_definition.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class CardinalityEstimatorTest : public BaseTest {
  public:
@@ -913,4 +913,4 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   EXPECT_EQ(estimator.estimate_cardinality(DummyTableNode::make()), 0.0f);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

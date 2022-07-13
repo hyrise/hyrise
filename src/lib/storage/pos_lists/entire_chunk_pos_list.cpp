@@ -1,6 +1,6 @@
 #include "entire_chunk_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool EntireChunkPosList::references_single_chunk() const {
   return true;
@@ -38,4 +38,4 @@ AbstractPosList::PosListIterator<EntireChunkPosList, RowID> EntireChunkPosList::
   return end();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

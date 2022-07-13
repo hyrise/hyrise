@@ -5,7 +5,7 @@
 
 #include <boost/asio.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 using AsioStreamDescriptor = boost::asio::posix::stream_descriptor;
 
@@ -66,4 +66,4 @@ class NetworkConversionHelper {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

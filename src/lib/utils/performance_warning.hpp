@@ -24,7 +24,7 @@
  * Warnings do not print in tests.
  */
 
-namespace opossum {
+namespace hyrise {
 
 class PerformanceWarningDisabler;
 
@@ -73,4 +73,4 @@ class PerformanceWarningDisabler {
   }                                                                                                    \
   static_assert(true, "End call of macro with a semicolon")
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "constant_mappings.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct TableColumnDefinition final {
   TableColumnDefinition() = default;
@@ -30,4 +30,4 @@ using TableColumnDefinitions = std::vector<TableColumnDefinition>;
 
 TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const TableColumnDefinitions& rhs);
 
-}  // namespace opossum
+}  // namespace hyrise

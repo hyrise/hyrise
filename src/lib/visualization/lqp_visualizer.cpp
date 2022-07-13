@@ -13,7 +13,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
@@ -201,4 +201,4 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   _add_edge(from, to, info);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 
 #include "abstract_benchmark_item_runner.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCCBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
@@ -21,4 +21,4 @@ class TPCCBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   const int _num_warehouses;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

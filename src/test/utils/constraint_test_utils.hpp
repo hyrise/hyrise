@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "storage/table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Verifies whether a given table key constraint is represented in a given set of unique constraints.
@@ -37,4 +37,4 @@ static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& t
   return false;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

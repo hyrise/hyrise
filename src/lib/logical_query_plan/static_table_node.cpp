@@ -6,7 +6,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
     : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
@@ -79,4 +79,4 @@ bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   return table->column_definitions() == static_table_node.table->column_definitions();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

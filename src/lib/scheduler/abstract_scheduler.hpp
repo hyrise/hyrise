@@ -9,7 +9,7 @@
 #include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TaskQueue;
 
@@ -60,4 +60,4 @@ class AbstractScheduler : public Noncopyable {
   virtual void _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

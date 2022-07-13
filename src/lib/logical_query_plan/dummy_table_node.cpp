@@ -8,7 +8,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}
 
@@ -36,4 +36,4 @@ bool DummyTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNod
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

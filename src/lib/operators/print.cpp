@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 bool has_print_mvcc_flag(const PrintFlags flags) {
   return static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags);
@@ -32,7 +32,7 @@ bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 Print::Print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out)
     : AbstractReadOnlyOperator(OperatorType::Print, in), _flags(flags), _out(out) {}
@@ -268,4 +268,4 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
   return segment_type;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableColumnDefinitionTest : public BaseTest {
  protected:
@@ -31,4 +31,4 @@ TEST_F(TableColumnDefinitionTest, HashingAndEqualityCheck) {
   EXPECT_NE(column_definition.hash(), different_column_definition_c.hash());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

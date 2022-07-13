@@ -31,7 +31,7 @@ void clear_cache() {
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
@@ -73,7 +73,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  opossum::Hyrise::reset();
+  hyrise::Hyrise::reset();
 }
 
 template <class C>
@@ -114,4 +114,4 @@ BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
 
-}  // namespace opossum
+}  // namespace hyrise

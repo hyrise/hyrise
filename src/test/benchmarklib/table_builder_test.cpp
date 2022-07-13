@@ -3,7 +3,7 @@
 #include "all_type_variant.hpp"
 #include "table_builder.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 const auto table_builder_test_types = boost::hana::tuple<int32_t, std::optional<float>, pmr_string>();
@@ -39,4 +39,4 @@ TEST_F(TableBuilderTest, AppendsRows) {
   EXPECT_TABLE_EQ_UNORDERED(table, expected_table);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

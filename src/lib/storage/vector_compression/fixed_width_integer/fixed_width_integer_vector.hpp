@@ -10,7 +10,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -65,4 +65,4 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
   const pmr_vector<UnsignedIntType> _data;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

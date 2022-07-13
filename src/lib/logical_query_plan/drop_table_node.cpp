@@ -1,6 +1,6 @@
 #include "drop_table_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DropTableNode::DropTableNode(const std::string& init_table_name, const bool init_if_exists)
     : AbstractNonQueryNode(LQPNodeType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
@@ -24,4 +24,4 @@ bool DropTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
   return table_name == drop_table_node.table_name && if_exists == drop_table_node.if_exists;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

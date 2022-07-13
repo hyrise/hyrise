@@ -4,7 +4,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class AggregateNode;
@@ -47,4 +47,4 @@ class DependentGroupByReductionRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

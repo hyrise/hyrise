@@ -14,9 +14,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 std::string ExpressionReductionRule::name() const {
   static const auto name = std::string{"ExpressionReductionRule"};
@@ -360,4 +360,4 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

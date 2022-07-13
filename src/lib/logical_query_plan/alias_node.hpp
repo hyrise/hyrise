@@ -6,7 +6,7 @@
 
 #include "abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Assign column names to expressions
@@ -30,4 +30,4 @@ class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

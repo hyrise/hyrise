@@ -2,7 +2,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 GenericHistogramBuilder<T>::GenericHistogramBuilder(const size_t reserve_bin_count, const HistogramDomain<T>& domain)
@@ -64,4 +64,4 @@ std::shared_ptr<GenericHistogram<T>> GenericHistogramBuilder<T>::build() {
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogramBuilder);
 
-}  // namespace opossum
+}  // namespace hyrise

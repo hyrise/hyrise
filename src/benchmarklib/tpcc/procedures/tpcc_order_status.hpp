@@ -4,7 +4,7 @@
 
 #include "abstract_tpcc_procedure.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCCOrderStatus : public AbstractTPCCProcedure {
  public:
@@ -27,4 +27,4 @@ class TPCCOrderStatus : public AbstractTPCCProcedure {
   int32_t ol_quantity_sum{0};               // Sum of the quantities in the order lines, stored for verification
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Delete::Delete(const std::shared_ptr<const AbstractOperator>& referencing_table_op)
     : AbstractReadWriteOperator{OperatorType::Delete, referencing_table_op}, _transaction_id{0} {}
@@ -143,4 +143,4 @@ std::shared_ptr<AbstractOperator> Delete::_on_deep_copy(
 
 void Delete::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

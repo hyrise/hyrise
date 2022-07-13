@@ -2,7 +2,7 @@
 
 #include "storage/create_iterable_from_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SegmentIteratorsTest : public EncodingTest {
  public:
@@ -213,4 +213,4 @@ bool operator<(const AbstractSegmentPosition<T>& /*lhs*/, const AbstractSegmentP
 INSTANTIATE_TEST_SUITE_P(SegmentIteratorsTestInstances, SegmentIteratorsTest,
                          ::testing::ValuesIn(all_segment_encoding_specs), all_segment_encoding_specs_formatter);
 
-}  // namespace opossum
+}  // namespace hyrise

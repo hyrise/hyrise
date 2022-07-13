@@ -7,7 +7,7 @@
 #include "utils/abstract_plugin.hpp"
 #include "utils/string_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct plugin_name_function_name_hash;
 
@@ -63,4 +63,4 @@ class PluginManager : public Noncopyable {
   std::unordered_map<PluginName, PluginHandleWrapper>::iterator _unload_and_erase_plugin(
       const std::unordered_map<PluginName, PluginHandleWrapper>::iterator plugin_iter);
 };
-}  // namespace opossum
+}  // namespace hyrise

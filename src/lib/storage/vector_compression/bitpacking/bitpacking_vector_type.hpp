@@ -3,7 +3,7 @@
 #include "compact_vector.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Template arguments of compact_vector<typename IDX, unsigned BITS, typename W, typename Allocator>
@@ -16,4 +16,4 @@ namespace opossum {
 
 using pmr_compact_vector = compact::vector<uint32_t, 0u, uint64_t, PolymorphicAllocator<uint64_t>>;
 
-}  // namespace opossum
+}  // namespace hyrise

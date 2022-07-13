@@ -7,7 +7,7 @@
 #include "abstract_statistics_object.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 static constexpr uint32_t DEFAULT_MAX_RANGES_COUNT = 10;
 
@@ -71,4 +71,4 @@ extern template class RangeFilter<int64_t>;
 extern template class RangeFilter<float>;
 extern template class RangeFilter<double>;
 
-}  // namespace opossum
+}  // namespace hyrise

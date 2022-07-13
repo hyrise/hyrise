@@ -2,7 +2,7 @@
 
 #include <string>
 
-namespace opossum {
+namespace hyrise {
 
 ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
@@ -22,4 +22,4 @@ bool ValidateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeM
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

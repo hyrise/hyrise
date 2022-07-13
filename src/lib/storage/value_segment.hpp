@@ -9,7 +9,7 @@
 #include "base_value_segment.hpp"
 #include "chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // ValueSegment is a specific segment type that stores all its values in a vector.
 template <typename T>
@@ -91,4 +91,4 @@ class ValueSegment : public BaseValueSegment {
 
 EXPLICITLY_DECLARE_DATA_TYPES(ValueSegment);
 
-}  // namespace opossum
+}  // namespace hyrise

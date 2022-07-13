@@ -12,7 +12,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsPrintTest : public BaseTest {
  protected:
@@ -148,7 +148,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {
-  auto pr = std::make_shared<opossum::Print>(_gt, PrintFlags::None, output);
+  auto pr = std::make_shared<hyrise::Print>(_gt, PrintFlags::None, output);
 
   EXPECT_EQ(pr->name(), "Print");
 }
@@ -351,4 +351,4 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   EXPECT_FALSE(wrapper.is_printing_mvcc_information());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

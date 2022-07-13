@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class for showing information about static system properties such as hardware capabilities.
@@ -21,4 +21,4 @@ class MetaSystemInformationTable : public AbstractMetaTable {
   static std::string _cpu_model();
 };
 
-}  // namespace opossum
+}  // namespace hyrise

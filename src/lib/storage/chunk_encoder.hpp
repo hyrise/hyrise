@@ -12,7 +12,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Chunk;
 class Table;
@@ -82,4 +82,4 @@ class ChunkEncoder {
                                 const SegmentEncodingSpec& segment_encoding_spec = {});
 };
 
-}  // namespace opossum
+}  // namespace hyrise

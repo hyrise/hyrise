@@ -7,7 +7,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
                                    const ColumnID referenced_column_id,
@@ -68,4 +68,4 @@ size_t ReferenceSegment::memory_usage(const MemoryUsageCalculationMode mode) con
   return sizeof(*this) + _pos_list->memory_usage(mode);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

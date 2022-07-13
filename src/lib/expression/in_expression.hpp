@@ -2,7 +2,7 @@
 
 #include "abstract_predicate_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * SQL's IN
@@ -26,4 +26,4 @@ class InExpression : public AbstractPredicateExpression {
   std::string description(const DescriptionMode mode) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

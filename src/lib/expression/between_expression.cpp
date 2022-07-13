@@ -4,7 +4,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BetweenExpression::BetweenExpression(const PredicateCondition init_predicate_condition,
                                      const std::shared_ptr<AbstractExpression>& value,
@@ -45,4 +45,4 @@ ExpressionPrecedence BetweenExpression::_precedence() const {
   return ExpressionPrecedence::BinaryTernaryPredicate;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

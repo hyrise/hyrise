@@ -3,7 +3,7 @@
 #include "abstract_pos_list.hpp"
 #include "storage/chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EntireChunkPosList : public AbstractPosList {
  public:
@@ -42,4 +42,4 @@ class EntireChunkPosList : public AbstractPosList {
   const ChunkOffset _common_chunk_size;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

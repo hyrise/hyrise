@@ -12,11 +12,11 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * This operator writes a table into a file.
- * Supportes file types are .csv and Opossum .bin files.
+ * Supportes file types are .csv and hyrise .bin files.
  * For .csv files, a CSV config is added, which is located in the <filename>.json file.
  * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */
@@ -51,4 +51,4 @@ class Export : public AbstractReadOnlyOperator {
   FileType _file_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

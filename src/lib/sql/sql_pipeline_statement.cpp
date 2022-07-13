@@ -27,7 +27,7 @@
 #include "utils/assert.hpp"
 #include "utils/tracing/probes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
@@ -389,4 +389,4 @@ bool SQLPipelineStatement::_is_transaction_statement() {
   return get_parsed_sql_statement()->getStatements().front()->isType(hsql::kStmtTransaction);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

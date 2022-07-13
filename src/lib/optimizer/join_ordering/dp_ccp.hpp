@@ -2,7 +2,7 @@
 
 #include "abstract_join_ordering_algorithm.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractCostEstimator;
 class JoinGraph;
@@ -24,4 +24,4 @@ class DpCcp final : public AbstractJoinOrderingAlgorithm {
                                               const std::shared_ptr<AbstractCostEstimator>& cost_estimator) override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

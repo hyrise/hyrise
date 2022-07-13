@@ -9,7 +9,7 @@
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 IntersectNode::IntersectNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Intersect), set_operation_mode(init_operation_mode) {}
@@ -56,4 +56,4 @@ bool IntersectNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
   return set_operation_mode == intersect_node.set_operation_mode;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

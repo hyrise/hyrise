@@ -72,7 +72,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
@@ -271,7 +271,7 @@ std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_sca
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
-    const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
+    const std::shared_ptr<hyrise::AbstractLQPNode>& node) const {
   const auto alias_node = std::dynamic_pointer_cast<AliasNode>(node);
   const auto input_node = alias_node->left_input();
   const auto input_operator = translate_node(input_node);
@@ -555,7 +555,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
-    const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
+    const std::shared_ptr<hyrise::AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
   return std::make_shared<CreatePreparedPlan>(create_prepared_plan_node->name,
                                               create_prepared_plan_node->prepared_plan);
@@ -672,4 +672,4 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   return pqp_expressions;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

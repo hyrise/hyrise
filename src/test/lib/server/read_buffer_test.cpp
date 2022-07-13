@@ -5,7 +5,7 @@
 
 #include "server/read_buffer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ReadBufferTest : public BaseTest {
  protected:
@@ -61,4 +61,4 @@ TEST_F(ReadBufferTest, ReadLargeString) {
   EXPECT_EQ(_read_buffer->get_string(), original_content);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 
 #include "join_graph_edge.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class JoinGraph;
 
@@ -87,4 +87,4 @@ class EnumerateCcp final {
   std::vector<JoinGraphVertexSet> _vertex_neighborhoods;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Base class of all vector decompressors
@@ -26,4 +26,4 @@ class BaseVectorDecompressor {
   virtual size_t size() const = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

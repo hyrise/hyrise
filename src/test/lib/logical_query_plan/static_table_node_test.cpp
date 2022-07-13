@@ -5,7 +5,7 @@
 #include "storage/table_column_definition.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StaticTableNodeTest : public BaseTest {
  public:
@@ -72,4 +72,4 @@ TEST_F(StaticTableNodeTest, UniqueConstraints) {
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

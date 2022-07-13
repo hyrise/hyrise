@@ -5,7 +5,7 @@
 
 #include "scheduler/abstract_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Chunk;
 
@@ -50,4 +50,4 @@ class ChunkCompressionTask : public AbstractTask {
   const std::string _table_name;
   const std::vector<ChunkID> _chunk_ids;
 };
-}  // namespace opossum
+}  // namespace hyrise

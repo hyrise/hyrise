@@ -2,7 +2,7 @@
 #include "hyrise.hpp"
 #include "utils/tracing/probes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipelineBuilder::SQLPipelineBuilder(const std::string& sql)
     : _sql(sql), _pqp_cache(Hyrise::get().default_pqp_cache), _lqp_cache(Hyrise::get().default_lqp_cache) {}
@@ -48,4 +48,4 @@ SQLPipeline SQLPipelineBuilder::create_pipeline() const {
   return pipeline;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

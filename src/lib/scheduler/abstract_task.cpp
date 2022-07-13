@@ -13,7 +13,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
 
@@ -245,4 +245,4 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

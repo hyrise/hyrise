@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is an abstract class for all settings objects.
@@ -39,4 +39,4 @@ class AbstractSetting : public Noncopyable, public std::enable_shared_from_this<
   const std::string name;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

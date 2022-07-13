@@ -1,6 +1,6 @@
 #include "abstract_table_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractTableConstraint::AbstractTableConstraint(std::unordered_set<ColumnID> init_columns)
     : _columns(std::move(init_columns)) {}
@@ -29,4 +29,4 @@ bool AbstractTableConstraint::operator!=(const AbstractTableConstraint& rhs) con
   return !(rhs == *this);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

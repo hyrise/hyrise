@@ -17,7 +17,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 struct Predicate {
   PredicateCondition predicate_condition;
@@ -37,7 +37,7 @@ T previous_value(T v) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class GenericHistogramTest : public BaseTest {
  public:
@@ -1186,4 +1186,4 @@ TEST_F(GenericHistogramTest, ScaledWithSelectivity) {
   EXPECT_FLOAT_EQ(scaled_histogram_10->bin_distinct_count(BinID{3}), 5.0f);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

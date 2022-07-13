@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_component) {
   switch (datetime_component) {
@@ -66,4 +66,4 @@ size_t ExtractExpression::_shallow_hash() const {
   return std::hash<DatetimeUnderlyingType>{}(static_cast<DatetimeUnderlyingType>(datetime_component));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

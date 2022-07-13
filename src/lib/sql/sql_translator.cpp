@@ -67,11 +67,11 @@
 #include "SQLParser.h"
 
 using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},
@@ -157,7 +157,7 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
@@ -2061,4 +2061,4 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

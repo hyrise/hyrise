@@ -7,7 +7,7 @@
 
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLengthSegmentIterable<T>> {
@@ -262,4 +262,4 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

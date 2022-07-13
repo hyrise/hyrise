@@ -6,7 +6,7 @@
 
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageValueSegmentTest : public BaseTest {
  protected:
@@ -110,4 +110,4 @@ TEST_F(StorageValueSegmentTest, MemoryUsageEstimation) {
   EXPECT_EQ(vs_str.memory_usage(MemoryUsageCalculationMode::Full), empty_usage_str + longer_str.capacity() + 1);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

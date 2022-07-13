@@ -18,7 +18,7 @@
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This encoder compresses a value segment with the LZ4 library. LZ4 allows two different modes: block and stream
@@ -424,4 +424,4 @@ class LZ4Encoder : public SegmentEncoder<LZ4Encoder> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

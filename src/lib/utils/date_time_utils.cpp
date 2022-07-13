@@ -2,7 +2,7 @@
 
 #include <magic_enum.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 std::optional<boost::gregorian::date> string_to_date(const std::string& date_string) {
   // We catch parsing exceptions since we return a std::nullopt if the input string is not a valid date.
@@ -63,4 +63,4 @@ std::string date_time_to_string(const boost::posix_time::ptime& date_time) {
   return string_representation;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

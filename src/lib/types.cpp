@@ -2,7 +2,7 @@
 
 #include "utils/make_bimap.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::Equals || predicate_condition == PredicateCondition::NotEquals ||
@@ -197,4 +197,4 @@ std::ostream& operator<<(std::ostream& stream, TableType table_type) {
   return stream << table_type_to_string.left.at(table_type);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

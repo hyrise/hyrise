@@ -6,7 +6,7 @@
 #include "operators/abstract_operator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PQPSubqueryExpression::PQPSubqueryExpression(const std::shared_ptr<AbstractOperator>& init_pqp,
                                              const DataType data_type, const bool nullable,
@@ -71,4 +71,4 @@ bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) c
 PQPSubqueryExpression::DataTypeInfo::DataTypeInfo(const DataType init_data_type, const bool init_nullable)
     : data_type(init_data_type), nullable(init_nullable) {}
 
-}  // namespace opossum
+}  // namespace hyrise

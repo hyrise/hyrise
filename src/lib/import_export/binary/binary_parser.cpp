@@ -18,7 +18,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
@@ -330,4 +330,4 @@ std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std
   return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

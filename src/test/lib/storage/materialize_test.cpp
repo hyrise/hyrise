@@ -6,9 +6,9 @@
 #include "storage/materialize.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class MaterializeTest : public EncodingTest {
  public:
@@ -153,4 +153,4 @@ TEST_P(MaterializeTest, MaterializeNullsTwoSegments) {
 INSTANTIATE_TEST_SUITE_P(MaterializeTestInstances, MaterializeTest, ::testing::ValuesIn(all_segment_encoding_specs),
                          all_segment_encoding_specs_formatter);
 
-}  // namespace opossum
+}  // namespace hyrise

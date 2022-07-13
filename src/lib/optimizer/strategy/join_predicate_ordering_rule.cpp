@@ -9,7 +9,7 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string JoinPredicateOrderingRule::name() const {
   static const auto name = std::string{"JoinPredicateOrderingRule"};
@@ -69,4 +69,4 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

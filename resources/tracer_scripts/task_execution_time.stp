@@ -6,7 +6,7 @@ probe begin
     printf("Probing binary %s\n", @1)
 }
 
-probe process(@1).function("_ZN7opossum12AbstractTask7executeEv").return
+probe process(@1).function("_ZN7hyrise12AbstractTask7executeEv").return
 {
     time = gettimeofday_us() - @entry(gettimeofday_us())
     printf("Execution time is %i μs\n", time)

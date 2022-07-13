@@ -10,7 +10,7 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
                                                    const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
@@ -139,4 +139,4 @@ std::shared_ptr<AbstractLQPNode> DpCcp::operator()(const JoinGraph& join_graph,
   return best_plan_iter->second;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

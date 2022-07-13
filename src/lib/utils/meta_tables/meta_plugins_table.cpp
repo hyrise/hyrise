@@ -4,7 +4,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaPluginsTable::MetaPluginsTable() : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false}}) {}
 
@@ -41,4 +41,4 @@ void MetaPluginsTable::_on_remove(const std::vector<AllTypeVariant>& values) {
   Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

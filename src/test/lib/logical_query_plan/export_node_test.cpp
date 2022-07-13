@@ -6,7 +6,7 @@
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/export_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ExportNodeTest : public BaseTest {
  protected:
@@ -44,4 +44,4 @@ TEST_F(ExportNodeTest, Copy) {
   EXPECT_EQ(*_export_node, *_export_node->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

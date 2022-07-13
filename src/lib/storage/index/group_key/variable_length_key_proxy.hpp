@@ -2,7 +2,7 @@
 
 #include "variable_length_key_base.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKey;
 
@@ -77,4 +77,4 @@ class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
   VariableLengthKeyProxy& operator=(const VariableLengthKeyBase& other);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

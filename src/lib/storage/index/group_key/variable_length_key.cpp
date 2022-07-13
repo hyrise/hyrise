@@ -8,7 +8,7 @@
 #include "variable_length_key_proxy.hpp"
 #include "variable_length_key_store.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 VariableLengthKey::VariableLengthKey(CompositeKeyLength bytes_per_key)
     : _owned_data(std::make_unique<VariableLengthKeyWord[]>(bytes_per_key)),  // NOLINT
@@ -81,4 +81,4 @@ std::ostream& operator<<(std::ostream& os, const VariableLengthKey& key) {
   return os;
 }
 
-}  // namespace opossum
+}  // namespace hyrise
