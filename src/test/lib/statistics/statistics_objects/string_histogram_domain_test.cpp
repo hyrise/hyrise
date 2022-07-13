@@ -40,7 +40,7 @@ TEST_F(StringHistogramDomainTest, NextValue) {
 }
 
 TEST_F(StringHistogramDomainTest, NextValueThrowsOnInvalidInput) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
   // "A" is not in `domain_a`

@@ -53,7 +53,7 @@ TEST_F(StorageChunkTest, AddValuesToChunk) {
   chunk->append({2, "two"});
   EXPECT_EQ(chunk->size(), 4u);
 
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(chunk->append({}), std::exception);
     EXPECT_THROW(chunk->append({4, "val", 3}), std::exception);
     EXPECT_EQ(chunk->size(), 4u);
@@ -239,7 +239,7 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -255,7 +255,7 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -273,7 +273,7 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -291,7 +291,7 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
