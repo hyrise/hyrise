@@ -186,7 +186,7 @@ TEST_F(VariableLengthKeyStoreTest, WriteAccessViaBracketsOperator) {
 }
 
 TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
   // _store is created with 4 bytes per entry

@@ -308,7 +308,7 @@ TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
 }
 
 TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

@@ -45,7 +45,7 @@ TEST_F(QueryHandlerTest, BindParameters) {
   // Check that the optimizer was executed. We cannot distinguish an optimized PQP from an unoptimized PQP, so we check
   // whether the chunk pruning information was set in the GetTable operator. That would have been done by the
   // ChunkPruningRule, which could not have been successful before the bound value (12345) was known.
-  ASSERT_FALSE(get_table->pruned_chunk_ids().empty());
+  EXPECT_FALSE(get_table->pruned_chunk_ids().empty());
 }
 
 TEST_F(QueryHandlerTest, ExecutePreparedStatement) {

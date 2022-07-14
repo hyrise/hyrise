@@ -180,10 +180,10 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
 
   // Execute query in Hyrise and SQLite
   const auto [pipeline_status, result_table] = sql_pipeline.get_result_table();
-  ASSERT_EQ(pipeline_status, SQLPipelineStatus::Success);
+  EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
   const auto sqlite_result_table = _sqlite->main_connection.execute_query(sql);
 
-  ASSERT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
+  EXPECT_TRUE(result_table && result_table->row_count() > 0 && sqlite_result_table &&
               sqlite_result_table->row_count() > 0)
       << "The SQLiteTestRunner cannot handle queries without results. We can only infer column types from sqlite if "
          "they have at least one row";

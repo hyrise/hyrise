@@ -161,11 +161,11 @@ TEST_F(SQLIdentifierResolverTest, ResolveOuterExpression) {
   /**
    * Test whether the proxies tracked accesses to their contexts correctly
    */
-  ASSERT_EQ(outermost_context_proxy->accessed_expressions().size(), 2u);
+  EXPECT_EQ(outermost_context_proxy->accessed_expressions().size(), 2u);
   EXPECT_EQ(outermost_context_proxy->accessed_expressions().count(outermost_expression_a), 1u);
   EXPECT_EQ(outermost_context_proxy->accessed_expressions().count(outermost_expression_b), 1u);
 
-  ASSERT_EQ(intermediate_context_proxy->accessed_expressions().size(), 2u);
+  EXPECT_EQ(intermediate_context_proxy->accessed_expressions().size(), 2u);
   EXPECT_EQ(intermediate_context_proxy->accessed_expressions().count(intermediate_expression_b), 1u);
   EXPECT_EQ(intermediate_context_proxy->accessed_expressions().count(intermediate_expression_a), 1u);
 }

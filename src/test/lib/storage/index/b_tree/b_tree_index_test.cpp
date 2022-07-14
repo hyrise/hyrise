@@ -219,7 +219,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionVeryShortStringEmpty) {
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
-  ASSERT_GE(pmr_string("").capacity(), 7u)
+  EXPECT_GE(pmr_string("").capacity(), 7u)
       << "Short String Optimization (SSO) is expected to hold at least 7 characters";
 
 // Index memory consumption depends on implementation of pmr_string.
@@ -247,7 +247,7 @@ TEST_F(BTreeIndexTest, MemoryConsumptionShortString) {
 }
 
 TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
-  ASSERT_LE(pmr_string("").capacity(), 22u)
+  EXPECT_LE(pmr_string("").capacity(), 22u)
       << "Short String Optimization (SSO) is expected to hold at maximum 22 characters";
 
   auto local_values = pmr_vector<pmr_string>{

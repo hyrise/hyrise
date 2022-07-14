@@ -72,7 +72,7 @@ void NodeQueueScheduler::finish() {
   wait_for_all_tasks();
 
   // All queues SHOULD be empty by now
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     for (auto& queue : _queues) {
       Assert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
     }

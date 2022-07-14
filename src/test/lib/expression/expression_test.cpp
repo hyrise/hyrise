@@ -145,7 +145,7 @@ TEST_F(ExpressionTest, DeepCopySubplanDeduplication) {
 
   // We are going to check whether the following property survives deep_copy(). We do not want to see duplicated
   // operators in copied PQPs.
-  ASSERT_EQ(table_wrapper->consumer_count(), 2);
+  EXPECT_EQ(table_wrapper->consumer_count(), 2);
 
   // Prepare expressions for testing
   auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};

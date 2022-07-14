@@ -87,17 +87,17 @@ TEST_F(StorageTableTest, GetValue) {
   t->append({6, "world"});
   t->append({3, "!"});
   t->append({3, NULL_VALUE});
-  ASSERT_EQ(*t->get_value<int32_t>(ColumnID{0}, 0u), 4);
+  EXPECT_EQ(*t->get_value<int32_t>(ColumnID{0}, 0u), 4);
   EXPECT_EQ(*t->get_value<int32_t>(ColumnID{0}, 2u), 3);
   EXPECT_FALSE(t->get_value<pmr_string>(ColumnID{1}, 3u));
 
-  ASSERT_EQ(*t->get_value<pmr_string>(ColumnID{1}, 0u), "Hello,");
-  ASSERT_EQ(*t->get_value<pmr_string>(ColumnID{1}, 1u), "world");
+  EXPECT_EQ(*t->get_value<pmr_string>(ColumnID{1}, 0u), "Hello,");
+  EXPECT_EQ(*t->get_value<pmr_string>(ColumnID{1}, 1u), "world");
   EXPECT_THROW(*t->get_value<int32_t>(ColumnID{1}, 0u), std::exception);
   EXPECT_THROW(*t->get_value<int32_t>(ColumnID{3}, 0u), std::exception);
 
-  ASSERT_EQ(*t->get_value<int32_t>("column_1", 0u), 4);
-  ASSERT_EQ(*t->get_value<pmr_string>("column_2", 2u), "!");
+  EXPECT_EQ(*t->get_value<int32_t>("column_1", 0u), 4);
+  EXPECT_EQ(*t->get_value<pmr_string>("column_2", 2u), "!");
   EXPECT_THROW(*t->get_value<int32_t>("column_3", 0u), std::exception);
 }
 
@@ -105,9 +105,9 @@ TEST_F(StorageTableTest, GetRow) {
   t->append({4, "Hello,"});
   t->append({6, "world"});
   t->append({3, NULL_VALUE});
-  ASSERT_EQ(t->get_row(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
-  ASSERT_EQ(t->get_row(1u), std::vector<AllTypeVariant>({6, "world"}));
-  ASSERT_TRUE(variant_is_null(t->get_row(2u)[1]));
+  EXPECT_EQ(t->get_row(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
+  EXPECT_EQ(t->get_row(1u), std::vector<AllTypeVariant>({6, "world"}));
+  EXPECT_TRUE(variant_is_null(t->get_row(2u)[1]));
   EXPECT_ANY_THROW(t->get_row(4u));
 }
 
@@ -122,7 +122,7 @@ TEST_F(StorageTableTest, GetRows) {
 
   const auto rows = table->get_rows();
 
-  ASSERT_EQ(rows.size(), 4u);
+  EXPECT_EQ(rows.size(), 4u);
   EXPECT_EQ(rows.at(0u), std::vector<AllTypeVariant>({4, "Hello,"}));
   EXPECT_EQ(rows.at(1u), std::vector<AllTypeVariant>({6, "world"}));
   EXPECT_EQ(rows.at(2u), std::vector<AllTypeVariant>({3, "!"}));
@@ -180,7 +180,7 @@ TEST_F(StorageTableTest, EmplaceEmptyChunk) {
 }
 
 TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -240,7 +240,7 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
   TableColumnDefinitions column_definitions{};

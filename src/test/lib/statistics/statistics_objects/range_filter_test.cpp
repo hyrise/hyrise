@@ -57,7 +57,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -133,7 +133,7 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
     }
   }
   {
-    if (!HYRISE_DEBUG) {
+    if constexpr (!HYRISE_DEBUG) {
       GTEST_SKIP();
     }
 

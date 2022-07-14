@@ -24,17 +24,17 @@ class SchedulerTest : public BaseTest {
     auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
       auto successful = counter.compare_exchange_strong(current_value, 1u);
-      ASSERT_TRUE(successful);
+      EXPECT_TRUE(successful);
     });
     auto task2 = std::make_shared<JobTask>([&]() {
       auto current_value = 1u;
       auto successful = counter.compare_exchange_strong(current_value, 2u);
-      ASSERT_TRUE(successful);
+      EXPECT_TRUE(successful);
     });
     auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 2u;
       auto successful = counter.compare_exchange_strong(current_value, 3u);
-      ASSERT_TRUE(successful);
+      EXPECT_TRUE(successful);
     });
 
     task1->set_as_predecessor_of(task2);
@@ -51,7 +51,7 @@ class SchedulerTest : public BaseTest {
     auto task3 = std::make_shared<JobTask>([&]() {
       auto current_value = 3u;
       auto successful = counter.compare_exchange_strong(current_value, 4u);
-      ASSERT_TRUE(successful);
+      EXPECT_TRUE(successful);
     });
 
     task1->set_as_predecessor_of(task3);
@@ -66,14 +66,14 @@ class SchedulerTest : public BaseTest {
     auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
       auto successful = counter.compare_exchange_strong(current_value, 1u);
-      ASSERT_TRUE(successful);
+      EXPECT_TRUE(successful);
     });
     auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
     auto task3 = std::make_shared<JobTask>([&]() { counter += 3u; });
     auto task4 = std::make_shared<JobTask>([&]() {
       auto current_value = 6u;
       auto successful = counter.compare_exchange_strong(current_value, 7u);
-      ASSERT_TRUE(successful);
+      EXPECT_TRUE(successful);
     });
 
     task1->set_as_predecessor_of(task2);
@@ -120,7 +120,7 @@ TEST_F(SchedulerTest, BasicTest) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 30u);
+  EXPECT_EQ(counter, 30u);
 
   Hyrise::get().set_scheduler(std::make_shared<ImmediateExecutionScheduler>());
 }
@@ -128,7 +128,7 @@ TEST_F(SchedulerTest, BasicTest) {
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
   std::atomic_uint32_t counter{0};
   increment_counter_in_subtasks(counter);
-  ASSERT_EQ(counter, 30u);
+  EXPECT_EQ(counter, 30u);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
@@ -141,7 +141,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 3u);
+  EXPECT_EQ(counter, 3u);
 }
 
 TEST_F(SchedulerTest, Grouping) {
@@ -187,7 +187,7 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 4u);
+  EXPECT_EQ(counter, 4u);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
@@ -200,25 +200,25 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 
   Hyrise::get().scheduler()->finish();
 
-  ASSERT_EQ(counter, 7u);
+  EXPECT_EQ(counter, 7u);
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
   std::atomic_uint32_t counter{0u};
   stress_linear_dependencies(counter);
-  ASSERT_EQ(counter, 3u);
+  EXPECT_EQ(counter, 3u);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
   std::atomic_uint32_t counter{0u};
   stress_multiple_dependencies(counter);
-  ASSERT_EQ(counter, 4u);
+  EXPECT_EQ(counter, 4u);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
   std::atomic_uint32_t counter{0};
   stress_diamond_dependencies(counter);
-  ASSERT_EQ(counter, 7u);
+  EXPECT_EQ(counter, 7u);
 }
 
 TEST_F(SchedulerTest, MultipleOperators) {

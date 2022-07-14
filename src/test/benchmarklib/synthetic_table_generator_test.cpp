@@ -20,7 +20,7 @@ TEST_F(SyntheticTableGeneratorTest, StringGeneration) {
   EXPECT_EQ(SyntheticTableGenerator::generate_value<pmr_string>(3'433'820), "      EPIC");
 
   // Negative values are not supported.
-  ASSERT_THROW(SyntheticTableGenerator::generate_value<pmr_string>(-17), std::logic_error);
+  EXPECT_THROW(SyntheticTableGenerator::generate_value<pmr_string>(-17), std::logic_error);
 }
 
 TEST_F(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
@@ -34,7 +34,7 @@ TEST_F(SyntheticTableGeneratorTest, TestGeneratedValueRange) {
       chunk_size);
   for (auto table_row_id = size_t{0}; table_row_id < 100; ++table_row_id) {
     const auto value = table->get_value<double>(ColumnID{0}, table_row_id);
-    ASSERT_TRUE(value >= 0.0 && value <= 1.0);
+    EXPECT_TRUE(value >= 0.0 && value <= 1.0);
   }
 
   EXPECT_EQ(table->row_count(), row_count);

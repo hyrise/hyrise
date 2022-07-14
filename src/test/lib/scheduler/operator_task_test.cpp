@@ -35,7 +35,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   auto gt = std::make_shared<GetTable>("table_a");
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(gt);
 
-  ASSERT_EQ(tasks.size(), 1);
+  EXPECT_EQ(tasks.size(), 1);
   root_operator_task->schedule();
 
   EXPECT_TABLE_EQ_UNORDERED(_test_table_a, gt->get_output());
@@ -84,7 +84,7 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(union_positions);
 
-  ASSERT_EQ(tasks.size(), 5u);
+  EXPECT_EQ(tasks.size(), 5u);
   auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
   EXPECT_TRUE(tasks_set.contains(gt_a->get_or_create_operator_task()));
   EXPECT_TRUE(tasks_set.contains(scan_a->get_or_create_operator_task()));

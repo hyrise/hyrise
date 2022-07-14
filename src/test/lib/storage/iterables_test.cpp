@@ -36,7 +36,7 @@ struct SumUpWithIterator {
       _sum += begin->value();
     }
 
-    ASSERT_EQ(distance, 0);
+    EXPECT_EQ(distance, 0);
   }
 
   DataType& _sum;

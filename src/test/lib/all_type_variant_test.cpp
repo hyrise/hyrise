@@ -33,7 +33,7 @@ TYPED_TEST(AllTypeVariantTest, GetExtractsExactNumericalValue) {
     const auto variant = AllTypeVariant{value_in};
     const auto value_out = boost::get<TypeParam>(variant);
 
-    ASSERT_EQ(value_in, value_out);
+    EXPECT_EQ(value_in, value_out);
   }
 }
 

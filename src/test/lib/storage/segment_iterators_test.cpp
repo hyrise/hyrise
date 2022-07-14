@@ -13,8 +13,8 @@ class SegmentIteratorsTest : public EncodingTest {
   template <typename Functor>
   void test_all_iterators(const std::shared_ptr<Table> table, const std::shared_ptr<RowIDPosList> position_filter,
                           const std::shared_ptr<RowIDPosList> position_filter_multi_chunk, const Functor functor) {
-    ASSERT_TRUE(position_filter->references_single_chunk());
-    ASSERT_FALSE(position_filter_multi_chunk->references_single_chunk());
+    EXPECT_TRUE(position_filter->references_single_chunk());
+    EXPECT_FALSE(position_filter_multi_chunk->references_single_chunk());
 
     for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
       const auto abstract_segment = table->get_chunk(ChunkID{0})->get_segment(column_id);
@@ -111,7 +111,7 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
 
       return a.value() < b.value();
     });
-    ASSERT_TRUE(is_sorted);
+    EXPECT_TRUE(is_sorted);
 
     auto search_value = ColumnDataType{};
     if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
@@ -126,8 +126,8 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
       }
       return a.value() < b;
     });
-    ASSERT_NE(lower_bound_iter, end);
-    ASSERT_EQ(lower_bound_iter->value(), search_value);
+    EXPECT_NE(lower_bound_iter, end);
+    EXPECT_EQ(lower_bound_iter->value(), search_value);
   });
 }
 
@@ -161,18 +161,18 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
     auto it = begin;  // Make a copy
     if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
       it += 2;
-      ASSERT_EQ(it->value(), "102");
+      EXPECT_EQ(it->value(), "102");
       it--;
-      ASSERT_EQ(it->value(), "101");
+      EXPECT_EQ(it->value(), "101");
       --it;
-      ASSERT_EQ(it->value(), "100");
+      EXPECT_EQ(it->value(), "100");
     } else {
       it += 2;
-      ASSERT_EQ(it->value(), ColumnDataType{102});
+      EXPECT_EQ(it->value(), ColumnDataType{102});
       it--;
-      ASSERT_EQ(it->value(), ColumnDataType{101});
+      EXPECT_EQ(it->value(), ColumnDataType{101});
       --it;
-      ASSERT_EQ(it->value(), ColumnDataType{100});
+      EXPECT_EQ(it->value(), ColumnDataType{100});
     }
   });
 }

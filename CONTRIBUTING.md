@@ -56,13 +56,26 @@
   * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
   * Use braced control statements, even for single-line blocks. Moreover, unless the block
     is empty (e.g., `while (!ready) {}`), add line breaks. Instead of `if (...) x();` (or `if (...) { x(); }`), write:
-    
-    ```
+    ```c++
        if (...) {
          x();
        }
     ```
+  * Only use `ASSERT` in tests when your test case should abort on that line to prevent a segfault.
+    For instance, `ASSERT` that a pointer is not `nullptr` and `EXPECT` its members to have specific values.
+    Write:
+    ```c++
+    ASSERT_TRUE(a_pointer);
+    EXPECT_EQ(a_pointer->a_variable, a_value);
+    EXPECT_EQ(*a_pointer, *another_pointer);
+    ```
 
+    Do not write:
+    ```c++
+    ASSERT_EQ(a_vector.size() 1u);
+    EXPECT_EQ(a_vector[0], a_value);  // use a_vector.at(0) instead of the ASSERT
+    EXPECT_EQ(*a_vector.front(), *a_pointer);  // front() is save also for dereferencing
+    ```
 
 # Formatting and Naming
 * Much of this is enforced by clang-tidy. However, clang-tidy does not yet cover hpp files (see #1901). Also, while

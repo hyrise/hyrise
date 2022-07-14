@@ -140,7 +140,7 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

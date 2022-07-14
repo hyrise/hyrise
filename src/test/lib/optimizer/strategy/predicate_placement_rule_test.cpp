@@ -207,9 +207,9 @@ TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
           input_common_node))));
 
   // Increase the output count of input_common_node
-  ASSERT_EQ(input_common_node->outputs().size(), 2);
+  EXPECT_EQ(input_common_node->outputs().size(), 2);
   const auto non_diamond_lqp_node = ProjectionNode::make(expression_vector(_a_a), input_common_node);
-  ASSERT_EQ(input_common_node->outputs().size(), 3);
+  EXPECT_EQ(input_common_node->outputs().size(), 3);
 
   // Predicates are not pushed through the diamond. However, predicates inside the diamond are pushed towards the
   // diamond's origin.
@@ -606,7 +606,7 @@ TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
 
   // Increase the predicate's output count so that it becomes an actual barrier in the _push_down_traversal subroutine.
   const auto temporary_node = LogicalPlanRootNode::make(barrier_predicate_node);
-  ASSERT_EQ(barrier_predicate_node->output_count(), 2);
+  EXPECT_EQ(barrier_predicate_node->output_count(), 2);
 
   const auto expected_lqp =
   PredicateNode::make(greater_than_(_c_a, 150),

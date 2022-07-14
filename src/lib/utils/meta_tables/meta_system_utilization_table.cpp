@@ -281,7 +281,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
  */
 std::optional<size_t> MetaSystemUtilizationTable::_get_allocated_memory() {
 #ifdef HYRISE_WITH_JEMALLOC
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     // Check that jemalloc was built with statistics support
 
     bool stats_enabled;

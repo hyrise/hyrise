@@ -22,7 +22,7 @@ TEST_F(LikeMatcherTest, PatternToTokens) {
   const auto tokens_a = LikeMatcher::pattern_string_to_tokens("");
   const auto tokens_b = LikeMatcher::pattern_string_to_tokens("%abc%_def__Hello%");
 
-  ASSERT_EQ(tokens_a.size(), 0u);
+  EXPECT_TRUE(tokens_a.empty());
 
   ASSERT_EQ(tokens_b.size(), 9u);
   EXPECT_EQ(tokens_b.at(0), LikeMatcher::PatternToken(LikeMatcher::Wildcard::AnyChars));
@@ -59,8 +59,8 @@ TEST_F(LikeMatcherTest, LowerUpperBound) {
   const auto pattern = pmr_string("Japan%");
   const auto bounds = LikeMatcher::bounds(pattern);
   const auto [lower_bound, upper_bound] = bounds.value();
-  ASSERT_EQ(lower_bound, "Japan");
-  ASSERT_EQ(upper_bound, "Japao");
+  EXPECT_EQ(lower_bound, "Japan");
+  EXPECT_EQ(upper_bound, "Japao");
 }
 
 TEST_F(LikeMatcherTest, ASCIIOverflow) {
@@ -83,8 +83,8 @@ TEST_F(LikeMatcherTest, NoWildcard) {
   const auto expected_upper_bound = pmr_string("Japan") + '\0';
   const auto bounds = LikeMatcher::bounds(pattern);
   const auto [lower_bound, upper_bound] = bounds.value();
-  ASSERT_EQ(lower_bound, "Japan");
-  ASSERT_EQ(upper_bound, expected_upper_bound);
+  EXPECT_EQ(lower_bound, "Japan");
+  EXPECT_EQ(upper_bound, expected_upper_bound);
 }
 
 TEST_F(LikeMatcherTest, EmptyString) {
@@ -93,8 +93,8 @@ TEST_F(LikeMatcherTest, EmptyString) {
   const auto expected_upper_bound = pmr_string("") + '\0';
   const auto bounds = LikeMatcher::bounds(pattern);
   const auto [lower_bound, upper_bound] = bounds.value();
-  ASSERT_EQ(lower_bound, "");
-  ASSERT_EQ(upper_bound, expected_upper_bound);
+  EXPECT_EQ(lower_bound, "");
+  EXPECT_EQ(upper_bound, expected_upper_bound);
 }
 
 }  // namespace opossum

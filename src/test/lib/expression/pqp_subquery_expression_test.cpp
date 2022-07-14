@@ -98,7 +98,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopy) {
       std::dynamic_pointer_cast<PQPSubqueryExpression>(_pqp_subquery_expression->deep_copy());
   ASSERT_TRUE(_pqp_subquery_expression_copy);
 
-  ASSERT_EQ(_pqp_subquery_expression_copy->parameters.size(), 0u);
+  EXPECT_TRUE(_pqp_subquery_expression_copy->parameters.empty(), 0u);
   EXPECT_NE(_pqp_subquery_expression_copy->pqp, _pqp_subquery_expression_with_param->pqp);
   EXPECT_EQ(_pqp_subquery_expression_copy->pqp->type(), OperatorType::TableScan);
 }
@@ -110,7 +110,7 @@ TEST_F(PQPSubqueryExpressionTest, DeepCopyPreservesPlanDeduplication) {
   auto scan_b = std::make_shared<TableScan>(get_table, greater_than_(_b, 10));
   auto union_positions = std::make_shared<UnionPositions>(scan_a, scan_b);
   auto pqp_subquery_expression = std::make_shared<PQPSubqueryExpression>(union_positions);
-  ASSERT_EQ(get_table->consumer_count(), 2);
+  EXPECT_EQ(get_table->consumer_count(), 2);
 
   const auto copied_pqp_subquery_expression =
       std::dynamic_pointer_cast<PQPSubqueryExpression>(pqp_subquery_expression->deep_copy());

@@ -98,9 +98,9 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
   stn_subquery->set_pruned_column_ids(pruned_column_set_a_b);
 
   // Prerequisites
-  ASSERT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
-  ASSERT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
-  ASSERT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b);  // differs
+  EXPECT_EQ(_stored_table_node_left->pruned_column_ids(), pruned_column_set_a);
+  EXPECT_EQ(_stored_table_node_right->pruned_column_ids(), pruned_column_set_a);
+  EXPECT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a_b);  // differs
 
   apply_rule(_rule, projection_root);
 

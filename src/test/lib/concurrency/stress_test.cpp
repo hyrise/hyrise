@@ -72,7 +72,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      FAIL() << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
     thread_future.get();
@@ -136,7 +136,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      FAIL() << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
     thread_future.get();
@@ -191,7 +191,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(600)) == std::future_status::timeout) {
-      ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
+      FAIL() << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
     thread_future.get();
@@ -201,7 +201,7 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   auto pipeline =
       SQLPipelineBuilder{"SELECT a, COUNT(a), COUNT(b) FROM table_c GROUP BY a ORDER BY a"}.create_pipeline();
   const auto [_, verification_table] = pipeline.get_result_table();
-  ASSERT_EQ(verification_table->row_count(), num_threads);
+  EXPECT_EQ(verification_table->row_count(), num_threads);
 
   for (auto row = size_t{0}; row < num_threads; ++row) {
     EXPECT_EQ(*verification_table->get_value<int32_t>(ColumnID{0}, row), row);

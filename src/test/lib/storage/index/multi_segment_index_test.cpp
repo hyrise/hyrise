@@ -164,7 +164,7 @@ TYPED_TEST(MultiSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(MultiSegmentIndexTest, TooManyReferenceValues) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);

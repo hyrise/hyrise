@@ -84,26 +84,26 @@ TEST_P(MaterializeTest, MaterializeTwoIntReferenceSegments) {
 TEST_P(MaterializeTest, MaterializeFloatData) {
   const auto floats_0 =
       materialize_values_to_vector<float>(*_data_table->get_chunk(ChunkID(0))->get_segment(ColumnID(1)));
-  ASSERT_EQ(floats_0.size(), 2u);
+  EXPECT_EQ(floats_0.size(), 2u);
   EXPECT_FLOAT_EQ(458.7, floats_0.at(0));
   EXPECT_FLOAT_EQ(456.7f, floats_0.at(1));
 
   const auto floats_1 =
       materialize_values_to_vector<float>(*_data_table->get_chunk(ChunkID(1))->get_segment(ColumnID(1)));
-  ASSERT_EQ(floats_1.size(), 1u);
+  EXPECT_EQ(floats_1.size(), 1u);
   EXPECT_FLOAT_EQ(457.7, floats_1.at(0));
 }
 
 TEST_P(MaterializeTest, MaterializeFloatReferences) {
   const auto floats_0 =
       materialize_values_to_vector<float>(*_references_table->get_chunk(ChunkID(0))->get_segment(ColumnID(1)));
-  ASSERT_EQ(floats_0.size(), 2u);
+  EXPECT_EQ(floats_0.size(), 2u);
   EXPECT_FLOAT_EQ(458.7, floats_0.at(0));
   EXPECT_FLOAT_EQ(456.7f, floats_0.at(1));
 
   const auto floats_1 =
       materialize_values_to_vector<float>(*_references_table->get_chunk(ChunkID(1))->get_segment(ColumnID(1)));
-  ASSERT_EQ(floats_1.size(), 1u);
+  EXPECT_EQ(floats_1.size(), 1u);
   EXPECT_FLOAT_EQ(457.7, floats_1.at(0));
 }
 
@@ -111,7 +111,7 @@ TEST_P(MaterializeTest, MaterializeValuesAndNulls) {
   const auto values_and_nulls = materialize_values_and_nulls_to_vector<int32_t>(
       *_data_table_with_nulls->get_chunk(ChunkID(1))->get_segment(ColumnID(0)));
 
-  ASSERT_EQ(values_and_nulls.size(), 2u);
+  EXPECT_EQ(values_and_nulls.size(), 2u);
   EXPECT_EQ(values_and_nulls[0].first, true);
   EXPECT_EQ(values_and_nulls[1].first, false);
   EXPECT_EQ(values_and_nulls[1].second, 1234);
@@ -123,7 +123,7 @@ TEST_P(MaterializeTest, MaterializeValuesAndNullsTwoSegments) {
                                values_and_nulls);
   materialize_values_and_nulls(*_data_table_with_nulls->get_chunk(ChunkID(1))->get_segment(ColumnID(0)),
                                values_and_nulls);
-  ASSERT_EQ(values_and_nulls.size(), 4u);
+  EXPECT_EQ(values_and_nulls.size(), 4u);
   EXPECT_EQ(values_and_nulls[0].first, false);
   EXPECT_EQ(values_and_nulls[0].second, 12345);
   EXPECT_EQ(values_and_nulls[1].first, false);

@@ -256,7 +256,7 @@ TEST_F(SubqueryToJoinRuleTest, TryToExtractJoinPredicatesSuccessCase) {
   const auto& [extracted_predicates, remaining_expression] =
       SubqueryToJoinRule::try_to_extract_join_predicates(predicate_node, parameter_map, false);
   EXPECT_FALSE(remaining_expression);
-  ASSERT_EQ(extracted_predicates.size(), 1);
+  EXPECT_EQ(extracted_predicates.size(), 1);
   EXPECT_EQ(*extracted_predicates.front(), *equals_(a_a, b_a));
 }
 
@@ -352,7 +352,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullEqualsFromBelowA
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
-  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(result.join_predicates.size(), 1);
   EXPECT_EQ(*result.join_predicates.front(), *equals_(a_a, b_a));
   // Changes to the LQP are tested in AdaptAggregateNode
 }
@@ -385,7 +385,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowAlias) 
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
-  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(result.join_predicates.size(), 1);
   EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
   // Changes to the LQP are tested in AdaptAliasNode
 }
@@ -402,7 +402,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowProject
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
-  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(result.join_predicates.size(), 1);
   EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
   // Changes to the LQP are tested in AdaptProjectionNode
 }
@@ -422,7 +422,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowSort) {
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
-  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(result.join_predicates.size(), 1);
   EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
   EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
 }
@@ -439,7 +439,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromBelowValidat
   // clang-format on
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
-  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(result.join_predicates.size(), 1);
   EXPECT_EQ(*result.join_predicates.front(), *greater_than_(a_a, b_a));
   EXPECT_LQP_EQ(result.adapted_lqp, ValidateNode::make(node_b));
 }
@@ -513,12 +513,12 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromNonNullProdu
   EXPECT_LQP_EQ(full_outer_result.adapted_lqp, full_outer_expected_lqp);
 
   const auto left_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(left_outer_lqp, parameter_map);
-  ASSERT_EQ(left_outer_result.join_predicates.size(), 1);
+  EXPECT_EQ(left_outer_result.join_predicates.size(), 1);
   EXPECT_EQ(*left_outer_result.join_predicates.front(), *less_than_(a_a, b_a));
   EXPECT_LQP_EQ(left_outer_result.adapted_lqp, left_outer_expected_lqp);
 
   const auto right_outer_result = SubqueryToJoinRule::pull_up_correlated_predicates(right_outer_lqp, parameter_map);
-  ASSERT_EQ(right_outer_result.join_predicates.size(), 1);
+  EXPECT_EQ(right_outer_result.join_predicates.size(), 1);
   EXPECT_EQ(*right_outer_result.join_predicates.front(), *equals_(a_a, c_a));
   EXPECT_LQP_EQ(right_outer_result.adapted_lqp, right_outer_expected_lqp);
 }
@@ -543,7 +543,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesCanPullFromLeftSideOfSe
     // clang-format on
 
     const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
-    ASSERT_EQ(result.join_predicates.size(), 1);
+    EXPECT_EQ(result.join_predicates.size(), 1);
     EXPECT_EQ(*result.join_predicates.front(), *not_equals_(a_a, b_a));
     EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
   }
@@ -619,7 +619,7 @@ TEST_F(SubqueryToJoinRuleTest, PullUpCorrelatedPredicatesHandlesDiamondLQPs) {
 
   const auto result = SubqueryToJoinRule::pull_up_correlated_predicates(lqp, parameter_map);
   EXPECT_LQP_EQ(result.adapted_lqp, expected_lqp);
-  ASSERT_EQ(result.join_predicates.size(), 1);
+  EXPECT_EQ(result.join_predicates.size(), 1);
 }
 
 TEST_F(SubqueryToJoinRuleTest, IsPredicateNodeJoinCandidateHandlesCorrelatedExists) {
