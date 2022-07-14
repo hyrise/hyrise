@@ -334,7 +334,7 @@ Console::RegisteredCommands Console::commands() {
 }
 
 void Console::set_prompt(const std::string& prompt) {
-  if (HYRISE_DEBUG) {
+  if constexpr (HYRISE_DEBUG) {
     _prompt = ANSI_COLOR_RED_RL "(debug)" ANSI_COLOR_RESET_RL + prompt;
   } else {
     _prompt = ANSI_COLOR_GREEN_RL "(release)" ANSI_COLOR_RESET_RL + prompt;
@@ -1079,7 +1079,7 @@ int main(int argc, char** argv) {
     console.out("Type 'help' for more information.\n\n");
 
     console.out("Hyrise is running a ");
-    if (HYRISE_DEBUG) {
+    if constexpr (HYRISE_DEBUG) {
       console.out(ANSI_COLOR_RED "(debug)" ANSI_COLOR_RESET);
     } else {
       console.out(ANSI_COLOR_GREEN "(release)" ANSI_COLOR_RESET);
