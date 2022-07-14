@@ -36,20 +36,19 @@ std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& d
 boost::gregorian::date date_interval(const boost::gregorian::date& start_date, int64_t offset, DatetimeComponent unit) {
   switch (unit) {
     case DatetimeComponent::Year: {
-      const auto interval = boost::date_time::year_functor<boost::gregorian::date>(offset);
-      return start_date + interval.get_offset(start_date);
+      return *(++boost::gregorian::year_iterator(start_date, offset));
     }
     case DatetimeComponent::Month: {
-      const auto interval = boost::date_time::month_functor<boost::gregorian::date>(offset);
-      return start_date + interval.get_offset(start_date);
+      return *(++boost::gregorian::month_iterator(start_date, offset));
     }
     case DatetimeComponent::Day: {
-      const auto interval = boost::date_time::day_functor<boost::gregorian::date>(offset);
-      return start_date + interval.get_offset(start_date);
+      return *(++boost::gregorian::day_iterator(start_date, offset));
     }
     default:
       Fail("Invalid time unit for date interval: " + std::string{magic_enum::enum_name(unit)});
   }
+
+  Fail("Invalid enum value");
 }
 
 std::string date_to_string(const boost::gregorian::date& date) {
