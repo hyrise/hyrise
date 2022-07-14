@@ -38,6 +38,20 @@ add_plugin(NAME hyriseSecondTestPlugin SRCS second_test_plugin.cpp second_test_p
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS sqlparser)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
+add_plugin(NAME hyriseCostModelFeaturePlugin
+  SRCS
+    cost_model_feature_plugin.cpp
+    cost_model_feature_plugin.hpp
+    feature_extraction/plan_exporter.cpp
+    feature_extraction/plan_exporter.hpp
+    feature_extraction/query_exporter.cpp
+    feature_extraction/query_exporter.hpp
+
+  DEPS
+    sqlparser
+    magic_enum
+)
+
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")
