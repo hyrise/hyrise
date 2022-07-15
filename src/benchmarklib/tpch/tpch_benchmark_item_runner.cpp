@@ -17,7 +17,7 @@ extern "C" {
 #include "sql/sql_pipeline_builder.hpp"
 #include "tpch_queries.hpp"
 #include "utils/assert.hpp"
-#include "utils/date_utils.hpp"
+#include "utils/date_time_utils.hpp"
 
 namespace opossum {
 

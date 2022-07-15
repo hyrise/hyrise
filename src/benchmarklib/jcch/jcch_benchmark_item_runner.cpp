@@ -4,7 +4,7 @@
 #include <random>
 
 #include "tpch/tpch_queries.hpp"
-#include "utils/date_utils.hpp"
+#include "utils/date_time_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/timer.hpp"
 
