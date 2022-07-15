@@ -12,10 +12,12 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
-    target_link_libraries(${PARSED_ARGS_NAME} PRIVATE hyrise)
+    target_link_libraries_system(
+        ${PARSED_ARGS_NAME}
 
-    # For provider.hpp
-    target_include_directories(${PARSED_ARGS_NAME} PRIVATE ${CMAKE_BINARY_DIR})
+        tbb
+        ${BOOST_LIBS}
+    )
 
     foreach(dep ${PARSED_ARGS_DEPS})
         target_link_libraries(${PARSED_ARGS_NAME} PRIVATE ${dep})
