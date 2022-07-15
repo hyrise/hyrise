@@ -26,7 +26,8 @@ std::string JoinToLocalPredicateRewritePlugin::description() const {
 }
 
 void JoinToLocalPredicateRewritePlugin::start() {
-    _loop_thread_start = std::make_unique<PausableLoopThread>(JoinToLocalPredicateRewritePlugin::IDLE_DELAY_PREDICATE_REWRITE, [&](size_t) { _start(); });
+    // _loop_thread_start = std::make_unique<PausableLoopThread>(JoinToLocalPredicateRewritePlugin::IDLE_DELAY_PREDICATE_REWRITE, [&](size_t) { _start(); });
+    _start();
 }
 
 void check_and_add_unique_constraint(const std::shared_ptr<LQPColumnExpression> candidate) {
@@ -202,7 +203,7 @@ void JoinToLocalPredicateRewritePlugin::_start() {
 void JoinToLocalPredicateRewritePlugin::stop() {
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was stopped..." << std::endl;
 
-    _loop_thread_start.reset();
+    // _loop_thread_start.reset();
 }
 
 EXPORT_PLUGIN(JoinToLocalPredicateRewritePlugin)
