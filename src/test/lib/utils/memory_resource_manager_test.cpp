@@ -1,8 +1,12 @@
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "utils/memory_resource_manager.hpp"
+//#include "gtest/gtest-matchers.h"
+#include <gmock/gmock.h>
 
 namespace opossum {
+
+using namespace ::testing;
 
 class MemoryResourceManagerTest : public BaseTest {
  protected:
@@ -51,9 +55,10 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
     memory_resource->deallocate(mem_ptr, indx+1);
   };
 
-  // Create 5 threads that interact with the memory resource manager and obtained memory resources
-  auto threads = std::vector<std::thread>(5);
-  for (auto indx = uint8_t{0}; indx < 5; ++indx) {
+  // Create a few threads that interact with the memory resource manager and obtained memory resources
+  auto N_THREADS = uint8_t{10};
+  auto threads = std::vector<std::thread>(N_THREADS);
+  for (auto indx = uint8_t{0}; indx < N_THREADS; ++indx) {
     threads[indx] = std::thread(fetch_and_use_a_memory_resource, indx);
   }
   for (auto& thread : threads) {
@@ -63,17 +68,11 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   // Ensure that the memory resources, the allocations, and the deallcoations are recorded correctly. Each allocation or 
   // deallocation should be recorded exactly once by any memory resource.
   const auto memory_resources = memory_resource_manager.memory_resources();
-  ASSERT_EQ(memory_resources.size(), 5);
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, 1)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -1)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, 2)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -2)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, 3)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -3)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, 4)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -4)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, 5)))));
-  EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -5)))));
+  ASSERT_EQ(memory_resources.size(), N_THREADS);
+  for (auto allocation_amount = uint8_t{1}; allocation_amount <= N_THREADS; ++allocation_amount ) {
+    EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, allocation_amount)))));
+    EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -1 * allocation_amount)))));
+  }
 }
 
 }  // namespace opossum
