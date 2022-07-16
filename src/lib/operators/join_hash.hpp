@@ -9,9 +9,6 @@
 
 namespace opossum {
 
-// template <typename T, Purpose P = Purpose::HashJoinMaterialization>
-// using tracking_vector = std::vector<T, TrackingAllocator<T, P>>;
-
 /**
  * This operator joins two tables using one column of each table.
  * The output is a new table with referenced columns for all columns of the two inputs and filtered pos_lists.
