@@ -367,7 +367,7 @@ void BenchmarkRunner::write_report_to_file() const {
 
   nlohmann::json benchmarks;
 
-  for (const auto& item_id : _benchmark_item_runner->items()) {
+  for (const auto& item_id : items()) {
     const auto& name = _benchmark_item_runner->item_name(item_id);
     const auto& result = _results.at(item_id);
 
