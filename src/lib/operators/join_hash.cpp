@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
@@ -24,11 +23,6 @@ namespace opossum {
 
 enum Purpose { None, HashStuffTest };
 
-template <typename T>
-PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
-  return PolymorphicAllocator<T>{
-      &(*Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure))};
-}
 
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
@@ -278,8 +272,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers used to store histograms for (potentially subsequent) radix partitioning step (in cases
     // _radix_bits > 0). Created during materialization step.
-    std::vector<std::vector<size_t>> histograms_build_column;
-    std::vector<std::vector<size_t>> histograms_probe_column;
+    auto histograms_build_column = pmr_vector<pmr_vector<size_t>>(alloc<pmr_vector<size_t>>("_on_execute::histograms_build_column"));
+    auto histograms_probe_column = pmr_vector<pmr_vector<size_t>>(alloc<pmr_vector<size_t>>("_on_execute::histograms_probe_column"));
 
     // Output containers of materialization step. Uses the same output type as the radix partitioning step to allow
     // shortcut for _radix_bits == 0 (in this case, we can skip the partitioning altogether).
@@ -287,11 +281,11 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     RadixContainer<ProbeColumnType> materialized_probe_column;
 
     // Containers for potential (skipped when build side small) radix partitioning step
-    RadixContainer<BuildColumnType> radix_build_column;
-    RadixContainer<ProbeColumnType> radix_probe_column;
+    auto radix_build_column = RadixContainer<BuildColumnType>(alloc<BuildColumnType>("_on_execute::radix_build_column"));
+    auto radix_probe_column = RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("_on_execute::radix_probe_column"));
 
     // HashTables for the build column, one for each partition
-    std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+    pmr_vector<std::optional<PosHashTable<HashedType>>> hash_tables;
 
     /**
      * Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)
@@ -321,8 +315,10 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * 1.1. Materialize the build partition, which is expected to be smaller. Create a Bloom filter.
      */
 
-    auto build_side_bloom_filter = BloomFilter{};
-    auto probe_side_bloom_filter = BloomFilter{};
+
+    auto build_side_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("_on_execute::build_side_bloom_filter"));
+    auto probe_side_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("_on_execute::probe_side_bloom_filter"));
+
 
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
       if (keep_nulls_build_column) {
@@ -388,7 +384,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     if (_radix_bits > 0) {
       Timer timer_clustering;
-      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      std::vector<std::shared_ptr<AbstractTask>> jobs;
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
@@ -490,8 +486,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
     // demo data structures for memory tracking. Needs to be changed to use the real operator step name.
-    auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>());
-    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("HashStuffTestString"));
+    auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("_on_execute::build_side_pos_lists"));
+    auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("_on_execute::probe_side_pos_lists"));
 
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
