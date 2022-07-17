@@ -12,9 +12,13 @@ namespace opossum {
 VariableLengthKeyConstProxy::VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key)
     : _impl(data, bytes_per_key) {}
 
-VariableLengthKeyConstProxy::operator VariableLengthKey() const { return VariableLengthKey(_impl); }
+VariableLengthKeyConstProxy::operator VariableLengthKey() const {
+  return VariableLengthKey(_impl);
+}
 
-CompositeKeyLength VariableLengthKeyConstProxy::bytes_per_key() const { return _impl._size; }
+CompositeKeyLength VariableLengthKeyConstProxy::bytes_per_key() const {
+  return _impl._size;
+}
 
 bool VariableLengthKeyConstProxy::operator==(const VariableLengthKeyConstProxy& other) const {
   return _impl == other._impl;
@@ -28,9 +32,17 @@ bool VariableLengthKeyConstProxy::operator<(const VariableLengthKeyConstProxy& o
   return _impl < other._impl;
 }
 
-bool VariableLengthKeyConstProxy::operator==(const VariableLengthKey& other) const { return _impl == other._impl; }
-bool VariableLengthKeyConstProxy::operator!=(const VariableLengthKey& other) const { return _impl != other._impl; }
-bool VariableLengthKeyConstProxy::operator<(const VariableLengthKey& other) const { return _impl < other._impl; }
+bool VariableLengthKeyConstProxy::operator==(const VariableLengthKey& other) const {
+  return _impl == other._impl;
+}
+
+bool VariableLengthKeyConstProxy::operator!=(const VariableLengthKey& other) const {
+  return _impl != other._impl;
+}
+
+bool VariableLengthKeyConstProxy::operator<(const VariableLengthKey& other) const {
+  return _impl < other._impl;
+}
 
 std::ostream& operator<<(std::ostream& os, const VariableLengthKeyConstProxy& key) {
   os << key._impl;
@@ -54,6 +66,7 @@ VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(const VariableLengthKe
   operator=(other._impl);
   return *this;
 }
+
 VariableLengthKeyProxy& VariableLengthKeyProxy::operator=(const VariableLengthKeyProxy& other) {
   operator=(other._impl);
   return *this;

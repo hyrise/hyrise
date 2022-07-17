@@ -32,12 +32,16 @@ TEST_F(ChangeMetaTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(_change_meta_table_node->hash(), another_change_meta_table_node->hash());
 }
 
-TEST_F(ChangeMetaTableNodeTest, NodeExpressions) { EXPECT_TRUE(_change_meta_table_node->node_expressions.empty()); }
+TEST_F(ChangeMetaTableNodeTest, NodeExpressions) {
+  EXPECT_TRUE(_change_meta_table_node->node_expressions.empty());
+}
 
 TEST_F(ChangeMetaTableNodeTest, ColumnExpressions) {
   EXPECT_TRUE(_change_meta_table_node->output_expressions().empty());
 }
 
-TEST_F(ChangeMetaTableNodeTest, Copy) { EXPECT_EQ(*_change_meta_table_node, *_change_meta_table_node->deep_copy()); }
+TEST_F(ChangeMetaTableNodeTest, Copy) {
+  EXPECT_EQ(*_change_meta_table_node, *_change_meta_table_node->deep_copy());
+}
 
 }  // namespace opossum

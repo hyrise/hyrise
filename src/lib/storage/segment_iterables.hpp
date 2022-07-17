@@ -126,7 +126,9 @@ class SegmentIterable {
   /** @} */
 
  private:
-  const Derived& _self() const { return static_cast<const Derived&>(*this); }
+  const Derived& _self() const {
+    return static_cast<const Derived&>(*this);
+  }
 };
 
 /**
@@ -187,7 +189,9 @@ class PointAccessibleSegmentIterable : public SegmentIterable<Derived> {
   }
 
  private:
-  const Derived& _self() const { return static_cast<const Derived&>(*this); }
+  const Derived& _self() const {
+    return static_cast<const Derived&>(*this);
+  }
 };
 
 template <typename T>

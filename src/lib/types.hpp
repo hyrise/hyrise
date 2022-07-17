@@ -112,7 +112,9 @@ struct RowID {
   ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
 
   // Faster than row_id == ROW_ID_NULL, since we only compare the ChunkOffset
-  bool is_null() const { return chunk_offset == INVALID_CHUNK_OFFSET; }
+  bool is_null() const {
+    return chunk_offset == INVALID_CHUNK_OFFSET;
+  }
 
   // Joins need to use RowIDs as keys for maps.
   bool operator<(const RowID& other) const {

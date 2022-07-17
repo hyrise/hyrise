@@ -72,9 +72,13 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
   _accept_new_session();
 }
 
-boost::asio::ip::address Server::server_address() const { return _acceptor.local_endpoint().address(); }
+boost::asio::ip::address Server::server_address() const {
+  return _acceptor.local_endpoint().address();
+}
 
-uint16_t Server::server_port() const { return _acceptor.local_endpoint().port(); }
+uint16_t Server::server_port() const {
+  return _acceptor.local_endpoint().port();
+}
 
 void Server::shutdown() {
   while (_num_running_sessions > 0) {
@@ -84,6 +88,8 @@ void Server::shutdown() {
   _io_service.stop();
 }
 
-bool Server::is_initialized() const { return _is_initialized; }
+bool Server::is_initialized() const {
+  return _is_initialized;
+}
 
 }  // namespace opossum

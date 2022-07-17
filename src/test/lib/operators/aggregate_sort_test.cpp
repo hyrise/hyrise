@@ -155,7 +155,9 @@ TEST_F(AggregateSortTest, AggregateMaxMultiColumnSorted) {
     // Group and aggregate by every column combination.
     for (auto group_by_column_id = ColumnID{0}; group_by_column_id < column_count; ++group_by_column_id) {
       for (auto aggregate_by_column_id = ColumnID{0}; aggregate_by_column_id < column_count; ++aggregate_by_column_id) {
-        if (group_by_column_id == aggregate_by_column_id) continue;
+        if (group_by_column_id == aggregate_by_column_id) {
+          continue;
+        }
         const auto table = sort->get_output();
         const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{max_(pqp_column_(
             aggregate_by_column_id, table->column_data_type(aggregate_by_column_id),

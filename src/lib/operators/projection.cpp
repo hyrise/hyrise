@@ -37,7 +37,9 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
   for (const auto& expression : expressions) {
     auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
     for (const auto& subquery_expression : pqp_subquery_expressions) {
-      if (subquery_expression->is_correlated()) continue;
+      if (subquery_expression->is_correlated()) {
+        continue;
+      }
 
       /**
        * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
@@ -173,7 +175,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     output_segments_by_chunk[chunk_id] = std::move(output_segments);
 
     // All columns are forwarded. We do not need to evaluate newly generated columns.
-    if (all_segments_forwarded) continue;
+    if (all_segments_forwarded) {
+      continue;
+    }
 
     // Defines the job that performs the evaluation if the columns are newly generated.
     auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,

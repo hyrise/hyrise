@@ -8,7 +8,6 @@
 #include "operators/abstract_read_write_operator.hpp"
 
 #include "scheduler/job_task.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace {
 
@@ -24,7 +23,9 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   auto task = op->get_or_create_operator_task();
   // By using an unordered set, we can avoid adding duplicate tasks.
   const auto& [_, inserted] = tasks.insert(task);
-  if (!inserted) return task;
+  if (!inserted) {
+    return task;
+  }
 
   if (auto left = op->mutable_left_input()) {
     if (auto left_subtree_root = add_operator_tasks_recursively(left, tasks)) {
@@ -60,7 +61,9 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
       root_operator_task);
 }
 
-const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const { return _op; }
+const std::shared_ptr<AbstractOperator>& OperatorTask::get_operator() const {
+  return _op;
+}
 
 void OperatorTask::skip_operator_task() {
   // Newly created tasks always have TaskState::Created. However, AbstractOperator::get_or_create_operator_task needs
@@ -111,8 +114,6 @@ void OperatorTask::_on_execute() {
         Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
     }
   }
-
-  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
 
   _op->execute();
 

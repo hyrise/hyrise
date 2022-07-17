@@ -567,8 +567,8 @@ set(
     utils/column_ids_after_pruning.cpp
     utils/column_ids_after_pruning.hpp
     utils/copyable_atomic.hpp
-    utils/date_utils.cpp
-    utils/date_utils.hpp
+    utils/date_time_utils.cpp
+    utils/date_time_utils.hpp
     utils/enum_constant.hpp
     utils/format_bytes.cpp
     utils/format_bytes.hpp
@@ -636,7 +636,6 @@ set(
     utils/template_type.hpp
     utils/timer.cpp
     utils/timer.hpp
-    utils/tracing/probes.hpp
     visualization/abstract_visualizer.hpp
     visualization/join_graph_visualizer.cpp
     visualization/join_graph_visualizer.hpp
@@ -678,19 +677,6 @@ if (NOT "${ERASE_SEGMENT_TYPES_UPPER}" STREQUAL "")
     endforeach()
 endif()
 
-# Generate header file in order to define probes needed for dtrace
-set(PROVIDER_FILE "${CMAKE_BINARY_DIR}/provider.hpp")
-add_custom_command (
-    OUTPUT ${PROVIDER_FILE}
-    DEPENDS utils/tracing/provider.d
-    COMMAND dtrace -h -s ${CMAKE_CURRENT_LIST_DIR}/utils/tracing/provider.d -o ${PROVIDER_FILE}
-)
-add_custom_target (
-    generate-provider-hpp
-    DEPENDS ${PROVIDER_FILE}
-)
-set(SOURCES ${SOURCES} ${PROVIDER_FILE})
-
 # hyrise_impl should not be directly used, as linking to it regularly excludes unused symbols. See hyrise below.
 if(NOT ENABLE_COVERAGE AND NOT (APPLE AND (ENABLE_ADDR_UB_SANITIZATION OR ENABLE_THREAD_SANITIZATION)))
     add_library(hyrise_impl SHARED ${SOURCES})
@@ -699,8 +685,6 @@ else()
     # Also, the sanitizer builds on Mac require static linkage
     add_library(hyrise_impl STATIC ${SOURCES})
 endif()
-
-add_dependencies(hyrise_impl generate-provider-hpp)
 
 # Work around an stdlibc++ bug, see list_directory.hpp for details
 set_source_files_properties(
