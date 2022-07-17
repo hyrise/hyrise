@@ -318,8 +318,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
 
-    auto build_side_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("_on_execute::build_side_bloom_filter"));
-    auto probe_side_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("_on_execute::probe_side_bloom_filter"));
+    auto build_side_bloom_filter = BloomFilter{alloc<unsigned long>("_on_execute::build_side_bloom_filter")};
+    auto probe_side_bloom_filter = BloomFilter{alloc<unsigned long>("_on_execute::build_side_bloom_filter")};
 
 
     const auto materialize_build_side = [&](const auto& input_bloom_filter) {
