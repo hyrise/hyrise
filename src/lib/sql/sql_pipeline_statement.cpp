@@ -256,7 +256,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     }
     return false;
   };
-
   if (has_failed() && !_is_transaction_statement()) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
@@ -266,22 +265,17 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   }
 
   const auto& tasks = get_tasks();
-
   const auto started = std::chrono::steady_clock::now();
 
   DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
                 reinterpret_cast<uintptr_t>(this));
-
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-
   if (has_failed()) {
     return {SQLPipelineStatus::Failure, _result_table};
   }
-
   if (_use_mvcc == UseMvcc::Yes && _transaction_context->is_auto_commit()) {
     _transaction_context->commit();
   }
-
   if (_transaction_context) {
     Assert(_transaction_context->phase() == TransactionPhase::Active ||
                _transaction_context->phase() == TransactionPhase::Committed ||
@@ -291,7 +285,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   const auto done = std::chrono::steady_clock::now();
   _metrics->plan_execution_duration = done - started;
-
   // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {
     // After execution, the root operator should be the only operator in OperatorState::ExecutedAndAvailable. All
@@ -309,7 +302,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     _result_table = _root_operator_task->get_operator()->get_output();
     _root_operator_task->get_operator()->clear_output();
   }
-
   if (!_result_table) _query_has_output = false;
 
   DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),

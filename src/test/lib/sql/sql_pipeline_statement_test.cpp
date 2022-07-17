@@ -510,16 +510,10 @@ TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
-  std::cout << "here1" << std::endl;
   auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline(); 
-  std::cout << "here2" << std::endl;
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
-  std::cout << "here3" << std::endl;
-
-  Hyrise::get().topology.use_fake_numa_topology(8, 4);
-  std::cout << "here4" << std::endl;
+  // Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
-  std::cout << "here5" << std::endl;
   const auto [pipeline_status, table] = statement->get_result_table();
   std::cout << "here6" << std::endl;
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
