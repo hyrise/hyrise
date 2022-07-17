@@ -9,8 +9,12 @@ namespace opossum {
 class MetaTemporaryMemoryUsageTest : public BaseTest {
  protected:
   std::shared_ptr<AbstractMetaTable> meta_temporary_memory_usage_table;
-  void SetUp() override { meta_temporary_memory_usage_table = std::make_shared<MetaTemporaryMemoryUsageTable>(); }
-  void TearDown() override { Hyrise::reset(); }
+  void SetUp() override {
+    meta_temporary_memory_usage_table = std::make_shared<MetaTemporaryMemoryUsageTable>();
+  }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
     return table->_generate();

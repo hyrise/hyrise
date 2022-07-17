@@ -17,8 +17,8 @@
 
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
-#include <boost/dynamic_bitset.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/operators.hpp>
 
 #include "strong_typedef.hpp"

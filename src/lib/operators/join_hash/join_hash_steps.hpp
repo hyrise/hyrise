@@ -1,11 +1,11 @@
 #pragma once
 
+#include <tsl/robin_map.h>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
-#include <tsl/robin_map.h>
 #include <uninitialized_vector.hpp>
 
 #include "hyrise.hpp"
@@ -66,7 +66,7 @@ struct Partition {
   // Bit vector to store NULL flags - not using uninitialized_vector because it is not specialized for bool.
   // It is stored independently of the elements as adding a single bit to PartitionedElement would cause memory waste
   // due to padding.
-  pmr_vector<bool> null_values = pmr_vector<bool> (alloc<bool>("69 Steps | Partition struct"));
+  pmr_vector<bool> null_values = pmr_vector<bool>(alloc<bool>("69 Steps | Partition struct"));
 };
 
 // This alias is used in two phases:
@@ -196,7 +196,9 @@ class PosHashTable {
   }
 
   // Return the number of distinct values (i.e., the size of the hash table).
-  size_t distinct_value_count() const { return _offset_hash_table.size(); }
+  size_t distinct_value_count() const {
+    return _offset_hash_table.size();
+  }
 
   // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
   // table. For other join types, we return the size of the unified position list that is created in finalize().
@@ -266,9 +268,9 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                     pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
-                                     BloomFilter& output_bloom_filter,
-                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+                                    pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
+                                    BloomFilter& output_bloom_filter,
+                                    const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
   auto chunk_count = in_table->chunk_count();
 
@@ -277,7 +279,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   auto radix_container = RadixContainer<T>(alloc<T>("materialize_input::radix_container"));
 
   radix_container.resize(chunk_count);
-
 
   // Fan-out
   const size_t num_radix_partitions = 1ull << radix_bits;
@@ -295,12 +296,12 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in)
+      continue;
 
     const auto num_rows = chunk_in->size();
 
@@ -314,7 +315,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       }
 
       // Skip chunks that were physically deleted
-      if (!chunk_in) return;
+      if (!chunk_in)
+        return;
 
       auto& elements = radix_container[chunk_id].elements;
       auto& null_values = radix_container[chunk_id].null_values;
@@ -430,17 +432,19 @@ Build all the hash tables for the partitions of the build column. One job per pa
 */
 template <typename BuildColumnType, typename HashedType>
 pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
-                                                            const JoinHashBuildMode mode, const size_t radix_bits,
-                                                            const BloomFilter& input_bloom_filter) {
+                                                          const JoinHashBuildMode mode, const size_t radix_bits,
+                                                          const BloomFilter& input_bloom_filter) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
-  if (radix_container.empty()) return {};
+  if (radix_container.empty())
+    return {};
 
   /*
   NUMA notes:
   The hash tables for each partition P should also reside on the same node as the build and probe partitions.
   */
-  auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(alloc<std::optional<PosHashTable<HashedType>>>("build::hash_tables"));
+  auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(
+      alloc<std::optional<PosHashTable<HashedType>>>("build::hash_tables"));
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -502,16 +506,18 @@ pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<B
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, finalize is called above.
-  if (radix_bits == 0) hash_tables[0]->finalize();
+  if (radix_bits == 0)
+    hash_tables[0]->finalize();
 
   return hash_tables;
 }
 
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-                                      pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
-                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
-  if (radix_container.empty()) return radix_container;
+                                     pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
+                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
+  if (radix_container.empty())
+    return radix_container;
 
   if constexpr (keep_null_values) {
     Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),
@@ -536,12 +542,14 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
   // Writing to std::vector<bool> is not thread-safe if the same byte is being written to. For now, we temporarily
   // use a std::vector<char> and compress it into an std::vector<bool> later.
-  auto null_values_as_char = pmr_vector<std::vector<char>>(output_partition_count, alloc<std::vector<char>>("partition_by_radix::null_values_as_char"));
+  auto null_values_as_char = pmr_vector<std::vector<char>>(
+      output_partition_count, alloc<std::vector<char>>("partition_by_radix::null_values_as_char"));
 
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
-  auto output_offsets_by_input_partition =
-      pmr_vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count), alloc<std::vector<size_t>>("partition_by_radix::output_offsets_by_input_partition"));
+  auto output_offsets_by_input_partition = pmr_vector<std::vector<size_t>>(
+      input_partition_count, std::vector<size_t>(output_partition_count),
+      alloc<std::vector<size_t>>("partition_by_radix::output_offsets_by_input_partition"));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {

@@ -7,7 +7,9 @@ namespace opossum {
 class MemoryResourceManagerTest : public BaseTest {
  protected:
   MemoryResourceManager memory_resource_manager;
-  void SetUp() override { memory_resource_manager.enable(); }
+  void SetUp() override {
+    memory_resource_manager.enable();
+  }
 };
 
 TEST_F(MemoryResourceManagerTest, GetMemoryResources) {
