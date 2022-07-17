@@ -5,7 +5,7 @@
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
-#include <tsl/sparse_map.h>
+#include <tsl/robin_map.h>
 #include <uninitialized_vector.hpp>
 
 #include "hyrise.hpp"
@@ -95,7 +95,7 @@ class PosHashTable {
 
   // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
   // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
-  using OffsetHashTable = tsl::sparse_map<HashedType, Offset>;
+  using OffsetHashTable = tsl::robin_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
