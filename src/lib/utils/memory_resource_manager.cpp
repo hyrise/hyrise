@@ -11,7 +11,6 @@ boost::container::pmr::memory_resource* MemoryResourceManager::get_memory_resour
   // Return default memory resource if tracking is disabled.
   if (!_tracking_is_enabled) {
     return boost::container::pmr::get_default_resource();
-    ;
   }
 
   auto resource_ptr = new TrackingMemoryResource();
