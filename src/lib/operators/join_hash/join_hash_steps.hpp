@@ -246,7 +246,6 @@ static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
 // needed for merging partial Bloom filters created by different threads. Note that the dynamic_bitset(n, value)
 // constructor does not do what you would expect it to, so try to avoid it.
-// using BloomFilter = boost::dynamic_bitset<>;
 using BloomFilter = pmr_dynamic_bitset<unsigned long>;
 
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
@@ -254,7 +253,6 @@ using BloomFilter = pmr_dynamic_bitset<unsigned long>;
 // it where needed. Having a Bloom filter that always returns true avoids a branch in the hot loop.
 
 static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
-// static const auto ALL_TRUE_BLOOM_FILTER = ~pmr_dynamic_bitset<unsigned long>(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
 // @param column_id            Column within that table to materialize
@@ -266,10 +264,6 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 // @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
 //                             Bloom filter is false
 
-// RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-//                                     pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
-//                                     pmr_dynamic_bitset<unsigned long>& output_bloom_filter,
-//                                     const pmr_dynamic_bitset<unsigned long>& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                      pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
@@ -311,13 +305,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
     const auto num_rows = chunk_in->size();
 
     const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
-      // auto local_output_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("materialize::local_output_bloom_filter"));
-      // std::reference_wrapper<pmr_dynamic_bitset<unsigned long>> used_output_bloom_filter = output_bloom_filter;
       auto local_output_bloom_filter = BloomFilter{};
       std::reference_wrapper<BloomFilter> used_output_bloom_filter = output_bloom_filter;
       if (Hyrise::get().is_multi_threaded()) {
         // We cannot write to BloomFilter concurrently, so we build a local one first.
-        // local_output_bloom_filter = pmr_dynamic_bitset<unsigned long>(alloc<unsigned long>("materialize::local_output_bloom_filter"));
         local_output_bloom_filter = BloomFilter(BLOOM_FILTER_SIZE, false);
         used_output_bloom_filter = local_output_bloom_filter;
       }
@@ -437,11 +428,6 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 /*
 Build all the hash tables for the partitions of the build column. One job per partition
 */
-
-
-// pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
-//                                                            const JoinHashBuildMode mode, const size_t radix_bits,
-//                                                            const pmr_dynamic_bitset<unsigned long>& input_bloom_filter) {
 template <typename BuildColumnType, typename HashedType>
 pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
                                                             const JoinHashBuildMode mode, const size_t radix_bits,
@@ -521,9 +507,6 @@ pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<B
   return hash_tables;
 }
 
-// RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-//                                      pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
-//                                      const pmr_dynamic_bitset<unsigned long>& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                       pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
