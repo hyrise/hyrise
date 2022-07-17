@@ -63,8 +63,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
     thread.join();
   }
 
-  // Ensure that the memory resources, the allocations, and the deallcoations are recorded correctly. Each allocation or 
-  // deallocation should be recorded exactly once by any memory resource.
+  // Ensure that the number of memory resources matches the number of threads.
   const auto memory_resources = memory_resource_manager.memory_resources();
   ASSERT_EQ(memory_resources.size(), N_THREADS);
 
