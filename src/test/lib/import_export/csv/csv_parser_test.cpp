@@ -70,7 +70,9 @@ TEST_F(CsvParserTest, TrailingNewline) {
   EXPECT_TABLE_EQ_ORDERED(table, expected_table);
 }
 
-TEST_F(CsvParserTest, FileDoesNotExist) { EXPECT_THROW(CsvParser::parse("not_existing_file"), std::exception); }
+TEST_F(CsvParserTest, FileDoesNotExist) {
+  EXPECT_THROW(CsvParser::parse("not_existing_file"), std::exception);
+}
 
 TEST_F(CsvParserTest, EmptyStrings) {
   auto table = CsvParser::parse("resources/test_data/csv/empty_strings.csv");

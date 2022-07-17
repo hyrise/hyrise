@@ -8,6 +8,8 @@ void LogManager::add_message(const std::string& reporter, const std::string& mes
   _log_entries.emplace_back(log_entry);
 }
 
-const tbb::concurrent_vector<LogEntry>& LogManager::log_entries() const { return _log_entries; }
+const tbb::concurrent_vector<LogEntry>& LogManager::log_entries() const {
+  return _log_entries;
+}
 
 }  // namespace opossum

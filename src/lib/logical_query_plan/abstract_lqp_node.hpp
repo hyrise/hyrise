@@ -286,7 +286,9 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node);
 
 // Wrapper around node->hash(), to enable hash based containers containing std::shared_ptr<AbstractLQPNode>
 struct LQPNodeSharedPtrHash final {
-  size_t operator()(const std::shared_ptr<AbstractLQPNode>& node) const { return node->hash(); }
+  size_t operator()(const std::shared_ptr<AbstractLQPNode>& node) const {
+    return node->hash();
+  }
 };
 
 // Wrapper around AbstractLQPNode::operator==(), to enable hash based containers containing

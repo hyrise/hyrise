@@ -260,7 +260,9 @@ void registerTableScanSortedBenchmarks() {
 // constructor.
 class StartUp {
  public:
-  StartUp() { registerTableScanSortedBenchmarks(); }
+  StartUp() {
+    registerTableScanSortedBenchmarks();
+  }
 };
 StartUp startup;
 

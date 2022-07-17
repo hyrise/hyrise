@@ -20,9 +20,13 @@ std::string CastExpression::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-DataType CastExpression::data_type() const { return _data_type; }
+DataType CastExpression::data_type() const {
+  return _data_type;
+}
 
-std::shared_ptr<AbstractExpression> CastExpression::argument() const { return arguments[0]; }
+std::shared_ptr<AbstractExpression> CastExpression::argument() const {
+  return arguments[0];
+}
 
 bool CastExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const CastExpression*>(&expression),

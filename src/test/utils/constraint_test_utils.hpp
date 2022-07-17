@@ -15,7 +15,9 @@ static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& t
 
   for (const auto& unique_constraint : *unique_constraints) {
     // Basic comparison: Column count
-    if (column_ids.size() != unique_constraint.expressions.size()) continue;
+    if (column_ids.size() != unique_constraint.expressions.size()) {
+      continue;
+    }
 
     // In-depth comparison: Column IDs
     auto unique_constraint_column_ids = std::unordered_set<ColumnID>();

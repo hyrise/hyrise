@@ -10,12 +10,16 @@ namespace opossum {
 
 class ImportNodeTest : public BaseTest {
  protected:
-  void SetUp() override { _import_node = ImportNode::make("table_name", "file_name", FileType::Csv); }
+  void SetUp() override {
+    _import_node = ImportNode::make("table_name", "file_name", FileType::Csv);
+  }
 
   std::shared_ptr<ImportNode> _import_node;
 };
 
-TEST_F(ImportNodeTest, Description) { EXPECT_EQ(_import_node->description(), "[Import] Name: 'table_name'"); }
+TEST_F(ImportNodeTest, Description) {
+  EXPECT_EQ(_import_node->description(), "[Import] Name: 'table_name'");
+}
 
 TEST_F(ImportNodeTest, HashingAndEqualityCheck) {
   const auto another_import_node = ImportNode::make("table_name", "file_name", FileType::Csv);
@@ -24,10 +28,16 @@ TEST_F(ImportNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(_import_node->hash(), another_import_node->hash());
 }
 
-TEST_F(ImportNodeTest, NodeExpressions) { EXPECT_TRUE(_import_node->node_expressions.empty()); }
+TEST_F(ImportNodeTest, NodeExpressions) {
+  EXPECT_TRUE(_import_node->node_expressions.empty());
+}
 
-TEST_F(ImportNodeTest, ColumnExpressions) { EXPECT_TRUE(_import_node->output_expressions().empty()); }
+TEST_F(ImportNodeTest, ColumnExpressions) {
+  EXPECT_TRUE(_import_node->output_expressions().empty());
+}
 
-TEST_F(ImportNodeTest, Copy) { EXPECT_EQ(*_import_node, *_import_node->deep_copy()); }
+TEST_F(ImportNodeTest, Copy) {
+  EXPECT_EQ(*_import_node, *_import_node->deep_copy());
+}
 
 }  // namespace opossum

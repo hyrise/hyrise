@@ -112,7 +112,9 @@ TEST_F(StoredTableNodeTest, Copy) {
   EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
 }
 
-TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u); }
+TEST_F(StoredTableNodeTest, NodeExpressions) {
+  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u);
+}
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneFirstColumn) {
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 4u);

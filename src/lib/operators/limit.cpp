@@ -22,7 +22,9 @@ const std::string& Limit::name() const {
   return name;
 }
 
-std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
+std::shared_ptr<AbstractExpression> Limit::row_count_expression() const {
+  return _row_count_expression;
+}
 
 std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,

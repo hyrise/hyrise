@@ -244,7 +244,9 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
         // Again, due to the hashing, we do not know which cluster holds the value
         // But we know that two buckets have _table_size_zero_one/2 items and two have none items.
         EXPECT_TRUE(count == this->_chunk_size_zero_one / 2 || count == 0);
-        if (count == 0) ++empty_cluster_count;
+        if (count == 0) {
+          ++empty_cluster_count;
+        }
       }
     }
     EXPECT_EQ(empty_cluster_count, 2 * this->_table_size_zero_one / this->_chunk_size_zero_one);
@@ -306,7 +308,9 @@ TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
 }
 
 TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   size_t radix_bit_count = 0;
   pmr_vector<pmr_vector<size_t>> histograms;

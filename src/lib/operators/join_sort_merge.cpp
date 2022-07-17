@@ -84,7 +84,9 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   return _impl->_on_execute();
 }
 
-void JoinSortMerge::_on_cleanup() { _impl.reset(); }
+void JoinSortMerge::_on_cleanup() {
+  _impl.reset();
+}
 
 const std::string& JoinSortMerge::name() const {
   static const auto name = std::string{"JoinSortMerge"};
@@ -169,7 +171,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     size_t cluster;
     size_t index;
 
-    TableRange to(TablePosition position) { return TableRange(*this, position); }
+    TableRange to(TablePosition position) {
+      return TableRange(*this, position);
+    }
   };
 
   TablePosition _end_of_left_table;
