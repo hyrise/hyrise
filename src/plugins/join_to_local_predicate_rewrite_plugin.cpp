@@ -28,10 +28,10 @@ std::string JoinToLocalPredicateRewritePlugin::description() const {
 }
 
 void JoinToLocalPredicateRewritePlugin::start() {
-    _loop_thread_start = std::make_unique<PausableLoopThread>(JoinToLocalPredicateRewritePlugin::IDLE_DELAY_PREDICATE_REWRITE, [&](size_t) { _start(); });
+    // _loop_thread_start = std::make_unique<PausableLoopThread>(JoinToLocalPredicateRewritePlugin::IDLE_DELAY_PREDICATE_REWRITE, [&](size_t) { discover_uccs(); });
 }
 
-void JoinToLocalPredicateRewritePlugin::_start() {
+void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
     auto t = Timer();
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was started..." << std::endl;
 
@@ -138,12 +138,17 @@ void JoinToLocalPredicateRewritePlugin::_start() {
 }
 
 void JoinToLocalPredicateRewritePlugin::stop() {
-    _loop_thread_start.reset();
+    // _loop_thread_start.reset();
 
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was stopped..." << std::endl;
 }
 
-UCCCandidate* JoinToLocalPredicateRewritePlugin::generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> JoinToLocalPredicateRewritePlugin::provided_user_executable_functions()
+    const {
+  return {{"DiscoverUCCs", [&]() { discover_uccs(); }}};
+}
+
+UCCCandidate* JoinToLocalPredicateRewritePlugin::generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) const {
     UCCCandidate* candidate = nullptr;
 
     if (!root_node) {
@@ -200,7 +205,7 @@ UCCCandidate* JoinToLocalPredicateRewritePlugin::generate_valid_candidate(std::s
     return candidate;
 }
 
-UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
+UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() const {
     const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
 
     auto ucc_candidates = new UCCCandidates{};

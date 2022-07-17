@@ -40,13 +40,15 @@ class JoinToLocalPredicateRewritePlugin : public AbstractPlugin {
 
   void stop() final;
 
+  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const final;
+
   constexpr static std::chrono::milliseconds IDLE_DELAY_PREDICATE_REWRITE = std::chrono::milliseconds(5000);
 
  protected:
-  UCCCandidates* identify_ucc_candidates();
-  UCCCandidate* generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate);
+  UCCCandidates* identify_ucc_candidates() const;
+  UCCCandidate* generate_valid_candidate(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) const;
 
-  void _start();
+  void discover_uccs() const;
 
   std::unique_ptr<PausableLoopThread> _loop_thread_start;
 };
