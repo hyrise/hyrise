@@ -35,8 +35,8 @@ using Hash = size_t;
 
 template <typename T>
 PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
-  boost::container::pmr::memory_resource* memory_resource = Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure);
-  return PolymorphicAllocator<T>{memory_resource};
+  return PolymorphicAllocator<T>{
+    Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure)};
 }
 
 /*

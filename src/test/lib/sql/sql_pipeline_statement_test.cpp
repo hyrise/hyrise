@@ -519,9 +519,7 @@ TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   const auto [pipeline_status, table] = statement->get_result_table();
-  std::cout << "here6" << std::endl;
   EXPECT_EQ(pipeline_status, SQLPipelineStatus::Success);
-  std::cout << "here7" << std::endl;
 
   EXPECT_TABLE_EQ_UNORDERED(table, _join_result);
 }

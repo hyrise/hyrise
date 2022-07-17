@@ -10,7 +10,7 @@ boost::container::pmr::memory_resource* MemoryResourceManager::get_memory_resour
     const OperatorType operator_type, const std::string& operator_data_structure) {
 
   // Return default memory resource if tracking is disabled.
-  if (true) { //(!_tracking_is_enabled) {
+  if (!_tracking_is_enabled) {
     return boost::container::pmr::get_default_resource();;
   }
 
