@@ -25,7 +25,9 @@ namespace {
 // predicate and then optimized to a Join.
 std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
     [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
-      if (node->type != opossum::LQPNodeType::Join) return false;
+      if (node->type != opossum::LQPNodeType::Join) {
+        return false;
+      }
       if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
         return join_node->join_mode == opossum::JoinMode::Cross;
       }
@@ -103,7 +105,9 @@ class SQLPipelineStatementTest : public BaseTest {
   static bool _contains_validate(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
     for (const auto& task : tasks) {
       if (auto op_task = std::dynamic_pointer_cast<OperatorTask>(task)) {
-        if (std::dynamic_pointer_cast<Validate>(op_task->get_operator())) return true;
+        if (std::dynamic_pointer_cast<Validate>(op_task->get_operator())) {
+          return true;
+        }
       }
     }
     return false;
@@ -510,9 +514,8 @@ TEST_F(SQLPipelineStatementTest, GetResultTableJoin) {
 }
 
 TEST_F(SQLPipelineStatementTest, GetResultTableWithScheduler) {
-  auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline();
+  auto sql_pipeline = SQLPipelineBuilder{_join_query}.create_pipeline(); 
   auto statement = get_sql_pipeline_statements(sql_pipeline).at(0);
-
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   const auto [pipeline_status, table] = statement->get_result_table();

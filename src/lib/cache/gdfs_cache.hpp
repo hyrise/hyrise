@@ -152,4 +152,3 @@ class GDFSCache : public AbstractCache<Key, Value> {
 };
 
 }  // namespace opossum
-

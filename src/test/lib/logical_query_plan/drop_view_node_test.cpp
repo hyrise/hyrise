@@ -8,12 +8,16 @@ namespace opossum {
 
 class DropViewNodeTest : public BaseTest {
  public:
-  void SetUp() override { _drop_view_node = DropViewNode::make("some_view", false); }
+  void SetUp() override {
+    _drop_view_node = DropViewNode::make("some_view", false);
+  }
 
   std::shared_ptr<DropViewNode> _drop_view_node;
 };
 
-TEST_F(DropViewNodeTest, Description) { EXPECT_EQ(_drop_view_node->description(), "[Drop] View: 'some_view'"); }
+TEST_F(DropViewNodeTest, Description) {
+  EXPECT_EQ(_drop_view_node->description(), "[Drop] View: 'some_view'");
+}
 
 TEST_F(DropViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_drop_view_node, *_drop_view_node);
@@ -28,8 +32,12 @@ TEST_F(DropViewNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_drop_view_node->hash(), different_drop_view_node->hash());
 }
 
-TEST_F(DropViewNodeTest, Copy) { EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node); }
+TEST_F(DropViewNodeTest, Copy) {
+  EXPECT_EQ(*_drop_view_node->deep_copy(), *_drop_view_node);
+}
 
-TEST_F(DropViewNodeTest, NodeExpressions) { ASSERT_EQ(_drop_view_node->node_expressions.size(), 0u); }
+TEST_F(DropViewNodeTest, NodeExpressions) {
+  ASSERT_EQ(_drop_view_node->node_expressions.size(), 0u);
+}
 
 }  // namespace opossum

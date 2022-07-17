@@ -15,24 +15,33 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 
   // Quick check for cardinality
-  if (determinants.size() != other.determinants.size() || dependents.size() != other.dependents.size()) return false;
+  if (determinants.size() != other.determinants.size() || dependents.size() != other.dependents.size()) {
+    return false;
+  }
 
   // Compare determinants
   for (const auto& expression : other.determinants) {
-    if (!determinants.contains(expression)) return false;
+    if (!determinants.contains(expression)) {
+      return false;
+    }
   }
+
   // Compare dependants
   for (const auto& expression : other.dependents) {
-    if (!dependents.contains(expression)) return false;
+    if (!dependents.contains(expression)) {
+      return false;
+    }
   }
 
   return true;
 }
 
-bool FunctionalDependency::operator!=(const FunctionalDependency& other) const { return !(other == *this); }
+bool FunctionalDependency::operator!=(const FunctionalDependency& other) const {
+  return !(other == *this);
+}
 
 size_t FunctionalDependency::hash() const {
-  size_t hash = 0;
+  auto hash = size_t{0};
   for (const auto& expression : determinants) {
     // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
     hash = hash ^ expression->hash();
@@ -63,7 +72,9 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
 }
 
 std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds) {
-  if (fds.empty()) return {};
+  if (fds.empty()) {
+    return {};
+  }
 
   auto inflated_fds = std::unordered_set<FunctionalDependency>();
   inflated_fds.reserve(fds.size());
@@ -82,7 +93,9 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
 }
 
 std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds) {
-  if (fds.empty()) return {};
+  if (fds.empty()) {
+    return {};
+  }
 
   auto deflated_fds = std::vector<FunctionalDependency>();
   deflated_fds.reserve(fds.size());
@@ -93,15 +106,20 @@ std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDepend
       // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 
       // Quick check for cardinality
-      if (fd.determinants.size() != fd_to_add.determinants.size()) return false;
+      if (fd.determinants.size() != fd_to_add.determinants.size()) {
+        return false;
+      }
 
       // Compare determinants
       for (const auto& expression : fd_to_add.determinants) {
-        if (!fd.determinants.contains(expression)) return false;
+        if (!fd.determinants.contains(expression)) {
+          return false;
+        }
       }
 
       return true;
     });
+
     if (existing_fd == deflated_fds.end()) {
       deflated_fds.push_back(fd_to_add);
     } else {
@@ -122,8 +140,13 @@ std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependen
     Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
            "Did not expect input vector to contain multiple FDs with the same determinant expressions");
   }
-  if (fds_a.empty()) return fds_b;
-  if (fds_b.empty()) return fds_a;
+  if (fds_a.empty()) {
+    return fds_b;
+  }
+
+  if (fds_b.empty()) {
+    return fds_a;
+  }
 
   auto fds_unified = std::vector<FunctionalDependency>();
   fds_unified.reserve(fds_a.size() + fds_b.size());
@@ -136,7 +159,9 @@ std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependen
 
 std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDependency>& fds_a,
                                                 const std::vector<FunctionalDependency>& fds_b) {
-  if (fds_a.empty() || fds_b.empty()) return {};
+  if (fds_a.empty() || fds_b.empty()) {
+    return {};
+  }
 
   const auto& inflated_fds_a = inflate_fds(fds_a);
   const auto& inflated_fds_b = inflate_fds(fds_b);

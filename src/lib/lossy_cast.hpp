@@ -24,7 +24,9 @@ namespace opossum {
  */
 template <typename Target>
 std::optional<Target> lossy_variant_cast(const AllTypeVariant& source) {
-  if (variant_is_null(source)) return std::nullopt;
+  if (variant_is_null(source)) {
+    return std::nullopt;
+  }
 
   std::optional<Target> result;
 

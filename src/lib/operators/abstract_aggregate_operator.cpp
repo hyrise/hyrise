@@ -26,7 +26,9 @@ AbstractAggregateOperator::AbstractAggregateOperator(
 const std::vector<std::shared_ptr<AggregateExpression>>& AbstractAggregateOperator::aggregates() const {
   return _aggregates;
 }
-const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const { return _groupby_column_ids; }
+const std::vector<ColumnID>& AbstractAggregateOperator::groupby_column_ids() const {
+  return _groupby_column_ids;
+}
 
 std::string AbstractAggregateOperator::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');

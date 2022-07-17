@@ -9,6 +9,7 @@
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "utils/meta_tables/meta_temporary_memory_usage_table.hpp"
 
 namespace opossum {
 
@@ -137,6 +138,14 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
+  const auto enable_temporary_memory_tracking = parse_result["memory_tracking"].as<bool>();
+  if (enable_temporary_memory_tracking) {
+    std::cout << "- Tracking temporary memory usage, results are stored in meta table: "  << MetaTemporaryMemoryUsageTable().name();
+    std::cout << "  Caution: Temporary memory usage tracking is not implemente for all operators" << std::endl;
+  } else {
+    std::cout << "- Not tracking temporary memory usage" << std::endl;
+  }
+
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
@@ -152,7 +161,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          enable_visualization,
                          verify,
                          cache_binary_tables,
-                         metrics};
+                         metrics,
+                         enable_temporary_memory_tracking};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

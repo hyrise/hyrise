@@ -86,7 +86,9 @@ ValueID DictionarySegment<T>::lower_bound(const AllTypeVariant& value) const {
   const auto typed_value = boost::get<T>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  if (it == _dictionary->cend()) {
+    return INVALID_VALUE_ID;
+  }
   return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
@@ -98,7 +100,9 @@ ValueID DictionarySegment<T>::upper_bound(const AllTypeVariant& value) const {
   const auto typed_value = boost::get<T>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  if (it == _dictionary->cend()) {
+    return INVALID_VALUE_ID;
+  }
   return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 

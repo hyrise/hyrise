@@ -36,6 +36,11 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
+  // Enable temporary memory tracking if requested. Memory tracking is off by default.
+  if (config.enable_temporary_memory_tracking) {
+    Hyrise::get().memory_resource_manager.enable();
+  }
+
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     Hyrise::get().topology.use_default_topology(config.cores);
@@ -84,7 +89,9 @@ void BenchmarkRunner::run() {
 
   auto track_system_utilization = std::atomic_bool{_config.metrics};
   auto system_utilization_tracker = std::thread{[&] {
-    if (!track_system_utilization) return;
+    if (!track_system_utilization) {
+      return;
+    }
 
     // Start tracking the system utilization
     SQLPipelineBuilder{
@@ -158,7 +165,9 @@ void BenchmarkRunner::run() {
 
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
-      if (result.successful_runs.empty()) continue;
+      if (result.successful_runs.empty()) {
+        continue;
+      }
       Assert(result.verification_passed.load(), "Verification result should have been set");
       any_verification_failed |= !(*result.verification_passed.load());
     }
@@ -259,7 +268,9 @@ void BenchmarkRunner::_benchmark_ordered() {
     _state.set_done();
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    if (_currently_running_clients > 0) std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    if (_currently_running_clients > 0) {
+      std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    }
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
@@ -311,7 +322,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
-          if (!_config.metrics) metrics.clear();
+          if (!_config.metrics) {
+            metrics.clear();
+          }
           const auto item_result =
               BenchmarkItemRunResult{run_start - _benchmark_start, run_end - run_start, std::move(metrics)};
           if (success) {
@@ -327,7 +340,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
-  if (_config.warmup_duration == Duration{0}) return;
+  if (_config.warmup_duration == Duration{0}) {
+    return;
+  }
 
   const auto& name = _benchmark_item_runner->item_name(item_id);
   std::cout << "- Warming up for " << name << std::endl;
@@ -493,6 +508,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("memory_tracking", "Enables tracking of the temporary memory usage of certain operators using polymorphic allocators", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")) // NOLINT
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
@@ -569,7 +585,9 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 }
 
 void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
-  if (!_config.metrics) return;
+  if (!_config.metrics) {
+    return;
+  }
 
   auto moment_or_timestamp = moment;
   if (moment_or_timestamp.empty()) {

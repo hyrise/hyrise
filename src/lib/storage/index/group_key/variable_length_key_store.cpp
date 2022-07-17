@@ -26,13 +26,21 @@ VariableLengthKeyConstProxy VariableLengthKeyStore::operator[](ChunkOffset posit
                                      _bytes_per_key);
 }
 
-void VariableLengthKeyStore::resize(ChunkOffset size) { _data.resize(size * _key_alignment); }
+void VariableLengthKeyStore::resize(ChunkOffset size) {
+  _data.resize(size * _key_alignment);
+}
 
-void VariableLengthKeyStore::shrink_to_fit() { _data.shrink_to_fit(); }
+void VariableLengthKeyStore::shrink_to_fit() {
+  _data.shrink_to_fit();
+}
 
-CompositeKeyLength VariableLengthKeyStore::key_size() const { return _bytes_per_key; }
+CompositeKeyLength VariableLengthKeyStore::key_size() const {
+  return _bytes_per_key;
+}
 
-ChunkOffset VariableLengthKeyStore::size() const { return static_cast<ChunkOffset>(_data.size() / _key_alignment); }
+ChunkOffset VariableLengthKeyStore::size() const {
+  return static_cast<ChunkOffset>(_data.size() / _key_alignment);
+}
 
 VariableLengthKeyStore::iterator VariableLengthKeyStore::erase(iterator first, iterator last) {
   auto underlying_first = _data.begin();
@@ -51,9 +59,13 @@ VariableLengthKeyStore::iterator VariableLengthKeyStore::end() {
   return iterator(_bytes_per_key, _key_alignment, _data.data() + _data.size());
 }
 
-VariableLengthKeyStore::const_iterator VariableLengthKeyStore::begin() const { return cbegin(); }
+VariableLengthKeyStore::const_iterator VariableLengthKeyStore::begin() const {
+  return cbegin();
+}
 
-VariableLengthKeyStore::const_iterator VariableLengthKeyStore::end() const { return cend(); }
+VariableLengthKeyStore::const_iterator VariableLengthKeyStore::end() const {
+  return cend();
+}
 
 VariableLengthKeyStore::const_iterator VariableLengthKeyStore::cbegin() const {
   auto* const self =

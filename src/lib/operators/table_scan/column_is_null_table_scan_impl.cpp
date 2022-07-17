@@ -22,7 +22,9 @@ ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const
               "Invalid PredicateCondition");
 }
 
-std::string ColumnIsNullTableScanImpl::description() const { return "IsNullScan"; }
+std::string ColumnIsNullTableScanImpl::description() const {
+  return "IsNullScan";
+}
 
 std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) {
   const auto& chunk = _in_table->get_chunk(chunk_id);

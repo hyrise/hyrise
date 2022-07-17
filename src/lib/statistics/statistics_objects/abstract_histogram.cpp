@@ -493,7 +493,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::sliced(
 
     case PredicateCondition::NotEquals: {
       const auto value_bin_id = _bin_for_value(*value);
-      if (value_bin_id == INVALID_BIN_ID) return clone();
+      if (value_bin_id == INVALID_BIN_ID) {
+        return clone();
+      }
 
       auto minimum = bin_minimum(value_bin_id);
       auto maximum = bin_maximum(value_bin_id);
@@ -723,7 +725,9 @@ std::shared_ptr<AbstractStatisticsObject> AbstractHistogram<T>::pruned(
   for (auto bin_id = BinID{0}; bin_id < bin_count(); ++bin_id) {
     const auto pruned_height = bin_prunable_height[bin_id] * pruning_ratio;
     const auto new_bin_height = bin_height(bin_id) - pruned_height;
-    if (new_bin_height <= std::numeric_limits<float>::epsilon()) continue;
+    if (new_bin_height <= std::numeric_limits<float>::epsilon()) {
+      continue;
+    }
 
     builder.add_bin(bin_minimum(bin_id), bin_maximum(bin_id), new_bin_height, bin_distinct_count(bin_id));
   }

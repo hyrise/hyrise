@@ -166,7 +166,9 @@ std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
 
 void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void AggregateHash::_on_cleanup() { _contexts_per_column.clear(); }
+void AggregateHash::_on_cleanup() {
+  _contexts_per_column.clear();
+}
 
 /*
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
@@ -268,7 +270,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
     keys_per_chunk.reserve(chunk_count);
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
 
       if constexpr (std::is_same_v<AggregateKey, AggregateKeySmallVector>) {
         keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
@@ -422,7 +426,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
-              if (!chunk_in) continue;
+              if (!chunk_in) {
+                continue;
+              }
 
               auto& keys = keys_per_chunk[chunk_id];
 
@@ -501,7 +507,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                     id = inserted.first->second;
 
                     // if the id_map didn't have the value as a key and a new element was inserted
-                    if (inserted.second) ++id_counter;
+                    if (inserted.second) {
+                      ++id_counter;
+                    }
                   }
 
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
@@ -607,7 +615,9 @@ void AggregateHash::_aggregate() {
   const auto chunk_count = input_table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = input_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in) {
+      continue;
+    }
 
     // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
     const auto input_chunk_size = chunk_in->size();
@@ -801,7 +811,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     for (const auto& result : context->results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
       // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-      if (result.row_id.is_null()) continue;
+      if (result.row_id.is_null()) {
+        continue;
+      }
       pos_list.emplace_back(result.row_id);
     }
     _write_groupby_output(pos_list);
@@ -862,7 +874,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator);
@@ -884,7 +898,9 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     values.emplace_back(result.aggregate_count);
   }
@@ -900,7 +916,9 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     values.emplace_back(result.accumulator.size());
   }
@@ -917,7 +935,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
@@ -949,7 +969,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 1) {
       values.emplace_back(result.accumulator[3]);
@@ -1116,7 +1138,9 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     for (const auto& result : results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
       // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-      if (result.row_id.is_null()) continue;
+      if (result.row_id.is_null()) {
+        continue;
+      }
       pos_list.emplace_back(result.row_id);
     }
     Timer write_groupby_output_timer;
