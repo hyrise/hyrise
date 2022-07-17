@@ -1,12 +1,9 @@
 #include "base_test.hpp"
 #include "hyrise.hpp"
 #include "utils/memory_resource_manager.hpp"
-//#include "gtest/gtest-matchers.h"
-#include <gmock/gmock.h>
 
 namespace opossum {
 
-using namespace ::testing;
 
 class MemoryResourceManagerTest : public BaseTest {
  protected:
@@ -69,10 +66,19 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   // deallocation should be recorded exactly once by any memory resource.
   const auto memory_resources = memory_resource_manager.memory_resources();
   ASSERT_EQ(memory_resources.size(), N_THREADS);
-  for (auto allocation_amount = uint8_t{1}; allocation_amount <= N_THREADS; ++allocation_amount ) {
-    EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, allocation_amount)))));
-    EXPECT_THAT(memory_resources, Contains(Property(&TrackingMemoryResource::memory_timeseries, Contains(Pair(_, -1 * allocation_amount)))));
+
+  // The total allocated amount should be as expected. We expect a total of 1+2+..+N_THREADS = ((N_THREADS^2 + N_THREADS) / 2) 
+  // bytes to have been allocated or deallocated.
+  auto n_allocated_bytes = int{0};
+  auto n_deallocated_bytes = int{0};
+  auto expected_allocation_amount = (N_THREADS*N_THREADS + N_THREADS) / 2;
+  for (const auto& resource_record : memory_resources) {
+    const auto memory_resource = *resource_record.resource_ptr;
+    n_allocated_bytes += memory_resource.memory_timeseries()[0].second;
+    n_deallocated_bytes += memory_resource.memory_timeseries()[1].second;
   }
+  EXPECT_EQ(n_allocated_bytes, expected_allocation_amount);
+  EXPECT_EQ(n_deallocated_bytes, -1 * expected_allocation_amount);
 }
 
 }  // namespace opossum
