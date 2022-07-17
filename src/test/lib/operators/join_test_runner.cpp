@@ -67,6 +67,7 @@ struct InputTableConfiguration {
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() < r.to_tuple();
 }
+
 bool operator==(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() == r.to_tuple();
 }
@@ -108,8 +109,13 @@ struct JoinTestConfiguration {
   }
 };
 
-bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
-bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() == r.to_tuple(); }
+bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() < r.to_tuple();
+}
+
+bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() == r.to_tuple();
+}
 
 // Virtual interface to create a join operator
 class BaseJoinOperatorFactory {

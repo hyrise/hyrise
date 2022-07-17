@@ -13,11 +13,17 @@ class SettingsManagerTest : public BaseTest {
     another_mock_setting = std::make_shared<MockSetting>("mock_setting");
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
-  void add_setting(std::shared_ptr<AbstractSetting> setting) { Hyrise::get().settings_manager._add(setting); }
+  void add_setting(std::shared_ptr<AbstractSetting> setting) {
+    Hyrise::get().settings_manager._add(setting);
+  }
 
-  void remove_setting(const std::string& name) { Hyrise::get().settings_manager._remove(name); }
+  void remove_setting(const std::string& name) {
+    Hyrise::get().settings_manager._remove(name);
+  }
 
   std::shared_ptr<AbstractSetting> mock_setting;
   std::shared_ptr<AbstractSetting> another_mock_setting;

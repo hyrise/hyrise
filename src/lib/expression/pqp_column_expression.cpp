@@ -30,11 +30,17 @@ std::shared_ptr<AbstractExpression> PQPColumnExpression::_on_deep_copy(
   return std::make_shared<PQPColumnExpression>(column_id, _data_type, _nullable, _column_name);
 }
 
-std::string PQPColumnExpression::description(const DescriptionMode mode) const { return _column_name; }
+std::string PQPColumnExpression::description(const DescriptionMode mode) const {
+  return _column_name;
+}
 
-DataType PQPColumnExpression::data_type() const { return _data_type; }
+DataType PQPColumnExpression::data_type() const {
+  return _data_type;
+}
 
-bool PQPColumnExpression::requires_computation() const { return false; }
+bool PQPColumnExpression::requires_computation() const {
+  return false;
+}
 
 bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const PQPColumnExpression*>(&expression),
@@ -44,7 +50,9 @@ bool PQPColumnExpression::_shallow_equals(const AbstractExpression& expression) 
          _nullable == pqp_column_expression._nullable && _column_name == pqp_column_expression._column_name;
 }
 
-size_t PQPColumnExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(column_id)); }
+size_t PQPColumnExpression::_shallow_hash() const {
+  return boost::hash_value(static_cast<size_t>(column_id));
+}
 
 bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   Fail("Nullability 'on lqp' should never be queried from a PQPColumn");

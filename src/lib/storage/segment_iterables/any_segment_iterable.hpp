@@ -92,7 +92,9 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
     }
   }
 
-  size_t size() const override { return iterable._on_size(); }
+  size_t size() const override {
+    return iterable._on_size();
+  }
 
   UnerasedIterable iterable;
 };
@@ -135,7 +137,9 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
   }
 
-  size_t _on_size() const { return _iterable_wrapper->size(); }
+  size_t _on_size() const {
+    return _iterable_wrapper->size();
+  }
 
  private:
   std::shared_ptr<BaseAnySegmentIterableWrapper<ValueType>> _iterable_wrapper;

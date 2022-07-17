@@ -120,7 +120,9 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 }
 
 TEST_F(SQLPipelineTest, ParseErrorDebugMessage) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   try {
     auto sql_pipeline = SQLPipelineBuilder{_invalid_sql}.create_pipeline();

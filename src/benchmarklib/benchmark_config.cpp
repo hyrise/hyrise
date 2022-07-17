@@ -29,6 +29,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       metrics(init_metrics),
       enable_temporary_memory_tracking(init_enable_temporary_memory_tracking) {}
 
-BenchmarkConfig BenchmarkConfig::get_default_config() { return BenchmarkConfig(); }
+BenchmarkConfig BenchmarkConfig::get_default_config() {
+  return BenchmarkConfig();
+}
 
 }  // namespace opossum
