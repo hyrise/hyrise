@@ -39,6 +39,7 @@ TEST_F(MetaTemporaryMemoryUsageTest, EmptyTableGeneration) {
 TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
   // record some allocations and deallocations
   auto& memory_resource_manager = Hyrise::get().memory_resource_manager;
+  memory_resource_manager.enable();
   auto memory_resource_1 = memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure_1");
   auto memory_resource_2 = memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure_2");
   auto mem1 = memory_resource_1->allocate(10);
