@@ -29,6 +29,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     resolve_compressed_vector_type(*_segment.attribute_vector(), [&](const auto& vector) {
       using CompressedVectorIterator = decltype(vector.cbegin());
       using DictionaryIteratorType = decltype(_dictionary->cbegin());
+      
+      //std::cout << "dict size: " << _dictionary->size() << std::endl;
 
       auto begin = Iterator<CompressedVectorIterator, DictionaryIteratorType>{
           _dictionary->cbegin(), _segment.null_value_id(), vector.cbegin(), ChunkOffset{0u}};
@@ -105,14 +107,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     }
 
     SegmentPosition<T> dereference() const {
-      const auto value_id = static_cast<ValueID>(*_attribute_it);
-      const auto is_null = (value_id == _null_value_id);
-
-      if (is_null) {
-        return SegmentPosition<T>{T{}, true, _chunk_offset};
-      }
-
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
+      const auto& value_id = static_cast<ValueID>(*_attribute_it);
+      //std::cout << "adding value " << ((value_id != _null_value_id) * value_id) << " with bool: " << (value_id != _null_value_id) << " and value id: " << value_id << std::endl;
+      return SegmentPosition<T>{T{*(_dictionary_begin_it + ((value_id != _null_value_id) * value_id))}, (value_id == _null_value_id), _chunk_offset};
     }
 
    private:
@@ -145,15 +142,8 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-
-      const auto value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
-      const auto is_null = (value_id == _null_value_id);
-
-      if (is_null) {
-        return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
-      }
-
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
+      const auto& value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
+      return SegmentPosition<T>{T{*(_dictionary_begin_it + ((value_id != _null_value_id) * value_id))}, (value_id == _null_value_id), chunk_offsets.offset_in_poslist};
     }
 
    private:

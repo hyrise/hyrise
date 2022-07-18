@@ -15,6 +15,7 @@ template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<T>()),
+      //_dictionary{dictionary->empty() ? std::make_shared<const pmr_vector<T>>(std::initializer_list<T>({T{}})) : dictionary},
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _decompressor{_attribute_vector->create_base_decompressor()} {

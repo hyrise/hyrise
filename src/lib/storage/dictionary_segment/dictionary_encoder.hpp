@@ -65,6 +65,10 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
     dictionary->shrink_to_fit();
 
+    if (dictionary->empty()) {
+      dictionary->emplace_back(T{});
+    }
+
     const auto null_value_id = static_cast<uint32_t>(dictionary->size());
 
     auto uncompressed_attribute_vector = pmr_vector<uint32_t>{null_values.size(), allocator};
