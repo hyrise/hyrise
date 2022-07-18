@@ -146,15 +146,15 @@ lossless_cast(const Source& source) {
     if (source >= 2'147'483'648.0f || source <= -2'147'483'904.0f) {
       return std::nullopt;
     }
-  } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int32_t>) {
+  } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int32_t>) { // NOLINT
     if (source >= 2'147'483'648.0 || source <= -2'147'483'649.0) {
       return std::nullopt;
     }
-  } else if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int64_t>) {
+  } else if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int64_t>) { // NOLINT
     if (source >= 9'223'372'036'854'775'808.0f || source <= -9'223'373'136'366'403'584.0f) {
       return std::nullopt;
     }
-  } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int64_t>) {
+  } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int64_t>) { // NOLINT
     if (source >= 9'223'372'036'854'775'808.0 || source <= -9'223'372'036'854'777'856.0) {
       return std::nullopt;
     }

@@ -46,7 +46,8 @@ TEST_F(MemoryResourceManagerTest, GetMemoryResourceForSamePurposeMultipleTimes) 
 }
 
 TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
-  // get a memory resource, perform an allocation and a deallocation. Will be executed by multiple threads simultaneously.
+  // get a memory resource, perform an allocation and a deallocation.
+  // Will be executed by multiple threads simultaneously.
   auto fetch_and_use_a_memory_resource = [&](const uint8_t indx) {
     auto memory_resource =
         memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure_" + std::to_string(indx));
@@ -68,7 +69,8 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   const auto memory_resources = memory_resource_manager.memory_resources();
   ASSERT_EQ(memory_resources.size(), N_THREADS);
 
-  // The total allocated amount should be as expected. We expect a total of 1+2+..+N_THREADS = ((N_THREADS^2 + N_THREADS) / 2)
+  // The total allocated amount should be as expected.
+  // We expect a total of 1+2+..+N_THREADS = ((N_THREADS^2 + N_THREADS) / 2)
   // bytes to have been allocated or deallocated.
   auto n_allocated_bytes = int{0};
   auto n_deallocated_bytes = int{0};
