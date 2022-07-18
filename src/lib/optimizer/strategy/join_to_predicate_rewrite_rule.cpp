@@ -27,6 +27,10 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
     // std::cout << node->description() << std::endl;
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
+      if (join_node->join_predicates().size() != 1) {
+        std::cout << "Join has too many predicates, skipping... " << std::endl;
+        return LQPVisitation::VisitInputs;
+      }
       auto removable_side = join_node->get_unused_input();
       if ((removable_side) || (join_node->join_mode == JoinMode::Semi)) {
         // std::cout << "Has potential to be rewritten" << std::endl;
@@ -96,7 +100,11 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
 
   // Now, we look for a predicate that can be used inside the substituting table scan node.
   visit_lqp(removable_subtree, [&exchangable_column_expr, &removable_subtree, &valid_predicate](auto& current_node) {
-    if (current_node->type != LQPNodeType::Predicate) return LQPVisitation::VisitInputs;
+    if (current_node->type == LQPNodeType::Union)  {
+      std::cout << "Ran into a Union, will not check anywhere lower in this subtree..." << std::endl;
+      return LQPVisitation::DoNotVisitInputs;
+    }
+    else if (current_node->type != LQPNodeType::Predicate) return LQPVisitation::VisitInputs;
 
     const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
     const auto candidate_exp = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
