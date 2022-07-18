@@ -101,8 +101,8 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   pmr_vector<pmr_vector<size_t>> histograms;
 
   // BloomFilters are ignored in this test
-  pmr_dynamic_bitset<unsigned long> bloom_filter_with_nulls;
-  pmr_dynamic_bitset<unsigned long> bloom_filter_without_nulls;
+  BloomFilter bloom_filter_with_nulls;
+  BloomFilter bloom_filter_without_nulls;
 
   // We materialize the table twice, once with keeping NULL values and once without
   auto materialized_with_nulls = materialize_input<int, int, true>(
@@ -160,7 +160,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
   {
     pmr_vector<pmr_vector<size_t>> histograms;  // Ignored in this test
-    pmr_dynamic_bitset<unsigned long> bloom_filter;
+    BloomFilter bloom_filter;
 
     materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
                                        bloom_filter);
@@ -174,17 +174,17 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
     }
 
     // All other slots should be false
-    EXPECT_EQ(bloom_filter, pmr_dynamic_bitset<unsigned long>(BLOOM_FILTER_SIZE));
+    EXPECT_EQ(bloom_filter, BloomFilter(BLOOM_FILTER_SIZE));
   }
 }
 
 TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
   {
     pmr_vector<pmr_vector<size_t>> histograms;  // Ignored in this test
-    pmr_dynamic_bitset<unsigned long> output_bloom_filter;
+    BloomFilter output_bloom_filter;
 
     // Fill input_bloom_filter
-    pmr_dynamic_bitset<unsigned long> input_bloom_filter(BLOOM_FILTER_SIZE);
+    BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
     for (auto value : std::vector<int>{6, 7, 9}) {
       input_bloom_filter[value] = true;
     }
@@ -213,7 +213,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   {
     pmr_vector<pmr_vector<size_t>> histograms;
-    pmr_dynamic_bitset<unsigned long> bloom_filter;  // Ignored in this test
+    BloomFilter bloom_filter;  // Ignored in this test
 
     // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
     // significant bit. For the 0/1 table, we should thus cluster the ones and the zeros.
@@ -231,7 +231,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 
   {
     pmr_vector<pmr_vector<size_t>> histograms;
-    pmr_dynamic_bitset<unsigned long> bloom_filter;  // Ignored in this test
+    BloomFilter bloom_filter;  // Ignored in this test
 
     // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
     // significant bits. For the 0/1 table, we expect two non-empty clusters (00/01) and two empty ones (10/11).
@@ -256,7 +256,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const size_t radix_bit_count = 1;
   pmr_vector<pmr_vector<size_t>> histograms;
-  pmr_dynamic_bitset<unsigned long> bloom_filter;  // Ignored in this test
+  BloomFilter bloom_filter;  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, true>(
       _table_int_with_nulls->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
@@ -283,10 +283,10 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 
 TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
   pmr_vector<pmr_vector<size_t>> histograms;              // Ignored in this test
-  pmr_dynamic_bitset<unsigned long> output_bloom_filter;  // Ignored in this test
+  BloomFilter output_bloom_filter;  // Ignored in this test
 
   // Fill input_bloom_filter
-  pmr_dynamic_bitset<unsigned long> input_bloom_filter(BLOOM_FILTER_SIZE);
+  BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
   for (auto value : std::vector<int>{6, 7, 9}) {
     input_bloom_filter[value] = true;
   }
@@ -314,7 +314,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
 
   size_t radix_bit_count = 0;
   pmr_vector<pmr_vector<size_t>> histograms;
-  pmr_dynamic_bitset<unsigned long> bloom_filter;  // Ignored in this test
+  BloomFilter bloom_filter;  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
       _table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, radix_bit_count, bloom_filter);
