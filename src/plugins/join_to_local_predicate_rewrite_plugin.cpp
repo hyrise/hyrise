@@ -42,8 +42,11 @@ void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
     std::cout << "  - UCC Candidates: " << ucc_candidates.size() << std::endl;
 
     for (const auto& candidate : ucc_candidates) {
+        auto candidate_time = Timer();
         const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name());
         const auto col_id = candidate.column_id();
+
+        std::cout << "  - Checking candidate " << candidate.table_name() << "." << table->column_name(col_id) ;
 
         const auto& soft_key_constraints = table->soft_key_constraints();
 
@@ -54,6 +57,7 @@ void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
             const auto& columns = key_constraint.columns();
             return columns.size() == 1 && columns.contains(col_id);
         })) {
+            std::cout << " [skipped (already known) in " << format_duration(candidate_time.lap()) << "]" << std::endl;
             continue;
         }
 
@@ -75,6 +79,7 @@ void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
                     const auto& attr_vector = dict_segment->attribute_vector();
 
                     if (dict->size() != attr_vector->size()) {
+                        std::cout << " [rejected in " << format_duration(candidate_time.lap()) << "]" << std::endl;
                         return;
                     }
                 }
@@ -94,6 +99,7 @@ void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
                         all_values_size += values.size();
                     } else {
                         // If not all elements have been inserted, there must have occured a duplicate, so the UCC constraint is violated.
+                        std::cout << " [rejected in " << format_duration(candidate_time.lap()) << "]" << std::endl;
                         return;
                     }
 
@@ -109,6 +115,7 @@ void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
                         all_values_size += dict->size();
                     } else {
                         // If not all elements have been inserted, there must have occured a duplicate, so the UCC constraint is violated.
+                        std::cout << " [rejected in " << format_duration(candidate_time.lap()) << "]" << std::endl;
                         return;
                     }
                 } else {
@@ -117,10 +124,18 @@ void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
             }
 
             // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
-            std::cout << "  - Validated UCC on: " << table->column_name(col_id) << std::endl;
+            std::cout << " [confirmed in " << format_duration(candidate_time.lap()) << "]" << std::endl;
             table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
         });
     }
+    std::cout << "  - Clearing caches..." << std::endl;
+    auto cache_time = Timer();
+
+    Hyrise::get().default_lqp_cache->clear();
+    Hyrise::get().default_pqp_cache->clear();
+
+    std::cout << "    - Done after " << format_duration(cache_time.lap()) << std::endl;
+
     std::cout << "  - Time for UCC discovery: " << format_duration(t.lap()) << std::endl;
 }
 

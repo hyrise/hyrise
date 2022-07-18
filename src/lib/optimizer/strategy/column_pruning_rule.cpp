@@ -284,8 +284,6 @@ void try_join_to_semi_rewrite(
 
   // Early out, if we need output expressions from both input tables.
   if (left_input_is_used && right_input_is_used) return;
-  std::cout << node->description() << std::endl;
-  std::cout << "One input is used" << std::endl;
 
   /**
    * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
@@ -383,11 +381,6 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
 
   // Now, go through the LQP and perform all prunings. This time, it is sufficient to look at each node once.
   for (const auto& [node, required_expressions] : required_expressions_by_node) {
-    if (outputs_visited_by_node.at(node) != node->output_count()) {
-      std::cout << node->description() << std::endl;
-      std::cout << node->output_count() << std::endl;
-      std::cout << outputs_visited_by_node.at(node) << std::endl;
-    }
     DebugAssert(outputs_visited_by_node.at(node) == node->output_count(),
                 "Not all outputs have been visited - is the input LQP corrupt?");
     switch (node->type) {

@@ -24,17 +24,17 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
   auto valid_predicates = std::vector<std::shared_ptr<PredicateNode>>();
 
   visit_lqp(lqp_root, [&](const auto& node) {
-    std::cout << node->description() << std::endl;
+    // std::cout << node->description() << std::endl;
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
       auto removable_side = join_node->get_unused_input();
       if ((removable_side) || (join_node->join_mode == JoinMode::Semi)) {
-        std::cout << "Has potential to be rewritten" << std::endl;
+        // std::cout << "Has potential to be rewritten" << std::endl;
 
         std::shared_ptr<PredicateNode> valid_predicate = nullptr;
         const auto can_rewrite = _check_rewrite_validity(join_node, removable_side, valid_predicate);
         if (can_rewrite) {
-          std::cout << "Will rewrite for predicate: " << valid_predicate->description() << std::endl;
+          // std::cout << "Will rewrite for predicate: " << valid_predicate->description() << std::endl;
           rewritable_nodes.push_back(join_node);
           removable_sides.push_back(*removable_side);
           valid_predicates.push_back(valid_predicate);
@@ -46,6 +46,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(const std::sh
 
   const auto n_rewritables = rewritable_nodes.size();
   for (auto index = size_t{0}; index < n_rewritables; ++index) {
+    // std::cout << "  - Rewriting " << rewritable_nodes[index]->description() << std::endl;
     _perform_rewrite(rewritable_nodes[index], removable_sides[index], valid_predicates[index]);
   }
 
@@ -89,7 +90,7 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
   testable_expressions.insert(exchangable_column_expr);
 
   if (!removable_subtree->has_matching_unique_constraint(testable_expressions)) {
-    std::cout << "No unique constraint for join column found..." << exchangable_column_expr->description() << std::endl;
+    // std::cout << "No unique constraint for join column found..." << exchangable_column_expr->description() << std::endl;
     return false;
   }
 
@@ -99,6 +100,10 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
 
     const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
     const auto candidate_exp = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
+
+    if (!candidate_exp) {
+      return LQPVisitation::VisitInputs;
+    }
 
     DebugAssert(candidate_exp, "Need to get a predicate with a BinaryPredicateExpression.");
 
@@ -129,7 +134,7 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
     testable_expressions.insert(candidate_column_expr);
 
     if (!removable_subtree->has_matching_unique_constraint(testable_expressions)) {
-      std::cout << "No unique constraint matching the predicate column found..." << candidate_column_expr->description(AbstractExpression::DescriptionMode::Detailed) << std::endl;
+      // std::cout << "No unique constraint matching the predicate column found..." << candidate_column_expr->description(AbstractExpression::DescriptionMode::Detailed) << std::endl;
       return LQPVisitation::VisitInputs;
     }
 
@@ -148,7 +153,7 @@ void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode
   const auto param_ids = std::vector<ParameterID>{};
   const auto param_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
-  std::cout << "Rewrite of Node: " << join_node->description() << std::endl;
+  // std::cout << "Rewrite of Node: " << join_node->description() << std::endl;
 
   if (removable_side == LQPInputSide::Left) {
     join_node->set_left_input(join_node->right_input());
