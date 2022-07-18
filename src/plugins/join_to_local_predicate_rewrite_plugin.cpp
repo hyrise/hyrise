@@ -29,6 +29,11 @@ std::string JoinToLocalPredicateRewritePlugin::description() const {
 }
 
 void JoinToLocalPredicateRewritePlugin::start() {
+    // _loop_thread_start = std::make_unique<PausableLoopThread>(JoinToLocalPredicateRewritePlugin::IDLE_DELAY_PREDICATE_REWRITE, [&](size_t) { discover_uccs(); });
+    discover_uccs();
+}
+
+void JoinToLocalPredicateRewritePlugin::discover_uccs() const {
     auto t = Timer();
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was started..." << std::endl;
 
@@ -120,10 +125,18 @@ void JoinToLocalPredicateRewritePlugin::start() {
 }
 
 void JoinToLocalPredicateRewritePlugin::stop() {
+    // _loop_thread_start.reset();
+
     std::cout << "The Hyrise JoinToLocalPredicateRewritePlugin was stopped..." << std::endl;
 }
 
-std::shared_ptr<std::vector<UCCCandidate>> JoinToLocalPredicateRewritePlugin::generate_valid_candidates(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> JoinToLocalPredicateRewritePlugin::provided_user_executable_functions()
+    const {
+  return {{"DiscoverUCCs", [&]() { discover_uccs(); }}};
+}
+
+
+std::shared_ptr<std::vector<UCCCandidate>> JoinToLocalPredicateRewritePlugin::generate_valid_candidates(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) const {
     auto candidates = std::make_shared<std::vector<UCCCandidate>>();
 
     if (!root_node) {
@@ -181,7 +194,7 @@ std::shared_ptr<std::vector<UCCCandidate>> JoinToLocalPredicateRewritePlugin::ge
     return candidates;
 }
 
-UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() {
+UCCCandidates* JoinToLocalPredicateRewritePlugin::identify_ucc_candidates() const {
     const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
 
     auto ucc_candidates = new UCCCandidates{};
