@@ -5,7 +5,11 @@
 namespace opossum {
 
 /**
- * TODO
+ * This is a class for showing temporary memory usage in a meta table.
+ *
+ * Temporary memory usage refers to memory allocated by operators during their execution time, 
+ * i.e. the memory used by operator-internal data structures. The data is collected using
+ * polymorphic allocators with memory resources that track allocations and deallocations. 
  */
 class MetaTemporaryMemoryUsageTable : public AbstractMetaTable {
  public:
