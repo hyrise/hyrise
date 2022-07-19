@@ -543,7 +543,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // Writing to std::vector<bool> is not thread-safe if the same byte is being written to. For now, we temporarily
   // use a std::vector<char> and compress it into an std::vector<bool> later.
   auto null_values_as_char = pmr_vector<std::vector<char>>(
-      output_partition_count, alloc<std::vector<char>>("partition_by_radix::null_values_as_char"));
+      output_partition_count, alloc<std::vector<char>>("radix_partitioning_null_values_as_char"));
 
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
