@@ -142,8 +142,14 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
 
     SegmentPosition<T> dereference() const {
       const auto& chunk_offsets = this->chunk_offsets();
-      const auto& value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
-      return SegmentPosition<T>{T{*(_dictionary_begin_it + ((value_id != _null_value_id) * value_id))}, (value_id == _null_value_id), chunk_offsets.offset_in_poslist};
+      const auto value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
+      const auto is_null = (value_id == _null_value_id);
+
+      if (is_null) {
+        return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+      }
+
+      return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
 
    private:
