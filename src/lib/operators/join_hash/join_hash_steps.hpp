@@ -34,7 +34,7 @@ enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 using Hash = size_t;
 
 template <typename T>
-PolymorphicAllocator<T> alloc(const std::string& operator_data_structure = "None") {
+PolymorphicAllocator<T> alloc(const std::string& operator_data_structure) {
   return PolymorphicAllocator<T>{
       Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure)};
 }
