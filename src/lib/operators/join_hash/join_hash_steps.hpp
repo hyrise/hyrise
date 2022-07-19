@@ -276,7 +276,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   const std::hash<HashedType> hash_function;
   // List of all elements that will be partitioned
-  auto radix_container = RadixContainer<T>(alloc<T>("materialize_input::radix_container"));
+  auto radix_container = RadixContainer<T>(alloc<T>("input_materialization_radix_container"));
 
   radix_container.resize(chunk_count);
 
