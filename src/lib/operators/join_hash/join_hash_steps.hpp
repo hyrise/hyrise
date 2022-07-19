@@ -549,7 +549,7 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   // bucket written for input_partition_idx
   auto output_offsets_by_input_partition = pmr_vector<std::vector<size_t>>(
       input_partition_count, std::vector<size_t>(output_partition_count),
-      alloc<std::vector<size_t>>("partition_by_radix::output_offsets_by_input_partition"));
+      alloc<std::vector<size_t>>("radix_partitioning_output_offsets"));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
