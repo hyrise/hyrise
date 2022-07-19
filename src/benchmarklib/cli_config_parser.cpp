@@ -140,9 +140,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
 
   const auto enable_temporary_memory_tracking = parse_result["memory_tracking"].as<bool>();
   if (enable_temporary_memory_tracking) {
-    std::cout << "- Tracking temporary memory usage, results are stored in meta table: "
-              << MetaTemporaryMemoryUsageTable().name();
-    std::cout << "  Caution: Temporary memory usage tracking is not implemente for all operators" << std::endl;
+    std::cout << "- Tracking temporary memory usage."
+              << "  Caution: Temporary memory usage tracking is not implemente for all operators" << std::endl;
   } else {
     std::cout << "- Not tracking temporary memory usage" << std::endl;
   }

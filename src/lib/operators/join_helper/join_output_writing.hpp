@@ -167,7 +167,7 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
 }
 
 inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
-    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+    auto& pos_lists_left, auto& pos_lists_right,
     const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
     bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
@@ -183,6 +183,10 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
      *
      * They hold one entry per column in the table, not per AbstractSegment in a single chunk
      */
+
+  // Ensure that input types with auto type declaration are supported.
+  Assert(typeid(pos_lists_left) == typeid(pmr_vector<RowIDPosList>) || typeid(pos_lists_left) == typeid(std::vector<RowIDPosList>), "Wrong type for pos_list_left in call to write_output_chunks.");
+  Assert(typeid(pos_lists_right) == typeid(pmr_vector<RowIDPosList>) || typeid(pos_lists_right) == typeid(std::vector<RowIDPosList>), "Wrong type for post_lists_right in call to write_output_chunks.");
 
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;
@@ -278,115 +282,4 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   return output_chunks;
 }
 
-inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
-    pmr_vector<RowIDPosList>& pos_lists_left, pmr_vector<RowIDPosList>& pos_lists_right,
-    const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
-    bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
-    OutputColumnOrder output_column_order, bool allow_partition_merge) {
-  /**
-     * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
-     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
-     *  write_output_chunks a lot.
-     *
-     * They do two things:
-     *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
-     *          PosLists Chunk by Chunk
-     *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
-     *
-     * They hold one entry per column in the table, not per AbstractSegment in a single chunk
-     */
-
-  PosListsByChunk left_side_pos_lists_by_segment;
-  PosListsByChunk right_side_pos_lists_by_segment;
-
-  if (create_left_side_pos_lists_by_segment) {
-    left_side_pos_lists_by_segment = setup_pos_lists_by_chunk(left_input_table);
-  }
-
-  if (create_right_side_pos_lists_by_segment) {
-    right_side_pos_lists_by_segment = setup_pos_lists_by_chunk(right_input_table);
-  }
-
-  const auto pos_lists_left_size = pos_lists_left.size();
-
-  auto expected_output_chunk_count = size_t{0};
-  for (size_t partition_id = 0; partition_id < pos_lists_left_size; ++partition_id) {
-    if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
-      ++expected_output_chunk_count;
-    }
-  }
-
-  std::vector<std::shared_ptr<Chunk>> output_chunks{};
-  output_chunks.reserve(expected_output_chunk_count);
-
-  // For every partition, create a reference segment.
-  auto partition_id = size_t{0};
-  auto output_chunk_id = size_t{0};
-  while (partition_id < pos_lists_left_size) {
-    // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
-    // left_side_pos_list and right_side_pos_list will not be used again.
-    auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));
-    auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_right[partition_id]));
-
-    if (left_side_pos_list->empty() && right_side_pos_list->empty()) {
-      ++partition_id;
-      continue;
-    }
-
-    // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
-    // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
-    // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
-    // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
-    // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
-    // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-    constexpr auto MIN_SIZE = 500;
-    constexpr auto MAX_SIZE = MIN_SIZE * 2;
-    left_side_pos_list->reserve(MAX_SIZE);
-    right_side_pos_list->reserve(MAX_SIZE);
-
-    if (allow_partition_merge) {
-      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
-      // size or are empty (in case of semi/anti joins).
-      while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
-             right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
-        // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
-        // used for the merged PosList.
-        std::copy(pos_lists_left[partition_id + 1].begin(), pos_lists_left[partition_id + 1].end(),
-                  std::back_inserter(*left_side_pos_list));
-        pos_lists_left[partition_id + 1] = {};
-
-        std::copy(pos_lists_right[partition_id + 1].begin(), pos_lists_right[partition_id + 1].end(),
-                  std::back_inserter(*right_side_pos_list));
-        pos_lists_right[partition_id + 1] = {};
-
-        ++partition_id;
-      }
-    }
-
-    Segments output_segments;
-    // Swap back the inputs, so that the order of the output columns is not changed.
-    switch (output_column_order) {
-      case OutputColumnOrder::LeftFirstRightSecond:
-        write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment, left_side_pos_list);
-        write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment, right_side_pos_list);
-        break;
-
-      case OutputColumnOrder::RightFirstLeftSecond:
-        write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment, right_side_pos_list);
-        write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_segment, left_side_pos_list);
-        break;
-
-      case OutputColumnOrder::RightOnly:
-        write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_segment, right_side_pos_list);
-        break;
-    }
-
-    auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
-
-    output_chunks.emplace_back(output_chunk);
-    ++partition_id;
-    ++output_chunk_id;
-  }
-  return output_chunks;
-}
 }  // namespace opossum
