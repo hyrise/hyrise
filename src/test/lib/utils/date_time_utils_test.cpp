@@ -51,8 +51,7 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(timestamp_without_microseconds->time_of_day().hours(), 12);
   EXPECT_EQ(timestamp_without_microseconds->time_of_day().minutes(), 13);
   EXPECT_EQ(timestamp_without_microseconds->time_of_day().seconds(), 14);
-  const auto total_microseconds = ((12 * 3600) + (13 * 60) + 14) * 1'000'000l;
-  EXPECT_EQ(timestamp_without_microseconds->time_of_day().total_microseconds(), total_microseconds);
+  EXPECT_EQ(timestamp_without_microseconds->time_of_day().fractional_seconds(), 0);
 
   const auto timestamp_with_microseconds = string_to_timestamp("2000-01-31 12:13:14.5");
   EXPECT_NE(timestamp_with_microseconds, std::nullopt);
@@ -62,7 +61,10 @@ TEST_F(DateTimeUtilsTest, StringToDateTime) {
   EXPECT_EQ(timestamp_with_microseconds->time_of_day().hours(), 12);
   EXPECT_EQ(timestamp_with_microseconds->time_of_day().minutes(), 13);
   EXPECT_EQ(timestamp_with_microseconds->time_of_day().seconds(), 14);
-  EXPECT_EQ(timestamp_with_microseconds->time_of_day().total_microseconds(), total_microseconds + 500'000);
+  const auto time_of_day = timestamp_with_microseconds->time_of_day();
+  const auto fractional_seconds =
+      static_cast<double>(time_of_day.fractional_seconds()) / static_cast<double>(time_of_day.ticks_per_second());
+  EXPECT_EQ(fractional_seconds, 0.5);
 
   const auto timestamp_without_time = string_to_timestamp("2000-01-01 00:00:00");
   EXPECT_EQ(*string_to_timestamp("2000-01-01 00:"), *timestamp_without_time);
