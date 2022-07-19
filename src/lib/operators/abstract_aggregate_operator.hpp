@@ -56,10 +56,14 @@ template <typename ColumnDataType, typename AggregateType>
 class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction::Sum> {
  public:
   auto get_aggregate_function() {
-    return [](const ColumnDataType& new_value, const size_t aggregate_count, AggregateType& accumulator) {
+    return [](const ColumnDataType& new_value, const bool is_null, const size_t aggregate_count, AggregateType& accumulator) {
       // Add new value to sum - no need to check if this is the first value as `sum` is only defined on numerical values
       // and the accumulator is initialized with 0.
-      accumulator += static_cast<AggregateType>(new_value);
+      if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+        accumulator += (1 - is_null) * static_cast<AggregateType>(new_value);
+      } else {
+        accumulator += static_cast<AggregateType>(new_value);
+      }
     };
   }
 };

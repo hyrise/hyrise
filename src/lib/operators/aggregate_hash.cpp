@@ -226,16 +226,24 @@ __attribute__((hot)) void AggregateHash::_aggregate_segment(ChunkID chunk_id, Co
                                      get_aggregate_key<AggregateKey>(keys_per_chunk, chunk_id, chunk_offset),
                                      RowID{chunk_id, chunk_offset});
 
-    // If the value is NULL, the current aggregate value does not change.
-    if (!position.is_null()) {
-      if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
-        // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
-        result.accumulator.emplace(position.value());
-      } else {
-        aggregator(ColumnDataType{position.value()}, result.aggregate_count, result.accumulator);
-      }
-
+    if constexpr (aggregate_function == AggregateFunction::Sum || aggregate_function == AggregateFunction::Avg) {
+      aggregator(ColumnDataType{position.value()}, position.is_null(), result.aggregate_count, result.accumulator);
       ++result.aggregate_count;
+    }
+
+    else {
+
+      // If the value is NULL, the current aggregate value does not change.
+      if (!position.is_null()) {
+        if constexpr (aggregate_function == AggregateFunction::CountDistinct) {
+          // For the case of CountDistinct, insert the current value into the set to keep track of distinct values
+          result.accumulator.emplace(position.value());
+        } else {
+          aggregator(ColumnDataType{position.value()}, result.aggregate_count, result.accumulator);
+        }
+
+        ++result.aggregate_count;
+      }
     }
 
     ++chunk_offset;

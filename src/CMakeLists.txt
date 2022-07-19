@@ -61,7 +61,7 @@ else()
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 13.99)
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 14.99)
         message(WARNING "Disabling 'reserved-identifier' warning for clang 13 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
         add_compile_options(-Wno-reserved-identifier)
     endif()
