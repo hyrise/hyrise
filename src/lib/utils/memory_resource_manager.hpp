@@ -44,7 +44,7 @@ class MemoryResourceManager : public Noncopyable {
   MemoryResourceManager() = default;
 
   tbb::concurrent_vector<ResourceRecord> _memory_resources;
-  bool _tracking_is_enabled = false;
+  bool _tracking_is_enabled = true;
 };
 
 }  // namespace opossum
