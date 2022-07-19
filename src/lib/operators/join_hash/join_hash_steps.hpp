@@ -66,7 +66,7 @@ struct Partition {
   // Bit vector to store NULL flags - not using uninitialized_vector because it is not specialized for bool.
   // It is stored independently of the elements as adding a single bit to PartitionedElement would cause memory waste
   // due to padding.
-auto null_values = pmr_vector<bool>(alloc<bool>("partition_struct"));
+  pmr_vector<bool> null_values = pmr_vector<bool>(alloc<bool>("partition_step_null_values_bitmap"));
 };
 
 // This alias is used in two phases:
