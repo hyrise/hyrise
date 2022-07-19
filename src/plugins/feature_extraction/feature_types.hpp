@@ -12,6 +12,7 @@ struct Query {
   size_t frequency;
 };
 
-using FeatureVector = std::vector<double>;
+using Feature = double;
+using FeatureVector = std::vector<Feature>;
 
 }  // namespace opossum

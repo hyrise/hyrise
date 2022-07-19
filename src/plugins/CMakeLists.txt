@@ -47,8 +47,15 @@ add_plugin(NAME hyriseCostModelFeaturePlugin
     feature_extraction/query_exporter.cpp
     feature_extraction/query_exporter.hpp
     feature_extraction/feature_types.hpp
-    feature_extraction/abstract_feature_node.cpp
-    feature_extraction/abstract_feature_node.hpp
+    feature_extraction/feature_nodes/abstract_feature_node.cpp
+    feature_extraction/feature_nodes/abstract_feature_node.hpp
+    feature_extraction/feature_nodes/column_feature_node.cpp
+    feature_extraction/feature_nodes/column_feature_node.hpp
+    feature_extraction/feature_nodes/operator_feature_node.cpp
+    feature_extraction/feature_nodes/operator_feature_node.hpp
+    feature_extraction/feature_nodes/table_feature_node.cpp
+    feature_extraction/feature_nodes/table_feature_node.hpp
+    feature_extraction/util/one_hot_encoding.hpp
 
   DEPS
     sqlparser
