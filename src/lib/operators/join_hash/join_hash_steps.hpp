@@ -330,7 +330,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       [[maybe_unused]] auto null_values_iter = null_values.begin();
 
       // prepare histogram
-      auto histogram = pmr_vector<size_t>(num_radix_partitions, alloc<size_t>("materialize::histogram"));
+      auto histogram = pmr_vector<size_t>(num_radix_partitions, alloc<size_t>("input_materialization_histogram"));
 
       auto reference_chunk_offset = ChunkOffset{0};
 
