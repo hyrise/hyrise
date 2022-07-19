@@ -98,7 +98,7 @@ TEST_F(JoinHashStepsTest, LargeHashTableExistenceOnly) {
 
 TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
   const size_t radix_bit_count = 0;
-  std::vector<std::vector<size_t>> histograms;
+  pmr_vector<pmr_vector<size_t>> histograms;
 
   // BloomFilters are ignored in this test
   BloomFilter bloom_filter_with_nulls;
@@ -159,7 +159,7 @@ TEST_F(JoinHashStepsTest, MaterializeAndBuildWithKeepNulls) {
 
 TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
   {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
+    pmr_vector<pmr_vector<size_t>> histograms;  // Ignored in this test
     BloomFilter bloom_filter;
 
     materialize_input<int, int, false>(_table_with_nulls_and_zeros->get_output(), ColumnID{0}, histograms, 1,
@@ -174,13 +174,13 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
     }
 
     // All other slots should be false
-    EXPECT_EQ(bloom_filter, BloomFilter{BLOOM_FILTER_SIZE});
+    EXPECT_EQ(bloom_filter, BloomFilter(BLOOM_FILTER_SIZE));
   }
 }
 
 TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
   {
-    std::vector<std::vector<size_t>> histograms;  // Ignored in this test
+    pmr_vector<pmr_vector<size_t>> histograms;  // Ignored in this test
     BloomFilter output_bloom_filter;
 
     // Fill input_bloom_filter
@@ -212,7 +212,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputBloomFilter) {
 
 TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   {
-    std::vector<std::vector<size_t>> histograms;
+    pmr_vector<pmr_vector<size_t>> histograms;
     BloomFilter bloom_filter;  // Ignored in this test
 
     // When using 1 bit for radix partitioning, we have two radix clusters determined on the least
@@ -230,7 +230,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
   }
 
   {
-    std::vector<std::vector<size_t>> histograms;
+    pmr_vector<pmr_vector<size_t>> histograms;
     BloomFilter bloom_filter;  // Ignored in this test
 
     // When using 2 bits for radix partitioning, we have four radix clusters determined on the two least
@@ -255,7 +255,7 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
 
 TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
   const size_t radix_bit_count = 1;
-  std::vector<std::vector<size_t>> histograms;
+  pmr_vector<pmr_vector<size_t>> histograms;
   BloomFilter bloom_filter;  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, true>(
@@ -282,8 +282,8 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 }
 
 TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
-  std::vector<std::vector<size_t>> histograms;  // Ignored in this test
-  BloomFilter output_bloom_filter;              // Ignored in this test
+  pmr_vector<pmr_vector<size_t>> histograms;              // Ignored in this test
+  BloomFilter output_bloom_filter;  // Ignored in this test
 
   // Fill input_bloom_filter
   BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);
@@ -313,7 +313,7 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
   }
 
   size_t radix_bit_count = 0;
-  std::vector<std::vector<size_t>> histograms;
+  pmr_vector<pmr_vector<size_t>> histograms;
   BloomFilter bloom_filter;  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, false>(

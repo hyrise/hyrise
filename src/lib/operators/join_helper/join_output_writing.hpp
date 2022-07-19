@@ -167,7 +167,7 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
 }
 
 inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
-    std::vector<RowIDPosList>& pos_lists_left, std::vector<RowIDPosList>& pos_lists_right,
+    auto& pos_lists_left, auto& pos_lists_right,
     const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
     bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
@@ -183,6 +183,10 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
      *
      * They hold one entry per column in the table, not per AbstractSegment in a single chunk
      */
+
+  // Ensure that input types with auto type declaration are supported.
+  Assert(typeid(pos_lists_left) == typeid(pmr_vector<RowIDPosList>) || typeid(pos_lists_left) == typeid(std::vector<RowIDPosList>), "Wrong type for pos_list_left in call to write_output_chunks.");
+  Assert(typeid(pos_lists_right) == typeid(pmr_vector<RowIDPosList>) || typeid(pos_lists_right) == typeid(std::vector<RowIDPosList>), "Wrong type for post_lists_right in call to write_output_chunks.");
 
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;
@@ -277,4 +281,5 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   }
   return output_chunks;
 }
+
 }  // namespace opossum

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tsl/robin_map.h>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
@@ -7,7 +8,6 @@
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
-#include "bytell_hash_map.hpp"
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -32,6 +32,12 @@ namespace opossum {
 enum class JoinHashBuildMode { AllPositions, ExistenceOnly };
 
 using Hash = size_t;
+
+template <typename T>
+PolymorphicAllocator<T> alloc(const std::string& operator_data_structure) {
+  return PolymorphicAllocator<T>{
+      Hyrise::get().memory_resource_manager.get_memory_resource(OperatorType::JoinHash, operator_data_structure)};
+}
 
 /*
 This is how elements of the input relations are saved after materialization.
@@ -60,7 +66,7 @@ struct Partition {
   // Bit vector to store NULL flags - not using uninitialized_vector because it is not specialized for bool.
   // It is stored independently of the elements as adding a single bit to PartitionedElement would cause memory waste
   // due to padding.
-  std::vector<bool> null_values;
+  pmr_vector<bool> null_values = pmr_vector<bool>(alloc<bool>("partition_step_null_values_bitmap"));
 };
 
 // This alias is used in two phases:
@@ -70,7 +76,7 @@ struct Partition {
 // As the radix clustering might be skipped (when radix_bits == 0), both the materialization as well as the radix
 // clustering methods yield RadixContainers.
 template <typename T>
-using RadixContainer = std::vector<Partition<T>>;
+using RadixContainer = pmr_vector<Partition<T>>;
 
 // Stores the mapping from HashedType to positions. Conceptually, this is similar to an (unordered_)multimap, but it has
 // some optimizations for the performance-critical probe() method. Instead of storing the matches directly in the
@@ -87,9 +93,9 @@ class PosHashTable {
   // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
   using Offset = uint32_t;
 
-  // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
-  // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
-  using OffsetHashTable = ska::bytell_hash_map<HashedType, Offset>;
+  // Tessil's robin:map is used because it is very fast and does not consume too much memory.
+  // If memory consumption is prioritized above performance, it maybe should exchanged (e.g. with Tessil's sparse_map).
+  using OffsetHashTable = tsl::robin_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>, PolymorphicAllocator<std::pair<HashedType, Offset>>>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -135,8 +141,6 @@ class PosHashTable {
 
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
-    _offset_hash_table.shrink_to_fit();
-
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
       // Resize so that we can store the start offset of each range as well as the final end offset.
@@ -218,7 +222,7 @@ class PosHashTable {
       std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
   JoinHashBuildMode _mode{};
-  OffsetHashTable _offset_hash_table{};
+  OffsetHashTable _offset_hash_table = OffsetHashTable{alloc<std::pair<HashedType, Offset>>("build_phase_offset_hash_table")};
   std::vector<SmallPosList> _small_pos_lists{};
 
   std::optional<UnifiedPosList> _unified_pos_list{};
@@ -244,11 +248,12 @@ static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
 // needed for merging partial Bloom filters created by different threads. Note that the dynamic_bitset(n, value)
 // constructor does not do what you would expect it to, so try to avoid it.
-using BloomFilter = boost::dynamic_bitset<>;
+using BloomFilter = pmr_dynamic_bitset<uint32_t>;
 
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
 // negation (~x). As the negation is surprisingly expensive, we create a static empty Bloom filter and reference
 // it where needed. Having a Bloom filter that always returns true avoids a branch in the hot loop.
+
 static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 
 // @param in_table             Table to materialize
@@ -260,9 +265,10 @@ static const auto ALL_TRUE_BLOOM_FILTER = ~BloomFilter(BLOOM_FILTER_SIZE);
 //                             encountered in the input column
 // @param input_bloom_filter   Optional: Materialization is skipped for each value where the corresponding slot in the
 //                             Bloom filter is false
+
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
-                                    std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                    pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
                                     BloomFilter& output_bloom_filter,
                                     const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   // Retrieve input chunk_count as it might change during execution if we work on a non-reference table
@@ -270,7 +276,8 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 
   const std::hash<HashedType> hash_function;
   // List of all elements that will be partitioned
-  auto radix_container = RadixContainer<T>{};
+  auto radix_container = RadixContainer<T>(alloc<T>("input_materialization_radix_container"));
+
   radix_container.resize(chunk_count);
 
   // Fan-out
@@ -289,14 +296,13 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   // Create histograms per chunk
   histograms.resize(chunk_count);
 
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
     if (!chunk_in) {
       continue;
     }
-
     const auto num_rows = chunk_in->size();
 
     const auto materialize = [&, chunk_in, chunk_id, num_rows]() {
@@ -325,7 +331,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       [[maybe_unused]] auto null_values_iter = null_values.begin();
 
       // prepare histogram
-      auto histogram = std::vector<size_t>(num_radix_partitions);
+      auto histogram = pmr_vector<size_t>(num_radix_partitions, alloc<size_t>("input_materialization_histogram"));
 
       auto reference_chunk_offset = ChunkOffset{0};
 
@@ -425,11 +431,10 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
 /*
 Build all the hash tables for the partitions of the build column. One job per partition
 */
-
 template <typename BuildColumnType, typename HashedType>
-std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
-                                                           const JoinHashBuildMode mode, const size_t radix_bits,
-                                                           const BloomFilter& input_bloom_filter) {
+pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<BuildColumnType>& radix_container,
+                                                          const JoinHashBuildMode mode, const size_t radix_bits,
+                                                          const BloomFilter& input_bloom_filter) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
   if (radix_container.empty()) {
@@ -440,7 +445,8 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   NUMA notes:
   The hash tables for each partition P should also reside on the same node as the build and probe partitions.
   */
-  std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+  auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(
+      alloc<std::optional<PosHashTable<HashedType>>>("hash_tables"));
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
@@ -511,7 +517,7 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
 
 template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
-                                     std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
+                                     pmr_vector<pmr_vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
   if (radix_container.empty()) {
     return radix_container;
@@ -533,19 +539,21 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   const size_t radix_mask = static_cast<uint32_t>(pow(2, radix_bits * (pass + 1)) - 1);
 
   // allocate new (shared) output
-  auto output = RadixContainer<T>(output_partition_count);
+  auto output = RadixContainer<T>(output_partition_count, alloc<T>("partition_by_radix_output_container"));
 
   Assert(histograms.size() == input_partition_count, "Expected one histogram per input partition");
   Assert(histograms[0].size() == output_partition_count, "Expected one histogram bucket per output partition");
 
   // Writing to std::vector<bool> is not thread-safe if the same byte is being written to. For now, we temporarily
   // use a std::vector<char> and compress it into an std::vector<bool> later.
-  auto null_values_as_char = std::vector<std::vector<char>>(output_partition_count);
+  auto null_values_as_char = pmr_vector<std::vector<char>>(
+      output_partition_count, alloc<std::vector<char>>("radix_partitioning_null_values_as_char"));
 
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
-  auto output_offsets_by_input_partition =
-      std::vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count));
+  auto output_offsets_by_input_partition = pmr_vector<std::vector<size_t>>(
+      input_partition_count, std::vector<size_t>(output_partition_count),
+      alloc<std::vector<size_t>>("radix_partitioning_output_offsets"));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
@@ -622,15 +630,10 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   return output;
 }
 
-/*
-  In the probe phase we take all partitions from the probe partition, iterate over them and compare each join candidate
-  with the values in the hash table. Since build and probe are hashed using the same hash function, we can reduce the
-  number of hash tables that need to be looked into to just 1.
-  */
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
-           const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-           std::vector<RowIDPosList>& pos_lists_build_side, std::vector<RowIDPosList>& pos_lists_probe_side,
+           const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+           pmr_vector<RowIDPosList>& pos_lists_build_side, pmr_vector<RowIDPosList>& pos_lists_probe_side,
            const JoinMode mode, const Table& build_table, const Table& probe_table,
            const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
@@ -789,8 +792,8 @@ void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
 
 template <typename ProbeColumnType, typename HashedType, JoinMode mode>
 void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_container,
-                     const std::vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
-                     std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
+                     const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,
+                     pmr_vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
   jobs.reserve(probe_radix_container.size());

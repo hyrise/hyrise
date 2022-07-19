@@ -10,7 +10,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
                                  const bool init_enable_scheduler, const uint32_t init_cores,
                                  const uint32_t init_data_preparation_cores, const uint32_t init_clients,
                                  const bool init_enable_visualization, const bool init_verify,
-                                 const bool init_cache_binary_tables, const bool init_metrics)
+                                 const bool init_cache_binary_tables, const bool init_metrics,
+                                 const bool init_enable_temporary_memory_tracking)
     : benchmark_mode(init_benchmark_mode),
       chunk_size(init_chunk_size),
       encoding_config(init_encoding_config),
@@ -26,7 +27,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       enable_visualization(init_enable_visualization),
       verify(init_verify),
       cache_binary_tables(init_cache_binary_tables),
-      metrics(init_metrics) {}
+      metrics(init_metrics),
+      enable_temporary_memory_tracking(init_enable_temporary_memory_tracking) {}
 
 BenchmarkConfig BenchmarkConfig::get_default_config() {
   return BenchmarkConfig();

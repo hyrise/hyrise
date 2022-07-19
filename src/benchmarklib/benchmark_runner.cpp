@@ -36,6 +36,11 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
 
+  // Enable temporary memory tracking if requested. Memory tracking is off by default.
+  if (config.enable_temporary_memory_tracking) {
+    Hyrise::get().memory_resource_manager.enable_temporary_memory_tracking();
+  }
+
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
   if (config.enable_scheduler) {
     Hyrise::get().topology.use_default_topology(config.cores);
@@ -503,6 +508,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("clients", "Specify how many items should run in parallel if the scheduler is active", cxxopts::value<uint32_t>()->default_value("1")) // NOLINT
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
+    ("memory_tracking", "Enables tracking of the temporary memory usage of certain operators using polymorphic allocators", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")) // NOLINT
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.

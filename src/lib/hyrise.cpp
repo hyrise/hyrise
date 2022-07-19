@@ -17,6 +17,7 @@ Hyrise::Hyrise() {
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};
+  memory_resource_manager = MemoryResourceManager{};
   settings_manager = SettingsManager{};
   log_manager = LogManager{};
   topology = Topology{};

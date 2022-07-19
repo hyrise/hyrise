@@ -18,6 +18,7 @@
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/dynamic_bitset.hpp>
 #include <boost/operators.hpp>
 
 #include "strong_typedef.hpp"
@@ -103,6 +104,9 @@ using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
+
+template <typename T>
+using pmr_dynamic_bitset = boost::dynamic_bitset<T, PolymorphicAllocator<T>>;
 
 constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base_type>::max()};
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
@@ -205,6 +209,41 @@ std::pair<PredicateCondition, PredicateCondition> between_to_conditions(const Pr
 
 // Join, e.g., {GreaterThanEquals, LessThan} into BetweenUpperExclusive
 PredicateCondition conditions_to_between(const PredicateCondition lower, const PredicateCondition upper);
+
+enum class OperatorType {
+  Aggregate,
+  Alias,
+  ChangeMetaTable,
+  CreateTable,
+  CreatePreparedPlan,
+  CreateView,
+  DropTable,
+  DropView,
+  Delete,
+  Difference,
+  Export,
+  GetTable,
+  Import,
+  IndexScan,
+  Insert,
+  JoinHash,
+  JoinIndex,
+  JoinNestedLoop,
+  JoinSortMerge,
+  JoinVerification,
+  Limit,
+  Print,
+  Product,
+  Projection,
+  Sort,
+  TableScan,
+  TableWrapper,
+  UnionAll,
+  UnionPositions,
+  Update,
+  Validate,
+  Mock  // for Tests that need to Mock operators
+};
 
 // Let R and S be two tables and we want to perform `R <JoinMode> S ON <condition>`
 // AntiNullAsTrue:    If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is NULL or TRUE, Ri is

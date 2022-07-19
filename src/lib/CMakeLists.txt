@@ -170,6 +170,8 @@ set(
     lossless_cast.hpp
     lossy_cast.hpp
     memory/boost_default_memory_resource.cpp
+    memory/tracking_memory_resource.hpp
+    memory/tracking_memory_resource.cpp
     memory/zero_allocator.hpp
     null_value.hpp
     operators/abstract_aggregate_operator.cpp
@@ -584,6 +586,8 @@ set(
     utils/lossless_predicate_cast.cpp
     utils/lossless_predicate_cast.hpp
     utils/make_bimap.hpp
+    utils/memory_resource_manager.cpp
+    utils/memory_resource_manager.hpp
     utils/meta_table_manager.cpp
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
@@ -598,6 +602,8 @@ set(
     utils/meta_tables/meta_exec_table.hpp
     utils/meta_tables/meta_log_table.cpp
     utils/meta_tables/meta_log_table.hpp
+    utils/meta_tables/meta_temporary_memory_usage_table.cpp
+    utils/meta_tables/meta_temporary_memory_usage_table.hpp
     utils/meta_tables/meta_plugins_table.cpp
     utils/meta_tables/meta_plugins_table.hpp
     utils/meta_tables/meta_segments_accurate_table.cpp

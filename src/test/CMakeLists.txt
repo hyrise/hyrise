@@ -71,6 +71,7 @@ set(
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
+    lib/memory/tracking_memory_resource_test.cpp
     lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
     lib/operators/aggregate_sort_test.cpp
@@ -218,9 +219,11 @@ set(
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
     lib/utils/meta_tables/meta_plugins_table_test.cpp
+    lib/utils/meta_tables/meta_temporary_memory_usage_table_test.cpp
     lib/utils/meta_tables/meta_settings_table_test.cpp
     lib/utils/meta_tables/meta_system_utilization_table_test.cpp
     lib/utils/meta_tables/meta_table_test.cpp
+    lib/utils/memory_resource_manager_test.cpp
     lib/utils/mock_setting.cpp
     lib/utils/mock_setting.hpp
     lib/utils/plugin_manager_test.cpp
