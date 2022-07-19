@@ -8,15 +8,6 @@ class TrackingMemoryResourceTest : public BaseTest {
   TrackingMemoryResource tracking_memory_resource;
 };
 
-TEST_F(TrackingMemoryResourceTest, PerformAllocations) {
-  auto int_ptr = reinterpret_cast<int*>(tracking_memory_resource.allocate(sizeof(int)));
-  EXPECT_NO_THROW((*int_ptr) = 1);
-
-  auto float_ptr = reinterpret_cast<float*>(tracking_memory_resource.allocate(sizeof(float) * 2));
-  EXPECT_NO_THROW(float_ptr[0] = 1);
-  EXPECT_NO_THROW(float_ptr[1] = 2);
-}
-
 TEST_F(TrackingMemoryResourceTest, RecordAllocations) {
   ASSERT_EQ(tracking_memory_resource.memory_timeseries().size(), 0);
 
