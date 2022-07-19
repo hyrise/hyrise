@@ -41,8 +41,6 @@ RUN apt-get update \
         python3-pip \
         software-properties-common \
         sudo \
-        systemtap \
-        systemtap-sdt-dev \
         valgrind \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
