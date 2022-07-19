@@ -5,7 +5,13 @@
 
 namespace opossum {
 
-OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOperator>& op, const std::shared_ptr<AbstractFeatureNode>& left_input, const std::shared_ptr<AbstractFeatureNode>& right_input, const std::shared_ptr<Query>& query) : AbstractFeatureNode{FeatureNodeType::Operator, left_input, right_input, op->performance_data->walltime, query}, _op{op}, _op_type{op->type()} {}
+OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOperator>& op,
+                                         const std::shared_ptr<AbstractFeatureNode>& left_input,
+                                         const std::shared_ptr<AbstractFeatureNode>& right_input)
+    : AbstractFeatureNode{FeatureNodeType::Operator, left_input, right_input},
+      _op{op},
+      _op_type{op->type()},
+      _run_time{op->performance_data->walltime} {}
 
 size_t OperatorFeatureNode::hash() const {
   const auto& lqp_node = _op->lqp_node;
@@ -13,7 +19,7 @@ size_t OperatorFeatureNode::hash() const {
   return lqp_node->hash();
 }
 
-std::shared_ptr<FeatureVector>  OperatorFeatureNode::_on_to_feature_vector() {
+std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() {
   if (_output_table.expired()) {
     _output_table = TableFeatureNode::from_performance_data(*_op->performance_data, shared_from_this());
   }
@@ -37,5 +43,23 @@ const std::vector<std::string>& OperatorFeatureNode::headers() {
   return ohe_headers_type;
 }
 
+std::chrono::nanoseconds OperatorFeatureNode::run_time() const {
+  return _run_time;
+}
+
+bool OperatorFeatureNode::is_root_node() const {
+  return _is_root_node;
+}
+
+void OperatorFeatureNode::set_as_root_node(std::shared_ptr<Query>& query) {
+  Assert(!_is_root_node, "Root Node Property should only be set once");
+  _is_root_node = true;
+  _query = query;
+}
+
+std::shared_ptr<Query> OperatorFeatureNode::query() const {
+  Assert(_is_root_node, "Only root node is assigned to query");
+  return _query;
+}
 
 }  // namespace opossum

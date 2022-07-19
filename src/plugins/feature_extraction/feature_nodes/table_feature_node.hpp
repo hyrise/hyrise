@@ -8,14 +8,17 @@ namespace opossum {
 
 class TableFeatureNode : public AbstractFeatureNode {
  public:
+  TableFeatureNode(const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
+                   const std::shared_ptr<AbstractFeatureNode>& input_node);
 
-  TableFeatureNode(const TableType table_type, const uint64_t row_count, const uint64_t chunk_count, const std::shared_ptr<AbstractFeatureNode>& input_node);
+  TableFeatureNode(const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
+                   const std::string& table_name);
 
-  TableFeatureNode(const TableType table_type, const uint64_t row_count, const uint64_t chunk_count, const std::string& table_name);
+  static std::shared_ptr<TableFeatureNode> from_performance_data(
+      const AbstractOperatorPerformanceData& performance_data, const std::shared_ptr<AbstractFeatureNode>& input_node);
 
-  static std::shared_ptr<TableFeatureNode> from_performance_data(const AbstractOperatorPerformanceData& performance_data, const std::shared_ptr<AbstractFeatureNode>& input_node);
-
-  static std::shared_ptr<TableFeatureNode> from_table(const std::shared_ptr<Table>& table, const std::string& table_name);
+  static std::shared_ptr<TableFeatureNode> from_table(const std::shared_ptr<Table>& table,
+                                                      const std::string& table_name);
 
   size_t hash() const final;
 
@@ -26,7 +29,7 @@ class TableFeatureNode : public AbstractFeatureNode {
   const std::optional<std::string>& table_name() const;
 
  protected:
-  std::shared_ptr<FeatureVector>  _on_to_feature_vector() final;
+  std::shared_ptr<FeatureVector> _on_to_feature_vector() final;
 
   TableType _table_type;
   uint64_t _row_count;

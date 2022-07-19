@@ -4,12 +4,11 @@
 
 #include <magic_enum.hpp>
 
-
 namespace opossum {
 
 template <typename EnumType>
-std::shared_ptr<std::vector<Feature>> one_hot_encoding(const EnumType value) {
-  auto result = std::make_shared<std::vector<Feature>>(magic_enum::enum_count<EnumType>());
+std::shared_ptr<FeatureVector> one_hot_encoding(const EnumType value) {
+  auto result = std::make_shared<FeatureVector>(magic_enum::enum_count<EnumType>());
   const auto& index = magic_enum::enum_index(value);
   Assert(index, "No index found for '" + std::string{magic_enum::enum_name(value)} + "'");
   (*result)[*index] = Feature{1};

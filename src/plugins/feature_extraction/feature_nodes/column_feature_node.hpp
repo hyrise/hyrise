@@ -1,14 +1,18 @@
 #pragma once
 
 #include "abstract_feature_node.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "storage/table.hpp"
 
 namespace opossum {
 
 class ColumnFeatureNode : public AbstractFeatureNode {
  public:
+  ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node, const std::shared_ptr<Table>& table,
+                    const ColumnID column_id);
 
-  ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node, const ColumnID column_id);
+  static std::shared_ptr<ColumnFeatureNode> from_column_expression(
+      const std::shared_ptr<AbstractFeatureNode>& input_node, const std::shared_ptr<AbstractExpression>& expression);
 
   size_t hash() const final;
 
@@ -19,9 +23,10 @@ class ColumnFeatureNode : public AbstractFeatureNode {
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() final;
 
-  ColumnID _column_id;
   std::shared_ptr<Table> _table;
+  ColumnID _column_id;
   DataType _data_type;
+
   uint64_t _value_segments = 0;
   uint64_t _dictionary_segments = 0;
   uint64_t _fixed_string_dictionary_segments = 0;
@@ -30,7 +35,6 @@ class ColumnFeatureNode : public AbstractFeatureNode {
   uint64_t _lz4_segments = 0;
   bool _nullable = false;
   uint64_t _sorted_segments = 0;
-
 };
 
 }  // namespace opossum
