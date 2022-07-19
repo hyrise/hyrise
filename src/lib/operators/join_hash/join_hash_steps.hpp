@@ -444,7 +444,7 @@ pmr_vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<B
   The hash tables for each partition P should also reside on the same node as the build and probe partitions.
   */
   auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>(
-      alloc<std::optional<PosHashTable<HashedType>>>("build::hash_tables"));
+      alloc<std::optional<PosHashTable<HashedType>>>("hash_tables"));
 
   if (radix_bits == 0) {
     auto total_size = size_t{0};
