@@ -8,7 +8,7 @@ class MemoryResourceManagerTest : public BaseTest {
  protected:
   MemoryResourceManager memory_resource_manager;
   void SetUp() override {
-    memory_resource_manager.enable();
+    memory_resource_manager.enable_temporary_memory_tracking();
   }
 };
 

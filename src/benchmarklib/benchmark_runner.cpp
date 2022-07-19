@@ -38,7 +38,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
 
   // Enable temporary memory tracking if requested. Memory tracking is off by default.
   if (config.enable_temporary_memory_tracking) {
-    Hyrise::get().memory_resource_manager.enable();
+    Hyrise::get().memory_resource_manager.enable_temporary_memory_tracking();
   }
 
   // Initialise the scheduler if the benchmark was requested to run multi-threaded
