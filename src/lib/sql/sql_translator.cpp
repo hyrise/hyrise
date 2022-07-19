@@ -1388,10 +1388,10 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
           std::cout << "WARNING: Parsing TIME to string since date and time data types are not yet supported\n";
           column_definition.data_type = DataType::String;
           break;
-        // case hsql::DataType::BOOLEAN:
-        //   std::cout << "WARNING: Parsing BOOLEAN to string\n";
-        //   column_definition.data_type = DataType::String;
-        //   break;
+        case hsql::DataType::BOOLEAN:
+          std::cout << "WARNING: Parsing BOOLEAN to string\n";
+          column_definition.data_type = DataType::String;
+          break;
         case hsql::DataType::UNKNOWN:
           Fail("UNKNOWN data type cannot be handled here");
       }
