@@ -4,7 +4,7 @@
  *  Early outs are exploited for dictionary segments.
  */
 
-#include "join_to_local_predicate_rewrite_plugin.hpp"
+#include "ucc_discovery_plugin.hpp"
 
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -27,10 +27,8 @@ namespace opossum {
 std::string UccDiscoveryPlugin::description() const {
     return "Unary Unique Column Combination Discovery Plugin";
 }
-
-void UccDiscoveryPlugin::start() {
-    discover_uccs();
-}
+  
+void UccDiscoveryPlugin::start() {}
 
 void UccDiscoveryPlugin::discover_uccs() const {
     const auto ucc_candidates = *identify_ucc_candidates();
@@ -101,9 +99,6 @@ void UccDiscoveryPlugin::discover_uccs() const {
                         Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
                         return;
                     }
-
-                    // std::cout << values.size() << std::endl;
-                    // std::cout << "----" << std::endl;
                 } else if (std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
                     const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
                     const auto& dict = dict_segment->dictionary();
