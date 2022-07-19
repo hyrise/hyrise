@@ -8,6 +8,10 @@
 
 namespace opossum {
 
+/*
+ * This class stores all (de-) allocations with timestamps as a pair in a vector by overwriting the default memory_resource.
+ * It can be used in polymorphic allocators to track the memory usage of containers. The allocation behaviour itself remains unchanged.
+ */
 class TrackingMemoryResource : public boost::container::pmr::memory_resource {
  public:
   TrackingMemoryResource() = default;
