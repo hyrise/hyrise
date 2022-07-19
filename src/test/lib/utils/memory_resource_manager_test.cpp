@@ -56,7 +56,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   };
 
   // Create a few threads that interact with the memory resource manager and obtained memory resources
-  auto N_THREADS = uint8_t{10};
+  const auto N_THREADS = uint8_t{10};
   auto threads = std::vector<std::thread>(N_THREADS);
   for (auto indx = uint8_t{0}; indx < N_THREADS; ++indx) {
     threads[indx] = std::thread(fetch_and_use_a_memory_resource, indx);
@@ -74,7 +74,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   // bytes to have been allocated or deallocated.
   auto n_allocated_bytes = int{0};
   auto n_deallocated_bytes = int{0};
-  auto expected_allocation_amount = (N_THREADS * N_THREADS + N_THREADS) / 2;
+  const auto expected_allocation_amount = (N_THREADS * N_THREADS + N_THREADS) / 2;
   for (const auto& resource_record : memory_resources) {
     const auto memory_resource = *resource_record.resource_ptr;
     n_allocated_bytes += memory_resource.memory_timeseries()[0].second;
