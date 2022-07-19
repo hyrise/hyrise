@@ -31,7 +31,7 @@ std::string UccDiscoveryPlugin::description() const {
 void UccDiscoveryPlugin::start() {}
 
 void UccDiscoveryPlugin::discover_uccs() const {
-    const auto ucc_candidates = *identify_ucc_candidates();
+    const auto ucc_candidates = identify_ucc_candidates();
 
     for (const auto& candidate : ucc_candidates) {
         auto candidate_time = Timer();
@@ -196,11 +196,11 @@ std::shared_ptr<std::vector<UCCCandidate>> UccDiscoveryPlugin::generate_valid_ca
     return candidates;
 }
 
-UCCCandidates* UccDiscoveryPlugin::identify_ucc_candidates() const {
+UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
     // get a snapshot of the current LQP cache to work on all currently cached queries
     const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
 
-    auto ucc_candidates = new UCCCandidates{};
+    auto ucc_candidates = UCCCandidates{};
 
     for (const auto& [query, entry] : snapshot) {
         const auto& root_node = entry.value;
@@ -224,7 +224,7 @@ UCCCandidates* UccDiscoveryPlugin::identify_ucc_candidates() const {
                     }
                     // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
                     const auto table = std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
-                    ucc_candidates->insert(UCCCandidate{table->table_name, casted_candidate->original_column_id});
+                    ucc_candidates.insert(UCCCandidate{table->table_name, casted_candidate->original_column_id});
                 }
                 
                 return LQPVisitation::VisitInputs;
@@ -265,7 +265,7 @@ UCCCandidates* UccDiscoveryPlugin::identify_ucc_candidates() const {
                     auto candidates = generate_valid_candidates(subtree_root, column_candidate);
                     if (candidates) {
                         for (const auto& candidate : *candidates) {
-                            ucc_candidates->insert(candidate);
+                            ucc_candidates.insert(candidate);
                         }
                     }
                     break;
@@ -284,12 +284,12 @@ UCCCandidates* UccDiscoveryPlugin::identify_ucc_candidates() const {
 
                         // for Join2Semi, this column is already interesting for optimization, so add it as a potential candidate anyways
                         const auto table = std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
-                        ucc_candidates->insert(UCCCandidate{table->table_name, casted_candidate->original_column_id});
+                        ucc_candidates.insert(UCCCandidate{table->table_name, casted_candidate->original_column_id});
 
                         auto candidates = generate_valid_candidates(subtree_root, casted_candidate);
                         if (candidates) {
                             for (const auto& candidate : *candidates) {
-                                ucc_candidates->insert(candidate);
+                                ucc_candidates.insert(candidate);
                             }
                         }
                     }
@@ -309,7 +309,7 @@ UCCCandidates* UccDiscoveryPlugin::identify_ucc_candidates() const {
                     auto candidates = generate_valid_candidates(subtree_root, column_candidate);
                     if (candidates) {
                         for (const auto& candidate : *candidates) {
-                            ucc_candidates->insert(candidate);
+                            ucc_candidates.insert(candidate);
                         }
                     }
                     break;
