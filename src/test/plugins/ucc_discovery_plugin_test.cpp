@@ -20,13 +20,13 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-// #include "sql/sql_plan_cache.hpp"
-
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 
 namespace opossum {
 
@@ -59,7 +59,6 @@ class UccDiscoveryPluginTest : public BaseTest {
         table_node_B
       )
     );
-
   }
 
   void TearDown() override {
@@ -72,6 +71,10 @@ class UccDiscoveryPluginTest : public BaseTest {
      return _uccPlugin.generate_valid_candidates(root_node, column_candidate);
   }
 
+  UCCCandidates _identify_ucc_candidates() {
+    return _uccPlugin.identify_ucc_candidates();
+  }
+
   void _discover_uccs() {
     return _uccPlugin.discover_uccs();
   }
@@ -81,6 +84,7 @@ class UccDiscoveryPluginTest : public BaseTest {
   static constexpr auto _chunk_size = ChunkOffset{2};
   const UccDiscoveryPlugin _uccPlugin{};
   std::shared_ptr<JoinNode> _lqp{};
+  std::shared_ptr<AggregateNode> _agg_lqp{};
 
   std::shared_ptr<LQPColumnExpression> _join_col_A{};
   std::shared_ptr<LQPColumnExpression> _join_col_B{};
@@ -96,21 +100,13 @@ TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
 }
 
 
-TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGenerated) {
-  auto ucc_candidates = UCCCandidates{};
+TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
 
-  const auto candidates_A = _generate_valid_candidates(_lqp, _join_col_A);
-  const auto candidates_B = _generate_valid_candidates(_lqp, _join_col_B);
+  Hyrise::get().default_lqp_cache->set("TestLQP", _lqp);
 
-  EXPECT_EQ(candidates_A->size(), 2);
-  EXPECT_EQ(candidates_B->size(), 2);
-
-  for (const auto& candidate : *candidates_A) {
-    ucc_candidates.insert(candidate);
-  }
-  for (const auto& candidate : *candidates_B) {
-    ucc_candidates.insert(candidate);
-  }
+  auto ucc_candidates = _identify_ucc_candidates();
 
   EXPECT_EQ(ucc_candidates.size(), 4);
 
@@ -123,6 +119,59 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGenerated) {
   EXPECT_TRUE(ucc_candidates.contains(predicate_col_A_candidate));
   EXPECT_TRUE(ucc_candidates.contains(join_col_B_candidate));
   EXPECT_TRUE(ucc_candidates.contains(predicate_col_B_candidate));
+}
+
+TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
+  const auto table_node_A = StoredTableNode::make(_table_name_A);
+
+  const auto lqp = AggregateNode::make(
+    expression_vector(_join_col_A),
+    expression_vector(),
+    PredicateNode::make(
+      equals_(_predicate_col_A, "unique"),
+      table_node_A
+    )
+  );
+
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+  Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
+
+  auto ucc_candidates = _identify_ucc_candidates();
+
+  const auto join_col_A_candidate = UCCCandidate{_table_name_A, _join_col_A->original_column_id};
+  const auto predicate_col_A_candidate = UCCCandidate{_table_name_A, _predicate_col_A->original_column_id};
+
+  EXPECT_EQ(ucc_candidates.size(), 1);
+  EXPECT_TRUE(ucc_candidates.contains(join_col_A_candidate));
+  EXPECT_TRUE(!ucc_candidates.contains(predicate_col_A_candidate));
+}
+
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGenerated) {
+  const auto table_node_A = StoredTableNode::make(_table_name_A);
+  const auto table_node_B = StoredTableNode::make(_table_name_B);
+
+  const auto lqp =  UnionNode::make(
+    SetOperationMode::All,
+    PredicateNode::make(
+      equals_(_predicate_col_A, "unique"),
+      table_node_A
+    ),
+    PredicateNode::make(
+    equals_(_predicate_col_B, "not"),
+    table_node_B
+    )
+  );
+
+  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
+
+  Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
+
+  auto ucc_candidates = _identify_ucc_candidates();
+
+  EXPECT_EQ(ucc_candidates.size(), 0);
 }
 
 
