@@ -8,19 +8,14 @@
 namespace opossum {
 
 /**
- * Takes delimited date string with order year-month-day (ISO 8601 extended format), e.g., "2001-01-01".
+ * Takes delimited timestampt string with order year-month-day [hour:minute:second<.second fraction>] (ISO 8601 extended
+ * format), e.g., "2001-01-01", "2000-01-01 13:01:02" or "2000-01-01 13:01:02.5000". Boost allows out-of-bounds values
+ * for timestamps, e.g., '2000-01-01 25:61:61' is a valid date time and the overflow is added to the subsequent time
+ * unit. In this example, the resulting date time is '2000-01-02 02:02:01'. This behavior is enabled by Boost's time
+ * math, see https://www.boost.org/doc/libs/1_79_0/doc/html/date_time/examples.html#date_time.examples.time_math
  * Notably, Boost's gregorian dates do not support years < 1400 or > 9999.
  */
-std::optional<boost::gregorian::date> string_to_date(const std::string& date_string);
-
-/**
- * Takes delimited date string with order year-month-day hour:minute:second<.second fraction> (ISO 8601 extended
- * format), e.g., "2000-01-01 13:01:02" or "2000-01-01 13:01:02.5000". Boost allows out-of-bounds values for
- * timestamps, e.g., '2000-01-01 25:61:61' is a valid date time and the overflow is added to the subsequent time unit.
- * In this example, the resulting date time is '2000-01-02 02:02:01'. This behavior is enabled by Boost's time math,
- * see https://www.boost.org/doc/libs/1_79_0/doc/html/date_time/examples.html#date_time.examples.time_math
- */
-std::optional<boost::posix_time::ptime> string_to_date_time(const std::string& date_time_string);
+std::optional<boost::posix_time::ptime> string_to_timestamp(const std::string& timestamp_string);
 
 /**
  * This also handles edge cases with days that are the end of a month.
@@ -33,6 +28,6 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
 std::string date_to_string(const boost::gregorian::date& date);
 
 // ISO 8601 extended format representation of the timestamp without time indicator.
-std::string date_time_to_string(const boost::posix_time::ptime& date_time);
+std::string timestamp_to_string(const boost::posix_time::ptime& timestamp);
 
 }  // namespace opossum

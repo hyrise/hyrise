@@ -1593,9 +1593,11 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       return null_();
 
     case hsql::kExprLiteralDate: {
-      const auto date = string_to_date(name);
-      if (date) {
-        return value_(pmr_string{name});
+      if (name.size() == 10) {
+        const auto timestamp = string_to_timestamp(name);
+        if (timestamp) {
+          return value_(pmr_string{name});
+        }
       }
       FailInput("'" + name + "' is not a valid ISO 8601 extended date");
     }
@@ -1740,13 +1742,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                       "Interval can only be applied to ValueExpression with String value");
           const auto start_date_string =
               std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
-          const auto start_date = string_to_date(start_date_string);
+          const auto start_date = string_to_timestamp(start_date_string);
           AssertInput(start_date, "'" + start_date_string + "' is not a valid ISO 8601 extended date");
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
           // We already ensured to have either Addition or Substraction right at the beginning
           const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
                                                                                     : -interval_expression.duration;
-          const auto end_date = date_interval(*start_date, duration, interval_expression.unit);
+          const auto end_date = date_interval(start_date->date(), duration, interval_expression.unit);
           return value_(pmr_string{date_to_string(end_date)});
         }
         return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);
@@ -1845,18 +1847,19 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
         if (target_hsql_data_type == hsql::DataType::DATE) {
           // We do not have a Date data type, so we check if the date is valid and return its ValueExpression.
-          const auto date = string_to_date(input_string);
-          AssertInput(date, "'" + input_string + "' is not a valid ISO 8601 extended date");
+          const auto timestamp = string_to_timestamp(input_string);
+          AssertInput(timestamp && input_string.size() == 10,
+                      "'" + input_string + "' is not a valid ISO 8601 extended date");
           return left;
         }
 
         if (target_hsql_data_type == hsql::DataType::DATETIME) {
-          const auto date_time = string_to_date_time(input_string);
+          const auto date_time = string_to_timestamp(input_string);
           AssertInput(date_time, "'" + input_string + "' is not a valid ISO 8601 extended timestamp");
           // Parsing valid timestamps is also possible for at first glance invalid strings (see
           // utils/date_time_utils.hpp for details). To always obtain a semantically meaningful result, we retrieve the
           // created timestamp's string representation.
-          return value_(pmr_string{date_time_to_string(*date_time)});
+          return value_(pmr_string{timestamp_to_string(*date_time)});
         }
       }
 

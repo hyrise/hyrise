@@ -44,7 +44,7 @@ std::string ExtractExpression::description(const DescriptionMode mode) const {
 }
 
 DataType ExtractExpression::data_type() const {
-  // Timestamps can contain fractional seconds, so the result must be a floating-point number.
+  // Timestamps can contain fractional seconds, so the result must be a floating-point number for seconds.
   return datetime_component == DatetimeComponent::Second ? DataType::Double : DataType::Int;
 }
 
