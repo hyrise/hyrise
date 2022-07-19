@@ -366,7 +366,7 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       parameters.emplace_back("'Brand#"s + std::to_string(brand) + "'");
       parameters.emplace_back("'"s + partial_type + "%'");
-      for (auto parameter_index = 0; parameter_index < 8; ++parameter_index) {
+      for (auto parameter_index = size_t{0}; parameter_index < 8; ++parameter_index) {
         parameters.emplace_back(std::to_string(sizes_copy[parameter_index]));
       }
       break;

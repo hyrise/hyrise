@@ -40,12 +40,12 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_item_table() {
   _add_column<int32_t>(segments_by_chunk, column_definitions, "I_ID", cardinalities,
                        [&](std::vector<size_t>& indices) { return indices[0] + 1; });
   _add_column<int32_t>(segments_by_chunk, column_definitions, "I_IM_ID", cardinalities,
-                       [&](std::vector<size_t>& /*indices*/) { return _random_gen.random_number(1, 10000); });
+                       [&](std::vector<size_t>& /*indices*/) { return _random_gen.random_number(1, 10'000); });
   _add_column<pmr_string>(segments_by_chunk, column_definitions, "I_NAME", cardinalities,
                           [&](std::vector<size_t>& /*indices*/) { return pmr_string{_random_gen.astring(14, 24)}; });
   _add_column<float>(segments_by_chunk, column_definitions, "I_PRICE", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) {
-                       return static_cast<float>(_random_gen.random_number(100, 10000)) / 100.f;
+                       return static_cast<float>(_random_gen.random_number(100, 10'000)) / 100.f;
                      });
   _add_column<pmr_string>(
       segments_by_chunk, column_definitions, "I_DATA", cardinalities, [&](std::vector<size_t>& indices) {
@@ -95,7 +95,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_warehouse_table() {
                           [&](std::vector<size_t>& /*indices*/) { return pmr_string{_random_gen.zip_code()}; });
   _add_column<float>(segments_by_chunk, column_definitions, "W_TAX", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) {
-                       return static_cast<float>(_random_gen.random_number(0, 2000)) / 10000.f;
+                       return static_cast<float>(_random_gen.random_number(0, 2'000)) / 10'000.f;
                      });
   _add_column<float>(segments_by_chunk, column_definitions, "W_YTD", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) {
@@ -195,7 +195,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_district_table() {
                           [&](std::vector<size_t>& /*indices*/) { return pmr_string{_random_gen.zip_code()}; });
   _add_column<float>(segments_by_chunk, column_definitions, "D_TAX", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) {
-                       return static_cast<float>(_random_gen.random_number(0, 2000)) / 10000.f;
+                       return static_cast<float>(_random_gen.random_number(0, 2'000)) / 10'000.f;
                      });
   _add_column<float>(segments_by_chunk, column_definitions, "D_YTD", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) { return CUSTOMER_YTD * NUM_CUSTOMERS_PER_DISTRICT; });
@@ -258,10 +258,10 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_customer_table() {
                             return pmr_string{is_original ? "BC" : "GC"};
                           });
   _add_column<float>(segments_by_chunk, column_definitions, "C_CREDIT_LIM", cardinalities,
-                     [&](std::vector<size_t>& /*indices*/) { return 50000; });
+                     [&](std::vector<size_t>& /*indices*/) { return 50'000; });
   _add_column<float>(segments_by_chunk, column_definitions, "C_DISCOUNT", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) {
-                       return static_cast<float>(_random_gen.random_number(0, 5000)) / 10000.f;
+                       return static_cast<float>(_random_gen.random_number(0, 5'000)) / 10'000.f;
                      });
   _add_column<float>(segments_by_chunk, column_definitions, "C_BALANCE", cardinalities,
                      [&](std::vector<size_t>& /*indices*/) { return -CUSTOMER_YTD; });
@@ -369,8 +369,7 @@ std::shared_ptr<Table> TPCCTableGenerator::generate_order_table(
   auto table =
       std::make_shared<Table>(column_definitions, TableType::Data, _benchmark_config->chunk_size, UseMvcc::Yes);
   for (const auto& segments : segments_by_chunk) {
-    const auto chunk_size = segments.front()->size();
-    const auto mvcc_data = std::make_shared<MvccData>(chunk_size, CommitID{0});
+    const auto mvcc_data = std::make_shared<MvccData>(segments.front()->size(), CommitID{0});
     table->append_chunk(segments, mvcc_data);
   }
 

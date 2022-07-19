@@ -25,7 +25,7 @@ void clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
   const auto clear_cache_size = clear.size();
-  for (auto index = uint{0}; index < clear_cache_size; index++) {
+  for (auto index = size_t{0}; index < clear_cache_size; index++) {
     clear[index] += 1;
   }
   clear.resize(0);

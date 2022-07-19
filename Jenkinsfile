@@ -194,14 +194,14 @@ try {
               }
             }
           }, clangDebugUnityODR: {
-             stage("clang-debug-unity-odr") {
-               if (env.BRANCH_NAME == 'master' || full_ci) {
-                 // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
-                 sh "cd clang-debug-unity-odr && make all -j \$(( \$(nproc) / 10))"
-               } else {
-                 Utils.markStageSkippedForConditional("clangDebugUnityODR")
-               }
-             }
+            stage("clang-debug-unity-odr") {
+              if (env.BRANCH_NAME == 'master' || full_ci) {
+                // Check if unity builds work even if everything is batched into a single compilation unit. This helps prevent ODR (one definition rule) issues.
+                sh "cd clang-debug-unity-odr && make all -j \$(( \$(nproc) / 10))"
+              } else {
+                Utils.markStageSkippedForConditional("clangDebugUnityODR")
+              }
+            }
           }, clangDebugTidy: {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {

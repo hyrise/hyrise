@@ -24,8 +24,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
   const auto tables_path = _path + "/tables/";
 
   // NOLINTBEGIN(concurrency-mt-unsafe)
-  // clang-tidy complains that system() is not thread-safe. We can ignore this warning, because we assume that users
-  // will not calling the JCCH table generator in parallel.
+  // clang-tidy complains that system() is not thread-safe. We ignore this warning as we expect that users will not call
+  // the JCCH table generator in parallel.
 
   // Check if table data has already been generated (and converted to .bin by the FileBasedTableGenerator)
   if (!std::filesystem::exists(tables_path + "/customer.bin")) {
