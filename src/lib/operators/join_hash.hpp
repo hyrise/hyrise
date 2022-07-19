@@ -3,7 +3,6 @@
 #include <optional>
 
 #include "abstract_join_operator.hpp"
-#include "join_helper/join_output_writing.hpp"
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
 
