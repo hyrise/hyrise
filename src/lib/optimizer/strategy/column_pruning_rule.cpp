@@ -414,11 +414,9 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
         }
       } break;
 
-      case LQPNodeType::Join: {
-        // Prevent the application of the join-to-semi-join strategy to make our join-to-local-predicate-rewrite strategy applicable.     
+      case LQPNodeType::Join: {   
         try_join_to_semi_rewrite(node, required_expressions_by_node);
         annotate_join_unused_inputs(node, required_expressions_by_node);
-        // try_join_to_local_predicate_rewrite(node, required_expressions_by_node);
       } break;
 
       case LQPNodeType::Projection: {

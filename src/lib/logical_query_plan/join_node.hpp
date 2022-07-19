@@ -58,7 +58,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_semi_reduction() const;
 
   /**
-   * @returns LQPInputSide* to the input side that is no longer used further up in LQP or nullptr
+   * @returns std::optional<LQPInputSide> to the input side that is no longer used further up in LQP.
+   *          If no side is unused, nullopt is returned.
    */
   std::optional<LQPInputSide> get_unused_input() const;
 
@@ -98,9 +99,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * The following flag is set by the ColumnPruningRule. It indicates whether and which input side
    * of a join is no longer needed in the LQP tree above the join and could therefore be removed
-   * during optimization by other rules such as ... TODO write rule name in here
+   * during optimization by other rules such as the JoinToPredicateRewriteRule.
    * 
-   * nullptr if both sides are used further up in the LQP
+   * nullopt if both sides are used further up in the LQP
    */
   std::optional<LQPInputSide> _removable_input_side = std::nullopt;
 
