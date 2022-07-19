@@ -93,8 +93,8 @@ class PosHashTable {
   // If we end up with a partition that has more values than Offset can hold, the partitioning algorithm is at fault.
   using Offset = uint32_t;
 
-  // In case we consider runtime to be more relevant, the flat hash map performs better (measured to be mostly on par
-  // with bytell hash map and in some cases up to 5% faster) but is significantly larger than the bytell hash map.
+  // Tessil's robin:map is used because it is very fast and does not consume too much memory.
+  // If memory consumption is prioritized above performance, it maybe should exchanged (e.g. with Tessil's sparse_map).
   using OffsetHashTable = tsl::robin_map<HashedType, Offset>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
