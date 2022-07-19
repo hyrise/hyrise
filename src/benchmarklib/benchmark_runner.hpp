@@ -63,9 +63,6 @@ class BenchmarkRunner : public Noncopyable {
   // Run benchmark in BenchmarkMode::Ordered mode
   void _benchmark_ordered();
 
-  // Load plugin for UCC discovery.
-  void _mine_dependencies();
-
   // Execute warmup run of a benchmark item
   void _warmup(const BenchmarkItemID item_id);
 

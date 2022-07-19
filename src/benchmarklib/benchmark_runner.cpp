@@ -76,36 +76,6 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
   }
 }
 
-void BenchmarkRunner::_mine_dependencies() {
-  std::cout << "- Mining Dependencies " << std::endl;
-  const auto& items = _benchmark_item_runner->items();
-  for (const auto& item_id : items) {
-    const auto& name = _benchmark_item_runner->item_name(item_id);
-    std::cout << "  - run " << name << std::endl;
-
-    auto& result = _results[item_id];
-
-    Assert(_currently_running_clients == 0, "Did not expect any clients to run at this time");
-    const auto num_runs = size_t{1};
-    
-    while ((result.successful_runs.size() + result.unsuccessful_runs.size()) < num_runs) {
-      // We want to only schedule as many items simultaneously as we have simulated clients
-      if (_currently_running_clients.load(std::memory_order_relaxed) < _config.clients) {
-        _schedule_item_run(item_id);
-      } else {
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-      }
-    }
-    Hyrise::get().scheduler()->wait_for_all_tasks();
-    Assert(_currently_running_clients == 0, "All runs must be finished at this point");
-  }
-
-  _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
-  const auto& plugin_path = "/home/henok/hyrise/cmake-build-debug/lib/libhyriseJoinToLocalPredicateRewriteV2Plugin.so";
-  std::cout << "- Load DependencyMiningPlugin from " << plugin_path << std::endl;
-  Hyrise::get().plugin_manager.load_plugin(plugin_path);
-}
-
 void BenchmarkRunner::run() {
   std::cout << "- Starting Benchmark..." << std::endl;
 
@@ -149,8 +119,6 @@ void BenchmarkRunner::run() {
   if (!items.empty()) {
     _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
   }
-
-  _mine_dependencies();
 
   switch (_config.benchmark_mode) {
     case BenchmarkMode::Ordered: {
