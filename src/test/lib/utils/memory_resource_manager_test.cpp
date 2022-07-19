@@ -55,7 +55,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
     memory_resource->deallocate(mem_ptr, indx + 1);
   };
 
-  // Create a few threads that interact with the memory resource manager and obtained memory resources
+  // Create a few threads that interact with the memory resource manager and obtained memory resources.
   const auto N_THREADS = uint8_t{10};
   auto threads = std::vector<std::thread>(N_THREADS);
   for (auto indx = uint8_t{0}; indx < N_THREADS; ++indx) {
