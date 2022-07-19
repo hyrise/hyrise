@@ -31,6 +31,7 @@ std::string UccDiscoveryPlugin::description() const {
 void UccDiscoveryPlugin::start() {}
 
 void UccDiscoveryPlugin::discover_uccs() const {
+    const auto current_commit = Hyrise::get().transaction_manager.last_commit_id();
     const auto ucc_candidates = identify_ucc_candidates();
 
     for (const auto& candidate : ucc_candidates) {
@@ -121,7 +122,7 @@ void UccDiscoveryPlugin::discover_uccs() const {
             // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
             message << " [confirmed in " << format_duration(candidate_time.lap()) << "]";
             Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-            table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE));
+            table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}), KeyConstraintType::UNIQUE, current_commit));
         });
     }
     Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
