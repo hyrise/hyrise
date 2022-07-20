@@ -12,6 +12,8 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
+# We tried to link both libraries directly to hyrise, but unfortunately this resulted in
+# segmentation faults when the "ENABLE_COVERAGE" compiler flag is set.
     target_link_libraries_system(
         ${PARSED_ARGS_NAME}
 
