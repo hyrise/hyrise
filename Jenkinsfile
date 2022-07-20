@@ -107,7 +107,7 @@ try {
             mkdir clang-debug-disable-precompile-headers && cd clang-debug-disable-precompile-headers && ${cmake} ${debug}          ${clang}            -DCMAKE_DISABLE_PRECOMPILE_HEADERS=On .. &\
             mkdir clang-debug-addr-ub-sanitizers && cd clang-debug-addr-ub-sanitizers &&                 ${cmake} ${debug}          ${clang}            -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
             mkdir clang-release-addr-ub-sanitizers && cd clang-release-addr-ub-sanitizers &&             ${cmake} ${release}        ${clang}   ${unity} -DENABLE_ADDR_UB_SANITIZATION=ON .. &\
-            // Configure build to use dwarf-4 debugging format as Valgrind does not support dwarf-5 (used by GCC11 and Clang14, see https://www.mail-archive.com/valgrind-users@lists.sourceforge.net/msg07239.html)
+            // Configure build to use dwarf-4 debugging format as Valgrind does not support dwarf-5 (used by GCC11 and Clang14). See: https://www.mail-archive.com/valgrind-users@lists.sourceforge.net/msg07239.html
             mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            -DCMAKE_C_FLAGS="-gdwarf-4" -DCMAKE_CXX_FLAGS="-gdwarf-4" .. &\
             mkdir clang-relwithdebinfo-thread-sanitizer && cd clang-relwithdebinfo-thread-sanitizer &&   ${cmake} ${relwithdebinfo} ${clang}            -DENABLE_THREAD_SANITIZATION=ON .. &\
             mkdir gcc-debug && cd gcc-debug &&                                                           ${cmake} ${debug}          ${gcc}              .. &\
