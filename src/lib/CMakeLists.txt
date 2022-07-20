@@ -700,7 +700,7 @@ target_link_libraries(hyrise_impl PUBLIC ${LIBRARIES} -rdynamic)
 if(NOT APPLE)
     # Do not use jemalloc on Mac as we cannot properly replace the allocator - see third_party/CMakeLists.txt for details.
     target_link_libraries(hyrise_impl PUBLIC custom_jemalloc -rdynamic)
-    target_compile_definitions(hyrise_impl PUBLIC HYRISE_WITH_JEMALLOC)
+    target_compile_definitions(hyrise_impl SYSTEM PUBLIC HYRISE_WITH_JEMALLOC)
 
     # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions.
     # We need to use a path relative to CMAKE_CURRENT_BINARY_DIR instead of using CMAKE_BINARY_DIR because Hyrise might
