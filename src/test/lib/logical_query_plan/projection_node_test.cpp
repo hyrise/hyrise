@@ -55,7 +55,9 @@ TEST_F(ProjectionNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_projection_node->hash(), different_projection_node_b->hash());
 }
 
-TEST_F(ProjectionNodeTest, Copy) { EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node); }
+TEST_F(ProjectionNodeTest, Copy) {
+  EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node);
+}
 
 TEST_F(ProjectionNodeTest, NodeExpressions) {
   ASSERT_EQ(_projection_node->node_expressions.size(), 5u);

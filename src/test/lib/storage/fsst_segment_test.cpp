@@ -90,7 +90,7 @@ TEST_F(StorageFSSTSegmentTest, CopyUsingAllocatorFSSTSegmentTest) {
       std::dynamic_pointer_cast<FSSTSegment<pmr_string>>(segment->copy_using_allocator(allocator));
 
   ASSERT_EQ(copied_segment->size(), values.size());
-  for (auto index = size_t{0}; index < values.size(); ++index) {
+  for (auto index = ChunkOffset{0}; index < values.size(); ++index) {
     ASSERT_EQ(std::optional{values[index]}, copied_segment->get_typed_value(index));
   }
 }

@@ -78,7 +78,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
     return decompressors;
   }();
 
-  for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
     auto concatenated_key = VariableLengthKey(bytes_per_key);
     for (const auto& [byte_width, decompressor] : attribute_vector_widths_and_decompressors) {
       concatenated_key.shift_and_set(decompressor->get(chunk_offset), static_cast<uint8_t>(byte_width * CHAR_BIT));
@@ -92,15 +92,17 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
             [&keys](auto left, auto right) { return keys[left] < keys[right]; });
 
   _keys = VariableLengthKeyStore(static_cast<ChunkOffset>(segment_size), bytes_per_key);
-  for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
+  for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
     _keys[chunk_offset] = keys[_position_list[chunk_offset]];
   }
 
   // create offsets to unique keys
   _key_offsets.reserve(segment_size);
   _key_offsets.emplace_back(0);
-  for (ChunkOffset chunk_offset = 1; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
-    if (_keys[chunk_offset] != _keys[chunk_offset - 1]) _key_offsets.emplace_back(chunk_offset);
+  for (auto chunk_offset = ChunkOffset{1}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
+    if (_keys[chunk_offset] != _keys[ChunkOffset{chunk_offset - 1}]) {
+      _key_offsets.emplace_back(chunk_offset);
+    }
   }
   _key_offsets.shrink_to_fit();
 
@@ -110,9 +112,13 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _keys.shrink_to_fit();
 }
 
-AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const {
+  return _position_list.cbegin();
+}
 
-AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const {
+  return _position_list.cend();
+}
 
 AbstractIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
@@ -161,7 +167,9 @@ AbstractIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(c
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
   auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
-  if (key_it == _keys.cend()) return _position_list.cend();
+  if (key_it == _keys.cend()) {
+    return _position_list.cend();
+  }
 
   // get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
   // (which is at the same position as the iterator for the key in the keystore)

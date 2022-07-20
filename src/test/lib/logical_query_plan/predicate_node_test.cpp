@@ -13,8 +13,8 @@ namespace opossum {
 class PredicateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a",
-                                            load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
+    Hyrise::get().storage_manager.add_table(
+        "table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2}));
 
     _table_node = StoredTableNode::make("table_a");
     _i = lqp_column_(_table_node, ColumnID{0});
@@ -28,7 +28,9 @@ class PredicateNodeTest : public BaseTest {
   std::shared_ptr<PredicateNode> _predicate_node;
 };
 
-TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5"); }
+TEST_F(PredicateNodeTest, Descriptions) {
+  EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5");
+}
 
 TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
@@ -54,7 +56,9 @@ TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(other_predicate_node_e->hash(), _predicate_node->hash());
 }
 
-TEST_F(PredicateNodeTest, Copy) { EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node); }
+TEST_F(PredicateNodeTest, Copy) {
+  EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node);
+}
 
 TEST_F(PredicateNodeTest, NodeExpressions) {
   ASSERT_EQ(_predicate_node->node_expressions.size(), 1u);

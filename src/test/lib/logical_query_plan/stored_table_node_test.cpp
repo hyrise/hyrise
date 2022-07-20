@@ -23,8 +23,10 @@ class StoredTableNodeTest : public BaseTest {
   void SetUp() override {
     Hyrise::reset();
 
-    Hyrise::get().storage_manager.add_table("t_a", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
-    Hyrise::get().storage_manager.add_table("t_b", load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    Hyrise::get().storage_manager.add_table("t_a",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    Hyrise::get().storage_manager.add_table("t_b",
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
     const auto& table_t_a = Hyrise::get().storage_manager.get_table("t_a");
     ChunkEncoder::encode_all_chunks(table_t_a);
@@ -110,7 +112,9 @@ TEST_F(StoredTableNodeTest, Copy) {
   EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
 }
 
-TEST_F(StoredTableNodeTest, NodeExpressions) { ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u); }
+TEST_F(StoredTableNodeTest, NodeExpressions) {
+  ASSERT_EQ(_stored_table_node->node_expressions.size(), 0u);
+}
 
 TEST_F(StoredTableNodeTest, GetStatisticsPruneFirstColumn) {
   EXPECT_EQ(_stored_table_node->indexes_statistics().size(), 4u);

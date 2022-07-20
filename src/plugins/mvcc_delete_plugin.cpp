@@ -10,7 +10,9 @@
 
 namespace opossum {
 
-std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
+std::string MvccDeletePlugin::description() const {
+  return "Physical MVCC delete plugin";
+}
 
 void MvccDeletePlugin::start() {
   _loop_thread_logical_delete =
@@ -36,7 +38,9 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
   // Check all tables
   for (auto& [table_name, table] : tables) {
-    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
+    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
+      continue;
+    }
     size_t saved_memory = 0;
     size_t num_chunks = 0;
 

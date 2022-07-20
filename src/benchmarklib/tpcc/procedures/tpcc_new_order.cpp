@@ -96,7 +96,9 @@ bool TPCCNewOrder::_on_execute() {
   auto o_all_local = true;
   for (const auto& order_line : order_lines) {
     // This is technically known when we create the procedure, but TPC-C wants us to calculate it live.
-    if (order_line.ol_supply_w_id != w_id) o_all_local = false;
+    if (order_line.ol_supply_w_id != w_id) {
+      o_all_local = false;
+    }
   }
 
   // Insert row into NEW_ORDER

@@ -124,7 +124,9 @@ class SortedSegmentSearch {
   // This function sets the offset(s) that delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end_positions_for_between_scan() {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
-    if (_begin == _end) return;
+    if (_begin == _end) {
+      return;
+    }
 
     auto first_value = _begin->value();
     auto last_value = (_end - 1)->value();
@@ -268,7 +270,9 @@ class SortedSegmentSearch {
   void _write_rows_to_matches(ResultIteratorType begin, ResultIteratorType end, const ChunkID chunk_id,
                               RowIDPosList& matches,
                               const std::shared_ptr<const AbstractPosList>& position_filter) const {
-    if (begin == end) return;
+    if (begin == end) {
+      return;
+    }
 
     // General note: If the predicate is NotEquals, there might be two ranges that match.
     // These two ranges might have been combined into a single one via boost::join(range_1, range_2).
@@ -293,8 +297,8 @@ class SortedSegmentSearch {
       const auto first_offset = begin->chunk_offset();
       const auto distance = std::distance(begin, end);
 
-      for (auto chunk_offset = 0; chunk_offset < distance; ++chunk_offset) {
-        matches[output_idx++] = RowID{chunk_id, first_offset + chunk_offset};
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < distance; ++chunk_offset) {
+        matches[output_idx++] = RowID{chunk_id, ChunkOffset{first_offset + chunk_offset}};
       }
     }
   }

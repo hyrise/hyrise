@@ -269,7 +269,9 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
   auto predicate_condition = expression.predicate_condition;
   const bool flip = predicate_condition == PredicateCondition::GreaterThan ||
                     predicate_condition == PredicateCondition::GreaterThanEquals;
-  if (flip) predicate_condition = flip_predicate_condition(predicate_condition);
+  if (flip) {
+    predicate_condition = flip_predicate_condition(predicate_condition);
+  }
   const auto& left = flip ? *expression.right_operand() : *expression.left_operand();
   const auto& right = flip ? *expression.left_operand() : *expression.right_operand();
 
@@ -426,7 +428,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           all_elements_are_values_of_left_type = false;
         } else {
           const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
-          if (value_expression->value.type() != typeid(LeftDataType)) all_elements_are_values_of_left_type = false;
+          if (value_expression->value.type() != typeid(LeftDataType)) {
+            all_elements_are_values_of_left_type = false;
+          }
         }
       }
     });
@@ -528,7 +532,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               // here as well.
               EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),
                                 left_view.value(chunk_offset));
-              if (result_values[chunk_offset]) break;
+              if (result_values[chunk_offset]) {
+                break;
+              }
 
               list_contains_null |= list.is_null(list_element_idx);
             }
@@ -536,7 +542,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             result_nulls[chunk_offset] =
                 (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
 
-            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
+            if (in_expression.is_negated()) {
+              result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
+            }
           }
 
         } else {
@@ -687,27 +695,24 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
   auto nulls = pmr_vector<bool>{};
 
   _resolve_to_expression_result(*cast_expression.argument(), [&](const auto& argument_result) {
-    using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
-
-    const auto result_size = _result_size(argument_result.size());
-    values.resize(result_size);
-
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
-      const auto& argument_value = argument_result.value(chunk_offset);
-
-      // "NULL to <Something>" cast is handled by the `nulls` vector
-      if constexpr (!std::is_same_v<ArgumentDataType, NullValue>) {
-        try {
-          values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
-        } catch (boost::bad_lexical_cast&) {
-          std::stringstream error_message;
-          error_message << "Cannot cast '" << argument_value << "' as "
-                        << magic_enum::enum_name(cast_expression.data_type());
-          Fail(error_message.str());
+    argument_result.as_view([&](const auto& argument_result_view) {
+      const auto result_size = _result_size(argument_result_view.size());
+      values.resize(result_size);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
+        if (!argument_result_view.is_null(chunk_offset)) {
+          const auto& argument_value = argument_result_view.value(chunk_offset);
+          try {
+            values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+          } catch (boost::bad_lexical_cast&) {
+            std::stringstream error_message;
+            error_message << "Cannot cast '" << argument_value << "' as "
+                          << magic_enum::enum_name(cast_expression.data_type());
+            Fail(error_message.str());
+          }
         }
       }
-    }
-    nulls = argument_result.nulls;
+      nulls = argument_result.nulls;
+    });
   });
 
   return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
@@ -831,8 +836,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_ext
   pmr_vector<pmr_string> values(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(from_view.size());
-         ++chunk_offset) {
+    const auto from_view_size = from_view.size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
         DebugAssert(from_view.value(chunk_offset).size() == 10u,
                     "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
@@ -1060,12 +1065,16 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
                                                                      RightDataType>::value) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                      ++chunk_offset) {
-                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
+                    continue;
+                  }
 
                   auto matches = ExpressionEvaluator::Bool{0};
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
-                  if (matches != 0) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  if (matches != 0) {
+                    result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  }
                 }
               } else {
                 Fail("Argument types not compatible");
@@ -1088,12 +1097,16 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
-                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                if (result.is_null(chunk_offset)) {
+                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                }
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
-                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                if (!result.is_null(chunk_offset)) {
+                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                }
               }
             }
           });
@@ -1339,7 +1352,9 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
   //        no matter whether there is a (potentially) non-empty Chunk involved or not.
   //        So 5+3 always gives you one result element: 8
 
-  if (((row_counts == 0) || ...)) return 0;
+  if (((row_counts == 0) || ...)) {
+    return ChunkOffset{0};
+  }
 
   return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
@@ -1374,7 +1389,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const ColumnID column_id) {
   Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
 
-  if (_segment_materializations[column_id]) return;
+  if (_segment_materializations[column_id]) {
+    return;
+  }
 
   const auto& segment = *_chunk->get_segment(column_id);
 
@@ -1448,7 +1465,9 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
     const auto signed_string_size = static_cast<int32_t>(string.size());
 
     auto length = lengths->value(chunk_offset);
-    if (length <= 0) continue;
+    if (length <= 0) {
+      continue;
+    }
 
     auto start = starts->value(chunk_offset);
 
@@ -1543,7 +1562,9 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
           // but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). I can't see
           // how there was anything uninitialised given the `result_nulls.resize(result_size, false);` above.
           // Anyway, changing it to the line below silences valgrind.
-          if (argument_view.is_null(chunk_offset)) result_nulls[chunk_offset] = true;
+          if (argument_view.is_null(chunk_offset)) {
+            result_nulls[chunk_offset] = true;
+          }
         }
       });
     }

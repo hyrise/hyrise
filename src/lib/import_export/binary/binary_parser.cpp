@@ -26,7 +26,7 @@ std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   file.exceptions(std::ifstream::failbit | std::ifstream::badbit);
 
   auto [table, chunk_count] = _read_header(file);
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     _import_chunk(file, table);
   }
 
@@ -126,7 +126,9 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
   table->append_chunk(output_segments, mvcc_data);
   table->last_chunk()->finalize();
-  if (num_sorted_columns > 0) table->last_chunk()->set_individually_sorted_by(sorted_columns);
+  if (num_sorted_columns > 0) {
+    table->last_chunk()->set_individually_sorted_by(sorted_columns);
+  }
 }
 
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
@@ -254,7 +256,7 @@ std::shared_ptr<FSSTSegment<pmr_string>> BinaryParser::_import_fsst_segment(std:
   const auto compressed_value_size = _read_value<uint32_t>(file);
   auto compressed_values = _read_values<unsigned char>(file, compressed_value_size);
 
-  auto offset_values = _import_offset_value_vector(file, row_count + 1, compressed_vector_type_id);
+  auto offset_values = _import_offset_value_vector(file, ChunkOffset{row_count + 1}, compressed_vector_type_id);
 
   const auto reference_offsets_size = _read_value<uint32_t>(file);
   auto reference_offsets = _read_values<uint64_t>(file, reference_offsets_size);

@@ -2,7 +2,6 @@
 
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
-#include "utils/singleton.hpp"
 
 namespace opossum {
 
@@ -15,6 +14,12 @@ class TestPlugin : public AbstractPlugin {
   void start() final;
 
   void stop() final;
+
+  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const final;
+
+  void a_user_executable_function() const;
+
+  void another_user_executable_function() const;
 
   StorageManager& storage_manager;
 };

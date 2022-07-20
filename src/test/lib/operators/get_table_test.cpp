@@ -17,7 +17,7 @@ class OperatorsGetTableTest : public BaseTest {
  protected:
   void SetUp() override {
     Hyrise::get().storage_manager.add_table("int_int_float",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
     ChunkEncoder::encode_all_chunks(table);
@@ -31,20 +31,23 @@ TEST_F(OperatorsGetTableTest, GetOutput) {
   auto get_table = std::make_shared<GetTable>("int_int_float");
   get_table->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
+                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 }
 
 TEST_F(OperatorsGetTableTest, OutputDoesNotChangeChunkSize) {
   auto get_table = std::make_shared<GetTable>("int_int_float");
   get_table->execute();
 
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
+                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
   const auto table = Hyrise::get().storage_manager.get_table("int_int_float");
   table->append({1, 2, 10.0f});
   EXPECT_GT(table->chunk_count(), get_table->get_output()->chunk_count());
 
-  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(), load_table("resources/test_data/tbl/int_int_float.tbl", 1u));
+  EXPECT_TABLE_EQ_UNORDERED(get_table->get_output(),
+                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 }
 
 TEST_F(OperatorsGetTableTest, ThrowsUnknownTableName) {
@@ -165,7 +168,7 @@ TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
 
 TEST_F(OperatorsGetTableTest, ExcludeCleanedUpChunk) {
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
-  auto context = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   auto original_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto chunk = original_table->get_chunk(ChunkID{0});
@@ -185,7 +188,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
-  auto context = std::make_shared<TransactionContext>(1u, 1u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{1}, AutoCommit::No);
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   get_table->set_transaction_context(context);
   get_table->execute();
@@ -213,7 +216,7 @@ TEST_F(OperatorsGetTableTest, ExcludePhysicallyDeletedChunks) {
   EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // Check GetTable filtering
-  auto context2 = std::make_shared<TransactionContext>(2u, 1u, AutoCommit::No);
+  auto context2 = std::make_shared<TransactionContext>(TransactionID{2}, CommitID{1}, AutoCommit::No);
   auto get_table_2 = std::make_shared<opossum::GetTable>("int_int_float");
   get_table_2->set_transaction_context(context2);
 
@@ -227,7 +230,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   EXPECT_EQ(original_table->chunk_count(), 4);
 
   // Invalidate all records to be able to call remove_chunk()
-  auto context = std::make_shared<TransactionContext>(1u, 1u, AutoCommit::No);
+  auto context = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{1}, AutoCommit::No);
   auto get_table = std::make_shared<opossum::GetTable>("int_int_float");
   get_table->set_transaction_context(context);
   get_table->execute();
@@ -256,7 +259,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   auto get_table_2 =
       std::make_shared<opossum::GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
 
-  auto context2 = std::make_shared<TransactionContext>(1u, 3u, AutoCommit::No);
+  auto context2 = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
   auto modified_table = Hyrise::get().storage_manager.get_table("int_int_float");
   auto chunk = modified_table->get_chunk(ChunkID{1});

@@ -12,7 +12,9 @@ Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo se
       _postgres_protocol_handler(std::make_shared<PostgresProtocolHandler<Socket>>(_socket)),
       _send_execution_info(send_execution_info) {}
 
-std::shared_ptr<Socket> Session::socket() { return _socket; }
+std::shared_ptr<Socket> Session::socket() {
+  return _socket;
+}
 
 void Session::run() {
   // Set TCP_NODELAY in order to disable Nagle's algorithm. It handles congestion control in TCP networks. Therefore,
@@ -189,7 +191,9 @@ void Session::_handle_execute() {
 
   const auto physical_plan = portal_it->second;
 
-  if (portal_name.empty()) _portals.erase(portal_it);
+  if (portal_name.empty()) {
+    _portals.erase(portal_it);
+  }
 
   if (!_transaction_context) {
     _transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

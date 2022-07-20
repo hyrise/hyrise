@@ -41,7 +41,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
     functor(begin, end);
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   const RunLengthSegment<T>& _segment;
@@ -72,14 +74,15 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   static ChunkOffset determine_linear_search_offset_distance_threshold(
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions) {
     if (end_positions->empty()) {
-      return 0;
+      return ChunkOffset{0};
     }
 
     const auto chunk_size = end_positions->back();
     const auto run_count = end_positions->size();
 
     const auto avg_elements_per_run = static_cast<float>(chunk_size) / static_cast<float>(run_count);
-    return static_cast<ChunkOffset>(LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * std::ceil(avg_elements_per_run));
+    return ChunkOffset{
+        static_cast<ChunkOffset::base_type>(LINEAR_SEARCH_VECTOR_DISTANCE_THRESHOLD * std::ceil(avg_elements_per_run))};
   }
 
   using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
@@ -165,7 +168,9 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
           std::distance(_end_positions->cbegin(), _end_positions_it), _linear_search_threshold);
     }
 
-    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
+    bool equal(const Iterator& other) const {
+      return _chunk_offset == other._chunk_offset;
+    }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
       return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;

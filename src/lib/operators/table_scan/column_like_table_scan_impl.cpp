@@ -26,7 +26,9 @@ ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Tab
       _matcher{pattern, skip_chars_for_like},
       _invert_results(predicate_condition == PredicateCondition::NotLike) {}
 
-std::string ColumnLikeTableScanImpl::description() const { return "ColumnLike"; }
+std::string ColumnLikeTableScanImpl::description() const {
+  return "ColumnLike";
+}
 
 void ColumnLikeTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,

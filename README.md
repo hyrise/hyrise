@@ -75,8 +75,6 @@ The install script was tested under macOS Big Sur (10.16) and Ubuntu 20.10 (apt-
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
 
-**Note about LLVM 13 and TBB 2021:** Hyrise can currently not be built with LLVM 13. We hope to get LLVM 13 running soon. For TBB, please use a `2020*` version until https://github.com/oneapi-src/oneTBB/issues/378 is resolved. On MacOS with brew, LLVM 12 and TBB 2020 can be installed as follows: `brew install tbb@2020 && brew install llvm@12`
-
 ## Setup using Docker
 If you want to create a Docker-based development environment using CLion, head over to our [dedicated tutorial](https://github.com/hyrise/hyrise/wiki/Use-Docker-with-CLion). 
 
@@ -129,7 +127,7 @@ Subsets of all available tests can be selected via `--gtest_filter=`.
 ### Coverage
 `./scripts/coverage.sh` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
-*Supports only clang on MacOS and only gcc on linux*
+*Requires clang on macOS and Linux.*
 
 ### Address/UndefinedBehavior Sanitizers
 `cmake -DENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
@@ -148,6 +146,7 @@ When trying to optimize the time spent building the project, it is often helpful
 
 ## Maintainers
 - Jan Kossmann
+- Marcel Weisgut
 - Martin Boissier
 - Stefan Halfpap
 
@@ -157,62 +156,58 @@ Contact: firstname.lastname@hpi.de
 - Markus Dreseler
 
 ## Contributors
--   Christopher Aust
--   Yannick     Bäumer
--   Lawrence    Benson
--   Timo        Djürken
--   Alexander   Dubrawski
--   Fabian      Dumke
--   Leonard     Geier
--   Richard     Ebeling
--   Fabian      Engel
--   Moritz      Eyssen
--   Martin      Fischer
--   Christian   Flach
--   Pedro       Flemming
--   Mathias     Flüggen
--   Johannes    Frohnhofen
--   Pascal      Führlich
--   Carl        Gödecken
--   Adrian      Holfter
--   Ben         Hurdelhey
--   Sven        Ihde
--   Ivan        Illic
--   Jonathan    Janetzki
--   Michael     Janke
--   Max         Jendruk
--   David       Justen
--   Youri       Kaminsky
--   Marvin      Keller
--   Mirko       Krause
--   Eva         Krebs
--   Sven        Lehmann
--   Till        Lehmann
--   Tom         Lichtenstein
--   Daniel      Lindner
--   Alexander   Löser
--   Moritz      Manner
--   Jan         Mattfeld
--   Arne        Mayer
--   Dominik     Meier
--   Julian      Menzler
--   Torben      Meyer
--   Leander     Neiß
--   Hendrik     Rätz
--   Alexander   Riese
--   Johannes    Schneider
--   David       Schumann
--   Simon       Siegert
--   Arthur      Silber
--   Toni        Stachewicz
--   Daniel      Stolpe
--   Jonathan    Striebel
--   Nils        Thamm
--   Hendrik     Tjabben
--   Justin      Trautmann
--   Petr        Tsayun
--   Carsten     Walther
--   Marcel      Weisgut
--   Lukas       Wenzel
--   Fabian      Wiebe
--   Tim         Zimmermann
+-   Yannick   Bäumer
+-   Lawrence  Benson
+-   Timo      Djürken
+-   Alexander Dubrawski
+-   Fabian    Dumke
+-   Leonard   Geier
+-   Richard   Ebeling
+-   Fabian    Engel
+-   Moritz    Eyssen
+-   Martin    Fischer
+-   Christian Flach
+-   Pedro     Flemming
+-   Mathias   Flüggen
+-   Johannes  Frohnhofen
+-   Pascal    Führlich
+-   Carl      Gödecken
+-   Adrian    Holfter
+-   Ben       Hurdelhey
+-   Sven      Ihde
+-   Ivan      Illic
+-   Jonathan  Janetzki
+-   Michael   Janke
+-   Max       Jendruk
+-   David     Justen
+-   Youri     Kaminsky
+-   Marvin    Keller
+-   Mirko     Krause
+-   Eva       Krebs
+-   Sven      Lehmann
+-   Till      Lehmann
+-   Tom       Lichtenstein
+-   Daniel    Lindner
+-   Alexander Löser
+-   Jan       Mattfeld
+-   Arne      Mayer
+-   Dominik   Meier
+-   Julian    Menzler
+-   Torben    Meyer
+-   Leander   Neiß
+-   Hendrik   Rätz
+-   Alexander Riese
+-   Johannes  Schneider
+-   David     Schumann
+-   Simon     Siegert
+-   Arthur    Silber
+-   Toni      Stachewicz
+-   Daniel    Stolpe
+-   Jonathan  Striebel
+-   Nils      Thamm
+-   Hendrik   Tjabben
+-   Justin    Trautmann
+-   Carsten   Walther
+-   Lukas     Wenzel
+-   Fabian    Wiebe
+-   Tim       Zimmermann

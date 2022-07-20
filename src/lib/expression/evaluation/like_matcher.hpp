@@ -99,14 +99,18 @@ class LikeMatcher {
     if (std::holds_alternative<StartsWithPattern>(_pattern_variant)) {
       const auto& prefix = std::get<StartsWithPattern>(_pattern_variant).string;
       functor([&](const auto& string) -> bool {
-        if (string.size() < prefix.size()) return invert_results;
+        if (string.size() < prefix.size()) {
+          return invert_results;
+        }
         return (string.compare(0, prefix.size(), prefix) == 0) ^ invert_results;
       });
 
     } else if (std::holds_alternative<EndsWithPattern>(_pattern_variant)) {
       const auto& suffix = std::get<EndsWithPattern>(_pattern_variant).string;
       functor([&](const auto& string) -> bool {
-        if (string.size() < suffix.size()) return invert_results;
+        if (string.size() < suffix.size()) {
+          return invert_results;
+        }
         return (string.compare(string.size() - suffix.size(), suffix.size(), suffix) == 0) ^ invert_results;
       });
 
@@ -132,7 +136,9 @@ class LikeMatcher {
         auto current_position = string.begin();
         for (auto searcher_idx = size_t{0}; searcher_idx < searchers.size(); ++searcher_idx) {
           current_position = std::search(current_position, string.end(), searchers[searcher_idx]);
-          if (current_position == string.end()) return invert_results;
+          if (current_position == string.end()) {
+            return invert_results;
+          }
           current_position += contains_strs[searcher_idx].size();
         }
         return !invert_results;

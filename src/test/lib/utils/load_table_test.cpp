@@ -17,7 +17,7 @@ TEST_F(LoadTableTest, EmptyTableFromHeader) {
 }
 
 TEST_F(LoadTableTest, AllChunksFinalized) {
-  const auto table = load_table("resources/test_data/tbl/float_int.tbl", 2);
+  const auto table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{2});
 
   EXPECT_EQ(table->row_count(), 3);
   EXPECT_EQ(table->chunk_count(), 2);
@@ -29,7 +29,7 @@ TEST_F(LoadTableTest, AllChunksFinalized) {
 }
 
 TEST_F(LoadTableTest, WindowsEncoding) {
-  EXPECT_THROW(load_table("resources/test_data/tbl/float_int_crlf.tbl", 2), std::exception);
+  EXPECT_THROW(load_table("resources/test_data/tbl/float_int_crlf.tbl", ChunkOffset{2}), std::exception);
 }
 
 }  // namespace opossum

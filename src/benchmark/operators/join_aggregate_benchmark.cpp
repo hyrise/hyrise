@@ -28,7 +28,7 @@ constexpr auto SELECTIVITY = 0.2;
 
 namespace opossum {
 
-using namespace opossum::expression_functional;  //NOLINT
+using namespace opossum::expression_functional;  // NOLINT
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
@@ -149,8 +149,10 @@ std::shared_ptr<TableWrapper> create_ages_table(const size_t table_size) {
 template <typename AggregateType, typename JoinType>
 void BM_Join_Aggregate(benchmark::State& state) {
   auto table_wrapper_left = create_ages_table(TABLE_SIZE);
+  table_wrapper_left->never_clear_output();
   table_wrapper_left->execute();
   auto table_wrapper_right = create_zip_table(TABLE_SIZE);
+  table_wrapper_right->never_clear_output();
   table_wrapper_right->execute();
 
   auto operator_join_predicate =

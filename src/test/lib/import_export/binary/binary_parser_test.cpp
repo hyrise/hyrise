@@ -35,7 +35,7 @@ INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryParserMultiEncodingTest,
 
 TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto expected_table =
-      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, 5);
+      std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Float, false}}, TableType::Data, ChunkOffset{5});
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -50,7 +50,7 @@ TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
 TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Float, false);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
   expected_table->append({5.5f});
   expected_table->append({13.0f});
   expected_table->append({16.2f});
@@ -69,7 +69,7 @@ TEST_P(BinaryParserMultiEncodingTest, MultipleChunkSingleFloatColumn) {
 TEST_P(BinaryParserMultiEncodingTest, StringSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3}, UseMvcc::Yes);
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -90,7 +90,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesSegmentSorted) {
   column_definitions.emplace_back("d", DataType::Float, false);
   column_definitions.emplace_back("e", DataType::Double, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -111,7 +111,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesSegmentUnsorted) {
   column_definitions.emplace_back("d", DataType::Float, false);
   column_definitions.emplace_back("e", DataType::Double, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
   expected_table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -132,7 +132,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesMixColumn) {
   column_definitions.emplace_back("d", DataType::Float, false);
   column_definitions.emplace_back("e", DataType::Double, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
   expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
   expected_table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
   expected_table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
@@ -149,7 +149,7 @@ TEST_P(BinaryParserMultiEncodingTest, EmptyStringsSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
 
   expected_table->append({""});
   expected_table->append({""});
@@ -216,7 +216,7 @@ TEST_P(BinaryParserMultiEncodingTest, RepeatedInt) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
 
   expected_table->append({1});
   expected_table->append({2});
@@ -235,7 +235,7 @@ TEST_P(BinaryParserMultiEncodingTest, RunNullValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
 
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({1});
@@ -260,7 +260,7 @@ TEST_F(BinaryParserTest, LZ4MultipleBlocks) {
   column_definitions.emplace_back("d", DataType::Float, false);
   column_definitions.emplace_back("e", DataType::Double, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 20000);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20'000});
 
   for (int index = 0; index < 5000; ++index) {
     expected_table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
@@ -279,7 +279,7 @@ TEST_F(BinaryParserTest, FSSTSingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -295,7 +295,7 @@ TEST_F(BinaryParserTest, FSSTNullValue) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -313,7 +313,7 @@ TEST_F(BinaryParserTest, FSSTMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -329,7 +329,7 @@ TEST_F(BinaryParserTest, FixedStringDictionarySingleChunk) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -345,7 +345,7 @@ TEST_F(BinaryParserTest, FixedStringDictionaryNullValue) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 10);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -363,7 +363,7 @@ TEST_F(BinaryParserTest, FixedStringDictionaryMultipleChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
@@ -379,7 +379,7 @@ TEST_F(BinaryParserTest, NullValuesFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   expected_table->append({1});
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({2});
@@ -396,7 +396,7 @@ TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, true);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({opossum::NULL_VALUE});
   expected_table->append({opossum::NULL_VALUE});
@@ -419,14 +419,16 @@ TEST_F(BinaryParserTest, InvalidAttributeVectorWidth) {
   EXPECT_THROW(BinaryParser::parse(filename), std::exception);
 }
 
-TEST_F(BinaryParserTest, FileDoesNotExist) { EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception); }
+TEST_F(BinaryParserTest, FileDoesNotExist) {
+  EXPECT_THROW(BinaryParser::parse("not_existing_file"), std::exception);
+}
 
 TEST_F(BinaryParserTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("FirstColumn", DataType::Int, false);
   column_definitions.emplace_back("SecondColumn", DataType::String, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 30000);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{30'000});
 
   auto table = BinaryParser::parse(_reference_filepath +
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
@@ -439,7 +441,7 @@ TEST_F(BinaryParserTest, SortColumnDefinitions) {
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
 
-  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, 3);
+  auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   // Chunk 0: a sorted ascending, b sorted descending
   expected_table->append({1, 3});
   expected_table->append({2, 2});

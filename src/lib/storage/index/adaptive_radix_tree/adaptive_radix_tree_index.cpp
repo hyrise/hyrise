@@ -84,9 +84,13 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<A
   }
 }
 
-AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const {
+  return _chunk_offsets.cbegin();
+}
 
-AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const {
+  return _chunk_offsets.cend();
+}
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
@@ -168,7 +172,9 @@ AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _par
   }
 }
 
-size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const { return _parts.size(); }
+size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const {
+  return _parts.size();
+}
 
 uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) const {
   Assert(position < _parts.size(), "BinaryComparable indexed out of bounds");
@@ -178,9 +184,15 @@ uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) co
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
                 const AdaptiveRadixTreeIndex::BinaryComparable& right) {
-  if (left.size() != right.size()) return false;
-  for (size_t i = 0; i < left.size(); ++i) {
-    if (left[i] != right[i]) return false;
+  const auto left_size = left.size();
+  if (left_size != right.size()) {
+    return false;
+  }
+
+  for (auto index = size_t{0}; index < left_size; ++index) {
+    if (left[index] != right[index]) {
+      return false;
+    }
   }
   return true;
 }

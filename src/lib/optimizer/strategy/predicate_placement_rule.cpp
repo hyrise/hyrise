@@ -12,6 +12,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
@@ -40,19 +41,58 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                                                   std::vector<std::shared_ptr<AbstractLQPNode>>& push_down_nodes,
                                                   AbstractCardinalityEstimator& estimator) {
   const auto input_node = current_node->input(input_side);
-  if (!input_node) return;  // Allow calling without checks
+  // Allow calling without checks
+  if (!input_node) {
+    Assert(push_down_nodes.empty(), "Expected pushdown nodes to be already inserted.");
+    return;
+  }
 
-  // A helper method for cases where the input_node does not allow us to proceed
+  // A helper method for cases where the input_node does not allow us to proceed.
   const auto handle_barrier = [&]() {
     _insert_nodes(current_node, input_side, push_down_nodes);
 
-    if (input_node->left_input()) {
-      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(input_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+    // At this point, all pushdown predicates should have been inserted above the barrier node. In the following, we
+    // apply the pushdown traversal logic to the remaining parts of the LQP – including the current barrier node. The
+    // latter might also be a predicate eligible for pushdown. If it is, we try to push it down the LQP, and another
+    // node might become the "new barrier" (having multiple output nodes).
+    const auto& barrier_node = input_node;
+    const auto barrier_node_is_pushdown_predicate = [&barrier_node]() {
+      if (barrier_node->type == LQPNodeType::Predicate) {
+        const auto predicate_node = std::static_pointer_cast<PredicateNode>(barrier_node);
+        return !_is_expensive_predicate(predicate_node->predicate());
+      } else if (barrier_node->type == LQPNodeType::Join) {
+        const auto join_mode = std::static_pointer_cast<JoinNode>(barrier_node)->join_mode;
+        return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
+               join_mode == JoinMode::AntiNullAsFalse;
+      }
+      return false;
+    }();
+
+    auto next_push_down_traversal_root = barrier_node;
+    if (barrier_node_is_pushdown_predicate) {
+      // barrier_node is a predicate, and we would like to cover it in the next recursion of _push_down_traversal.
+      // However, if we simply call _push_down_traversal with barrier_node, the predicate would not become pushed down
+      // since _push_down_traversal looks at input nodes only. To overcome this issue, we insert a temporary root node,
+      // set barrier_node as an input, and call _push_down_traversal with the temporary root node.
+      next_push_down_traversal_root = LogicalPlanRootNode::make();
+      lqp_insert_node_above(barrier_node, next_push_down_traversal_root);
     }
-    if (input_node->right_input()) {
-      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-      _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+
+    if (next_push_down_traversal_root->left_input()) {
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(next_push_down_traversal_root, LQPInputSide::Left, left_push_down_nodes, estimator);
+
+      // Check for the left input node first because there cannot be a right input node otherwise.
+      if (next_push_down_traversal_root->right_input()) {
+        auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+        _push_down_traversal(next_push_down_traversal_root, LQPInputSide::Right, right_push_down_nodes, estimator);
+      }
+    }
+
+    // The recursion calls to _push_down_traversal have returned. Therefore, we must remove the temporary root node, we
+    // might have inserted previously (see comment above).
+    if (next_push_down_traversal_root->type == LQPNodeType::Root && next_push_down_traversal_root->output_count() > 0) {
+      lqp_remove_node(next_push_down_traversal_root);
     }
   };
 
@@ -62,21 +102,11 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
     return;
   }
 
-  // Removes a node from the current LQP and continues to run _push_down_traversal on the node's inputs. It is the
-  // caller's responsibility to put the node back into the LQP at some new position.
-  const auto untie_and_recurse = [&](const std::shared_ptr<AbstractLQPNode>& node) {
-    push_down_nodes.emplace_back(node);
-
-    // As node might be the input to multiple nodes, remember those nodes before we untie node
-    const auto output_relations = node->output_relations();
-
-    lqp_remove_node(node, AllowRightInput::Yes);
+  // Removes input_node from the current LQP and continues to run _push_down_traversal.
+  const auto untie_input_node_and_recurse = [&]() {
+    push_down_nodes.emplace_back(input_node);
+    lqp_remove_node(input_node, AllowRightInput::Yes);
     _push_down_traversal(current_node, input_side, push_down_nodes, estimator);
-
-    // Restore the output relationships
-    for (const auto& [output_node, output_side] : output_relations) {
-      output_node->set_input(output_side, current_node->input(input_side));
-    }
   };
 
   switch (input_node->type) {
@@ -84,7 +114,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       const auto predicate_node = std::static_pointer_cast<PredicateNode>(input_node);
 
       if (!_is_expensive_predicate(predicate_node->predicate())) {
-        untie_and_recurse(input_node);
+        untie_input_node_and_recurse();
       } else {
         _push_down_traversal(input_node, input_side, push_down_nodes, estimator);
       }
@@ -100,7 +130,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
         _push_down_traversal(input_node, LQPInputSide::Right, right_push_down_nodes, estimator);
 
-        untie_and_recurse(input_node);
+        untie_input_node_and_recurse();
         break;
       }
 
@@ -112,9 +142,7 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
       // It is safe to move predicates down past the named joins as doing so does not affect the presence of NULLs
-      if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross ||
-          join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
-          join_node->join_mode == JoinMode::AntiNullAsFalse) {
+      if (join_node->join_mode == JoinMode::Inner || join_node->join_mode == JoinMode::Cross) {
         for (const auto& push_down_node : push_down_nodes) {
           const auto move_to_left = _is_evaluable_on_lqp(push_down_node, join_node->left_input());
           const auto move_to_right = _is_evaluable_on_lqp(push_down_node, join_node->right_input());
@@ -217,7 +245,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
               const auto add_disjunction_if_beneficial =
                   [&](const auto& disjunction, const auto& disjunction_input_node, auto& predicate_nodes) {
-                    if (disjunction.empty()) return;
+                    if (disjunction.empty()) {
+                      return;
+                    }
 
                     const auto expression = inflate_logical_expressions(disjunction, LogicalOperator::Or);
                     const auto predicate_node = PredicateNode::make(expression, disjunction_input_node);
@@ -225,7 +255,9 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
                     // Determine the selectivity of the predicate if executed on disjunction_input_node
                     const auto cardinality_in = estimator.estimate_cardinality(disjunction_input_node);
                     const auto cardinality_out = estimator.estimate_cardinality(predicate_node);
-                    if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) return;
+                    if (cardinality_out / cardinality_in > MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE) {
+                      return;
+                    }
 
                     // predicate_node was found to be beneficial. Add it to predicate_nodes so that _insert_nodes will
                     // insert it as low as possible in the left/right input of the join. As predicate_nodes might have
@@ -239,14 +271,18 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
               // End of the pre-join filter code
             }
-            _insert_nodes(current_node, input_side, {push_down_node});
+            lqp_insert_node(current_node, input_side, push_down_node, AllowRightInput::Yes);
           } else if (move_to_left && move_to_right) {
             // This predicate applies to both the left and the right side. We have not seen this case in the wild yet,
             // it might make more sense to duplicate the predicate and push it down on both sides.
-            _insert_nodes(current_node, input_side, {push_down_node});
+            lqp_insert_node(current_node, input_side, push_down_node, AllowRightInput::Yes);
           } else {
-            if (move_to_left) left_push_down_nodes.emplace_back(push_down_node);
-            if (move_to_right) right_push_down_nodes.emplace_back(push_down_node);
+            if (move_to_left) {
+              left_push_down_nodes.emplace_back(push_down_node);
+            }
+            if (move_to_right) {
+              right_push_down_nodes.emplace_back(push_down_node);
+            }
           }
         }
       } else {
@@ -272,14 +308,107 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
         if (_is_evaluable_on_lqp(push_down_node, input_node->left_input())) {
           aggregate_push_down_nodes.emplace_back(push_down_node);
         } else {
-          _insert_nodes(current_node, input_side, {push_down_node});
+          lqp_insert_node_above(input_node, push_down_node, AllowRightInput::Yes);
         }
       }
       _push_down_traversal(input_node, LQPInputSide::Left, aggregate_push_down_nodes, estimator);
     } break;
 
+    case LQPNodeType::Union: {
+      const auto union_node = std::static_pointer_cast<UnionNode>(input_node);
+      /**
+       * If we have a diamond of predicates where all UnionNode inputs result from the same origin node, the
+       * pushdown traversal should continue below the diamond's origin node, if possible.
+       *
+       *                                        |
+       *                                  ____Union_____
+       *                                 /              \
+       *                      Predicate(a LIKE %man)    |
+       *                                |               |
+       *                                |     Predicate(a LIKE %woman)
+       *                                |               |
+       *                                |               |
+       *                                \_____Node______/  <---- Diamond's origin node
+       *                                        |  <------------ Continue pushdown traversal here, if possible
+       *                                        |
+       */
+      const auto diamond_origin_node = find_diamond_origin_node(union_node);
+      if (!diamond_origin_node) {
+        handle_barrier();
+        return;
+      }
+
+      /**
+       * In the following, we determine whether the diamond's origin node is used as an input by nodes which are
+       * not part of the diamond because we should only filter the predicates of the diamond nodes, not other nodes'
+       * predicates. For example:
+       *                                           |                                |
+       *                                     ____Union_____                   Join(a = x)
+       *                                    /              \                     /    \
+       *                             ______/               |                     |    |
+       *                            /                      |                     |    |
+       *                     ____Union_____                |                     |    |
+       *                    /              \               |                     |    |
+       *                   /               |     Predicate(a LIKE %woman)        |    |
+       *        Predicate(a LIKE %man)     |               |                     |    |
+       *                  |                |               |                     |    |
+       *                  |       Predicate(a LIKE %child) |                     |    |
+       *                  |                |               |                     |    |
+       *                  |                \______   ______/                     |    |
+       *                   \                      \ /                            |    |
+       *                    \___________________  | |  __________________________/    |
+       *                                        \ | | /                               |
+       *                     ---------------->    Node                              Table
+       *                    /                      |
+       *                   /                      ...
+       *       ___________/_________
+       *   The diamond's origin node has four outputs, but only three outputs are part of the diamond structure.
+       *   Therefore, we do not want to continue the pushdown traversal below the diamond. Because otherwise, we would
+       *   incorrectly filter the Join's left input.
+       *
+       * To identify cases such as above, we check the output count of the diamond's origin node and compare it
+       * with the number of UnionNodes in the diamond structure.
+       */
+      size_t union_node_count = 0;
+      visit_lqp(union_node, [&](const auto& diamond_node) {
+        if (diamond_node == diamond_origin_node) {
+          return LQPVisitation::DoNotVisitInputs;
+        }
+        if (diamond_node->type == LQPNodeType::Union) {
+          union_node_count++;
+        }
+        return LQPVisitation::VisitInputs;
+      });
+      if (diamond_origin_node->output_count() != union_node_count + 1) {
+        handle_barrier();
+        return;
+      }
+
+      // Apply predicate pushdown to the diamond's nodes.
+      auto left_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      auto right_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      _push_down_traversal(union_node, LQPInputSide::Left, left_push_down_nodes, estimator);
+      _push_down_traversal(union_node, LQPInputSide::Right, right_push_down_nodes, estimator);
+
+      // Continue predicate pushdown below the diamond.
+      auto updated_push_down_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+      for (const auto& push_down_node : push_down_nodes) {
+        if (_is_evaluable_on_lqp(push_down_node, diamond_origin_node)) {
+          // Save for next _push_down_traversal recursion.
+          updated_push_down_nodes.emplace_back(push_down_node);
+        } else {
+          // The diamond is a barrier for push_down_node.
+          lqp_insert_node_above(union_node, push_down_node, AllowRightInput::Yes);
+        }
+      }
+      auto temporary_root_node = LogicalPlanRootNode::make();
+      lqp_insert_node_above(diamond_origin_node, temporary_root_node);
+      _push_down_traversal(temporary_root_node, LQPInputSide::Left, updated_push_down_nodes, estimator);
+      lqp_remove_node(temporary_root_node);
+    } break;
+
     default: {
-      // All not explicitly handled node types are barriers and we do not push predicates past them.
+      // All not explicitly handled node types are barriers, and we do not push predicates past them.
       handle_barrier();
     }
   }
@@ -287,9 +416,13 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
 
 std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_traversal(
     const std::shared_ptr<AbstractLQPNode>& current_node, const LQPInputSide input_side) {
-  if (!current_node) return {};
+  if (!current_node) {
+    return {};
+  }
   const auto input_node = current_node->input(input_side);
-  if (!input_node) return {};
+  if (!input_node) {
+    return {};
+  }
 
   auto candidate_nodes = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Left);
   auto candidate_nodes_tmp = _pull_up_traversal(current_node->input(input_side), LQPInputSide::Right);
@@ -394,7 +527,9 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
   switch (node->type) {
     case LQPNodeType::Predicate: {
       const auto& predicate_node = static_cast<PredicateNode&>(*node);
-      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) return false;
+      if (!expression_evaluable_on_lqp(predicate_node.predicate(), *lqp)) {
+        return false;
+      }
 
       auto has_uncomputed_aggregate = false;
       const auto predicate = predicate_node.predicate();

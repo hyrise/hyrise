@@ -51,7 +51,9 @@ class SegmentAccessor final : public AbstractSegmentAccessor<T> {
     return _segment.get_typed_value(offset);
   }
 
-  ~SegmentAccessor() override { _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses; }
+  ~SegmentAccessor() override {
+    _segment.access_counter[SegmentAccessCounter::AccessType::Random] += _accesses;
+  }
 
  protected:
   mutable uint64_t _accesses{0};
@@ -181,7 +183,9 @@ class SingleChunkReferenceSegmentAccessorLZ4 final : public AbstractSegmentAcces
 // Accessor for ReferenceSegments that reference only NULL values
 template <typename T>
 class NullAccessor final : public AbstractSegmentAccessor<T> {
-  const std::optional<T> access(const ChunkOffset offset) const final { return std::nullopt; }
+  const std::optional<T> access(const ChunkOffset offset) const final {
+    return std::nullopt;
+  }
 };
 
 }  // namespace opossum

@@ -135,7 +135,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   const auto root_node = LogicalPlanRootNode::make(std::move(input));
   input = nullptr;
 
-  if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+  if constexpr (HYRISE_DEBUG) {
+    validate_lqp(root_node);
+  }
 
   for (const auto& rule : _rules) {
     Timer rule_timer{};
@@ -146,7 +148,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
     }
 
-    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+    if constexpr (HYRISE_DEBUG) {
+      validate_lqp(root_node);
+    }
   }
 
   // Remove LogicalPlanRootNode
@@ -192,7 +196,9 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
                                                        node->description() + "` not found in LQP");
 
         for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
-          if (other_lqp == lqp) continue;
+          if (other_lqp == lqp) {
+            continue;
+          }
           Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
                                             node->description() + "` found in different LQP");
         }
@@ -204,7 +210,9 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       // at the latest. However, feel free to add that check here.
       for (const auto& node_expression : node->node_expressions) {
         visit_expression(node_expression, [&](const auto& sub_expression) {
-          if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          if (sub_expression->type != ExpressionType::LQPColumn) {
+            return ExpressionVisitation::VisitArguments;
+          }
           const auto original_node = dynamic_cast<LQPColumnExpression&>(*sub_expression).original_node.lock();
           Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
           Assert(nodes_by_lqp[lqp].contains(original_node),

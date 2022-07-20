@@ -46,7 +46,9 @@ namespace detail {
 // We need this indirection so that we can throw exceptions from destructors without the compiler complaining. That is
 // generally forbidden and might lead to std::terminate, but since we don't want to handle most errors anyway,
 // that's fine.
-[[noreturn]] inline void fail(const std::string& msg) { throw std::logic_error(msg); }
+[[noreturn]] inline void fail(const std::string& msg) {
+  throw std::logic_error(msg);
+}
 }  // namespace detail
 
 #define Fail(msg)                                                                                               \

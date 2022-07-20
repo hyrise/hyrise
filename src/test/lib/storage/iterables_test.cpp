@@ -30,7 +30,9 @@ struct SumUpWithIterator {
     for (; begin != end; ++begin) {
       --distance;
       _accessed_offsets.emplace_back(begin->chunk_offset());
-      if (begin->is_null()) continue;
+      if (begin->is_null()) {
+        continue;
+      }
       _sum += begin->value();
     }
 
@@ -46,7 +48,9 @@ struct CountNullsWithIterator {
   void operator()(Iterator begin, Iterator end) const {
     for (; begin != end; ++begin) {
       _accessed_offsets.emplace_back(begin->chunk_offset());
-      if (begin->is_null()) _nulls++;
+      if (begin->is_null()) {
+        _nulls++;
+      }
     }
   }
 
@@ -58,7 +62,9 @@ template <typename DataType>
 struct SumUp {
   template <typename T>
   void operator()(const T& position) const {
-    if (position.is_null()) return;
+    if (position.is_null()) {
+      return;
+    }
     _sum += position.value();
   }
 
@@ -69,7 +75,9 @@ struct AppendWithIterator {
   template <typename Iterator>
   void operator()(Iterator begin, Iterator end) const {
     for (; begin != end; ++begin) {
-      if ((*begin).is_null()) continue;
+      if ((*begin).is_null()) {
+        continue;
+      }
       _concatenate += (*begin).value();
     }
   }
@@ -155,13 +163,15 @@ TEST_P(EncodedSegmentIterablesTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id == ColumnID{0}) return;
+      if (column_id == ColumnID{0}) {
+        return;
+      }
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
-  const auto chunk = test_table->get_chunk(ChunkID{0u});
-  const auto abstract_segment = chunk->get_segment(ColumnID{0u});
+  const auto chunk = test_table->get_chunk(ChunkID{0});
+  const auto abstract_segment = chunk->get_segment(ColumnID{0});
 
   resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -261,13 +271,15 @@ TEST_P(EncodedStringSegmentIterablesTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id == ColumnID{0}) return;
+      if (column_id == ColumnID{0}) {
+        return;
+      }
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
-  const auto chunk = test_table->get_chunk(ChunkID{0u});
-  const auto abstract_segment = chunk->get_segment(ColumnID{0u});
+  const auto chunk = test_table->get_chunk(ChunkID{0});
+  const auto abstract_segment = chunk->get_segment(ColumnID{0});
 
   resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -324,13 +336,15 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
       chunk_encoding_spec[column_id] = encoding_spec;
     } else {
       // skip test if the column that is used for testing doesn't support encoding
-      if (column_id == ColumnID{0}) return;
+      if (column_id == ColumnID{0}) {
+        return;
+      }
     }
   }
   ChunkEncoder::encode_all_chunks(test_table, chunk_encoding_spec);
 
-  const auto chunk = test_table->get_chunk(ChunkID{0u});
-  const auto abstract_segment = chunk->get_segment(ColumnID{0u});
+  const auto chunk = test_table->get_chunk(ChunkID{0});
+  const auto abstract_segment = chunk->get_segment(ColumnID{0});
 
   resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
     using ColumnDataType = typename decltype(data_type_t)::type;
@@ -349,11 +363,11 @@ TEST_P(EncodedSegmentChunkOffsetTest, IteratorWithIterators) {
 // Reference Segment Tests
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
-  auto pos_list = RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u},
-                               RowID{ChunkID{0u}, 2u}, NULL_ROW_ID};
+  auto pos_list = RowIDPosList{RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{3}},
+                               RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}, NULL_ROW_ID};
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
@@ -367,12 +381,12 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIterators) {
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
-  auto pos_list =
-      RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+  auto pos_list = RowIDPosList{RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{3}},
+                               RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::No>{*reference_segment};
 
@@ -386,12 +400,12 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunk) {
 }
 
 TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased) {
-  auto pos_list =
-      RowIDPosList{RowID{ChunkID{0u}, 0u}, RowID{ChunkID{0u}, 3u}, RowID{ChunkID{0u}, 1u}, RowID{ChunkID{0u}, 2u}};
+  auto pos_list = RowIDPosList{RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{3}},
+                               RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{2}}};
   pos_list.guarantee_single_chunk();
 
   const auto reference_segment =
-      std::make_unique<ReferenceSegment>(table, ColumnID{0u}, std::make_shared<RowIDPosList>(std::move(pos_list)));
+      std::make_unique<ReferenceSegment>(table, ColumnID{0}, std::make_shared<RowIDPosList>(std::move(pos_list)));
 
   const auto iterable = ReferenceSegmentIterable<int32_t, EraseReferencedSegmentType::Yes>{*reference_segment};
 
@@ -407,9 +421,9 @@ TEST_F(IterablesTest, ReferenceSegmentIteratorWithIteratorsSingleChunkTypeErased
 // Value Segment Tests
 
 TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
-  const auto chunk = table->get_chunk(ChunkID{0u});
+  const auto chunk = table->get_chunk(ChunkID{0});
 
-  const auto segment = chunk->get_segment(ColumnID{0u});
+  const auto segment = chunk->get_segment(ColumnID{0});
   const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
 
   const auto iterable = ValueSegmentIterable<int>{*int_segment};
@@ -421,9 +435,9 @@ TEST_F(IterablesTest, ValueSegmentIteratorForEach) {
 }
 
 TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
-  const auto chunk = table_with_null->get_chunk(ChunkID{0u});
+  const auto chunk = table_with_null->get_chunk(ChunkID{0});
 
-  const auto segment = chunk->get_segment(ColumnID{0u});
+  const auto segment = chunk->get_segment(ColumnID{0});
   const auto int_segment = std::dynamic_pointer_cast<const ValueSegment<int32_t>>(segment);
 
   const auto iterable = ValueSegmentIterable<int32_t>{*int_segment};

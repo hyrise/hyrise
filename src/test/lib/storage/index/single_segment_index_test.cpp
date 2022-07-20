@@ -519,7 +519,7 @@ TYPED_TEST(SingleSegmentIndexTest, FullRangeNulls) {
 
   auto actual_null_positions_int =
       std::vector<ChunkOffset>(this->index_int_nulls->null_cbegin(), this->index_int_nulls->null_cend());
-  auto expected_null_positions = std::vector<ChunkOffset>{0u, 1u, 2u};
+  auto expected_null_positions = std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}};
   EXPECT_EQ(expected_null_positions, actual_null_positions_int);
 
   // string
@@ -543,7 +543,8 @@ TYPED_TEST(SingleSegmentIndexTest, FullRangeMixed) {
 
   auto actual_null_positions_int =
       std::vector<ChunkOffset>(this->index_int_mixed->null_cbegin(), this->index_int_mixed->null_cend());
-  auto expected_null_positions = std::vector<ChunkOffset>{0u, 2u, 4u, 7u};
+  auto expected_null_positions =
+      std::vector<ChunkOffset>{ChunkOffset{0}, ChunkOffset{2}, ChunkOffset{4}, ChunkOffset{7}};
   EXPECT_EQ(expected_null_positions, actual_null_positions_int);
 
   // string
@@ -655,7 +656,9 @@ TYPED_TEST(SingleSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
-  if (!HYRISE_DEBUG || std::is_same_v<TypeParam, BTreeIndex>) GTEST_SKIP();
+  if (!HYRISE_DEBUG || std::is_same_v<TypeParam, BTreeIndex>) {
+    GTEST_SKIP();
+  }
   auto vs_int = std::make_shared<ValueSegment<int>>();
   vs_int->append(4);
 

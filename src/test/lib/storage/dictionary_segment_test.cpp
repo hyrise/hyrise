@@ -36,7 +36,9 @@ INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          dictionary_segment_test_formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
-  for (int i = 0; i <= 10; i += 2) vs_int->append(i);
+  for (int i = 0; i <= 10; i += 2) {
+    vs_int->append(i);
+  }
 
   auto segment =
       ChunkEncoder::encode_segment(vs_int, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary, GetParam()});
@@ -155,7 +157,7 @@ TEST_P(StorageDictionarySegmentTest, CompressNullableSegmentInt) {
   EXPECT_EQ((*dict)[1], 4);
 
   // Test retrieval of null value
-  EXPECT_TRUE(variant_is_null((*dict_segment)[4]));
+  EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{4}]));
 }
 
 TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerVectorSize) {

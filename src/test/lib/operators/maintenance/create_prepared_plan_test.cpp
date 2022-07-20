@@ -22,7 +22,9 @@ class CreatePreparedPlanTest : public BaseTest {
   std::shared_ptr<CreatePreparedPlan> create_prepared_plan;
 };
 
-TEST_F(CreatePreparedPlanTest, OperatorName) { EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan"); }
+TEST_F(CreatePreparedPlanTest, OperatorName) {
+  EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan");
+}
 
 TEST_F(CreatePreparedPlanTest, OperatorDescription) {
   EXPECT_EQ(replace_addresses(create_prepared_plan->description(DescriptionMode::SingleLine)),

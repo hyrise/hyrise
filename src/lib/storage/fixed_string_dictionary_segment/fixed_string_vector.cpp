@@ -52,13 +52,17 @@ FixedStringIterator<true> FixedStringVector::cend() const noexcept {
 }
 
 using ReverseIterator = boost::reverse_iterator<FixedStringIterator<false>>;
-ReverseIterator FixedStringVector::rbegin() noexcept { return ReverseIterator(end()); }
+ReverseIterator FixedStringVector::rbegin() noexcept {
+  return ReverseIterator(end());
+}
 
-ReverseIterator FixedStringVector::rend() noexcept { return ReverseIterator(begin()); }
+ReverseIterator FixedStringVector::rend() noexcept {
+  return ReverseIterator(begin());
+}
 
 FixedString FixedStringVector::operator[](const size_t pos) {
   PerformanceWarning("operator[] used");
-  return FixedString(&_chars[pos * _string_length], _string_length);
+  return {&_chars[pos * _string_length], _string_length};
 }
 
 FixedString FixedStringVector::at(const size_t pos) {
@@ -79,13 +83,21 @@ pmr_string FixedStringVector::get_string_at(const size_t pos) const {
   }
 }
 
-const char* FixedStringVector::data() const { return _chars.data(); }
+const char* FixedStringVector::data() const {
+  return _chars.data();
+}
 
-size_t FixedStringVector::size() const { return _size; }
+size_t FixedStringVector::size() const {
+  return _size;
+}
 
-size_t FixedStringVector::capacity() const { return _chars.capacity(); }
+size_t FixedStringVector::capacity() const {
+  return _chars.capacity();
+}
 
-size_t FixedStringVector::string_length() const { return _string_length; }
+size_t FixedStringVector::string_length() const {
+  return _string_length;
+}
 
 void FixedStringVector::erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end) {
   const auto count = std::distance(start, end);
@@ -95,18 +107,26 @@ void FixedStringVector::erase(const FixedStringIterator<false> start, const Fixe
     return;
   }
 
-  auto it = _chars.begin();
-  std::advance(it, _chars.size() - count * _string_length);
-  _chars.erase(it, _chars.end());
+  auto iter = _chars.begin();
+  std::advance(iter, _chars.size() - count * _string_length);
+  _chars.erase(iter, _chars.end());
   _size -= count;
 }
 
-void FixedStringVector::shrink_to_fit() { _chars.shrink_to_fit(); }
+void FixedStringVector::shrink_to_fit() {
+  _chars.shrink_to_fit();
+}
 
-PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() { return _chars.get_allocator(); }
+PolymorphicAllocator<FixedString> FixedStringVector::get_allocator() {
+  return _chars.get_allocator();
+}
 
-void FixedStringVector::reserve(const size_t n) { _chars.reserve(n * _string_length); }
+void FixedStringVector::reserve(const size_t n) {
+  _chars.reserve(n * _string_length);
+}
 
-size_t FixedStringVector::data_size() const { return sizeof(*this) + _chars.capacity(); }
+size_t FixedStringVector::data_size() const {
+  return sizeof(*this) + _chars.capacity();
+}
 
 }  // namespace opossum

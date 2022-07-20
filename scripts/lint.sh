@@ -3,7 +3,7 @@
 exitcode=0
 
 # Run cpplint
-find src \( -iname "*.cpp" -o -iname "*.hpp" \) -a -not -path "src/lib/utils/boost_curry_override.hpp" -a -not -path "src/lib/utils/boost_bimap_core_override.hpp" -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
+find src \( -iname "*.cpp" -o -iname "*.hpp" \) -a -not -path "src/lib/utils/boost_curry_override.hpp" -a -not -path "src/lib/utils/boost_bimap_core_override.hpp" -print0 | parallel --null --no-notice -j 100% --nice 17 /usr/bin/env python3 ./third_party/cpplint/cpplint.py --verbose=0 --extensions=hpp,cpp --counting=detailed --filter=-legal/copyright,-whitespace/newline,-runtime/references,-build/c++11,-build/include_what_you_use,-readability/nolint,-whitespace/braces,-build/include_subdir --linelength=120 {} 2\>\&1 \| grep -v \'\^Done processing\' \| grep -v \'\^Total errors found: 0\' \; test \${PIPESTATUS[0]} -eq 0
 let "exitcode |= $?"
 #                             /------------------ runs in parallel -------------------\
 # Conceptual: find | parallel python cpplint \| grep -v \| test \${PIPESTATUS[0]} -eq 0
@@ -75,15 +75,6 @@ do
 			exitcode=1
 		fi
 	done
-done
-
-# Check if all probes are defined in provider.d
-for probe in $(grep -r --include=*.[ch]pp --exclude=probes.hpp --exclude=provider.hpp -h '^\s*DTRACE_PROBE' src | sed -E 's/^ *DTRACE_PROBE[0-9]{0,2}\(HYRISE, *([A-Z_]+).*$/\1/'); do
-    grep -i $probe src/lib/utils/tracing/provider.d > /dev/null
-    if [ $? -ne 0 ]; then
-        echo "Probe $probe is not defined in provider.d"
-        exitcode=1
-    fi
 done
 
 # Check for Windows-style line endings

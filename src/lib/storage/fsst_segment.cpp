@@ -69,7 +69,7 @@ std::optional<T> FSSTSegment<T>::get_typed_value(const ChunkOffset chunk_offset)
 
   // Calculate actual offset with help of reference offset vector.
   const auto actual_offset = get_offset(chunk_offset);
-  const auto actual_offset_next = get_offset(chunk_offset + 1);
+  const auto actual_offset_next = get_offset(ChunkOffset{chunk_offset + 1});
   const auto compressed_length = actual_offset_next - actual_offset;
 
   // Note: we use const_cast in order to use fsst_decompress.

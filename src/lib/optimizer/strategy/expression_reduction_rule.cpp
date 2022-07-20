@@ -34,6 +34,7 @@ void ExpressionReductionRule::_apply_to_plan_without_subqueries(
 
     for (auto& expression : sub_node->node_expressions) {
       reduce_distributivity(expression);
+      rewrite_like_prefix_wildcard(expression);
 
       // We can't prune Aggregate arguments, because the operator doesn't support, e.g., `MIN(1)`, whereas it supports
       // `MIN(2-1)`, since `2-1` becomes a column.
@@ -154,7 +155,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
     reduce_constant_expression(argument);
   }
 
-  if (input_expression->arguments.empty()) return;
+  if (input_expression->arguments.empty()) {
+    return;
+  }
 
   // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
   if (input_expression->type != ExpressionType::Predicate && input_expression->type != ExpressionType::Arithmetic &&
@@ -166,7 +169,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
       std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
                   [&](const auto& argument) { return argument->type == ExpressionType::Value; });
 
-  if (!all_arguments_are_values) return;
+  if (!all_arguments_are_values) {
+    return;
+  }
 
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
@@ -181,6 +186,58 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
   });
 }
 
+void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression) {
+  // Continue only if the expression is a LIKE/NOT LIKE expression
+  const auto binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(input_expression);
+  if (!binary_predicate) {
+    return;
+  }
+  if (binary_predicate->predicate_condition != PredicateCondition::Like &&
+      binary_predicate->predicate_condition != PredicateCondition::NotLike) {
+    return;
+  }
+
+  // Continue only if right operand is a literal/value (expr LIKE 'asdf%')
+  const auto pattern_value_expression = std::dynamic_pointer_cast<ValueExpression>(binary_predicate->right_operand());
+  if (!pattern_value_expression) {
+    return;
+  }
+
+  const auto pattern = boost::get<pmr_string>(pattern_value_expression->value);
+
+  // Continue only if the pattern ends with a "%"-wildcard, has a non-empty prefix and contains no other wildcards
+  const auto single_char_wildcard_pos = pattern.find_first_of('_');
+
+  if (single_char_wildcard_pos != pmr_string::npos) {
+    return;
+  }
+
+  const auto multi_char_wildcard_pos = pattern.find_first_of('%');
+  // TODO(anyone): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%"
+  // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new PredicateNodes. For now, we assume
+  // that the potential pruning of such LIKE predicates via the ChunkPruningRule is sufficient. However, if not many
+  // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
+  if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
+      multi_char_wildcard_pos + 1 != pattern.size()) {
+    return;
+  }
+  const auto bounds = LikeMatcher::bounds(pattern);
+
+  // In case of an ASCII overflow
+  if (!bounds) {
+    return;
+  }
+
+  const auto [lower_bound, upper_bound] = *bounds;
+
+  if (binary_predicate->predicate_condition == PredicateCondition::Like) {
+    input_expression = between_upper_exclusive_(binary_predicate->left_operand(), lower_bound, upper_bound);
+  } else {  // binary_predicate->predicate_condition == PredicateCondition::NotLike
+    input_expression = or_(less_than_(binary_predicate->left_operand(), lower_bound),
+                           greater_than_equals_(binary_predicate->left_operand(), upper_bound));
+  }
+}
+
 void ExpressionReductionRule::remove_duplicate_aggregate(
     std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
     const std::shared_ptr<AbstractLQPNode>& aggregate_node, const std::shared_ptr<AbstractLQPNode>& root_node) {
@@ -189,7 +246,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate) continue;
+    if (input_expression->type != ExpressionType::Aggregate) {
+      continue;
+    }
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
     switch (aggregate_expression.aggregate_function) {
       case AggregateFunction::Sum: {
@@ -249,12 +308,14 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 
   // No replacements possible
-  if (replacements.empty()) return;
+  if (replacements.empty()) {
+    return;
+  }
 
   // Back up the current column names
   const auto& root_expressions = root_node->output_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
-  for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < root_expressions.size(); ++expression_idx) {
     old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
   }
 
@@ -279,7 +340,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       expression_deep_replace(expression, replacements);
     }
 
-    if (node->type == LQPNodeType::Alias) updated_an_alias = true;
+    if (node->type == LQPNodeType::Alias) {
+      updated_an_alias = true;
+    }
 
     return LQPUpwardVisitation::VisitOutputs;
   });
