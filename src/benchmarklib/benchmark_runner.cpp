@@ -19,6 +19,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "tpch/tpch_table_generator.hpp"
+#include "utils/meta_tables/meta_temporary_memory_usage_table.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
@@ -479,7 +480,8 @@ void BenchmarkRunner::write_report_to_file() const {
 }
 
 void BenchmarkRunner::write_temporary_memory_usage_report_to_file() const {
-  std::cout << "SHOULD WRITE REPORT TO FILE " << *(_config.memory_tracking_output_file_path) << std::endl;
+  const auto report = _sql_to_json("SELECT * FROM meta_"+MetaTemporaryMemoryUsageTable().name());
+  std::ofstream{_config.memory_tracking_output_file_path.value()} << std::setw(2) << report << std::endl;
 }
 
 cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& benchmark_name) {
@@ -516,7 +518,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("visualize", "Create a visualization image of one LQP and PQP for each query, do not properly run the benchmark", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("verify", "Verify each query by comparing it with the SQLite result", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("memory_tracking", "Enables tracking of the temporary memory usage of certain operators using polymorphic allocators", cxxopts::value<bool>()->default_value("false")) // NOLINT
-    ("memory_tracking_output", "JSON file to output temporary memory tracking results to, don't specify for stdout. Only applies if memory tracking is activated.", cxxopts::value<std::string>()->default_value("")) // NOLINT
+    ("memory_tracking_output", "JSON file to output temporary memory tracking results to, don't specify for no output. Only applies if memory tracking is activated.", cxxopts::value<std::string>()->default_value("")) // NOLINT
     ("dont_cache_binary_tables", "Do not cache tables as binary files for faster loading on subsequent runs", cxxopts::value<bool>()->default_value("false")) // NOLINT
     ("metrics", "Track more metrics (steps in SQL pipeline, system utilization, etc.) and add them to the output JSON (see -o)", cxxopts::value<bool>()->default_value("false")) // NOLINT
     // This option is only advised when the underlying system's memory capacity is overleaded by the preparation phase.
