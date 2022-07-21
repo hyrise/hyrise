@@ -12,8 +12,6 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
-    # For provider.hpp
-    target_include_directories(${PARSED_ARGS_NAME} PRIVATE ${CMAKE_BINARY_DIR})
     target_link_libraries_system(
         ${PARSED_ARGS_NAME}
 
@@ -63,7 +61,6 @@ add_plugin(NAME hyriseCostModelFeaturePlugin
     sqlparser
     magic_enum
 )
-
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")

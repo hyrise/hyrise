@@ -17,7 +17,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "utils/timer.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 
@@ -63,8 +62,6 @@ bool AbstractOperator::executed() const {
 }
 
 void AbstractOperator::execute() {
-  DTRACE_PROBE1(HYRISE, OPERATOR_STARTED, name().c_str());
-
   /**
    * If an operator has already executed, we return immediately. Either because
    *    a) the output has already been set, or
@@ -145,10 +142,6 @@ void AbstractOperator::execute() {
   if (_right_input) {
     mutable_right_input()->deregister_consumer();
   }
-
-  DTRACE_PROBE5(HYRISE, OPERATOR_EXECUTED, name().c_str(), performance_data->walltime.count(),
-                _output ? _output->row_count() : 0, _output ? _output->chunk_count() : 0,
-                reinterpret_cast<uintptr_t>(this));
 
   if constexpr (HYRISE_DEBUG) {
     // Verify that LQP (if set) and PQP match.
