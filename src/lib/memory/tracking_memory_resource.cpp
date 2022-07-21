@@ -23,4 +23,4 @@ TrackingMemoryResource::memory_timeseries() const {
   return _memory_timeseries;
 }
 
-}
+} // namespace opossum
