@@ -51,5 +51,10 @@ target_link_libraries(
     PRIVATE
     hyriseBenchmarkLib
     ncurses
+)
+
+# Link readline as a system library to ignore '-Wreserved-identifier' warnings (compile errors due to -Werror)
+target_link_libraries_system(
+    hyriseConsole
     readline
 )
