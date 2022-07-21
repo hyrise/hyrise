@@ -122,7 +122,7 @@ class PosHashTable {
     // If casted_value is already present in the hash table, this returns an iterator to the existing value. If not, it
     // inserts a mapping from casted_value to the index into _values, which is defined by the previously inserted
     // number of values.
-    const auto iter = _offset_hash_table.emplace(casted_value, _offset_hash_table.size());
+    const auto iter = _offset_hash_table.try_emplace(casted_value, _offset_hash_table.size());
     if (_mode == JoinHashBuildMode::AllPositions) {
       auto& pos_list = _small_pos_lists[iter.first->second];
       pos_list.emplace_back(row_id);
