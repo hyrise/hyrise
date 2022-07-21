@@ -95,7 +95,8 @@ class PosHashTable {
 
   // Tessil's robin:map is used because it is very fast and does not consume too much memory.
   // If memory consumption is prioritized above performance, it maybe should exchanged (e.g. with Tessil's sparse_map).
-  using OffsetHashTable = tsl::robin_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>, PolymorphicAllocator<std::pair<HashedType, Offset>>>;
+  using OffsetHashTable = tsl::robin_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>,
+  PolymorphicAllocator<std::pair<HashedType, Offset>>>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -222,7 +223,8 @@ class PosHashTable {
       std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
   JoinHashBuildMode _mode{};
-  OffsetHashTable _offset_hash_table = OffsetHashTable{alloc<std::pair<HashedType, Offset>>("build_phase_offset_hash_table")};
+  OffsetHashTable _offset_hash_table = OffsetHashTable{
+    alloc<std::pair<HashedType, Offset>>("build_phase_offset_hash_table")};
   std::vector<SmallPosList> _small_pos_lists{};
 
   std::optional<UnifiedPosList> _unified_pos_list{};

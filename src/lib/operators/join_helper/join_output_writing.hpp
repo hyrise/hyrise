@@ -186,8 +186,12 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
      */
 
   // Ensure that input types with auto type declaration are supported.
-  Assert(typeid(pos_lists_left) == typeid(pmr_vector<RowIDPosList>) || typeid(pos_lists_left) == typeid(std::vector<RowIDPosList>), "Wrong type for pos_list_left in call to write_output_chunks.");
-  Assert(typeid(pos_lists_right) == typeid(pmr_vector<RowIDPosList>) || typeid(pos_lists_right) == typeid(std::vector<RowIDPosList>), "Wrong type for post_lists_right in call to write_output_chunks.");
+  Assert(typeid(pos_lists_left) == typeid(pmr_vector<RowIDPosList>) ||
+    typeid(pos_lists_left) == typeid(std::vector<RowIDPosList>),
+    "Wrong type for pos_list_left in call to write_output_chunks.");
+  Assert(typeid(pos_lists_right) == typeid(pmr_vector<RowIDPosList>) ||
+    typeid(pos_lists_right) == typeid(std::vector<RowIDPosList>),
+    "Wrong type for post_lists_right in call to write_output_chunks.");
 
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;

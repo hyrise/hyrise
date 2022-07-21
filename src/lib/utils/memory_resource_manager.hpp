@@ -25,7 +25,8 @@ struct ResourceRecord {
 */
 class MemoryResourceManager : public Noncopyable {
  public:
-  // If memory tracking is enabled, memory resources created by the MemoryResourceManager consist of TrackingMemoryResources.
+  // If memory tracking is enabled, memory resources created by the MemoryResourceManager
+  // consist of TrackingMemoryResources.
   // This allows to keep track of allocations and deallocations by the MemoryResources.
   void enable_temporary_memory_tracking();
 
