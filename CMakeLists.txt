@@ -31,10 +31,19 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         compiler_not_supported("Your clang version ${CMAKE_CXX_COMPILER_VERSION} is too old.")
     endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    if(NOT EXISTS "/usr/local/opt/llvm/bin/clang")
+    execute_process(
+        COMMAND brew --prefix llvm
+        RESULT_VARIABLE BREW_LLVM
+        OUTPUT_VARIABLE BREW_LLVM_PREFIX
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(NOT BREW_LLVM EQUAL 0)
+        set(BREW_LLVM_PREFIX "<brew_library_path>")
+    endif()
+    if (NOT EXISTS "${BREW_LLVM_PREFIX}/bin/clang")
         set(CMAKE_OSX_INSTALL_TEXT "install the official llvm/clang package using `install_dependencies.sh` or `brew install llvm --with-toolchain` and then ")
     endif()
-    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=/usr/local/opt/llvm/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm/bin/clang++`.")
+    compiler_not_supported("Apple's clang compiler is not supported because it is lacking support for recent C++ features. Please ${CMAKE_OSX_INSTALL_TEXT}run cmake with `-DCMAKE_C_COMPILER=${BREW_LLVM_PREFIX}/bin/clang -DCMAKE_CXX_COMPILER=${BREW_LLVM_PREFIX}/bin/clang++`.")
 else()
     compiler_not_supported("You are using an unsupported compiler (${CMAKE_CXX_COMPILER_ID})! Compilation has only been tested with Clang (Linux + OS X) and GCC (Linux).")
 endif()
