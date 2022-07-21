@@ -166,8 +166,9 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
   }
 }
 
+template <typename T>
 inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
-    auto& pos_lists_left, auto& pos_lists_right,
+    T& pos_lists_left, T& pos_lists_right,
     const std::shared_ptr<const Table>& left_input_table, const std::shared_ptr<const Table>& right_input_table,
     bool create_left_side_pos_lists_by_segment, bool create_right_side_pos_lists_by_segment,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
