@@ -1742,13 +1742,13 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
                       "Interval can only be applied to ValueExpression with String value");
           const auto start_date_string =
               std::string{boost::get<pmr_string>(static_cast<ValueExpression&>(*left).value)};
-          const auto start_date = string_to_timestamp(start_date_string);
-          AssertInput(start_date, "'" + start_date_string + "' is not a valid ISO 8601 extended date");
+          const auto start_timestamp = string_to_timestamp(start_date_string);
+          AssertInput(start_timestamp, "'" + start_date_string + "' is not a valid ISO 8601 extended date");
           const auto& interval_expression = static_cast<IntervalExpression&>(*right);
           // We already ensured to have either Addition or Substraction right at the beginning
           const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
                                                                                     : -interval_expression.duration;
-          const auto end_date = date_interval(start_date->date(), duration, interval_expression.unit);
+          const auto end_date = date_interval(start_timestamp->date(), duration, interval_expression.unit);
           return value_(pmr_string{date_to_string(end_date)});
         }
         return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);

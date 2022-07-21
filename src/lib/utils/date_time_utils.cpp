@@ -9,14 +9,14 @@ std::optional<boost::posix_time::ptime> string_to_timestamp(const std::string& t
   try {
     if (timestamp_string.size() == 10) {
       // This is a date without time information.
-      const auto date = boost::gregorian::from_string(timestamp_string);
+      const auto date = boost::gregorian::from_simple_string(timestamp_string);
       if (!date.is_not_a_date()) {
         return boost::posix_time::ptime{date};
       }
     } else {
-      const auto date_time = boost::posix_time::time_from_string(timestamp_string);
-      if (!date_time.is_not_a_date_time()) {
-        return date_time;
+      const auto timestamp = boost::posix_time::time_from_string(timestamp_string);
+      if (!timestamp.is_not_a_date_time()) {
+        return timestamp;
       }
     }
   } catch (const boost::wrapexcept<boost::gregorian::bad_day_of_month>& /* exception */) {
