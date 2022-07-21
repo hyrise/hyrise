@@ -10,7 +10,7 @@ namespace opossum {
 /**
  * Takes delimited timestamp string with order year-month-day [hour:minute:second<.second fraction>] (ISO 8601 extended
  * format), e.g., "2001-01-01", "2000-01-01 13:01:02" or "2000-01-01 13:01:02.5000". Boost allows out-of-bounds values
- * for timestamps, e.g., '2000-01-01 25:61:61' is valid  and the overflow is added to the subsequent time unit. In this
+ * for timestamps, e.g., '2000-01-01 25:61:61' is valid and the overflow is added to the subsequent time unit. In this
  * example, the resulting timestamp is '2000-01-02 02:02:01'. This behavior is enabled by Boost's time math, see
  * https://www.boost.org/doc/libs/1_79_0/doc/html/date_time/examples.html#date_time.examples.time_math
  * Notably, Boost's timestamps do not support years < 1400 or > 9999.
