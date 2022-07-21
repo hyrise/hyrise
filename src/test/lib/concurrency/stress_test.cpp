@@ -58,11 +58,11 @@ TEST_F(StressTest, TestTransactionConflicts) {
   //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
   //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
-  const auto num_threads = 10000u;
+  const auto num_threads = uint32_t{100};
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+  for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
@@ -71,7 +71,7 @@ TEST_F(StressTest, TestTransactionConflicts) {
   for (auto& thread_future : thread_futures) {
     // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
-    if (thread_future.wait_for(std::chrono::seconds(18)) == std::future_status::timeout) {
+    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
       ASSERT_TRUE(false) << "At least one thread got stuck and did not commit.";
     }
     // Retrieve the future so that exceptions stored in its state are thrown
