@@ -7,6 +7,7 @@
 // Warning: In the past, magic_enum has led to problems with TSan. See #2154 for details.
 #include <magic_enum.hpp>
 
+#include "storage/encoding_type.hpp"
 #include "types.hpp"
 #include "utils/format_duration.hpp"
 
@@ -27,6 +28,9 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   bool has_output{false};
   uint64_t output_row_count{0};
   uint64_t output_chunk_count{0};
+  uint16_t output_column_count{0};
+  std::vector<std::vector<SortColumnDefinition>> output_chunks_sorted_by{};
+  std::vector<std::vector<std::optional<EncodingType>>> output_segment_types{};
 };
 
 /**

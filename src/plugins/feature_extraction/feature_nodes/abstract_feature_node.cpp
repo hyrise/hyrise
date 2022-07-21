@@ -1,5 +1,6 @@
 #include "abstract_feature_node.hpp"
 
+#include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -31,6 +32,22 @@ const FeatureVector& AbstractFeatureNode::to_feature_vector() {
   Assert(_feature_vector->size() == feature_headers().size(), "Malformed feature vector");
 
   return *_feature_vector;
+}
+
+size_t AbstractFeatureNode::hash() const {
+  size_t hash{0};
+
+  visit_feature_nodes(shared_from_this(), [&hash](const auto& node) {
+    if (node) {
+      boost::hash_combine(hash, node->type());
+      boost::hash_combine(hash, node->_on_shallow_hash());
+      return FeatureNodeVisitation::VisitInputs;
+    } else {
+      return FeatureNodeVisitation::DoNotVisitInputs;
+    }
+  });
+
+  return hash;
 }
 
 }  // namespace opossum

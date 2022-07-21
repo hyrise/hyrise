@@ -11,8 +11,6 @@ class OperatorFeatureNode : public AbstractFeatureNode {
                       const std::shared_ptr<AbstractFeatureNode>& left_input,
                       const std::shared_ptr<AbstractFeatureNode>& right_input = nullptr);
 
-  size_t hash() const final;
-
   const std::vector<std::string>& feature_headers() const final;
 
   static const std::vector<std::string>& headers();
@@ -26,7 +24,8 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   std::shared_ptr<Query> query() const;
 
  protected:
-  std::shared_ptr<FeatureVector> _on_to_feature_vector() final;
+  std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
+  size_t _on_shallow_hash() const final;
 
   std::shared_ptr<const AbstractOperator> _op;
   OperatorType _op_type;

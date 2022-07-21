@@ -1,49 +1,26 @@
 #include "column_feature_node.hpp"
 
+#include <boost/container_hash/hash.hpp>
+
 #include "feature_extraction/feature_nodes/table_feature_node.hpp"
-#include "feature_extraction/util/one_hot_encoding.hpp"
+#include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 
 namespace opossum {
 
-ColumnFeatureNode::ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node,
-                                     const std::shared_ptr<Table>& table, const ColumnID column_id)
-    : AbstractFeatureNode{FeatureNodeType::Column, input_node},
-      _table{table},
-      _column_id{column_id},
-      _data_type{table->column_data_type(column_id)} {
+ColumnFeatureNode::ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node, const ColumnID column_id)
+    : AbstractFeatureNode{FeatureNodeType::Column, input_node}, _column_id{column_id} {
   Assert(_left_input->type() == FeatureNodeType::Table, "ColumnFeatureNode requires TableFeatureNode as input");
-}
-
-std::shared_ptr<ColumnFeatureNode> ColumnFeatureNode::from_column_expression(
-    const std::shared_ptr<AbstractFeatureNode>& input_node, const std::shared_ptr<AbstractExpression>& expression) {
-  Assert(expression->type == ExpressionType::LQPColumn, "Expected LQPColumnExpression");
-  const auto& column = static_cast<LQPColumnExpression&>(*expression);
-  const auto original_node = column.original_node.lock();
-  Assert(original_node->type == LQPNodeType::StoredTable, "Expected StoredTableNode");
-  const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-  const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
-
-  return std::make_shared<ColumnFeatureNode>(input_node, table, column.original_column_id);
-}
-
-size_t ColumnFeatureNode::hash() const {
-  auto hash = _left_input->hash();
-
-  // hashes should already be unique, and operators have only one output
-  // thus, let's just add the table type to differ from the input hashes
-  boost::hash_combine(hash, _column_id);
-  return hash;
-}
-
-std::shared_ptr<FeatureVector> ColumnFeatureNode::_on_to_feature_vector() {
-  const auto chunk_count = _table->chunk_count();
-  _nullable = _table->column_is_nullable(_column_id);
-  _data_type = _table->column_data_type(_column_id);
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto& chunk = _table->get_chunk(chunk_id);
+  const auto& table_node = static_cast<TableFeatureNode&>(*_left_input);
+  Assert(!table_node.registered_column(column_id), "Column already registered");
+  const auto& table = table_node.table();
+  _chunk_count = table->chunk_count();
+  _nullable = table->column_is_nullable(_column_id);
+  _data_type = table->column_data_type(_column_id);
+  for (auto chunk_id = ChunkID{0}; chunk_id < _chunk_count; ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
     if (!chunk) {
       continue;
     }
@@ -79,10 +56,36 @@ std::shared_ptr<FeatureVector> ColumnFeatureNode::_on_to_feature_vector() {
       ++_value_segments;
     }
   }
+}
+
+std::shared_ptr<ColumnFeatureNode> ColumnFeatureNode::from_column_expression(
+    const std::shared_ptr<AbstractFeatureNode>& operator_node, const std::shared_ptr<AbstractExpression>& expression) {
+  Assert(expression->type == ExpressionType::LQPColumn, "Expected LQPColumnExpression");
+  const auto& column = static_cast<LQPColumnExpression&>(*expression);
+
+  const auto& base_tables = find_base_tables(operator_node);
+  const auto& base_table = match_base_table(column, base_tables);
+
+  if (base_table->registered_column(column.original_column_id)) {
+    return base_table->get_column(column.original_column_id);
+  }
+
+  const auto column_node = std::make_shared<ColumnFeatureNode>(base_table, column.original_column_id);
+  base_table->register_column(column_node);
+  return column_node;
+}
+
+size_t ColumnFeatureNode::_on_shallow_hash() const {
+  auto hash = size_t{0};
+  boost::hash_combine(hash, _column_id);
+  return hash;
+}
+
+std::shared_ptr<FeatureVector> ColumnFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<DataType>(_data_type);
   feature_vector->reserve(_feature_vector->size() + 8);
   feature_vector->emplace_back(static_cast<Feature>(_nullable));
-  const auto num_chunks = static_cast<double>(chunk_count);
+  const auto num_chunks = static_cast<double>(_chunk_count);
   feature_vector->emplace_back(static_cast<Feature>(_value_segments) / num_chunks);
   feature_vector->emplace_back(static_cast<Feature>(_dictionary_segments) / num_chunks);
   feature_vector->emplace_back(static_cast<Feature>(_run_length_segments) / num_chunks);
@@ -107,6 +110,10 @@ const std::vector<std::string>& ColumnFeatureNode::headers() {
     ohe_headers_type.insert(ohe_headers_type.end(), headers.begin(), headers.end());
   }
   return ohe_headers_type;
+}
+
+ColumnID ColumnFeatureNode::column_id() const {
+  return _column_id;
 }
 
 }  // namespace opossum

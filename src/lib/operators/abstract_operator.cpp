@@ -110,6 +110,28 @@ void AbstractOperator::execute() {
     performance_data->has_output = true;
     performance_data->output_row_count = _output->row_count();
     performance_data->output_chunk_count = _output->chunk_count();
+    performance_data->output_column_count = _output->column_count();
+    const auto chunk_count = _output->chunk_count();
+    const auto column_count = _output->column_count();
+    auto& chunks_sorted_by = performance_data->output_chunks_sorted_by;
+    auto& segment_types = performance_data->output_segment_types;
+    chunks_sorted_by.resize(chunk_count);
+    segment_types.resize(chunk_count);
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = _output->get_chunk(chunk_id);
+      if (!chunk) {
+        continue;
+      }
+
+      chunks_sorted_by[chunk_id] = chunk->individually_sorted_by();
+      segment_types[chunk_id].resize(column_count);
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto& segment = chunk->get_segment(column_id);
+        if (auto encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
+          segment_types[chunk_id][column_id] = encoded_segment->encoding_type();
+        }
+      }
+    }
   }
   performance_data->walltime = performance_timer.lap();
 

@@ -1,7 +1,7 @@
 #include "operator_feature_node.hpp"
 
 #include "feature_extraction/feature_nodes/table_feature_node.hpp"
-#include "feature_extraction/util/one_hot_encoding.hpp"
+#include "feature_extraction/util/feature_extraction_utils.hpp"
 
 namespace opossum {
 
@@ -11,19 +11,27 @@ OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOpe
     : AbstractFeatureNode{FeatureNodeType::Operator, left_input, right_input},
       _op{op},
       _op_type{op->type()},
-      _run_time{op->performance_data->walltime} {}
-
-size_t OperatorFeatureNode::hash() const {
-  const auto& lqp_node = _op->lqp_node;
-  Assert(lqp_node, "Operator does not have LQPNode");
-  return lqp_node->hash();
+      _run_time{op->performance_data->walltime} {
+  _output_table = TableFeatureNode::from_performance_data(*_op->performance_data, shared_from_this());
 }
 
-std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() {
-  if (_output_table.expired()) {
-    _output_table = TableFeatureNode::from_performance_data(*_op->performance_data, shared_from_this());
+size_t OperatorFeatureNode::_on_shallow_hash() const {
+  //const auto& lqp_node = _op->lqp_node;
+  //Assert(lqp_node, "Operator does not have LQPNode");
+  //return lqp_node->hash();
+  size_t hash{0};
+
+  for (const auto& predicate : _predicates) {
+    boost::hash_combine(hash, predicate->type());
+    boost::hash_combine(hash, predicate->hash());
   }
 
+  boost::hash_combine(hash, _op_type);
+
+  return hash;
+}
+
+std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<OperatorType>(_op_type);
   const auto& output_feature_vector = _output_table.lock()->to_feature_vector();
   feature_vector->insert(feature_vector->end(), output_feature_vector.begin(), output_feature_vector.end());
