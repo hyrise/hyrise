@@ -216,7 +216,7 @@ if(NOT APPLE)
       CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
                                  cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
                                  (printf \"$output\\n\" && false)"
-      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make CFLAGS="-gdwarf-17" 2>&1) || (printf \"$output\\n\" && false)"
+      BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make CFLAGS=\"-gdwarf-4\" 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
       STEP_TARGETS build
       BUILD_BYPRODUCTS ${JEMALLOC_LIB_PATH}
