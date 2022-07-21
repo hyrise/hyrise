@@ -141,9 +141,20 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   const auto enable_temporary_memory_tracking = parse_result["memory_tracking"].as<bool>();
   if (enable_temporary_memory_tracking) {
     std::cout << "- Tracking temporary memory usage."
-              << "  Caution: Temporary memory usage tracking is not implemente for all operators" << std::endl;
+              << " Caution: Temporary memory usage tracking is not implemented for all operators" << std::endl; 
   } else {
     std::cout << "- Not tracking temporary memory usage" << std::endl;
+  }
+
+  std::optional<std::string> memory_tracking_output_file_path;
+  const auto memory_tracking_output_file_string = parse_result["memory_tracking_output"].as<std::string>();
+  if (!memory_tracking_output_file_string.empty()) {
+    if (enable_temporary_memory_tracking) {
+      memory_tracking_output_file_path = memory_tracking_output_file_string;
+      std::cout << "- Writing temporary memory usage stats results to '" << memory_tracking_output_file_path.value() << "'" << std::endl;
+    } else {
+      std::cout << "- CAUTION: you have specified an output file for the memory tracking results even though memory tracking is deactivated!" << std::endl;;
+    }
   }
 
   return BenchmarkConfig{benchmark_mode,
@@ -162,7 +173,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          verify,
                          cache_binary_tables,
                          metrics,
-                         enable_temporary_memory_tracking};
+                         enable_temporary_memory_tracking,
+                         memory_tracking_output_file_path};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

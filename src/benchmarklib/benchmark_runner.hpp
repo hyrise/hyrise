@@ -56,6 +56,9 @@ class BenchmarkRunner : public Noncopyable {
   // writing the file may affect the performance of concurrently running queries.
   void write_report_to_file() const;
 
+  // Create report of the temporary memory usage. This is essentially a dump of the temporary memory usage meta table.
+  void write_temporary_memory_usage_report_to_file() const;
+
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode
   void _benchmark_shuffled();
