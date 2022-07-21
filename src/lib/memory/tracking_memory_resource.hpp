@@ -24,7 +24,6 @@ class TrackingMemoryResource : public boost::container::pmr::memory_resource {
 
  protected:
   std::vector<std::pair<std::chrono::system_clock::time_point, int64_t>> _memory_timeseries;
-  std::chrono::system_clock::time_point _get_timestamp() const;
 };
 
 }  // namespace opossum
