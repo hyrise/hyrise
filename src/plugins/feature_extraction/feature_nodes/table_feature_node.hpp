@@ -7,7 +7,7 @@
 
 namespace opossum {
 
-class TableFeatureNode : public AbstractFeatureNode {
+class BaseTableFeatureNode : public AbstractFeatureNode {
  public:
   TableFeatureNode(const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
                    const uint16_t column_count, const std::shared_ptr<AbstractFeatureNode>& input_node);

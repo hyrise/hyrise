@@ -23,6 +23,8 @@ class OperatorFeatureNode : public AbstractFeatureNode {
 
   std::shared_ptr<Query> query() const;
 
+  std::shared_ptr<const AbstractOperator> operator() const;
+
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
   size_t _on_shallow_hash() const final;

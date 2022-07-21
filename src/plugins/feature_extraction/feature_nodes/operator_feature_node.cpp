@@ -70,4 +70,8 @@ std::shared_ptr<Query> OperatorFeatureNode::query() const {
   return _query;
 }
 
+std::shared_ptr<const AbstractOperator> OperatorFeatureNode::operator() const {
+  return _op;
+}
+
 }  // namespace opossum

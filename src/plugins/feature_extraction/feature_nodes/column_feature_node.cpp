@@ -52,8 +52,10 @@ ColumnFeatureNode::ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>&
           ++_run_length_segments;
           break;
       }
-    } else {
+    } else if (auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
       ++_value_segments;
+    } else {
+      Fail("Did not expect ReferenceSegment in base table");
     }
   }
 }
