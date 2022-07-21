@@ -108,8 +108,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
-  optimizer->add_rule(std::make_unique<SemiJoinRemovalRule>());
-
   return optimizer;
 }
 
