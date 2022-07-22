@@ -96,7 +96,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
 
-  return static_cast<size_t>(std::ceil(std::log2(cluster_count)));
+  return std::min(size_t{10}, static_cast<size_t>(std::ceil(std::log2(cluster_count))));
 }
 
 std::shared_ptr<const Table> JoinHash::_on_execute() {
