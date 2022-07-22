@@ -206,7 +206,7 @@ if(NOT APPLE)
   endif()
 
   include(ExternalProject)
-  set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\"")
+  set(JEMALLOC_COMPILER_ENVIRONMENT "CC=\"${CMAKE_C_COMPILER_LAUNCHER} ${CMAKE_C_COMPILER}\" CXX=\"${CMAKE_CXX_COMPILER_LAUNCHER} ${CMAKE_CXX_COMPILER}\" CFLAGS=\"-g -gdwarf-4 -gstrict-dwarf\"")
   externalproject_add(
       libjemalloc
 
@@ -214,7 +214,7 @@ if(NOT APPLE)
       BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/jemalloc
       # Executing autoconf and the configure script with suppressed output, only printing it in case of non-zero return
       CONFIGURE_COMMAND bash -c "cd <SOURCE_DIR> && if [ ! -f ./configure ] $<SEMICOLON> then autoconf $<SEMICOLON> fi && \
-                                 cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure CFLAGS=\"-gdwarf-4\" --prefix=<BINARY_DIR> 2>&1) || \
+                                 cd <BINARY_DIR> && output=$(${JEMALLOC_COMPILER_ENVIRONMENT} <SOURCE_DIR>/configure --prefix=<BINARY_DIR> 2>&1) || \
                                  (printf \"$output\\n\" && false)"
       BUILD_COMMAND bash -c "output=$(${MAC_INCLUDES} make 2>&1) || (printf \"$output\\n\" && false)"
       INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
