@@ -34,6 +34,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
+#include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
 
 using namespace std::string_literals;            // NOLINT
@@ -688,9 +689,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
   });
   /**
    * Implements SQL's CAST with the following semantics
-   *    Float/Double -> Int/Long:           Value gets floor()ed
-   *    String -> Int/Long/Float/Double:    Conversion is attempted, on error zero is returned
-   *                                        in accordance with SQLite. (" 5hallo" AS INT) -> 5
+   *    Float/Double -> Int/Long:           Value gets floor()ed.
+   *    String -> Int/Long/Float/Double:    Conversion is attempted, abort on error.
    *    NULL -> Any type                    A nulled value of the requested type is returned.
    */
 
@@ -706,7 +706,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
           const auto& argument_value = argument_result_view.value(chunk_offset);
           try {
             values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
-          } catch (boost::bad_lexical_cast&) {
+          } catch (boost::bad_lexical_cast& /* exception */) {
             std::stringstream error_message;
             error_message << "Cannot cast '" << argument_value << "' as "
                           << magic_enum::enum_name(cast_expression.data_type());
@@ -802,52 +802,70 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
   Fail("Invalid enum value");
 }
 
-template <>
-std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_expression<pmr_string>(
-    const ExtractExpression& extract_expression) {
-  const auto from_result = evaluate_expression_to_result<pmr_string>(*extract_expression.from());
-
-  switch (extract_expression.datetime_component) {
-    case DatetimeComponent::Year:
-      return _evaluate_extract_substr<0, 4>(*from_result);
-    case DatetimeComponent::Month:
-      return _evaluate_extract_substr<5, 2>(*from_result);
-    case DatetimeComponent::Day:
-      return _evaluate_extract_substr<8, 2>(*from_result);
-
-    case DatetimeComponent::Hour:
-    case DatetimeComponent::Minute:
-    case DatetimeComponent::Second:
-      Fail("Hour, Minute and Second not available in String Datetimes");
-  }
-  Fail("Invalid enum value");
-}
-
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract_expression(
     const ExtractExpression& extract_expression) {
-  Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
+  const auto datetime_component = extract_expression.datetime_component;
+  const auto& from_result = *evaluate_expression_to_result<pmr_string>(*extract_expression.from());
+
+  if constexpr (std::is_same_v<Result, int32_t>) {
+    switch (datetime_component) {
+      case DatetimeComponent::Year:
+        return _evaluate_extract_component<int32_t>(from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().year(); });
+      case DatetimeComponent::Month:
+        return _evaluate_extract_component<int32_t>(from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().month(); });
+      case DatetimeComponent::Day:
+        return _evaluate_extract_component<int32_t>(from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().day(); });
+      case DatetimeComponent::Hour:
+        return _evaluate_extract_component<int32_t>(
+            from_result, [](const auto& timestamp) { return timestamp.time_of_day().hours(); });
+      case DatetimeComponent::Minute:
+        return _evaluate_extract_component<int32_t>(
+            from_result, [](const auto& timestamp) { return timestamp.time_of_day().minutes(); });
+      case DatetimeComponent::Second:
+        Fail("SECOND must be extracted as Double");
+    }
+  }
+
+  if constexpr (std::is_same_v<Result, double>) {
+    Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double");
+    return _evaluate_extract_component<double>(from_result, [](const auto& timestamp) {
+      const auto& time_of_day = timestamp.time_of_day();
+      return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
+                                                              static_cast<double>(time_of_day.ticks_per_second());
+    });
+  }
+
+  Fail("Invalid Result type: ExtractExpression result either has to be Int or Dobule");
 }
 
-template <size_t offset, size_t count>
-std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_substr(
-    const ExpressionResult<pmr_string>& from_result) {
-  std::shared_ptr<ExpressionResult<pmr_string>> result;
-
-  pmr_vector<pmr_string> values(from_result.size());
+template <typename Result, typename Functor>
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract_component(
+    const ExpressionResult<pmr_string>& from_result, const Functor extract_component) {
+  auto values = pmr_vector<Result>(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
     const auto from_view_size = static_cast<ChunkOffset>(from_view.size());
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
-        DebugAssert(from_view.value(chunk_offset).size() == 10u,
-                    "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
-        values[chunk_offset] = from_view.value(chunk_offset).substr(offset, count);
+        const auto& value = std::string{from_view.value(chunk_offset)};
+        // Usually, checking whether the stored values are correct dates/timestamps should be checked on tuple
+        // insertion or when values are loaded from files. However, we do not have proper date/timestamp data types and
+        // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
+        // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
+        // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
+        Assert(value.size() >= 10u, "Invalid ISO 8601 extended timestamp '" + value + "'");
+        const auto& timestamp = string_to_timestamp(value);
+        Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'");
+        values[chunk_offset] = extract_component(*timestamp);
       }
     }
   });
 
-  return std::make_shared<ExpressionResult<pmr_string>>(std::move(values), from_result.nulls);
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), from_result.nulls);
 }
 
 template <typename Result>

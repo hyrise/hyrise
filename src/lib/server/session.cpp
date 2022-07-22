@@ -25,8 +25,8 @@ void Session::run() {
   while (!_terminate_session) {
     try {
       _handle_request();
-    } catch (const ClientDisconnectException&) {
       // clang-format off
+    } catch (const ClientDisconnectException& /* exception */) {
       return;
       // clang-format on
     } catch (const std::exception& e) {
