@@ -140,9 +140,11 @@ void BenchmarkRunner::run() {
   }
 
   // Create report
-  if (_config.output_file_path) {
+  if (_config.output_file_path || _config.enable_temporary_memory_tracking) {
     if (!_config.verify && !_config.enable_visualization) {
-      write_report_to_file();
+      if (_config.enable_temporary_memory_tracking) {
+        write_report_to_file();
+      }
       if (_config.enable_temporary_memory_tracking) {
         write_temporary_memory_usage_report_to_file();
       }
