@@ -35,6 +35,13 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
     v = node_b->get_column("v");
     w = node_b->get_column("w");
 
+    auto key_constraints = std::vector<TableKeyConstraint>();
+
+    key_constraints.push_back(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
+    key_constraints.push_back(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
+
+    node_b->set_key_constraints(key_constraints);
+
     rule = std::make_shared<JoinToPredicateRewriteRule>();
   }
 
