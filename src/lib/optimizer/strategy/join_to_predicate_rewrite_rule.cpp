@@ -94,7 +94,7 @@ bool JoinToPredicateRewriteRule::_check_rewrite_validity(const std::shared_ptr<J
   }
 
   // Now, we look for a predicate that can be used inside the substituting table scan node.
-  visit_lqp(removable_subtree, [&exchangable_column_expr, &removable_subtree, &valid_predicate](auto& current_node) {
+  visit_lqp(removable_subtree, [&removable_subtree, &valid_predicate](auto& current_node) {
     if (current_node->type == LQPNodeType::Union) return LQPVisitation::DoNotVisitInputs;
     else if (current_node->type != LQPNodeType::Predicate) return LQPVisitation::VisitInputs;
 
