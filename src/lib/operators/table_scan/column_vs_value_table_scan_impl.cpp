@@ -189,6 +189,14 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
         sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
           sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter);
         });
+
+        if (sorted_segment_search.no_rows_matching) {
+          ++num_chunks_with_early_out;
+        } else if (sorted_segment_search.all_rows_matching) {
+          ++num_chunks_with_all_rows_matching;
+        } else {
+          ++num_chunks_with_binary_search;
+        }
       });
     }
   });

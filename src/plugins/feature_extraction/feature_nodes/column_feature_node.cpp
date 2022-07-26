@@ -2,18 +2,19 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "feature_extraction/feature_nodes/table_feature_node.hpp"
+#include "feature_extraction/feature_nodes/abstract_table_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "storage/abstract_encoded_segment.hpp"
+#include "storage/base_value_segment.hpp"
 
 namespace opossum {
 
 ColumnFeatureNode::ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node, const ColumnID column_id)
     : AbstractFeatureNode{FeatureNodeType::Column, input_node}, _column_id{column_id} {
   Assert(_left_input->type() == FeatureNodeType::Table, "ColumnFeatureNode requires TableFeatureNode as input");
-  const auto& table_node = static_cast<TableFeatureNode&>(*_left_input);
+  const auto& table_node = static_cast<BaseTableFeatureNode&>(*_left_input);
   Assert(!table_node.registered_column(column_id), "Column already registered");
   const auto& table = table_node.table();
   _chunk_count = table->chunk_count();

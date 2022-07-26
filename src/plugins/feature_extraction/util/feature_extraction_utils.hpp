@@ -7,7 +7,7 @@
 
 #include "expression/lqp_column_expression.hpp"
 #include "feature_extraction/feature_nodes/abstract_feature_node.hpp"
-#include "feature_extraction/feature_nodes/table_feature_node.hpp"
+#include "feature_extraction/feature_nodes/base_table_feature_node.hpp"
 #include "feature_extraction/feature_types.hpp"
 
 namespace opossum {
@@ -32,7 +32,7 @@ std::vector<std::string> one_hot_headers(const std::string& prefix) {
   return result;
 }
 
-enum class FeatureNodeVisitation { VisitInputs, DoNotVisitInputs };
+enum class FeatureNodeVisitation { VisitInputs, DoNotVisitInputs, VisitLeftInput, VisitRightInput };
 
 /**
  * Calls the passed @param visitor on @param feature_npde and recursively on its INPUTS.
@@ -61,20 +61,22 @@ void visit_feature_nodes(const std::shared_ptr<FeaturNode>& feature_node, Visito
       continue;
     }
 
-    if (visitor(node) == FeatureNodeVisitation::VisitInputs) {
-      if (node->left_input()) {
+    const auto result = visitor(node);
+
+    if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitLeftInput) && node->left_input()) {
         node_queue.push(node->left_input());
-      }
-      if (node->right_input()) {
+    }
+    if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitRightInput) && node->right_input()) {
         node_queue.push(node->right_input());
-      }
     }
   }
 }
 
-std::vector<std::shared_ptr<TableFeatureNode>> find_base_tables(const std::shared_ptr<AbstractFeatureNode>& root_node);
+std::vector<std::shared_ptr<BaseTableFeatureNode>> find_base_tables(const std::shared_ptr<AbstractFeatureNode>& root_node);
 
-std::shared_ptr<TableFeatureNode> match_base_table(const LQPColumnExpression& column_expression,
-                                                   const std::vector<std::shared_ptr<TableFeatureNode>>& base_tables);
+std::shared_ptr<BaseTableFeatureNode> match_base_table(const LQPColumnExpression& column_expression,
+                                                   const std::vector<std::shared_ptr<BaseTableFeatureNode>>& base_tables);
+
+std::pair<std::shared_ptr<AbstractTableFeatureNode>, ColumnID> find_original_column(const std::shared_ptr<AbstractExpression>& expression, const std::shared_ptr<AbstractFeatureNode>& root_node);
 
 }  // namespace opossum

@@ -35,6 +35,7 @@ class ColumnFeatureNode : public AbstractFeatureNode {
   uint64_t _lz4_segments = 0;
   bool _nullable = false;
   uint64_t _sorted_segments = 0;
+  bool _references = false;
 };
 
 }  // namespace opossum

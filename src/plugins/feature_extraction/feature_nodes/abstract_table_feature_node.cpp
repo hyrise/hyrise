@@ -5,8 +5,8 @@
 namespace opossum {
 
 AbstractTableFeatureNode::AbstractTableFeatureNode(const TableNodeType node_type, const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
-                   const uint16_t column_count, std::shared_ptr<AbstractFeatureNode>& input_node)
-    : AbstractFeatureNode{FeatureNodeType::Table, input_node},
+                   const uint16_t column_count)
+    : AbstractFeatureNode{FeatureNodeType::Table, nullptr},
       _node_type{node_type},
       _table_type{table_type},
       _row_count{row_count},
@@ -16,14 +16,7 @@ AbstractTableFeatureNode::AbstractTableFeatureNode(const TableNodeType node_type
       }
 
 
-size_t TableFeatureNode::_on_shallow_hash() const {
-  auto hash = _left_input ? size_t{0} : boost::hash_value(*_table_name);
-  boost::hash_combine(hash, _node_type);
-  boost::hash_combine(hash, _table_type);
-  return hash;
-}
-
-std::shared_ptr<FeatureVector> TableFeatureNode::_on_to_feature_vector() const {
+std::shared_ptr<FeatureVector> AbstractTableFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<TableType>(_table_type);
   feature_vector->reserve(feature_vector->size() + 3);
   feature_vector->emplace_back(static_cast<Feature>(_row_count));
@@ -32,11 +25,11 @@ std::shared_ptr<FeatureVector> TableFeatureNode::_on_to_feature_vector() const {
   return feature_vector;
 }
 
-const std::vector<std::string>& TableFeatureNode::feature_headers() const {
+const std::vector<std::string>& AbstractTableFeatureNode::feature_headers() const {
   return headers();
 }
 
-const std::vector<std::string>& TableFeatureNode::headers() {
+const std::vector<std::string>& AbstractTableFeatureNode::headers() {
   static auto ohe_headers_type = one_hot_headers<TableType>("table_type.");
   static const auto headers = std::vector<std::string>{"row_count", "chunk_count", "column_count"};
   if (ohe_headers_type.size() == magic_enum::enum_count<TableType>()) {
@@ -45,22 +38,22 @@ const std::vector<std::string>& TableFeatureNode::headers() {
   return ohe_headers_type;
 }
 
-bool TableFeatureNode::is_base_table() const {
-  return _table_type == _node_type == TableNodeType::BaseTable;
+bool AbstractTableFeatureNode::is_base_table() const {
+  return _node_type == TableNodeType::BaseTable;
 }
 
-bool TableFeatureNode::registered_column(ColumnID column_id) const {
+bool AbstractTableFeatureNode::registered_column(ColumnID column_id) const {
   Assert(_columns.size() > column_id, "Invalid column ID");
   return !_columns[column_id].expired();
 }
 
-std::shared_ptr<ColumnFeatureNode> TableFeatureNode::get_column(ColumnID column_id) const {
+std::shared_ptr<ColumnFeatureNode> AbstractTableFeatureNode::get_column(ColumnID column_id) const {
   Assert(_columns.size() > column_id, "Invalid column ID");
   Assert(!_columns[column_id].expired(), "Column was not set");
   return _columns[column_id].lock();
 }
 
-void TableFeatureNode::register_column(const std::shared_ptr<ColumnFeatureNode>& column) {
+void AbstractTableFeatureNode::register_column(const std::shared_ptr<ColumnFeatureNode>& column) {
   const auto column_id = column->column_id();
   Assert(_columns.size() > column_id, "Invalid column ID");
   Assert(_columns[column_id].expired(), "Column was already set");

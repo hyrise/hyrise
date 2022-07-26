@@ -2,6 +2,7 @@
 
 #include "abstract_feature_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "feature_extraction/feature_nodes/result_table_feature_node.hpp"
 
 namespace opossum {
 
@@ -23,7 +24,9 @@ class OperatorFeatureNode : public AbstractFeatureNode {
 
   std::shared_ptr<Query> query() const;
 
-  std::shared_ptr<const AbstractOperator> operator() const;
+  std::shared_ptr<const AbstractOperator> get_operator() const;
+
+  std::shared_ptr<ResultTableFeatureNode> output_table() const;
 
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
@@ -35,7 +38,7 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   std::shared_ptr<Query> _query;
 
   std::vector<std::shared_ptr<AbstractFeatureNode>> _predicates;
-  std::weak_ptr<AbstractFeatureNode> _output_table;
+  std::shared_ptr<ResultTableFeatureNode> _output_table;
 
   bool _is_root_node = false;
 };

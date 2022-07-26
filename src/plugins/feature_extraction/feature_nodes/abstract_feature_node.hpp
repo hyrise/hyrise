@@ -27,7 +27,7 @@ class AbstractFeatureNode : public std::enable_shared_from_this<AbstractFeatureN
  protected:
   virtual std::shared_ptr<FeatureVector> _on_to_feature_vector() const = 0;
 
-  virtual size_t _on_shallow_hash() const = 0;
+  virtual size_t _on_shallow_hash() const;
 
   FeatureNodeType _type;
 

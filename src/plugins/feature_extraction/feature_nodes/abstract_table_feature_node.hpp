@@ -7,10 +7,10 @@ namespace opossum {
 
 class AbstractTableFeatureNode : public AbstractFeatureNode {
  public:
-  enum class TableNodeType : { BaseTable, ResultTable };
+  enum class TableNodeType { BaseTable, ResultTable };
 
-  TableFeatureNode(const TableNodeType node_type, const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
-                   const uint16_t column_count, std::shared_ptr<AbstractFeatureNode>& input_node);
+  AbstractTableFeatureNode(const TableNodeType node_type, const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
+                   const uint16_t column_count);
 
   const std::vector<std::string>& feature_headers() const final;
 
@@ -26,7 +26,7 @@ class AbstractTableFeatureNode : public AbstractFeatureNode {
 
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
-  size_t _on_shallow_hash() const final;
+  //size_t _on_shallow_hash() const final;
 
   TableNodeType _node_type;
   TableType _table_type;

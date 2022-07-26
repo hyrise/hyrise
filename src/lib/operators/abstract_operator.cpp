@@ -127,6 +127,8 @@ void AbstractOperator::execute() {
         const auto& segment = chunk->get_segment(column_id);
         if (auto encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
           segment_types[chunk_id][column_id] = encoded_segment->encoding_type();
+        } else if (auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
+          segment_types[chunk_id][column_id] = EncodingType::Unencoded;
         }
       }
     }
