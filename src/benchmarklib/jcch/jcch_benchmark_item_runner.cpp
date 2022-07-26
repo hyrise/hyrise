@@ -138,7 +138,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 4 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -147,7 +147,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 5 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(1));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(1))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -157,7 +157,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 6 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -212,7 +212,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 12 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(2));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(2))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -228,7 +228,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 14 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -239,7 +239,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
       // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
@@ -307,7 +307,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 20 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(1));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(1))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "%'");
