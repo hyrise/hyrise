@@ -245,6 +245,13 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
                     join_predicate = nullptr;
                     continue;
                 }
+                // check whether both operands are column expressions
+                const auto op_left = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
+                const auto op_right = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
+                if ((!op_left) || (!op_right)) {
+                    join_predicate = nullptr;
+                    continue;
+                }
                 break;
             }
 
