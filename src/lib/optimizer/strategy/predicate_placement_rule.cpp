@@ -16,6 +16,8 @@
 #include "logical_query_plan/union_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
+#include "expression/evaluation/like_matcher.hpp"
+#include "expression/value_expression.hpp"
 
 namespace opossum {
 
@@ -519,8 +521,28 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
     } else if (const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
                predicate_expression && (predicate_expression->predicate_condition == PredicateCondition::Like ||
                                         predicate_expression->predicate_condition == PredicateCondition::NotLike)) {
+      std::shared_ptr<AbstractExpression> value_expression{};
+      if (predicate_expression->left_operand()->type == ExpressionType::Value) {
+        value_expression = predicate_expression->left_operand();
+      }
+
+      if (predicate_expression->left_operand()->type == ExpressionType::Value) {
+        if (value_expression) {
+          return ExpressionVisitation::VisitArguments;
+        }
+        value_expression = predicate_expression->left_operand();
+      }
+      if (!value_expression) {
+        predicate_is_expensive = true;
+        return ExpressionVisitation::DoNotVisitArguments;
+      }
+
+      const auto predicate = boost::get<pmr_string>(static_cast<ValueExpression&>(*value_expression).value);
+      if (LikeMatcher::contains_wildcard(predicate)) {
       predicate_is_expensive = true;
       return ExpressionVisitation::DoNotVisitArguments;
+      }
+      return ExpressionVisitation::VisitArguments;
     } else {
       return ExpressionVisitation::VisitArguments;
     }
