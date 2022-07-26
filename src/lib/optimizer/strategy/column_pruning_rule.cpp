@@ -243,22 +243,25 @@ void recursively_gather_required_expressions(
 }
 
 void annotate_join_unused_inputs(
-  const std::shared_ptr<AbstractLQPNode>& node,
-  const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+    const std::shared_ptr<AbstractLQPNode>& node,
+    const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   // Identify whether the left or right side of the given join node are not needed anywhere further up in the LQP
   // If one of the sides is not used, add this information to the join node
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  
+
   auto left_input_is_used = false;
   auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
     for (const auto& required_expression : required_expressions_by_node.at(output)) {
-      if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_is_used = true;
-      if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_is_used = true;
+      if (expression_evaluable_on_lqp(required_expression, *node->left_input()))
+        left_input_is_used = true;
+      if (expression_evaluable_on_lqp(required_expression, *node->right_input()))
+        right_input_is_used = true;
     }
   }
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
-  if (left_input_is_used && right_input_is_used) return;
+  if (left_input_is_used && right_input_is_used)
+    return;
 
   if (!left_input_is_used) {
     auto l = LQPInputSide::Left;
@@ -436,7 +439,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
         }
       } break;
 
-      case LQPNodeType::Join: {   
+      case LQPNodeType::Join: {
         try_join_to_semi_rewrite(node, required_expressions_by_node);
         annotate_join_unused_inputs(node, required_expressions_by_node);
       } break;
