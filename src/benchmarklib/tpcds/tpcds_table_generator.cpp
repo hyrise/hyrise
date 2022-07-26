@@ -116,7 +116,9 @@ std::pair<ds_key_t, ds_key_t> prepare_for_table(int table_id) {
   return {k_first_row, k_row_count};
 }
 
-pmr_string boolean_to_string(bool boolean) { return pmr_string(1, boolean ? 'Y' : 'N'); }
+pmr_string boolean_to_string(bool boolean) {
+  return pmr_string(1, boolean ? 'Y' : 'N');
+}
 
 pmr_string zip_to_string(int32_t zip) {
   auto result = pmr_string(5, '?');

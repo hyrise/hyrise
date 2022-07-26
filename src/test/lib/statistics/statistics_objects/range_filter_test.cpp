@@ -57,7 +57,9 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   const pmr_vector<TypeParam> test_vector{std::numeric_limits<TypeParam>::max(),
                                           std::numeric_limits<TypeParam>::lowest()};
@@ -131,7 +133,9 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
     }
   }
   {
-    if (!HYRISE_DEBUG) GTEST_SKIP();
+    if (!HYRISE_DEBUG) {
+      GTEST_SKIP();
+    }
 
     // Throw when range filter shall include 0 range values.
     EXPECT_THROW((RangeFilter<TypeParam>::build_filter(this->_values, 0)), std::logic_error);

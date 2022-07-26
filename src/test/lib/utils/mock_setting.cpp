@@ -20,8 +20,12 @@ void MockSetting::set(const std::string& value) {
   _value = value;
 }
 
-size_t MockSetting::get_calls() const { return _get_calls; }
+size_t MockSetting::get_calls() const {
+  return _get_calls;
+}
 
-size_t MockSetting::set_calls() const { return _get_calls; }
+size_t MockSetting::set_calls() const {
+  return _get_calls;
+}
 
 }  // namespace opossum

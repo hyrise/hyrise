@@ -92,7 +92,9 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
   }
 }
 
-TEST_F(FixedStringVectorTest, Size) { EXPECT_EQ(fixed_string_vector->size(), 3u); }
+TEST_F(FixedStringVectorTest, Size) {
+  EXPECT_EQ(fixed_string_vector->size(), 3u);
+}
 
 TEST_F(FixedStringVectorTest, Erase) {
   EXPECT_EQ(fixed_string_vector->size(), 3u);

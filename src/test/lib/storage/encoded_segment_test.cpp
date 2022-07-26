@@ -49,7 +49,9 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     }
   }
 
-  std::shared_ptr<ValueSegment<int32_t>> _create_int_value_segment() { return _create_int_value_segment(_row_count()); }
+  std::shared_ptr<ValueSegment<int32_t>> _create_int_value_segment() {
+    return _create_int_value_segment(_row_count());
+  }
 
   std::shared_ptr<ValueSegment<int32_t>> _create_int_value_segment(size_t row_count) {
     auto values = pmr_vector<int32_t>(row_count);

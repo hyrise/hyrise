@@ -53,9 +53,17 @@ class SegmentPosition final : public AbstractSegmentPosition<T> {
   SegmentPosition(const T& value, const bool null_value, const ChunkOffset& chunk_offset)
       : _value{value}, _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
-  const T& value() const override { return _value; }
-  bool is_null() const override { return _null_value; }
-  ChunkOffset chunk_offset() const override { return _chunk_offset; }
+  const T& value() const override {
+    return _value;
+  }
+
+  bool is_null() const override {
+    return _null_value;
+  }
+
+  ChunkOffset chunk_offset() const override {
+    return _chunk_offset;
+  }
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
@@ -77,9 +85,17 @@ class NonNullSegmentPosition final : public AbstractSegmentPosition<T> {
   NonNullSegmentPosition(const T& value, const ChunkOffset& chunk_offset)
       : _value{value}, _chunk_offset{chunk_offset} {}
 
-  const T& value() const override { return _value; }
-  bool is_null() const override { return false; }
-  ChunkOffset chunk_offset() const override { return _chunk_offset; }
+  const T& value() const override {
+    return _value;
+  }
+
+  bool is_null() const override {
+    return false;
+  }
+
+  ChunkOffset chunk_offset() const override {
+    return _chunk_offset;
+  }
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization
@@ -101,9 +117,17 @@ class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank>
   IsNullSegmentPosition(const bool null_value, const ChunkOffset& chunk_offset)
       : _null_value{null_value}, _chunk_offset{chunk_offset} {}
 
-  const boost::blank& value() const override { return _blank; }
-  bool is_null() const override { return _null_value; }
-  ChunkOffset chunk_offset() const override { return _chunk_offset; }
+  const boost::blank& value() const override {
+    return _blank;
+  }
+
+  bool is_null() const override {
+    return _null_value;
+  }
+
+  ChunkOffset chunk_offset() const override {
+    return _chunk_offset;
+  }
 
  private:
   // The alignment improves the suitability of the iterator for (auto-)vectorization

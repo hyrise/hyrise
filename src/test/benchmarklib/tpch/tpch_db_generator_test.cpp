@@ -32,7 +32,9 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
 #if (__has_feature(thread_sanitizer) || __has_feature(address_sanitizer))
   // We verified thread and address safety above. As this is quite expensive to sanitize, don't perform the following
   // check - double parantheses mark the code as explicitly dead.
-  if ((true)) return;
+  if ((true)) {
+    return;
+  }
 #endif
 #endif
 

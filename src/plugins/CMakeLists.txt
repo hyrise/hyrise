@@ -12,8 +12,6 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
-    # For provider.hpp
-    target_include_directories(${PARSED_ARGS_NAME} PRIVATE ${CMAKE_BINARY_DIR})
     target_link_libraries_system(
         ${PARSED_ARGS_NAME}
 

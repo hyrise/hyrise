@@ -22,11 +22,15 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
   // Note that this is not equal to XOR. In the case handled here, we know that both sides cannot be true at the same
   // time. XOR would require us to check if both are true and discard the row if they are. As such, even if we later
   // introduce PredicateCondition::Xor, we cannot automatically use ::All for that expression.
-  if (predicates.size() != 2) return false;
+  if (predicates.size() != 2) {
+    return false;
+  }
 
   const auto first_binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[0]);
   const auto second_binary_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicates[1]);
-  if (!first_binary_predicate || !second_binary_predicate) return false;
+  if (!first_binary_predicate || !second_binary_predicate) {
+    return false;
+  }
 
   // Check for pattern `col_x < 'val' OR col_x >= 'vam'`
   if (first_binary_predicate->predicate_condition != PredicateCondition::LessThan ||
@@ -90,7 +94,9 @@ void PredicateSplitUpRule::_apply_to_plan_without_subqueries(const std::shared_p
   // _split_conjunction() and _split_disjunction() split up logical expressions by calling each other recursively.
   for (const auto& predicate_node : predicate_nodes) {
     _split_conjunction(predicate_node);
-    if (_split_disjunctions) _split_disjunction(predicate_node);
+    if (_split_disjunctions) {
+      _split_disjunction(predicate_node);
+    }
   }
 }
 

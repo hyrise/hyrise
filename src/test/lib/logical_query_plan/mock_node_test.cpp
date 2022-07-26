@@ -81,7 +81,9 @@ TEST_F(MockNodeTest, Copy) {
   EXPECT_EQ(*_mock_node_b, *_mock_node_b->deep_copy());
 }
 
-TEST_F(MockNodeTest, NodeExpressions) { ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u); }
+TEST_F(MockNodeTest, NodeExpressions) {
+  ASSERT_EQ(_mock_node_a->node_expressions.size(), 0u);
+}
 
 TEST_F(MockNodeTest, UniqueConstraints) {
   // Add constraints to MockNode
