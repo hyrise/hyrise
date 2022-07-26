@@ -509,12 +509,15 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
    * We (heuristically) consider a predicate to be expensive if it contains a correlated subquery. Otherwise, we
    * consider it to be cheap
    */
-  auto predicate_contains_correlated_subquery = false;
+  auto predicate_is_expensive = false;
   visit_expression(predicate, [&](const auto& sub_expression) {
     if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
         subquery_expression && subquery_expression->is_correlated()) {
-      predicate_contains_correlated_subquery = true;
+      predicate_is_expensive = true;
       return ExpressionVisitation::DoNotVisitArguments;
+    } else if (const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(sub_expression);
+        predicate_expression && predicate_expression->predicate_condition == PredicateCondition::Like || predicate_expression->predicate_condition == PredicateCondition::NotLike) {
+        predicate_is_expensive == true;
     } else {
       return ExpressionVisitation::VisitArguments;
     }
