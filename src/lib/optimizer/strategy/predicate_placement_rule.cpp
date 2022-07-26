@@ -538,7 +538,7 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
       }
 
       const auto predicate = boost::get<pmr_string>(static_cast<ValueExpression&>(*value_expression).value);
-      if (LikeMatcher::contains_wildcard(predicate)) {
+      if (LikeMatcher::get_index_of_next_wildcard(predicate, 0) == 1) {
       predicate_is_expensive = true;
       return ExpressionVisitation::DoNotVisitArguments;
       }
