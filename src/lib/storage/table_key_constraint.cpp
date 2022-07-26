@@ -2,8 +2,11 @@
 
 namespace opossum {
 
-TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type, std::optional<CommitID> latest_validated_commit/* = std::nullopt*/)
-    : AbstractTableConstraint(std::move(init_columns)), _key_type(init_key_type), _latest_validated_commit(latest_validated_commit) {}
+TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type,
+                                       std::optional<CommitID> latest_validated_commit /* = std::nullopt*/)
+    : AbstractTableConstraint(std::move(init_columns)),
+      _key_type(init_key_type),
+      _latest_validated_commit(latest_validated_commit) {}
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;

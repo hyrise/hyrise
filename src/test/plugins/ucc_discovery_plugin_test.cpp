@@ -10,6 +10,12 @@
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
+#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/union_node.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
@@ -19,14 +25,6 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
-
-#include "expression/expression_functional.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/union_node.hpp"
 
 namespace opossum {
 
@@ -47,18 +45,9 @@ class UccDiscoveryPluginTest : public BaseTest {
     _predicate_col_A = table_node_A->get_column("c");
     _predicate_col_B = table_node_B->get_column("d");
 
-    _lqp = JoinNode::make(
-      JoinMode::Inner, 
-      equals_(_join_col_A, _join_col_B),
-      PredicateNode::make(
-        equals_(_predicate_col_A, "unique"),
-        table_node_A
-      ),
-      PredicateNode::make(
-        equals_(_predicate_col_B, "not"),
-        table_node_B
-      )
-    );
+    _lqp = JoinNode::make(JoinMode::Inner, equals_(_join_col_A, _join_col_B),
+                          PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A),
+                          PredicateNode::make(equals_(_predicate_col_B, "not"), table_node_B));
   }
 
   void TearDown() override {
@@ -66,9 +55,9 @@ class UccDiscoveryPluginTest : public BaseTest {
   }
 
  protected:
-
-  std::shared_ptr<std::vector<UCCCandidate>> _generate_valid_candidates (std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
-     return _uccPlugin.generate_valid_candidates(root_node, column_candidate);
+  std::shared_ptr<std::vector<UCCCandidate>> _generate_valid_candidates(
+      std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
+    return _uccPlugin.generate_valid_candidates(root_node, column_candidate);
   }
 
   UCCCandidates _identify_ucc_candidates() {
@@ -90,7 +79,6 @@ class UccDiscoveryPluginTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _join_col_B{};
   std::shared_ptr<LQPColumnExpression> _predicate_col_A{};
   std::shared_ptr<LQPColumnExpression> _predicate_col_B{};
-
 };
 
 TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
@@ -98,7 +86,6 @@ TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
   pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
   pm.unload_plugin("hyriseUccDiscoveryPlugin");
 }
-
 
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
@@ -124,14 +111,8 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
 
-  const auto lqp = AggregateNode::make(
-    expression_vector(_join_col_A),
-    expression_vector(),
-    PredicateNode::make(
-      equals_(_predicate_col_A, "unique"),
-      table_node_A
-    )
-  );
+  const auto lqp = AggregateNode::make(expression_vector(_join_col_A), expression_vector(),
+                                       PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A));
 
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
@@ -152,17 +133,9 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGenerated) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
   const auto table_node_B = StoredTableNode::make(_table_name_B);
 
-  const auto lqp =  UnionNode::make(
-    SetOperationMode::All,
-    PredicateNode::make(
-      equals_(_predicate_col_A, "unique"),
-      table_node_A
-    ),
-    PredicateNode::make(
-    equals_(_predicate_col_B, "not"),
-    table_node_B
-    )
-  );
+  const auto lqp =
+      UnionNode::make(SetOperationMode::All, PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A),
+                      PredicateNode::make(equals_(_predicate_col_B, "not"), table_node_B));
 
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
@@ -173,7 +146,6 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGenerated) {
 
   EXPECT_EQ(ucc_candidates.size(), 0);
 }
-
 
 TEST_F(UccDiscoveryPluginTest, PluginFullRun) {
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
@@ -214,8 +186,6 @@ TEST_F(UccDiscoveryPluginTest, PluginFullRun) {
 
   // ensure we clear the LQP again
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);
-
 }
-
 
 }  // namespace opossum
