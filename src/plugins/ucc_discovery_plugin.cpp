@@ -103,7 +103,6 @@ void UccDiscoveryPlugin::discover_uccs() const {
         } else if (std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
           const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
           const auto& dict = dict_segment->dictionary();
-          const auto& attr_vector = dict_segment->attribute_vector();
 
           all_values->insert(begin(*dict), end(*dict));
           if (all_values->size() == all_values_size + dict->size()) {
