@@ -2,6 +2,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
+#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/logical_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -510,19 +511,21 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
    * consider it to be cheap
    */
   auto predicate_is_expensive = false;
-  visit_expression(predicate, [&](const auto& sub_expression) {
-    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+  visit_expression(predicate, [&](const auto& expression) {
+    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(expression);
         subquery_expression && subquery_expression->is_correlated()) {
       predicate_is_expensive = true;
       return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(sub_expression);
-        predicate_expression && predicate_expression->predicate_condition == PredicateCondition::Like || predicate_expression->predicate_condition == PredicateCondition::NotLike) {
-        predicate_is_expensive == true;
+    } else if (const auto predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
+               predicate_expression && (predicate_expression->predicate_condition == PredicateCondition::Like ||
+                                        predicate_expression->predicate_condition == PredicateCondition::NotLike)) {
+      predicate_is_expensive = true;
+      return ExpressionVisitation::DoNotVisitArguments;
     } else {
       return ExpressionVisitation::VisitArguments;
     }
   });
-  return predicate_contains_correlated_subquery;
+  return predicate_is_expensive;
 }
 
 bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<AbstractLQPNode>& node,
