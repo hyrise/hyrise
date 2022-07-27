@@ -60,8 +60,6 @@ TEST_F(JoinToPredicateRewriteRuleTest, SimplePredicateSemiJoin) {
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
 
-  lqp = lqp->deep_copy();
-
   const auto actual_lqp = apply_rule(rule, lqp);
 
   const auto subquery = ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{u},
@@ -72,8 +70,12 @@ TEST_F(JoinToPredicateRewriteRuleTest, SimplePredicateSemiJoin) {
   const auto expected_lqp =
   ProjectionNode::make(std::vector<std::shared_ptr<AbstractExpression>>{b},
     PredicateNode::make(equals_(a, std::make_shared<LQPSubqueryExpression>(subquery, param_ids, param_expressions)),
-      node_b));
+      node_a));
   // clang-format on
+
+  // We explicitly need to empty the mock node's key constraints here, otherwise, the node's equality comparison doesn't work
+  const auto empty_constraints = TableKeyConstraints{};
+  node_b->set_key_constraints(empty_constraints);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
