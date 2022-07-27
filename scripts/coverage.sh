@@ -38,7 +38,7 @@ path_to_compiler=''
 unamestr=`uname`
 if [[ "$unamestr" == 'Darwin' ]]; then
    # Use homebrew clang for OS X
-   path_to_compiler='/usr/local/opt/llvm/bin/'
+   path_to_compiler="$(brew --prefix llvm)/bin/"
 fi
 
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
