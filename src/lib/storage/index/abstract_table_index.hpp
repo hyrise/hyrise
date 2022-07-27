@@ -14,8 +14,8 @@ namespace opossum {
 /**
  * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the
  * virtual properties is meant to represent the iterator of an empty collection. Therefore it shall not be dereferenced
- * (like and end-iterator), increments do not make a change, and equality comparisons with other instances of this class
- * always result in true.
+ * (like and end-iterator), increments do not make a change, and equality comparisons with other instances of this
+ * class always result in true.
  */
 class BaseTableIndexIterator {
  public:
@@ -64,7 +64,7 @@ class IteratorWrapper {
 };
 
 /**
- * This is a concept parallel to chunk based indexes superclass AbstractChunkIndex.
+ * This is a concept parallel to chunk based indexes' superclass AbstractChunkIndex.
  * It allows indexing multiple chunks of a table column.
  * It is assumed that all table index types support equality lookup queries (equals and not-equals queries).
  * The IteratorWrapper type is used as the return type for all lookup types.
@@ -84,7 +84,8 @@ class AbstractTableIndex : private Noncopyable {
    *
    * Calls _equals() of the most derived class.
    * @param value used to query the index.
-   * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the table index.
+   * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the
+   * table index.
    */
   IteratorPair range_equals(const AllTypeVariant& value) const;
 
@@ -93,7 +94,9 @@ class AbstractTableIndex : private Noncopyable {
    *
    * Calls _not_equals() of the most derived class.
    * @param value used to query the index.
-   * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the first occurence of a value equals to the searched entry and the range from the end of the value until the end of the map.
+   * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the
+   * first occurence of a value equals to the searched entry and the range from the end of the value until the end of
+   * the map.
    */
   std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
 
@@ -132,7 +135,7 @@ class AbstractTableIndex : private Noncopyable {
   TableIndexType type() const;
 
   /**
-   * Returns the memory usage of this Index in bytes
+   * Returns the memory usage of this Index in bytes.
    */
   size_t memory_usage() const;
 

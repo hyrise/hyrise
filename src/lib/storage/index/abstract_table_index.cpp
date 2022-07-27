@@ -3,7 +3,7 @@
 namespace opossum {
 
 BaseTableIndexIterator::reference BaseTableIndexIterator::operator*() const {
-  throw std::logic_error("cannot dereference on empty iterator");
+  Fail("cannot dereference on empty iterator");
 }
 
 BaseTableIndexIterator& BaseTableIndexIterator::operator++() {

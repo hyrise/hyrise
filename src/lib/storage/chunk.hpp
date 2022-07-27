@@ -99,16 +99,15 @@ class Chunk : private Noncopyable {
   template <typename Index>
   std::shared_ptr<AbstractChunkIndex> create_index(
       const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index) {
-    DebugAssert(([&]() {
-                  for (auto segment : segments_to_index) {
-                    const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
-                    if (segment_it == _segments.cend()) {
-                      return false;
-                    }
-                  }
-                  return true;
-                }()),
-                "All segments must be part of the chunk.");
+    
+    if constexpr (HYRISE_DEBUG) {
+      for (auto segment : segments_to_index) {
+        const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
+        if (segment_it == _segments.cend()) {
+          Fail("All segments must be part of the chunk.");
+        }
+      }
+    }
 
     auto index = std::make_shared<Index>(segments_to_index);
     _indexes.emplace_back(index);
