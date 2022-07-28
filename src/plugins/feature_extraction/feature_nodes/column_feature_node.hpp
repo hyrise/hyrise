@@ -1,17 +1,25 @@
 #pragma once
 
 #include "abstract_feature_node.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "storage/table.hpp"
+#include "expression/abstract_expression.hpp"
+#include "feature_extraction/feature_nodes/abstract_feature_node.hpp"
+#include "feature_extraction/feature_nodes/segment_feature_node.hpp"
+#include "operators/operator_performance_data.hpp"
 
 namespace opossum {
 
 class ColumnFeatureNode : public AbstractFeatureNode {
  public:
-  ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node, const ColumnID column_id);
+  ColumnFeatureNode(const bool is_reference, const std::shared_ptr<AbstractFeatureNode>& input_node,
+                    const ColumnID column_id, const std::shared_ptr<AbstractFeatureNode>& original_node,
+                    const ColumnID original_column_id);
 
-  static std::shared_ptr<ColumnFeatureNode> from_column_expression(
-      const std::shared_ptr<AbstractFeatureNode>& operator_node, const std::shared_ptr<AbstractExpression>& expression);
+  ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>& input_node, const ColumnID column_id,
+                    const std::shared_ptr<AbstractFeatureNode>& original_node, const ColumnID original_column_id);
+
+  static std::shared_ptr<ColumnFeatureNode> from_expression(const std::shared_ptr<AbstractFeatureNode>& operator_node,
+                                                            const std::shared_ptr<AbstractExpression>& expression,
+                                                            const ColumnID column_id);
 
   const std::vector<std::string>& feature_headers() const final;
 
@@ -27,15 +35,17 @@ class ColumnFeatureNode : public AbstractFeatureNode {
   DataType _data_type;
 
   ChunkID _chunk_count = ChunkID{0};
-  uint64_t _value_segments = 0;
+  /*uint64_t _value_segments = 0;
   uint64_t _dictionary_segments = 0;
   uint64_t _fixed_string_dictionary_segments = 0;
   uint64_t _for_segments = 0;
   uint64_t _run_length_segments = 0;
-  uint64_t _lz4_segments = 0;
+  uint64_t _lz4_segments = 0;*/
   bool _nullable = false;
   uint64_t _sorted_segments = 0;
-  bool _references = false;
+  bool _is_reference = false;
+
+  std::vector<std::shared_ptr<SegmentFeatureNode>> _segments;
 };
 
 }  // namespace opossum

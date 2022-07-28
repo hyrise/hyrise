@@ -13,6 +13,13 @@ OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOpe
       _run_time{op->performance_data->walltime},
       _output_table{ResultTableFeatureNode::from_operator(op)} {}
 
+std::shared_ptr<OperatorFeatureNode> OperatorFeatureNode::from_pqp(const std::shared_ptr<const AbstractOperator>& op) {
+  const auto left_input = op->left_input() ? OperatorFeatureNode::from_pqp(op->left_input()) : nullptr;
+  const auto right_input = op->right_input() ? OperatorFeatureNode::from_pqp(op->right_input()) : nullptr;
+
+  return std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
+}
+
 size_t OperatorFeatureNode::_on_shallow_hash() const {
   const auto& lqp_node = _op->lqp_node;
   Assert(lqp_node, "Operator does not have LQPNode");

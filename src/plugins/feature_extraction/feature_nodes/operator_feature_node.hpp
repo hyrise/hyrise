@@ -1,8 +1,8 @@
 #pragma once
 
 #include "abstract_feature_node.hpp"
-#include "operators/abstract_operator.hpp"
 #include "feature_extraction/feature_nodes/result_table_feature_node.hpp"
+#include "operators/abstract_operator.hpp"
 
 namespace opossum {
 
@@ -11,6 +11,8 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   OperatorFeatureNode(const std::shared_ptr<const AbstractOperator>& op,
                       const std::shared_ptr<AbstractFeatureNode>& left_input,
                       const std::shared_ptr<AbstractFeatureNode>& right_input = nullptr);
+
+  std::shared_ptr<OperatorFeatureNode> from_pqp(const std::shared_ptr<const AbstractOperator>& op);
 
   const std::vector<std::string>& feature_headers() const final;
 

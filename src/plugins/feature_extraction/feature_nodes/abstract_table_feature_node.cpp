@@ -4,17 +4,17 @@
 
 namespace opossum {
 
-AbstractTableFeatureNode::AbstractTableFeatureNode(const TableNodeType node_type, const TableType table_type, const uint64_t row_count, const uint64_t chunk_count,
-                   const uint16_t column_count)
+AbstractTableFeatureNode::AbstractTableFeatureNode(const TableNodeType node_type, const TableType table_type,
+                                                   const uint64_t row_count, const uint32_t chunk_count,
+                                                   const uint16_t column_count)
     : AbstractFeatureNode{FeatureNodeType::Table, nullptr},
       _node_type{node_type},
       _table_type{table_type},
       _row_count{row_count},
       _chunk_count{chunk_count},
       _column_count{column_count} {
-        _columns.resize(column_count);
-      }
-
+  _columns.resize(column_count);
+}
 
 std::shared_ptr<FeatureVector> AbstractTableFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<TableType>(_table_type);
@@ -59,6 +59,5 @@ void AbstractTableFeatureNode::register_column(const std::shared_ptr<ColumnFeatu
   Assert(_columns[column_id].expired(), "Column was already set");
   _columns[column_id] = column;
 }
-
 
 }  // namespace opossum

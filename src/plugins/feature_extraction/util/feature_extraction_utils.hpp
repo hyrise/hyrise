@@ -63,20 +63,25 @@ void visit_feature_nodes(const std::shared_ptr<FeaturNode>& feature_node, Visito
 
     const auto result = visitor(node);
 
-    if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitLeftInput) && node->left_input()) {
-        node_queue.push(node->left_input());
+    if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitLeftInput) &&
+        node->left_input()) {
+      node_queue.push(node->left_input());
     }
-    if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitRightInput) && node->right_input()) {
-        node_queue.push(node->right_input());
+    if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitRightInput) &&
+        node->right_input()) {
+      node_queue.push(node->right_input());
     }
   }
 }
 
-std::vector<std::shared_ptr<BaseTableFeatureNode>> find_base_tables(const std::shared_ptr<AbstractFeatureNode>& root_node);
+std::vector<std::shared_ptr<BaseTableFeatureNode>> find_base_tables(
+    const std::shared_ptr<AbstractFeatureNode>& root_node);
 
-std::shared_ptr<BaseTableFeatureNode> match_base_table(const LQPColumnExpression& column_expression,
-                                                   const std::vector<std::shared_ptr<BaseTableFeatureNode>>& base_tables);
+std::shared_ptr<BaseTableFeatureNode> match_base_table(
+    const LQPColumnExpression& column_expression,
+    const std::vector<std::shared_ptr<BaseTableFeatureNode>>& base_tables);
 
-std::pair<std::shared_ptr<AbstractTableFeatureNode>, ColumnID> find_original_column(const std::shared_ptr<AbstractExpression>& expression, const std::shared_ptr<AbstractFeatureNode>& root_node);
+std::pair<std::shared_ptr<AbstractTableFeatureNode>, ColumnID> find_original_column(
+    const std::shared_ptr<AbstractExpression>& expression, const std::shared_ptr<AbstractFeatureNode>& root_node);
 
 }  // namespace opossum

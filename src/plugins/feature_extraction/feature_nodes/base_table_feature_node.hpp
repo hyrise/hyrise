@@ -9,12 +9,11 @@ namespace opossum {
 
 class BaseTableFeatureNode : public AbstractTableFeatureNode {
  public:
-  BaseTableFeatureNode(const uint64_t row_count, const uint64_t chunk_count,
-                   const uint16_t column_count, const std::shared_ptr<Table>& table, const std::string& table_name);
-
+  BaseTableFeatureNode(const uint64_t row_count, const uint32_t chunk_count, const uint16_t column_count,
+                       const std::shared_ptr<Table>& table, const std::string& table_name);
 
   static std::shared_ptr<BaseTableFeatureNode> from_table(const std::shared_ptr<Table>& table,
-                                                      const std::string& table_name);
+                                                          const std::string& table_name);
 
   bool is_base_table() const;
 
@@ -27,6 +26,11 @@ class BaseTableFeatureNode : public AbstractTableFeatureNode {
   void register_column(const std::shared_ptr<ColumnFeatureNode>& column);
 
   std::shared_ptr<Table> table() const;
+
+  bool column_is_nullable(const ColumnID column_id) const final;
+  DataType column_data_type(const ColumnID column_id) const final;
+  uint32_t sorted_segment_count(const ColumnID column_id) const final;
+  uint32_t chunk_count() const final;
 
  protected:
   size_t _on_shallow_hash() const final;

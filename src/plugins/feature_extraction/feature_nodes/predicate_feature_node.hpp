@@ -16,11 +16,11 @@ class PredicateFeatureNode : public AbstractFeatureNode {
 
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
-  size_t _on_shallow_hash() const final;
 
   PredicateCondition _predicate_condition;
   bool _column_vs_value = false;
   bool _column_vs_column = false;
+  bool _is_complex = false;
 };
 
 }  // namespace opossum

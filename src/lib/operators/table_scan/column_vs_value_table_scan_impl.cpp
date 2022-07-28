@@ -41,7 +41,6 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++num_chunks_with_binary_search;
         return;
       }
     }
@@ -174,7 +173,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
 void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
-                                                      const SortMode sort_mode) const {
+                                                      const SortMode sort_mode) {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 

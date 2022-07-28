@@ -39,7 +39,8 @@ size_t AbstractFeatureNode::hash() const {
 
   visit_feature_nodes(shared_from_this(), [&hash](const auto& node) {
     if (node) {
-      Assert(node->type() == FeatureNodeType::Table || node->type() == FeatureNodeType::Operator, "Expected hash only on table and operator nodes");
+      Assert(node->type() == FeatureNodeType::Table || node->type() == FeatureNodeType::Operator,
+             "Expected hash only on table and operator nodes");
       boost::hash_combine(hash, node->type());
       boost::hash_combine(hash, node->_on_shallow_hash());
       return FeatureNodeVisitation::VisitInputs;

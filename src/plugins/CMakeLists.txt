@@ -56,6 +56,8 @@ add_plugin(NAME hyriseCostModelFeaturePlugin
     feature_extraction/feature_nodes/column_feature_node.hpp
     feature_extraction/feature_nodes/operator_feature_node.cpp
     feature_extraction/feature_nodes/operator_feature_node.hpp
+    feature_extraction/feature_nodes/predicate_feature_node.cpp
+    feature_extraction/feature_nodes/predicate_feature_node.hpp
     feature_extraction/feature_nodes/result_table_feature_node.cpp
     feature_extraction/feature_nodes/result_table_feature_node.hpp
     feature_extraction/feature_nodes/segment_feature_node.cpp
