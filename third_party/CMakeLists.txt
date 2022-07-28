@@ -110,8 +110,10 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c
     ${ZSTD_LIBRARY_DIR}/common/xxhash.h
     ${ZSTD_LIBRARY_DIR}/common/zstd_common.c
-    ${ZSTD_LIBRARY_DIR}/common/zstd_errors.h
+    ${ZSTD_LIBRARY_DIR}/common/zstd_deps.h
     ${ZSTD_LIBRARY_DIR}/common/zstd_internal.h
+    ${ZSTD_LIBRARY_DIR}/common/zstd_trace.h
+    ${ZSTD_LIBRARY_DIR}/compress/clevels.h
     ${ZSTD_LIBRARY_DIR}/compress/fse_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/hist.c
     ${ZSTD_LIBRARY_DIR}/compress/hist.h
@@ -133,6 +135,7 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/compress/zstd_lazy.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm.h
+    ${ZSTD_LIBRARY_DIR}/compress/zstd_ldm_geartab.h
     ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.c
     ${ZSTD_LIBRARY_DIR}/compress/zstd_opt.h
     ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
@@ -147,11 +150,10 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
-    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
-    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
-    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.h
+    ${ZSTD_LIBRARY_DIR}/zdict.h
     ${ZSTD_LIBRARY_DIR}/zstd.h
+    ${ZSTD_LIBRARY_DIR}/zstd_errors.h
 )
 
 target_include_directories(
