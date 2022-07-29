@@ -28,6 +28,13 @@ target_link_libraries(
  
     hyrise
     hyriseBenchmarkLib
+)
+
+# Ignore -Wshift-sign-overflow of google benchmark introduced with
+# https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
+target_link_libraries_systems(
+    hyriseMicroBenchmarks
+
     benchmark
 )
 
@@ -46,6 +53,13 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
+)
+
+# Ignore -Wshift-sign-overflow of google benchmark introduced with
+# https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
+target_link_libraries_systems(
+    hyriseBenchmarkPlayground
+
     benchmark
 )
 
