@@ -29,15 +29,16 @@ target_link_libraries(
 
     hyrise
     hyriseBenchmarkLib
+    benchmark::benchmark
 )
 
 # Ignore -Wshift-sign-overflow of google benchmark introduced with
 # https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
-target_link_libraries_system(
-    hyriseMicroBenchmarks
+#target_link_libraries_system(
+#    hyriseMicroBenchmarks
 
-    benchmark
-)
+#    benchmark
+#)
 
 add_executable(
     hyriseBenchmarkPlayground
@@ -49,21 +50,23 @@ add_executable(
     micro_benchmark_utils.cpp
     micro_benchmark_utils.hpp
 )
+
 target_link_libraries(
     hyriseBenchmarkPlayground
     PRIVATE
 
     hyrise
     hyriseBenchmarkLib
+    benchmark::benchmark
 )
 
 # Ignore -Wshift-sign-overflow of google benchmark introduced with
 # https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
-target_link_libraries_system(
-    hyriseBenchmarkPlayground
-
-    benchmark
-)
+# target_link_libraries_system(
+#     hyriseBenchmarkPlayground
+# 
+#     benchmark
+# )
 
 # General purpose benchmark runner
 add_executable(
