@@ -1,5 +1,6 @@
 #include "cost_model_feature_plugin.hpp"
 
+#include "feature_extraction/feature_types.hpp"
 #include "hyrise.hpp"
 
 namespace opossum {
@@ -38,8 +39,9 @@ void CostModelFeaturePlugin::export_operator_features() const {
   const auto& cache_snapshot = pqp_cache->snapshot();
   for (const auto& [key, entry] : cache_snapshot) {
     const auto& query_hash = QueryExporter::query_hash(key);
+    const auto query = std::make_shared<Query>(query_hash, key, *entry.frequency);
     _query_exporter->add_query(query_hash, key, *entry.frequency);
-    _plan_exporter->add_plan(query_hash, entry.value);
+    _plan_exporter->add_plan(query, entry.value);
   }
 }
 

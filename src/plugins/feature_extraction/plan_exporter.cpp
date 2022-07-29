@@ -1,10 +1,11 @@
 #include "plan_exporter.hpp"
 
+#include "feature_extraction/feature_nodes/operator_feature_node.hpp"
+
 namespace opossum {
 
-void PlanExporter::add_plan(const std::string& hash, const std::shared_ptr<const AbstractOperator>& pqp) {
-  Assert(!_pqps.contains(hash), "Query with same hash seen before");
-  _pqps[hash] = pqp;
+void PlanExporter::add_plan(const std::shared_ptr<Query>& query, const std::shared_ptr<const AbstractOperator>& pqp) {
+  _feature_graphs.push_back(OperatorFeatureNode::from_pqp(pqp, query));
 }
 
 void PlanExporter::export_plans(const std::string& file_name) {

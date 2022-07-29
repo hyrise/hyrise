@@ -18,8 +18,8 @@ class OperatorFeatureNode : public AbstractFeatureNode {
                       const std::shared_ptr<AbstractFeatureNode>& left_input,
                       const std::shared_ptr<AbstractFeatureNode>& right_input = nullptr);
 
-  std::shared_ptr<OperatorFeatureNode> from_pqp(const std::shared_ptr<const AbstractOperator>& op,
-                                                const std::shared_ptr<Query>& query);
+  static std::shared_ptr<OperatorFeatureNode> from_pqp(const std::shared_ptr<const AbstractOperator>& op,
+                                                       const std::shared_ptr<Query>& query);
 
   const std::vector<std::string>& feature_headers() const final;
 
