@@ -105,6 +105,7 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/common/mem.h
     ${ZSTD_LIBRARY_DIR}/common/pool.c
     ${ZSTD_LIBRARY_DIR}/common/pool.h
+    ${ZSTD_LIBRARY_DIR}/common/portability_macros.h
     ${ZSTD_LIBRARY_DIR}/common/threading.c
     ${ZSTD_LIBRARY_DIR}/common/threading.h
     ${ZSTD_LIBRARY_DIR}/common/xxhash.c
@@ -141,6 +142,7 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.c
     ${ZSTD_LIBRARY_DIR}/compress/zstdmt_compress.h
     ${ZSTD_LIBRARY_DIR}/decompress/huf_decompress.c
+    ${ZSTD_LIBRARY_DIR}/decompress/huf_decompress_amd64.S
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_ddict.c
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_ddict.h
     ${ZSTD_LIBRARY_DIR}/decompress/zstd_decompress.c
@@ -150,7 +152,9 @@ add_library (zstd
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.c
     ${ZSTD_LIBRARY_DIR}/dictBuilder/cover.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/divsufsort.h
     ${ZSTD_LIBRARY_DIR}/dictBuilder/fastcover.c
+    ${ZSTD_LIBRARY_DIR}/dictBuilder/zdict.c
     ${ZSTD_LIBRARY_DIR}/zdict.h
     ${ZSTD_LIBRARY_DIR}/zstd.h
     ${ZSTD_LIBRARY_DIR}/zstd_errors.h
