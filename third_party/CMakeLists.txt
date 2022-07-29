@@ -25,7 +25,6 @@ target_include_directories(
     libzstd_static
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/zstd/lib>
-    $<INSTALL_INTERFACE:lib>
 )
 
 # Build sql-parser library
