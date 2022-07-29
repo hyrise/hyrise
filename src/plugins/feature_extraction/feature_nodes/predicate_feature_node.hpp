@@ -7,7 +7,8 @@ namespace opossum {
 
 class PredicateFeatureNode : public AbstractFeatureNode {
  public:
-  PredicateFeatureNode(const std::shared_ptr<AbstractExpression>& expression,
+  PredicateFeatureNode(const std::shared_ptr<AbstractExpression>& lqp_expression,
+                       const std::shared_ptr<AbstractExpression>& pqp_expression,
                        const std::shared_ptr<AbstractFeatureNode>& operator_node);
 
   const std::vector<std::string>& feature_headers() const final;

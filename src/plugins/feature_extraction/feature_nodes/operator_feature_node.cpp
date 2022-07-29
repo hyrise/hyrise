@@ -2,6 +2,20 @@
 
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 
+namespace {
+
+using namespace opossum;
+
+std::shared_ptr<OperatorFeatureNode> _recursively_build_graph_from_pqp(
+    const std::shared_ptr<const AbstractOperator>& op) {
+  const auto left_input = op->left_input() ? _recursively_build_graph_from_pqp(op->left_input()) : nullptr;
+  const auto right_input = op->right_input() ? _recursively_build_graph_from_pqp(op->right_input()) : nullptr;
+
+  return std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
+}
+
+}  // namespace
+
 namespace opossum {
 
 OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOperator>& op,
@@ -13,11 +27,11 @@ OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOpe
       _run_time{op->performance_data->walltime},
       _output_table{ResultTableFeatureNode::from_operator(op)} {}
 
-std::shared_ptr<OperatorFeatureNode> OperatorFeatureNode::from_pqp(const std::shared_ptr<const AbstractOperator>& op) {
-  const auto left_input = op->left_input() ? OperatorFeatureNode::from_pqp(op->left_input()) : nullptr;
-  const auto right_input = op->right_input() ? OperatorFeatureNode::from_pqp(op->right_input()) : nullptr;
-
-  return std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
+std::shared_ptr<OperatorFeatureNode> OperatorFeatureNode::from_pqp(const std::shared_ptr<const AbstractOperator>& op,
+                                                                   const std::shared_ptr<Query>& query) {
+  auto root_node = _recursively_build_graph_from_pqp(op);
+  root_node->set_as_root_node(query);
+  return root_node;
 }
 
 size_t OperatorFeatureNode::_on_shallow_hash() const {
@@ -64,7 +78,7 @@ bool OperatorFeatureNode::is_root_node() const {
   return _is_root_node;
 }
 
-void OperatorFeatureNode::set_as_root_node(std::shared_ptr<Query>& query) {
+void OperatorFeatureNode::set_as_root_node(const std::shared_ptr<Query>& query) {
   Assert(!_is_root_node, "Root Node Property should only be set once");
   _is_root_node = true;
   _query = query;
@@ -81,6 +95,10 @@ std::shared_ptr<const AbstractOperator> OperatorFeatureNode::get_operator() cons
 
 std::shared_ptr<ResultTableFeatureNode> OperatorFeatureNode::output_table() const {
   return _output_table;
+}
+
+const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::subqueries() const {
+  return _subqueries;
 }
 
 }  // namespace opossum

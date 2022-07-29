@@ -44,7 +44,8 @@ enum class FeatureNodeVisitation { VisitInputs, DoNotVisitInputs, VisitLeftInput
  *                     Returns `FeatureNodeVisitation`
  */
 template <typename FeaturNode, typename Visitor>
-void visit_feature_nodes(const std::shared_ptr<FeaturNode>& feature_node, Visitor visitor) {
+void visit_feature_nodes(const std::shared_ptr<FeaturNode>& feature_node, Visitor visitor,
+                         bool visit_subqueries = false) {
   using AbstractFeatureNodeType =
       std::conditional_t<std::is_const_v<FeaturNode>, const AbstractFeatureNode, AbstractFeatureNode>;
 
@@ -70,6 +71,12 @@ void visit_feature_nodes(const std::shared_ptr<FeaturNode>& feature_node, Visito
     if ((result == FeatureNodeVisitation::VisitInputs || result == FeatureNodeVisitation::VisitRightInput) &&
         node->right_input()) {
       node_queue.push(node->right_input());
+    }
+
+    if (result == FeatureNodeVisitation::VisitInputs && visit_subqueries && node->type() == FeatureNodeType::Operator) {
+      for (const auto& subquery : node->subqueries()) {
+        node_queue.push(subquery);
+      }
     }
   }
 }
