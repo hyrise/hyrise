@@ -3,6 +3,12 @@
 #include "abstract_feature_node.hpp"
 #include "feature_extraction/feature_nodes/result_table_feature_node.hpp"
 #include "operators/abstract_operator.hpp"
+#include "operators/aggregate_hash.hpp"
+#include "operators/index_scan.hpp"
+#include "operators/join_hash.hpp"
+#include "operators/join_index.hpp"
+#include "operators/projection.hpp"
+#include "operators/table_scan.hpp"
 
 namespace opossum {
 
@@ -33,9 +39,21 @@ class OperatorFeatureNode : public AbstractFeatureNode {
 
   const std::vector<std::shared_ptr<AbstractFeatureNode>>& subqueries() const final;
 
+  void initialize();
+
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
   size_t _on_shallow_hash() const final;
+
+  void _handle_general_operator(const AbstractOperator& op);
+  void _handle_join_hash(const JoinHash& join_hash);
+  void _handle_join_index(const JoinIndex& join_index);
+  void _handle_table_scan(const TableScan& table_scan);
+  void _handle_index_scan(const IndexScan& index_scan);
+  void _handle_aggregate(const AggregateHash& aggregate);
+  void _handle_projection(const Projection& projection);
+
+  void _add_subqueries(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
   std::shared_ptr<const AbstractOperator> _op;
   OperatorType _op_type;

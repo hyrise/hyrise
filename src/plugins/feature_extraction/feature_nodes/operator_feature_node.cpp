@@ -1,6 +1,9 @@
 #include "operator_feature_node.hpp"
 
+#include "expression/pqp_subquery_expression.hpp"
+#include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
+#include "logical_query_plan/predicate_node.hpp"
 
 namespace {
 
@@ -11,7 +14,9 @@ std::shared_ptr<OperatorFeatureNode> _recursively_build_graph_from_pqp(
   const auto left_input = op->left_input() ? _recursively_build_graph_from_pqp(op->left_input()) : nullptr;
   const auto right_input = op->right_input() ? _recursively_build_graph_from_pqp(op->right_input()) : nullptr;
 
-  return std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
+  auto feature_node = std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
+  feature_node->initialize();
+  return feature_node;
 }
 
 }  // namespace
@@ -26,6 +31,32 @@ OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOpe
       _op_type{op->type()},
       _run_time{op->performance_data->walltime},
       _output_table{ResultTableFeatureNode::from_operator(op)} {}
+
+void OperatorFeatureNode::initialize() {
+  switch (_op->type()) {
+    case OperatorType::JoinHash:
+      _handle_join_hash(static_cast<const JoinHash&>(*_op));
+      break;
+    case OperatorType::JoinIndex:
+      _handle_join_index(static_cast<const JoinIndex&>(*_op));
+      break;
+    case OperatorType::TableScan:
+      _handle_table_scan(static_cast<const TableScan&>(*_op));
+      break;
+    case OperatorType::IndexScan:
+      _handle_index_scan(static_cast<const IndexScan&>(*_op));
+      break;
+    case OperatorType::Aggregate:
+      _handle_aggregate(static_cast<const AggregateHash&>(*_op));
+      break;
+    case OperatorType::Projection:
+      _handle_projection(static_cast<const Projection&>(*_op));
+      break;
+    default:
+      _handle_general_operator(*_op);
+      break;
+  }
+}
 
 std::shared_ptr<OperatorFeatureNode> OperatorFeatureNode::from_pqp(const std::shared_ptr<const AbstractOperator>& op,
                                                                    const std::shared_ptr<Query>& query) {
@@ -99,6 +130,30 @@ std::shared_ptr<ResultTableFeatureNode> OperatorFeatureNode::output_table() cons
 
 const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::subqueries() const {
   return _subqueries;
+}
+
+void OperatorFeatureNode::_handle_general_operator(const AbstractOperator& op) {}
+void OperatorFeatureNode::_handle_join_hash(const JoinHash& join_hash) {}
+void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {}
+void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
+  const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
+  _predicates.push_back(
+      std::make_shared<PredicateFeatureNode>(predicate_node.predicate(), table_scan.predicate(), shared_from_this()));
+  _add_subqueries(table_scan.predicate()->arguments);
+}
+
+void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {}
+void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {}
+void OperatorFeatureNode::_handle_projection(const Projection& projection) {}
+
+void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
+  for (const auto& expression : expressions) {
+    if (auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression)) {
+      if (!subquery_expression->is_correlated()) {
+        _subqueries.push_back(_recursively_build_graph_from_pqp(subquery_expression->pqp));
+      }
+    }
+  }
 }
 
 }  // namespace opossum

@@ -68,6 +68,14 @@ add_plugin(NAME hyriseCostModelFeaturePlugin
   DEPS
     sqlparser
     magic_enum
+    uninitialized_vector
+)
+
+target_link_libraries_system(
+    hyriseCostModelFeaturePlugin
+
+    flat-hash-map
+    robin_map
 )
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
