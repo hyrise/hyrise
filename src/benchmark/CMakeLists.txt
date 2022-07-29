@@ -25,7 +25,8 @@ add_executable(
 
 target_link_libraries(
     hyriseMicroBenchmarks
- 
+    PRIVATE
+
     hyrise
     hyriseBenchmarkLib
 )
@@ -50,6 +51,7 @@ add_executable(
 )
 target_link_libraries(
     hyriseBenchmarkPlayground
+    PRIVATE
 
     hyrise
     hyriseBenchmarkLib
