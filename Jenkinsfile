@@ -272,7 +272,7 @@ try {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
               }
             }
-            Parallel Part1: {
+            parallel Part1: {
               stage("clang-relwithdebinfo:thread-sanitizer1") {
                 if (env.BRANCH_NAME == 'master' || full_ci) {
                   sh "cd clang-relwithdebinfo-thread-sanitizer"
