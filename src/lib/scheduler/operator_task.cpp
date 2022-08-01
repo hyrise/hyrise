@@ -8,7 +8,6 @@
 #include "operators/abstract_read_write_operator.hpp"
 
 #include "scheduler/job_task.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace {
 
@@ -115,8 +114,6 @@ void OperatorTask::_on_execute() {
         Fail("Trying to execute an operator for a transaction that has been rolled back by the user");
     }
   }
-
-  DTRACE_PROBE2(HYRISE, OPERATOR_TASKS, reinterpret_cast<uintptr_t>(_op.get()), reinterpret_cast<uintptr_t>(this));
 
   _op->execute();
 

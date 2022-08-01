@@ -6,7 +6,6 @@
 #include "scheduler/abstract_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
 #include "worker.hpp"
 
 namespace hyrise {

@@ -1,6 +1,5 @@
 #include "sql_pipeline_builder.hpp"
 #include "hyrise.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace hyrise {
 
@@ -40,11 +39,8 @@ SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() {
 }
 
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
-  DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
   auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache);
-  DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_per_statement().size(), _sql.c_str(),
-                reinterpret_cast<uintptr_t>(this));
   return pipeline;
 }
 

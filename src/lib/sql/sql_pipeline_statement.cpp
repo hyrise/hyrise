@@ -25,7 +25,6 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace hyrise {
 
@@ -273,9 +272,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   const auto started = std::chrono::steady_clock::now();
 
-  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
-                reinterpret_cast<uintptr_t>(this));
-
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   if (has_failed()) {
@@ -319,11 +315,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
   if (!_result_table) {
     _query_has_output = false;
   }
-
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
-                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
-                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
-                reinterpret_cast<uintptr_t>(this));
 
   return {SQLPipelineStatus::Success, _result_table};
 }

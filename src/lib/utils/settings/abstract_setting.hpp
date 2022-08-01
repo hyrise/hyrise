@@ -10,7 +10,7 @@ namespace hyrise {
  * The component configured by the setting instantiates and destroys a setting.
  *
  * Settings need to be registered and deregistered in the SettingsManager.
- * If a component ends its lifecycle (e.g., a plugin in unloaded) and does not deregister its settings,
+ * If a component ends its lifecycle (e.g., a plugin is unloaded) and does not deregister its settings,
  * this might lead to undefined behavior.
  *
  * Settings provide a getter/setter that returns/requires a std::string.

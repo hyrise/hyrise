@@ -139,9 +139,9 @@ class ExpressionEvaluator final {
   std::shared_ptr<ExpressionResult<Result>> _evaluate_unary_minus_expression(
       const UnaryMinusExpression& unary_minus_expression);
 
-  template <size_t offset, size_t count>
-  std::shared_ptr<ExpressionResult<pmr_string>> _evaluate_extract_substr(
-      const ExpressionResult<pmr_string>& from_result);
+  template <typename Result, typename Functor>
+  std::shared_ptr<ExpressionResult<Result>> _evaluate_extract_component(const ExpressionResult<pmr_string>& from_result,
+                                                                        const Functor extract_component);
 
   template <typename Result>
   std::shared_ptr<ExpressionResult<Result>> _evaluate_exists_expression(const ExistsExpression& exists_expression);
