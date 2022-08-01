@@ -64,8 +64,8 @@ class IteratorWrapper {
 };
 
 /**
- * This is a concept parallel to chunk based indexes' superclass AbstractChunkIndex.
- * It allows indexing multiple chunks of a table column.
+ * This is a superclass for all table indexes.
+ * It allows indexing segments of multiple chunks of a table column.
  * It is assumed that all table index types support equality lookup queries (equals and not-equals queries).
  * The IteratorWrapper type is used as the return type for all lookup types.
  */
@@ -82,7 +82,7 @@ class AbstractTableIndex : private Noncopyable {
   /**
    * Searches for all positions of the entry within the table index.
    *
-   * Calls _equals() of the most derived class.
+   * Calls _equals() of the derived class.
    * @param value used to query the index.
    * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the
    * table index.
@@ -92,7 +92,7 @@ class AbstractTableIndex : private Noncopyable {
   /**
    * Searches for all positions that do not equal to the entry in the table index.
    *
-   * Calls _not_equals() of the most derived class.
+   * Calls _not_equals() of the derived class.
    * @param value used to query the index.
    * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the
    * first occurence of a value equals to the searched entry and the range from the end of the value until the end of
@@ -103,7 +103,7 @@ class AbstractTableIndex : private Noncopyable {
   /**
    * Returns an Iterator to the position of the first indexed non-NULL element.
    * Iterating from cbegin() to cend() will result in a position list.
-   * Calls _cbegin() of the most derived class.
+   * Calls _cbegin() of the derived class.
    * @return An Iterator on the position of first non-NULL element of the Index.
    */
   Iterator cbegin() const;
@@ -111,7 +111,7 @@ class AbstractTableIndex : private Noncopyable {
   /**
    * Returns an Iterator past the position of the last indexed non-NULL element.
    * Iterating from cbegin() to cend() will result in a position list.
-   * Calls _cend() of the most derived class.
+   * Calls _cend() of the derived class.
    * @return An Iterator on the end of the non-NULL elements (one after the last element).
    */
   Iterator cend() const;
