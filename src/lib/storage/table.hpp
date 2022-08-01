@@ -197,22 +197,7 @@ class Table : private Noncopyable {
                           const std::string& name = "");
 
   template <typename Index>
-  void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "") {
-    static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
-                  "'Index' template argument is not an AbstractChunkIndex");
-
-    const auto chunk_index_type = get_chunk_index_type_of<Index>();
-
-    const auto chunk_count = _chunks.size();
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      auto chunk = std::atomic_load(&_chunks[chunk_id]);
-      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-
-      chunk->create_index<Index>(column_ids);
-    }
-    ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
-    _chunk_indexes_statistics.emplace_back(indexes_statistics);
-  }
+  void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
 
   /**
    * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.

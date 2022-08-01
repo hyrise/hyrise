@@ -13,7 +13,10 @@
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/segment_iterate.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
@@ -379,6 +382,24 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
   _table_indexes_statistics.emplace_back(table_indexes_statistics);
 }
 
+template <typename Index>
+  void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
+    static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
+                  "'Index' template argument is not an AbstractChunkIndex");
+
+    const auto chunk_index_type = get_chunk_index_type_of<Index>();
+
+    const auto chunk_count = _chunks.size();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      auto chunk = std::atomic_load(&_chunks[chunk_id]);
+      Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
+
+      chunk->create_index<Index>(column_ids);
+    }
+    ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
+    _chunk_indexes_statistics.emplace_back(indexes_statistics);
+  }
+
 const TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
@@ -494,6 +515,9 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
 }
 
 template void Table::create_table_index<PartialHashIndex>(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
-                          const std::string& name = "");
+                          const std::string& name);
+template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids, const std::string& name);
+template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vector<ColumnID>& column_ids, const std::string& name);
+template void Table::create_chunk_index<AdaptiveRadixTreeIndex>(const std::vector<ColumnID>& column_ids, const std::string& name);
 
 }  // namespace opossum
