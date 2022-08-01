@@ -268,11 +268,27 @@ try {
             stage("clang-relwithdebinfo:thread-sanitizer") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
-                sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
+              },
+            }, Parallel Part1: {
+              stage("clang-relwithdebinfo:thread-sanitizer1") {
+                if (env.BRANCH_NAME == 'master' || full_ci) {
+                  sh "cd clang-relwithdebinfo-thread-sanitizer"
+                  sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseTest clang-relwithdebinfo-thread-sanitizer"
+		  sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseBenchmarkTPCH -s .01 --verify -r 100 --scheduler --clients 10"
+		} else {
+		  Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
+		}
+              }
+	    }, Part2: {
+              stage("clang-relwithdebinfo:thread-sanitizer2") {
+		if (env.BRANCH_NAME == 'master' || full_ci) {
+                  sh "cd clang-relwithdebinfo-thread-sanitizer"
+		  sh "TSAN_OPTIONS=\"history_size=7 suppressions=resources/.tsan-ignore.txt\" ./clang-relwithdebinfo-thread-sanitizer/hyriseSystemTest ${tests_excluded_in_sanitizer_builds} clang-relwithdebinfo-thread-sanitizer"
+		} else {
+		  Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
+		}
               }
             }
           }, clangDebugCoverage: {
