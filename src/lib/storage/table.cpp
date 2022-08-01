@@ -361,20 +361,27 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
                 "'Index' template argument is not an AbstractTableIndex");
   Assert(column_id < _column_definitions.size(),
          "Cannot create index: passed column id is larger than the highest table's column id.");
+
+  std::shared_ptr<AbstractTableIndex> table_index = nullptr;
   TableIndexType table_index_type = get_table_index_type_of<Index>();
   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-  chunks_to_index.reserve(chunk_ids.size());
-  for (const auto& chunk_id : chunk_ids) {
-    const auto& chunk = get_chunk(chunk_id);
-    Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
-    chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
-  }
-  std::shared_ptr<AbstractTableIndex> table_index = nullptr;
-  if (!chunks_to_index.empty()) {
-    table_index = std::make_shared<Index>(chunks_to_index, column_id);
-  } else {
+
+  // If no ChunkIDs are passed an empty index is created.
+  if (chunk_ids.empty()) {
     const auto column_data_type = _column_definitions[column_id].data_type;
     table_index = std::make_shared<Index>(column_data_type, column_id);
+  }
+
+  else {
+    chunks_to_index.reserve(chunk_ids.size());
+    
+    for (const auto& chunk_id : chunk_ids) {
+      const auto& chunk = get_chunk(chunk_id);
+      Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
+      chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
+    }
+
+    table_index = std::make_shared<Index>(chunks_to_index, column_id);
   }
   _table_indexes.emplace_back(table_index);
 
