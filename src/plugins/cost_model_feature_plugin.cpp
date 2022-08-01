@@ -21,6 +21,7 @@ void CostModelFeaturePlugin::stop() {
   Assert(_query_exporter, "QueryExporter was never set");
   Assert(_plan_exporter, "QueryExporter was never set");
 
+  std::filesystem::create_directories(_output_path->get());
   _output_path->unregister_at_settings_manager();
   _query_exporter->export_queries(_output_path->get());
   _plan_exporter->export_plans(_output_path->get());
@@ -28,7 +29,7 @@ void CostModelFeaturePlugin::stop() {
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 CostModelFeaturePlugin::provided_user_executable_functions() const {
-  return {{"ExportOperatorFeatures", [&]() { this->export_operator_features(); }}};
+  return {{"ExtractOperatorFeatures", [&]() { this->export_operator_features(); }}};
 }
 
 void CostModelFeaturePlugin::export_operator_features() const {
@@ -36,12 +37,32 @@ void CostModelFeaturePlugin::export_operator_features() const {
   const auto& pqp_cache = Hyrise::get().default_pqp_cache;
   Assert(pqp_cache, "No PQPCache");
 
+  const auto non_selection_operators = std::unordered_set<OperatorType>{OperatorType::ChangeMetaTable,
+                                                                        OperatorType::CreateTable,
+                                                                        OperatorType::CreatePreparedPlan,
+                                                                        OperatorType::CreateView,
+                                                                        OperatorType::DropTable,
+                                                                        OperatorType::DropView,
+                                                                        OperatorType::Delete,
+                                                                        OperatorType::Export,
+                                                                        OperatorType::Import,
+                                                                        OperatorType::Insert,
+                                                                        OperatorType::JoinVerification,
+                                                                        OperatorType::Print,
+                                                                        OperatorType::Update,
+                                                                        OperatorType::Mock};
   const auto& cache_snapshot = pqp_cache->snapshot();
   for (const auto& [key, entry] : cache_snapshot) {
+    const auto& pqp = entry.value;
+    // Skip maintenance operators
+    if (non_selection_operators.contains(pqp->type())) {
+      continue;
+    }
+
     const auto& query_hash = QueryExporter::query_hash(key);
     const auto query = std::make_shared<Query>(query_hash, key, *entry.frequency);
-    _query_exporter->add_query(query_hash, key, *entry.frequency);
-    _plan_exporter->add_plan(query, entry.value);
+    _query_exporter->add_query(query);
+    _plan_exporter->add_plan(query, pqp);
   }
 }
 

@@ -76,4 +76,14 @@ std::pair<std::shared_ptr<AbstractTableFeatureNode>, ColumnID> find_original_col
   return std::make_pair(original_table, original_column);
 }
 
+void feature_vector_to_stream(std::ostream& stream, const FeatureVector& feature_vector) {
+  const auto element_count = feature_vector.size();
+  for (auto element_id = size_t{0}; element_id < element_count; ++element_id) {
+    stream << feature_vector[element_id];
+    if (element_id + 1 < element_count) {
+      stream << ";";
+    }
+  }
+}
+
 }  // namespace opossum

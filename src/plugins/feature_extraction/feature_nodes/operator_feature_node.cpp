@@ -1,8 +1,10 @@
 #include "operator_feature_node.hpp"
 
 #include "expression/pqp_subquery_expression.hpp"
+#include "feature_extraction/feature_nodes/base_table_feature_node.hpp"
 #include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
+#include "hyrise.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 
 namespace {
@@ -51,6 +53,9 @@ void OperatorFeatureNode::initialize() {
       break;
     case OperatorType::Projection:
       _handle_projection(static_cast<const Projection&>(*_op));
+      break;
+    case OperatorType::GetTable:
+      _handle_get_table(static_cast<const GetTable&>(*_op));
       break;
     default:
       _handle_general_operator(*_op);
@@ -146,6 +151,12 @@ void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {}
 void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {}
 void OperatorFeatureNode::_handle_projection(const Projection& projection) {}
 
+void OperatorFeatureNode::_handle_get_table(const GetTable& get_table) {
+  const auto& table_name = get_table.table_name();
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  _left_input = BaseTableFeatureNode::from_table(table, table_name);
+}
+
 void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   for (const auto& expression : expressions) {
     if (auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression)) {
@@ -154,6 +165,10 @@ void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<Abst
       }
     }
   }
+}
+
+const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::predicates() const {
+  return _predicates;
 }
 
 }  // namespace opossum

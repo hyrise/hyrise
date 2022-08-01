@@ -56,8 +56,4 @@ size_t AbstractFeatureNode::_on_shallow_hash() const {
   Fail("Not implemented");
 }
 
-const std::vector<std::shared_ptr<AbstractFeatureNode>>& AbstractFeatureNode::subqueries() const {
-  Fail("Subquery should only be called from Operator nodes");
-}
-
 }  // namespace opossum

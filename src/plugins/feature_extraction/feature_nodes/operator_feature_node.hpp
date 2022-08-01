@@ -4,6 +4,7 @@
 #include "feature_extraction/feature_nodes/result_table_feature_node.hpp"
 #include "operators/abstract_operator.hpp"
 #include "operators/aggregate_hash.hpp"
+#include "operators/get_table.hpp"
 #include "operators/index_scan.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
@@ -37,7 +38,9 @@ class OperatorFeatureNode : public AbstractFeatureNode {
 
   std::shared_ptr<ResultTableFeatureNode> output_table() const;
 
-  const std::vector<std::shared_ptr<AbstractFeatureNode>>& subqueries() const final;
+  const std::vector<std::shared_ptr<AbstractFeatureNode>>& subqueries() const;
+
+  const std::vector<std::shared_ptr<AbstractFeatureNode>>& predicates() const;
 
   void initialize();
 
@@ -52,6 +55,7 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   void _handle_index_scan(const IndexScan& index_scan);
   void _handle_aggregate(const AggregateHash& aggregate);
   void _handle_projection(const Projection& projection);
+  void _handle_get_table(const GetTable& get_table);
 
   void _add_subqueries(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 

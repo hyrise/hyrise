@@ -132,6 +132,9 @@ void AbstractOperator::execute() {
         }
       }
     }
+
+    performance_data->output_columns_nullable = _output->columns_are_nullable();
+    performance_data->output_data_types = _output->column_data_types();
   }
   performance_data->walltime = performance_timer.lap();
 

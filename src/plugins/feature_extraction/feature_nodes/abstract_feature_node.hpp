@@ -24,8 +24,6 @@ class AbstractFeatureNode : public std::enable_shared_from_this<AbstractFeatureN
 
   FeatureNodeType type() const;
 
-  virtual const std::vector<std::shared_ptr<AbstractFeatureNode>>& subqueries() const;
-
  protected:
   virtual std::shared_ptr<FeatureVector> _on_to_feature_vector() const = 0;
 

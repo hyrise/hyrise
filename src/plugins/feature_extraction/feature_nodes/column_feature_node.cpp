@@ -105,7 +105,7 @@ size_t ColumnFeatureNode::_on_shallow_hash() const {
 
 std::shared_ptr<FeatureVector> ColumnFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<DataType>(_data_type);
-  feature_vector->reserve(_feature_vector->size() + 3);
+  feature_vector->reserve(feature_vector->size() + 3);
   feature_vector->emplace_back(static_cast<Feature>(_nullable));
   feature_vector->emplace_back(static_cast<Feature>(_is_reference));
   feature_vector->emplace_back(static_cast<Feature>(_sorted_segments));
@@ -128,6 +128,10 @@ const std::vector<std::string>& ColumnFeatureNode::headers() {
 
 ColumnID ColumnFeatureNode::column_id() const {
   return _column_id;
+}
+
+const std::vector<std::shared_ptr<SegmentFeatureNode>>& ColumnFeatureNode::segments() const {
+  return _segments;
 }
 
 }  // namespace opossum

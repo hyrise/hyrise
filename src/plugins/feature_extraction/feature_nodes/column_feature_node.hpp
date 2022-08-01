@@ -25,6 +25,8 @@ class ColumnFeatureNode : public AbstractFeatureNode {
 
   static const std::vector<std::string>& headers();
 
+  const std::vector<std::shared_ptr<SegmentFeatureNode>>& segments() const;
+
   ColumnID column_id() const;
 
  protected:
