@@ -38,7 +38,7 @@ path_to_compiler=''
 unamestr=`uname`
 if [[ "$unamestr" == 'Darwin' ]]; then
    # Use homebrew clang for OS X
-   path_to_compiler='/usr/local/opt/llvm/bin/'
+   path_to_compiler="$(brew --prefix llvm)/bin/"
 fi
 
 # TODO(Martin): explain why clang-11 (in case it works at all ...)
