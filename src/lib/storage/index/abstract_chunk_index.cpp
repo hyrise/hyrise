@@ -24,7 +24,6 @@ size_t AbstractChunkIndex::estimate_memory_consumption(ChunkIndexType type, Chun
     case ChunkIndexType::Invalid:
       Fail("ChunkIndexType is invalid.");
   }
-  Fail("GCC thinks this is reachable.");
 }
 
 AbstractChunkIndex::AbstractChunkIndex(const ChunkIndexType type) : _type{type} {}
