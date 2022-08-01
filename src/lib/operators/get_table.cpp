@@ -39,30 +39,38 @@ const std::string& GetTable::name() const {
 
 std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
-
-  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
-
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
 
-  stream << name() << separator << "(" << table_name() << ")";
-
-  stream << separator << "pruned:" << separator;
+  stream << AbstractOperator::description(description_mode) << separator;
+  stream << "(" << table_name() << ")" << separator;
+  stream << "pruned:" << separator;
   stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";
-  if (description_mode == DescriptionMode::SingleLine) stream << ",";
-  stream << separator << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
+  if (description_mode == DescriptionMode::SingleLine) {
+    stream << ",";
+  }
+  stream << separator;
+  stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();
 }
 
-const std::string& GetTable::table_name() const { return _name; }
+const std::string& GetTable::table_name() const {
+  return _name;
+}
 
-const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const { return _pruned_chunk_ids; }
+const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const {
+  return _pruned_chunk_ids;
+}
 
-const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _pruned_column_ids; }
+const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
+  return _pruned_column_ids;
+}
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<GetTable>(_name, _pruned_chunk_ids, _pruned_column_ids);
 }
 

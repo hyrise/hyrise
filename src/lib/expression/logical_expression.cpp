@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 #include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {
@@ -25,13 +25,18 @@ LogicalExpression::LogicalExpression(const LogicalOperator init_logical_operator
     : AbstractExpression(ExpressionType::Logical, {left_operand, right_operand}),
       logical_operator(init_logical_operator) {}
 
-const std::shared_ptr<AbstractExpression>& LogicalExpression::left_operand() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& LogicalExpression::left_operand() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& LogicalExpression::right_operand() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& LogicalExpression::right_operand() const {
+  return arguments[1];
+}
 
-std::shared_ptr<AbstractExpression> LogicalExpression::deep_copy() const {
-  return std::make_shared<LogicalExpression>(logical_operator, left_operand()->deep_copy(),
-                                             right_operand()->deep_copy());
+std::shared_ptr<AbstractExpression> LogicalExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<LogicalExpression>(logical_operator, left_operand()->deep_copy(copied_ops),
+                                             right_operand()->deep_copy(copied_ops));
 }
 
 std::string LogicalExpression::description(const DescriptionMode mode) const {
@@ -41,7 +46,9 @@ std::string LogicalExpression::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-DataType LogicalExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
+DataType LogicalExpression::data_type() const {
+  return ExpressionEvaluator::DataTypeBool;
+}
 
 bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LogicalExpression*>(&expression),
@@ -49,8 +56,12 @@ bool LogicalExpression::_shallow_equals(const AbstractExpression& expression) co
   return logical_operator == static_cast<const LogicalExpression&>(expression).logical_operator;
 }
 
-size_t LogicalExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(logical_operator)); }
+size_t LogicalExpression::_shallow_hash() const {
+  return boost::hash_value(static_cast<size_t>(logical_operator));
+}
 
-ExpressionPrecedence LogicalExpression::_precedence() const { return ExpressionPrecedence::Logical; }
+ExpressionPrecedence LogicalExpression::_precedence() const {
+  return ExpressionPrecedence::Logical;
+}
 
 }  // namespace opossum

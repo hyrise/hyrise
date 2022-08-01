@@ -50,8 +50,8 @@ const boost::bimap<LogLevel, std::string> log_level_to_string = make_bimap<LogLe
 
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
-        {VectorCompressionType::FixedSizeByteAligned, "Fixed-size byte-aligned"},
-        {VectorCompressionType::SimdBp128, "SIMD-BP128"},
+        {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},
+        {VectorCompressionType::BitPacking, "Bit-packing"},
     });
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
@@ -84,20 +84,20 @@ std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vecto
 
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type) {
   switch (compressed_vector_type) {
-    case CompressedVectorType::FixedSize4ByteAligned: {
-      stream << "FixedSize4ByteAligned";
+    case CompressedVectorType::FixedWidthInteger4Byte: {
+      stream << "FixedWidthInteger4Byte";
       break;
     }
-    case CompressedVectorType::FixedSize2ByteAligned: {
-      stream << "FixedSize2ByteAligned";
+    case CompressedVectorType::FixedWidthInteger2Byte: {
+      stream << "FixedWidthInteger2Byte";
       break;
     }
-    case CompressedVectorType::FixedSize1ByteAligned: {
-      stream << "FixedSize1ByteAligned";
+    case CompressedVectorType::FixedWidthInteger1Byte: {
+      stream << "FixedWidthInteger1Byte";
       break;
     }
-    case CompressedVectorType::SimdBp128: {
-      stream << "SimdBp128";
+    case CompressedVectorType::BitPacking: {
+      stream << "BitPacking";
       break;
     }
     default:

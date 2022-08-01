@@ -19,11 +19,11 @@
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
+namespace {
+
+using namespace opossum;                         // NOLINT
 using namespace opossum::expression_functional;  // NOLINT
 
-namespace opossum {
-
-namespace {
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
     const std::vector<std::shared_ptr<AbstractExpression>>& input_expressions,
@@ -36,7 +36,9 @@ void gather_expressions_not_computed_by_expression_evaluator(
   // If an expression that is not a top-level expression is already an input, we require it
   if (std::find_if(input_expressions.begin(), input_expressions.end(),
                    [&expression](const auto& other) { return *expression == *other; }) != input_expressions.end()) {
-    if (!top_level) required_expressions.emplace(expression);
+    if (!top_level) {
+      required_expressions.emplace(expression);
+    }
     return;
   }
 
@@ -85,7 +87,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
       const auto& aggregate_node = static_cast<AggregateNode&>(*node);
       const auto& node_expressions = node->node_expressions;
 
-      for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+      for (auto expression_idx = ColumnID{0}; expression_idx < node_expressions.size(); ++expression_idx) {
         const auto& expression = node_expressions[expression_idx];
         // The AggregateNode's node_expressions contain both the group_by- and the aggregate_expressions in that order,
         // separated by aggregate_expressions_begin_idx.
@@ -108,7 +110,9 @@ ExpressionUnorderedSet gather_locally_required_expressions(
              *     is the only type of aggregate function, we simply require the first output expression from the
              *     left input node.
              */
-            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) continue;
+            if (!locally_required_expressions.empty() || expression_idx < node_expressions.size() - 1) {
+              continue;
+            }
             locally_required_expressions.emplace(node->left_input()->output_expressions().at(0));
           }
         }
@@ -122,6 +126,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
     // be already computed; if they use the ExpressionEvaluator the columns should at least be computable.
     case LQPNodeType::Predicate:
     case LQPNodeType::Projection: {
+      const auto& input_expressions = node->left_input()->output_expressions();
       for (const auto& expression : node->node_expressions) {
         if (node->type == LQPNodeType::Projection && !expressions_required_by_consumers.contains(expression)) {
           // An expression produced by a ProjectionNode that is not required by anyone upstream is useless. We should
@@ -129,7 +134,7 @@ ExpressionUnorderedSet gather_locally_required_expressions(
           continue;
         }
 
-        gather_expressions_not_computed_by_expression_evaluator(expression, node->left_input()->output_expressions(),
+        gather_expressions_not_computed_by_expression_evaluator(expression, input_expressions,
                                                                 locally_required_expressions);
       }
     } break;
@@ -205,22 +210,30 @@ void recursively_gather_required_expressions(
 
   // We only continue with node's inputs once we have visited all paths above node. We check this by counting the
   // number of the node's outputs that have already been visited. Once we reach the output count, we can continue.
-  if (node->type != LQPNodeType::Root) ++outputs_visited_by_node[node];
-  if (outputs_visited_by_node[node] < node->output_count()) return;
+  if (node->type != LQPNodeType::Root) {
+    ++outputs_visited_by_node[node];
+  }
+  if (outputs_visited_by_node[node] < node->output_count()) {
+    return;
+  }
 
   // Once all nodes that may require columns from this node (i.e., this node's outputs) have been visited, we can
   // recurse into this node's inputs.
   for (const auto& input : {node->left_input(), node->right_input()}) {
-    if (!input) continue;
+    if (!input) {
+      continue;
+    }
 
     // Make sure the entry in required_expressions_by_node exists, then insert all expressions that the current node
     // needs
     auto& required_expressions_for_input = required_expressions_by_node[input];
+    const auto& expressions_of_input = input->output_expressions();
+
     for (const auto& required_expression : required_expressions) {
       // Add the columns needed here (and above) if they come from the input node. Reasons why this might NOT be the
       // case are: (1) The expression is calculated in this node (and is thus not available in the input node), or
       // (2) we have two input nodes (i.e., a join) and the expressions comes from the other side.
-      if (input->find_column_id(*required_expression)) {
+      if (find_expression_idx(*required_expression, expressions_of_input)) {
         required_expressions_for_input.emplace(required_expression);
       }
     }
@@ -239,21 +252,29 @@ void try_join_to_semi_rewrite(
   // line more than once.
 
   auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  if (join_node->join_mode != JoinMode::Inner) return;
+  if (join_node->join_mode != JoinMode::Inner) {
+    return;
+  }
 
   // Check whether the left/right inputs are actually needed by following operators
   auto left_input_is_used = false;
   auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
     for (const auto& required_expression : required_expressions_by_node.at(output)) {
-      if (expression_evaluable_on_lqp(required_expression, *node->left_input())) left_input_is_used = true;
-      if (expression_evaluable_on_lqp(required_expression, *node->right_input())) right_input_is_used = true;
+      if (expression_evaluable_on_lqp(required_expression, *node->left_input())) {
+        left_input_is_used = true;
+      }
+      if (expression_evaluable_on_lqp(required_expression, *node->right_input())) {
+        right_input_is_used = true;
+      }
     }
   }
   DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
 
   // Early out, if we need output expressions from both input tables.
-  if (left_input_is_used && right_input_is_used) return;
+  if (left_input_is_used && right_input_is_used) {
+    return;
+  }
 
   /**
    * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
@@ -270,7 +291,9 @@ void try_join_to_semi_rewrite(
   for (const auto& join_predicate : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
     // Skip predicates that are not of type Equals (because we need n:1 or 1:1 join cardinality)
-    if (predicate->predicate_condition != PredicateCondition::Equals) continue;
+    if (predicate->predicate_condition != PredicateCondition::Equals) {
+      continue;
+    }
 
     // Collect operand expressions table-wise
     for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {
@@ -282,7 +305,9 @@ void try_join_to_semi_rewrite(
     }
   }
   // Early out, if we did not see any Equals-predicates.
-  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) return;
+  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) {
+    return;
+  }
 
   // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
   if (!left_input_is_used &&
@@ -325,6 +350,13 @@ void prune_projection_node(
 
 }  // namespace
 
+namespace opossum {
+
+std::string ColumnPruningRule::name() const {
+  static const auto name = std::string{"ColumnPruningRule"};
+  return name;
+}
+
 void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   // For each node, required_expressions_by_node will hold the expressions either needed by this node or by one of its
   // successors (i.e., nodes to which this node is an input). After collecting this information, we walk through all
@@ -351,7 +383,8 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       case LQPNodeType::StoredTable: {
         // Prune all unused columns from a StoredTableNode
         auto pruned_column_ids = std::vector<ColumnID>{};
-        for (const auto& expression : node->output_expressions()) {
+        const auto& node_output_expressions = node->output_expressions();
+        for (const auto& expression : node_output_expressions) {
           if (required_expressions.find(expression) != required_expressions.end()) {
             continue;
           }
@@ -360,7 +393,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
           pruned_column_ids.emplace_back(column_expression->original_column_id);
         }
 
-        if (pruned_column_ids.size() == node->output_expressions().size()) {
+        if (pruned_column_ids.size() == node_output_expressions.size()) {
           // All columns were marked to be pruned. However, while `SELECT 1 FROM table` does not need any particular
           // column, it needs at least one column so that it knows how many 1s to produce. Thus, we remove a random
           // column from the pruning list. It does not matter which column it is.

@@ -65,7 +65,7 @@ const std::string& JoinIndex::name() const {
 }
 
 std::string JoinIndex::description(DescriptionMode description_mode) const {
-  const auto* const separator = description_mode == DescriptionMode::MultiLine ? "\n" : " ";
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   const auto* const index_side_str = _index_side == IndexSide::Left ? "Left" : "Right";
 
   std::ostringstream stream(AbstractJoinOperator::description(description_mode), std::ios_base::ate);
@@ -76,7 +76,8 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates, _index_side);
 }

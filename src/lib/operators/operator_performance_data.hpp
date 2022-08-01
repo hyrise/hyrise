@@ -20,7 +20,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 
   virtual void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const = 0;
 
-  bool executed{false};
   std::chrono::nanoseconds walltime{0};
 
   // Some operators do not return a table (e.g., Insert).
@@ -41,19 +40,14 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
 template <typename Steps>
 struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
   void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override {
-    if (!executed) {
-      stream << "Not executed.";
-      return;
-    }
-
     if (!has_output) {
-      stream << "Executed, but no output.";
+      stream << "No output.";
       return;
     }
 
     stream << "Output: " << output_row_count << " row" << (output_row_count > 1 ? "s" : "") << " in "
-           << output_chunk_count << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", "
-           << format_duration(std::chrono::duration_cast<std::chrono::nanoseconds>(walltime)) << ".";
+           << output_chunk_count << " chunk" << (output_chunk_count > 1 ? "s" : "") << ", " << format_duration(walltime)
+           << ".";
 
     if constexpr (std::is_same_v<Steps, NoSteps>) {
       return;

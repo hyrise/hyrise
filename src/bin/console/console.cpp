@@ -198,7 +198,9 @@ int Console::read() {
   return _eval(input);
 }
 
-int Console::execute_script(const std::string& filepath) { return _exec_script(filepath); }
+int Console::execute_script(const std::string& filepath) {
+  return _exec_script(filepath);
+}
 
 int Console::_eval(const std::string& input) {
   // Do nothing if no input was given
@@ -279,7 +281,9 @@ bool Console::_initialize_pipeline(const std::string& sql) {
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  if (!_initialize_pipeline(sql)) {
+    return ReturnCode::Error;
+  }
 
   try {
     _sql_pipeline->get_result_tables();
@@ -321,9 +325,13 @@ int Console::_eval_sql(const std::string& sql) {
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
+void Console::register_command(const std::string& name, const CommandFunction& func) {
+  _commands[name] = func;
+}
 
-Console::RegisteredCommands Console::commands() { return _commands; }
+Console::RegisteredCommands Console::commands() {
+  return _commands;
+}
 
 void Console::set_prompt(const std::string& prompt) {
   if (HYRISE_DEBUG) {
@@ -405,9 +413,11 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 // Command functions
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
-int Console::_exit(const std::string&) { return Console::ReturnCode::Quit; }
+int Console::_exit(const std::string& /*args*/) {
+  return Console::ReturnCode::Quit;
+}
 
-int Console::_help(const std::string&) {
+int Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
   encoding_options += boost::algorithm::join(
       encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
@@ -475,7 +485,7 @@ int Console::_generate_tpcc(const std::string& args) {
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
   }
 
   out("Generating all TPCC tables (this might take a while) ...\n");
@@ -500,7 +510,7 @@ int Console::_generate_tpch(const std::string& args) {
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
   }
 
   out("Generating all TPCH tables (this might take a while) ...\n");
@@ -524,7 +534,7 @@ int Console::_generate_tpcds(const std::string& args) {
 
   auto chunk_size = Chunk::DEFAULT_SIZE;
   if (arguments.size() > 1) {
-    chunk_size = boost::lexical_cast<ChunkOffset>(arguments.at(1));
+    chunk_size = ChunkOffset{boost::lexical_cast<ChunkOffset::base_type>(arguments.at(1))};
   }
 
   out("Generating all TPC-DS tables (this might take a while) ...\n");
@@ -711,7 +721,9 @@ int Console::_visualize(const std::string& input) {
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
   if (!sql.empty()) {
-    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+    if (!_initialize_pipeline(sql)) {
+      return ReturnCode::Error;
+    }
   }
 
   // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
@@ -892,7 +904,7 @@ int Console::_print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory(const std::string&) {
+int Console::_print_current_working_directory(const std::string& /*args*/) {
   out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
@@ -1077,8 +1089,7 @@ int main(int argc, char** argv) {
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details
-  while (sigsetjmp(jmp_env, 1) != 0) {
-  }
+  while (sigsetjmp(jmp_env, 1) != 0) {}
 
   // Main REPL loop
   while (return_code != Return::Quit) {

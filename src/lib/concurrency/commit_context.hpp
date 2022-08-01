@@ -50,7 +50,7 @@ class CommitContext : private Noncopyable {
 
  private:
   const CommitID _commit_id;
-  std::atomic<bool> _pending;  // true if context is waiting to be committed
+  std::atomic_bool _pending;  // true if context is waiting to be committed
   std::shared_ptr<CommitContext> _next;
   std::function<void()> _callback;
 };

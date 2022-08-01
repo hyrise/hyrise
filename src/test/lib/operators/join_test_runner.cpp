@@ -67,6 +67,7 @@ struct InputTableConfiguration {
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() < r.to_tuple();
 }
+
 bool operator==(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() == r.to_tuple();
 }
@@ -108,8 +109,13 @@ struct JoinTestConfiguration {
   }
 };
 
-bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
-bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() == r.to_tuple(); }
+bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() < r.to_tuple();
+}
+
+bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() == r.to_tuple();
+}
 
 // Virtual interface to create a join operator
 class BaseJoinOperatorFactory {
@@ -175,7 +181,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
                                             JoinMode::AntiNullAsTrue};
     const auto all_table_sizes = std::vector{10u, 15u, 0u};
-    const auto all_chunk_sizes = std::vector{10u, 3u, 1u};
+    const auto all_chunk_sizes = std::vector{ChunkOffset{10}, ChunkOffset{3}, ChunkOffset{1}};
     const auto all_secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
         {},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
@@ -479,7 +485,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (const auto join_mode : {JoinMode::Inner, JoinMode::Right, JoinMode::Semi}) {
           for (const auto left_table_size : all_table_sizes) {
             for (const auto right_table_size : all_table_sizes) {
-              for (const auto chunk_size : all_chunk_sizes) {
+              for (const auto& chunk_size : all_chunk_sizes) {
                 for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
                   auto join_test_configuration = default_configuration;
                   join_test_configuration.join_mode = join_mode;
@@ -657,8 +663,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   cached_output_configuration.radix_bits = {};
   cached_output_configuration.index_side = {};
 
-  auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
-
   const auto join_verification =
       std::make_shared<JoinVerification>(input_operator_left, input_operator_right, configuration.join_mode,
                                          primary_predicate, configuration.secondary_predicates);
@@ -696,15 +700,15 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << get_table_path(configuration.right_input) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
-    if (join_op->get_output()) {
-      Print::print(join_op->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    if (actual_table) {
+      Print::print(actual_table, PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the join operator under test" << std::endl;
     }
     std::cout << "=================== Expected Output Table ==================" << std::endl;
-    if (join_verification->get_output()) {
-      Print::print(join_verification->get_output(), PrintFlags::IgnoreChunkBoundaries);
+    if (expected_table) {
+      Print::print(expected_table, PrintFlags::IgnoreChunkBoundaries);
       std::cout << std::endl;
     } else {
       std::cout << "No Table produced by the reference join operator" << std::endl;
@@ -715,6 +719,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   };
 
   try {
+    auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
+
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {
       join_verification->execute();
@@ -722,6 +728,9 @@ TEST_P(JoinTestRunner, TestJoin) {
       expected_output_table_iter =
           expected_output_tables.emplace(cached_output_configuration, expected_output_table).first;
     }
+    expected_table = expected_output_table_iter->second;
+
+    // Execute the actual join
     join_op->execute();
   } catch (...) {
     // If an error occurred in the join operator under test, we still want to see the test configuration
@@ -730,7 +739,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   }
 
   actual_table = join_op->get_output();
-  expected_table = expected_output_table_iter->second;
 
   table_difference_message = check_table_equal(actual_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict,
                                                FloatComparisonMode::AbsoluteDifference, IgnoreNullable::No);

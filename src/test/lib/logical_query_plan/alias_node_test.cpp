@@ -62,7 +62,7 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(alias_node->hash(), alias_node_other_expressions->hash());
   EXPECT_EQ(alias_node->hash(), alias_node_other_left_input->hash());
   // alias_node == alias_node_other_left_input is false but the hash codes of these nodes are equal. The reason for this
-  // is in the LQPColumnExpressions: Semantically equal LQPColumnExpressions are not equal if they refere to different
+  // is in the LQPColumnExpressions: Semantically equal LQPColumnExpressions are not equal if they refer to different
   // original_nodes. This allows, e.g., for self-joins. The hash function does not take the actual pointer into account,
   // so the hashes of semantically equal LQPColumnExpressions are equal. The following lines show this fact in detail:
   EXPECT_NE(*a, *expr_a);

@@ -1,6 +1,6 @@
 #include "lqp_column_expression.hpp"
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "hyrise.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -17,14 +17,17 @@ LQPColumnExpression::LQPColumnExpression(const std::shared_ptr<const AbstractLQP
       original_node(init_original_node),
       original_column_id(init_original_column_id) {}
 
-std::shared_ptr<AbstractExpression> LQPColumnExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> LQPColumnExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<LQPColumnExpression>(original_node.lock(), original_column_id);
 }
 
 std::string LQPColumnExpression::description(const DescriptionMode mode) const {
   // Even if the LQP is invalid, we still want to be able to print it as good as possible
   const auto original_node_locked = original_node.lock();
-  if (!original_node_locked) return "<Expired Column>";
+  if (!original_node_locked) {
+    return "<Expired Column>";
+  }
 
   std::stringstream output;
   if (mode == AbstractExpression::DescriptionMode::Detailed) {
@@ -96,7 +99,9 @@ DataType LQPColumnExpression::data_type() const {
   }
 }
 
-bool LQPColumnExpression::requires_computation() const { return false; }
+bool LQPColumnExpression::requires_computation() const {
+  return false;
+}
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPColumnExpression*>(&expression),

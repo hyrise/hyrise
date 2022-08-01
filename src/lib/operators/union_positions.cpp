@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/sort/sort.hpp>
+
 #include "storage/chunk.hpp"
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
@@ -61,11 +63,16 @@ UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& le
 
 std::shared_ptr<AbstractOperator> UnionPositions::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<UnionPositions>(copied_left_input, copied_right_input);
 }
 
 void UnionPositions::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
+
+void UnionPositions::_on_cleanup() {
+  _referenced_tables.clear();
+}
 
 const std::string& UnionPositions::name() const {
   static const auto name = std::string{"UnionPositions"};
@@ -97,12 +104,17 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
   /**
    * Sort the virtual pos lists so that they bring the rows in their respective ReferenceMatrix into order.
    * This is necessary for merging them.
-   * PERFORMANCE NOTE: These sorts take the vast majority of time spend in this Operator
+   * Performance note: These sorts take the vast majority of time spent in this operator. Using boost's pdqsort helps
+   * a lot over std::sort, but there is probably still room for improvement (see comment above about other data
+   * structures). The reason why pdqsort can be much faster than std::sort is that is more efficient for already sorted
+   * data, which happens when no "shuffling" operators (e.g., inner joins) occur before the UnionPosition so the
+   * position lists are already sorted. For cases where the input is not sorted, pdqsort is usually still more than 20%
+   * faster than std::sort.
    */
-  std::sort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
-            VirtualPosListCmpContext{reference_matrix_left});
-  std::sort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
-            VirtualPosListCmpContext{reference_matrix_right});
+  boost::sort::pdqsort(virtual_pos_list_left.begin(), virtual_pos_list_left.end(),
+                       VirtualPosListCmpContext{reference_matrix_left});
+  boost::sort::pdqsort(virtual_pos_list_right.begin(), virtual_pos_list_right.end(),
+                       VirtualPosListCmpContext{reference_matrix_right});
 
   /**
    * Build result table
@@ -199,8 +211,8 @@ std::shared_ptr<const Table> UnionPositions::_on_execute() {
 }
 
 std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
-  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-              "Input tables don't have the same layout");
+  Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
+         "Input tables don't have the same layout");
 
   // Later code relies on input tables containing columns. This is guaranteed by the AbstractOperator.
 
@@ -211,6 +223,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   if (left_input_table()->row_count() == 0) {
     return right_input_table();
   }
+
   if (right_input_table()->row_count() == 0) {
     return left_input_table();
   }
@@ -242,7 +255,7 @@ std::shared_ptr<const Table> UnionPositions::_prepare_operator() {
   add(left_input_table());
   add(right_input_table());
 
-  std::sort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
+  boost::sort::pdqsort(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   const auto unique_end_iter = std::unique(_column_cluster_offsets.begin(), _column_cluster_offsets.end());
   _column_cluster_offsets.resize(std::distance(_column_cluster_offsets.begin(), unique_end_iter));
 
@@ -340,8 +353,13 @@ UnionPositions::ReferenceMatrix UnionPositions::_build_reference_matrix(
 bool UnionPositions::_compare_reference_matrix_rows(const ReferenceMatrix& left_matrix, size_t left_row_idx,
                                                     const ReferenceMatrix& right_matrix, size_t right_row_idx) {
   for (size_t column_idx = 0; column_idx < left_matrix.size(); ++column_idx) {
-    if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) return true;
-    if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) return false;
+    if (left_matrix[column_idx][left_row_idx] < right_matrix[column_idx][right_row_idx]) {
+      return true;
+    }
+
+    if (right_matrix[column_idx][right_row_idx] < left_matrix[column_idx][left_row_idx]) {
+      return false;
+    }
   }
   return false;
 }
@@ -351,8 +369,13 @@ bool UnionPositions::VirtualPosListCmpContext::operator()(size_t left, size_t ri
     const auto left_row_id = reference_matrix_column[left];
     const auto right_row_id = reference_matrix_column[right];
 
-    if (left_row_id < right_row_id) return true;
-    if (right_row_id < left_row_id) return false;
+    if (left_row_id < right_row_id) {
+      return true;
+    }
+
+    if (right_row_id < left_row_id) {
+      return false;
+    }
   }
   return false;
 }

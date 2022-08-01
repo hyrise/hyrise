@@ -2,11 +2,13 @@
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "operators/get_table.hpp"
+#include "operators/projection.hpp"
 
 using namespace opossum::expression_functional;  // NOLINT
 
@@ -143,6 +145,109 @@ TEST_F(ExpressionUtilsTest, ExpressionContainsCorrelatedParameter) {
       and_(greater_than_(a_a, placeholder_(ParameterID{5})), equals_(a_c, 7))));
   EXPECT_TRUE(expression_contains_correlated_parameter(
       and_(greater_than_(a_a, correlated_parameter_(ParameterID{5}, a_a)), equals_(a_c, 7))));
+}
+
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsSingle) {
+  const auto pqp_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+
+  auto subqueries = find_pqp_subquery_expressions(pqp_subquery);
+
+  EXPECT_EQ(subqueries.size(), 1);
+  EXPECT_EQ(subqueries.at(0), pqp_subquery);
+}
+
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsMultiple) {
+  const auto pqp_subquery_a = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  const auto pqp_subquery_b = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_b"));
+  auto expression = add_(pqp_subquery_a, sub_(value_(1), pqp_subquery_b));
+
+  auto subqueries = find_pqp_subquery_expressions(expression);
+
+  EXPECT_EQ(subqueries.size(), 2);
+  EXPECT_EQ(subqueries.at(0), pqp_subquery_a);
+  EXPECT_EQ(subqueries.at(1), pqp_subquery_b);
+}
+
+TEST_F(ExpressionUtilsTest, CollectPQPSubqueryExpressionsIgnoreNested) {
+  // (1) Nested Subquery
+  const auto nested_subquery = std::make_shared<PQPSubqueryExpression>(std::make_shared<GetTable>("table_a"));
+  // (2) Root Subquery
+  const auto projection = std::make_shared<Projection>(std::make_shared<GetTable>("table_b"),
+                                                       expression_vector(add_(nested_subquery, value_(1))));
+  const auto subquery = std::make_shared<PQPSubqueryExpression>(projection);
+
+  // Nested PQPSubqueryExpressions should NOT be returned
+  {
+    auto found_pqp_subqueries = find_pqp_subquery_expressions(subquery);
+    EXPECT_EQ(found_pqp_subqueries.size(), 1);
+    EXPECT_EQ(found_pqp_subqueries.at(0), subquery);
+  }
+  // Wrapping subqueries should not make a difference
+  {
+    auto wrapped_subquery = add_(subquery, value_(1));
+    auto found_pqp_subqueries = find_pqp_subquery_expressions(wrapped_subquery);
+    EXPECT_EQ(found_pqp_subqueries.size(), 1);
+    EXPECT_EQ(found_pqp_subqueries.at(0), subquery);
+  }
+}
+
+TEST_F(ExpressionUtilsTest, GetValueOrParameter) {
+  const auto expected_value = AllTypeVariant{int64_t{1}};
+  const auto value_expression = value_(expected_value);
+  const auto correlated_parameter_expression = correlated_parameter_(ParameterID{0}, value_expression);
+  correlated_parameter_expression->set_value(expected_value);
+  const auto invalid_cast = cast_(value_(pmr_string{"1.2"}), DataType::Int);
+  const auto cast_as_null = cast_(expected_value, DataType::Null);
+  const auto cast_as_float = cast_(value_expression, DataType::Float);
+  const auto cast_from_null = cast_(null_(), DataType::Int);
+  const auto cast_column = cast_(a_a, DataType::Float);
+
+  EXPECT_THROW(expression_get_value_or_parameter(*invalid_cast), std::logic_error);
+  // Casts as NULL are undefined
+  EXPECT_THROW(expression_get_value_or_parameter(*cast_as_null), std::logic_error);
+
+  {
+    const auto actual_value = expression_get_value_or_parameter(*value_expression);
+    EXPECT_NE(actual_value, std::nullopt);
+    EXPECT_EQ(*actual_value, expected_value);
+  }
+  {
+    const auto actual_value = expression_get_value_or_parameter(*correlated_parameter_expression);
+    EXPECT_NE(actual_value, std::nullopt);
+    EXPECT_EQ(*actual_value, expected_value);
+  }
+  {
+    const auto actual_value = expression_get_value_or_parameter(*cast_as_float);
+    EXPECT_NE(actual_value, std::nullopt);
+    EXPECT_FLOAT_EQ(boost::get<float>(*actual_value), 1.0);
+  }
+  {
+    // Casts from NULL should return a NULL value
+    const auto actual_value = expression_get_value_or_parameter(*cast_from_null);
+    EXPECT_NE(actual_value, std::nullopt);
+    EXPECT_TRUE(variant_is_null(*actual_value));
+  }
+  {
+    // More complicated casts should be evaluated by ExpressionEvaluator
+    const auto actual_value = expression_get_value_or_parameter(*cast_column);
+    EXPECT_EQ(actual_value, std::nullopt);
+  }
+}
+
+TEST_F(ExpressionUtilsTest, FindExpressionIDx) {
+  const auto expression_vector = std::vector<std::shared_ptr<AbstractExpression>>{a_a, a_b};
+
+  EXPECT_EQ(find_expression_idx(*a_c, expression_vector), std::nullopt);
+
+  EXPECT_NE(find_expression_idx(*a_a, expression_vector), std::nullopt);
+  EXPECT_EQ(*find_expression_idx(*a_a, expression_vector), ColumnID{0});
+
+  EXPECT_NE(find_expression_idx(*a_b, expression_vector), std::nullopt);
+  EXPECT_EQ(*find_expression_idx(*a_b, expression_vector), ColumnID{1});
+
+  const auto a_a_copy = a_a->deep_copy();
+  EXPECT_NE(find_expression_idx(*a_a_copy, expression_vector), std::nullopt);
+  EXPECT_EQ(*find_expression_idx(*a_a_copy, expression_vector), ColumnID{0});
 }
 
 }  // namespace opossum

@@ -18,6 +18,7 @@
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
@@ -64,25 +65,17 @@ const std::string& JoinHash::name() const {
   return name;
 }
 
-std::string JoinHash::description(DescriptionMode description_mode) const {
-  std::ostringstream stream;
-  stream << AbstractJoinOperator::description(description_mode);
-  stream << " Radix bits: " << (_radix_bits ? std::to_string(*_radix_bits) : "Unspecified");
-
-  return stream.str();
-}
-
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                     _secondary_predicates, _radix_bits);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-template <typename T>
-size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
+size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode, const size_t data_type_size) {
   if ((build_side_size + probe_side_size) < 10'000) {
     // Rough estimate for early exists. We assume the worst case of a rather small L2 cache of 128 KB and a string
     // column with 24 bytes per entry. This means we can keep 5'000 rows in the L2 cache.
@@ -132,7 +125,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       // Number of items in map. We defensively assume each row is distinct.
       static_cast<double>(build_side_size) *
       // key + value (and one byte overhead, see link above)
-      static_cast<double>(sizeof(T) + sizeof(uint32_t) + 1);
+      static_cast<double>(data_type_size + sizeof(uint32_t) + 1);
 
   // The goal of radix partitioning is to have the hash table fitting in the L2 cache at the time of probing. We thus
   // estimate the size of the unified pos list which is built after the initial hash map building and before the actual
@@ -151,7 +144,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
   // For very large probe table, we can end up with a few radix bits (and thus few output chunks). If the probe side is
   // too large, we limit potential parallelization in the join as well as the following operators due to the few huge
   // chunks. To counter these cases, we try to limit the output partitions to a maximum size.
-  constexpr auto MAX_OUTPUT_CHUNK_SIZE = size_t{Chunk::DEFAULT_SIZE * 10};  // chosen rather arbitrarily
+  const auto MAX_OUTPUT_CHUNK_SIZE = size_t{Chunk::DEFAULT_SIZE * 10};  // chosen rather arbitrarily
   const auto radix_bits = static_cast<size_t>(std::round(std::log2(cluster_count)));
   if ((probe_side_size / static_cast<size_t>(std::pow(2, radix_bits))) > MAX_OUTPUT_CHUNK_SIZE) {
     return static_cast<size_t>(std::ceil(std::log2(std::ceil(probe_side_size / MAX_OUTPUT_CHUNK_SIZE))));
@@ -219,15 +212,17 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   const auto build_column_type = build_input_table->column_data_type(build_column_id);
   const auto probe_column_type = probe_input_table->column_data_type(probe_column_id);
 
-  // Determine output column order
+  // Depending on which input table became the build/probe table we have to order the columns of the output table.
+  // Semi/Anti* Joins only emit tuples from the probe table, which is given by the right input table in Hyrise.
+  // For other join modes, we need to check which side has been chosen as the probe side (see variable
+  // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
-
   if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
-    output_column_order = OutputColumnOrder::ProbeOnly;
+    output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
-    output_column_order = OutputColumnOrder::ProbeFirstBuildSecond;
+    output_column_order = OutputColumnOrder::RightFirstLeftSecond;
   } else {
-    output_column_order = OutputColumnOrder::BuildFirstProbeSecond;
+    output_column_order = OutputColumnOrder::LeftFirstRightSecond;
   }
 
   auto& join_hash_performance_data = dynamic_cast<PerformanceData&>(*performance_data);
@@ -244,8 +239,9 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         //if (!_radix_bits) {
 	  // disabled, as PQP cache makes the whole setting stuff unused otherwise as radix is stored in the cached PQP
-          _radix_bits = calculate_radix_bits<BuildColumnDataType>(build_input_table->row_count(),
-                                                                  probe_input_table->row_count(), _mode);
+          _radix_bits = calculate_radix_bits(build_input_table->row_count(),
+                                             probe_input_table->row_count(), _mode,
+                                             size_t{sizeof(BuildColumnDataType)});
         //}
 
         // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
@@ -274,7 +270,9 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   return _impl->_on_execute();
 }
 
-void JoinHash::_on_cleanup() { _impl.reset(); }
+void JoinHash::_on_cleanup() {
+  _impl.reset();
+}
 
 template <typename BuildColumnType, typename ProbeColumnType>
 class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
@@ -291,7 +289,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _mode(mode),
         _column_ids(column_ids),
         _predicate_condition(predicate_condition),
-        _performance(performance_data),
+        _performance_data(performance_data),
         _output_column_order(output_column_order),
         _secondary_predicates(std::move(secondary_predicates)),
         _radix_bits(radix_bits) {}
@@ -302,7 +300,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
   const JoinMode _mode;
   const ColumnIDPair _column_ids;
   const PredicateCondition _predicate_condition;
-  JoinHash::PerformanceData& _performance;
+  JoinHash::PerformanceData& _performance_data;
 
   OutputColumnOrder _output_column_order;
 
@@ -375,7 +373,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
 
     /**
-     * 1.1. Materialize the build partition, which is expected to be smaller. Create a bloom filter.
+     * 1.1. Materialize the build partition, which is expected to be smaller. Create a Bloom filter.
      */
 
     auto build_side_bloom_filter = BloomFilter{};
@@ -394,7 +392,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     };
 
     /**
-     * 1.2. Materialize the larger probe partition. Use the bloom filter from the probe partition to skip rows that
+     * 1.2. Materialize the larger probe partition. Use the Bloom filter from the probe partition to skip rows that
      *       will not find a join partner.
      */
     const auto materialize_probe_side = [&](const auto& input_bloom_filter) {
@@ -411,18 +409,30 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     Timer timer_materialization;
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
-      // When materializing the first side (here: the build side), we do not yet have a bloom filter. To keep the number
-      // of code paths low, materialize_*_side always expects a bloom filter. For the first step, we thus pass in a
-      // bloom filter that returns true for every probe.
+      // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
+      // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
+      // Bloom filter that returns true for every probe.
       materialize_build_side(ALL_TRUE_BLOOM_FILTER);
-      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
       materialize_probe_side(build_side_bloom_filter);
-      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
     } else {
+      // Here, we first materialize the probe side and use the resulting Bloom filter in the materialization of the
+      // build side. Consequently, the Bloom filter later passed into build() will have no effect as it has already
+      // been used here to filter non-matching values.
       materialize_probe_side(ALL_TRUE_BLOOM_FILTER);
-      _performance.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::ProbeSideMaterializing, timer_materialization.lap());
       materialize_build_side(probe_side_bloom_filter);
-      _performance.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+      _performance_data.set_step_runtime(OperatorSteps::BuildSideMaterializing, timer_materialization.lap());
+    }
+
+    // Store the number of materialized values. Depending on the order of materialization (which depends on the input
+    // sizes), each side might or might not be filtered by the Bloom filter.
+    for (const auto& partition : materialized_build_column) {
+      _performance_data.build_side_materialized_value_count += partition.elements.size();
+    }
+    for (const auto& partition : materialized_probe_column) {
+      _performance_data.probe_side_materialized_value_count += partition.elements.size();
     }
     
 
@@ -441,8 +451,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         }
       }
 
-      auto after_bloom_filtering_radix_bit_count = _join_hash.calculate_radix_bits<BuildColumnType>(build_side_size_after_bloom_filtering,
-                                                                  probe_side_size_after_bloom_filtering, _mode);
+      auto after_bloom_filtering_radix_bit_count = _join_hash.calculate_radix_bits(build_side_size_after_bloom_filtering,
+                                                                                   probe_side_size_after_bloom_filtering,
+                                                                                   _mode, size_t{sizeof(HashedType)});
 
       std::stringstream ss;
       ss << "Build side (radix bits " << _radix_bits << "): "
@@ -450,7 +461,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
          << " for " << _build_input_table->row_count() << " rows, probe side: "
          << (static_cast<double>(probe_side_size_after_bloom_filtering) / static_cast<double>(_probe_input_table->row_count()))
          << " for " << _probe_input_table->row_count() << " rows";
-      _performance.radix_blooming = ss.str();
+      _performance_data.radix_blooming = ss.str();
       std::cout << "\tBLOOOOOOOOOOOOOOOOOOOOMING: \n\t\t" << ss.str() << std::endl;
       if (_radix_bits != after_bloom_filtering_radix_bit_count) {
         std::cout << "\t\tRadix changed: " << _radix_bits << "->" << after_bloom_filtering_radix_bit_count << std::endl;
@@ -478,7 +489,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     }
 
     /**
-     * 2. Perform radix partitioning for build and probe sides. The bloom filters are not used in this step. Future work
+     * 2. Perform radix partitioning for build and probe sides. The Bloom filters are not used in this step. Future work
      *    could use them on the build side to exclude them for values that are not seen on the probe side. That would
      *    reduce the size of the intermediary results, but would require an adapted calculation of the output offsets
      *    within partition_by_radix.
@@ -520,7 +531,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       histograms_build_column.clear();
       histograms_probe_column.clear();
 
-      _performance.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
+      _performance_data.set_step_runtime(OperatorSteps::Clustering, timer_clustering.lap());
     } else {
       // short cut: skip radix partitioning and use materialized data directly
       radix_build_column = std::move(materialized_build_column);
@@ -532,7 +543,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    In the case of semi or anti joins, we do not need to track all rows on the hashed side, just one per value.
      *    value. However, if we have secondary predicates, those might fail on that single row. In that case, we DO need
      *    all rows.
-     *    We use the probe side's bloom filter to exclude values from the hash table that will not be accessed in the
+     *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
     Timer timer_hash_map_building;
@@ -544,7 +555,23 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::AllPositions, _radix_bits,
                                                        probe_side_bloom_filter);
     }
-    _performance.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+    _performance_data.set_step_runtime(OperatorSteps::Building, timer_hash_map_building.lap());
+
+    // Store the element counts of the built hash tables. Depending on the Bloom filter, we might have significantly
+    // less values stored than in the initial input table.
+    for (const auto& hash_table : hash_tables) {
+      if (!hash_table) {
+        continue;
+      }
+
+      _performance_data.hash_tables_distinct_value_count += hash_table->distinct_value_count();
+      const auto position_count = hash_table->position_count();
+      if (position_count) {
+        // Update or set hash_tables_position_count if hash table stores positions.
+        _performance_data.hash_tables_position_count =
+            _performance_data.hash_tables_position_count.value_or(0) + *position_count;
+      }
+    }
 
     /**
      * Short cut for AntiNullAsTrue:
@@ -559,7 +586,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
           if (null_value) {
             Timer timer_output_writing;
             const auto result = _join_hash._build_output_table({});
-            _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+            _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
             return result;
           }
         }
@@ -621,7 +648,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       default:
         Fail("JoinMode not supported by JoinHash");
     }
-    _performance.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
+    _performance_data.set_step_runtime(OperatorSteps::Probing, timer_probing.lap());
 
     radix_probe_column.clear();
     hash_tables.clear();
@@ -636,115 +663,21 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      * probe_side_pos_lists[p][r].
      */
 
-    /**
-     * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
-     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
-     *  write_output_chunks a lot.
-     *
-     * They do two things:
-     *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
-     *          PosLists Chunk by Chunk
-     *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
-     *
-     * They hold one entry per column in the table, not per AbstractSegment in a single chunk
-     */
-
-    PosListsByChunk build_side_pos_lists_by_segment;
-    PosListsByChunk probe_side_pos_lists_by_segment;
-
     Timer timer_output_writing;
 
-    // build_side_pos_lists_by_segment will only be needed if build is a reference table and being output
-    if (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::ProbeOnly) {
-      build_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_build_input_table);
-    }
+    const auto create_left_side_pos_lists_by_segment =
+        (_build_input_table->type() == TableType::References && _output_column_order != OutputColumnOrder::RightOnly);
+    const auto create_right_side_pos_lists_by_segment = (_probe_input_table->type() == TableType::References);
 
-    // probe_side_pos_lists_by_segment will only be needed if right is a reference table
-    if (_probe_input_table->type() == TableType::References) {
-      probe_side_pos_lists_by_segment = setup_pos_lists_by_chunk(_probe_input_table);
-    }
+    // A hash join's input can be heavily pre-filtered or the join results in very few matches. To counteract this the
+    // partitions can be merged (#2202).
+    constexpr auto ALLOW_PARTITION_MERGE = true;
+    auto output_chunks =
+        write_output_chunks(build_side_pos_lists, probe_side_pos_lists, _build_input_table, _probe_input_table,
+                            create_left_side_pos_lists_by_segment, create_right_side_pos_lists_by_segment,
+                            _output_column_order, ALLOW_PARTITION_MERGE);
 
-    auto expected_output_chunk_count = size_t{0};
-    for (size_t partition_id = 0; partition_id < build_side_pos_lists.size(); ++partition_id) {
-      if (!build_side_pos_lists[partition_id].empty() || !probe_side_pos_lists[partition_id].empty()) {
-        ++expected_output_chunk_count;
-      }
-    }
-
-    std::vector<std::shared_ptr<Chunk>> output_chunks{};
-    output_chunks.reserve(expected_output_chunk_count);
-
-    // For every partition, create a reference segment.
-    auto partition_id = size_t{0};
-    auto output_chunk_id = size_t{0};
-    while (partition_id < build_side_pos_lists.size()) {
-      // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
-      // build_pos_lists and probe_side_pos_lists will not be used again.
-      auto build_side_pos_list = std::make_shared<RowIDPosList>(std::move(build_side_pos_lists[partition_id]));
-      auto probe_side_pos_list = std::make_shared<RowIDPosList>(std::move(probe_side_pos_lists[partition_id]));
-
-      if (build_side_pos_list->empty() && probe_side_pos_list->empty()) {
-        ++partition_id;
-        continue;
-      }
-
-      // If the input is heavily pre-filtered or the join results in very few matches, we might end up with a high
-      // number of chunks that contain only few rows. If a PosList is smaller than MIN_SIZE, we merge it with the
-      // following PosList(s) until a size between MIN_SIZE and MAX_SIZE is reached. This involves a trade-off:
-      // A lower number of output chunks reduces the overhead, especially when multi-threading is used. However,
-      // merging chunks destroys a potential references_single_chunk property of the PosList that would have been
-      // emitted otherwise. Search for guarantee_single_chunk in join_hash_steps.hpp for details.
-      constexpr auto MIN_SIZE = 500;
-      constexpr auto MAX_SIZE = MIN_SIZE * 2;
-      build_side_pos_list->reserve(MAX_SIZE);
-      probe_side_pos_list->reserve(MAX_SIZE);
-
-      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
-      // size or are empty (in case of semi/anti joins).
-      while (partition_id + 1 < probe_side_pos_lists.size() && probe_side_pos_list->size() < MIN_SIZE &&
-             probe_side_pos_list->size() + probe_side_pos_lists[partition_id + 1].size() < MAX_SIZE) {
-        // Copy entries from following PosList into the current working set (build_side_pos_list) and free the memory
-        // used for the merged PosList.
-        std::copy(build_side_pos_lists[partition_id + 1].begin(), build_side_pos_lists[partition_id + 1].end(),
-                  std::back_inserter(*build_side_pos_list));
-        build_side_pos_lists[partition_id + 1] = {};
-
-        std::copy(probe_side_pos_lists[partition_id + 1].begin(), probe_side_pos_lists[partition_id + 1].end(),
-                  std::back_inserter(*probe_side_pos_list));
-        probe_side_pos_lists[partition_id + 1] = {};
-
-        ++partition_id;
-      }
-
-      Segments output_segments;
-
-      // Swap back the inputs, so that the order of the output columns is not changed.
-      switch (_output_column_order) {
-        case OutputColumnOrder::BuildFirstProbeSecond:
-          write_output_segments(output_segments, _build_input_table, build_side_pos_lists_by_segment,
-                                build_side_pos_list);
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
-                                probe_side_pos_list);
-          break;
-
-        case OutputColumnOrder::ProbeFirstBuildSecond:
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
-                                probe_side_pos_list);
-          write_output_segments(output_segments, _build_input_table, build_side_pos_lists_by_segment,
-                                build_side_pos_list);
-          break;
-
-        case OutputColumnOrder::ProbeOnly:
-          write_output_segments(output_segments, _probe_input_table, probe_side_pos_lists_by_segment,
-                                probe_side_pos_list);
-          break;
-      }
-
-      output_chunks.emplace_back(std::make_shared<Chunk>(std::move(output_segments)));
-      ++partition_id;
-      ++output_chunk_id;
-    }
-    _performance.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
+    _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
 
     return _join_hash._build_output_table(std::move(output_chunks));
   }
@@ -753,7 +686,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, DescriptionMode description_mode) const {
   OperatorPerformanceData<OperatorSteps>::output_to_stream(stream, description_mode);
 
-  const auto* const separator = description_mode == DescriptionMode::SingleLine ? " " : "\n";
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   stream << separator << "Radix bits: " << radix_bits << ".";
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
   stream << separator << "Radix Blooming: " << radix_blooming;

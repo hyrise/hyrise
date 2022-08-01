@@ -56,6 +56,10 @@ void SQLiteTestRunner::SetUpTestCase() {
 void SQLiteTestRunner::SetUp() {
   const auto& param = GetParam();
 
+  // Enable multi-threading for SQLite test runner
+  Hyrise::get().topology.use_numa_topology();
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
   /**
    * Encode Tables if no encoded variant of a Table is in the cache
    */
@@ -143,7 +147,9 @@ void SQLiteTestRunner::SetUp() {
 std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
   static std::vector<std::pair<size_t, std::string>> queries;
 
-  if (!queries.empty()) return queries;
+  if (!queries.empty()) {
+    return queries;
+  }
 
   std::ifstream file("resources/test_data/sqlite_testrunner_queries.sql");
   std::string query;
@@ -151,7 +157,9 @@ std::vector<std::pair<size_t, std::string>> SQLiteTestRunner::queries() {
   auto next_line = size_t{0};  // Incremented before first use
   while (std::getline(file, query)) {
     ++next_line;
-    if (query.empty() || query.substr(0, 2) == "--") continue;
+    if (query.empty() || query.substr(0, 2) == "--") {
+      continue;
+    }
 
     queries.emplace_back(next_line, std::move(query));
   }

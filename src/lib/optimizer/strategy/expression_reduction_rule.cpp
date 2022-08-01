@@ -18,6 +18,11 @@ namespace opossum {
 
 using namespace opossum::expression_functional;  // NOLINT
 
+std::string ExpressionReductionRule::name() const {
+  static const auto name = std::string{"ExpressionReductionRule"};
+  return name;
+}
+
 void ExpressionReductionRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   Assert(lqp_root->type == LQPNodeType::Root, "ExpressionReductionRule needs root to hold onto");
@@ -150,7 +155,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
     reduce_constant_expression(argument);
   }
 
-  if (input_expression->arguments.empty()) return;
+  if (input_expression->arguments.empty()) {
+    return;
+  }
 
   // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
   if (input_expression->type != ExpressionType::Predicate && input_expression->type != ExpressionType::Arithmetic &&
@@ -162,7 +169,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
       std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
                   [&](const auto& argument) { return argument->type == ExpressionType::Value; });
 
-  if (!all_arguments_are_values) return;
+  if (!all_arguments_are_values) {
+    return;
+  }
 
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
@@ -205,8 +214,8 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
 
   const auto multi_char_wildcard_pos = pattern.find_first_of('%');
   // TODO(anyone): we do not rewrite LIKEs with multiple wildcards here. Theoretically, we could rewrite "c LIKE RED%E%"
-  // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new predicate nodes. For now, we assume
-  // that the potential pruning of such LIKE predicates via the chunk pruning rule is sufficient. However, if not many
+  // to "c >= RED and C < REE and c LIKE RED%E%" but that would require adding new PredicateNodes. For now, we assume
+  // that the potential pruning of such LIKE predicates via the ChunkPruningRule is sufficient. However, if not many
   // chunks can be pruned, rewriting with additional predicates might show to be beneficial.
   if (multi_char_wildcard_pos == std::string::npos || multi_char_wildcard_pos == 0 ||
       multi_char_wildcard_pos + 1 != pattern.size()) {
@@ -215,7 +224,9 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   const auto bounds = LikeMatcher::bounds(pattern);
 
   // In case of an ASCII overflow
-  if (!bounds) return;
+  if (!bounds) {
+    return;
+  }
 
   const auto [lower_bound, upper_bound] = *bounds;
 
@@ -235,7 +246,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate) continue;
+    if (input_expression->type != ExpressionType::Aggregate) {
+      continue;
+    }
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
     switch (aggregate_expression.aggregate_function) {
       case AggregateFunction::Sum: {
@@ -285,19 +298,24 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
     auto sum_it = std::find_if(sums.begin(), sums.end(), finder);
     auto count_it = std::find_if(counts.begin(), counts.end(), finder);
     if (sum_it != sums.end() && count_it != counts.end()) {
-      // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list
-      // The cast will become unnecessary once #1799 is fixed
+      // Found matching SUM and COUNT (either COUNT(a) or COUNT(*) for a non-NULL a) - add it to the replacements list.
+      // Notes on casting:
+      //  As stated in expression_common_type, the division of integer types will result in an integer result as well.
+      //  Since COUNT results are always of type integer, the calculated average depends on the data type of SUM,
+      //  which can be floating type or integer. To guarantee correct results, we thus cast to type double.
       replacements[avg_expression_ptr] = div_(cast_(sum_it->get(), DataType::Double), count_it->get());
     }
   }
 
   // No replacements possible
-  if (replacements.empty()) return;
+  if (replacements.empty()) {
+    return;
+  }
 
   // Back up the current column names
   const auto& root_expressions = root_node->output_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
-  for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < root_expressions.size(); ++expression_idx) {
     old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
   }
 
@@ -322,7 +340,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       expression_deep_replace(expression, replacements);
     }
 
-    if (node->type == LQPNodeType::Alias) updated_an_alias = true;
+    if (node->type == LQPNodeType::Alias) {
+      updated_an_alias = true;
+    }
 
     return LQPUpwardVisitation::VisitOutputs;
   });

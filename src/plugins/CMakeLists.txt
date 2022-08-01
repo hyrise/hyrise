@@ -12,27 +12,29 @@ function(add_plugin)
 
     add_library(${PARSED_ARGS_NAME} SHARED ${PARSED_ARGS_SRCS})
 
-    add_dependencies(${PARSED_ARGS_NAME} hyrise)
+    target_link_libraries_system(
+        ${PARSED_ARGS_NAME}
 
-    include_directories(${CMAKE_BINARY_DIR})  # For provider.hpp
+        tbb
+        ${BOOST_LIBS}
+    )
 
     foreach(dep ${PARSED_ARGS_DEPS})
-        add_dependencies(${PARSED_ARGS_NAME} ${dep})
+        target_link_libraries(${PARSED_ARGS_NAME} PRIVATE ${dep})
     endforeach(dep)
 
     # Prevent the linker under macOS from complaining about undefined methods
     if (APPLE)
         if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-            target_link_libraries(${PARSED_ARGS_NAME} "-undefined dynamic_lookup")
+            target_link_libraries(${PARSED_ARGS_NAME} PRIVATE "-undefined dynamic_lookup")
         endif()
     endif()
 endfunction(add_plugin)
 
-add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp)
-add_plugin(NAME BenchmarkingPlugin SRCS benchmarking_plugin.cpp benchmarking_plugin.hpp)
-add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp)
+add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp DEPS sqlparser magic_enum gtest)
+add_plugin(NAME hyriseSecondTestPlugin SRCS second_test_plugin.cpp second_test_plugin.hpp DEPS sqlparser)
+add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS sqlparser)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
-
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")

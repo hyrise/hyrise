@@ -38,7 +38,7 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     auto sorted_duration_by_operator_name = std::vector<std::pair<std::string, std::chrono::nanoseconds>>{
         _duration_by_operator_name.begin(), _duration_by_operator_name.end()};
     std::sort(sorted_duration_by_operator_name.begin(), sorted_duration_by_operator_name.end(),
-              [](const auto& lhs, const auto& rhs) { return lhs.second.count() > rhs.second.count(); });
+              [](const auto& lhs, const auto& rhs) { return lhs.second > rhs.second; });
 
     // Print first column (operator name)
     for (const auto& [operator_name, _] : sorted_duration_by_operator_name) {
@@ -58,8 +58,8 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
     // Print third column (relative operator duration)
     operator_breakdown_stream << "|";
     for (const auto& [_, nanoseconds] : sorted_duration_by_operator_name) {
-      operator_breakdown_stream << round(static_cast<double>(nanoseconds.count()) /
-                                         static_cast<double>(total_nanoseconds.count()) * 100)
+      operator_breakdown_stream << round(std::chrono::duration<double, std::nano>{nanoseconds} /
+                                         std::chrono::duration<double, std::nano>{total_nanoseconds} * 100)
                                 << " %\\l";
     }
     operator_breakdown_stream << " \\l";
@@ -77,7 +77,9 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
-  if (visualized_ops.find(op) != visualized_ops.end()) return;
+  if (visualized_ops.find(op) != visualized_ops.end()) {
+    return;
+  }
   visualized_ops.insert(op);
 
   _add_operator(op);
@@ -122,7 +124,9 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
                                           std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-    if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;
+    if (!pqp_subquery_expression) {
+      return ExpressionVisitation::VisitArguments;
+    }
 
     _build_subtree(pqp_subquery_expression->pqp, visualized_ops);
 
@@ -141,7 +145,7 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   VizEdgeInfo info = _default_edge;
 
   const auto& performance_data = *from->performance_data;
-  if (performance_data.executed && performance_data.has_output) {
+  if (from->executed() && performance_data.has_output) {
     std::stringstream stream;
 
     // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
@@ -169,7 +173,7 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   auto label = op->description(DescriptionMode::MultiLine);
 
   const auto& performance_data = *op->performance_data;
-  if (performance_data.executed) {
+  if (op->executed()) {
     auto total = performance_data.walltime;
     label += "\n\n" + format_duration(total);
     info.pen_width = static_cast<double>(total.count());

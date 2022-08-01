@@ -47,14 +47,14 @@ add_executable(
 )
 target_link_libraries(
     hyriseConsole
+
+    PRIVATE
     hyriseBenchmarkLib
     ncurses
-    ${READLINE_LIBRARY}
 )
 
-target_include_directories(
+# Link readline as a system library to ignore '-Wreserved-identifier' warnings (compile errors due to -Werror)
+target_link_libraries_system(
     hyriseConsole
-
-    SYSTEM PUBLIC
-    ${READLINE_INCLUDE_DIR}
+    readline
 )

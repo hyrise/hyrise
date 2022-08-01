@@ -4,7 +4,7 @@
 #include <string>
 #include <type_traits>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "resolve_type.hpp"
 
@@ -22,7 +22,8 @@ CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID i
       parameter_id(init_parameter_id),
       _referenced_expression_info(referenced_expression_info) {}
 
-std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() const {
+std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   auto copy = std::make_shared<CorrelatedParameterExpression>(parameter_id, _referenced_expression_info);
   copy->_value = _value;
   return copy;
@@ -31,18 +32,24 @@ std::shared_ptr<AbstractExpression> CorrelatedParameterExpression::deep_copy() c
 std::string CorrelatedParameterExpression::description(const DescriptionMode mode) const {
   std::stringstream stream;
   stream << "Parameter[";
-  stream << "name=" << _referenced_expression_info.column_name << ";";
-  stream << "id=" << std::to_string(parameter_id);
+  stream << "name=" << _referenced_expression_info.column_name << "; ";
+  stream << "ParameterID=" << std::to_string(parameter_id);
   stream << "]";
 
   return stream.str();
 }
 
-bool CorrelatedParameterExpression::requires_computation() const { return false; }
+bool CorrelatedParameterExpression::requires_computation() const {
+  return false;
+}
 
-DataType CorrelatedParameterExpression::data_type() const { return _referenced_expression_info.data_type; }
+DataType CorrelatedParameterExpression::data_type() const {
+  return _referenced_expression_info.data_type;
+}
 
-const std::optional<AllTypeVariant>& CorrelatedParameterExpression::value() const { return _value; }
+const std::optional<AllTypeVariant>& CorrelatedParameterExpression::value() const {
+  return _value;
+}
 
 void CorrelatedParameterExpression::set_value(const std::optional<AllTypeVariant>& value) {
   Assert(!value || data_type_from_all_type_variant(*value) == _referenced_expression_info.data_type ||

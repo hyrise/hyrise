@@ -16,7 +16,7 @@
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/container/scoped_allocator.hpp>
 #include <boost/container/small_vector.hpp>
-#include <boost/functional/hash.hpp>
+#include <boost/container_hash/hash.hpp>
 #include <bytell_hash_map.hpp>
 #include <uninitialized_vector.hpp>
 
@@ -167,7 +167,8 @@ class AggregateHash : public AbstractAggregateOperator {
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
@@ -191,7 +192,7 @@ class AggregateHash : public AbstractAggregateOperator {
   std::vector<std::shared_ptr<SegmentVisitorContext>> _contexts_per_column;
   bool _has_aggregate_functions;
 
-  std::atomic<size_t> _expected_result_size{};
+  std::atomic_size_t _expected_result_size{};
   bool _use_immediate_key_shortcut{};
 
   std::chrono::nanoseconds groupby_columns_writing_duration{};
@@ -203,7 +204,9 @@ class AggregateHash : public AbstractAggregateOperator {
 namespace std {
 template <>
 struct hash<opossum::EmptyAggregateKey> {
-  size_t operator()(const opossum::EmptyAggregateKey& key) const { return 0; }
+  size_t operator()(const opossum::EmptyAggregateKey& key) const {
+    return 0;
+  }
 };
 
 template <>

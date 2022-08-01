@@ -14,10 +14,13 @@ DataType ListExpression::data_type() const {
   Fail("A ListExpression doesn't have a single type, each of its elements might have a different type");
 }
 
-const std::vector<std::shared_ptr<AbstractExpression>>& ListExpression::elements() const { return arguments; }
+const std::vector<std::shared_ptr<AbstractExpression>>& ListExpression::elements() const {
+  return arguments;
+}
 
-std::shared_ptr<AbstractExpression> ListExpression::deep_copy() const {
-  return std::make_shared<ListExpression>(expressions_deep_copy(arguments));
+std::shared_ptr<AbstractExpression> ListExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<ListExpression>(expressions_deep_copy(arguments, copied_ops));
 }
 
 std::string ListExpression::description(const DescriptionMode mode) const {
@@ -29,7 +32,5 @@ bool ListExpression::_shallow_equals(const AbstractExpression& expression) const
               "Different expression type should have been caught by AbstractExpression::operator==");
   return true;
 }
-
-size_t ListExpression::_shallow_hash() const { return AbstractExpression::_shallow_hash(); }
 
 }  // namespace opossum

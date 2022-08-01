@@ -7,7 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/robin_map.h>  // NOLINT
+#include "boost/sort/sort.hpp"
+#include "tsl/robin_map.h"
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
@@ -30,7 +31,9 @@ template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
-    if (iterator_value.is_null()) return;
+    if (iterator_value.is_null()) {
+      return;
+    }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
@@ -49,22 +52,22 @@ template <typename T>
 std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(const Table& table,
                                                                              const ColumnID column_id,
                                                                              const HistogramDomain<T>& domain) {
-  // TODO(anybody) If you want to look into performance, this would probably benefit greatly from monotonic buffer
-  //               resources.
-  ValueDistributionMap<T> value_distribution_map;
-
+  auto value_distribution_map = ValueDistributionMap<T>{};
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
   }
 
   auto value_distribution =
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
-  std::sort(value_distribution.begin(), value_distribution.end(),
-            [&](const auto& l, const auto& r) { return l.first < r.first; });
+  value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
+  boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
+                       [&](const auto& l, const auto& r) { return l.first < r.first; });
 
   return value_distribution;
 }

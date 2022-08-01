@@ -20,8 +20,9 @@ struct SortTestParam {
 class SortTest : public BaseTestWithParam<SortTestParam> {
  public:
   static void SetUpTestCase() {
-    input_table = load_table("resources/test_data/tbl/sort/input.tbl", 20);
+    input_table = load_table("resources/test_data/tbl/sort/input.tbl", ChunkOffset{20});
     input_table_wrapper = std::make_shared<TableWrapper>(input_table);
+    input_table_wrapper->never_clear_output();
     input_table_wrapper->execute();
   }
 
@@ -110,15 +111,21 @@ inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestPara
   const auto& param = param_info.param;
 
   std::stringstream stream;
-  if (param.input_is_empty) stream << "Empty";
+  if (param.input_is_empty) {
+    stream << "Empty";
+  }
   stream << (param.input_is_reference ? "Reference" : "Data") << "Input";
   for (const auto& sort_column : param.sort_columns) {
     stream << "Col" << sort_column.column << sort_mode_to_string.left.at(sort_column.sort_mode);
   }
 
-  if (param.output_chunk_size != Chunk::DEFAULT_SIZE) stream << "ChunkSize" << param.output_chunk_size;
+  if (param.output_chunk_size != Chunk::DEFAULT_SIZE) {
+    stream << "ChunkSize" << param.output_chunk_size;
+  }
 
-  if (param.force_materialization == Sort::ForceMaterialization::Yes) stream << "ForcedMaterialization";
+  if (param.force_materialization == Sort::ForceMaterialization::Yes) {
+    stream << "ForcedMaterialization";
+  }
 
   return stream.str();
 }
@@ -133,8 +140,8 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Descending}, SortColumnDefinition{ColumnID{1}, SortMode::Ascending}},  false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "a_desc_b_asc.tbl"},      // NOLINT
 
                            // Output chunk size
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, false, 40,                  Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, true,  40,                  Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, false, ChunkOffset{40},     Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, true,  ChunkOffset{40},     Sort::ForceMaterialization::No,  "a_asc_b_desc.tbl"},      // NOLINT
 
                            // Empty input tables
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},                                                           true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::No,  "empty.tbl"},             // NOLINT
@@ -142,9 +149,9 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
 
                            // Forced materialization
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, false, 33,                  Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, false, ChunkOffset{33},     Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
-                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, true,  33,                  Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
+                           SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending},  SortColumnDefinition{ColumnID{1}, SortMode::Descending}}, false, true,  ChunkOffset{33},     Sort::ForceMaterialization::Yes, "a_asc_b_desc.tbl"},      // NOLINT
 
                            // Empty input tables with forced materialization
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},                                                           true,  false, Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"},             // NOLINT
@@ -172,7 +179,7 @@ TEST_F(SortTest, InputReferencesDifferentTables) {
   // When a single column in a table references different tables, we cannot output sorted ReferenceSegments.
   // This test simulates the output of a union on the first column.
 
-  const auto second_table = load_table("resources/test_data/tbl/sort/a_asc.tbl", 10);
+  const auto second_table = load_table("resources/test_data/tbl/sort/a_asc.tbl", ChunkOffset{10});
   const auto second_table_wrapper = std::make_shared<TableWrapper>(second_table);
   second_table_wrapper->execute();
 

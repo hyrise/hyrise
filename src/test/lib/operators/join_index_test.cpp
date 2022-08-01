@@ -26,21 +26,33 @@ class OperatorsJoinIndexTest : public BaseTest {
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
 
     // load and create the indexed tables
-    _table_wrapper_a = load_table_with_index("resources/test_data/tbl/int_float.tbl", 2);
-    _table_wrapper_b = load_table_with_index("resources/test_data/tbl/int_float2.tbl", 2);
-    _table_wrapper_c = load_table_with_index("resources/test_data/tbl/int_string.tbl", 4);
-    _table_wrapper_d = load_table_with_index("resources/test_data/tbl/string_int.tbl", 3);
-    _table_wrapper_e = load_table_with_index("resources/test_data/tbl/int_int2.tbl", 4);
-    _table_wrapper_f = load_table_with_index("resources/test_data/tbl/int_int3.tbl", 4);
-    _table_wrapper_g = load_table_with_index("resources/test_data/tbl/int_int4.tbl", 4);
-    _table_wrapper_h = load_table_with_index("resources/test_data/tbl/int_float_null_1.tbl", 20);
+    _table_wrapper_a = load_table_with_index("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
+    _table_wrapper_b = load_table_with_index("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
+    _table_wrapper_c = load_table_with_index("resources/test_data/tbl/int_string.tbl", ChunkOffset{4});
+    _table_wrapper_d = load_table_with_index("resources/test_data/tbl/string_int.tbl", ChunkOffset{3});
+    _table_wrapper_e = load_table_with_index("resources/test_data/tbl/int_int2.tbl", ChunkOffset{4});
+    _table_wrapper_f = load_table_with_index("resources/test_data/tbl/int_int3.tbl", ChunkOffset{4});
+    _table_wrapper_g = load_table_with_index("resources/test_data/tbl/int_int4.tbl", ChunkOffset{4});
+    _table_wrapper_h = load_table_with_index("resources/test_data/tbl/int_float_null_1.tbl", ChunkOffset{20});
     _table_wrapper_h_no_index =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_1.tbl", 20));
-    _table_wrapper_i = load_table_with_index("resources/test_data/tbl/int_float_null_2.tbl", 20);
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_1.tbl", ChunkOffset{20}));
+    _table_wrapper_i = load_table_with_index("resources/test_data/tbl/int_float_null_2.tbl", ChunkOffset{20});
     _table_wrapper_i_no_index =
-        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_2.tbl", 20));
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_float_null_2.tbl", ChunkOffset{20}));
 
-    // // execute all TableWrapper operators in advance
+    // Disable auto-clearing of operators' output
+    _table_wrapper_a->never_clear_output();
+    _table_wrapper_b->never_clear_output();
+    _table_wrapper_c->never_clear_output();
+    _table_wrapper_d->never_clear_output();
+    _table_wrapper_e->never_clear_output();
+    _table_wrapper_f->never_clear_output();
+    _table_wrapper_g->never_clear_output();
+    _table_wrapper_h->never_clear_output();
+    _table_wrapper_h_no_index->never_clear_output();
+    _table_wrapper_i->never_clear_output();
+    _table_wrapper_i_no_index->never_clear_output();
+
     _table_wrapper_a->execute();
     _table_wrapper_b->execute();
     _table_wrapper_c->execute();
@@ -55,7 +67,8 @@ class OperatorsJoinIndexTest : public BaseTest {
   }
 
  protected:
-  static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename, const size_t chunk_size) {
+  static std::shared_ptr<TableWrapper> load_table_with_index(const std::string& filename,
+                                                             const ChunkOffset chunk_size) {
     auto table = load_table(filename, chunk_size);
 
     ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::Dictionary});
@@ -74,12 +87,15 @@ class OperatorsJoinIndexTest : public BaseTest {
   }
 
   // builds and executes the given Join and checks correctness of the output
-  static void test_join_output(const std::shared_ptr<const AbstractOperator>& left,
-                               const std::shared_ptr<const AbstractOperator>& right,
+  static void test_join_output(const std::shared_ptr<AbstractOperator>& left,
+                               const std::shared_ptr<AbstractOperator>& right,
                                const OperatorJoinPredicate& primary_predicate, const JoinMode mode,
                                const size_t chunk_size, const bool using_index = true,
                                const IndexSide index_side = IndexSide::Right,
                                const bool single_chunk_reference_guarantee = true) {
+    left->never_clear_output();
+    right->never_clear_output();
+
     const auto join_verification = std::make_shared<JoinVerification>(left, right, mode, primary_predicate);
 
     join_verification->execute();
@@ -149,26 +165,26 @@ TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
                                   std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Right);
 
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Left");
+            "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)\nIndex side: Left");
+            "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0) Index side: Right");
+            "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)\nIndex side: Right");
+            "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Right");
 
   dummy_input->execute();
 
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where a = a AND a != a) Index side: Left");
+            "JoinIndex (Inner) a = a AND a != a Index side: Left");
   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where a = a AND a != a)\nIndex side: Left");
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Left");
 
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-            "JoinIndex (Inner Join where a = a AND a != a) Index side: Right");
+            "JoinIndex (Inner) a = a AND a != a Index side: Right");
   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-            "JoinIndex\n(Inner Join where a = a AND a != a)\nIndex side: Right");
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Right");
 
   EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
 }
@@ -194,7 +210,6 @@ TEST_F(OperatorsJoinIndexTest, DeepCopy) {
 TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
   auto performance_data = JoinIndex::PerformanceData{};
 
-  performance_data.executed = true;
   performance_data.has_output = true;
   performance_data.output_row_count = 2u;
   performance_data.output_chunk_count = 1u;

@@ -182,8 +182,8 @@ class Leaf final : public ARTNode {
  public:
   explicit Leaf(Iterator& lower, Iterator& upper);
 
-  Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable&, size_t) const override;
-  Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable&, size_t) const override;
+  Iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/, size_t) const override;
+  Iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/, size_t) const override;
   Iterator begin() const override;
   Iterator end() const override;
 

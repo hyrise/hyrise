@@ -27,9 +27,9 @@ class AbstractTableScanImpl {
 
   virtual std::shared_ptr<RowIDPosList> scan_chunk(ChunkID chunk_id) = 0;
 
-  std::atomic<size_t> num_chunks_with_early_out{0};
-  std::atomic<size_t> num_chunks_with_all_rows_matching{0};
-  std::atomic<size_t> num_chunks_with_binary_search{0};
+  std::atomic_size_t num_chunks_with_early_out{0};
+  std::atomic_size_t num_chunks_with_all_rows_matching{0};
+  std::atomic_size_t num_chunks_with_binary_search{0};
 
  protected:
   /**
@@ -109,7 +109,7 @@ class AbstractTableScanImpl {
     auto matches_out_index = matches_out.size();
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
-    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
+    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, ChunkOffset{0}});
 
     // As we access the offsets after we already moved the iterator, we need a copy of it. Creating this copy outside
     // of the while loop keeps the surprisingly high costs for copying an iterator to a minimum.
@@ -139,14 +139,16 @@ class AbstractTableScanImpl {
         const auto& left = *left_it;
 
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          mask |= ((!CheckForNull | !left.is_null()) & func(left)) << i;
+          mask |= ((!CheckForNull | !left.is_null()) && func(left)) << i;
         } else {
           const auto& right = *right_it;
           mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << i;
         }
 
         ++left_it;
-        if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
+        if constexpr (!std::is_same_v<RightIterator, std::false_type>) {
+          ++right_it;
+        }
       }
 
       if (!mask) {
@@ -226,7 +228,7 @@ class AbstractTableScanImpl {
       // As we write directly into the matches_out vector, we have to make sure that is big enough. We grow the vector
       // more aggressively than its default behavior as the potentially wasted space is only ephemeral.
       if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
-        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
+        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, ChunkOffset{0}});
       }
     }
 

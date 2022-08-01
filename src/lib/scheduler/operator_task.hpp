@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include <unordered_map>
+#include <utility>
 #include <vector>
 
 #include "scheduler/abstract_task.hpp"
@@ -20,25 +20,25 @@ class OperatorTask : public AbstractTask {
                bool stealable = true);
 
   /**
-   * Create tasks recursively from result operator and set task dependencies automatically.
+   * Creates tasks recursively from the given operator @param op and sets task dependencies automatically.
+   * @returns a pair, consisting of a vector of unordered tasks and a pointer to the root operator task that would
+   *          otherwise be hidden inside the vector.
    */
-  static std::vector<std::shared_ptr<AbstractTask>> make_tasks_from_operator(
+  static std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>> make_tasks_from_operator(
       const std::shared_ptr<AbstractOperator>& op);
 
   const std::shared_ptr<AbstractOperator>& get_operator() const;
 
   std::string description() const override;
 
+  /**
+   * Transitions this OperatorTask to TaskState::Done.
+   * @pre Operator must have already been executed.
+   */
+  void skip_operator_task();
+
  protected:
   void _on_execute() override;
-
-  /**
-   * Create tasks recursively. Called by `make_tasks_from_operator`. Returns the root of the subtree that was added.
-   * @param task_by_op  Cache to avoid creating duplicate Tasks for diamond shapes
-   */
-  static std::shared_ptr<AbstractTask> _add_tasks_from_operator(
-      const std::shared_ptr<AbstractOperator>& op, std::vector<std::shared_ptr<AbstractTask>>& tasks,
-      std::unordered_map<std::shared_ptr<AbstractOperator>, std::shared_ptr<AbstractTask>>& task_by_op);
 
  private:
   std::shared_ptr<AbstractOperator> _op;

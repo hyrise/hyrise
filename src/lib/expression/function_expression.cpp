@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
@@ -27,8 +27,9 @@ FunctionExpression::FunctionExpression(const FunctionType init_function_type,
   }
 }
 
-std::shared_ptr<AbstractExpression> FunctionExpression::deep_copy() const {
-  return std::make_shared<FunctionExpression>(function_type, expressions_deep_copy(arguments));
+std::shared_ptr<AbstractExpression> FunctionExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<FunctionExpression>(function_type, expressions_deep_copy(arguments, copied_ops));
 }
 
 std::string FunctionExpression::description(const DescriptionMode mode) const {
@@ -37,7 +38,9 @@ std::string FunctionExpression::description(const DescriptionMode mode) const {
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
     stream << arguments[argument_idx]->description(mode);
-    if (argument_idx + 1 < arguments.size()) stream << ",";
+    if (argument_idx + 1 < arguments.size()) {
+      stream << ",";
+    }
   }
   stream << ")";
   return stream.str();
@@ -61,6 +64,8 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
          expressions_equal(arguments, function_expression.arguments);
 }
 
-size_t FunctionExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(function_type)); }
+size_t FunctionExpression::_shallow_hash() const {
+  return boost::hash_value(static_cast<size_t>(function_type));
+}
 
 }  // namespace opossum

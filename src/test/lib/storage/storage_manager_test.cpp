@@ -17,7 +17,8 @@ class StorageManagerTest : public BaseTest {
   void SetUp() override {
     auto& sm = Hyrise::get().storage_manager;
     auto t1 = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
-    auto t2 = std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int, false}}, TableType::Data, 4);
+    auto t2 =
+        std::make_shared<Table>(TableColumnDefinitions{{"b", DataType::Int, false}}, TableType::Data, ChunkOffset{4});
 
     sm.add_table("first_table", t1);
     sm.add_table("second_table", t2);
@@ -155,7 +156,7 @@ TEST_F(StorageManagerTest, ListViewNames) {
 
 TEST_F(StorageManagerTest, OutputToStream) {
   auto& sm = Hyrise::get().storage_manager;
-  sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", 2));
+  sm.add_table("third_table", load_table("resources/test_data/tbl/int_int2.tbl", ChunkOffset{2}));
 
   std::ostringstream output;
   output << sm;

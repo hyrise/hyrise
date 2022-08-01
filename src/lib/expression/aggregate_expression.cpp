@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "constant_mappings.hpp"
 #include "expression_utils.hpp"
@@ -21,8 +21,9 @@ std::shared_ptr<AbstractExpression> AggregateExpression::argument() const {
   return arguments.empty() ? nullptr : arguments[0];
 }
 
-std::shared_ptr<AbstractExpression> AggregateExpression::deep_copy() const {
-  return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy());
+std::shared_ptr<AbstractExpression> AggregateExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<AggregateExpression>(aggregate_function, argument()->deep_copy(copied_ops));
 }
 
 std::string AggregateExpression::description(const DescriptionMode mode) const {
@@ -41,7 +42,9 @@ std::string AggregateExpression::description(const DescriptionMode mode) const {
     }
   } else {
     stream << aggregate_function << "(";
-    if (argument()) stream << argument()->description(mode);
+    if (argument()) {
+      stream << argument()->description(mode);
+    }
     stream << ")";
   }
 
@@ -95,16 +98,18 @@ DataType AggregateExpression::data_type() const {
 
 bool AggregateExpression::is_count_star(const AbstractExpression& expression) {
   // COUNT(*) is represented by an AggregateExpression with the COUNT function and an INVALID_COLUMN_ID.
-  if (expression.type != ExpressionType::Aggregate) return false;
-  const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
+  if (expression.type != ExpressionType::Aggregate) {
+    return false;
+  }
 
-  if (aggregate_expression.aggregate_function != AggregateFunction::Count) return false;
-  if (aggregate_expression.argument()->type != ExpressionType::LQPColumn) return false;
+  const auto& aggregate_expression = static_cast<const AggregateExpression&>(expression);
+  if (aggregate_expression.aggregate_function != AggregateFunction::Count ||
+      aggregate_expression.argument()->type != ExpressionType::LQPColumn) {
+    return false;
+  }
 
   const auto& lqp_column_expression = static_cast<LQPColumnExpression&>(*aggregate_expression.argument());
-  if (lqp_column_expression.original_column_id != INVALID_COLUMN_ID) return false;  // NOLINT
-
-  return true;
+  return lqp_column_expression.original_column_id == INVALID_COLUMN_ID;
 }
 
 bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) const {
@@ -113,7 +118,9 @@ bool AggregateExpression::_shallow_equals(const AbstractExpression& expression) 
   return aggregate_function == static_cast<const AggregateExpression&>(expression).aggregate_function;
 }
 
-size_t AggregateExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(aggregate_function)); }
+size_t AggregateExpression::_shallow_hash() const {
+  return boost::hash_value(static_cast<size_t>(aggregate_function));
+}
 
 bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an

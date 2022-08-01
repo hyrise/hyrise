@@ -2,7 +2,8 @@
 
 #include <sstream>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/evaluation/expression_evaluator.hpp"
 
 namespace opossum {
@@ -12,7 +13,9 @@ AbstractPredicateExpression::AbstractPredicateExpression(
     const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
     : AbstractExpression(ExpressionType::Predicate, init_arguments), predicate_condition(init_predicate_condition) {}
 
-DataType AbstractPredicateExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
+DataType AbstractPredicateExpression::data_type() const {
+  return ExpressionEvaluator::DataTypeBool;
+}
 
 bool AbstractPredicateExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const AbstractPredicateExpression*>(&expression),

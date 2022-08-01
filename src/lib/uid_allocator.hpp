@@ -10,9 +10,11 @@ namespace opossum {
  */
 class UidAllocator {
  public:
-  std::uint32_t allocate() { return _incrementor++; }
+  std::uint32_t allocate() {
+    return _incrementor++;
+  }
 
  private:
-  std::atomic<std::uint32_t> _incrementor{0};
+  std::atomic_uint32_t _incrementor{0};
 };
 }  // namespace opossum

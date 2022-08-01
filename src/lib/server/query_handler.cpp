@@ -12,7 +12,9 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) {
+    Hyrise::get().storage_manager.drop_prepared_plan("");
+  }
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
               "Auto-commit transaction contexts should not be passed around this far");
@@ -96,9 +98,9 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
 
 std::shared_ptr<const Table> QueryHandler::execute_prepared_plan(
     const std::shared_ptr<AbstractOperator>& physical_plan) {
-  const auto tasks = OperatorTask::make_tasks_from_operator(physical_plan);
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(physical_plan);
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  return static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
+  return root_operator_task->get_operator()->get_output();
 }
 
 void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& execution_info,

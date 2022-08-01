@@ -41,12 +41,14 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
                                    std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
                                    ExpressionUnorderedSet& visualized_sub_queries) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped Nodes
-  if (visualized_nodes.find(node) != visualized_nodes.end()) return;
+  if (visualized_nodes.find(node) != visualized_nodes.end()) {
+    return;
+  }
   visualized_nodes.insert(node);
 
   auto node_label = node->description();
   if (!node->comment.empty()) {
-    node_label += "\\n(" + node->comment + ")";
+    node_label += "\n(" + node->comment + ")";
   }
   _add_vertex(node, node_label);
 
@@ -66,9 +68,13 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   for (const auto& expression : node->node_expressions) {
     visit_expression(expression, [&](const auto& sub_expression) {
       const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
-      if (!subquery_expression) return ExpressionVisitation::VisitArguments;
+      if (!subquery_expression) {
+        return ExpressionVisitation::VisitArguments;
+      }
 
-      if (!visualized_sub_queries.emplace(subquery_expression).second) return ExpressionVisitation::VisitArguments;
+      if (!visualized_sub_queries.emplace(subquery_expression).second) {
+        return ExpressionVisitation::VisitArguments;
+      }
 
       _build_subtree(subquery_expression->lqp, visualized_nodes, visualized_sub_queries);
 
@@ -122,7 +128,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   const auto& separate_thousands_locale = std::locale(label_stream.getloc(), new SeparateThousandsFacet);
   label_stream.imbue(separate_thousands_locale);
 
-  if (!isnan(row_count)) {
+  if (!std::isnan(row_count)) {
     label_stream << " " << std::fixed << std::setprecision(1) << row_count << " row(s) | " << row_percentage
                  << "% estd.";
   } else {
@@ -137,7 +143,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
     tooltip_stream << " (" << column_id + 1 << ") ";
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
-    if (from->is_column_nullable(column_id)) tooltip_stream << " NULL";
+    if (from->is_column_nullable(column_id)) {
+      tooltip_stream << " NULL";
+    }
     tooltip_stream << "\n";
   }
 
@@ -146,7 +154,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     const auto& unique_constraints = from->unique_constraints();
     tooltip_stream << "\n"
                    << "Unique Constraints: \n";
-    if (unique_constraints->empty()) tooltip_stream << " <none>\n";
+    if (unique_constraints->empty()) {
+      tooltip_stream << " <none>\n";
+    }
     for (auto uc_idx = size_t{0}; uc_idx < unique_constraints->size(); ++uc_idx) {
       tooltip_stream << " (" << uc_idx + 1 << ") ";
       tooltip_stream << unique_constraints->at(uc_idx) << "\n";
@@ -154,10 +164,14 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
     // Edge Tooltip: Trivial FDs
     auto trivial_fds = std::vector<FunctionalDependency>();
-    if (!unique_constraints->empty()) trivial_fds = fds_from_unique_constraints(from, unique_constraints);
+    if (!unique_constraints->empty()) {
+      trivial_fds = fds_from_unique_constraints(from, unique_constraints);
+    }
     tooltip_stream << "\n"
                    << "Functional Dependencies (trivial): \n";
-    if (trivial_fds.empty()) tooltip_stream << " <none>\n";
+    if (trivial_fds.empty()) {
+      tooltip_stream << " <none>\n";
+    }
     for (auto fd_idx = size_t{0}; fd_idx < trivial_fds.size(); ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
       tooltip_stream << trivial_fds.at(fd_idx) << "\n";
@@ -167,7 +181,9 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     const auto& fds = from->non_trivial_functional_dependencies();
     tooltip_stream << "\n"
                    << "Functional Dependencies (non-trivial): \n";
-    if (fds.empty()) tooltip_stream << " <none>";
+    if (fds.empty()) {
+      tooltip_stream << " <none>";
+    }
     for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
       tooltip_stream << fds.at(fd_idx) << "\n";

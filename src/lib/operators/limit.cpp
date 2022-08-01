@@ -22,12 +22,15 @@ const std::string& Limit::name() const {
   return name;
 }
 
-std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
+std::shared_ptr<AbstractExpression> Limit::row_count_expression() const {
+  return _row_count_expression;
+}
 
 std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
-  return std::make_shared<Limit>(copied_left_input, _row_count_expression->deep_copy());
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<Limit>(copied_left_input, _row_count_expression->deep_copy(copied_ops));
 }
 
 std::shared_ptr<const Table> Limit::_on_execute() {
@@ -61,17 +64,19 @@ std::shared_ptr<const Table> Limit::_on_execute() {
    */
   auto output_chunks = std::vector<std::shared_ptr<Chunk>>{};
 
-  ChunkID chunk_id{0};
+  auto chunk_id = ChunkID{0};
   const auto chunk_count = input_table->chunk_count();
-  for (size_t i = 0; i < num_rows && chunk_id < chunk_count; chunk_id++) {
+  for (size_t index = 0; index < num_rows && chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     Segments output_segments;
 
-    size_t output_chunk_row_count = std::min<size_t>(input_chunk->size(), num_rows - i);
+    auto output_chunk_row_count =
+        std::min<ChunkOffset>(input_chunk->size(), static_cast<ChunkOffset>(num_rows - index));
 
-    for (ColumnID column_id{0}; column_id < input_table->column_count(); column_id++) {
+    const auto column_count = input_table->column_count();
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       const auto input_abstract_segment = input_chunk->get_segment(column_id);
       auto output_pos_list = std::make_shared<RowIDPosList>(output_chunk_row_count);
       std::shared_ptr<const Table> referenced_table;
@@ -85,7 +90,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
         std::copy(begin, begin + output_chunk_row_count, output_pos_list->begin());
       } else {
         referenced_table = input_table;
-        for (ChunkOffset chunk_offset = 0; chunk_offset < static_cast<ChunkOffset>(output_chunk_row_count);
+        for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_chunk_row_count);
              chunk_offset++) {
           (*output_pos_list)[chunk_offset] = RowID{chunk_id, chunk_offset};
         }
@@ -95,7 +100,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
           std::make_shared<ReferenceSegment>(referenced_table, output_column_id, output_pos_list));
     }
 
-    i += output_chunk_row_count;
+    index += output_chunk_row_count;
     auto output_chunk = std::make_shared<Chunk>(std::move(output_segments));
     output_chunk->finalize();
     // The limit operator does not affect sorted_by property. If a chunk was sorted before, it still is after the limit

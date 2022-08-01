@@ -12,6 +12,7 @@ class OperatorsJoinSortMergeTest : public BaseTest {
     const auto dummy_table =
         std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
     dummy_input = std::make_shared<TableWrapper>(dummy_table);
+    dummy_input->never_clear_output();
   }
 
   std::shared_ptr<AbstractOperator> dummy_input;
@@ -26,15 +27,13 @@ TEST_F(OperatorsJoinSortMergeTest, DescriptionAndName) {
                                       std::vector<OperatorJoinPredicate>{secondary_predicate});
 
   EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinSortMerge (Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)");
+            "JoinSortMerge (Inner) Column #0 = Column #0 AND Column #0 != Column #0");
   EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinSortMerge\n(Inner Join where Column #0 = Column #0 AND Column #0 != Column #0)");
+            "JoinSortMerge (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0");
 
   dummy_input->execute();
-  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine),
-            "JoinSortMerge (Inner Join where a = a AND a != a)");
-  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine),
-            "JoinSortMerge\n(Inner Join where a = a AND a != a)");
+  EXPECT_EQ(join_operator->description(DescriptionMode::SingleLine), "JoinSortMerge (Inner) a = a AND a != a");
+  EXPECT_EQ(join_operator->description(DescriptionMode::MultiLine), "JoinSortMerge (Inner)\na = a\nAND a != a");
 
   EXPECT_EQ(join_operator->name(), "JoinSortMerge");
 }
@@ -64,6 +63,7 @@ TEST_F(OperatorsJoinSortMergeTest, ValueClusteringFlag) {
   test_table->append({1, 2, 5});
 
   const auto test_input = std::make_shared<TableWrapper>(test_table);
+  test_input->never_clear_output();
   test_input->execute();
   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::Equals};
 

@@ -94,9 +94,13 @@ class SegmentEncoder : public BaseSegmentEncoder {
     return encoded_segment;
   }
 
-  std::unique_ptr<BaseSegmentEncoder> create_new() const final { return std::make_unique<Derived>(); }
+  std::unique_ptr<BaseSegmentEncoder> create_new() const final {
+    return std::make_unique<Derived>();
+  }
 
-  bool uses_vector_compression() const final { return Derived::_uses_vector_compression; }
+  bool uses_vector_compression() const final {
+    return Derived::_uses_vector_compression;
+  }
 
   void set_vector_compression(VectorCompressionType type) final {
     Assert(uses_vector_compression(), "Vector compression type can only be set if supported by encoder.");
@@ -142,17 +146,24 @@ class SegmentEncoder : public BaseSegmentEncoder {
   /**@}*/
 
  protected:
-  VectorCompressionType vector_compression_type() const { return _vector_compression_type; }
+  VectorCompressionType vector_compression_type() const {
+    return _vector_compression_type;
+  }
 
  private:
-  // LZ4Encoder only supports SimdBp128 in order to reduce the compile time, see the comment in lz4_encoder.hpp.
+  // LZ4Encoder only supports BitPacking in order to reduce the compile time, see the comment in lz4_encoder.hpp.
   VectorCompressionType _vector_compression_type = std::is_same_v<Derived, LZ4Encoder>
-                                                       ? VectorCompressionType::SimdBp128
-                                                       : VectorCompressionType::FixedSizeByteAligned;
+                                                       ? VectorCompressionType::BitPacking
+                                                       : VectorCompressionType::FixedWidthInteger;
 
  private:
-  Derived& _self() { return static_cast<Derived&>(*this); }
-  const Derived& _self() const { return static_cast<const Derived&>(*this); }
+  Derived& _self() {
+    return static_cast<Derived&>(*this);
+  }
+
+  const Derived& _self() const {
+    return static_cast<const Derived&>(*this);
+  }
 };
 
 }  // namespace opossum

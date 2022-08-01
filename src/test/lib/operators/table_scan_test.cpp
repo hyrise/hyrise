@@ -38,21 +38,23 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   void SetUp() override {
     _encoding_type = GetParam();
 
-    auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", 7);
-    auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", 5);
+    auto int_int_7 = load_table("resources/test_data/tbl/int_int_shuffled.tbl", ChunkOffset{7});
+    auto int_int_5 = load_table("resources/test_data/tbl/int_int_shuffled_2.tbl", ChunkOffset{5});
 
     ChunkEncoder::encode_chunks(int_int_7, {ChunkID{0}, ChunkID{1}}, SegmentEncodingSpec{_encoding_type});
     // partly compressed table
     ChunkEncoder::encode_chunks(int_int_5, {ChunkID{0}, ChunkID{1}}, SegmentEncodingSpec{_encoding_type});
 
     _int_int_compressed = std::make_shared<TableWrapper>(std::move(int_int_7));
+    _int_int_compressed->never_clear_output();
     _int_int_compressed->execute();
     _int_int_partly_compressed = std::make_shared<TableWrapper>(std::move(int_int_5));
+    _int_int_partly_compressed->never_clear_output();
     _int_int_partly_compressed->execute();
   }
 
   std::shared_ptr<TableWrapper> load_and_encode_table(
-      const std::string& path, const ChunkOffset chunk_size = 2,
+      const std::string& path, const ChunkOffset chunk_size = ChunkOffset{2},
       const std::optional<std::vector<SortColumnDefinition>> sorted_by = std::nullopt) {
     const auto table = load_table(path, chunk_size);
 
@@ -71,13 +73,16 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
-        if (!chunk) continue;
+        if (!chunk) {
+          continue;
+        }
 
         chunk->set_individually_sorted_by(sorted_by.value());
       }
     }
 
     auto table_wrapper = std::make_shared<TableWrapper>(table);
+    table_wrapper->never_clear_output();
     table_wrapper->execute();
 
     return table_wrapper;
@@ -89,13 +94,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_int_sorted_op() {
     return load_and_encode_table(
-        "resources/test_data/tbl/int_sorted.tbl", 4,
+        "resources/test_data/tbl/int_sorted.tbl", ChunkOffset{4},
         std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
   }
 
   std::shared_ptr<TableWrapper> get_int_only_null_op() {
     return load_and_encode_table(
-        "resources/test_data/tbl/int_only_null.tbl", 4,
+        "resources/test_data/tbl/int_only_null.tbl", ChunkOffset{4},
         std::make_optional(std::vector<SortColumnDefinition>{SortColumnDefinition(ColumnID(0), SortMode::Ascending)}));
   }
 
@@ -103,7 +108,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     return load_and_encode_table("resources/test_data/tbl/int_string.tbl");
   }
 
-  std::shared_ptr<TableWrapper> get_int_float_with_null_op(const ChunkOffset chunk_size = 2) {
+  std::shared_ptr<TableWrapper> get_int_float_with_null_op(const ChunkOffset chunk_size = ChunkOffset{2}) {
     return load_and_encode_table("resources/test_data/tbl/int_float_with_null.tbl", chunk_size);
   }
 
@@ -117,13 +122,13 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     const auto test_table_part_compressed = _int_int_partly_compressed->get_output();
 
     auto pos_list = std::make_shared<RowIDPosList>();
-    pos_list->emplace_back(RowID{ChunkID{2}, 0});
-    pos_list->emplace_back(RowID{ChunkID{1}, 1});
-    pos_list->emplace_back(RowID{ChunkID{1}, 3});
-    pos_list->emplace_back(RowID{ChunkID{0}, 2});
-    pos_list->emplace_back(RowID{ChunkID{2}, 2});
-    pos_list->emplace_back(RowID{ChunkID{0}, 0});
-    pos_list->emplace_back(RowID{ChunkID{0}, 4});
+    pos_list->emplace_back(RowID{ChunkID{2}, ChunkOffset{0}});
+    pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{1}});
+    pos_list->emplace_back(RowID{ChunkID{1}, ChunkOffset{3}});
+    pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
+    pos_list->emplace_back(RowID{ChunkID{2}, ChunkOffset{2}});
+    pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+    pos_list->emplace_back(RowID{ChunkID{0}, ChunkOffset{4}});
 
     auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{0}, pos_list);
     auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{1}, pos_list);
@@ -132,7 +137,9 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+    table_wrapper->never_clear_output();
     table_wrapper->execute();
+
     return table_wrapper;
   }
 
@@ -141,7 +148,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int, false);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::Data, 100'000);
+    std::shared_ptr<Table> table =
+        std::make_shared<Table>(table_column_definitions, TableType::Data, ChunkOffset{100'000});
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i});
@@ -152,24 +160,28 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
     auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
+    table_wrapper->never_clear_output();
     table_wrapper->execute();
+
     return table_wrapper;
   }
 
   std::shared_ptr<const Table> create_referencing_table_w_null_row_id(const bool references_dict_segment) {
-    const auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+    const auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
 
     if (references_dict_segment) {
       ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
     }
 
     auto pos_list_a = std::make_shared<RowIDPosList>(
-        RowIDPosList{RowID{ChunkID{0u}, 1u}, RowID{ChunkID{1u}, 0u}, RowID{ChunkID{0u}, 2u}, RowID{ChunkID{0u}, 3u}});
-    auto ref_segment_a = std::make_shared<ReferenceSegment>(table, ColumnID{0u}, pos_list_a);
+        RowIDPosList{RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{1}, ChunkOffset{0}},
+                     RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{0}, ChunkOffset{3}}});
+    auto ref_segment_a = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_a);
 
-    auto pos_list_b = std::make_shared<RowIDPosList>(
-        RowIDPosList{NULL_ROW_ID, RowID{ChunkID{0u}, 0u}, RowID{ChunkID{1u}, 2u}, RowID{ChunkID{0u}, 1u}});
-    auto ref_segment_b = std::make_shared<ReferenceSegment>(table, ColumnID{1u}, pos_list_b);
+    auto pos_list_b = std::make_shared<RowIDPosList>(RowIDPosList{NULL_ROW_ID, RowID{ChunkID{0}, ChunkOffset{0}},
+                                                                  RowID{ChunkID{1}, ChunkOffset{2}},
+                                                                  RowID{ChunkID{0}, ChunkOffset{1}}});
+    auto ref_segment_b = std::make_shared<ReferenceSegment>(table, ColumnID{1}, pos_list_b);
 
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("a", DataType::Int, true);
@@ -194,16 +206,18 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
       auto scan = create_table_scan(in, ColumnID{1}, predicate_condition, NULL_VALUE);
       scan->execute();
 
-      ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
+      ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, expected);
     }
   }
 
   void ASSERT_COLUMN_EQ(std::shared_ptr<const Table> table, const ColumnID& column_id,
                         std::vector<AllTypeVariant> expected) {
-    for (auto chunk_id = ChunkID{0u}; chunk_id < table->chunk_count(); ++chunk_id) {
+    const auto chunk_count = table->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
 
-      for (auto chunk_offset = ChunkOffset{0u}; chunk_offset < chunk->size(); ++chunk_offset) {
+      const auto chunk_size = chunk->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         const auto& segment = *chunk->get_segment(column_id);
 
         const auto found_value = segment[chunk_offset];
@@ -228,7 +242,8 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     scan_sorted->execute();
     const auto& result_table_sorted = scan_sorted->get_output();
 
-    for (auto chunk_id = ChunkID{0}; chunk_id < result_table_sorted->chunk_count(); ++chunk_id) {
+    const auto chunk_count = result_table_sorted->chunk_count();
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto& actual_sorted_by = result_table_sorted->get_chunk(chunk_id)->individually_sorted_by();
       ASSERT_TRUE(!actual_sorted_by.empty());
       const auto expected_sorted_by =
@@ -253,7 +268,7 @@ INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                          table_scan_test_formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", 2);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", ChunkOffset{2});
 
   auto scan_1 = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
@@ -274,7 +289,8 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScan) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
@@ -283,7 +299,8 @@ TEST_P(OperatorsTableScanTest, SingleScan) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_sorted_filtered.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_sorted_filtered.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 2);
   scan->execute();
@@ -292,7 +309,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqualNull) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_only_null_op(), ColumnID{0}, PredicateCondition::Equals, 2);
   scan->execute();
@@ -301,7 +318,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqual
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllPredicateValueLarger) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", 1);
+  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 6);
   scan->execute();
@@ -310,7 +327,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllPredicateValu
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentNotEquals) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_sorted_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_sorted_filtered2.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::NotEquals, 2);
   scan->execute();
@@ -319,34 +337,56 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentNotEquals) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
   const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
-
-  auto scan = std::make_shared<TableScan>(get_int_float_op(),
-                                          greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
-  scan->execute();
-  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
-  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+  subquery_pqp->never_clear_output();
+  {
+    auto scan = std::make_shared<TableScan>(get_int_float_op(),
+                                            greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                                 pqp_subquery_(subquery_pqp, DataType::Int, false)));
+    EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
+  }
+  {
+    auto scan = std::make_shared<TableScan>(get_int_float_op(),
+                                            greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                                 pqp_subquery_(subquery_pqp, DataType::Int, false)));
+    scan->execute();
+    EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+  }
 }
 
 TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+  std::shared_ptr<Table> expected_result =
+      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
   const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
-
+  subquery_pqp->never_clear_output();
+  {
+    auto scan = std::make_shared<TableScan>(
+        get_int_float_op(),
+        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
+    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
+  }
+  {
+    auto scan = std::make_shared<TableScan>(
+        get_int_float_op(),
+        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
+    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
+  }
   {
     auto scan = std::make_shared<TableScan>(
         get_int_float_op(),
         between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
                            pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
     scan->execute();
-    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
     EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
   }
 }
@@ -481,7 +521,7 @@ TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsValueLessThanMinDictionar
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValues) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
   table_wrapper->execute();
@@ -492,11 +532,11 @@ TEST_P(OperatorsTableScanTest, ScanOnIntValueSegmentWithFloatColumnWithNullValue
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
+  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, expected);
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWithNullValues) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
   table_wrapper->execute();
@@ -507,11 +547,11 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntValueSegmentWithFloatColumnWit
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
+  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, expected);
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNullValues) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -523,11 +563,11 @@ TEST_P(OperatorsTableScanTest, ScanOnIntCompressedSegmentsWithFloatColumnWithNul
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
+  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, expected);
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatColumnWithNullValues) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
@@ -539,7 +579,7 @@ TEST_P(OperatorsTableScanTest, ScanOnReferencedIntCompressedSegmentsWithFloatCol
   scan->execute();
 
   const auto expected = std::vector<AllTypeVariant>{12345, 1234, 12345, 1234};
-  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0u}, expected);
+  ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{0}, expected);
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedSegmentsAroundBounds) {
@@ -607,7 +647,8 @@ TEST_P(OperatorsTableScanTest, OperatorName) {
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
   auto table_wrapper =
-      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4));
+      std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4}));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -618,10 +659,11 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegment) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -632,11 +674,12 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSegments) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
-  const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", 4);
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_asc_2.tbl", ChunkOffset{4});
   table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
@@ -646,11 +689,12 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedSortedSegments) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegments) {
-  const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", 4);
+  const auto table = load_table("resources/test_data/tbl/int_null_sorted_desc_2.tbl", ChunkOffset{4});
   table->get_chunk(ChunkID{0})->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Descending));
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{{PredicateCondition::IsNull, {1, 2}},
@@ -660,9 +704,10 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnCompressedDescendingSortedSegm
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
-  auto table = load_table("resources/test_data/tbl/int_float.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{4});
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -672,9 +717,10 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnValueSegmentWithoutNulls) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutNulls) {
-  auto table = load_table("resources/test_data/tbl/int_float.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{4});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -684,9 +730,10 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegmentWithoutN
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -697,10 +744,11 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedValueSegment) {
 }
 
 TEST_P(OperatorsTableScanTest, ScanForNullValuesOnReferencedCompressedSegments) {
-  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", 4);
+  auto table = load_table("resources/test_data/tbl/int_int_w_null_8_rows.tbl", ChunkOffset{4});
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{_encoding_type});
 
   auto table_wrapper = std::make_shared<TableWrapper>(to_simple_reference_table(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -714,6 +762,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedValueSe
   auto table = create_referencing_table_w_null_row_id(false);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -726,6 +775,7 @@ TEST_P(OperatorsTableScanTest, ScanForNullValuesWithNullRowIDOnReferencedCompres
   auto table = create_referencing_table_w_null_row_id(true);
 
   auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
 
   const auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{
@@ -824,7 +874,7 @@ TEST_P(OperatorsTableScanTest, ScanWithExcludedFirstChunk) {
   auto scan = std::make_shared<TableScan>(
       _int_int_partly_compressed,
       greater_than_equals_(get_column_expression(_int_int_partly_compressed, ColumnID{0}), 0));
-  scan->excluded_chunk_ids = {ChunkID{0u}};
+  scan->excluded_chunk_ids = {ChunkID{0}};
   scan->execute();
 
   ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1}, expected);
@@ -874,18 +924,20 @@ TEST_P(OperatorsTableScanTest, SetParameters) {
 
   const auto column = get_column_expression(_int_int_compressed, ColumnID{0});
 
-  const auto scan_a = std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, 4));
+  // Hint: To set parameters, operators are not allowed to have executed.
+  //       Therefore, we deep copy the TableWrapper _int_int_compressed to reset its execution state.
+  const auto scan_a = std::make_shared<TableScan>(_int_int_compressed->deep_copy(), greater_than_equals_(column, 4));
   scan_a->set_parameters(parameters);
   EXPECT_EQ(*scan_a->predicate(), *greater_than_equals_(column, 4));
 
   const auto parameter_expression_with_value = placeholder_(ParameterID{2});
-  const auto scan_b =
-      std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{2})));
+  const auto scan_b = std::make_shared<TableScan>(_int_int_compressed->deep_copy(),
+                                                  greater_than_equals_(column, placeholder_(ParameterID{2})));
   scan_b->set_parameters(parameters);
   EXPECT_EQ(*scan_b->predicate(), *greater_than_equals_(column, parameter_expression_with_value));
 
-  const auto scan_c =
-      std::make_shared<TableScan>(_int_int_compressed, greater_than_equals_(column, placeholder_(ParameterID{4})));
+  const auto scan_c = std::make_shared<TableScan>(_int_int_compressed->deep_copy(),
+                                                  greater_than_equals_(column, placeholder_(ParameterID{4})));
   scan_c->set_parameters(parameters);
   EXPECT_EQ(*scan_c->predicate(), *greater_than_equals_(column, placeholder_(ParameterID{4})));
 }
@@ -1038,7 +1090,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   // For each fifth row, column a is NULL. Otherwise, a is 100'000 + i, b is the index in the list of non-NULL values.
 
   auto column_definitions = TableColumnDefinitions{{"a", DataType::Int, true}, {"b", DataType::Int, true}};
-  const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, 13);
+  const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{13});
 
   for (auto i = 0, index = 0; i < 1'000; ++i) {
     if (i % 5 == 4) {
@@ -1055,6 +1107,7 @@ TEST_P(OperatorsTableScanTest, TwoBigScans) {
   }
 
   auto data_table_wrapper = std::make_shared<TableWrapper>(data_table);
+  data_table_wrapper->never_clear_output();
   data_table_wrapper->execute();
 
   const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
@@ -1122,17 +1175,17 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 1});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 0});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 3});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 2});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
   pos_list_1->guarantee_single_chunk();
 
   const auto segment_1 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment_1});
 
   auto pos_list_2 = std::make_shared<RowIDPosList>();
-  pos_list_2->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_2->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
   pos_list_2->guarantee_single_chunk();
 
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
@@ -1170,14 +1223,14 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 1});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 3});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
 
   const auto segment_1 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment_1});
 
   auto pos_list_2 = std::make_shared<RowIDPosList>();
-  pos_list_2->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_2->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
 
   const auto segment_2 = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_2);
   ref_table->append_chunk({segment_2});
@@ -1220,11 +1273,11 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 1});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 0});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 3});
-  pos_list_1->emplace_back(RowID{ChunkID{0}, 2});
-  pos_list_1->emplace_back(RowID{ChunkID{1}, 0});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{3}});
+  pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{2}});
+  pos_list_1->emplace_back(RowID{ChunkID{1}, ChunkOffset{0}});
 
   const auto segment = std::make_shared<ReferenceSegment>(table, ColumnID{0}, pos_list_1);
   ref_table->append_chunk({segment});

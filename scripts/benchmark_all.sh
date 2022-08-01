@@ -4,22 +4,33 @@ set -e
 
 if [ $# -ne 2 ]
 then
-  echo 'This script is used to compare the performance impact of a change. Running it takes more than an hour.'
+  echo 'This script is used to compare the performance impact of a change. Running it takes a few hours.'
   echo '  It compares two git revisions using various benchmarks (see below) and prints the result in a format'
   echo '  that is copyable to Github.'
-  echo 'Typical call (in a release build folder): ../scripts/benchmark_all.sh master HEAD'
+  echo 'Typical call (in a release build folder): ../scripts/benchmark_all.sh origin/master HEAD'
   exit 1
 fi
 
 benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
-num_mt_clients=50
+# Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
+warmup_seconds=1
+mt_shuffled_runtime=1200
+runs=100
+
+# Setting the number of clients used for the multi-threaded scenario to the machine's physical core count. This only works for macOS and Linux.
+output="$(uname -s)"
+case "${output}" in
+    Linux*)     num_phy_cores="$(lscpu -p | egrep -v '^#' | grep '^[0-9]*,[0-9]*,0,0' | sort -u -t, -k 2,4 | wc -l)";;
+    Darwin*)    num_phy_cores="$(sysctl -n hw.physicalcpu)";;
+    *)          echo 'Unsupported operating system. Aborting.' && exit 1;;
+esac
 
 # Retrieve SHA-1 hashes from arguments (e.g., translate "master" into an actual hash)
 start_commit_reference=$1
 end_commit_reference=$2
 
-start_commit=$(git rev-parse $start_commit_reference | head -n 1)
-end_commit=$(git rev-parse $end_commit_reference | head -n 1)
+start_commit=$(git rev-parse "$start_commit_reference" | head -n 1)
+end_commit=$(git rev-parse "$end_commit_reference" | head -n 1)
 
 # Check status of repository
 if [[ $(git status --untracked-files=no --porcelain) ]]
@@ -38,7 +49,7 @@ fi
 
 # Check whether to use ninja or make
 output=$(grep 'CMAKE_MAKE_PROGRAM' CMakeCache.txt | grep ninja || true)
-if [ ! -z "$output" ]
+if [ -n "$output" ]
 then
   build_system='ninja'
 else
@@ -63,7 +74,7 @@ do
   fi
 
   # Checkout and build from scratch, tracking the compile time
-  git checkout $commit
+  git checkout "$commit"
   git submodule update --init --recursive
   echo "Building $commit..."
   $build_system clean
@@ -73,22 +84,25 @@ do
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
   for benchmark in $benchmarks
   do
-    echo "Running $benchmark for $commit... (single-threaded)"
-    ( ${build_folder}/$benchmark -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
+      echo "Running $benchmark for $commit... (single-threaded)"
+      # Warming up does not make sense/much of a difference for TPCC.
+      ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    else
+      echo "Running $benchmark for $commit... (single-threaded)"
+      ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+    fi
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( ${build_folder}/$benchmark -s .01 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
-      echo "Running $benchmark for $commit... (single-threaded, SF 1.0)"
-      ( ${build_folder}/$benchmark -s 1 -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s1.log"
-
-      echo "Running $benchmark for $commit... (multi-threaded, SF 10.0, clustered for pruning)"
-      ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -s 10 --clustering=Pruning -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_s10_clustered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_s10_clustered.log"
+      echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
-    echo "Running $benchmark for $commit... (multi-threaded)"
-    ( ${build_folder}/$benchmark --scheduler --clients ${num_mt_clients} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
+    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
@@ -134,17 +148,17 @@ echo ""
 echo "**Commit Info and Build Time**"
 echo "| commit | date | message | build time |"
 echo "| -- | -- | -- | -- |"
-echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${start_commit}) | "
-cat "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
-echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' ${end_commit}) | "
-cat "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | xargs | awk '{printf $0 "|\n"}'
+echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' "${start_commit}") | "
+xargs < "${build_folder}/benchmark_all_results/build_time_${start_commit}.txt" | awk '{printf $0 "|\n"}'
+echo -n "| $(git show -s --date=format:'%d.%m.%Y %H:%M' --format='%h | %cd | %s' "${end_commit}") | "
+xargs < "${build_folder}/benchmark_all_results/build_time_${end_commit}.txt" | awk '{printf $0 "|\n"}'
 
 # Print information for each benchmark
 for benchmark in $benchmarks
 do
   configs="st mt"
   if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-    configs="st st_s01 st_s10 mt"
+    configs="st st_s01 mt_ordered mt"
   fi
 
   for config in $configs
@@ -153,12 +167,20 @@ do
     echo ""
     echo ""
     echo -n "**${benchmark} - "
-    case "${config}" in
-      "st") echo -n "single-threaded" ;;
-      "st_s01") echo -n "single-threaded, SF 0.01" ;;
-      "st_s10") echo -n "single-threaded, SF 10" ;;
-      "mt") echo -n "multi-threaded (${num_mt_clients} clients)" ;;
-    esac
+    if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
+      case "${config}" in
+        "st") echo -n "single-threaded, SF 10.0" ;;
+        "st_s01") echo -n "single-threaded, SF 0.01" ;;
+        "mt_ordered") echo -n "multi-threaded, ordered, 1 client, ${num_phy_cores} cores, SF 10.0" ;;
+        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores, SF 10.0" ;;
+      esac
+    else
+      case "${config}" in
+        "st") echo -n "single-threaded" ;;
+        "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
+      esac
+    fi
+    
     echo "**"
     echo "<details>"
     echo "<summary>"

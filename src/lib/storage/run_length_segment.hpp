@@ -96,5 +96,4 @@ class RunLengthSegment : public AbstractEncodedSegment {
 
 EXPLICITLY_DECLARE_DATA_TYPES(RunLengthSegment);
 
-
 }  // namespace opossum

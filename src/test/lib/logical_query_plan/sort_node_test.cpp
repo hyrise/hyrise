@@ -14,8 +14,8 @@ namespace opossum {
 class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a",
-                                            load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
+    Hyrise::get().storage_manager.add_table(
+        "table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2}));
 
     _table_node = StoredTableNode::make("table_a");
 

@@ -27,7 +27,7 @@ class OperatorsUpdateTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     // Update operator works on the StorageManager
     Hyrise::get().storage_manager.add_table(table_to_update_name, table);
   }
@@ -37,6 +37,7 @@ class OperatorsUpdateTest : public BaseTest {
               const std::string& expected_result_path) {
     const auto get_table = std::make_shared<GetTable>(table_to_update_name);
     const auto where_scan = std::make_shared<TableScan>(get_table, where_predicate);
+    where_scan->never_clear_output();
     const auto updated_values_projection = std::make_shared<Projection>(where_scan, update_expressions);
 
     get_table->execute();

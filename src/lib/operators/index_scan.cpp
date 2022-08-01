@@ -66,7 +66,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
 std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<IndexScan>(copied_left_input, _index_type, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
@@ -77,10 +78,14 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
   auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
-    if (!chunk) return;
+    if (!chunk) {
+      return;
+    }
 
     const auto matches_out = std::make_shared<RowIDPosList>(_scan_chunk(chunk_id));
-    if (matches_out->empty()) return;
+    if (matches_out->empty()) {
+      return;
+    }
 
     Segments segments;
 

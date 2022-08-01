@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "boost/variant.hpp"
+#include <boost/variant.hpp>
 
 #include "abstract_expression.hpp"
 #include "resolve_type.hpp"
@@ -23,7 +23,9 @@ class CaseExpression : public AbstractExpression {
   const std::shared_ptr<AbstractExpression>& then() const;
   const std::shared_ptr<AbstractExpression>& otherwise() const;
 
-  std::shared_ptr<AbstractExpression> deep_copy() const override;
+  std::shared_ptr<AbstractExpression> _on_deep_copy(
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
+
   std::string description(const DescriptionMode mode) const override;
   DataType data_type() const override;
 

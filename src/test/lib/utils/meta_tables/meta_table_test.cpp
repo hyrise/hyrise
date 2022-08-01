@@ -60,26 +60,28 @@ class MetaTableTest : public BaseTest {
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
 
-    int_int = load_table("resources/test_data/tbl/int_int.tbl", 2);
-    int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", 100);
+    int_int = load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2});
+    int_int_int_null = load_table("resources/test_data/tbl/int_int_int_null.tbl", ChunkOffset{100});
 
     ChunkEncoder::encode_chunk(int_int_int_null->get_chunk(ChunkID{0}), int_int_int_null->column_data_types(),
                                {SegmentEncodingSpec{EncodingType::RunLength},
-                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::SimdBp128},
+                                SegmentEncodingSpec{EncodingType::Dictionary, VectorCompressionType::BitPacking},
                                 SegmentEncodingSpec{EncodingType::Unencoded}});
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
 
     const auto column_definitions = MetaMockTable().column_definitions();
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2);
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
     table->append({pmr_string{"foo"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager.add_table(table);

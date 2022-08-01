@@ -1,13 +1,13 @@
 {
-    "config": {"null_handling": "null_string_as_null"},
+    "config": {"null_handling": "null_string_as_value"},
     "columns": [
-        {"name": "id", 			"type": "int"},
-        {"name": "person_id", 		"type": "int"},
-        {"name": "name", 		"type": "string"},
-        {"name": "imdb_index", 		"type": "string", "nullable": true},
-        {"name": "name_pcode_cf", 	"type": "string", "nullable": true},
-        {"name": "name_pcode_nf", 	"type": "string", "nullable": true},
-        {"name": "surname_pcode", 	"type": "string", "nullable": true},
-        {"name": "md5sum", 		"type": "string", "nullable": true}
+        {"name": "id",            "type": "int",    "nullable": false},
+        {"name": "person_id",     "type": "int",    "nullable": false},
+        {"name": "name",          "type": "string", "nullable": false},
+        {"name": "imdb_index",    "type": "string", "nullable": true},
+        {"name": "name_pcode_cf", "type": "string", "nullable": true},
+        {"name": "name_pcode_nf", "type": "string", "nullable": true},
+        {"name": "surname_pcode", "type": "string", "nullable": true},
+        {"name": "md5sum",        "type": "string", "nullable": true}
     ]
 }

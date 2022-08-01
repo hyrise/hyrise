@@ -338,7 +338,7 @@ TEST_F(ColumnPruningRuleTest, InnerJoinToSemiJoin) {
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
@@ -380,7 +380,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
     column_definitions.emplace_back("column1", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
@@ -426,7 +426,7 @@ TEST_F(ColumnPruningRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
     column_definitions.emplace_back("column1", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
@@ -466,7 +466,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithNonEqui) {
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
@@ -507,7 +507,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutUniqueConstraint) {
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
@@ -553,7 +553,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchInnerJoinWithoutMatchingUniqueConstraint
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
     column_definitions.emplace_back("column1", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);
@@ -593,7 +593,7 @@ TEST_F(ColumnPruningRuleTest, DoNotTouchNonInnerJoin) {
   {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column0", DataType::Int, false);
-    auto table = std::make_shared<Table>(column_definitions, TableType::Data, 2, UseMvcc::Yes);
+    auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
 
     auto& sm = Hyrise::get().storage_manager;
     sm.add_table("table", table);

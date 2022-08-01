@@ -6,6 +6,7 @@
 
 #ifdef __APPLE__
 #include <mach/mach.h>
+#include <sys/sysctl.h>
 #endif
 
 #include "hyrise.hpp"
@@ -44,7 +45,9 @@ size_t MetaSystemInformationTable::_cpu_count() {
     cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
     std::string cpu_info_line;
     while (std::getline(cpu_info_file, cpu_info_line)) {
-      if (cpu_info_line.starts_with("processor")) ++processors;
+      if (cpu_info_line.starts_with("processor")) {
+        ++processors;
+      }
     }
 
     cpu_info_file.close();

@@ -73,21 +73,33 @@ class CompressedVector : public BaseCompressedVector {
    * @brief Returns a vector specific decompressor
    * @return a unique_ptr of subclass of BaseVectorDecompressor
    */
-  auto create_decompressor() const { return _self().on_create_decompressor(); }
+  auto create_decompressor() const {
+    return _self().on_create_decompressor();
+  }
 
   /**
    * @brief Returns an iterator to the beginning
    * @return a constant input iterator returning uint32_t
    */
-  auto begin() const { return _self().on_begin(); }
-  auto cbegin() const { return begin(); }
+  auto begin() const {
+    return _self().on_begin();
+  }
+
+  auto cbegin() const {
+    return begin();
+  }
 
   /**
    * @brief Returns an iterator to the end
    * @return a constant input iterator returning uint32_t
    */
-  auto end() const { return _self().on_end(); }
-  auto cend() const { return end(); }
+  auto end() const {
+    return _self().on_end();
+  }
+
+  auto cend() const {
+    return end();
+  }
   /**@}*/
 
  public:
@@ -96,10 +108,17 @@ class CompressedVector : public BaseCompressedVector {
    * @{
    */
 
-  size_t size() const final { return _self().on_size(); }
-  size_t data_size() const final { return _self().on_data_size(); }
+  size_t size() const final {
+    return _self().on_size();
+  }
 
-  CompressedVectorType type() const final { return get_compressed_vector_type<Derived>(); }
+  size_t data_size() const final {
+    return _self().on_data_size();
+  }
+
+  CompressedVectorType type() const final {
+    return get_compressed_vector_type<Derived>();
+  }
 
   std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const final {
     return _self().on_create_base_decompressor();
@@ -113,7 +132,9 @@ class CompressedVector : public BaseCompressedVector {
   /**@}*/
 
  private:
-  const Derived& _self() const { return static_cast<const Derived&>(*this); }
+  const Derived& _self() const {
+    return static_cast<const Derived&>(*this);
+  }
 };
 
 }  // namespace opossum

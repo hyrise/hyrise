@@ -7,6 +7,9 @@
 [submodule "third_party/cpp-btree"]
 	path = third_party/cpp-btree
 	url = https://github.com/mrks/cpp-btree
+[submodule "third_party/compact_vector"]
+	path = third_party/compact_vector
+	url = https://github.com/gmarcais/compact_vector.git
 [submodule "third_party/cpplint"]
 	path = third_party/cpplint
 	url = https://github.com/cpplint/cpplint.git
@@ -19,6 +22,9 @@
 [submodule "third_party/googletest"]
 	path = third_party/googletest
 	url = https://github.com/abseil/googletest.git
+[submodule "third_party/jcch-dbgen"]
+	path = third_party/jcch-dbgen
+	url = https://github.com/mrks/dbgen.JCC-H.git
 [submodule "third_party/jemalloc"]
 	path = third_party/jemalloc
 	url = https://github.com/jemalloc/jemalloc.git
@@ -38,18 +44,15 @@
 	path = third_party/nlohmann_json
 	url = https://github.com/nlohmann/json.git
 	shallow = true
+[submodule "third_party/robin-map"]
+	path = third_party/robin-map
+	url = https://github.com/Tessil/robin-map.git
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
-	url = https://github.com/hyrise/sql-parser
+	url = https://github.com/hyrise/sql-parser.git
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
-[submodule "third_party/robin-map"]
-	path = third_party/robin-map
-	url = https://github.com/Tessil/robin-map.git
-[submodule "third_party/jcch-dbgen"]
-	path = third_party/jcch-dbgen
-	url = https://github.com/mrks/dbgen.JCC-H.git

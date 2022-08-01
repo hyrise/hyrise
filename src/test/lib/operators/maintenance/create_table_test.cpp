@@ -25,6 +25,7 @@ class CreateTableTest : public BaseTest {
     column_definitions.emplace_back("b", DataType::Float, true);
 
     dummy_table_wrapper = std::make_shared<TableWrapper>(Table::create_dummy_table(column_definitions));
+    dummy_table_wrapper->never_clear_output();
     dummy_table_wrapper->execute();
 
     create_table = std::make_shared<CreateTable>("t", false, dummy_table_wrapper);

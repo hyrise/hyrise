@@ -17,7 +17,7 @@ struct MvccData {
 
  public:
   // The last commit id is reserved for uncommitted changes
-  static constexpr CommitID MAX_COMMIT_ID = std::numeric_limits<CommitID>::max() - 1;
+  static constexpr CommitID MAX_COMMIT_ID = CommitID{std::numeric_limits<CommitID::base_type>::max() - 1};
 
   // This is used for optimizing the validation process. It is set during Chunk::finalize(). Consult
   // Validate::_on_execute for further details.

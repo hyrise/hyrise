@@ -57,7 +57,7 @@ class LQPSubqueryExpressionTest : public BaseTest {
 
 TEST_F(LQPSubqueryExpressionTest, DeepEquals) {
   /**
-   * Test that when comparing sub query expressions, the underlying LQPs get compared and so does the Parameter
+   * Test that when comparing subquery expressions, the underlying LQPs get compared and so does the Parameter
    * signature
    */
 

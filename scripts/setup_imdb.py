@@ -35,8 +35,10 @@ def is_setup():
 assert len(sys.argv) == 2
 table_dir = sys.argv[1]
 
-LOCATION = "https://archive.org/download/imdb_20200624/imdb.zip"
-FILE_NAME = "imdb.zip"
+# This file contains the IMDB dataset and is based on the specifications of the
+# original JOB repository: https://github.com/gregrahn/join-order-benchmark
+LOCATION = "https://www.dropbox.com/s/177u7apsx7aqvh7/imdb_data.zip?dl=1"
+FILE_NAME = "imdb_data.zip"
 TABLE_NAMES = [
     "aka_name",
     "aka_title",
@@ -71,8 +73,17 @@ if is_setup():
 hash_md5 = hashlib.md5()
 
 url = urllib.request.urlopen(LOCATION)
+
 meta = url.info()
-file_size = int(meta["Content-Length"])
+
+if "X-Dropbox-Content-Length" in meta:
+    file_size = int(meta["X-Dropbox-Content-Length"])
+elif "Content-Length" in meta:
+    file_size = int(meta["Content-Length"])
+else:
+    print("- Aborting. Could not retrieve the imdb dataset's file size.")
+    clean_up()
+    sys.exit(1)
 
 file = open(FILE_NAME, "wb")
 
@@ -104,7 +115,7 @@ print("- Validating integrity...")
 
 hash_dl = hash_md5.hexdigest()
 
-if hash_dl != "1b5cf1e8ca7f7cb35235a3c23f89d8e9":
+if hash_dl != "8769841f04fdf2b0692a257018b4017c":
     print("  Aborting. MD5 checksum mismatch. Cleaning up.")
     clean_up()
     sys.exit(2)
@@ -113,7 +124,7 @@ print("- Downloaded file is valid.")
 print("- Unzipping the file...")
 
 try:
-    zip = zipfile.ZipFile("imdb.zip", "r")
+    zip = zipfile.ZipFile(FILE_NAME, "r")
     zip.extractall(table_dir)
     zip.close()
 except Exception:

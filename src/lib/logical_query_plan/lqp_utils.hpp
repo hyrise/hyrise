@@ -41,7 +41,7 @@ using LQPMismatch = std::pair<std::shared_ptr<const AbstractLQPNode>, std::share
  *                                                                         \
  *                                                                        [ProjectionNodeB(...)]
  *
- *        (1) collect_subquery_expressions_by_lqp(ProjectionNodeRoot)
+ *        (1) collect_lqp_subquery_expressions_by_lqp(ProjectionNodeRoot)
  *                =>  returns { [ ProjectionNodeA, { SubqueryExpressionA } ],
  *                              [ ProjectionNodeB, { SubqueryExpressionB } ] }
  *
@@ -62,9 +62,9 @@ using SubqueryExpressionsByLQP =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
- * Returns unique LQPs from (nested) subquery expressions of @param node.
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
  */
-SubqueryExpressionsByLQP collect_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
@@ -93,9 +93,15 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node,
+                     const std::shared_ptr<AbstractLQPNode>& node_to_insert,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
+/**
+ * Sets @param node as the left input of @param node_to_insert, and re-connects all outputs to @param node_to_insert.
+ */
+void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
+                           const AllowRightInput allow_right_input = AllowRightInput::No);
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
@@ -111,7 +117,7 @@ std::set<std::string> lqp_find_modified_tables(const std::shared_ptr<AbstractLQP
  * begin node until it reaches the end node if set or an LQP node which is a not a Predicate, Union, Projection, Sort,
  * Validate or Limit node. The end node is necessary if a certain Predicate should not be part of the created expression
  * 
- * Subsequent Predicate nodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
+ * Subsequent PredicateNodes are turned into a LogicalExpression with AND. UnionNodes into a LogicalExpression with OR.
  * Projection, Sort, Validate or Limit LQP nodes are ignored during the traversal.
  *
  *         input LQP   --- lqp_subplan_to_boolean_expression(Sort, Predicate A) --->   boolean expression
@@ -162,11 +168,17 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
     auto node = node_queue.front();
     node_queue.pop();
 
-    if (!visited_nodes.emplace(node).second) continue;
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
 
     if (visitor(node) == LQPVisitation::VisitInputs) {
-      if (node->left_input()) node_queue.push(node->left_input());
-      if (node->right_input()) node_queue.push(node->right_input());
+      if (node->left_input()) {
+        node_queue.push(node->left_input());
+      }
+      if (node->right_input()) {
+        node_queue.push(node->right_input());
+      }
     }
   }
 }
@@ -194,10 +206,14 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
     auto node = node_queue.front();
     node_queue.pop();
 
-    if (!visited_nodes.emplace(node).second) continue;
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
 
     if (visitor(node) == LQPUpwardVisitation::VisitOutputs) {
-      for (const auto& output : node->outputs()) node_queue.push(output);
+      for (const auto& output : node->outputs()) {
+        node_queue.push(output);
+      }
     }
   }
 }
@@ -207,6 +223,16 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
  *         subqueries
  */
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_subplan_roots(const std::shared_ptr<AbstractLQPNode>& lqp);
+
+/**
+ * Traverses @param lqp from the top to the bottom and returns all nodes of the given @param type.
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::shared_ptr<AbstractLQPNode>& lqp,
+                                                                     const LQPNodeType type);
+/**
+ * Traverses @param lqp from the top to the bottom and @returns all leaf nodes.
+ */
+std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
  * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
@@ -235,5 +261,11 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
  * the @param lqp node's output expressions.
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+
+/**
+ * Takes the given UnionNode @param union_root_node and traverses the LQP until a common origin node was found.
+ * @returns a shared pointer to the diamond's origin node. If it was not found, a null pointer is returned.
+ */
+std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 
 }  // namespace opossum

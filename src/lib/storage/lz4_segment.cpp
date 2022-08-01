@@ -448,7 +448,7 @@ std::shared_ptr<AbstractSegment> LZ4Segment<T>::copy_using_allocator(const Polym
 }
 
 template <typename T>
-size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode) const {
+size_t LZ4Segment<T>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode can be ignored since all relevant information can be either obtained directly (e.g.,
   // size of NULL values vector) or the actual size is already stored (e.g., data_size()).
 
@@ -483,7 +483,7 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
   return std::nullopt;
 }
 
-// Right now, vector compression is fixed to SimdBp128. This method nonetheless checks for the actual vector
+// Right now, vector compression is fixed to BitPacking. This method nonetheless checks for the actual vector
 // compression type. So if the vector compression becomes configurable, this method does not need to be touched.
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {

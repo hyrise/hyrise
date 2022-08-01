@@ -26,7 +26,7 @@ option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking
 if (${ENABLE_COVERAGE})
     add_compile_options(-O0 -fno-inline)
 
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_compile_options(-fprofile-arcs -ftest-coverage)
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -60,32 +60,19 @@ else()
     message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 13.99)
+        message(WARNING "Disabling 'reserved-identifier' warning for clang 13 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
+        add_compile_options(-Wno-reserved-identifier)
+    endif()
+endif()
+
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 
 include_directories(
-    ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
-    ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
-    ${PROJECT_SOURCE_DIR}/third_party/magic_enum/include
-
     ${PROJECT_SOURCE_DIR}/src/benchmarklib/
     ${PROJECT_SOURCE_DIR}/src/lib/
-    ${PROJECT_SOURCE_DIR}/src/plugin/
-
-    ${Boost_INCLUDE_DIRS}
-)
-
-# Include these libraries as system libraries to silence some warnings caused by -Weverything
-include_directories(
-    SYSTEM
-    ${TBB_INCLUDE_DIR}
-    ${PROJECT_SOURCE_DIR}/third_party/benchmark/include
-    ${PROJECT_SOURCE_DIR}/third_party/cpp-btree/include/btree
-    ${PROJECT_SOURCE_DIR}/third_party/cxxopts/include
-    ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
-    ${PROJECT_SOURCE_DIR}/third_party/json
-    ${PROJECT_SOURCE_DIR}/third_party/lz4
-    ${PROJECT_SOURCE_DIR}/third_party/zstd
-    ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
+    ${PROJECT_SOURCE_DIR}/src/plugins/
 )
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")

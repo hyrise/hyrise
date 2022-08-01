@@ -89,7 +89,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     result.as_view([&](const auto& resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
-        if (!resolved.is_null(idx)) normalized[idx] = resolved.value(idx);
+        if (!resolved.is_null(idx)) {
+          normalized[idx] = resolved.value(idx);
+        }
       }
     });
 
@@ -116,7 +118,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
         ExpressionEvaluator{table, ChunkID{0}, uncorrelated_subquery_results}.evaluate_expression_to_result<R>(
             expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
-    if (actual_normalized == expected) return true;
+    if (actual_normalized == expected) {
+      return true;
+    }
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
@@ -132,7 +136,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
   bool test_expression(const AbstractExpression& expression, const std::vector<std::optional<R>>& expected) {
     const auto actual_result = ExpressionEvaluator{}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
-    if (actual_normalized == expected) return true;
+    if (actual_normalized == expected) {
+      return true;
+    }
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
@@ -600,7 +606,9 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated)
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalculated) {
   // Make sure the expression evaluator complains if it has been given a list of preevaluated sub queries but one is
   // missing
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
@@ -639,7 +647,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalcu
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   // PQP that returns the column "b" multiplied with the current value in "a"
   //
-  // row   list returned from sub query
+  // row   list returned from subquery
   //  0      (1, 2, 3, 4)
   //  1      (2, 4, 6, 8)
   //  2      (3, 6, 9, 12)
@@ -664,7 +672,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
 
   // PQP that returns the column "c" added to the current value in "a"
   //
-  // row   list returned from sub query
+  // row   list returned from subquery
   //  0      (34, NULL, 35, NULL)
   //  1      (35, NULL, 36, NULL)
   //  2      (36, NULL, 37, NULL)
@@ -794,9 +802,14 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastLiterals) {
   EXPECT_TRUE(test_expression<pmr_string>(*cast_(5.5, DataType::String), {"5.5"}));
   EXPECT_TRUE(test_expression<int32_t>(*cast_(null_(), DataType::Int), {std::nullopt}));
 
-  // Following SQLite, CAST("Hello" AS INT) yields zero
-  EXPECT_TRUE(test_expression<int32_t>(*cast_("Hello", DataType::Int), {0}));
-  EXPECT_TRUE(test_expression<float>(*cast_("Hello", DataType::Float), {0.0f}));
+  // Ensure requested data type is cast data type
+  EXPECT_THROW(test_expression<int32_t>(*cast_("1.2", DataType::Float), {}), std::logic_error);
+  // Following SQL standard, CAST("Hello" AS INT) errors
+  EXPECT_THROW(test_expression<int32_t>(*cast_("Hello", DataType::Int), {}), std::logic_error);
+  EXPECT_THROW(test_expression<float>(*cast_("Hello", DataType::Float), {}), std::logic_error);
+  EXPECT_THROW(test_expression<int32_t>(*cast_("1.2", DataType::Int), {}), std::logic_error);
+  // Cast as Null is undefined
+  EXPECT_THROW(test_expression<pmr_string>(*cast_("Hello", DataType::Null), {}), std::logic_error);
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
@@ -806,6 +819,14 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *cast_(f, DataType::Int), {99, 2, 13, 15}));
   EXPECT_TRUE(
       test_expression<pmr_string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
+}
+
+TEST_F(ExpressionEvaluatorToValuesTest, CastNullableStrings) {
+  auto table_string_nullable = load_table("resources/test_data/tbl/string_numbers_null.tbl");
+  auto string_column = PQPColumnExpression::from_table(*table_string_nullable, "a");
+
+  EXPECT_TRUE(test_expression<int32_t>(table_string_nullable, *cast_(string_column, DataType::Int),
+                                       {12, std::nullopt, 1234, std::nullopt}));
 }
 
 }  // namespace opossum

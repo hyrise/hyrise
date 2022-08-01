@@ -11,10 +11,13 @@ UnaryMinusExpression::UnaryMinusExpression(const std::shared_ptr<AbstractExpress
   Assert(argument->data_type() != DataType::String, "Can't negate strings");
 }
 
-std::shared_ptr<AbstractExpression> UnaryMinusExpression::argument() const { return arguments[0]; }
+std::shared_ptr<AbstractExpression> UnaryMinusExpression::argument() const {
+  return arguments[0];
+}
 
-std::shared_ptr<AbstractExpression> UnaryMinusExpression::deep_copy() const {
-  return std::make_shared<UnaryMinusExpression>(argument());
+std::shared_ptr<AbstractExpression> UnaryMinusExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<UnaryMinusExpression>(argument()->deep_copy(copied_ops));
 }
 
 std::string UnaryMinusExpression::description(const DescriptionMode mode) const {
@@ -23,7 +26,9 @@ std::string UnaryMinusExpression::description(const DescriptionMode mode) const 
   return stream.str();
 }
 
-DataType UnaryMinusExpression::data_type() const { return argument()->data_type(); }
+DataType UnaryMinusExpression::data_type() const {
+  return argument()->data_type();
+}
 
 bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const UnaryMinusExpression*>(&expression),

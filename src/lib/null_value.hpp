@@ -2,14 +2,15 @@
 
 #if !defined(BOOST_NO_IOSTREAM)
 #include <iosfwd>  // for std::basic_ostream forward declare
-#include "boost/detail/templated_streams.hpp"
+
+#include <boost/detail/templated_streams.hpp>
 #endif  // BOOST_NO_IOSTREAM
 
-#include "boost/functional/hash.hpp"
-#include "boost/mpl/bool.hpp"
-#include "boost/type_traits/is_empty.hpp"
-#include "boost/type_traits/is_pod.hpp"
-#include "boost/type_traits/is_stateless.hpp"
+#include <boost/container_hash/hash.hpp>
+#include <boost/mpl/bool.hpp>
+#include <boost/type_traits/is_empty.hpp>
+#include <boost/type_traits/is_pod.hpp>
+#include <boost/type_traits/is_stateless.hpp>
 
 namespace opossum {
 
@@ -21,15 +22,35 @@ namespace opossum {
 struct NullValue {};
 
 // Relational operators
-inline bool operator==(const NullValue&, const NullValue&) { return false; }
-inline bool operator!=(const NullValue&, const NullValue&) { return false; }
-inline bool operator<(const NullValue&, const NullValue&) { return false; }
-inline bool operator<=(const NullValue&, const NullValue&) { return false; }
-inline bool operator>(const NullValue&, const NullValue&) { return false; }
-inline bool operator>=(const NullValue&, const NullValue&) { return false; }
-inline NullValue operator-(const NullValue&) { return NullValue{}; }
+inline bool operator==(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
+  return false;
+}
 
-inline size_t hash_value(const NullValue&) {
+inline bool operator!=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
+  return false;
+}
+
+inline bool operator<(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
+  return false;
+}
+
+inline bool operator<=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
+  return false;
+}
+
+inline bool operator>(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
+  return false;
+}
+
+inline bool operator>=(const NullValue& /*lhs*/, const NullValue& /*rhs*/) {
+  return false;
+}
+
+inline NullValue operator-(const NullValue& /*value*/) {
+  return NullValue{};
+}
+
+inline size_t hash_value(const NullValue& /*value*/) {
   // Aggregate wants all NULLs in one bucket
   return 0;
 }

@@ -16,6 +16,7 @@ race:shared_count
 race:^std::atomic
 race:^std::__1::atomic
 race:^std::__1::__atomic_base
+race:^std::mutex::lock
 
 # Boost is not built with tsan support, either
 race:boost::detail::thread_data_base

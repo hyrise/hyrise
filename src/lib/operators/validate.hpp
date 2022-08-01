@@ -30,7 +30,7 @@ class Validate : public AbstractReadOnlyOperator {
 
  private:
   void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
-                        const ChunkID chunk_id_end, const TransactionID our_tid, const TransactionID snapshot_commit_id,
+                        const ChunkID chunk_id_end, const TransactionID our_tid, const CommitID snapshot_commit_id,
                         std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const;
 
   // This is a performance optimization that can only be used if a couple of conditions are met, i.e., if
@@ -44,7 +44,8 @@ class Validate : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input) const override;
+      const std::shared_ptr<AbstractOperator>& copied_right_input,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };
 

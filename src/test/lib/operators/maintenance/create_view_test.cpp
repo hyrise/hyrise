@@ -41,7 +41,7 @@ TEST_F(CreateViewTest, DeepCopy) {
   EXPECT_NE(cv->get_output(), nullptr);
 
   const auto copy = cv->deep_copy();
-  EXPECT_EQ(copy->get_output(), nullptr);
+  EXPECT_EQ(copy->executed(), false);
 }
 
 TEST_F(CreateViewTest, Execute) {

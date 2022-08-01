@@ -3,6 +3,7 @@
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
 #include "utils/meta_tables/meta_columns_table.hpp"
+#include "utils/meta_tables/meta_exec_table.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
 #include "utils/meta_tables/meta_plugins_table.hpp"
 #include "utils/meta_tables/meta_segments_accurate_table.hpp"
@@ -19,6 +20,7 @@ MetaTableManager::MetaTableManager() {
                                                                        std::make_shared<MetaColumnsTable>(),
                                                                        std::make_shared<MetaChunksTable>(),
                                                                        std::make_shared<MetaChunkSortOrdersTable>(),
+                                                                       std::make_shared<MetaExecTable>(),
                                                                        std::make_shared<MetaLogTable>(),
                                                                        std::make_shared<MetaSegmentsTable>(),
                                                                        std::make_shared<MetaSegmentsAccurateTable>(),
@@ -40,7 +42,9 @@ bool MetaTableManager::is_meta_table_name(const std::string& name) {
   return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
 }
 
-const std::vector<std::string>& MetaTableManager::table_names() const { return _table_names; }
+const std::vector<std::string>& MetaTableManager::table_names() const {
+  return _table_names;
+}
 
 void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table) {
   _meta_tables[table->name()] = table;

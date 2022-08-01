@@ -2,7 +2,7 @@
 
 #include <vector>
 
-#include "boost/variant.hpp"
+#include <boost/variant.hpp>
 
 namespace opossum {
 

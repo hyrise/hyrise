@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-#include "boost/functional/hash.hpp"
+#include <boost/container_hash/hash.hpp>
 
 #include "utils/assert.hpp"
 

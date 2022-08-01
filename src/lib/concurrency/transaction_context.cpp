@@ -54,9 +54,17 @@ TransactionContext::~TransactionContext() {
   Hyrise::get().transaction_manager._deregister_transaction(_snapshot_commit_id);
 }
 
-TransactionID TransactionContext::transaction_id() const { return _transaction_id; }
-CommitID TransactionContext::snapshot_commit_id() const { return _snapshot_commit_id; }
-AutoCommit TransactionContext::is_auto_commit() const { return _is_auto_commit; }
+TransactionID TransactionContext::transaction_id() const {
+  return _transaction_id;
+}
+
+CommitID TransactionContext::snapshot_commit_id() const {
+  return _snapshot_commit_id;
+}
+
+AutoCommit TransactionContext::is_auto_commit() const {
+  return _is_auto_commit;
+}
 
 CommitID TransactionContext::commit_id() const {
   Assert(_commit_context, "TransactionContext cid only available after commit context has been created.");
@@ -64,7 +72,9 @@ CommitID TransactionContext::commit_id() const {
   return _commit_context->commit_id();
 }
 
-TransactionPhase TransactionContext::phase() const { return _phase; }
+TransactionPhase TransactionContext::phase() const {
+  return _phase;
+}
 
 bool TransactionContext::aborted() const {
   const auto phase = _phase.load();
@@ -123,7 +133,9 @@ void TransactionContext::_mark_as_conflicted() {
 void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::RolledBack) return false;
+                  if (op->state() != ReadWriteOperatorState::RolledBack) {
+                    return false;
+                  }
                 }
                 return true;
               }()),
@@ -140,7 +152,9 @@ void TransactionContext::_mark_as_rolled_back(RollbackReason rollback_reason) {
 void TransactionContext::_prepare_commit() {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::Executed) return false;
+                  if (op->state() != ReadWriteOperatorState::Executed) {
+                    return false;
+                  }
                 }
                 return true;
               }()),
@@ -156,7 +170,9 @@ void TransactionContext::_prepare_commit() {
 void TransactionContext::_mark_as_pending_and_try_commit(const std::function<void(TransactionID)>& callback) {
   DebugAssert(([this]() {
                 for (const auto& op : _read_write_operators) {
-                  if (op->state() != ReadWriteOperatorState::Committed) return false;
+                  if (op->state() != ReadWriteOperatorState::Committed) {
+                    return false;
+                  }
                 }
                 return true;
               }()),
@@ -169,13 +185,17 @@ void TransactionContext::_mark_as_pending_and_try_commit(const std::function<voi
       context_ptr->_transition(TransactionPhase::Committing, TransactionPhase::Committed);
     }
 
-    if (callback) callback(transaction_id);
+    if (callback) {
+      callback(transaction_id);
+    }
   });
 
   Hyrise::get().transaction_manager._try_increment_last_commit_id(_commit_context);
 }
 
-void TransactionContext::on_operator_started() { ++_num_active_operators; }
+void TransactionContext::on_operator_started() {
+  ++_num_active_operators;
+}
 
 void TransactionContext::on_operator_finished() {
   DebugAssert((_num_active_operators > 0), "Bug detected");
@@ -186,11 +206,15 @@ void TransactionContext::on_operator_finished() {
   }
 }
 
-bool TransactionContext::is_auto_commit() { return _is_auto_commit == AutoCommit::Yes; }
+bool TransactionContext::is_auto_commit() {
+  return _is_auto_commit == AutoCommit::Yes;
+}
 
 void TransactionContext::_wait_for_active_operators_to_finish() const {
   std::unique_lock<std::mutex> lock(_active_operators_mutex);
-  if (_num_active_operators == 0) return;
+  if (_num_active_operators == 0) {
+    return;
+  }
   _active_operators_cv.wait(lock, [&] { return _num_active_operators != 0; });
 }
 

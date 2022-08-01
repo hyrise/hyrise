@@ -13,6 +13,11 @@
 
 namespace opossum {
 
+std::string JoinOrderingRule::name() const {
+  static const auto name = std::string{"JoinOrderingRule"};
+  return name;
+}
+
 void JoinOrderingRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
   DebugAssert(cost_estimator, "JoinOrderingRule requires cost estimator to be set");
 
@@ -87,8 +92,13 @@ std::shared_ptr<AbstractLQPNode> JoinOrderingRule::_perform_join_ordering_recurs
 }
 
 void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const {
-  if (lqp->left_input()) lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input()));
-  if (lqp->right_input()) lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input()));
+  if (lqp->left_input()) {
+    lqp->set_left_input(_perform_join_ordering_recursively(lqp->left_input()));
+  }
+
+  if (lqp->right_input()) {
+    lqp->set_right_input(_perform_join_ordering_recursively(lqp->right_input()));
+  }
 }
 
 }  // namespace opossum

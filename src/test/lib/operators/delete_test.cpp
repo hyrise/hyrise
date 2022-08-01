@@ -28,7 +28,7 @@ class OperatorsDeleteTest : public BaseTest {
     _table_name = "table_a";
     _table2_name = "table_b";
     _table = load_table("resources/test_data/tbl/int_float.tbl");
-    _table2 = load_table("resources/test_data/tbl/int_int3.tbl", 3);
+    _table2 = load_table("resources/test_data/tbl/int_int3.tbl", ChunkOffset{3});
 
     // Delete Operator works with the Storage Manager, so the test table must also be known to the StorageManager
     Hyrise::get().storage_manager.add_table(_table_name, _table);
@@ -56,9 +56,9 @@ void OperatorsDeleteTest::helper(bool commit) {
 
   delete_op->execute();
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(0u), transaction_context->transaction_id());
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(2u), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{0}), transaction_context->transaction_id());
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{1}), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{2}), transaction_context->transaction_id());
 
   auto expected_end_cid = CommitID{0u};
   if (commit) {
@@ -69,20 +69,24 @@ void OperatorsDeleteTest::helper(bool commit) {
     expected_end_cid = MvccData::MAX_COMMIT_ID;
   }
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(0u), expected_end_cid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(1u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(2u), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{2}), expected_end_cid);
 
   auto expected_tid = commit ? transaction_context->transaction_id() : 0u;
 
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(0u), expected_tid);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(1u), 0u);
-  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(2u), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{0}), expected_tid);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{1}), 0u);
+  EXPECT_EQ(_table->get_chunk(ChunkID{0})->mvcc_data()->get_tid(ChunkOffset{2}), expected_tid);
 }
 
-TEST_F(OperatorsDeleteTest, ExecuteAndCommit) { helper(true); }
+TEST_F(OperatorsDeleteTest, ExecuteAndCommit) {
+  helper(true);
+}
 
-TEST_F(OperatorsDeleteTest, ExecuteAndAbort) { helper(false); }
+TEST_F(OperatorsDeleteTest, ExecuteAndAbort) {
+  helper(false);
+}
 
 TEST_F(OperatorsDeleteTest, DetectDirtyWrite) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -158,11 +162,12 @@ TEST_F(OperatorsDeleteTest, EmptyDelete) {
   auto tx_context_verification = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto gt_post_delete = std::make_shared<GetTable>(_table_name);
+  gt_post_delete->never_clear_output();
   gt_post_delete->execute();
 
   auto validate = std::make_shared<Validate>(gt_post_delete);
   validate->set_transaction_context(tx_context_verification);
-
+  validate->never_clear_output();
   validate->execute();
 
   EXPECT_TABLE_EQ_UNORDERED(validate->get_output(), gt_post_delete->get_output());
@@ -282,31 +287,32 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
 
   auto gt = std::make_shared<GetTable>(_table_name);
+  auto validate = std::make_shared<Validate>(gt);
+  auto delete_op = std::make_shared<Delete>(validate);
+  auto delete_op2 = std::make_shared<Delete>(validate);
+  delete_op->set_transaction_context_recursively(t1_context);
+
   gt->execute();
-
-  auto validate1 = std::make_shared<Validate>(gt);
-  validate1->set_transaction_context(t1_context);
-  validate1->execute();
-
-  auto delete_op = std::make_shared<Delete>(validate1);
-  delete_op->set_transaction_context(t1_context);
+  validate->execute();
   delete_op->execute();
 
   t1_context->commit();
 
-  auto delete_op2 = std::make_shared<Delete>(validate1);
-  delete_op->set_transaction_context(t1_context);
+  delete_op2->set_transaction_context(t1_context);
 
-  EXPECT_THROW(delete_op->execute(), std::logic_error);
+  EXPECT_THROW(delete_op2->execute(), std::logic_error);
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto get_table = std::make_shared<GetTable>(_table_name);
   get_table->execute();
 
-  const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10000);
+  const auto table_scan = create_table_scan(get_table, ColumnID{0}, PredicateCondition::LessThan, 10'000);
+  table_scan->never_clear_output();
   table_scan->execute();
 
   auto t1_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
@@ -346,14 +352,14 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   transaction_context->commit();
 
   const auto expected_end_cid = transaction_context->commit_id();
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(0u), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(1u), expected_end_cid);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(2u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(0u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(1u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(2u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(0u), MvccData::MAX_COMMIT_ID);
-  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(1u), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{0}), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{0})->mvcc_data()->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{1}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{1})->mvcc_data()->get_end_cid(ChunkOffset{2}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{0}), MvccData::MAX_COMMIT_ID);
+  EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
 }
 
 }  // namespace opossum

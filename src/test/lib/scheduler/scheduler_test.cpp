@@ -20,7 +20,7 @@ namespace opossum {
 
 class SchedulerTest : public BaseTest {
  protected:
-  void stress_linear_dependencies(std::atomic_uint& counter) {
+  void stress_linear_dependencies(std::atomic_uint32_t& counter) {
     auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
       auto successful = counter.compare_exchange_strong(current_value, 1u);
@@ -45,7 +45,7 @@ class SchedulerTest : public BaseTest {
     task2->schedule();
   }
 
-  void stress_multiple_dependencies(std::atomic_uint& counter) {
+  void stress_multiple_dependencies(std::atomic_uint32_t& counter) {
     auto task1 = std::make_shared<JobTask>([&]() { counter += 1u; });
     auto task2 = std::make_shared<JobTask>([&]() { counter += 2u; });
     auto task3 = std::make_shared<JobTask>([&]() {
@@ -62,7 +62,7 @@ class SchedulerTest : public BaseTest {
     task2->schedule();
   }
 
-  void stress_diamond_dependencies(std::atomic_uint& counter) {
+  void stress_diamond_dependencies(std::atomic_uint32_t& counter) {
     auto task1 = std::make_shared<JobTask>([&]() {
       auto current_value = 0u;
       auto successful = counter.compare_exchange_strong(current_value, 1u);
@@ -87,7 +87,7 @@ class SchedulerTest : public BaseTest {
     task2->schedule();
   }
 
-  void increment_counter_in_subtasks(std::atomic_uint& counter) {
+  void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
     std::vector<std::shared_ptr<AbstractTask>> tasks;
     for (size_t i = 0; i < 10; i++) {
       auto task = std::make_shared<JobTask>([&]() {
@@ -114,7 +114,7 @@ TEST_F(SchedulerTest, BasicTest) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint counter{0};
+  std::atomic_uint32_t counter{0};
 
   increment_counter_in_subtasks(counter);
 
@@ -126,7 +126,7 @@ TEST_F(SchedulerTest, BasicTest) {
 }
 
 TEST_F(SchedulerTest, BasicTestWithoutScheduler) {
-  std::atomic_uint counter{0};
+  std::atomic_uint32_t counter{0};
   increment_counter_in_subtasks(counter);
   ASSERT_EQ(counter, 30u);
 }
@@ -135,7 +135,7 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint counter{0u};
+  std::atomic_uint32_t counter{0u};
 
   stress_linear_dependencies(counter);
 
@@ -181,7 +181,7 @@ TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint counter{0u};
+  std::atomic_uint32_t counter{0u};
 
   stress_multiple_dependencies(counter);
 
@@ -194,7 +194,7 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  std::atomic_uint counter{0};
+  std::atomic_uint32_t counter{0};
 
   stress_diamond_dependencies(counter);
 
@@ -204,19 +204,19 @@ TEST_F(SchedulerTest, DiamondDependenciesWithScheduler) {
 }
 
 TEST_F(SchedulerTest, LinearDependenciesWithoutScheduler) {
-  std::atomic_uint counter{0u};
+  std::atomic_uint32_t counter{0u};
   stress_linear_dependencies(counter);
   ASSERT_EQ(counter, 3u);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithoutScheduler) {
-  std::atomic_uint counter{0u};
+  std::atomic_uint32_t counter{0u};
   stress_multiple_dependencies(counter);
   ASSERT_EQ(counter, 4u);
 }
 
 TEST_F(SchedulerTest, DiamondDependenciesWithoutScheduler) {
-  std::atomic_uint counter{0};
+  std::atomic_uint32_t counter{0};
   stress_diamond_dependencies(counter);
   ASSERT_EQ(counter, 7u);
 }
@@ -225,7 +225,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
   Hyrise::get().topology.use_fake_numa_topology(8, 4);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  auto test_table = load_table("resources/test_data/tbl/int_float.tbl", 2);
+  auto test_table = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table", test_table);
 
   auto gt = std::make_shared<GetTable>("table");
@@ -241,7 +241,7 @@ TEST_F(SchedulerTest, MultipleOperators) {
 
   Hyrise::get().scheduler()->finish();
 
-  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", 1);
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
   EXPECT_TABLE_EQ_UNORDERED(ts->get_output(), expected_result);
 }
 

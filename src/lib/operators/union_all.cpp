@@ -20,8 +20,8 @@ const std::string& UnionAll::name() const {
 }
 
 std::shared_ptr<const Table> UnionAll::_on_execute() {
-  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-              "Input tables must have same number of columns");
+  Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
+         "Input tables must have same number of columns");
   DebugAssert(left_input_table()->type() == right_input_table()->type(), "Input tables must have the same type");
 
   auto output_chunks =
@@ -55,7 +55,8 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
 }
 std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<UnionAll>(copied_left_input, copied_right_input);
 }
 

@@ -31,7 +31,9 @@ static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
 
 namespace opossum {
 
-std::shared_ptr<Worker> Worker::get_this_thread_worker() { return ::this_thread_worker.lock(); }
+std::shared_ptr<Worker> Worker::get_this_thread_worker() {
+  return ::this_thread_worker.lock();
+}
 
 Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
     : _queue(queue), _id(id), _cpu_id(cpu_id) {
@@ -41,11 +43,17 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_i
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
 }
 
-WorkerID Worker::id() const { return _id; }
+WorkerID Worker::id() const {
+  return _id;
+}
 
-std::shared_ptr<TaskQueue> Worker::queue() const { return _queue; }
+std::shared_ptr<TaskQueue> Worker::queue() const {
+  return _queue;
+}
 
-CpuID Worker::cpu_id() const { return _cpu_id; }
+CpuID Worker::cpu_id() const {
+  return _cpu_id;
+}
 
 void Worker::operator()() {
   Assert(this_thread_worker.expired(), "Thread already has a worker");
@@ -130,14 +138,18 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
   }
 }
 
-void Worker::start() { _thread = std::thread(&Worker::operator(), this); }
+void Worker::start() {
+  _thread = std::thread(&Worker::operator(), this);
+}
 
 void Worker::join() {
   Assert(!Hyrise::get().scheduler()->active(), "Worker can't be join()-ed while the scheduler is still active");
   _thread.join();
 }
 
-uint64_t Worker::num_finished_tasks() const { return _num_finished_tasks; }
+uint64_t Worker::num_finished_tasks() const {
+  return _num_finished_tasks;
+}
 
 void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   // This lambda checks if all tasks from the vector (our "own" tasks) have been executed. If they are, it causes
@@ -166,7 +178,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       }
 
       // Give other tasks, i.e., tasks that are unrelated to what we are currently waiting on, a certain chance of being
-      // executed, too. Anectotal evidence says that this is a good idea. For some reason, this keeps the memory
+      // executed, too. Anecdotal evidence says that this is a good idea. For some reason, this keeps the memory
       // consumption of TPC-H Q6 low even if the scheduler is overcommitted. Because generating random numbers is
       // somewhat expensive, we keep a list of random numbers and reuse them.
       // TODO(anyone): Look deeper into scheduling theory and make this theoretically sound.
@@ -176,7 +188,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
       }
 
       // Run one of our own tasks. First, let everyone know that we are about to execute it. This is necessary because
-      // the task is already in a queue and some other worker might pull it at the same time.
+      // the task might already be in a queue and some other worker might pull it at the same time.
       const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
       if (!successfully_assigned) {
         // Some other worker has already started to work on this task - pick a different one.

@@ -44,7 +44,8 @@ const std::string& Print::name() const {
 
 std::shared_ptr<AbstractOperator> Print::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input) const {
+    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<Print>(copied_left_input, _flags, _out);
 }
 
@@ -63,8 +64,9 @@ void Print::print(const std::shared_ptr<const AbstractOperator>& in, const Print
 void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& out) {
   auto pipeline = SQLPipelineBuilder{sql}.create_pipeline();
   const auto [status, result_tables] = pipeline.get_result_tables();
-  Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful");
-  Assert(result_tables.size() == 1, "Expected exactly one result table");
+  Assert(status == SQLPipelineStatus::Success, "SQL execution was unsuccessful.");
+  Assert(result_tables.size() == 1, "Expected exactly one result table.");
+  Assert(result_tables.back(), "Unexpected null pointer.");
 
   auto table_wrapper = std::make_shared<TableWrapper>(result_tables[0]);
   table_wrapper->execute();
@@ -106,7 +108,9 @@ std::shared_ptr<const Table> Print::_on_execute() {
   const auto chunk_count = left_input_table()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = left_input_table()->get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     if (!has_print_ignore_chunk_boundaries_flag(_flags)) {
       _out << "=== Chunk " << chunk_id << " ===" << std::endl;
@@ -122,7 +126,9 @@ std::shared_ptr<const Table> Print::_on_execute() {
         const auto& segment = chunk->get_segment(column_id);
         _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
       }
-      if (has_print_mvcc_flag(_flags)) _out << "|";
+      if (has_print_mvcc_flag(_flags)) {
+        _out << "|";
+      }
       _out << "|" << std::endl;
     }
 
@@ -175,7 +181,9 @@ std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
   const auto chunk_count = left_input_table()->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = left_input_table()->get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
@@ -235,20 +243,20 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
     }
     if (encoded_segment->compressed_vector_type()) {
       switch (*encoded_segment->compressed_vector_type()) {
-        case CompressedVectorType::FixedSize4ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger4Byte: {
           segment_type += ":4B";
           break;
         }
-        case CompressedVectorType::FixedSize2ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger2Byte: {
           segment_type += ":2B";
           break;
         }
-        case CompressedVectorType::FixedSize1ByteAligned: {
+        case CompressedVectorType::FixedWidthInteger1Byte: {
           segment_type += ":1B";
           break;
         }
-        case CompressedVectorType::SimdBp128: {
-          segment_type += ":BP";
+        case CompressedVectorType::BitPacking: {
+          segment_type += ":BitP";
           break;
         }
       }

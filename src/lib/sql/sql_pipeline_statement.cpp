@@ -2,6 +2,7 @@
 
 #include <fstream>
 #include <iomanip>
+#include <memory>
 #include <utility>
 
 #include <boost/algorithm/string.hpp>
@@ -24,7 +25,6 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
 
 namespace opossum {
 
@@ -53,7 +53,9 @@ void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<Transac
   _transaction_context = transaction_context;
 }
 
-const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; }
+const std::string& SQLPipelineStatement::get_sql_string() {
+  return _sql_string;
+}
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
   if (_parsed_sql_statement) {
@@ -82,7 +84,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   auto parsed_sql = get_parsed_sql_statement();
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  const auto started = std::chrono::steady_clock::now();
 
   SQLTranslator sql_translator{_use_mvcc};
 
@@ -94,8 +96,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_unoptimized_lo
 
   _unoptimized_logical_plan = lqp_roots.front();
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->sql_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  const auto done = std::chrono::steady_clock::now();
+  _metrics->sql_translation_duration = done - started;
 
   return _unoptimized_logical_plan;
 }
@@ -129,7 +131,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   auto unoptimized_lqp = get_unoptimized_logical_plan();
 
-  const auto started = std::chrono::high_resolution_clock::now();
+  const auto started = std::chrono::steady_clock::now();
 
   // The optimizer works on the original unoptimized LQP nodes. After optimizing, the unoptimized version is also
   // optimized, which could lead to subtle bugs. optimized_logical_plan holds the original values now.
@@ -140,8 +142,8 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
 
   _optimized_logical_plan = _optimizer->optimize(std::move(unoptimized_lqp), optimizer_rule_durations);
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->optimization_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  const auto done = std::chrono::steady_clock::now();
+  _metrics->optimization_duration = done - started;
   _metrics->optimizer_rule_durations = *optimizer_rule_durations;
 
   // Cache newly created plan for the according sql statement
@@ -163,7 +165,7 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
   }
 
   // Stores when the actual compilation started/ended
-  auto started = std::chrono::high_resolution_clock::now();
+  auto started = std::chrono::steady_clock::now();
   auto done = started;  // dummy value needed for initialization
 
   // Try to retrieve the PQP from cache
@@ -185,20 +187,22 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
     const auto& lqp = get_optimized_logical_plan();
 
     // Reset time to exclude previous pipeline steps
-    started = std::chrono::high_resolution_clock::now();
+    started = std::chrono::steady_clock::now();
     _physical_plan = LQPTranslator{}.translate_node(lqp);
   }
 
-  done = std::chrono::high_resolution_clock::now();
+  done = std::chrono::steady_clock::now();
 
-  if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
+  if (_use_mvcc == UseMvcc::Yes) {
+    _physical_plan->set_transaction_context_recursively(_transaction_context);
+  }
 
   // Cache newly created plan for the according sql statement (only if not already cached)
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
     pqp_cache->set(_sql_string, _physical_plan);
   }
 
-  _metrics->lqp_translation_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  _metrics->lqp_translation_duration = done - started;
 
   return _physical_plan;
 }
@@ -212,8 +216,7 @@ const std::vector<std::shared_ptr<AbstractTask>>& SQLPipelineStatement::get_task
     _tasks = _get_transaction_tasks();
   } else {
     _precheck_ddl_operators(get_physical_plan());
-    auto operator_tasks = OperatorTask::make_tasks_from_operator(get_physical_plan());
-    _tasks = std::vector<std::shared_ptr<AbstractTask>>(operator_tasks.cbegin(), operator_tasks.cend());
+    std::tie(_tasks, _root_operator_task) = OperatorTask::make_tasks_from_operator(get_physical_plan());
   }
   return _tasks;
 }
@@ -267,10 +270,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   const auto& tasks = get_tasks();
 
-  const auto started = std::chrono::high_resolution_clock::now();
-
-  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
-                reinterpret_cast<uintptr_t>(this));
+  const auto started = std::chrono::steady_clock::now();
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
@@ -289,20 +289,32 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
            "Transaction should either be still active or have been auto-committed by now");
   }
 
-  const auto done = std::chrono::high_resolution_clock::now();
-  _metrics->plan_execution_duration = std::chrono::duration_cast<std::chrono::nanoseconds>(done - started);
+  const auto done = std::chrono::steady_clock::now();
+  _metrics->plan_execution_duration = done - started;
 
-  // Get output from the last task if the task was an actual operator and not a transaction statement
+  // Get result table, if it was not a transaction statement
   if (!_is_transaction_statement()) {
-    _result_table = static_cast<const OperatorTask&>(*tasks.back()).get_operator()->get_output();
+    // After execution, the root operator should be the only operator in OperatorState::ExecutedAndAvailable. All
+    // other operators should be in OperatorState::ExecutedAndCleared.
+    Assert(_root_operator_task && _root_operator_task->get_operator()->state() == OperatorState::ExecutedAndAvailable,
+           "Expected root operator to be in OperatorState::ExecutedAndAvailable.");
+    if constexpr (HYRISE_DEBUG) {
+      for (const auto& task : tasks) {
+        const auto operator_task = std::static_pointer_cast<OperatorTask>(task);
+        if (operator_task == _root_operator_task) {
+          continue;
+        }
+        Assert(operator_task->get_operator()->state() == OperatorState::ExecutedAndCleared,
+               "Expected non-root operator to be in OperatorState::ExecutedAndCleared.");
+      }
+    }
+    _result_table = _root_operator_task->get_operator()->get_output();
+    _root_operator_task->get_operator()->clear_output();
   }
 
-  if (!_result_table) _query_has_output = false;
-
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
-                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
-                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
-                reinterpret_cast<uintptr_t>(this));
+  if (!_result_table) {
+    _query_has_output = false;
+  }
 
   return {SQLPipelineStatus::Success, _result_table};
 }
@@ -311,7 +323,9 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
   return _transaction_context;
 }
 
-const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const {
+  return _metrics;
+}
 
 void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
   const auto& storage_manager = Hyrise::get().storage_manager;

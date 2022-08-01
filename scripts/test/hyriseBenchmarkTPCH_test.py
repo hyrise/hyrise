@@ -26,7 +26,7 @@ def main():
     arguments["--mode"] = "'Shuffled'"
     arguments["--clustering"] = "Pruning"
     arguments["--encoding"] = "'Dictionary'"
-    arguments["--compression"] = "'Fixed-size byte-aligned'"
+    arguments["--compression"] = "'Fixed-width integer'"
     arguments["--indexes"] = "true"
     arguments["--scheduler"] = "false"
     arguments["--clients"] = "1"
@@ -46,6 +46,7 @@ def main():
     benchmark.expect_exact("Benchmarking Queries: [ 1, 13, 19 ]")
     benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: yes")
+    benchmark.expect_exact("Loading/Generating tables done")
     benchmark.expect_exact("Sorting tables")
     benchmark.expect_exact("Creating index on customer [ c_custkey ]")
     benchmark.expect_exact("Preparing queries")
@@ -123,12 +124,11 @@ def main():
     arguments["--runs"] = "100"
     arguments["--warmup"] = "10"
     arguments["--encoding"] = "'LZ4'"
-    arguments["--compression"] = "'SIMD-BP128'"
+    arguments["--compression"] = "'Bit-packing'"
     arguments["--indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--verify"] = "true"
-    arguments["--dont_cache_binary_tables"] = "true"
 
     benchmark = run_benchmark(build_dir, arguments, "hyriseBenchmarkTPCH", True)
 
@@ -144,6 +144,8 @@ def main():
     benchmark.expect_exact("TPC-H scale factor is 0.01")
     benchmark.expect_exact("Using prepared statements: no")
     benchmark.expect_exact("Multi-threaded Topology:")
+    benchmark.expect_exact("Loading/Generating tables done")
+    benchmark.expect_exact("Writing 'lineitem' into binary file \"tpch_cached_tables/sf-0.010000/lineitem.bin\"")
 
     close_benchmark(benchmark)
     check_exit_status(benchmark)
@@ -162,6 +164,9 @@ def main():
     benchmark.expect_exact("Visualizing the plans into SVG files. This will make the performance numbers invalid.")
     benchmark.expect_exact("Chunk size is 10000")
     benchmark.expect_exact("Benchmarking Queries: [ 6 ]")
+    benchmark.expect_exact("Loading table 'orders' from cached binary \"tpch_cached_tables/sf-0.010000/orders.bin\"")
+    # Different encoding then previously loaded, writes binary tables again.
+    benchmark.expect_exact("Writing 'lineitem' into binary file \"tpch_cached_tables/sf-0.010000/lineitem.bin\"")
 
     close_benchmark(benchmark)
     check_exit_status(benchmark)

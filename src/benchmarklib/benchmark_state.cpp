@@ -20,7 +20,7 @@ BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
 bool BenchmarkState::keep_running() {
   switch (state) {
     case State::NotStarted:
-      benchmark_begin = std::chrono::high_resolution_clock::now();
+      benchmark_begin = std::chrono::steady_clock::now();
       state = State::Running;
       break;
     case State::Over:
@@ -29,7 +29,7 @@ bool BenchmarkState::keep_running() {
     }
   }
 
-  benchmark_duration = std::chrono::high_resolution_clock::now() - benchmark_begin;
+  benchmark_duration = std::chrono::steady_clock::now() - benchmark_begin;
 
   // Stop execution if we reached the time limit
   if (benchmark_duration >= max_duration) {
@@ -40,8 +40,12 @@ bool BenchmarkState::keep_running() {
   return true;
 }
 
-void BenchmarkState::set_done() { state = State::Over; }
+void BenchmarkState::set_done() {
+  state = State::Over;
+}
 
-bool BenchmarkState::is_done() const { return state == State::Over; }
+bool BenchmarkState::is_done() const {
+  return state == State::Over;
+}
 
 }  // namespace opossum

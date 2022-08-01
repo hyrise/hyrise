@@ -59,7 +59,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   /**
    * Executes the operator. The context parameter is used to lock the rows that should be modified.
    * Any modifications are not visible to other operators (that is, if the Validate operator has been applied properly)
-   * until commit_records has been called on this operator and the transaction manager has finished committing the
+   * until commit_records has been called on this operator and the TransactionManager has finished committing the
    * respective transaction.
    * The execution may fail if the operator attempts to lock rows that have been locked by other operators.
    * In that case, execute_failed returns true after _on_execute has returned.
@@ -89,7 +89,7 @@ class AbstractReadWriteOperator : public AbstractOperator {
   void _mark_as_failed();
 
  private:
-  ReadWriteOperatorState _state;
+  ReadWriteOperatorState _rw_state;
 };
 
 }  // namespace opossum

@@ -46,10 +46,9 @@
 #include <boost/bimap/relation/member_at.hpp>
 #include <boost/bimap/relation/mutant_relation.hpp>
 #include <boost/bimap/relation/support/data_extractor.hpp>
+#include <boost/bimap/set_of.hpp>
 #include <boost/bimap/tags/support/default_tagged.hpp>
 #include <boost/bimap/tags/tagged.hpp>
-
-#include <boost/bimap/set_of.hpp>
 #include <boost/bimap/unconstrained_set_of.hpp>
 
 namespace boost {

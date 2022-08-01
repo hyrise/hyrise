@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 
 namespace opossum {
@@ -16,15 +15,23 @@ BetweenExpression::BetweenExpression(const PredicateCondition init_predicate_con
          "Predicate Condition not supported by Between Expression");
 }
 
-const std::shared_ptr<AbstractExpression>& BetweenExpression::value() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& BetweenExpression::value() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& BetweenExpression::lower_bound() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& BetweenExpression::lower_bound() const {
+  return arguments[1];
+}
 
-const std::shared_ptr<AbstractExpression>& BetweenExpression::upper_bound() const { return arguments[2]; }
+const std::shared_ptr<AbstractExpression>& BetweenExpression::upper_bound() const {
+  return arguments[2];
+}
 
-std::shared_ptr<AbstractExpression> BetweenExpression::deep_copy() const {
-  return std::make_shared<BetweenExpression>(predicate_condition, value()->deep_copy(), lower_bound()->deep_copy(),
-                                             upper_bound()->deep_copy());
+std::shared_ptr<AbstractExpression> BetweenExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<BetweenExpression>(predicate_condition, value()->deep_copy(copied_ops),
+                                             lower_bound()->deep_copy(copied_ops),
+                                             upper_bound()->deep_copy(copied_ops));
 }
 
 std::string BetweenExpression::description(const DescriptionMode mode) const {
@@ -34,6 +41,8 @@ std::string BetweenExpression::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-ExpressionPrecedence BetweenExpression::_precedence() const { return ExpressionPrecedence::BinaryTernaryPredicate; }
+ExpressionPrecedence BetweenExpression::_precedence() const {
+  return ExpressionPrecedence::BinaryTernaryPredicate;
+}
 
 }  // namespace opossum

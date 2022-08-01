@@ -22,7 +22,9 @@ class CreatePreparedPlanTest : public BaseTest {
   std::shared_ptr<CreatePreparedPlan> create_prepared_plan;
 };
 
-TEST_F(CreatePreparedPlanTest, OperatorName) { EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan"); }
+TEST_F(CreatePreparedPlanTest, OperatorName) {
+  EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan");
+}
 
 TEST_F(CreatePreparedPlanTest, OperatorDescription) {
   EXPECT_EQ(replace_addresses(create_prepared_plan->description(DescriptionMode::SingleLine)),
@@ -34,7 +36,7 @@ ParameterIDs: []
 
 TEST_F(CreatePreparedPlanTest, DeepCopy) {
   const auto copy = std::dynamic_pointer_cast<CreatePreparedPlan>(create_prepared_plan->deep_copy());
-  EXPECT_EQ(copy->get_output(), nullptr);
+  EXPECT_EQ(copy->executed(), false);
 }
 
 TEST_F(CreatePreparedPlanTest, Execute) {

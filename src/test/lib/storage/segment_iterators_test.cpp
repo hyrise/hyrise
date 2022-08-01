@@ -73,7 +73,7 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
    * instead of simply std::random_access_iterator_tag.
    */
 
-  const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 5);
+  const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", ChunkOffset{5});
 
   const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
@@ -97,9 +97,18 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     using ColumnDataType = typename decltype(begin)::ValueType;
 
     const auto is_sorted = std::is_sorted(begin, end, [](const auto& a, const auto& b) {
-      if (a.is_null() && b.is_null()) return false;
-      if (a.is_null() && !b.is_null()) return false;
-      if (!a.is_null() && b.is_null()) return true;
+      if (a.is_null() && b.is_null()) {
+        return false;
+      }
+
+      if (a.is_null() && !b.is_null()) {
+        return false;
+      }
+
+      if (!a.is_null() && b.is_null()) {
+        return true;
+      }
+
       return a.value() < b.value();
     });
     ASSERT_TRUE(is_sorted);
@@ -112,7 +121,9 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
     }
 
     const auto lower_bound_iter = std::lower_bound(begin, end, search_value, [](const auto& a, const auto& b) {
-      if (a.is_null()) return false;
+      if (a.is_null()) {
+        return false;
+      }
       return a.value() < b;
     });
     ASSERT_NE(lower_bound_iter, end);
@@ -127,7 +138,7 @@ TEST_P(SegmentIteratorsTest, LegacyBidirectionalIteratorCompatible) {
    * test above.
    */
 
-  const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 3);
+  const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", ChunkOffset{3});
 
   const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
@@ -172,7 +183,7 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
    * Find a discussion about this here: https://github.com/hyrise/hyrise/issues/1531
    */
 
-  const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", 3);
+  const auto table = load_table_with_encoding("resources/test_data/tbl/all_data_types_sorted.tbl", ChunkOffset{3});
 
   const auto position_filter = std::make_shared<RowIDPosList>();
   position_filter->emplace_back(RowID{ChunkID{0}, ChunkOffset{0}});
@@ -194,7 +205,7 @@ TEST_P(SegmentIteratorsTest, LegacyRandomIteratorCompatible) {
 }
 
 template <typename T>
-bool operator<(const AbstractSegmentPosition<T>&, const AbstractSegmentPosition<T>&) {
+bool operator<(const AbstractSegmentPosition<T>& /*lhs*/, const AbstractSegmentPosition<T>& /*rhs*/) {
   // Fake comparator needed by is_heap
   return false;
 }

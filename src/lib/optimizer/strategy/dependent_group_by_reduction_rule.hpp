@@ -40,6 +40,9 @@ class StoredTableNode;
  * However, not all queries listed in the paper can be optimized yet, since Hyrise lacks foreign key support.
  */
 class DependentGroupByReductionRule : public AbstractRule {
+ public:
+  std::string name() const override;
+
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };

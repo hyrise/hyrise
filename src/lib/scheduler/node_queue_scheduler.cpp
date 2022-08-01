@@ -15,7 +15,9 @@
 
 namespace opossum {
 
-NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
+NodeQueueScheduler::NodeQueueScheduler() {
+  _worker_id_allocator = std::make_shared<UidAllocator>();
+}
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
@@ -39,7 +41,8 @@ void NodeQueueScheduler::begin() {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     for (const auto& topology_cpu : topology_node.cpus) {
-      _workers.emplace_back(std::make_shared<Worker>(queue, _worker_id_allocator->allocate(), topology_cpu.cpu_id));
+      _workers.emplace_back(
+          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
     }
   }
 
@@ -57,7 +60,9 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       num_finished_tasks += worker->num_finished_tasks();
     }
 
-    if (num_finished_tasks == _task_counter) break;
+    if (num_finished_tasks == _task_counter) {
+      break;
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -84,22 +89,28 @@ void NodeQueueScheduler::finish() {
   _task_counter = 0;
 }
 
-bool NodeQueueScheduler::active() const { return _active; }
+bool NodeQueueScheduler::active() const {
+  return _active;
+}
 
-const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
+const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const {
+  return _queues;
+}
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**
-   * Add task to the queue of the preferred node.
+   * Add task to the queue of the preferred node if it is ready for execution.
    */
   DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down");
   DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
 
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
-  task->set_id(task_counter);
+  task->set_id(TaskID{task_counter});
 
-  if (!task->is_ready()) return;
+  if (!task->is_ready()) {
+    return;
+  }
 
   // Lookup node id for current worker.
   if (preferred_node_id == CURRENT_NODE_ID) {
@@ -132,7 +143,9 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty()) return;
+    if (!task->predecessors().empty() || !task->successors().empty()) {
+      return;
+    }
 
     if (common_node_id) {
       // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see

@@ -24,14 +24,18 @@ namespace opossum {
 
 class MvccDeletePluginTest : public BaseTest {
  public:
-  static void SetUpTestCase() { _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a"); }
+  static void SetUpTestCase() {
+    _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  }
 
   void SetUp() override {
     const auto& table = load_table("resources/test_data/tbl/int3.tbl", _chunk_size);
     Hyrise::get().storage_manager.add_table(_table_name, table);
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
  protected:
   void _increment_all_values_by_one() {
@@ -44,6 +48,7 @@ class MvccDeletePluginTest : public BaseTest {
     // Validate
     auto validate_table = std::make_shared<Validate>(get_table);
     validate_table->set_transaction_context(transaction_context);
+    validate_table->never_clear_output();
     validate_table->execute();
 
     // Update
@@ -76,7 +81,7 @@ class MvccDeletePluginTest : public BaseTest {
   }
 
   const std::string _table_name{"mvccTestTable"};
-  static constexpr auto _chunk_size = size_t{4};
+  static constexpr auto _chunk_size = ChunkOffset{4};
   inline static std::shared_ptr<AbstractExpression> _column_a;
 };
 

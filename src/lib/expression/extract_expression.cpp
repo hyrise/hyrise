@@ -32,8 +32,9 @@ ExtractExpression::ExtractExpression(const DatetimeComponent init_datetime_compo
                                      const std::shared_ptr<AbstractExpression>& from)
     : AbstractExpression(ExpressionType::Extract, {from}), datetime_component(init_datetime_component) {}
 
-std::shared_ptr<AbstractExpression> ExtractExpression::deep_copy() const {
-  return std::make_shared<ExtractExpression>(datetime_component, from()->deep_copy());
+std::shared_ptr<AbstractExpression> ExtractExpression::_on_deep_copy(
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+  return std::make_shared<ExtractExpression>(datetime_component, from()->deep_copy(copied_ops));
 }
 
 std::string ExtractExpression::description(const DescriptionMode mode) const {
@@ -47,7 +48,9 @@ DataType ExtractExpression::data_type() const {
   return DataType::String;
 }
 
-std::shared_ptr<AbstractExpression> ExtractExpression::from() const { return arguments[0]; }
+std::shared_ptr<AbstractExpression> ExtractExpression::from() const {
+  return arguments[0];
+}
 
 bool ExtractExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ExtractExpression*>(&expression),

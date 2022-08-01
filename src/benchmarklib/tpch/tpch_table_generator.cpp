@@ -10,11 +10,9 @@ extern "C" {
 #include <utility>
 
 #include "benchmark_config.hpp"
-#include "import_export/binary/binary_parser.hpp"
 #include "storage/chunk.hpp"
 #include "storage/table_key_constraint.hpp"
 #include "table_builder.hpp"
-#include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
 extern char** asc_date;
@@ -116,7 +114,7 @@ std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                       uint32_t chunk_size)
+                                       ChunkOffset chunk_size)
     : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
@@ -131,23 +129,7 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
 
   const auto cache_directory = std::string{"tpch_cached_tables/sf-"} + std::to_string(_scale_factor);  // NOLINT
   if (_benchmark_config->cache_binary_tables && std::filesystem::is_directory(cache_directory)) {
-    std::unordered_map<std::string, BenchmarkTableInfo> table_info_by_name;
-
-    for (const auto& table_file : list_directory(cache_directory)) {
-      const auto table_name = table_file.stem();
-      Timer timer;
-      std::cout << "-  Loading table " << table_name << " from cached binary " << table_file.relative_path();
-
-      BenchmarkTableInfo table_info;
-      table_info.table = BinaryParser::parse(table_file);
-      table_info.loaded_from_binary = true;
-      table_info.binary_file_path = table_file;
-      table_info_by_name[table_name] = table_info;
-
-      std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
-    }
-
-    return table_info_by_name;
+    return _load_binary_tables_from_path(cache_directory);
   }
 
   // Init tpch_dbgen - it is important this is done before any data structures from tpch_dbgen are read.
@@ -166,10 +148,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                                 customer_count};
   TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                order_count * 4};
+                                ChunkOffset{order_count * 4}};
   TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                part_count * 4};
+                                ChunkOffset{part_count * 4}};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
                                 supplier_count};
   TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
