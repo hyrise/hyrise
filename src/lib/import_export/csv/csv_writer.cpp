@@ -40,7 +40,7 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
    * as it does not care about representation of values. Also, probably, the main reason for this,
    * it makes is very easy to load this data into a different database.
    * The disadvantage is that it can be quite slow if the data has been compressed before.
-   * Also, it does not involve the column-oriented style used in hyriseDB.
+   * Also, it does not involve the column-oriented style used in hyrise.
    */
 
   // Open file for writing

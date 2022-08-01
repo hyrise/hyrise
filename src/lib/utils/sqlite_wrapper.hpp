@@ -11,7 +11,7 @@ namespace hyrise {
 
 /*
  * This class wraps the sqlite3 library for hyrise. It creates an in-memory sqlite database on construction.
- * When executing a sql query, the wrapper converts the result into an hyrise Table.
+ * When executing a sql query, the wrapper converts the result into a hyrise Table.
  */
 class SQLiteWrapper final {
  public:

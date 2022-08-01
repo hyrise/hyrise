@@ -3,16 +3,16 @@
 namespace hyrise {
 
 // The fixture for testing class Foo.
-class hyriseTestTemplate : public BaseTest {
+class HyriseTestTemplate : public BaseTest {
  protected:
   // You can remove any or all of the following functions if its body
   // is empty.
 
-  hyriseTestTemplate() {
+  HyriseTestTemplate() {
     // You can do set-up work for each test here.
   }
 
-  ~hyriseTestTemplate() override {
+  ~HyriseTestTemplate() override {
     // You can do clean-up work that doesn't throw exceptions here.
   }
 
