@@ -108,7 +108,7 @@ std::shared_ptr<FeatureVector> ColumnFeatureNode::_on_to_feature_vector() const 
   feature_vector->reserve(feature_vector->size() + 3);
   feature_vector->emplace_back(static_cast<Feature>(_nullable));
   feature_vector->emplace_back(static_cast<Feature>(_is_reference));
-  feature_vector->emplace_back(static_cast<Feature>(_sorted_segments));
+  feature_vector->emplace_back(static_cast<Feature::base_type>(_sorted_segments));
 
   return feature_vector;
 }

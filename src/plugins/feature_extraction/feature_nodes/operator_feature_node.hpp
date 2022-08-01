@@ -60,7 +60,7 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   void _add_subqueries(const std::vector<std::shared_ptr<AbstractExpression>>& expressions);
 
   std::shared_ptr<const AbstractOperator> _op;
-  OperatorType _op_type;
+  QueryOperatorType _op_type;
   std::chrono::nanoseconds _run_time;
   std::shared_ptr<Query> _query;
 

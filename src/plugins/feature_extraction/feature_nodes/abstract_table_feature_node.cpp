@@ -19,7 +19,7 @@ AbstractTableFeatureNode::AbstractTableFeatureNode(const TableNodeType node_type
 std::shared_ptr<FeatureVector> AbstractTableFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<TableType>(_table_type);
   feature_vector->reserve(feature_vector->size() + 3);
-  feature_vector->emplace_back(static_cast<Feature>(_row_count));
+  feature_vector->emplace_back(static_cast<Feature::base_type>(_row_count));
   feature_vector->emplace_back(static_cast<Feature>(_chunk_count));
   feature_vector->emplace_back(static_cast<Feature>(_column_count));
   return feature_vector;

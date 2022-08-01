@@ -37,25 +37,11 @@ void CostModelFeaturePlugin::export_operator_features() const {
   const auto& pqp_cache = Hyrise::get().default_pqp_cache;
   Assert(pqp_cache, "No PQPCache");
 
-  const auto non_selection_operators = std::unordered_set<OperatorType>{OperatorType::ChangeMetaTable,
-                                                                        OperatorType::CreateTable,
-                                                                        OperatorType::CreatePreparedPlan,
-                                                                        OperatorType::CreateView,
-                                                                        OperatorType::DropTable,
-                                                                        OperatorType::DropView,
-                                                                        OperatorType::Delete,
-                                                                        OperatorType::Export,
-                                                                        OperatorType::Import,
-                                                                        OperatorType::Insert,
-                                                                        OperatorType::JoinVerification,
-                                                                        OperatorType::Print,
-                                                                        OperatorType::Update,
-                                                                        OperatorType::Mock};
   const auto& cache_snapshot = pqp_cache->snapshot();
   for (const auto& [key, entry] : cache_snapshot) {
     const auto& pqp = entry.value;
     // Skip maintenance operators
-    if (non_selection_operators.contains(pqp->type())) {
+    if (!operator_type_mapping.contains(pqp->type())) {
       continue;
     }
 

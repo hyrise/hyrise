@@ -87,8 +87,8 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         const auto hash = node->hash();
 
         auto& operator_file = output_files.at(FeatureNodeType::Operator);
-        operator_file << query << ";" << subquery_string << ";" << subquery_id_string << ";" << hash;
-        feature_vector_to_stream(operator_file, node->to_feature_vector());
+        operator_file << query << ";" << subquery_string << ";" << subquery_id_string << ";" << hash
+                      << node->to_feature_vector();
         for (const auto& input : {node->left_input(), node->right_input()}) {
           operator_file << ";";
           if (input) {
@@ -104,9 +104,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
           const auto& predicate = predicates[predicate_id];
           auto& predicate_file = output_files.at(FeatureNodeType::Predicate);
           predicate_file << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << predicate_id
-                         << ";";
-          feature_vector_to_stream(predicate_file, predicate->to_feature_vector());
-          predicate_file << "\n";
+                         << ";" << predicate->to_feature_vector() << "\n";
           auto column_id = ColumnID{0};
           for (const auto& column : {predicate->left_input(), predicate->right_input()}) {
             if (!column) {
@@ -117,9 +115,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
             Assert(column->type() == FeatureNodeType::Column, "expected column");
             auto& column_file = output_files.at(FeatureNodeType::Column);
             column_file << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << predicate_id
-                        << ";" << column_id << ";";
-            feature_vector_to_stream(column_file, column->to_feature_vector());
-            column_file << "\n";
+                        << ";" << column_id << ";" << column->to_feature_vector() << "\n";
 
             const auto& column_node = static_cast<ColumnFeatureNode&>(*column);
             const auto& segments = column_node.segments();
@@ -128,9 +124,8 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
               const auto& segment = segments[segment_id];
               auto& segment_file = output_files.at(FeatureNodeType::Segment);
               segment_file << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";"
-                           << predicate_id << ";" << column_id << ";" << segment_id << ";";
-              feature_vector_to_stream(segment_file, segment->to_feature_vector());
-              segment_file << "\n";
+                           << predicate_id << ";" << column_id << ";" << segment_id << ";"
+                           << segment->to_feature_vector() << "\n";
             }
             ++column_id;
           }
@@ -148,9 +143,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
 
       case FeatureNodeType::Table: {
         auto& table_file = output_files.at(FeatureNodeType::Table);
-        table_file << node->hash() << ";";
-        feature_vector_to_stream(table_file, node->to_feature_vector());
-        table_file << "\n";
+        table_file << node->hash() << ";" << node->to_feature_vector() << "\n";
 
         return FeatureNodeVisitation::DoNotVisitInputs;
       }

@@ -30,31 +30,31 @@ OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOpe
                                          const std::shared_ptr<AbstractFeatureNode>& right_input)
     : AbstractFeatureNode{FeatureNodeType::Operator, left_input, right_input},
       _op{op},
-      _op_type{op->type()},
+      _op_type{map_operator_type(op->type())},
       _run_time{op->performance_data->walltime},
       _output_table{ResultTableFeatureNode::from_operator(op)} {}
 
 void OperatorFeatureNode::initialize() {
-  switch (_op->type()) {
-    case OperatorType::JoinHash:
+  switch (_op_type) {
+    case QueryOperatorType::JoinHash:
       _handle_join_hash(static_cast<const JoinHash&>(*_op));
       break;
-    case OperatorType::JoinIndex:
+    case QueryOperatorType::JoinIndex:
       _handle_join_index(static_cast<const JoinIndex&>(*_op));
       break;
-    case OperatorType::TableScan:
+    case QueryOperatorType::TableScan:
       _handle_table_scan(static_cast<const TableScan&>(*_op));
       break;
-    case OperatorType::IndexScan:
+    case QueryOperatorType::IndexScan:
       _handle_index_scan(static_cast<const IndexScan&>(*_op));
       break;
-    case OperatorType::Aggregate:
+    case QueryOperatorType::Aggregate:
       _handle_aggregate(static_cast<const AggregateHash&>(*_op));
       break;
-    case OperatorType::Projection:
+    case QueryOperatorType::Projection:
       _handle_projection(static_cast<const Projection&>(*_op));
       break;
-    case OperatorType::GetTable:
+    case QueryOperatorType::GetTable:
       _handle_get_table(static_cast<const GetTable&>(*_op));
       break;
     default:
@@ -87,7 +87,7 @@ size_t OperatorFeatureNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() const {
-  auto feature_vector = one_hot_encoding<OperatorType>(_op_type);
+  auto feature_vector = one_hot_encoding<QueryOperatorType>(_op_type);
   const auto& output_feature_vector = _output_table->to_feature_vector();
   feature_vector->insert(feature_vector->end(), output_feature_vector.begin(), output_feature_vector.end());
   return feature_vector;
@@ -98,9 +98,9 @@ const std::vector<std::string>& OperatorFeatureNode::feature_headers() const {
 }
 
 const std::vector<std::string>& OperatorFeatureNode::headers() {
-  static auto ohe_headers_type = one_hot_headers<OperatorType>("operator_type.");
+  static auto ohe_headers_type = one_hot_headers<QueryOperatorType>("operator_type.");
   static const auto output_headers = AbstractTableFeatureNode::headers();
-  if (ohe_headers_type.size() == magic_enum::enum_count<OperatorType>()) {
+  if (ohe_headers_type.size() == magic_enum::enum_count<QueryOperatorType>()) {
     ohe_headers_type.insert(ohe_headers_type.end(), output_headers.begin(), output_headers.end());
   }
   return ohe_headers_type;
