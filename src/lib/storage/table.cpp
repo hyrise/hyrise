@@ -376,7 +376,7 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
     for (const auto& chunk_id : chunk_ids) {
       const auto& chunk = get_chunk(chunk_id);
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
-      chunks_to_index.push_back(std::make_pair(chunk_id, chunk));
+      chunks_to_index.emplace_back(std::make_pair(chunk_id, chunk));
     }
 
     table_index = std::make_shared<Index>(chunks_to_index, column_id);
