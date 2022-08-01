@@ -22,7 +22,8 @@ size_t AbstractChunkIndex::estimate_memory_consumption(ChunkIndexType type, Chun
     case ChunkIndexType::BTree:
       return BTreeIndex::estimate_memory_consumption(row_count, distinct_count, value_bytes);
     case ChunkIndexType::Invalid:
-      Fail("ChunkIndexType is invalid.");
+    default:
+      Fail("GCC: Invalid enum value.");
   }
 }
 
