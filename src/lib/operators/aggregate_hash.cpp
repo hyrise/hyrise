@@ -626,7 +626,7 @@ void AggregateHash::_aggregate() {
       /**
        * DISTINCT implementation
        *
-       * In hyrise we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * In Hyrise we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
        * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
        * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *

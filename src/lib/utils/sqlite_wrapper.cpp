@@ -20,7 +20,7 @@ namespace {
 
 using namespace hyrise;  // NOLINT
 /*
- * Creates columns in given hyrise table according to an sqlite intermediate statement (one result row).
+ * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_statement, int column_count) {
   std::vector<bool> column_nullable(column_count, false);
@@ -92,7 +92,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
 }
 
 /*
- * Adds a single row to given hyrise table according to an sqlite intermediate statement (one result row).
+ * Adds a single row to given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* sqlite_statement,
                                     int column_count) {

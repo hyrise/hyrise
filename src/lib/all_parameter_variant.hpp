@@ -14,7 +14,7 @@ namespace hana = boost::hana;
 
 /**
  * AllParameterVariant holds either an AllTypeVariant, a ColumnID or a Placeholder.
- * It should be used to generalize hyrise operator calls.
+ * It should be used to generalize Hyrise operator calls.
  */
 
 // This holds pairs of all types and their respective string representation

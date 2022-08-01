@@ -16,7 +16,7 @@ namespace hyrise {
 
 /*
  * This operator writes a table into a file.
- * Supportes file types are .csv and hyrise .bin files.
+ * Supportes file types are .csv and Hyrise .bin files.
  * For .csv files, a CSV config is added, which is located in the <filename>.json file.
  * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */

@@ -21,7 +21,7 @@
 namespace hyrise {
 
 /*
- * This parser reads an hyrise binary file and creates a table from that input.
+ * This parser reads an Hyrise binary file and creates a table from that input.
  * Documentation of the file formats can be found in BinaryWriter header file.
  */
 class BinaryParser {
