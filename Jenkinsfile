@@ -270,7 +270,7 @@ try {
                 sh "cd clang-relwithdebinfo-thread-sanitizer && make hyriseTest hyriseSystemTest hyriseBenchmarkTPCH -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangRelWithDebInfoThreadSanitizer")
-              },
+              }
             }, Parallel Part1: {
               stage("clang-relwithdebinfo:thread-sanitizer1") {
                 if (env.BRANCH_NAME == 'master' || full_ci) {
