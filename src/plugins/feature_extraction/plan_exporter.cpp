@@ -31,19 +31,21 @@ void PlanExporter::export_plans(const std::string& file_name) {
   auto operator_file = std::ofstream{operator_file_name};
   auto predicate_file = std::ofstream{predicate_file_name};
 
-  table_file /*    */ << "table_id";
-  column_file /*   */ << "query;subquery;subquery_id;operator_id;predicate_id;column_id";
-  segment_file /*  */ << "query;subquery;subquery_id;operator_id;predicate_id;column_id;segment_id";
-  operator_file /* */ << "query;subquery;subquery_id;operator_id;";
-  predicate_file /**/ << "query;subquery;subquery_id;operator_id;predicate_id";
+  // clang-format off
+  table_file    << "table_id";
+  column_file    << "query;subquery;subquery_id;operator_id;predicate_id;column_id";
+  segment_file   << "query;subquery;subquery_id;operator_id;predicate_id;column_id;segment_id";
+  operator_file  << "query;subquery;subquery_id;operator_id;";
+  predicate_file << "query;subquery;subquery_id;operator_id;predicate_id";
 
-  table_file /*    */ << boost::algorithm::join(AbstractTableFeatureNode::headers(), ";") << "\n";
-  column_file /*   */ << boost::algorithm::join(ColumnFeatureNode::headers(), ";") << "\n";
-  segment_file /*  */ << boost::algorithm::join(SegmentFeatureNode::headers(), ";") << "\n";
-  operator_file /* */ << boost::algorithm::join(OperatorFeatureNode::headers(), ";");
-  predicate_file /**/ << boost::algorithm::join(PredicateFeatureNode::headers(), ";") << "\n";
+  table_file     << boost::algorithm::join(AbstractTableFeatureNode::headers(), ";") << "\n";
+  column_file    << boost::algorithm::join(ColumnFeatureNode::headers(), ";") << "\n";
+  segment_file   << boost::algorithm::join(SegmentFeatureNode::headers(), ";") << "\n";
+  operator_file  << boost::algorithm::join(OperatorFeatureNode::headers(), ";");
+  predicate_file << boost::algorithm::join(PredicateFeatureNode::headers(), ";") << "\n";
 
-  operator_file /* */ << ";left_input;right_input;runtime\n";
+  operator_file  << ";left_input;right_input;runtime;estimated_cardinality\n";
+  // clang-format on
 
   auto output_files = std::unordered_map<FeatureNodeType, std::ofstream>{};
   output_files[FeatureNodeType::Table] = std::move(table_file);
@@ -58,8 +60,8 @@ void PlanExporter::export_plans(const std::string& file_name) {
 
   for (const auto& node : _feature_graphs) {
     const auto& root = static_cast<OperatorFeatureNode&>(*node);
-    std::cout << node->hash() << std::endl;
-    _features_to_csv(root.query()->hash, node, output_files);
+    auto cardinality_estimator = CardinalityEstimator{};
+    _features_to_csv(root.query()->hash, node, output_files, cardinality_estimator);
   }
 
   for (auto& [type, output_file] : output_files) {
@@ -71,13 +73,13 @@ void PlanExporter::export_plans(const std::string& file_name) {
 
 void PlanExporter::_features_to_csv(const std::string& query, const std::shared_ptr<AbstractFeatureNode>& graph,
                                     std::unordered_map<FeatureNodeType, std::ofstream>& output_files,
-                                    const std::optional<size_t>& subquery,
+                                    CardinalityEstimator& cardinality_estimator, const std::optional<size_t>& subquery,
                                     const std::optional<size_t>& subquery_id) const {
   const auto subquery_string = subquery ? std::to_string(*subquery) : "";
   const auto subquery_id_string = subquery ? std::to_string(*subquery) : "";
 
   visit_feature_nodes(graph, [&](const auto& node) {
-    std::cout << "    " << node->hash() << std::endl;
+    // std::cout << "    " << node->hash() << std::endl;
     const auto node_type = node->type();
     switch (node_type) {
       case FeatureNodeType::Operator: {
@@ -93,7 +95,8 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
             operator_file << input->hash();
           }
         }
-        operator_file << ";" << operator_node.run_time().count() << "\n";
+        operator_file << ";" << operator_node.run_time().count() << ";"
+                      << cardinality_estimator.estimate_cardinality(operator_node.get_operator()->lqp_node) << "\n";
 
         const auto& predicates = operator_node.predicates();
         const auto num_predicates = predicates.size();
@@ -136,7 +139,8 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         const auto& subqueries = operator_node.subqueries();
         const auto num_subqueries = subqueries.size();
         for (auto op_subquery_id = size_t{0}; op_subquery_id < num_subqueries; ++op_subquery_id) {
-          _features_to_csv(query, subqueries[op_subquery_id], output_files, hash, op_subquery_id);
+          _features_to_csv(query, subqueries[op_subquery_id], output_files, cardinality_estimator, hash,
+                           op_subquery_id);
         }
 
         return FeatureNodeVisitation::VisitInputs;
