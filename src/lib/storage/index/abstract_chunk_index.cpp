@@ -43,14 +43,16 @@ bool AbstractChunkIndex::is_index_for(const std::vector<std::shared_ptr<const Ab
 }
 
 AbstractChunkIndex::Iterator AbstractChunkIndex::lower_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert(_get_indexed_segments().size() >= values.size(),
+  DebugAssert(
+      _get_indexed_segments().size() >= values.size(),
       "AbstractChunkIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _lower_bound(values);
 }
 
 AbstractChunkIndex::Iterator AbstractChunkIndex::upper_bound(const std::vector<AllTypeVariant>& values) const {
-  DebugAssert(_get_indexed_segments().size() >= values.size(),
+  DebugAssert(
+      _get_indexed_segments().size() >= values.size(),
       "AbstractChunkIndex: The number of queried segments has to be less or equal to the number of indexed segments.");
 
   return _upper_bound(values);

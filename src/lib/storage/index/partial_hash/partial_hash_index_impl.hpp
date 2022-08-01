@@ -43,7 +43,6 @@ class TableIndexFlattenedSparseMapIterator : public BaseTableIndexIterator {
   size_t _vector_index;
 };
 
-
 /**
  * Forward iterator that iterates over a std::vector of RowIDs.
  */

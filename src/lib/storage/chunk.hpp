@@ -99,7 +99,6 @@ class Chunk : private Noncopyable {
   template <typename Index>
   std::shared_ptr<AbstractChunkIndex> create_index(
       const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index) {
-    
     if constexpr (HYRISE_DEBUG) {
       for (auto segment : segments_to_index) {
         const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
