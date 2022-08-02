@@ -61,13 +61,6 @@
    fun:_ZN7opossum14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
 }
 
-# When dereferencing a LZ4 segment iterable, an std::optional _null_value_it is used to check if the element is null.
-# This yields to a valgrind uninitialised value error.
-{
-   <False_positive_lz4>
-   Memcheck:Cond
-   fun:_ZNK7opossum18LZ4SegmentIterableIiE19PointAccessIteratorINS_15AbstractPosList15PosListIteratorIS3_NS_5RowIDEEEE11dereferenceEv
-}
 {
    <insert_a_suppression_name_here>
    Memcheck:Value8
