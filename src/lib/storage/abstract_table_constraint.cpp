@@ -29,5 +29,3 @@ bool AbstractTableConstraint::operator!=(const AbstractTableConstraint& rhs) con
 }
 
 }  // namespace opossum
-
-namespace std {}  // namespace std

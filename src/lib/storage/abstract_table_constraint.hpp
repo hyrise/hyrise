@@ -47,10 +47,3 @@ class AbstractTableConstraint {
 }  // namespace opossum
 
 namespace std {
-
-template <>
-struct hash<opossum::AbstractTableConstraint> final {
-  size_t operator()(const opossum::AbstractTableConstraint& table_constraint) const;
-};
-
-}  // namespace std
