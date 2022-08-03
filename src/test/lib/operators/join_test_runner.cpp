@@ -739,6 +739,9 @@ TEST_P(JoinTestRunner, TestJoin) {
 
   // If columns are pruned, we have to adjust the corresponding column IDs.
   auto adjust_column_id = [](auto& column_id, const auto original_column_id, const auto& pruned_column_ids) {
+    if (!pruned_column_ids) {
+      return;
+    }
     for (const auto& pruned_column_id : *pruned_column_ids) {
       if (pruned_column_id < original_column_id) {
         --column_id;
