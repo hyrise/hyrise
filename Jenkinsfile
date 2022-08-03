@@ -101,10 +101,6 @@ try {
 
             sh "mkdir clang-debug && cd clang-debug &&                                                   ${cmake} ${debug}          ${clang}  ${unity}  .. && make -j libjemalloc-build"
 
-            // clang-release build is configured to use the DWARF v4 debugging format as Valgrind does not support v5 as of now (v5 is the default format of GCC11 and Clang14).
-            // See: https://www.mail-archive.com/valgrind-users@lists.sourceforge.net/msg07239.html
-            //mkdir clang-release && cd clang-release &&                                                   ${cmake} ${release}        ${clang}            -DCMAKE_C_FLAGS="-gdwarf-4" -DCMAKE_CXX_FLAGS="-gdwarf-4" .. &\
-
             // Configure the rest in parallel
             sh "mkdir clang-debug-tidy && cd clang-debug-tidy &&                                         ${cmake} ${debug}          ${clang}            -DENABLE_CLANG_TIDY=ON .. &\
             mkdir clang-debug-unity-odr && cd clang-debug-unity-odr &&                                   ${cmake} ${debug}          ${clang}   ${unity} -DCMAKE_UNITY_BUILD_BATCH_SIZE=0 .. &\
@@ -302,7 +298,9 @@ try {
 
           parallel memcheckReleaseTest: {
             stage("memcheckReleaseTest") {
-              // Runs separately as it depends on clang-release to be built
+              // Runs after the other sanitizers as it depends on gcc-release to be built. With #2402, valgrind now
+              // uses the GCC build instead of the clang build as there are issues with valgrind and the debug symbols
+              // of clang 14 (https://bugs.kde.org/show_bug.cgi?id=452758).
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-release-memcheck-test"
                 // If this shows a leak, try --leak-check=full, which is slower but more precise
