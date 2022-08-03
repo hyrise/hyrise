@@ -222,9 +222,11 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), all_encoding_types.front()},  // NOLINT
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
+        all_encoding_types.front(), std::nullopt, std::nullopt, std::nullopt, std::nullopt},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), all_encoding_types.front()},  // NOLINT
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
+        all_encoding_types.front(), std::nullopt, std::nullopt, std::nullopt, std::nullopt},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
