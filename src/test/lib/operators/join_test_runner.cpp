@@ -151,11 +151,11 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
 
       auto index_column_id = ColumnID{};
       if (configuration.index_side == IndexSide::Left) {
-        const auto& pruned_column_ids = *(configuration.left_input.pruned_column_ids);
+        const auto& pruned_column_ids = *configuration.left_input.pruned_column_ids;
         const auto join_column_id = primary_predicate.column_ids.first;
         index_column_id = column_id_before_pruning(join_column_id, pruned_column_ids);
       } else {
-        const auto& pruned_column_ids = *(configuration.right_input.pruned_column_ids);
+        const auto& pruned_column_ids = *configuration.right_input.pruned_column_ids;
         const auto join_column_id = primary_predicate.column_ids.second;
         index_column_id = column_id_before_pruning(join_column_id, pruned_column_ids);
       }
