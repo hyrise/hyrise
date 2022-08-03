@@ -16,9 +16,7 @@ std::shared_ptr<OperatorFeatureNode> _recursively_build_graph_from_pqp(
   const auto left_input = op->left_input() ? _recursively_build_graph_from_pqp(op->left_input()) : nullptr;
   const auto right_input = op->right_input() ? _recursively_build_graph_from_pqp(op->right_input()) : nullptr;
 
-  auto feature_node = std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
-  feature_node->initialize();
-  return feature_node;
+  return std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
 }
 
 }  // namespace
@@ -32,9 +30,9 @@ OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOpe
       _op{op},
       _op_type{map_operator_type(op->type())},
       _run_time{op->performance_data->walltime},
-      _output_table{ResultTableFeatureNode::from_operator(op)} {}
+      _output_table{ResultTableFeatureNode::from_operator(op)} {
+  Assert(_op_type == QueryOperatorType::GetTable || _left_input, "expected input operator");
 
-void OperatorFeatureNode::initialize() {
   switch (_op_type) {
     case QueryOperatorType::JoinHash:
       _handle_join_hash(static_cast<const JoinHash&>(*_op));
@@ -138,18 +136,92 @@ const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::su
 }
 
 void OperatorFeatureNode::_handle_general_operator(const AbstractOperator& op) {}
-void OperatorFeatureNode::_handle_join_hash(const JoinHash& join_hash) {}
-void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {}
+
+void OperatorFeatureNode::_handle_join_hash(const JoinHash& join_hash) {
+  Assert(_right_input, "Join needs two inputs");
+
+  const auto& performance_data = static_cast<JoinHash::PerformanceData&>(_op->performance_data);
+  // for us, the right input is ALWAYS the probe column and the left input is the build side
+  auto flipped_inputs = !performance_data.left_input_is_build_side;
+  if (flipped_inputs) {
+    std::swap(_left_input, _right_input);
+  }
+
+  // if the operator flipped the sides, all predicates were flipped as well
+  // however, they could have been flipped on instantiation, and we don't know which sides of the
+  // LQP node's predicates belong to them
+  // need to handle that for the predicates...
+
+
+}
+void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {
+  Assert(_right_input, "Join needs two inputs");
+
+  // for us, the right input is ALWAYS the index column
+  const auto& performance_data = static_cast<JoinIndex::PerformanceData&>(_op->performance_data);
+  // for us, the right input is ALWAYS the probe column and the left input is the build side
+  auto flipped_inputs = !performance_data.right_input_has_index;
+  if (flipped_inputs) {
+    std::swap(_left_input, _right_input);
+  }
+}
+
 void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
   const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
   _predicates.push_back(
-      std::make_shared<PredicateFeatureNode>(predicate_node.predicate(), table_scan.predicate(), shared_from_this()));
+      std::make_shared<PredicateFeatureNode>(predicate_node.predicate(), table_scan.predicate(), _left_input));
   _add_subqueries(table_scan.predicate()->arguments);
 }
 
 void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {}
+
 void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {}
-void OperatorFeatureNode::_handle_projection(const Projection& projection) {}
+
+void OperatorFeatureNode::_handle_projection(const Projection& projection) {
+  const auto& expressions = projection.expressions;
+
+  // set mterialized columns if table is not data table
+  // First gather all forwardable PQP column expressions.
+  auto forwarded_pqp_columns = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    const auto& expression = expressions[column_id];
+    if (expression->type == ExpressionType::PQPColumn) {
+      forwarded_pqp_columns.emplace(expression_id);
+    }
+  }
+
+  // Iterate the expressions and check if a forwarded column is part of an expression. In this case, remove it from
+  // the list of forwarded columns. When the input is a data table (and thus the output table is as well) the
+  // forwarded column does not need to be accessed via its position list later. And since the following operator might
+  // have optimizations for accessing an encoded segment, we always forward for data tables.
+  if (_output_table->table_type() == TableType::References) {
+    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+      const auto& expression = expressions[column_id];
+
+      if (expression->type == ExpressionType::PQPColumn) {
+        continue;
+      }
+
+      visit_expression(expression, [&](const auto& sub_expression) {
+        if (sub_expression->type == ExpressionType::PQPColumn) {
+          forwarded_pqp_columns.erase(sub_expression);
+        }
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+  }
+
+  const auto& projection_node = static_cast<ProjectionNode&>(projection.lqp_node);
+  const auto& output_expressions = projection_node.output_expressions();
+  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    const auto& expression = expressions[column_id];
+    if (!forwarded_pqp_columns.contains(expression)) {
+      _output_table->set_column_materialized(column_id);
+      _predicates.push_back(std::make_shared<PredicateFeatureNode>(output_expressions.at(column_id)), expression,
+                            _left_input)
+    }
+  }
+}
 
 void OperatorFeatureNode::_handle_get_table(const GetTable& get_table) {
   const auto& table_name = get_table.table_name();

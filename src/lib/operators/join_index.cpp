@@ -266,6 +266,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
                                       join_index_performance_data.chunks_scanned_without_index) +
                        " chunks processed using an index.");
   }
+  join_index_performance_data.right_input_has_index = _index_side == IndexSide::Right;
 
   auto chunks = std::vector<std::shared_ptr<Chunk>>{};
   if (output_segments.at(0)->size() > 0) {

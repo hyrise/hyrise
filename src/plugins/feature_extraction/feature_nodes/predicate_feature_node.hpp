@@ -9,7 +9,7 @@ class PredicateFeatureNode : public AbstractFeatureNode {
  public:
   PredicateFeatureNode(const std::shared_ptr<AbstractExpression>& lqp_expression,
                        const std::shared_ptr<AbstractExpression>& pqp_expression,
-                       const std::shared_ptr<AbstractFeatureNode>& operator_node);
+                       const std::shared_ptr<AbstractFeatureNode>& operator_node_input);
 
   const std::vector<std::string>& feature_headers() const final;
 
@@ -18,7 +18,7 @@ class PredicateFeatureNode : public AbstractFeatureNode {
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
 
-  PredicateCondition _predicate_condition;
+  std::optional<PredicateCondition> _predicate_condition;
   bool _column_vs_value = false;
   bool _column_vs_column = false;
   bool _is_complex = false;

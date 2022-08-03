@@ -46,6 +46,7 @@ class JoinIndex : public AbstractJoinOperator {
 
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
+    bool right_input_has_index{true};
   };
 
   std::string description(DescriptionMode description_mode) const override;

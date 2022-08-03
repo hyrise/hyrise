@@ -75,68 +75,69 @@ namespace opossum {
 
 PredicateFeatureNode::PredicateFeatureNode(const std::shared_ptr<AbstractExpression>& lqp_expression,
                                            const std::shared_ptr<AbstractExpression>& pqp_expression,
-                                           const std::shared_ptr<AbstractFeatureNode>& operator_node)
+                                           const std::shared_ptr<AbstractFeatureNode>& operator_node_input)
     : AbstractFeatureNode(FeatureNodeType::Predicate, nullptr, nullptr) {
   Assert(pqp_expression->type == ExpressionType::Predicate, "Predicate expected");
-  const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(pqp_expression);
-  _predicate_condition = predicate_expression->predicate_condition;
 
-  const auto resolved_predicate = resolve_uncorrelated_subqueries(pqp_expression);
-  if (const auto binary_predicate_expression =
-          std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
-    const auto left_operand = binary_predicate_expression->left_operand();
-    const auto right_operand = binary_predicate_expression->right_operand();
+  if (const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(pqp_expression)) {
+    _predicate_condition = predicate_expression->predicate_condition;
 
-    const auto left_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(left_operand);
-    const auto right_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(right_operand);
+    const auto resolved_predicate = resolve_uncorrelated_subqueries(pqp_expression);
+    if (const auto binary_predicate_expression =
+            std::dynamic_pointer_cast<BinaryPredicateExpression>(resolved_predicate)) {
+      const auto left_operand = binary_predicate_expression->left_operand();
+      const auto right_operand = binary_predicate_expression->right_operand();
 
-    auto left_value = expression_get_value_or_parameter(*left_operand);
-    auto right_value = expression_get_value_or_parameter(*right_operand);
+      const auto left_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(left_operand);
+      const auto right_column_expression = std::dynamic_pointer_cast<PQPColumnExpression>(right_operand);
 
-    if (left_column_expression && right_column_expression) {
-      _column_vs_column = true;
-      _left_input = ColumnFeatureNode::from_expression(operator_node->left_input(), lqp_expression->arguments[0],
-                                                       left_column_expression->column_id);
-      _right_input = ColumnFeatureNode::from_expression(operator_node->left_input(), lqp_expression->arguments[1],
-                                                        right_column_expression->column_id);
-      return;
+      auto left_value = expression_get_value_or_parameter(*left_operand);
+      auto right_value = expression_get_value_or_parameter(*right_operand);
+
+      if (left_column_expression && right_column_expression) {
+        _column_vs_column = true;
+        _left_input = ColumnFeatureNode::from_expression(operator_node_input, lqp_expression->arguments[0],
+                                                         left_column_expression->column_id);
+        _right_input = ColumnFeatureNode::from_expression(operator_node_input, lqp_expression->arguments[1],
+                                                          right_column_expression->column_id);
+        return;
+      }
+
+      if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
+        Assert((left_column_expression && !right_column_expression), "expected only one column for like");
+        _left_input = ColumnFeatureNode::from_expression(operator_node_input, lqp_expression->arguments[0],
+                                                         left_column_expression->column_id);
+        return;
+      }
+
+      if ((left_column_expression && right_value) || (right_column_expression && left_value)) {
+        const auto left_is_column = left_column_expression ? true : false;
+        const auto& column_expression = left_is_column ? left_column_expression : right_column_expression;
+        const auto& lqp_column = left_is_column ? lqp_expression->arguments[0] : lqp_expression->arguments[1];
+        _column_vs_value = true;
+        _left_input = ColumnFeatureNode::from_expression(operator_node_input, lqp_column, column_expression->column_id);
+        return;
+      }
     }
 
-    if (_predicate_condition == PredicateCondition::Like || _predicate_condition == PredicateCondition::NotLike) {
-      Assert((left_column_expression && !right_column_expression), "expected only one column for like");
-      _left_input = ColumnFeatureNode::from_expression(operator_node->left_input(), lqp_expression->arguments[0],
-                                                       left_column_expression->column_id);
-      return;
-    }
-
-    if ((left_column_expression && right_value) || (right_column_expression && left_value)) {
-      const auto left_is_column = left_column_expression ? true : false;
-      const auto& column_expression = left_is_column ? left_column_expression : right_column_expression;
-      const auto& lqp_column = left_is_column ? lqp_expression->arguments[0] : lqp_expression->arguments[1];
+    if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(resolved_predicate)) {
       _column_vs_value = true;
+      Assert(is_null_expression->operand()->type == ExpressionType::PQPColumn, "Expected column");
+      const auto& pqp_column = static_cast<PQPColumnExpression&>(*is_null_expression->operand());
       _left_input =
-          ColumnFeatureNode::from_expression(operator_node->left_input(), lqp_column, column_expression->column_id);
+          ColumnFeatureNode::from_expression(operator_node_input, lqp_expression->arguments[0], pqp_column.column_id);
       return;
     }
-  }
 
-  if (const auto is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(resolved_predicate)) {
-    _column_vs_value = true;
-    Assert(is_null_expression->operand()->type == ExpressionType::PQPColumn, "Expected column");
-    const auto& pqp_column = static_cast<PQPColumnExpression&>(*is_null_expression->operand());
-    _left_input = ColumnFeatureNode::from_expression(operator_node->left_input(), lqp_expression->arguments[0],
-                                                     pqp_column.column_id);
-    return;
-  }
-
-  if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
-    const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
-    auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
-    auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
-    if (left_column && lower_bound_value && upper_bound_value) {
-      _left_input = ColumnFeatureNode::from_expression(operator_node->left_input(), lqp_expression->arguments[0],
-                                                       left_column->column_id);
-      return;
+    if (const auto between_expression = std::dynamic_pointer_cast<BetweenExpression>(resolved_predicate)) {
+      const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
+      auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
+      auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
+      if (left_column && lower_bound_value && upper_bound_value) {
+        _left_input = ColumnFeatureNode::from_expression(operator_node_input, lqp_expression->arguments[0],
+                                                         left_column->column_id);
+        return;
+      }
     }
   }
 
@@ -146,17 +147,20 @@ PredicateFeatureNode::PredicateFeatureNode(const std::shared_ptr<AbstractExpress
   for (auto argument_idx = ColumnID{0}; argument_idx < argument_count; ++argument_idx) {
     if (auto pqp_column = std::dynamic_pointer_cast<PQPColumnExpression>(arguments[argument_idx])) {
       Assert(!_left_input, "Input column already set");
-      _left_input = ColumnFeatureNode::from_expression(operator_node->left_input(),
-                                                       lqp_expression->arguments[argument_idx], pqp_column->column_id);
+      _left_input = ColumnFeatureNode::from_expression(operator_node_input, lqp_expression->arguments[argument_idx],
+                                                       pqp_column->column_id);
     }
   }
 
-  Assert(_left_input, "Scan should operate on a column");
+  Assert(_left_input, "Expected input column");
   _is_complex = true;
 }
 
 std::shared_ptr<FeatureVector> PredicateFeatureNode::_on_to_feature_vector() const {
-  return one_hot_encoding<PredicateCondition>(_predicate_condition);
+  if (!predicate_condition) {
+    return std::make_shared<FeatureVector>(feature_headers.size());
+  }
+  return one_hot_encoding<PredicateCondition>(*_predicate_condition);
 }
 
 const std::vector<std::string>& PredicateFeatureNode::feature_headers() const {
