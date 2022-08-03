@@ -4,6 +4,9 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
+#include <magic_enum.hpp>
+
+#include "storage/table_key_constraint.hpp"
 
 namespace opossum {
 
@@ -50,6 +53,27 @@ std::string trim_source_file_path(const std::string& path) {
 
 std::string replace_addresses(const std::string& input) {
   return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{4,}"}, "0x00000000");
+}
+
+void table_key_constraints_to_stream(std::ostream& stream, const std::shared_ptr<const Table>& table,
+                                     const std::string& separator) {
+  const auto& table_key_constraints = table->soft_key_constraints();
+  for (auto constraint_it = table_key_constraints.cbegin(); constraint_it != table_key_constraints.cend();
+       ++constraint_it) {
+    const auto& table_key_constraint = *constraint_it;
+    stream << magic_enum::enum_name(table_key_constraint.key_type()) << "(";
+    const auto& columns = table_key_constraint.columns();
+    for (auto column_it = columns.cbegin(); column_it != columns.cend(); ++column_it) {
+      stream << table->column_name(*column_it);
+      if (std::next(column_it) != columns.cend()) {
+        stream << ", ";
+      }
+    }
+    stream << ")";
+    if (std::next(constraint_it) != table_key_constraints.cend()) {
+      stream << separator;
+    }
+  }
 }
 
 }  // namespace opossum

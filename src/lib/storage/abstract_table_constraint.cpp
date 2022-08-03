@@ -30,11 +30,4 @@ bool AbstractTableConstraint::operator!=(const AbstractTableConstraint& rhs) con
 
 }  // namespace opossum
 
-namespace std {
-
-size_t hash<opossum::AbstractTableConstraint>::operator()(
-    const opossum::AbstractTableConstraint& table_constraint) const {
-  return table_constraint.hash();
-}
-
-}  // namespace std
+namespace std {}  // namespace std

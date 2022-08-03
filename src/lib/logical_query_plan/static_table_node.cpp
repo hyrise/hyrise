@@ -25,25 +25,10 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
       stream << ", ";
     }
   }
-  const auto& table_key_constraints = table->soft_key_constraints();
-  if (!table_key_constraints.empty()) {
+
+  if (!table->soft_key_constraints().empty()) {
     stream << ", ";
-    for (auto constraint_it = table_key_constraints.cbegin(); constraint_it != table_key_constraints.cend();
-         ++constraint_it) {
-      const auto& table_key_constraint = *constraint_it;
-      stream << magic_enum::enum_name(table_key_constraint.key_type()) << "(";
-      const auto& columns = table_key_constraint.columns();
-      for (auto column_it = columns.cbegin(); column_it != columns.cend(); ++column_it) {
-        stream << table->column_name(*column_it);
-        if (std::next(column_it) != columns.cend()) {
-          stream << ", ";
-        }
-      }
-      stream << ")";
-      if (std::next(constraint_it) != table_key_constraints.cend()) {
-        stream << ", ";
-      }
-    }
+    table_key_constraints_to_stream(stream, table);
   }
   stream << ")";
 

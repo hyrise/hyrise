@@ -1420,7 +1420,9 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     // Translate table constraints
     const auto column_count = column_definitions.size();
     for (const auto& table_constraint : *create_statement.tableConstraints) {
-      auto column_ids = std::set<ColumnID>{};
+      Assert(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
+                 table_constraint->type == hsql::ConstraintType::Unique,
+             "Only UNIQUE and PRIMARY KEY constraints are expected on a table level");
       const auto constraint_type = table_constraint->type == hsql::ConstraintType::PrimaryKey
                                        ? KeyConstraintType::PRIMARY_KEY
                                        : KeyConstraintType::UNIQUE;
@@ -1428,16 +1430,17 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       // Resolve column IDs
       DebugAssert(table_constraint->columnNames,
                   std::string{magic_enum::enum_name(constraint_type)} + " table constraint must contain columns");
-      for (const auto& column_name : *table_constraint->columnNames) {
+      auto column_ids = std::set<ColumnID>{};
+      for (const auto& constraint_column_name : *table_constraint->columnNames) {
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           auto& column_definition = column_definitions[column_id];
-          if (column_definition.name == column_name) {
+          if (column_definition.name == constraint_column_name) {
             column_ids.emplace(column_id);
             if (constraint_type == KeyConstraintType::PRIMARY_KEY) {
               column_definition.nullable = false;
               AssertInput(
                   !create_statement.columns->at(column_id)->column_constraints->contains(hsql::ConstraintType::Null),
-                  "PRIMARY KEY column " + column_name + " must not be nullable");
+                  "PRIMARY KEY column " + constraint_column_name + " must not be nullable");
             }
             break;
           }

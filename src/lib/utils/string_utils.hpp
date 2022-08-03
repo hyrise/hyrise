@@ -6,6 +6,9 @@
 
 namespace opossum {
 
+class Table;
+class TableKeyConstraint;
+
 // Removes whitespaces from the front and back. Also reduces multiple whitespaces between words to a single one.
 // Splits the result by whitespace into single words. Intended for usage in the console.
 std::vector<std::string> trim_and_split(const std::string& input);
@@ -22,5 +25,8 @@ std::string trim_source_file_path(const std::string& path);
 // Some description() implementations print addresses, which are non-deterministic. This method replaces them with
 // a dummy address (e.g., for testing).
 std::string replace_addresses(const std::string& input);
+
+void table_key_constraints_to_stream(std::ostream& stream, const std::shared_ptr<const Table>& table,
+                                     const std::string& separator = ", ");
 
 }  // namespace opossum
