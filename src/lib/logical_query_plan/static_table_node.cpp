@@ -1,7 +1,6 @@
 #include "static_table_node.hpp"
 
 #include <sstream>
-#include "magic_enum.hpp"
 
 #include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"

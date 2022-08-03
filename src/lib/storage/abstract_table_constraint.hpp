@@ -45,5 +45,3 @@ class AbstractTableConstraint {
 };
 
 }  // namespace opossum
-
-namespace std {
