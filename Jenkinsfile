@@ -61,7 +61,7 @@ try {
       // LSAN (executed as part of ASAN) requires elevated privileges. Therefore, we had to add --cap-add SYS_PTRACE.
       // Even if the CI run sometimes succeeds without SYS_PTRACE, you should not remove it until you know what you are doing.
       // See also: https://github.com/google/sanitizers/issues/764
-      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0") {
+      hyriseCI.inside("--cap-add SYS_PTRACE -u 0:0 --tty") {
         try {
           stage("Setup") {
             checkout scm
