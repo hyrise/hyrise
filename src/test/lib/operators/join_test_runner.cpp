@@ -213,7 +213,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
-    // Vectors of pruned ClumnIDs with which the tests should be performed
+    // Vectors of pruned ColumnIDs with which the tests should be performed
     const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
 
     // clang-format off
