@@ -41,11 +41,12 @@ if [[ "$unamestr" == 'Darwin' ]]; then
    path_to_compiler="$(brew --prefix llvm)/bin/"
 fi
 
-# TODO(Martin): explain why clang-11 (in case it works at all ...)
+# We use clang 11 for the coverage check as clang 14 (the default clang version for Ubuntu 22.04) has an unresolved
+# issue (see https://github.com/llvm/llvm-project/issues/54907).
 cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang-11 -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++-11 -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-make hyriseTest -j $((cores / 9))
+make hyriseTest -j $((cores / 10))
 cd -
 
 rm -fr coverage; mkdir coverage
