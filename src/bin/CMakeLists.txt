@@ -51,5 +51,9 @@ target_link_libraries(
     PRIVATE
     hyriseBenchmarkLib
     ncurses
+)
+
+target_link_libraries_system(
+    hyriseConsole
     readline
 )

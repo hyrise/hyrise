@@ -26,17 +26,6 @@
 
 namespace opossum {
 
-template <typename T>
-struct Testili {
-
-  explicit Testili(const AnySegmentIterator<T>& init_begin, const AnySegmentIterator<T>& init_end, const ChunkOffset init_chunk_offset)
-    : begin{init_begin}, end{init_end}, chunk_offset{init_chunk_offset} {}
-
-  AnySegmentIterator<T> begin;
-  AnySegmentIterator<T> end;
-  ChunkOffset chunk_offset;
-};
-
 template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {
  public:
@@ -134,11 +123,14 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       auto accessors = std::make_shared<Accessors>(referenced_table->chunk_count());
 
-      resolve_pos_list_type(position_filter, [&](auto resolved_position_filter) {
-        using PosListIteratorType = std::decay_t<decltype(position_begin_it)>;
+      // TODO: check if any chunk is LZ4 or tiered, if so, we'll check the pos list for hits on slow segments.
 
+      resolve_pos_list_type(position_filter, [&](auto resolved_position_filter) {
         const auto position_begin_it = resolved_position_filter->begin();
         const auto position_end_it = resolved_position_filter->end();
+
+        using PosListIteratorType = std::decay_t<decltype(position_begin_it)>;
+
         const auto pos_list_size = std::distance(position_begin_it, position_end_it);
 
         auto begin = MultipleChunkIterator<PosListIteratorType>{referenced_table, referenced_column_id, accessors,
@@ -278,7 +270,7 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
         return true;
       }
 
-      // TODO: main purpose is a segment's allocator. Do it!
+      // TODO: main purpose is a segment's allocator. Thus, we need to implement a check.
       return false;
     }
 
