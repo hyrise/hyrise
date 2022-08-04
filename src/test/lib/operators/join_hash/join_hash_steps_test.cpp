@@ -174,7 +174,7 @@ TEST_F(JoinHashStepsTest, MaterializeOutputBloomFilter) {
     }
 
     // All other slots should be false
-    EXPECT_EQ(bloom_filter, BloomFilter(BLOOM_FILTER_SIZE));
+    EXPECT_EQ(bloom_filter, BloomFilter{BLOOM_FILTER_SIZE});
   }
 }
 

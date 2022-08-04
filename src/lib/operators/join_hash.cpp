@@ -22,8 +22,6 @@
 
 namespace opossum {
 
-enum Purpose { None, HashStuffTest };
-
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
   // Secondary predicates in AntiNullAsTrue are not supported, because implementing them is cumbersome and we couldn't

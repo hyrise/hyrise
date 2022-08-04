@@ -149,16 +149,10 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   std::optional<std::string> memory_tracking_output_file_path;
   const auto memory_tracking_output_file_string = parse_result["memory_tracking_output"].as<std::string>();
   if (!memory_tracking_output_file_string.empty()) {
-    if (enable_temporary_memory_tracking) {
-      memory_tracking_output_file_path = memory_tracking_output_file_string;
-      std::cout << "- Writing temporary memory usage stats results to '"
-      << memory_tracking_output_file_path.value() << "'" << std::endl;
-    } else {
-      std::cout <<
-      "- CAUTION: you have specified an output file for the memory "
-      "tracking results even though memory tracking is deactivated!"
-      << std::endl;
-    }
+    Assert(enable_temporary_memory_tracking, "Specified memory tracking output while memory tracking is deactivated!");
+    memory_tracking_output_file_path = memory_tracking_output_file_string;
+    std::cout << "- Writing temporary memory usage stats results to '"
+              << memory_tracking_output_file_path.value() << "'" << std::endl;
   }
 
   return BenchmarkConfig{benchmark_mode,

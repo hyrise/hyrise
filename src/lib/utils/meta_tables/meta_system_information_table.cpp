@@ -51,7 +51,9 @@ size_t MetaSystemInformationTable::_cpu_count() {
     }
 
     cpu_info_file.close();
-  } catch (std::ios_base::failure& fail) { Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")"); }
+  } catch (std::ios_base::failure& fail) {
+    Fail("Failed to read /proc/cpuinfo (" + fail.what() + ")");
+  }
 
   return processors;
 #endif

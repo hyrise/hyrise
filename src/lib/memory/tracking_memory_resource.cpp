@@ -8,8 +8,8 @@ void* TrackingMemoryResource::do_allocate(std::size_t bytes, std::size_t alignme
   return std::malloc(bytes); // NOLINT
 }
 
-void TrackingMemoryResource::do_deallocate(void* p, std::size_t bytes, std::size_t alignment) {
-  std::free(p); // NOLINT
+void TrackingMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
+  std::free(pointer); // NOLINT
   auto timestamp = std::chrono::system_clock::now();
   _memory_timeseries.emplace_back(std::make_pair(timestamp, -1 * bytes));
 }
