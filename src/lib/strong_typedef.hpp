@@ -73,4 +73,3 @@
   }                                                                                                               \
   } /* NOLINT */                                                                                                  \
   static_assert(true, "End call of macro with a semicolon")
-  
