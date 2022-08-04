@@ -30,7 +30,7 @@ class MemoryResourceManager : public Noncopyable {
   // This allows to keep track of allocations and deallocations by the MemoryResources.
   void enable_temporary_memory_tracking();
 
-  // Disbales memory tracking. In this case. the MemoryResourceManager returns default memory resources.
+  // Disbales memory tracking. In this case, the MemoryResourceManager returns default memory resources.
   void disable_temporary_memory_tracking();
 
   const tbb::concurrent_vector<ResourceRecord>& memory_resources() const;
