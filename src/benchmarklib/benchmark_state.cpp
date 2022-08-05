@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-BenchmarkState::BenchmarkState(const hyrise::Duration init_max_duration) : max_duration(init_max_duration) {}
+BenchmarkState::BenchmarkState(const Duration init_max_duration) : max_duration(init_max_duration) {}
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
 BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {

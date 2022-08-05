@@ -66,7 +66,7 @@
 
 #include "SQLParser.h"
 
-using namespace std::string_literals;            // NOLINT
+using namespace std::string_literals;           // NOLINT
 using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {

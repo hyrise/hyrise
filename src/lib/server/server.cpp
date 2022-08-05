@@ -22,7 +22,7 @@ void Server::run() {
   _is_initialized = false;
 
   // Set scheduler so that the server can execute the tasks on separate threads.
-  Hyrise::get().set_scheduler(std::make_shared<hyrise::NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   // Set caches
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();

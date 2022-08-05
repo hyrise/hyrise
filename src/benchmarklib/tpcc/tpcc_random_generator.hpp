@@ -13,10 +13,10 @@
 
 namespace hyrise {
 
-class TPCCRandomGenerator : public hyrise::RandomGenerator {
+class TPCCRandomGenerator : public RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  explicit TPCCRandomGenerator(uint32_t seed = 42) : hyrise::RandomGenerator(seed) {}
+  explicit TPCCRandomGenerator(uint32_t seed = 42) : RandomGenerator(seed) {}
 
   /**
    * Generates a random zip code as defined by TPCC

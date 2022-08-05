@@ -73,7 +73,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  hyrise::Hyrise::reset();
+  Hyrise::reset();
 }
 
 template <class C>

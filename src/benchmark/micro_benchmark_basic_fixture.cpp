@@ -31,7 +31,7 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 }
 
 void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
-  hyrise::Hyrise::reset();
+  Hyrise::reset();
 }
 
 void MicroBenchmarkBasicFixture::_clear_cache() {

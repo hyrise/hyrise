@@ -16,7 +16,7 @@ void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpres
   }
 }
 
-void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<hyrise::AbstractExpression>& expression) {
+void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
   if (entry_iter == _entries.end()) {
