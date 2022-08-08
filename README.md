@@ -146,6 +146,7 @@ When trying to optimize the time spent building the project, it is often helpful
 
 ## Maintainers
 - Jan Kossmann
+- Daniel Lindner
 - Marcel Weisgut
 - Martin Boissier
 - Stefan Halfpap
@@ -187,7 +188,6 @@ Contact: firstname.lastname@hpi.de
 -   Sven      Lehmann
 -   Till      Lehmann
 -   Tom       Lichtenstein
--   Daniel    Lindner
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
