@@ -386,7 +386,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      */
     if (_radix_bits > 0) {
       Timer timer_clustering;
-      std::vector<std::shared_ptr<AbstractTask>> jobs;
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
         // radix partition the build table
