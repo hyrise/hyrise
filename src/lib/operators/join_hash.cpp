@@ -12,13 +12,13 @@
 #include "hyrise.hpp"
 #include "join_hash/join_hash_steps.hpp"
 #include "join_hash/join_hash_traits.hpp"
+#include "join_helper/join_output_writing.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
-#include "join_helper/join_output_writing.hpp"
 
 namespace opossum {
 
@@ -272,10 +272,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers used to store histograms for (potentially subsequent) radix partitioning step (in cases
     // _radix_bits > 0). Created during materialization step.
-    auto histograms_build_column =
-        pmr_vector<pmr_vector<size_t>>(alloc<pmr_vector<size_t>>("histograms_column"));
-    auto histograms_probe_column =
-        pmr_vector<pmr_vector<size_t>>(alloc<pmr_vector<size_t>>("histograms_column"));
+    auto histograms_build_column = pmr_vector<pmr_vector<size_t>>(alloc<pmr_vector<size_t>>("histograms_column"));
+    auto histograms_probe_column = pmr_vector<pmr_vector<size_t>>(alloc<pmr_vector<size_t>>("histograms_column"));
 
     // Output containers of materialization step. Uses the same output type as the radix partitioning step to allow
     // shortcut for _radix_bits == 0 (in this case, we can skip the partitioning altogether).
@@ -283,10 +281,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     RadixContainer<ProbeColumnType> materialized_probe_column;
 
     // Containers for potential (skipped when build side small) radix partitioning step
-    auto radix_build_column =
-        RadixContainer<BuildColumnType>(alloc<BuildColumnType>("radix_column"));
-    auto radix_probe_column =
-        RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("radix_column"));
+    auto radix_build_column = RadixContainer<BuildColumnType>(alloc<BuildColumnType>("radix_column"));
+    auto radix_probe_column = RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("radix_column"));
 
     // HashTables for the build column, one for each partition
     pmr_vector<std::optional<PosHashTable<HashedType>>> hash_tables;

@@ -1,12 +1,13 @@
 #pragma once
 
-#include <tsl/robin_map.h>
 #include <boost/container/pmr/monotonic_buffer_resource.hpp>
 #include <boost/container/pmr/unsynchronized_pool_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/dynamic_bitset.hpp>
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
+
+#include "tsl/robin_map.h"
 
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
@@ -96,7 +97,7 @@ class PosHashTable {
   // Tessil's robin:map is used because it is very fast and does not consume too much memory.
   // If memory consumption is prioritized above performance, it maybe should exchanged (e.g. with Tessil's sparse_map).
   using OffsetHashTable = tsl::robin_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>,
-  PolymorphicAllocator<std::pair<HashedType, Offset>>>;
+                                         PolymorphicAllocator<std::pair<HashedType, Offset>>>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
   // as n because in many cases, we join on primary key attributes where by definition we have only one match on the
@@ -223,8 +224,8 @@ class PosHashTable {
       std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
   JoinHashBuildMode _mode{};
-  OffsetHashTable _offset_hash_table = OffsetHashTable{
-    alloc<std::pair<HashedType, Offset>>("build_phase_offset_hash_table")};
+  OffsetHashTable _offset_hash_table =
+      OffsetHashTable{alloc<std::pair<HashedType, Offset>>("build_phase_offset_hash_table")};
   std::vector<SmallPosList> _small_pos_lists{};
 
   std::optional<UnifiedPosList> _unified_pos_list{};
@@ -250,6 +251,9 @@ static constexpr auto BLOOM_FILTER_MASK = BLOOM_FILTER_SIZE - 1;
 // Using dynamic_bitset because, different from vector<bool>, it has an efficient operator| implementation, which is
 // needed for merging partial Bloom filters created by different threads. Note that the dynamic_bitset(n, value)
 // constructor does not do what you would expect it to, so try to avoid it.
+template <typename T>
+using pmr_dynamic_bitset = boost::dynamic_bitset<T, PolymorphicAllocator<T>>;
+
 using BloomFilter = pmr_dynamic_bitset<uint32_t>;
 
 // ALL_TRUE_BLOOM_FILTER is initialized by creating a BloomFilter with every value being false and using bitwise
@@ -553,9 +557,9 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
 
   // output_offsets_by_input_partition[input_partition_idx][output_partition_idx] holds the first offset in the
   // bucket written for input_partition_idx
-  auto output_offsets_by_input_partition = pmr_vector<std::vector<size_t>>(
-      input_partition_count, std::vector<size_t>(output_partition_count),
-      alloc<std::vector<size_t>>("radix_partitioning_output_offsets"));
+  auto output_offsets_by_input_partition =
+      pmr_vector<std::vector<size_t>>(input_partition_count, std::vector<size_t>(output_partition_count),
+                                      alloc<std::vector<size_t>>("radix_partitioning_output_offsets"));
   for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
     auto this_output_partition_size = size_t{0};
     for (auto input_partition_idx = size_t{0}; input_partition_idx < input_partition_count; ++input_partition_idx) {
