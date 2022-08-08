@@ -1419,7 +1419,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
     // Translate table constraints. Note that a table constraint is either a unique constraint, a referential con-
     // straint, or a table check constraint per SQL standard. Some constraints can be set (i) when describing a single
-    // column, see above, or (ii) as a property of the table, containing multiple columns.
+    // column, see above, or (ii) as a property of the table, containing multiple columns. We only address UNIQUE/
+    // PRIMARY KEY constraints for now.
     const auto column_count = column_definitions.size();
     for (const auto& table_constraint : *create_statement.tableConstraints) {
       Assert(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
@@ -1455,7 +1456,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced\n";
     }
 
-    // Set table constraints
+    // Set table key constraints
     const auto table = Table::create_dummy_table(column_definitions);
     for (const auto& table_key_constraint : table_key_constraints) {
       table->add_soft_key_constraint(table_key_constraint);
