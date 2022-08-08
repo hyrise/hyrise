@@ -1412,8 +1412,8 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
                                          ? KeyConstraintType::PRIMARY_KEY
                                          : KeyConstraintType::UNIQUE;
         table_key_constraints.emplace(std::set<ColumnID>{column_id}, constraint_type);
-        std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " constraint for column " << column_definition.name
-                  << " will not be enforced\n";
+        std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " constraint for column "
+                  << column_definition.name << " will not be enforced\n";
       }
     }
 
