@@ -5,6 +5,7 @@
 #include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
+#include "utils/print_utils.hpp"
 
 namespace opossum {
 
@@ -27,7 +28,7 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
 
   if (!table->soft_key_constraints().empty()) {
     stream << ", ";
-    table_key_constraints_to_stream(stream, table);
+    print_table_key_constraints(table, stream);
   }
   stream << ")";
 

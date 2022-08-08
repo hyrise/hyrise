@@ -16,7 +16,7 @@
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/print_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

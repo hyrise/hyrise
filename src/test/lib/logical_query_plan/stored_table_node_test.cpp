@@ -220,6 +220,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
 
   EXPECT_EQ(fds.size(), 2);
+  // Funtional dependencies are built from the table's unique constraints. These constraints are stored in a set, and
+  // their order is not relevant. Thus, we only ensure that both expected FDs are generated.
   const auto fds_set = std::unordered_set<FunctionalDependency>{fds.cbegin(), fds.cend()};
   EXPECT_TRUE(fds_set.contains(fd1_expected));
   EXPECT_TRUE(fds_set.contains(fd2_expected));

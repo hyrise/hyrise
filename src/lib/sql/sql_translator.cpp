@@ -1400,7 +1400,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
 
-      // Translate column constraints
+      // Translate column constraints. We only address UNIQUE/PRIMARY KEY constraints for now.
       DebugAssert(parser_column_definition->column_constraints,
                   "Column " + column_definition.name + " is missing constraint information");
       for (const auto& column_constraint : *parser_column_definition->column_constraints) {
@@ -1412,12 +1412,14 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
                                          ? KeyConstraintType::PRIMARY_KEY
                                          : KeyConstraintType::UNIQUE;
         table_key_constraints.emplace(std::set<ColumnID>{column_id}, constraint_type);
-        std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " constraint for column "
-                  << column_definition.name << " will not be enforced\n";
+        std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " constraint for column " << column_definition.name
+                  << " will not be enforced\n";
       }
     }
 
-    // Translate table constraints
+    // Translate table constraints. Note that a table constraint is either a unique constraint, a referential con-
+    // straint, or a table check constraint per SQL standard. Some constraints can be set (i) when describing a single
+    // column, see above, or (ii) as a property of the table, containing multiple columns.
     const auto column_count = column_definitions.size();
     for (const auto& table_constraint : *create_statement.tableConstraints) {
       Assert(table_constraint->type == hsql::ConstraintType::PrimaryKey ||

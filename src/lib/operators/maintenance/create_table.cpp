@@ -6,6 +6,7 @@
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
 #include "storage/table.hpp"
+#include "utils/print_utils.hpp"
 
 namespace opossum {
 
@@ -49,7 +50,7 @@ std::string CreateTable::description(DescriptionMode description_mode) const {
 
   if (!input_table->soft_key_constraints().empty()) {
     stream << separator;
-    table_key_constraints_to_stream(stream, input_table, separator);
+    print_table_key_constraints(input_table, stream, separator);
   }
 
   stream << ")";
