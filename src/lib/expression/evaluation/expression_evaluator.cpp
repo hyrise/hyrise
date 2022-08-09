@@ -1651,7 +1651,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   return results;
 }
 
-// We explicitly instantiate these template functions because (at least) clang-12 does not instantiate them for us.
+// We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
 template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
     const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(

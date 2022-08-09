@@ -5,8 +5,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
 
-#include "storage/table_key_constraint.hpp"
-
 namespace opossum {
 
 std::vector<std::string> trim_and_split(const std::string& input) {
