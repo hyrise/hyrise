@@ -15,25 +15,6 @@ using NodeGetChildrenFn = std::function<std::vector<std::shared_ptr<Node>>(const
 template <typename Node>
 using NodePrintFn = std::function<void(const std::shared_ptr<Node>&, std::ostream& stream)>;
 
-namespace detail {
-
-/**
- *
- * @param indentation   its size determines the indentation of a node, a true means a vertical line "|",
- *                      a false means, a space " " should be used to increase the indentation
- * @param id_by_node    used to determine whether a node was already printed and which id it had
- * @param id_counter    used to generate ids for nodes
- */
-template <typename Node>
-void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
-                                       const NodeGetChildrenFn<Node>& get_children_fn,
-                                       const NodePrintFn<Node>& node_print_fn, std::ostream& stream,
-                                       std::vector<bool>& indentation,
-                                       std::unordered_map<std::shared_ptr<const Node>, size_t>& id_by_node,
-                                       size_t& id_counter);
-
-}  // namespace detail
-
 /**
  * Utility for formatted printing of any Directed Acyclic Graph.
  *

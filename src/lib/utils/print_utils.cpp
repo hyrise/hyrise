@@ -4,10 +4,17 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace {
 
-namespace detail {
+using namespace opossum;  // NOLINT
 
+/**
+ *
+ * @param indentation   its size determines the indentation of a node, a true means a vertical line "|",
+ *                      a false means, a space " " should be used to increase the indentation
+ * @param id_by_node    used to determine whether a node was already printed and which id it had
+ * @param id_counter    used to generate ids for nodes
+ */
 template <typename Node>
 void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
                                        const NodeGetChildrenFn<Node>& get_children_fn,
@@ -69,7 +76,9 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
   indentation.pop_back();
 }
 
-}  // namespace detail
+}  // namespace
+
+namespace opossum {
 
 template <typename Node>
 void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
@@ -78,8 +87,7 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
   std::unordered_map<std::shared_ptr<Node>, size_t> id_by_node;
   auto id_counter = size_t{0};
 
-  detail::print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node,
-                                                  id_counter);
+  print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node, id_counter);
 }
 
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
@@ -90,7 +98,7 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
   }
 
   const auto& last_constraint = *(--table_key_constraints.cend());
-  for (auto constraint : table_key_constraints) {
+  for (const auto& constraint : table_key_constraints) {
     stream << magic_enum::enum_name(constraint.key_type()) << "(";
     const auto& columns = constraint.columns();
     Assert(!columns.empty(), "Did not expect useless constraint");
