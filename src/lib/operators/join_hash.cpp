@@ -285,7 +285,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     auto radix_probe_column = RadixContainer<ProbeColumnType>(alloc<ProbeColumnType>("radix_column"));
 
     // HashTables for the build column, one for each partition
-    pmr_vector<std::optional<PosHashTable<HashedType>>> hash_tables;
+    auto hash_tables = pmr_vector<std::optional<PosHashTable<HashedType>>>{alloc<pmr_vector<std::optional<PosHashTable<HashedType>>>>("hash_tables")};
 
     /**
      * Depiction of the hash join parallelization (radix partitioning can be skipped when radix_bits = 0)

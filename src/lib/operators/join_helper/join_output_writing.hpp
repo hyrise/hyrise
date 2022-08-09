@@ -185,13 +185,9 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
      * They hold one entry per column in the table, not per AbstractSegment in a single chunk
      */
 
-  // Ensure that input types with auto type declaration are supported.
-  Assert(typeid(pos_lists_left) == typeid(pmr_vector<RowIDPosList>) ||
-    typeid(pos_lists_left) == typeid(std::vector<RowIDPosList>),
-    "Wrong type for pos_list_left in call to write_output_chunks.");
-  Assert(typeid(pos_lists_right) == typeid(pmr_vector<RowIDPosList>) ||
-    typeid(pos_lists_right) == typeid(std::vector<RowIDPosList>),
-    "Wrong type for post_lists_right in call to write_output_chunks.");
+  // Ensure that auto deducted input types are supported.
+  static_assert((std::is_same_v<T, pmr_vector<RowIDPosList>> || std::is_same_v<T, std::vector<RowIDPosList>>),
+    "Wrong type for pos_list in call to write_output_chunks.");
 
   PosListsByChunk left_side_pos_lists_by_segment;
   PosListsByChunk right_side_pos_lists_by_segment;

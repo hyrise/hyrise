@@ -19,15 +19,13 @@ struct ResourceRecord {
 };
 
 /** 
- * The MemoryResourceManager is a class that maintains memory resources.
- * It is able to generate new memory resources and to vend existing memory resources to other classes
- * so that they may calculate memory usage stats.
+ * The MemoryResourceManager is a class that maintains memory resources. It is able to generate new memory resources
+ * and to vend existing memory resources to other classes so that they may calculate memory usage stats.
 */
 class MemoryResourceManager : public Noncopyable {
  public:
-  // If memory tracking is enabled, memory resources created by the MemoryResourceManager
-  // consist of TrackingMemoryResources.
-  // This allows to keep track of allocations and deallocations by the MemoryResources.
+  // If memory tracking is enabled, memory resources created by the MemoryResourceManager consist of
+  // TrackingMemoryResources. This allows to keep track of allocations and deallocations by the MemoryResources.
   void enable_temporary_memory_tracking();
 
   // Disbales memory tracking. In this case, the MemoryResourceManager returns default MemoryResources.
@@ -39,7 +37,7 @@ class MemoryResourceManager : public Noncopyable {
                                                               const std::string& operator_data_structure);
 
  protected:
-  // make sure that only Hyrise (and tests) can create new instances
+  // Make sure that only Hyrise (and tests) can create new instances.
   friend class Hyrise;
   friend class MemoryResourceManagerTest;
   MemoryResourceManager() = default;

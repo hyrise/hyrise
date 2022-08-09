@@ -19,8 +19,8 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/chunk.hpp"
 #include "tpch/tpch_table_generator.hpp"
-#include "utils/meta_tables/meta_temporary_memory_usage_table.hpp"
 #include "utils/format_duration.hpp"
+#include "utils/meta_tables/meta_temporary_memory_usage_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 #include "version.hpp"
@@ -482,7 +482,7 @@ void BenchmarkRunner::write_report_to_file() const {
 }
 
 void BenchmarkRunner::write_temporary_memory_usage_report_to_file() const {
-  const auto report = _sql_to_json("SELECT * FROM meta_"+MetaTemporaryMemoryUsageTable().name());
+  const auto report = _sql_to_json("SELECT * FROM meta_" + MetaTemporaryMemoryUsageTable().name());
   std::ofstream{_config.memory_tracking_output_file_path.value()} << std::setw(2) << report << std::endl;
 }
 
