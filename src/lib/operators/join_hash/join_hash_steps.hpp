@@ -636,6 +636,11 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   return output;
 }
 
+/*
+  In the probe phase we take all partitions from the probe partition, iterate over them and compare each join candidate
+  with the values in the hash table. Since build and probe are hashed using the same hash function, we can reduce the
+  number of hash tables that need to be looked into to just 1.
+  */
 template <typename ProbeColumnType, typename HashedType, bool keep_null_values>
 void probe(const RadixContainer<ProbeColumnType>& probe_radix_container,
            const pmr_vector<std::optional<PosHashTable<HashedType>>>& hash_tables,

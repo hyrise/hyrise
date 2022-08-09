@@ -484,8 +484,6 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     /**
      * 4. Probe step
      */
-
-    // demo data structures for memory tracking. Needs to be changed to use the real operator step name.
     auto build_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("pos_lists"));
     auto probe_side_pos_lists = pmr_vector<RowIDPosList>(alloc<RowIDPosList>("pos_lists"));
 
