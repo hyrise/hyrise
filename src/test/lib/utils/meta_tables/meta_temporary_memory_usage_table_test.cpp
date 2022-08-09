@@ -36,7 +36,7 @@ TEST_F(MetaTemporaryMemoryUsageTest, EmptyTableGeneration) {
       Table::create_dummy_table(TableColumnDefinitions{{"operator_type", DataType::String, false},
                                                        {"operator_data_structure", DataType::String, false},
                                                        {"timestamp", DataType::Long, false},
-                                                       {"amount", DataType::Long, false}});
+                                                       {"memory_consumption_in_bytes", DataType::Long, false}});
   EXPECT_TABLE_EQ_UNORDERED(generate_meta_table(meta_temporary_memory_usage_table), expected_table);
 }
 

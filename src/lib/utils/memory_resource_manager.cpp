@@ -13,10 +13,10 @@ boost::container::pmr::memory_resource* MemoryResourceManager::get_memory_resour
     return boost::container::pmr::get_default_resource();
   }
 
-  auto resource_ptr = new TrackingMemoryResource(); // NOLINT
-  auto tracked_resource = ResourceRecord{operator_type, operator_data_structure, resource_ptr};
+  auto resource_pointer = new TrackingMemoryResource(); // NOLINT
+  auto tracked_resource = ResourceRecord{operator_type, operator_data_structure, resource_pointer};
   _memory_resources.push_back(tracked_resource);
-  return resource_ptr;
+  return resource_pointer;
 }
 
 void MemoryResourceManager::enable_temporary_memory_tracking() {

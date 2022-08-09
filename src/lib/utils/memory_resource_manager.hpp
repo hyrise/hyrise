@@ -12,10 +12,10 @@ namespace opossum {
 struct ResourceRecord {
   OperatorType operator_type;
   std::string operator_data_structure;
-  TrackingMemoryResource* resource_ptr;
+  TrackingMemoryResource* resource_pointer;
 
-  ResourceRecord(const OperatorType ot, const std::string& ods, TrackingMemoryResource* tmr)
-      : operator_type{ot}, operator_data_structure{ods}, resource_ptr{tmr} {}
+  ResourceRecord(const OperatorType init_operator_type, const std::string& init_operator_data_structure, TrackingMemoryResource* init_resource_pointer)
+      : operator_type{init_operator_type}, operator_data_structure{init_operator_data_structure}, resource_pointer{init_resource_pointer} {}
 };
 
 /** 

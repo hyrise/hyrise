@@ -282,8 +282,8 @@ TEST_F(JoinHashStepsTest, RadixClusteringOfNulls) {
 }
 
 TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
-  pmr_vector<pmr_vector<size_t>> histograms;              // Ignored in this test
-  BloomFilter output_bloom_filter;  // Ignored in this test
+  pmr_vector<pmr_vector<size_t>> histograms;  // Ignored in this test
+  BloomFilter output_bloom_filter;            // Ignored in this test
 
   // Fill input_bloom_filter
   BloomFilter input_bloom_filter(BLOOM_FILTER_SIZE);

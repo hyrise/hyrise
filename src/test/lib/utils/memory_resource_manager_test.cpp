@@ -15,34 +15,34 @@ class MemoryResourceManagerTest : public BaseTest {
 TEST_F(MemoryResourceManagerTest, GetMemoryResources) {
   ASSERT_EQ(memory_resource_manager.memory_resources().size(), 0);
 
-  const auto memory_resource_ptr_1 =
+  const auto memory_resource_pointer_1 =
       memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure");
   ASSERT_EQ(memory_resource_manager.memory_resources().size(), 1);
   const auto resource_record_1 = memory_resource_manager.memory_resources()[0];
   EXPECT_EQ(resource_record_1.operator_type, OperatorType::Mock);
   EXPECT_EQ(resource_record_1.operator_data_structure, "my_data_structure");
-  EXPECT_EQ(resource_record_1.resource_ptr, memory_resource_ptr_1);
+  EXPECT_EQ(resource_record_1.resource_pointer, memory_resource_pointer_1);
 
-  const auto memory_resource_ptr_2 =
+  const auto memory_resource_pointer_2 =
       memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure_2");
   ASSERT_EQ(memory_resource_manager.memory_resources().size(), 2);
   const auto resource_record_2 = memory_resource_manager.memory_resources()[1];
   EXPECT_EQ(resource_record_2.operator_type, OperatorType::Mock);
   EXPECT_EQ(resource_record_2.operator_data_structure, "my_data_structure_2");
-  EXPECT_EQ(resource_record_2.resource_ptr, memory_resource_ptr_2);
+  EXPECT_EQ(resource_record_2.resource_pointer, memory_resource_pointer_2);
 }
 
 TEST_F(MemoryResourceManagerTest, GetMemoryResourceForSamePurposeMultipleTimes) {
-  const auto memory_resource_ptr_1 =
+  const auto memory_resource_pointer_1 =
       memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure");
   ASSERT_EQ(memory_resource_manager.memory_resources().size(), 1);
 
-  const auto memory_resource_ptr_2 =
+  const auto memory_resource_pointer_2 =
       memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure");
   ASSERT_EQ(memory_resource_manager.memory_resources().size(), 2);
 
   // we expect
-  ASSERT_NE(memory_resource_ptr_1, memory_resource_ptr_2);
+  ASSERT_NE(memory_resource_pointer_1, memory_resource_pointer_2);
 }
 
 TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
@@ -76,7 +76,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   auto n_deallocated_bytes = int{0};
   const auto expected_allocation_amount = (N_THREADS * N_THREADS + N_THREADS) / 2;
   for (const auto& resource_record : memory_resources) {
-    const auto memory_resource = *resource_record.resource_ptr;
+    const auto memory_resource = *resource_record.resource_pointer;
     n_allocated_bytes += memory_resource.memory_timeseries()[0].second;
     n_deallocated_bytes += memory_resource.memory_timeseries()[1].second;
   }
