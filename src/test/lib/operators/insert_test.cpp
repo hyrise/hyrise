@@ -117,7 +117,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   // 3 Rows
   auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table(table_name, table);
-  hyrise::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
 
   // 10 Rows
   auto table2 = load_table("resources/test_data/tbl/10_ints.tbl");

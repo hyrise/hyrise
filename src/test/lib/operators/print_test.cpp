@@ -148,7 +148,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {
-  auto pr = std::make_shared<hyrise::Print>(_gt, PrintFlags::None, output);
+  auto pr = std::make_shared<Print>(_gt, PrintFlags::None, output);
 
   EXPECT_EQ(pr->name(), "Print");
 }

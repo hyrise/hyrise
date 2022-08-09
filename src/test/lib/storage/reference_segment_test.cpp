@@ -26,7 +26,7 @@ class ReferenceSegmentTest : public BaseTest {
     column_definitions.emplace_back("a", DataType::Int, true);
     column_definitions.emplace_back("b", DataType::Float, false);
 
-    _test_table = std::make_shared<hyrise::Table>(column_definitions, TableType::Data, ChunkOffset{3});
+    _test_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
     _test_table->append({12345, 458.7f});
@@ -37,7 +37,7 @@ class ReferenceSegmentTest : public BaseTest {
     column_definitions2.emplace_back("a", DataType::Int, false);
     column_definitions2.emplace_back("b", DataType::Int, false);
     _test_table_dict =
-        std::make_shared<hyrise::Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
+        std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
     for (auto index = int32_t{0}; index <= 24; index += 2) {
       _test_table_dict->append({index, 100 + index});
     }
@@ -48,7 +48,7 @@ class ReferenceSegmentTest : public BaseTest {
   }
 
  public:
-  std::shared_ptr<hyrise::Table> _test_table, _test_table_dict;
+  std::shared_ptr<Table> _test_table, _test_table_dict;
 };
 
 TEST_F(ReferenceSegmentTest, RetrievesValues) {

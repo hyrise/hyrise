@@ -159,7 +159,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
-    auto table_wrapper = std::make_shared<hyrise::TableWrapper>(std::move(table));
+    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->never_clear_output();
     table_wrapper->execute();
 

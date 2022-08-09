@@ -61,7 +61,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
         }
 
         for (auto i = 0; i < 20; ++i) {
-          original_segment->append(hyrise::NULL_VALUE);
+          original_segment->append(NULL_VALUE);
         }
       } else {
         for (auto i = 0; i < 100; ++i) {

@@ -79,7 +79,7 @@ class SQLTranslatorTest : public BaseTest {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  std::pair<std::shared_ptr<hyrise::AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
+  std::pair<std::shared_ptr<AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
       const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
@@ -1654,8 +1654,8 @@ TEST_F(SQLTranslatorTest, Extract) {
                                             DatetimeComponent::Day,    DatetimeComponent::Hour,
                                             DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  std::shared_ptr<hyrise::AbstractLQPNode> actual_lqp;
-  std::shared_ptr<hyrise::AbstractLQPNode> expected_lqp;
+  std::shared_ptr<AbstractLQPNode> actual_lqp;
+  std::shared_ptr<AbstractLQPNode> expected_lqp;
 
   for (const auto& component : components) {
     std::stringstream query_str;
