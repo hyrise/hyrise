@@ -71,7 +71,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   // The total allocated amount should be as expected. We expect a total of 1 + 2 + .. + N_THREADS = ((N_THREADS^2 +
   // N_THREADS) / 2) bytes to have been allocated or deallocated.
   auto n_allocated_bytes = uint8_t{0};
-  auto n_deallocated_bytes = uint8_t{0};
+  auto n_deallocated_bytes = int8_t{0};
   const auto expected_allocation_amount = (N_THREADS * N_THREADS + N_THREADS) / 2;
   for (const auto& resource_record : memory_resources) {
     const auto memory_resource = *resource_record.resource_pointer;
