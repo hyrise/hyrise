@@ -31,7 +31,7 @@ EXPLICITLY_DECLARE_DATA_TYPES(CreateSegmentAccessor);
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(
     const std::shared_ptr<const AbstractSegment>& segment) {
-  return hyrise::detail::CreateSegmentAccessor<T>::create(segment);
+  return detail::CreateSegmentAccessor<T>::create(segment);
 }
 
 /**

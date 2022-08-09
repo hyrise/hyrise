@@ -24,8 +24,8 @@ const auto ROWS = 1'000'000;
 const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
 const auto STRING_SIZE = 512;
 
-hyrise::TableColumnDefinitions create_column_definitions(const hyrise::DataType data_type) {
-  auto table_column_definitions = hyrise::TableColumnDefinitions();
+TableColumnDefinitions create_column_definitions(const DataType data_type) {
+  auto table_column_definitions = TableColumnDefinitions();
   table_column_definitions.emplace_back("a", data_type, true);
   return table_column_definitions;
 }

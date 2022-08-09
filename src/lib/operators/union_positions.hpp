@@ -76,7 +76,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
 
  private:
   // See docs at the top of the cpp
-  using ReferenceMatrix = std::vector<hyrise::RowIDPosList>;
+  using ReferenceMatrix = std::vector<RowIDPosList>;
   using VirtualPosList = std::vector<size_t>;
 
   /**

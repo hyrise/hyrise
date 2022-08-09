@@ -179,7 +179,7 @@ class CreateAnySegmentIterable {
 
 template <typename T>
 AnySegmentIterable<T> create_any_segment_iterable(const AbstractSegment& abstract_segment) {
-  return hyrise::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
+  return detail::CreateAnySegmentIterable<T>::create(abstract_segment);
 }
 
 }  // namespace hyrise

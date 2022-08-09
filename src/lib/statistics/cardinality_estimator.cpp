@@ -69,7 +69,7 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
