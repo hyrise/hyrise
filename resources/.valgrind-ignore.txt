@@ -74,6 +74,150 @@
    fun:main
 }
 
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Value8
+   fun:_itoa_word
+   fun:__vfprintf_internal
+   fun:__vsnprintf_internal
+   fun:snprintf
+   fun:_ZN7testing8internal20PrintBytesInObjectToEPKhmPSo
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_8JoinHashEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL43gtest_JoinHashJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_8JoinHashEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL43gtest_JoinHashJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_8JoinHashEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL43gtest_JoinHashJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_8JoinHashEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL43gtest_JoinHashJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_13JoinSortMergeEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL48gtest_JoinSortMergeJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_13JoinSortMergeEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL48gtest_JoinSortMergeJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_13JoinSortMergeEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL48gtest_JoinSortMergeJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_13JoinSortMergeEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL48gtest_JoinSortMergeJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_9JoinIndexEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL44gtest_JoinIndexJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
+{
+   <insert_a_suppression_name_here>
+   Memcheck:Cond
+   fun:_ZN12_GLOBAL__N_1eqERKNS_23InputTableConfigurationES2_
+   fun:_ZNK9__gnu_cxx5__ops19_Iter_equal_to_iterclINS_17__normal_iteratorIPN12_GLOBAL__N_121JoinTestConfigurationESt6vectorIS5_SaIS5_EEEESA_EEbT_T0_
+   fun:_ZN7opossum14JoinTestRunner21create_configurationsINS_9JoinIndexEEESt6vectorIN12_GLOBAL__N_121JoinTestConfigurationESaIS5_EEv
+   fun:_ZN7opossumL44gtest_JoinIndexJoinTestRunner_EvalGenerator_Ev
+   fun:_ZN7testing8internal26ParameterizedTestSuiteInfoIN7opossum14JoinTestRunnerEE13RegisterTestsEv
+   fun:_ZN7testing8internal12UnitTestImpl19PostFlagParsingInitEv
+   fun:_ZN7testing8internal18InitGoogleTestImplIcEEvPiPPT_
+   fun:main
+}
+
 # Similar to the suppression introduced via https://github.com/hyrise/hyrise/pull/1851#issuecomment-618937388, we need
 # to suppress a conditional jump check. We removed the previous suppression as it has not been triggered by
 # GoogleTest anymore.
