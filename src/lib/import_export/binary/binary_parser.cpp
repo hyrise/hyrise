@@ -68,7 +68,7 @@ pmr_vector<pmr_string> BinaryParser::_read_string_values(std::ifstream& file, co
   const auto total_length = std::accumulate(string_lengths.cbegin(), string_lengths.cend(), static_cast<size_t>(0));
   const auto buffer = _read_values<char>(file, total_length);
 
-  auto values = pmr_vector<pmr_string>(count);
+  auto values = pmr_vector<pmr_string>{count};
   auto start = size_t{0};
   for (auto index = size_t{0}; index < count; ++index) {
     values[index] = pmr_string(buffer.data() + start, buffer.data() + start + string_lengths[index]);
