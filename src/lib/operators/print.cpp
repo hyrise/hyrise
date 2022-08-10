@@ -174,7 +174,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
                                                    const std::shared_ptr<const Table>& table) const {
   const auto column_count = table->column_count();
-  auto widths = std::vector<uint16_t>{column_count};
+  std::vector<uint16_t> widths(column_count);
   // calculate the length of the column name
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     widths[column_id] = std::max(min, static_cast<uint16_t>(table->column_name(column_id).size()));
