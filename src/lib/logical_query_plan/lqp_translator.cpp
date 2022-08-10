@@ -69,7 +69,7 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "utils/column_id_before_pruning.hpp"
+#include "utils/column_pruning_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 

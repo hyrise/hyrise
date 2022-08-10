@@ -573,8 +573,8 @@ set(
     utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/column_ids_after_pruning.cpp
-    utils/column_ids_after_pruning.hpp
+    utils/column_pruning_utils.cpp
+    utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -583,8 +583,6 @@ set(
     utils/format_bytes.hpp
     utils/format_duration.cpp
     utils/format_duration.hpp
-    utils/column_id_before_pruning.cpp
-    utils/column_id_before_pruning.hpp
     utils/invalid_input_exception.hpp
     utils/list_directory.cpp
     utils/list_directory.hpp

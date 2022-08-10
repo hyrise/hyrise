@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-#include "utils/column_ids_after_pruning.hpp"
+#include "utils/column_pruning_utils.hpp"
 
 namespace opossum {
 

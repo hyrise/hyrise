@@ -18,7 +18,7 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/storage_manager.hpp"
-#include "utils/column_id_before_pruning.hpp"
+#include "utils/column_pruning_utils.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.
