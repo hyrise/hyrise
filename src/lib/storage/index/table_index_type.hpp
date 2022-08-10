@@ -1,10 +1,8 @@
 #pragma once
 
-#include <cstdint>
-
 #include <boost/hana/at_key.hpp>
 
-#include "all_type_variant.hpp"
+// #include "all_type_variant.hpp"
 
 namespace opossum {
 

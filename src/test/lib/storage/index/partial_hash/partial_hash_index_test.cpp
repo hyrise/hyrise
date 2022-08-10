@@ -75,7 +75,7 @@ TEST_F(PartialHashIndexTest, EmptyInitialization) {
   EXPECT_EQ(empty_index.range_equals("any").first, empty_index.cend());
   EXPECT_EQ(empty_index.range_equals("any").second, empty_index.cend());
 
-  EXPECT_EQ(empty_index.get_indexed_chunk_ids().size(), 0);
+  EXPECT_TRUE(empty_index.get_indexed_chunk_ids().empty());
 
   EXPECT_TRUE(empty_index.is_index_for(ColumnID{0}));
   EXPECT_FALSE(empty_index.is_index_for(ColumnID{1}));
