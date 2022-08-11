@@ -41,7 +41,6 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++num_chunks_with_binary_search;
         return;
       }
     }
