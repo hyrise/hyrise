@@ -11,7 +11,7 @@
 #include "utils/plugin_manager.hpp"
 #include "utils/plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class HyriseTest : public BaseTest {
  protected:
@@ -63,4 +63,4 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

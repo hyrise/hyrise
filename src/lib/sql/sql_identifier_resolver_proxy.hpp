@@ -5,7 +5,7 @@
 
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 struct SQLIdentifier;
@@ -51,4 +51,4 @@ class SQLIdentifierResolverProxy final {
   ExpressionUnorderedMap<ParameterID> _accessed_expressions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

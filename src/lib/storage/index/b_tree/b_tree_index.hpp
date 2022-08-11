@@ -6,7 +6,7 @@
 #include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BTreeIndexTest;
 
@@ -39,4 +39,4 @@ class BTreeIndex : public AbstractIndex {
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

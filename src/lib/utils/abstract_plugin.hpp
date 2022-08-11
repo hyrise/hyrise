@@ -5,7 +5,7 @@
 #include "types.hpp"
 #include "utils/singleton.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
@@ -39,4 +39,4 @@ class AbstractPlugin {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

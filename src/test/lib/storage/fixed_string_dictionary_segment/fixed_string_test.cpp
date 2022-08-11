@@ -5,7 +5,7 @@
 
 #include "storage/fixed_string_dictionary_segment/fixed_string.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FixedStringTest : public BaseTest {
  public:
@@ -118,4 +118,4 @@ TEST_F(FixedStringTest, OutputToStream) {
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

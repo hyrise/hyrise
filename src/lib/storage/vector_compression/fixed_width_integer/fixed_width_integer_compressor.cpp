@@ -1,6 +1,6 @@
 #include "fixed_width_integer_compressor.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::unique_ptr<const BaseCompressedVector> FixedWidthIntegerCompressor::compress(
     const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
@@ -42,4 +42,4 @@ std::unique_ptr<BaseCompressedVector> FixedWidthIntegerCompressor::_compress_usi
   return std::make_unique<FixedWidthIntegerVector<UnsignedIntType>>(std::move(data));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

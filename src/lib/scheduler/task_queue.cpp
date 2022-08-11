@@ -6,7 +6,7 @@
 #include "abstract_task.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
 
@@ -61,4 +61,4 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
   return nullptr;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

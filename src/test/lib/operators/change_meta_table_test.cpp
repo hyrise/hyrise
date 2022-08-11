@@ -9,7 +9,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ChangeMetaTableTest : public BaseTest {
  protected:
@@ -99,4 +99,4 @@ TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {
   transaction_context->rollback(RollbackReason::Conflict);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

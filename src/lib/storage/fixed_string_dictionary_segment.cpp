@@ -9,7 +9,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
@@ -131,4 +131,4 @@ ValueID FixedStringDictionarySegment<T>::null_value_id() const {
 
 template class FixedStringDictionarySegment<pmr_string>;
 
-}  // namespace opossum
+}  // namespace hyrise

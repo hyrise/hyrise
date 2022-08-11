@@ -1,6 +1,6 @@
 #include "abstract_statistics_object.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractStatisticsObject::AbstractStatisticsObject(const DataType init_data_type) : data_type(init_data_type) {}
 
@@ -10,4 +10,4 @@ std::shared_ptr<AbstractStatisticsObject> AbstractStatisticsObject::pruned(
   Fail("Pruning has not yet been implemented for the given statistics object");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "abstract_lqp_node.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents sorting operations as defined in ORDER BY clauses.
@@ -29,4 +29,4 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

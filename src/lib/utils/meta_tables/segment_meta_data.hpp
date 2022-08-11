@@ -2,7 +2,7 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Methods for collecting information about all stored segments,
 // used at MetaSegmentsTable and MetaSegmentsAccurateTable.
@@ -15,4 +15,4 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
 size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment);
 
-}  // namespace opossum
+}  // namespace hyrise

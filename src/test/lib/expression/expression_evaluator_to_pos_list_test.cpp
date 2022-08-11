@@ -22,9 +22,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class ExpressionEvaluatorToPosListTest : public BaseTest {
  public:
@@ -220,4 +220,4 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
                               {ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

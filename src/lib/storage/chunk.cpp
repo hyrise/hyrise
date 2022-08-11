@@ -16,7 +16,7 @@
 #include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
@@ -307,4 +307,4 @@ void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   _cleanup_commit_id.store(cleanup_commit_id);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

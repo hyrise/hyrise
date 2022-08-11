@@ -6,7 +6,7 @@
 
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -32,4 +32,4 @@ SegmentIndexType get_index_type_of() {
   return detail::segment_index_map[hana::type_c<IndexType>];
 }
 
-}  // namespace opossum
+}  // namespace hyrise

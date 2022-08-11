@@ -5,7 +5,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpression>& expression,
                                             const std::string& column_name) {
@@ -16,7 +16,7 @@ void SQLIdentifierResolver::add_column_name(const std::shared_ptr<AbstractExpres
   }
 }
 
-void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<opossum::AbstractExpression>& expression) {
+void SQLIdentifierResolver::reset_column_names(const std::shared_ptr<AbstractExpression>& expression) {
   auto entry_iter = std::find_if(_entries.begin(), _entries.end(),
                                  [&](const auto& entry) { return *entry.expression == *expression; });
   if (entry_iter == _entries.end()) {
@@ -98,4 +98,4 @@ SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_ent
   return *entry_iter;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

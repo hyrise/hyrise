@@ -7,7 +7,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Store relevant information after pipeline execution
 struct ExecutionInformation {
@@ -38,4 +38,4 @@ class QueryHandler {
   static void _handle_transaction_statement_message(ExecutionInformation& execution_info, SQLPipeline& sql_pipeline);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

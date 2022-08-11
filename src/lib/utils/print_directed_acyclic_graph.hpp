@@ -5,7 +5,7 @@
 #include <memory>
 #include <ostream>
 
-namespace opossum {
+namespace hyrise {
 
 template <typename Node>
 using NodeGetChildrenFn = std::function<std::vector<std::shared_ptr<Node>>(const std::shared_ptr<Node>&)>;
@@ -119,4 +119,4 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
                                                   id_counter);
 }
 
-}  //  namespace opossum
+}  //  namespace hyrise

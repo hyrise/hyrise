@@ -2,7 +2,7 @@
 
 #include <boost/hana/type.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Wraps a class template so that
@@ -21,4 +21,4 @@ struct TemplateType {
 template <template <typename...> typename TemplateT>
 constexpr auto template_c = hana::type_c<TemplateType<TemplateT>>;
 
-}  // namespace opossum
+}  // namespace hyrise

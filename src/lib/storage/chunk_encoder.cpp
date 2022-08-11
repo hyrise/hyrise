@@ -18,7 +18,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Function takes an arbitrary segment and (re-)encodes it. This reencoding can both mean that
@@ -183,4 +183,4 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

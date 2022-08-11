@@ -8,7 +8,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 InsertNode::InsertNode(const std::string& init_table_name)
     : AbstractNonQueryNode(LQPNodeType::Insert), table_name(init_table_name) {}
@@ -34,4 +34,4 @@ bool InsertNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
   return table_name == insert_node_rhs.table_name;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

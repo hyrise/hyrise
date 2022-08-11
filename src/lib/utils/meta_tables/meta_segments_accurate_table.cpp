@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/meta_tables/segment_meta_data.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSegmentsAccurateTable::MetaSegmentsAccurateTable()
     : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
@@ -35,4 +35,4 @@ std::shared_ptr<Table> MetaSegmentsAccurateTable::_on_generate() const {
   return output_table;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

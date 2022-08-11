@@ -14,7 +14,7 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CsvWriterTest : public BaseTest {
  protected:
@@ -227,4 +227,4 @@ TEST_F(CsvWriterTest, ExportNullValuesMeta) {
   EXPECT_TRUE(meta_information.columns.at(1).nullable);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

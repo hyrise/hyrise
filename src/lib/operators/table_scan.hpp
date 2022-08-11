@@ -12,7 +12,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PQPSubqueryExpression;
 class Table;
@@ -94,4 +94,4 @@ class TableScan : public AbstractReadOnlyOperator {
   std::string _impl_description{"Unset"};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

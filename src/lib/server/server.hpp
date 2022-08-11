@@ -6,7 +6,7 @@
 #include "server_types.hpp"
 #include "session.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /* In the following a short description of the classes used for the server implementation.
 
@@ -57,4 +57,4 @@ class Server {
   const SendExecutionInfo _send_execution_info;
   std::atomic_bool _is_initialized{false};
 };
-}  // namespace opossum
+}  // namespace hyrise

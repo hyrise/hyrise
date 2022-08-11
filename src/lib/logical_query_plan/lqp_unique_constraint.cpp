@@ -1,6 +1,6 @@
 #include "lqp_unique_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPUniqueConstraint::LQPUniqueConstraint(ExpressionUnorderedSet init_expressions)
     : expressions(std::move(init_expressions)) {
@@ -42,11 +42,11 @@ std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 
-size_t hash<opossum::LQPUniqueConstraint>::operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const {
+size_t hash<hyrise::LQPUniqueConstraint>::operator()(const hyrise::LQPUniqueConstraint& lqp_unique_constraint) const {
   return lqp_unique_constraint.hash();
 }
 

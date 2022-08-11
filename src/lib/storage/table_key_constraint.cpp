@@ -1,6 +1,6 @@
 #include "table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TableKeyConstraint::TableKeyConstraint(std::unordered_set<ColumnID> init_columns, KeyConstraintType init_key_type)
     : AbstractTableConstraint(std::move(init_columns)), _key_type(init_key_type) {}
@@ -15,4 +15,4 @@ bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constra
   return key_type() == static_cast<const TableKeyConstraint&>(table_constraint).key_type();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

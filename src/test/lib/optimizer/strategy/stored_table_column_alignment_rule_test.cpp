@@ -6,7 +6,7 @@
 #include "optimizer/strategy/stored_table_column_alignment_rule.hpp"
 #include "strategy_base_test.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StoredTableColumnAlignmentRuleTest : public StrategyBaseTest {
  public:
@@ -109,4 +109,4 @@ TEST_F(StoredTableColumnAlignmentRuleTest, CoverSubqueries) {
   EXPECT_EQ(stn_subquery->pruned_column_ids(), pruned_column_set_a);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 InExpression::InExpression(const PredicateCondition init_predicate_condition,
                            const std::shared_ptr<AbstractExpression>& value,
@@ -41,4 +41,4 @@ std::string InExpression::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

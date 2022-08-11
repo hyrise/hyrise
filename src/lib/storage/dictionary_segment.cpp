@@ -9,7 +9,7 @@
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
@@ -130,4 +130,4 @@ ValueID DictionarySegment<T>::null_value_id() const {
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(DictionarySegment);
 
-}  // namespace opossum
+}  // namespace hyrise

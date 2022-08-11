@@ -16,7 +16,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string PredicatePlacementRule::name() const {
   static const auto name = std::string{"PredicatePlacementRule"};
@@ -558,4 +558,4 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

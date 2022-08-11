@@ -4,7 +4,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename UnsignedIntType>
 class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
@@ -42,4 +42,4 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
   const pmr_vector<UnsignedIntType>& _data;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

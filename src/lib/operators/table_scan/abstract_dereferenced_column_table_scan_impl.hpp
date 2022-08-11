@@ -8,7 +8,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class ReferenceSegment;
@@ -46,4 +46,4 @@ class AbstractDereferencedColumnTableScanImpl : public AbstractTableScanImpl {
   const ColumnID _column_id;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

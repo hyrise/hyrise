@@ -2,7 +2,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& variant, DataType target_data_type) {
   const auto source_data_type = data_type_from_all_type_variant(variant);
@@ -33,4 +33,4 @@ std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& varian
   return result;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

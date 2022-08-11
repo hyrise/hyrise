@@ -14,7 +14,7 @@
 #include <utility>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 #if HYRISE_NUMA_SUPPORT
 const int Topology::_number_of_hardware_nodes = numa_num_configured_nodes();  // NOLINT
@@ -197,4 +197,4 @@ std::ostream& operator<<(std::ostream& stream, const Topology& topology) {
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

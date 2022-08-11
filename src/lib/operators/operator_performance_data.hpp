@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/format_duration.hpp"
 
-namespace opossum {
+namespace hyrise {
 struct AbstractOperatorPerformanceData : public Noncopyable {
   enum class NoSteps {
     Invalid  // Needed by magic_enum for enum_count
@@ -92,4 +92,4 @@ struct OperatorPerformanceData : public AbstractOperatorPerformanceData {
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperatorPerformanceData& performance_data);
 
-}  // namespace opossum
+}  // namespace hyrise

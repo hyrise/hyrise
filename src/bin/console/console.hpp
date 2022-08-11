@@ -13,7 +13,7 @@
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionContext;
 
@@ -102,7 +102,7 @@ class Console : public Singleton<Console> {
   static int _eval_command(const CommandFunction& func, const std::string& command);
 
   /*
-   * Evaluates given SQL statement using opossum::SqlQueryTranslator.
+   * Evaluates given SQL statement using hyrise::SqlQueryTranslator.
    */
   int _eval_sql(const std::string& sql);
 
@@ -156,4 +156,4 @@ class Console : public Singleton<Console> {
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

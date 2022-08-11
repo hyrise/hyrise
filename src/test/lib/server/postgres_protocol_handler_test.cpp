@@ -5,7 +5,7 @@
 
 #include "server/postgres_protocol_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PostgresProtocolHandlerTest : public BaseTest {
  protected:
@@ -291,4 +291,4 @@ TEST_F(PostgresProtocolHandlerTest, SendExecutionInfo) {
   EXPECT_EQ(NetworkConversionHelper::get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

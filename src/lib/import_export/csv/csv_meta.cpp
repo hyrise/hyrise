@@ -6,7 +6,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CsvMeta process_csv_meta_file(const std::string& filename) {
   std::ifstream metafile{filename};
@@ -125,4 +125,4 @@ bool operator==(const CsvMeta& left, const CsvMeta& right) {
   return std::tie(left.config, left.columns) == std::tie(right.config, right.columns);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

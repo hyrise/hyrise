@@ -9,7 +9,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The SegmentAccessCounter is a collection of counters to count how often a segment is accessed.
 // It contains several counters (see AccessType) to differentiate between different access types, like
@@ -79,4 +79,4 @@ class SegmentAccessCounter {
   void _set_counters(const SegmentAccessCounter& counter);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

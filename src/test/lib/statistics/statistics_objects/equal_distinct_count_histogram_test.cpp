@@ -8,7 +8,7 @@
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EqualDistinctCountHistogramTest : public BaseTest {
   void SetUp() override {
@@ -60,4 +60,4 @@ TEST_F(EqualDistinctCountHistogramTest, FromColumnFloat) {
   EXPECT_EQ(hist->bin(BinID{2}), HistogramBin<float>(3.6f, 6.1f, 4, 3));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -9,7 +9,7 @@
 #include "operators/abstract_operator.hpp"
 #include "visualization/abstract_visualizer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractOperator>>> {
  public:
@@ -36,4 +36,4 @@ class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
   std::unordered_map<std::string, std::chrono::nanoseconds> _duration_by_operator_name;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

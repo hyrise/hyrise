@@ -10,7 +10,7 @@
 #include "hyrise.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
 
@@ -243,4 +243,4 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                  stored_table->uses_mvcc());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,21 +7,21 @@ namespace {
 
 struct TestData {
   std::string predicate_condition_string;
-  opossum::PredicateCondition predicate_condition;
+  hyrise::PredicateCondition predicate_condition;
   int32_t search_value;
   std::vector<int32_t> expected;
 };
 
-using Params = std::tuple<TestData, opossum::SortMode, bool>;
+using Params = std::tuple<TestData, hyrise::SortMode, bool>;
 
 auto table_scan_sorted_segment_search_test_formatter = [](const ::testing::TestParamInfo<Params> info) {
-  return opossum::sort_mode_to_string.left.at(std::get<1>(info.param)) +
+  return hyrise::sort_mode_to_string.left.at(std::get<1>(info.param)) +
          std::get<0>(info.param).predicate_condition_string + (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
 };
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::testing::WithParamInterface<Params> {
  protected:
@@ -132,4 +132,4 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

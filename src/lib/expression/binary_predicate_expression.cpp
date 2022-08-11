@@ -5,7 +5,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition init_predicate_condition,
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
@@ -51,4 +51,4 @@ ExpressionPrecedence BinaryPredicateExpression::_precedence() const {
   return ExpressionPrecedence::BinaryTernaryPredicate;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

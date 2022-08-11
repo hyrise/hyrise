@@ -7,7 +7,7 @@
 #include "types.hpp"
 #include "uninitialized_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // A SubPosList is a part of a PosList. In the case of split_pos_list_by_chunk_id, we have multiple SubPosLists, each
 // of which references only a single chunk. For each entry in that SubPosList, we need to keep its position in the
@@ -28,4 +28,4 @@ using PosListsByChunkID = std::vector<SubPosList>;
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
                                              const size_t number_of_chunks);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "utils/settings/abstract_setting.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a mock of a setting.
@@ -28,4 +28,4 @@ class MockSetting : public AbstractSetting {
   size_t _set_calls;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

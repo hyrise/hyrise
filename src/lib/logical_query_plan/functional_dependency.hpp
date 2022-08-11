@@ -2,7 +2,7 @@
 
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Models a functional dependency (FD), which consists out of two sets of expressions.
@@ -82,7 +82,7 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
  * set of FDs and two expressions to see if dependee is dependent on dependent.
  */
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 
@@ -91,8 +91,8 @@ namespace std {
  * unordered sets). Therefore, we hash the determinant expressions only.
  */
 template <>
-struct hash<opossum::FunctionalDependency> {
-  size_t operator()(const opossum::FunctionalDependency& fd) const;
+struct hash<hyrise::FunctionalDependency> {
+  size_t operator()(const hyrise::FunctionalDependency& fd) const;
 };
 
 }  // namespace std

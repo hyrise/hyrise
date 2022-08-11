@@ -4,7 +4,7 @@
 
 #include <magic_enum.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 IntervalExpression::IntervalExpression(const int64_t init_duration, const DatetimeComponent init_unit)
     : AbstractExpression(ExpressionType::Interval, {}), duration(init_duration), unit(init_unit) {}
@@ -37,4 +37,4 @@ size_t IntervalExpression::_shallow_hash() const {
   return hash;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

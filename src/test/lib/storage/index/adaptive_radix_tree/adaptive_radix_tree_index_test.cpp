@@ -13,7 +13,7 @@
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AdaptiveRadixTreeIndexTest : public BaseTest {
  protected:
@@ -285,4 +285,4 @@ TEST_F(AdaptiveRadixTreeIndexTest, DenseVectorOfInts) {
   _search_elements(values);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

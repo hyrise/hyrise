@@ -5,7 +5,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type wraps a table and can be used as input for a CreateTableNode to represent a simple
@@ -34,4 +34,4 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

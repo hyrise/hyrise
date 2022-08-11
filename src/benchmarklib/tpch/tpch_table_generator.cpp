@@ -23,7 +23,7 @@ extern seed_t seed[];  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // clang-format off
 const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
@@ -51,13 +51,13 @@ const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_stri
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 // clang-format on
 
-std::unordered_map<opossum::TPCHTable, std::underlying_type_t<opossum::TPCHTable>> tpch_table_to_dbgen_id = {
-    {opossum::TPCHTable::Part, PART},     {opossum::TPCHTable::PartSupp, PSUPP}, {opossum::TPCHTable::Supplier, SUPP},
-    {opossum::TPCHTable::Customer, CUST}, {opossum::TPCHTable::Orders, ORDER},   {opossum::TPCHTable::LineItem, LINE},
-    {opossum::TPCHTable::Nation, NATION}, {opossum::TPCHTable::Region, REGION}};
+std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
+    {TPCHTable::Part, PART},     {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP},
+    {TPCHTable::Customer, CUST}, {TPCHTable::Orders, ORDER},   {TPCHTable::LineItem, LINE},
+    {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TPCHTable table,
+DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table,
                       Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
@@ -106,7 +106,7 @@ void dbgen_cleanup() {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Part, "part"},         {TPCHTable::PartSupp, "partsupp"}, {TPCHTable::Supplier, "supplier"},
@@ -370,4 +370,4 @@ void TPCHTableGenerator::_add_constraints(
   region_table->add_soft_key_constraint(region_pk_constraint);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

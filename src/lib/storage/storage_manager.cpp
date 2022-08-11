@@ -16,7 +16,7 @@
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   const auto table_iter = _tables.find(name);
@@ -260,4 +260,4 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

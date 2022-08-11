@@ -7,7 +7,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Base class for types that hold statistical information about a column/segment of data.
@@ -44,4 +44,4 @@ class AbstractStatisticsObject : private Noncopyable {
   const DataType data_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

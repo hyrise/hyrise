@@ -2,7 +2,7 @@
 
 #include "lossless_cast.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LosslessCastTest : public BaseTest {};
 
@@ -159,4 +159,4 @@ TEST_F(LosslessCastTest, VariantCastSafe) {
   EXPECT_TRUE(lossless_variant_cast(NullValue{}, DataType::Null));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -9,7 +9,7 @@
 #include "abstract_histogram.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Generic histogram.
@@ -81,4 +81,4 @@ std::ostream& operator<<(std::ostream& stream, const GenericHistogram<T>& histog
 
 EXPLICITLY_DECLARE_DATA_TYPES(GenericHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

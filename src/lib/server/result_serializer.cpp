@@ -2,7 +2,7 @@
 #include "lossy_cast.hpp"
 #include "query_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename SocketType>
 void ResultSerializer::send_table_description(
@@ -136,4 +136,4 @@ template void ResultSerializer::send_query_response<boost::asio::posix::stream_d
     const std::shared_ptr<const Table>&,
     const std::shared_ptr<PostgresProtocolHandler<boost::asio::posix::stream_descriptor>>&);
 
-}  // namespace opossum
+}  // namespace hyrise

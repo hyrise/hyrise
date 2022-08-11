@@ -4,7 +4,7 @@
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
     : _column_definitions(column_definitions) {}
@@ -80,4 +80,4 @@ const TableColumnDefinitions& AbstractMetaTable::column_definitions() const {
   return _column_definitions;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

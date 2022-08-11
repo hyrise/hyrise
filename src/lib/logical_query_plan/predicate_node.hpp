@@ -9,7 +9,7 @@
 #include "all_parameter_variant.hpp"
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 
@@ -41,4 +41,4 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

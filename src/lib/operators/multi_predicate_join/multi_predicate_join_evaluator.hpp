@@ -7,7 +7,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // This class is used to evaluate secondary join predicates. It is called by the join operators after the primary
 // predicate has been handled by, e.g., probing the hash table.
@@ -67,4 +67,4 @@ class MultiPredicateJoinEvaluator {
                                                                                     const ColumnID column_id);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

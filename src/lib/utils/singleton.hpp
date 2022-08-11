@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Singleton implementation à la Scott Meyers.
 // The method is declared inline because there can be some trouble with static local variables across translation
@@ -26,4 +26,4 @@ class Singleton : public Noncopyable {
   Singleton& operator=(Singleton&&) = default;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

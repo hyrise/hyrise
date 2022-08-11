@@ -7,7 +7,7 @@
 #include "all_type_variant.hpp"
 #include "operators/abstract_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractOperator;
 class TransactionContext;
@@ -82,4 +82,4 @@ class LQPTranslator {
   mutable LQPNodeUnorderedMap<std::shared_ptr<AbstractOperator>> _operator_by_lqp_node;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

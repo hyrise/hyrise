@@ -11,12 +11,12 @@
 #include "random_generator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-class TPCCRandomGenerator : public opossum::RandomGenerator {
+class TPCCRandomGenerator : public RandomGenerator {
  public:
   // Fix random seed by default, to make sure the benchmark is deterministic
-  explicit TPCCRandomGenerator(uint32_t seed = 42) : opossum::RandomGenerator(seed) {}
+  explicit TPCCRandomGenerator(uint32_t seed = 42) : RandomGenerator(seed) {}
 
   /**
    * Generates a random zip code as defined by TPCC
@@ -107,4 +107,4 @@ class TPCCRandomGenerator : public opossum::RandomGenerator {
   // Holds the constant C (see 2.1.6) for a given A
   std::unordered_map<size_t, size_t> _nurand_constants_c;
 };
-}  // namespace opossum
+}  // namespace hyrise

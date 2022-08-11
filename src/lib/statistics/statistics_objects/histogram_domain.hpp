@@ -6,7 +6,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * HistogramDomain<T> is a template specialized for integral types, floating point types, and strings respectively.
@@ -121,4 +121,4 @@ using StringHistogramDomain = HistogramDomain<pmr_string>;
  */
 uint64_t ipow(uint64_t base, uint64_t exp);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "expression/evaluation/expression_result.hpp"
 #include "expression/evaluation/expression_result_views.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ExpressionResultTest : public BaseTest {
  public:
@@ -44,4 +44,4 @@ TEST_F(ExpressionResultTest, DataAccess) {
   EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {true, false}).value(1), 5);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

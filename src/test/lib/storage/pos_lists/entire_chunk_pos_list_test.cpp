@@ -5,7 +5,7 @@
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EntireChunkPosListTest : public BaseTest {
  public:
@@ -61,4 +61,4 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // TODO(XPERIANER): Maybe add a better check than just size, cause the returned iterators should also handle
   // this case, which we right now don't check.
 }
-}  // namespace opossum
+}  // namespace hyrise

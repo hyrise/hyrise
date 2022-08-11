@@ -7,7 +7,7 @@
 #include "abstract_read_write_operator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Delete;
 class Insert;
@@ -50,4 +50,4 @@ class Update : public AbstractReadWriteOperator {
   std::shared_ptr<Delete> _delete;
   std::shared_ptr<Insert> _insert;
 };
-}  // namespace opossum
+}  // namespace hyrise

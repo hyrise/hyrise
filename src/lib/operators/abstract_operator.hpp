@@ -12,7 +12,7 @@
 #include "operator_performance_data.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorTask;
 class Table;
@@ -278,4 +278,4 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator);
 
-}  // namespace opossum
+}  // namespace hyrise

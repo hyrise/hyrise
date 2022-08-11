@@ -11,7 +11,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
@@ -43,7 +43,7 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 OperatorTask::OperatorTask(std::shared_ptr<AbstractOperator> op, SchedulePriority priority, bool stealable)
     : AbstractTask(priority, stealable), _op(std::move(op)) {}
 
@@ -129,4 +129,4 @@ void OperatorTask::_on_execute() {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

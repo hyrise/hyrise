@@ -5,7 +5,7 @@
 
 #include "lqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreateViewNode::CreateViewNode(const std::string& init_view_name, const std::shared_ptr<LQPView>& init_view,
                                const bool init_if_not_exists)
@@ -46,4 +46,4 @@ bool CreateViewNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNod
          if_not_exists == create_view_node_rhs.if_not_exists;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

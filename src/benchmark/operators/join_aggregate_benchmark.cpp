@@ -26,9 +26,9 @@ constexpr auto SELECTIVITY = 0.2;
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);
@@ -92,7 +92,7 @@ pmr_vector<int32_t> generate_ages(const size_t table_size) {
 std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<int32_t>& values) {
   const auto chunk_size = static_cast<ChunkOffset>(table_size / NUMBER_OF_CHUNKS_JOIN_AGGREGATE);
 
-  auto table_column_definitions = opossum::TableColumnDefinitions();
+  auto table_column_definitions = TableColumnDefinitions();
   table_column_definitions.emplace_back("a", DataType::Int, false);
   table_column_definitions.emplace_back("b", DataType::Int, false);
 
@@ -184,4 +184,4 @@ BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateSort, JoinHash);
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_Aggregate, AggregateHash, JoinHash);
 
-}  // namespace opossum
+}  // namespace hyrise

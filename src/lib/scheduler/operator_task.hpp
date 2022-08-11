@@ -6,7 +6,7 @@
 
 #include "scheduler/abstract_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractOperator;
 
@@ -43,4 +43,4 @@ class OperatorTask : public AbstractTask {
  private:
   std::shared_ptr<AbstractOperator> _op;
 };
-}  // namespace opossum
+}  // namespace hyrise

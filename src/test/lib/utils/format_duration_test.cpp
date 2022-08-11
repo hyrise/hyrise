@@ -4,7 +4,7 @@
 
 using namespace std::chrono_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class FormatDurationTest : public BaseTest {};
 
@@ -24,4 +24,4 @@ TEST_F(FormatDurationTest, Duration) {
   EXPECT_EQ(format_duration(61834567890ns), "1 min 2 s");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

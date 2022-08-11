@@ -5,7 +5,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LQPColumnExpression : public AbstractExpression {
  public:
@@ -31,4 +31,4 @@ class LQPColumnExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

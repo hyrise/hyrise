@@ -2,7 +2,7 @@
 
 #pragma once
 
-namespace opossum {
+namespace hyrise {
 
 // We need this file to store the current GIT hash and make it available to our binaries.
 
@@ -12,4 +12,4 @@ namespace opossum {
 // Whether or not there were uncommitted changes present.
 #define GIT_IS_DIRTY @GIT_IS_DIRTY@
 
-}  // namespace opossum
+}  // namespace hyrise
