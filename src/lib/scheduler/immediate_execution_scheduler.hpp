@@ -3,7 +3,7 @@
 #include "abstract_scheduler.hpp"
 #include "abstract_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Instead of actually scheduling, the ImmediateExecutionScheduler executes its tasks immediately.
@@ -27,4 +27,4 @@ class ImmediateExecutionScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<TaskQueue>> _queues = std::vector<std::shared_ptr<TaskQueue>>{};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

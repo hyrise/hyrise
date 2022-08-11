@@ -4,7 +4,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FileType import_type_to_file_type(const hsql::ImportType import_type) {
   switch (import_type) {
@@ -33,4 +33,4 @@ FileType file_type_from_filename(const std::string& filename) {
   Fail("Unknown file extension " + extension);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

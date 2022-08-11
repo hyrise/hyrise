@@ -25,9 +25,9 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class ChunkPruningRuleTest : public StrategyBaseTest {
  protected:
@@ -449,4 +449,4 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

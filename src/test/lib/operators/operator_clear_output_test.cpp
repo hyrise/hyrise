@@ -14,9 +14,9 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorClearOutputTest : public BaseTest {
  protected:
@@ -293,4 +293,4 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingProjectionUncorrelatedSubqueryNe
   EXPECT_EQ(aggregate_hash_max_a->state(), OperatorState::ExecutedAndCleared);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

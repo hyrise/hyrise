@@ -21,7 +21,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
@@ -578,4 +578,4 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

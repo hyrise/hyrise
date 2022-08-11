@@ -2,7 +2,7 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableVerificationTest : public BaseTest {};
 
@@ -48,4 +48,4 @@ TEST_F(TableVerificationTest, NullableColumns) {
             std::nullopt);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

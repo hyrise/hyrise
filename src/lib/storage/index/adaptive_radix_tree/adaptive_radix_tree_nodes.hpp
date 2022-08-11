@@ -11,7 +11,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using Iterator = std::vector<ChunkOffset>::const_iterator;
 
@@ -192,4 +192,4 @@ class Leaf final : public ARTNode {
   Iterator _end;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

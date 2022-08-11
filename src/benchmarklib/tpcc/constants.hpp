@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-namespace opossum {
+namespace hyrise {
 
 constexpr int32_t NUM_DISTRICTS_PER_WAREHOUSE = 10;
 constexpr int32_t NUM_CUSTOMERS_PER_DISTRICT = 3'000;
@@ -23,4 +23,4 @@ constexpr int32_t MIN_CARRIER_ID = 1;
 constexpr int32_t MAX_CARRIER_ID = 10;
 constexpr float CUSTOMER_YTD = 10;
 
-}  // namespace opossum
+}  // namespace hyrise

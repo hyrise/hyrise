@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-namespace opossum {
+namespace hyrise {
 
 class SQLiteWrapper;
 
@@ -24,4 +24,4 @@ class SQLiteWrapper;
 void add_indices_to_sqlite(const std::string& schema_file_path, const std::string& create_indices_file_path,
                            std::shared_ptr<SQLiteWrapper>& sqlite_wrapper);
 
-}  // namespace opossum
+}  // namespace hyrise

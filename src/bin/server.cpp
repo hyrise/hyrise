@@ -33,14 +33,14 @@ void generate_benchmark_data(std::string argument_string) {
   Assert(benchmark_name == "tpch" || benchmark_name == "tpcds" || benchmark_name == "tpcc",
          "Benchmark data generation is only supported for TPC-C, TPC-DS, and TPC-H.");
 
-  auto config = std::make_shared<opossum::BenchmarkConfig>(opossum::BenchmarkConfig::get_default_config());
+  auto config = std::make_shared<hyrise::BenchmarkConfig>(hyrise::BenchmarkConfig::get_default_config());
   config->cache_binary_tables = true;
   if (benchmark_name == "tpcc") {
-    opossum::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
+    hyrise::TPCCTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpcds") {
-    opossum::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
+    hyrise::TPCDSTableGenerator{static_cast<uint32_t>(sizing_factor), config}.generate_and_store();
   } else if (benchmark_name == "tpch") {
-    opossum::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
+    hyrise::TPCHTableGenerator{sizing_factor, ClusteringConfiguration::None, config}.generate_and_store();
   } else {
     Fail("Unexpected benchmark name passed in parameter 'benchmark_data'.");
   }
@@ -97,7 +97,7 @@ int main(int argc, char* argv[]) {
 
   Assert(!error, "Not a valid IPv4 address: " + parsed_options["address"].as<std::string>() + ", terminating...");
 
-  auto server = opossum::Server{address, port, static_cast<opossum::SendExecutionInfo>(execution_info)};
+  auto server = hyrise::Server{address, port, static_cast<hyrise::SendExecutionInfo>(execution_info)};
   server.run();
 
   return 0;

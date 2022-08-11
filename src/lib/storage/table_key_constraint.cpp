@@ -1,6 +1,6 @@
 #include "table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TableKeyConstraint::TableKeyConstraint(std::set<ColumnID> init_columns, KeyConstraintType init_key_type)
     : AbstractTableConstraint(std::move(init_columns)), _key_type(init_key_type) {}
@@ -35,4 +35,4 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   return std::lexicographical_compare(columns.cbegin(), columns.cend(), rhs_columns.cbegin(), rhs_columns.cend());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

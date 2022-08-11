@@ -15,7 +15,7 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ChunkEncoderTest : public BaseTest {
  public:
@@ -235,4 +235,4 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

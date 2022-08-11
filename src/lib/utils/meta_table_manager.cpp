@@ -13,7 +13,7 @@
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaTableManager::MetaTableManager() {
   const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {std::make_shared<MetaTablesTable>(),
@@ -107,4 +107,4 @@ std::string MetaTableManager::_trim_table_name(const std::string& table_name) {
   return is_meta_table_name(table_name) ? table_name.substr(MetaTableManager::META_PREFIX.size()) : table_name;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

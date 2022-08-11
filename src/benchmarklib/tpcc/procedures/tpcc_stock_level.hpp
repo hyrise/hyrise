@@ -2,7 +2,7 @@
 
 #include "abstract_tpcc_procedure.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCCStockLevel : public AbstractTPCCProcedure {
  public:
@@ -17,4 +17,4 @@ class TPCCStockLevel : public AbstractTPCCProcedure {
   int32_t threshold;  // Minimum stock level  [10..20]
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "visualization/abstract_visualizer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class JoinGraphVisualizer : public AbstractVisualizer<std::vector<JoinGraph>> {
  public:
@@ -16,4 +16,4 @@ class JoinGraphVisualizer : public AbstractVisualizer<std::vector<JoinGraph>> {
   static std::string _create_vertex_description(const std::shared_ptr<AbstractLQPNode>& vertex);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

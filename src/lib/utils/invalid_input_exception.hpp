@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * Hyrise specific exception used to handle errors related to wrong user input.
@@ -17,4 +17,4 @@ class InvalidInputException : public std::runtime_error {
   explicit InvalidInputException(const std::string& what_arg) : std::runtime_error(what_arg) {}
 };
 
-}  // namespace opossum
+}  // namespace hyrise

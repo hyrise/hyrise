@@ -9,7 +9,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class RowIDPosList;
 
@@ -84,4 +84,4 @@ inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
   return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

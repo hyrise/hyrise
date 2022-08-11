@@ -6,7 +6,7 @@
 #include "utils/assert.hpp"
 #include "variable_length_key.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Const VariableLengthKeyProxy
 VariableLengthKeyConstProxy::VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key)
@@ -87,4 +87,4 @@ VariableLengthKeyProxy& VariableLengthKeyProxy::shift_and_set(uint64_t value, ui
   return *this;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

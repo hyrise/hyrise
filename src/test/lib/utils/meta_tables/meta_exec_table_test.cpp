@@ -5,7 +5,7 @@
 
 #include "../plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaExecTest : public BaseTest {};
 
@@ -112,4 +112,4 @@ TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

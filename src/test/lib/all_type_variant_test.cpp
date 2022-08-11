@@ -7,7 +7,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class AllTypeVariantTest : public BaseTest {};
@@ -37,4 +37,4 @@ TYPED_TEST(AllTypeVariantTest, GetExtractsExactNumericalValue) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 #include "import_export/csv/csv_writer.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Export::Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename,
                const FileType& file_type)
@@ -52,4 +52,4 @@ std::shared_ptr<AbstractOperator> Export::_on_deep_copy(
 
 void Export::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

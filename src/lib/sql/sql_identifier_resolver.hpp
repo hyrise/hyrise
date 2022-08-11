@@ -7,7 +7,7 @@
 #include "expression/abstract_expression.hpp"
 #include "sql_identifier.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 
@@ -62,4 +62,4 @@ class SQLIdentifierResolver final {
   std::vector<SQLIdentifierContextEntry> _entries;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

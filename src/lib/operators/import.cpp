@@ -8,7 +8,7 @@
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Import::Import(const std::string& init_filename, const std::string& tablename, const ChunkOffset chunk_size,
                const FileType file_type, const std::optional<CsvMeta>& csv_meta)
@@ -69,4 +69,4 @@ std::shared_ptr<AbstractOperator> Import::_on_deep_copy(
 
 void Import::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

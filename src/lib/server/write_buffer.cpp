@@ -2,7 +2,7 @@
 
 #include "client_disconnect_exception.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename SocketType>
 size_t WriteBuffer<SocketType>::size() const {
@@ -88,4 +88,4 @@ void WriteBuffer<SocketType>::_flush_if_necessary(const size_t bytes_required) {
 template class WriteBuffer<Socket>;
 template class WriteBuffer<boost::asio::posix::stream_descriptor>;
 
-}  // namespace opossum
+}  // namespace hyrise

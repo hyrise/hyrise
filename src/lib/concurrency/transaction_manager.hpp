@@ -36,7 +36,7 @@
  * a new commit ID that is used to make its changes visible to others.
  */
 
-namespace opossum {
+namespace hyrise {
 
 class CommitContext;
 class TransactionContext;
@@ -101,4 +101,4 @@ class TransactionManager : public Noncopyable {
   mutable std::mutex _active_snapshot_commit_ids_mutex;
   std::unordered_multiset<CommitID> _active_snapshot_commit_ids;
 };
-}  // namespace opossum
+}  // namespace hyrise

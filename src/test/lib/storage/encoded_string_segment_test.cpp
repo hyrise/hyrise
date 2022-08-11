@@ -14,7 +14,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  protected:
@@ -328,4 +328,4 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

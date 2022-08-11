@@ -11,7 +11,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class JoinIndex;
 
@@ -67,4 +67,4 @@ class JoinNestedLoop : public AbstractJoinOperator {
   friend class JoinIndex;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "abstract_rule.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class PredicateNode;
@@ -46,4 +46,4 @@ class InExpressionRewriteRule : public AbstractRule {
   mutable std::shared_ptr<AbstractCardinalityEstimator> _cardinality_estimator_internal;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

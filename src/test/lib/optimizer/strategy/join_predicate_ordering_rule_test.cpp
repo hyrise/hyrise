@@ -18,7 +18,7 @@
 #include "optimizer/strategy/join_predicate_ordering_rule.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class JoinPredicateOrderingRuleTest : public StrategyBaseTest {
  public:
@@ -123,4 +123,4 @@ TEST_F(JoinPredicateOrderingRuleTest, SemiGreaterAndEquiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

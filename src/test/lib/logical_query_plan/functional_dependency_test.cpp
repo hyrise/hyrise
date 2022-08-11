@@ -3,7 +3,7 @@
 #include "logical_query_plan/functional_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FunctionalDependencyTest : public BaseTest {
  public:
@@ -148,4 +148,4 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
   EXPECT_TRUE(intersected_fds_set.contains(fd_a_2));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

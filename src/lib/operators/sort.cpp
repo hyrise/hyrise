@@ -5,7 +5,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
@@ -223,7 +223,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
            const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
@@ -477,4 +477,4 @@ class Sort::SortImpl {
   std::vector<RowIDValuePair> _null_value_rows;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

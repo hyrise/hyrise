@@ -11,7 +11,7 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string JoinOrderingRule::name() const {
   static const auto name = std::string{"JoinOrderingRule"};
@@ -101,4 +101,4 @@ void JoinOrderingRule::_recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

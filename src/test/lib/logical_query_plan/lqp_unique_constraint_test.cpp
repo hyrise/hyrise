@@ -3,7 +3,7 @@
 #include "logical_query_plan/functional_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LQPUniqueConstraintTest : public BaseTest {
  public:
@@ -58,4 +58,4 @@ TEST_F(LQPUniqueConstraintTest, Hash) {
   EXPECT_NE(unique_constraint_a_b_c.hash(), LQPUniqueConstraint({_a, _b, _c, _x}).hash());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

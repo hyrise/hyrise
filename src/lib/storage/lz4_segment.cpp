@@ -13,7 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
@@ -496,4 +496,4 @@ std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_ty
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);
 
-}  // namespace opossum
+}  // namespace hyrise

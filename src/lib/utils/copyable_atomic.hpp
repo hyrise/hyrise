@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Copyable atomic wrapper
@@ -88,4 +88,4 @@ class copyable_atomic {
   std::atomic<T> _atomic;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

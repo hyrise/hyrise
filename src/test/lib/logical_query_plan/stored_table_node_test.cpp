@@ -14,9 +14,9 @@
 #include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class StoredTableNodeTest : public BaseTest {
  protected:
@@ -363,4 +363,4 @@ TEST_F(StoredTableNodeTest, HasMatchingUniqueConstraint) {
   EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _c}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

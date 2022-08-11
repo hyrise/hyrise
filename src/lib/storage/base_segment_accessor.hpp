@@ -7,7 +7,7 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseSegmentAccessor {
  public:
@@ -28,4 +28,4 @@ class AbstractSegmentAccessor : public BaseSegmentAccessor {
   virtual const std::optional<T> access(ChunkOffset offset) const = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

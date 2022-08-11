@@ -3,9 +3,9 @@
 #include "logical_query_plan/join_node.hpp"
 #include "optimizer/strategy/semi_join_reduction_rule.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SemiJoinReductionRuleTest : public StrategyBaseTest {
  protected:
@@ -223,4 +223,4 @@ TEST_F(SemiJoinReductionRuleTest, NoReductionForAntiJoin) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -17,7 +17,7 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
   return std::make_shared<Table>(column_definitions, TableType::Data);
@@ -450,4 +450,4 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "abstract_table_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
@@ -36,4 +36,4 @@ class TableKeyConstraint final : public AbstractTableConstraint {
  */
 using TableKeyConstraints = std::set<TableKeyConstraint>;
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,7 +12,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
@@ -316,4 +316,4 @@ template class RangeFilter<int64_t>;
 template class RangeFilter<float>;
 template class RangeFilter<double>;
 
-}  // namespace opossum
+}  // namespace hyrise

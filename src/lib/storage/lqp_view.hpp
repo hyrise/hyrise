@@ -5,7 +5,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -24,4 +24,4 @@ class LQPView {
   const std::unordered_map<ColumnID, std::string> column_names;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

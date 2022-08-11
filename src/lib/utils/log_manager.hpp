@@ -6,7 +6,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct LogEntry {
   // We need system_clock here to provide human readable timestamps in MetaLogTable.
@@ -30,4 +30,4 @@ class LogManager : public Noncopyable {
   tbb::concurrent_vector<LogEntry> _log_entries;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,7 +12,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 class OperatorsUnionAllTest : public BaseTest {
  protected:
   void SetUp() override {
@@ -92,4 +92,4 @@ TEST_F(OperatorsUnionAllTest, ThrowWrongColumnDefinitions) {
   EXPECT_THROW(union_all->execute(), std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

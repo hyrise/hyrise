@@ -11,7 +11,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AggregateExpression::AggregateExpression(const AggregateFunction init_aggregate_function,
                                          const std::shared_ptr<AbstractExpression>& argument)
@@ -128,4 +128,4 @@ bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) con
   return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 AliasOperator::AliasOperator(const std::shared_ptr<const AbstractOperator>& input,
                              const std::vector<ColumnID>& column_ids, const std::vector<std::string>& aliases)
@@ -107,4 +107,4 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
                                  input_table.uses_mvcc());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

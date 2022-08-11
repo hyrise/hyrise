@@ -6,7 +6,7 @@
 
 #include "abstract_non_query_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 
@@ -29,4 +29,4 @@ class UpdateNode : public EnableMakeForLQPNode<UpdateNode>, public AbstractNonQu
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

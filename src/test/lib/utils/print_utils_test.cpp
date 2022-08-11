@@ -4,7 +4,7 @@
 #include "storage/table.hpp"
 #include "utils/print_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PrintUtilsTest : public BaseTest {};
 
@@ -42,18 +42,14 @@ TEST_F(PrintUtilsTest, print_directed_acyclic_graph) {
   };
 
   auto stream = std::ostringstream{};
-
-  /**
-   * [0] node_a
-   *  \_[1] node_b
-   *  |  \_[2] recurring_node
-   *  \_[3] node_c
-   *     \_Recurring Node --> [2]
-   *     \_Recurring Node --> [2]
-   */
   const auto expected_string = std::string{
-      "[0] node_a\n \\_[1] node_b\n |  \\_[2] recurring_node\n \\_[3] node_c\n    \\_Recurring Node --> [2]\n    "
-      "\\_Recurring Node --> [2]\n"};
+      R"([0] node_a
+ \_[1] node_b
+ |  \_[2] recurring_node
+ \_[3] node_c
+    \_Recurring Node --> [2]
+    \_Recurring Node --> [2]
+)"};
 
   print_directed_acyclic_graph<const AbstractLQPNode>(lqp, get_inputs_fn, node_print_fn, stream);
   EXPECT_EQ(stream.str(), expected_string);
@@ -82,4 +78,4 @@ TEST_F(PrintUtilsTest, print_table_key_constraints) {
   EXPECT_EQ(stream.str(), "PRIMARY_KEY(c) | UNIQUE(a, b)");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

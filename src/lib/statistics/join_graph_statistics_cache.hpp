@@ -7,7 +7,7 @@
 
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableStatistics;
 class JoinGraph;
@@ -81,4 +81,4 @@ class JoinGraphStatisticsCache {
   std::map<Bitmask, CacheEntry> _cache;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "storage/index/group_key/variable_length_key.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyTest : public BaseTest {
  protected:
@@ -50,4 +50,4 @@ TEST_F(VariableLengthKeyTest, CreateKeysWithOrAndShift) {
   EXPECT_TRUE(key == _key_reference);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

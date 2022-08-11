@@ -12,7 +12,7 @@
 #include "null_value.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractOperator;
 class AbstractPredicateExpression;
@@ -212,4 +212,4 @@ class ExpressionEvaluator final {
   ConstExpressionUnorderedMap<std::shared_ptr<BaseExpressionResult>> _cached_expression_results;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

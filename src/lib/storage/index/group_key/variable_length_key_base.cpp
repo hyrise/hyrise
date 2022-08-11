@@ -12,7 +12,7 @@
 
 namespace {
 template <typename uintX_t>  // NOLINT (We like uintX_t)
-std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, opossum::CompositeKeyLength bits) {
+std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, hyrise::CompositeKeyLength bits) {
   const auto bits_for_type = sizeof(uintX_t) * CHAR_BIT;
   assert(bits <= bits_for_type);
   auto borrow = value;
@@ -22,7 +22,7 @@ std::pair<uintX_t, uintX_t> shift_left_with_borrow(uintX_t value, opossum::Compo
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 VariableLengthKeyBase::VariableLengthKeyBase(VariableLengthKeyWord* data, CompositeKeyLength size)
     : _data(data), _size(size) {}
@@ -153,4 +153,4 @@ std::ostream& operator<<(std::ostream& os, const VariableLengthKeyBase& key) {
   os << std::dec << std::setw(0) << std::setfill(' ');
   return os;
 }
-}  // namespace opossum
+}  // namespace hyrise

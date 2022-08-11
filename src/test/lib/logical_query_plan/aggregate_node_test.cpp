@@ -11,9 +11,9 @@
 #include "types.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class AggregateNodeTest : public BaseTest {
  protected:
@@ -265,4 +265,4 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
   EXPECT_EQ(fd.dependents, expected_dependents);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 #include "bitpacking/bitpacking_compressor.hpp"
 #include "fixed_width_integer/fixed_width_integer_compressor.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 
@@ -40,4 +40,4 @@ std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uin
   return compressor->compress(vector, alloc, meta_info);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

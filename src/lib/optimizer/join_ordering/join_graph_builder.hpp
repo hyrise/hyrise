@@ -9,7 +9,7 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -88,4 +88,4 @@ class JoinGraphBuilder final {
   std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
   std::vector<std::shared_ptr<AbstractExpression>> _predicates;
 };
-}  // namespace opossum
+}  // namespace hyrise

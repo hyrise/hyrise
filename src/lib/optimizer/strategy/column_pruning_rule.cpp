@@ -21,8 +21,8 @@
 
 namespace {
 
-using namespace opossum;                         // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
@@ -350,7 +350,7 @@ void prune_projection_node(
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string ColumnPruningRule::name() const {
   static const auto name = std::string{"ColumnPruningRule"};
@@ -423,4 +423,4 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class InsertNodeTest : public BaseTest {
  protected:
@@ -41,4 +41,4 @@ TEST_F(InsertNodeTest, ColumnExpressions) {
   EXPECT_TRUE(_insert_node->output_expressions().empty());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

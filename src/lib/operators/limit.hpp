@@ -7,7 +7,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 // operator to limit the input to n rows
 class Limit : public AbstractReadOnlyOperator {
  public:
@@ -31,4 +31,4 @@ class Limit : public AbstractReadOnlyOperator {
  private:
   std::shared_ptr<AbstractExpression> _row_count_expression;
 };
-}  // namespace opossum
+}  // namespace hyrise

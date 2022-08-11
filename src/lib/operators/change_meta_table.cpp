@@ -7,7 +7,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ChangeMetaTable::ChangeMetaTable(const std::string& table_name, const MetaTableChangeType& change_type,
                                  const std::shared_ptr<const AbstractOperator>& values_to_modify,
@@ -48,4 +48,4 @@ std::shared_ptr<AbstractOperator> ChangeMetaTable::_on_deep_copy(
 
 void ChangeMetaTable::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

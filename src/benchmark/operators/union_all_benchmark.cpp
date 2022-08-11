@@ -5,7 +5,7 @@
 #include "operators/table_wrapper.hpp"
 #include "operators/union_all.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_UnionAll)(benchmark::State& state) {
   _clear_cache();
@@ -17,4 +17,4 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_UnionAll)(benchmark::State& state) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

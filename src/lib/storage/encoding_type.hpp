@@ -19,7 +19,7 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -84,4 +84,4 @@ inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        E
                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
                                                EncodingType::RunLength,        EncodingType::LZ4};
 
-}  // namespace opossum
+}  // namespace hyrise

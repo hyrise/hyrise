@@ -7,7 +7,7 @@
 #include "lqp_utils.hpp"
 #include "utils/print_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
     : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
@@ -90,4 +90,4 @@ bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
          table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

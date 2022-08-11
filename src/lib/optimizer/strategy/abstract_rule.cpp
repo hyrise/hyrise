@@ -7,7 +7,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/logical_plan_root_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp_root) const {
   // (1) Optimize root LQP
@@ -35,4 +35,4 @@ void AbstractRule::apply_to_plan(const std::shared_ptr<LogicalPlanRootNode>& lqp
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

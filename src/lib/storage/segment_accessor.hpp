@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace detail {
 
@@ -31,7 +31,7 @@ EXPLICITLY_DECLARE_DATA_TYPES(CreateSegmentAccessor);
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> create_segment_accessor(
     const std::shared_ptr<const AbstractSegment>& segment) {
-  return opossum::detail::CreateSegmentAccessor<T>::create(segment);
+  return hyrise::detail::CreateSegmentAccessor<T>::create(segment);
 }
 
 /**
@@ -135,4 +135,4 @@ class NullAccessor final : public AbstractSegmentAccessor<T> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -152,4 +152,4 @@ class SyntheticTableGenerator {
   const int _max_different_value = 10'000;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

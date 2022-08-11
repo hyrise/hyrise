@@ -8,7 +8,7 @@
 #include "hyrise.hpp"
 #include "storage/lqp_view.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreateView::CreateView(const std::string& view_name, const std::shared_ptr<LQPView>& view, const bool if_not_exists)
     : AbstractReadOnlyOperator(OperatorType::CreateView),
@@ -46,4 +46,4 @@ std::shared_ptr<const Table> CreateView::_on_execute() {
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 
-}  // namespace opossum
+}  // namespace hyrise

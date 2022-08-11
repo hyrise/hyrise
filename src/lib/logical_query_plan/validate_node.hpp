@@ -4,7 +4,7 @@
 
 #include "abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents validating tables with the Validate operator.
@@ -23,4 +23,4 @@ class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractL
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractOperator;
 
@@ -54,4 +54,4 @@ class PQPSubqueryExpression : public AbstractExpression {
   const std::optional<DataTypeInfo> _data_type_info;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

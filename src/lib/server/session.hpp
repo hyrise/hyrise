@@ -5,7 +5,7 @@
 #include "postgres_protocol_handler.hpp"
 #include "scheduler/operator_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The session class implements the communication flow and stores session-specific information such as portals. Those
 // portals are required by the PostgreSQL message protocol for the execution of prepared statements. However, named
@@ -54,4 +54,4 @@ class Session {
   std::shared_ptr<TransactionContext> _transaction_context;
   std::unordered_map<std::string, std::shared_ptr<AbstractOperator>> _portals;
 };
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "operators/abstract_read_only_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // maintenance operator for the "DROP TABLE" sql statement
 class DropTable : public AbstractReadOnlyOperator {
@@ -25,4 +25,4 @@ class DropTable : public AbstractReadOnlyOperator {
 
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };
-}  // namespace opossum
+}  // namespace hyrise

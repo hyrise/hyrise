@@ -2,7 +2,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 FunctionalDependency::FunctionalDependency(ExpressionUnorderedSet init_determinants,
                                            ExpressionUnorderedSet init_dependents)
@@ -178,11 +178,11 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
   return deflate_fds(intersected_fds);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 
-size_t hash<opossum::FunctionalDependency>::operator()(const opossum::FunctionalDependency& fd) const {
+size_t hash<hyrise::FunctionalDependency>::operator()(const hyrise::FunctionalDependency& fd) const {
   return fd.hash();
 }
 

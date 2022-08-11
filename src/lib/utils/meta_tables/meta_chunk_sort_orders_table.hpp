@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class for showing all sort orders of stored chunks via a meta table.
@@ -16,4 +16,4 @@ class MetaChunkSortOrdersTable : public AbstractMetaTable {
  protected:
   std::shared_ptr<Table> _on_generate() const final;
 };
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,11 +10,11 @@
 
 #include "SQLParser.h"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * This operator reads a file, creates a table from that input and adds it to the storage manager.
- * Supported file types are .tbl, .csv and Opossum .bin files.
+ * Supported file types are .tbl, .csv and Hyrise .bin files.
  * For .csv files, a CSV config is additionally required, which is commonly located in the <filename>.json file.
  * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */
@@ -51,4 +51,4 @@ class Import : public AbstractReadOnlyOperator {
   const std::optional<CsvMeta> _csv_meta;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

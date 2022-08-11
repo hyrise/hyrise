@@ -3,7 +3,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/prepared_plan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CreatePreparedPlan : public AbstractReadOnlyOperator {
  public:
@@ -30,4 +30,4 @@ class CreatePreparedPlan : public AbstractReadOnlyOperator {
   const std::shared_ptr<PreparedPlan> _prepared_plan;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

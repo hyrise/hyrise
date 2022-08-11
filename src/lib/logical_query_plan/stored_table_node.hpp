@@ -8,7 +8,7 @@
 #include "expression/lqp_column_expression.hpp"
 #include "storage/index/index_statistics.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LQPColumnExpression;
 class TableStatistics;
@@ -63,4 +63,4 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   std::vector<ColumnID> _pruned_column_ids;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

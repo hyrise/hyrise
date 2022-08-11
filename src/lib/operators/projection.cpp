@@ -22,7 +22,7 @@
 #include "utils/assert.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_operator,
                        const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions)
@@ -375,4 +375,4 @@ ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType 
   return forwarded_pqp_columns;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

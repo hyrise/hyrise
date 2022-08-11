@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractTPCCProcedure::AbstractTPCCProcedure(BenchmarkSQLExecutor& sql_executor) : _sql_executor(sql_executor) {
   PerformanceWarning(
@@ -37,4 +37,4 @@ AbstractTPCCProcedure& AbstractTPCCProcedure::operator=(const AbstractTPCCProced
   return *this;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

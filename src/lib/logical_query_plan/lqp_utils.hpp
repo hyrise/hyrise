@@ -10,7 +10,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 class AbstractLQPNode;
@@ -267,4 +267,4 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 
-}  // namespace opossum
+}  // namespace hyrise

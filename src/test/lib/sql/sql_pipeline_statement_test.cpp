@@ -23,19 +23,19 @@ namespace {
 // could break if something is changed within the optimizer.
 // It assumes that for the query: SELECT * from a, b WHERE a.a = b.a will be translated to a Cross Join with a filter
 // predicate and then optimized to a Join.
-std::function<bool(const std::shared_ptr<opossum::AbstractLQPNode>&)> contains_cross =
-    [](const std::shared_ptr<opossum::AbstractLQPNode>& node) {
-      if (node->type != opossum::LQPNodeType::Join) {
+std::function<bool(const std::shared_ptr<hyrise::AbstractLQPNode>&)> contains_cross =
+    [](const std::shared_ptr<hyrise::AbstractLQPNode>& node) {
+      if (node->type != hyrise::LQPNodeType::Join) {
         return false;
       }
-      if (auto join_node = std::dynamic_pointer_cast<opossum::JoinNode>(node)) {
-        return join_node->join_mode == opossum::JoinMode::Cross;
+      if (auto join_node = std::dynamic_pointer_cast<hyrise::JoinNode>(node)) {
+        return join_node->join_mode == hyrise::JoinMode::Cross;
       }
       return false;
     };
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class SQLPipelineStatementTest : public BaseTest {
  protected:
@@ -753,4 +753,4 @@ TEST_F(SQLPipelineStatementTest, SQLTranslationInfo) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

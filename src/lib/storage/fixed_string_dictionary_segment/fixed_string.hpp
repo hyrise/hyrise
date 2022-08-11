@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // FixedString is a data type, in order to access the elements of a `fixed_string_vector` and interact with them.
 // It has two different functionalities:
@@ -82,4 +82,4 @@ class FixedString {
   const bool _owns_memory = true;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

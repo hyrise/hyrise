@@ -23,7 +23,7 @@
 #include "utils/timer.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
 // been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
@@ -139,7 +139,7 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
@@ -626,7 +626,7 @@ void AggregateHash::_aggregate() {
       /**
        * DISTINCT implementation
        *
-       * In Opossum we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * In Hyrise we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
        * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
        * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
@@ -1224,4 +1224,4 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
   return context;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

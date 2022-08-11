@@ -10,7 +10,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "storage/chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Holds relevant information about the execution of an SQLPipeline.
 struct SQLPipelineMetrics {
@@ -134,4 +134,4 @@ class SQLPipeline : public Noncopyable {
   std::shared_ptr<SQLPipelineStatement> _failed_pipeline_statement;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

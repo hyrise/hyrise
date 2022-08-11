@@ -4,7 +4,7 @@
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaLogTable::MetaLogTable()
     : AbstractMetaTable(TableColumnDefinitions{{"timestamp", DataType::Long, false},
@@ -40,4 +40,4 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
   return output_table;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

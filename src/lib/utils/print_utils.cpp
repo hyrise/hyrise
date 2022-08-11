@@ -6,7 +6,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /**
  *
@@ -72,7 +72,7 @@ void print_directed_acyclic_graph_impl(const std::shared_ptr<Node>& node,
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 template <typename Node>
 void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
@@ -119,4 +119,4 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
     const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
     const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,6 +1,6 @@
 #include "list_directory.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::vector<std::filesystem::path> list_directory(const std::string& directory) {
   std::vector<std::filesystem::path> files;
@@ -16,4 +16,4 @@ std::vector<std::filesystem::path> list_directory(const std::string& directory) 
   return files;
 }
 
-}  // namespace opossum
+}  // namespace hyrise
