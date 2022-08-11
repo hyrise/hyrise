@@ -14,11 +14,11 @@
 #include "logical_query_plan/update_node.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void lqp_create_node_mapping_impl(LQPNodeMapping& mapping, const std::shared_ptr<AbstractLQPNode>& lhs,
                                   const std::shared_ptr<AbstractLQPNode>& rhs) {
@@ -139,7 +139,7 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
@@ -607,4 +607,4 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   return nullptr;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

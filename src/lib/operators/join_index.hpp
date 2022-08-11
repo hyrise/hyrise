@@ -11,7 +11,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MultiPredicateJoinEvaluator;
 
@@ -129,4 +129,4 @@ class JoinIndex : public AbstractJoinOperator {
   ColumnID _index_column_id;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

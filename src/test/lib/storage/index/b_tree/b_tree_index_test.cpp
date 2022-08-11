@@ -15,7 +15,7 @@
 // In this domain input modeling is explicitly used.
 // https://github.com/hyrise/hyrise/wiki/Input-Domain-Modeling
 
-namespace opossum {
+namespace hyrise {
 
 class BTreeIndexTest : public BaseTest {
  protected:
@@ -287,4 +287,4 @@ TEST_F(BTreeIndexTest, MemoryConsumptionLongString) {
 #endif
 }
 
-}  // namespace opossum
+}  // namespace hyrise

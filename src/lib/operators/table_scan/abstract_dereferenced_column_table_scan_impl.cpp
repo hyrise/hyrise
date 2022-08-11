@@ -12,7 +12,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractDereferencedColumnTableScanImpl::AbstractDereferencedColumnTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
@@ -77,4 +77,4 @@ void AbstractDereferencedColumnTableScanImpl::_scan_reference_segment(const Refe
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

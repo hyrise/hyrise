@@ -2,7 +2,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Supported aggregate functions. In addition to the default SQL functions (e.g., MIN(), MAX()), Hyrise internally uses
@@ -34,4 +34,4 @@ class AggregateExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

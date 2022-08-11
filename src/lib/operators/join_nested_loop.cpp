@@ -15,7 +15,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void __attribute__((noinline))
 process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
@@ -70,7 +70,7 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 bool JoinNestedLoop::supports(const JoinConfiguration config) {
   return true;
@@ -375,4 +375,4 @@ void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_p
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

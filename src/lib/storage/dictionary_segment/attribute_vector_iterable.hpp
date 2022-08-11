@@ -5,7 +5,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
@@ -136,4 +136,4 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

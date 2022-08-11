@@ -6,7 +6,7 @@
 #include "compact_vector.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Bit-packed vector with fixed bit length
@@ -38,4 +38,4 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   const pmr_compact_vector _data;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

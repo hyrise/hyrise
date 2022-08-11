@@ -8,7 +8,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionContext;
 
@@ -50,4 +50,4 @@ class Insert : public AbstractReadWriteOperator {
   std::shared_ptr<Table> _target_table;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

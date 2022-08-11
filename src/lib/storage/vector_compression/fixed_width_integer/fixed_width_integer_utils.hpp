@@ -3,7 +3,7 @@
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 inline bool is_fixed_width_integer(CompressedVectorType type) {
   switch (type) {
@@ -35,4 +35,4 @@ inline size_t byte_width_for_fixed_width_integer_type(CompressedVectorType type)
   Fail("GCC thinks this is reachable");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

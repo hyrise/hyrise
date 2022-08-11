@@ -10,8 +10,8 @@
 
 namespace {
 
-using namespace opossum;                         // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {
@@ -33,7 +33,7 @@ std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractE
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
                                                       const std::shared_ptr<const Table>& table) const {
@@ -173,4 +173,4 @@ std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& pred
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

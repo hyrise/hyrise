@@ -13,7 +13,7 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 enum class CompressedVectorType : uint8_t;
@@ -233,4 +233,4 @@ class BinaryWriter {
   template <typename T>
   static size_t _size(const T& object);
 };
-}  // namespace opossum
+}  // namespace hyrise

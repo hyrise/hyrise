@@ -8,7 +8,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Operator that marks the rows referenced by its input table as MVCC-expired.
@@ -34,4 +34,4 @@ class Delete : public AbstractReadWriteOperator {
   TransactionID _transaction_id;
   std::shared_ptr<const Table> _referencing_table;
 };
-}  // namespace opossum
+}  // namespace hyrise

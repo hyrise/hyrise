@@ -2,7 +2,7 @@
 
 #include "operators/abstract_join_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Reference implementation of all Join operations that Hyrise supports, providing a "ground truth" to test the
@@ -38,4 +38,4 @@ class JoinVerification : public AbstractJoinOperator {
                            const Tuple& tuple_right) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

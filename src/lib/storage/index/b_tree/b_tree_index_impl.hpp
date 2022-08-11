@@ -6,7 +6,7 @@
 #include "storage/abstract_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BTreeIndexTest;
 
@@ -62,4 +62,4 @@ void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& val
 
 EXPLICITLY_DECLARE_DATA_TYPES(BTreeIndexImpl);
 
-}  // namespace opossum
+}  // namespace hyrise

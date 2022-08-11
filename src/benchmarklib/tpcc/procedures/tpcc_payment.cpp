@@ -3,7 +3,7 @@
 
 #include "tpcc_payment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor) {
@@ -152,4 +152,4 @@ bool TPCCPayment::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

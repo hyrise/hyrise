@@ -6,7 +6,7 @@
 #include "storage/table.hpp"
 #include "storage/table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableKeyConstraintTest : public BaseTest {
  protected:
@@ -112,4 +112,4 @@ TEST_F(TableKeyConstraintTest, Equals) {
   EXPECT_FALSE(key_constraint_a == key_constraint_c);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -15,7 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * CsvConverter is a helper class that creates a ValueSegment by converting the given null terminated strings and placing
@@ -151,4 +151,4 @@ inline std::function<pmr_string(const std::string&)> CsvConverter<pmr_string>::_
   return [](const std::string& str) { return pmr_string{str}; };
 }
 
-}  // namespace opossum
+}  // namespace hyrise

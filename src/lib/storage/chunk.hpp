@@ -19,7 +19,7 @@
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractChunkIndex;
 class AbstractSegment;
@@ -208,4 +208,4 @@ class Chunk : private Noncopyable {
                 "Type of _cleanup_commit_id does not match type of CommitID.");
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "benchmark_config.hpp"
 #include "sql/sql_pipeline.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Stores the result of a SINGLE run of a single benchmark item (e.g., one execution of TPC-H query 5).
 struct BenchmarkItemRunResult {
@@ -23,4 +23,4 @@ struct BenchmarkItemRunResult {
   std::vector<SQLPipelineMetrics> metrics;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

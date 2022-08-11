@@ -14,9 +14,9 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LQPUtilsTest : public BaseTest {
  public:
@@ -424,4 +424,4 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
   EXPECT_EQ(top_diamond_origin_node, bottom_diamond_root_node);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

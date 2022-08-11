@@ -4,7 +4,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsJoinVerificationTest : public BaseTest {
  public:
@@ -53,4 +53,4 @@ TEST_F(OperatorsJoinVerificationTest, DeepCopy) {
   EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

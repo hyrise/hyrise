@@ -6,7 +6,7 @@
 
 #include "abstract_table_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FileBasedTableGenerator : virtual public AbstractTableGenerator {
  public:
@@ -27,4 +27,4 @@ class FileBasedTableGenerator : virtual public AbstractTableGenerator {
   std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)> _add_constraints_callback;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

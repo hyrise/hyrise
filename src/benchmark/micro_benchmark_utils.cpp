@@ -1,6 +1,6 @@
 #include "micro_benchmark_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void micro_benchmark_clear_cache() {
   std::vector<int> clear = std::vector<int>();
@@ -11,4 +11,4 @@ void micro_benchmark_clear_cache() {
   clear.resize(0);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

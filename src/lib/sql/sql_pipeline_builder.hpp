@@ -9,7 +9,7 @@
 #include "sql_pipeline.hpp"
 #include "sql_pipeline_statement.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Optimizer;
 
@@ -60,4 +60,4 @@ class SQLPipelineBuilder final {
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

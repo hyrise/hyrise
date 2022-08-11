@@ -15,7 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
@@ -187,4 +187,4 @@ bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
                                                            node_mapping) &&
          aggregate_expressions_begin_idx == aggregate_node.aggregate_expressions_begin_idx;
 }
-}  // namespace opossum
+}  // namespace hyrise

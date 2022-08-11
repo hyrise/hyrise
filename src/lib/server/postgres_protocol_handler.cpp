@@ -1,6 +1,6 @@
 #include "postgres_protocol_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename SocketType>
 PostgresProtocolHandler<SocketType>::PostgresProtocolHandler(const std::shared_ptr<SocketType>& socket)
@@ -276,4 +276,4 @@ template class PostgresProtocolHandler<Socket>;
 // For testing purposes only. stream_descriptor is used to write data to file
 template class PostgresProtocolHandler<boost::asio::posix::stream_descriptor>;
 
-}  // namespace opossum
+}  // namespace hyrise

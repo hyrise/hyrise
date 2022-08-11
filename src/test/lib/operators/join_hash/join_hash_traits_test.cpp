@@ -4,7 +4,7 @@
 
 #include "operators/join_hash/join_hash_traits.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class JoinHashTraitTest : public BaseTest {};
 
@@ -75,4 +75,4 @@ TEST_F(JoinHashTraitTest, MixedStringTraits) {
   EXPECT_HASH_TYPE(double, pmr_string, pmr_string);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

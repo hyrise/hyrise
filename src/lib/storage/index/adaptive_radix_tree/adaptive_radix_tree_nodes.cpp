@@ -11,7 +11,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 constexpr uint8_t INVALID_INDEX = 255u;
 
@@ -411,4 +411,4 @@ AbstractChunkIndex::Iterator Leaf::end() const {
   return _end;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -30,7 +30,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 
@@ -176,7 +176,7 @@ const std::unordered_map<DataType, uint16_t> data_type_order = {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
  public:
@@ -721,7 +721,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
   // Cache reference table to avoid redundant computation of the same
   static inline std::map<JoinTestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
-};  // namespace opossum
+};  // namespace hyrise
 
 TEST_P(JoinTestRunner, TestJoin) {
   const auto configuration = GetParam();
@@ -909,4 +909,4 @@ INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
 INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
 
-}  // namespace opossum
+}  // namespace hyrise

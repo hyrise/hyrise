@@ -4,7 +4,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/evaluation/expression_evaluator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class UncorrelatedSubqueryResults;
@@ -29,4 +29,4 @@ class ExpressionEvaluatorTableScanImpl : public AbstractTableScanImpl {
   const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSubqueryResults> _uncorrelated_subquery_results;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

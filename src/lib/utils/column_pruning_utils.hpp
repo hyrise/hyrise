@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Stores the updated ColumnID at the index of the original ID if the original column was not pruned.
 // If the original column with ColumnID c was pruned, the id_mapping vector contains nullopt at index c.
@@ -14,4 +14,4 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
 // (before pruning) for column_id.
 ColumnID column_id_before_pruning(ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids);
 
-}  // namespace opossum
+}  // namespace hyrise

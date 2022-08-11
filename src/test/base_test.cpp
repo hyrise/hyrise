@@ -17,7 +17,7 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 std::shared_ptr<DictionarySegment<T>> create_dict_segment_by_type(DataType data_type,
@@ -233,4 +233,4 @@ std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<con
   return table_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

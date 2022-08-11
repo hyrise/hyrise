@@ -12,7 +12,7 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
   std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
@@ -93,4 +93,4 @@ std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_stat
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

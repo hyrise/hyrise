@@ -13,7 +13,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class RangeFilterTest : public BaseTest {
@@ -340,4 +340,4 @@ TEST_F(RangeFilterTestUntyped, DoNotPruneUnsupportedPredicates) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 1, NULL_VALUE));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

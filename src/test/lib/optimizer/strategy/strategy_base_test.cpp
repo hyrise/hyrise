@@ -10,7 +10,7 @@
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> StrategyBaseTest::apply_rule(const std::shared_ptr<AbstractRule>& rule,
                                                               const std::shared_ptr<AbstractLQPNode>& input) {
@@ -32,4 +32,4 @@ std::shared_ptr<AbstractLQPNode> StrategyBaseTest::apply_rule(const std::shared_
   return optimized_node;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

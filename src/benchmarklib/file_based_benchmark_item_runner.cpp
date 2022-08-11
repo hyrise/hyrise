@@ -10,7 +10,7 @@
 #include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
@@ -106,4 +106,4 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

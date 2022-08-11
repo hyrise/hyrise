@@ -6,7 +6,7 @@
 #include "type_comparison.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
 The AggregateFunctionBuilder is used to create the lambda function that will be used by
@@ -153,4 +153,4 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
   TableColumnDefinitions _output_column_definitions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

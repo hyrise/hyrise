@@ -22,7 +22,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -64,7 +64,7 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions)
@@ -495,4 +495,4 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

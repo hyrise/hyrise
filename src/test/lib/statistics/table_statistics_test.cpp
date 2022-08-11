@@ -6,7 +6,7 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableStatisticsTest : public BaseTest {};
 
@@ -41,4 +41,4 @@ TEST_F(TableStatisticsTest, FromTable) {
   EXPECT_FLOAT_EQ(histogram_b->total_distinct_count(), 190);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

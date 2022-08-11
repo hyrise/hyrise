@@ -4,7 +4,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 IsNullExpression::IsNullExpression(const PredicateCondition init_predicate_condition,
                                    const std::shared_ptr<AbstractExpression>& operand)
@@ -43,4 +43,4 @@ bool IsNullExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const 
   return false;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

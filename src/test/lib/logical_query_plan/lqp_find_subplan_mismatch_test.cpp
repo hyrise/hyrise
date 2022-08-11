@@ -23,9 +23,9 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LQPFindSubplanMismatchTest : public BaseTest {
  protected:
@@ -153,4 +153,4 @@ TEST_F(LQPFindSubplanMismatchTest, TypeMismatch) {
   ASSERT_TRUE(mismatch);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

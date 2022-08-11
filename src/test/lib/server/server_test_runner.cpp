@@ -13,7 +13,7 @@
 #include "server/server.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // This class tests supported operations of the server implementation. This does not include statements with named
 // portals which are used for CURSOR operations.
@@ -498,4 +498,4 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   EXPECT_EQ(final_sum - initial_sum, successful_increments);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

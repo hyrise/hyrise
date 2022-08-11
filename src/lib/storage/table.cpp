@@ -21,7 +21,7 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
   return std::make_shared<Table>(column_definitions, TableType::Data);
@@ -529,4 +529,4 @@ template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vecto
 template void Table::create_chunk_index<AdaptiveRadixTreeIndex>(const std::vector<ColumnID>& column_ids,
                                                                 const std::string& name);
 
-}  // namespace opossum
+}  // namespace hyrise

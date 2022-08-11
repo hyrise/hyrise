@@ -9,7 +9,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class AbstractTask;
@@ -54,4 +54,4 @@ class IndexScan : public AbstractReadOnlyOperator {
   std::shared_ptr<Table> _out_table;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

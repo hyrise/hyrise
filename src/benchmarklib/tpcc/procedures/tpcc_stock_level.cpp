@@ -5,7 +5,7 @@
 
 #include "operators/print.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCStockLevel::TPCCStockLevel(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor) {
@@ -52,4 +52,4 @@ bool TPCCStockLevel::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

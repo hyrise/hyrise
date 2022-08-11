@@ -18,7 +18,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
 // chain.
@@ -47,7 +47,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string PredicateReorderingRule::name() const {
   static const auto name = std::string{"PredicateReorderingRule"};
@@ -137,4 +137,4 @@ void PredicateReorderingRule::_reorder_predicates(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

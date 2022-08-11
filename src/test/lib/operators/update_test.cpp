@@ -15,9 +15,9 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsUpdateTest : public BaseTest {
  public:
@@ -84,4 +84,4 @@ TEST_F(OperatorsUpdateTest, UpdateNone) {
   helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "resources/test_data/tbl/int_float2.tbl");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

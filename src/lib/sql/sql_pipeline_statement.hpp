@@ -15,7 +15,7 @@
 #include "sql_plan_cache.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Holds relevant information about the execution of an SQLPipelineStatement.
 struct SQLPipelineStatementMetrics {
@@ -141,4 +141,4 @@ class SQLPipelineStatement : public Noncopyable {
   std::shared_ptr<TransactionContext> _transaction_context = nullptr;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

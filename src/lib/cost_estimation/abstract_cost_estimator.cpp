@@ -7,7 +7,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractCostEstimator::AbstractCostEstimator(
     const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
@@ -113,4 +113,4 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
   return cost_estimation_cache_iter->second;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

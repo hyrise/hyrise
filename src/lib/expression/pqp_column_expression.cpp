@@ -4,7 +4,7 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<PQPColumnExpression> PQPColumnExpression::from_table(const Table& table,
                                                                      const std::string& column_name) {
@@ -58,4 +58,4 @@ bool PQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) con
   Fail("Nullability 'on lqp' should never be queried from a PQPColumn");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

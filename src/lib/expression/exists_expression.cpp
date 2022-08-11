@@ -5,7 +5,7 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "lqp_subquery_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& subquery,
                                    const ExistsExpressionType init_exists_expression_type)
@@ -51,4 +51,4 @@ bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const 
   return false;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

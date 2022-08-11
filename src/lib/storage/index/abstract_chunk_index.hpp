@@ -8,7 +8,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractSegment;
 
@@ -163,4 +163,4 @@ class AbstractChunkIndex : private Noncopyable {
  private:
   const ChunkIndexType _type;
 };
-}  // namespace opossum
+}  // namespace hyrise

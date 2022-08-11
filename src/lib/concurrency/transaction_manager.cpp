@@ -5,7 +5,7 @@
 #include "transaction_context.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TransactionManager::TransactionManager()
     : _next_transaction_id{INITIAL_TRANSACTION_ID},
@@ -128,4 +128,4 @@ void TransactionManager::_try_increment_last_commit_id(const std::shared_ptr<Com
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

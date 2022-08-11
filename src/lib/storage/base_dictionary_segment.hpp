@@ -4,7 +4,7 @@
 
 #include "abstract_encoded_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -51,4 +51,4 @@ class BaseDictionarySegment : public AbstractEncodedSegment {
    */
   virtual ValueID null_value_id() const = 0;
 };
-}  // namespace opossum
+}  // namespace hyrise

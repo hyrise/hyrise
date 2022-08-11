@@ -19,7 +19,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableStatistics;
 
@@ -264,4 +264,4 @@ class Table : private Noncopyable {
   // chunks more than once.
   mutable std::optional<uint64_t> _cached_row_count;
 };
-}  // namespace opossum
+}  // namespace hyrise

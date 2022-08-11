@@ -28,7 +28,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
@@ -45,7 +45,7 @@ pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
@@ -210,4 +210,4 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   return table;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

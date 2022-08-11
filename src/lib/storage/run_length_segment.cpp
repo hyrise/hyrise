@@ -7,7 +7,7 @@
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 RunLengthSegment<T>::RunLengthSegment(const std::shared_ptr<const pmr_vector<T>>& values,
@@ -89,4 +89,4 @@ std::optional<CompressedVectorType> RunLengthSegment<T>::compressed_vector_type(
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(RunLengthSegment);
 
-}  // namespace opossum
+}  // namespace hyrise

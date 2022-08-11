@@ -17,7 +17,7 @@
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
@@ -200,4 +200,4 @@ size_t CompositeGroupKeyIndex::_memory_consumption() const {
   return byte_count;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,9 +7,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class JoinGraphTest : public BaseTest {
  public:
@@ -84,4 +84,4 @@ a = 3
 )");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

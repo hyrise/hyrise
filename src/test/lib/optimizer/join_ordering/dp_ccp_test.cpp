@@ -20,9 +20,9 @@
  * Note, also, that EnumerateCcp is tested separately.
  */
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class DpCcpTest : public BaseTest {
  public:
@@ -240,4 +240,4 @@ TEST_F(DpCcpTest, UncorrelatedPredicates) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

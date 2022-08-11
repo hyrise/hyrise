@@ -17,10 +17,10 @@ extern "C" {
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
- * Wrapper around the official tpcds-dbgen tool, making it directly generate opossum::Table instances without having
+ * Wrapper around the official tpcds-dbgen tool, making it directly generate hyrise::Table instances without having
  * to generate and then load .tbl files.
  *
  * NOT thread safe because the underlying dsdgen is probably not (assuming it has the same issues as the tpch dbgen).
@@ -76,4 +76,4 @@ class TPCDSTableGenerator final : public AbstractTableGenerator {
   uint32_t _scale_factor;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

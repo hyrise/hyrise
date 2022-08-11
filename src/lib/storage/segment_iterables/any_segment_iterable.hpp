@@ -6,7 +6,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename ValueType>
 class AnySegmentIterable;
@@ -179,7 +179,7 @@ class CreateAnySegmentIterable {
 
 template <typename T>
 AnySegmentIterable<T> create_any_segment_iterable(const AbstractSegment& abstract_segment) {
-  return opossum::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
+  return hyrise::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

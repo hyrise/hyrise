@@ -1,6 +1,6 @@
 #include "abstract_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   DebugAssert(([&]() {
@@ -41,4 +41,4 @@ void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::share
   wait_for_tasks(tasks);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

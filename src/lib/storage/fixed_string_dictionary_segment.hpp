@@ -8,7 +8,7 @@
 #include "types.hpp"
 #include "vector_compression/base_compressed_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -77,4 +77,4 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
 extern template class FixedStringDictionarySegment<pmr_string>;
 
-}  // namespace opossum
+}  // namespace hyrise

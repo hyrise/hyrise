@@ -6,7 +6,7 @@
 #include "utils/assert.hpp"
 #include "utils/size_estimation_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DataType>
 BTreeIndexImpl<DataType>::BTreeIndexImpl(const std::shared_ptr<const AbstractSegment>& segments_to_index,
@@ -115,4 +115,4 @@ void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& val
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(BTreeIndexImpl);
 
-}  // namespace opossum
+}  // namespace hyrise

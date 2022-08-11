@@ -7,7 +7,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentIterable<T>> {
@@ -221,4 +221,4 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

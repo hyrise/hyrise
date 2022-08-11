@@ -15,7 +15,7 @@
 #include "resolve_type.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
 template <typename T>
@@ -354,4 +354,4 @@ class RadixClusterSort {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

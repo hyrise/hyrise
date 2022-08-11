@@ -14,7 +14,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const ChunkIndexType index_type,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
@@ -205,4 +205,4 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   return matches_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

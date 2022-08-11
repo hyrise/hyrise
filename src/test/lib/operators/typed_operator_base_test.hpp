@@ -9,7 +9,7 @@
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 // This is the base class for all tests that should run on every possible combination of data type, order and encoding.
 // A sample table is generate in TableScanBetweenTest. Depending on how other tests will use this, it might make sense
 // to have a single instantiation here
@@ -47,4 +47,4 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
   });
   return pairs;
 }
-}  // namespace opossum
+}  // namespace hyrise

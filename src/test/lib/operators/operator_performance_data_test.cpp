@@ -15,9 +15,9 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorPerformanceDataTest : public BaseTest {
  protected:
@@ -427,4 +427,4 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

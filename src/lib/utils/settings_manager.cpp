@@ -1,6 +1,6 @@
 #include "settings_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool SettingsManager::has_setting(const std::string& name) const {
   return _settings.count(name);
@@ -33,4 +33,4 @@ std::vector<std::string> SettingsManager::setting_names() const {
   return settings_list;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

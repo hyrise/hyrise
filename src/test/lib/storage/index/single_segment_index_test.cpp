@@ -18,7 +18,7 @@
 // In this domain input modeling is explicitly used.
 // https://github.com/hyrise/hyrise/wiki/Input-Domain-Modeling
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DerivedIndex>
 class SingleSegmentIndexTest : public BaseTest {
@@ -666,4 +666,4 @@ TYPED_TEST(SingleSegmentIndexTest, IndexOnNonDictionaryThrows) {
                std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

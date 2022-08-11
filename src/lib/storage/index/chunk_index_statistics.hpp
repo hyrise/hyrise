@@ -5,7 +5,7 @@
 #include "chunk_index_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct ChunkIndexStatistics {
   std::vector<ColumnID> column_ids;
@@ -16,4 +16,4 @@ struct ChunkIndexStatistics {
 // For googletest
 bool operator==(const ChunkIndexStatistics& left, const ChunkIndexStatistics& right);
 
-}  // namespace opossum
+}  // namespace hyrise

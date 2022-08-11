@@ -4,7 +4,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Abstract container class for the definition of table constraints based on a set of column ids.
@@ -38,4 +38,4 @@ class AbstractTableConstraint {
   std::unordered_set<ColumnID> _columns;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

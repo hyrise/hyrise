@@ -2,7 +2,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::vector<std::shared_ptr<AbstractExpression>> AbstractNonQueryNode::output_expressions() const {
   return {};
@@ -22,4 +22,4 @@ std::vector<FunctionalDependency> AbstractNonQueryNode::non_trivial_functional_d
   Fail("Node does not support functional dependencies.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

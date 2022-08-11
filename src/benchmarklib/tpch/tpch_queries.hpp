@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <map>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Contains all supported TPCH queries. Use ordered map to have queries sorted by query id.
@@ -11,4 +11,4 @@ namespace opossum {
  */
 extern const std::map<size_t, const char*> tpch_queries;
 
-}  // namespace opossum
+}  // namespace hyrise

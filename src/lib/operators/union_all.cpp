@@ -7,7 +7,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
                    const std::shared_ptr<const AbstractOperator>& right_in)
     : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {
@@ -62,4 +62,4 @@ std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
 
 void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

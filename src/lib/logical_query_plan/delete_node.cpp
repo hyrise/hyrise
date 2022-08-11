@@ -7,7 +7,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DeleteNode::DeleteNode() : AbstractNonQueryNode(LQPNodeType::Delete) {}
 
@@ -31,4 +31,4 @@ bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

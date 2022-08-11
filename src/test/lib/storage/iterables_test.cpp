@@ -19,7 +19,7 @@
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DataType>
 struct SumUpWithIterator {
@@ -449,4 +449,4 @@ TEST_F(IterablesTest, ValueSegmentNullableIteratorForEach) {
   EXPECT_EQ(sum, 13'702u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

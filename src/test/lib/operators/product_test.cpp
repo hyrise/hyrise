@@ -12,10 +12,10 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 class OperatorsProductTest : public BaseTest {
  public:
-  std::shared_ptr<opossum::TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c;
+  std::shared_ptr<TableWrapper> _table_wrapper_a, _table_wrapper_b, _table_wrapper_c;
 
   void SetUp() override {
     _table_wrapper_a = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", ChunkOffset{5}));
@@ -57,4 +57,4 @@ TEST_F(OperatorsProductTest, SelfProduct) {
   EXPECT_TABLE_EQ_UNORDERED(product->get_output(), expected_result);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

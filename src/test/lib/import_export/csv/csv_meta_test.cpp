@@ -2,7 +2,7 @@
 
 #include "import_export/csv/csv_meta.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CsvMetaTest : public BaseTest {};
 
@@ -55,4 +55,4 @@ TEST_F(CsvMetaTest, ColumnsMustBeArray) {
   EXPECT_THROW(from_json(json_meta, meta), std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

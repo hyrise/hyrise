@@ -58,7 +58,7 @@
 {
    <False_positive_optional>
    Memcheck:Cond
-   fun:_ZN7opossum14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
+   fun:_ZN7hyrise14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
 }
 
 {

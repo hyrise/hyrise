@@ -5,7 +5,7 @@
 #include <unordered_set>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractCardinalityEstimator;
 class AbstractCostEstimator;
@@ -59,4 +59,4 @@ class AbstractRule {
   virtual void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

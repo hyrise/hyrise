@@ -8,7 +8,7 @@
 #include "abstract_histogram.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -83,4 +83,4 @@ class EqualDistinctCountHistogram : public AbstractHistogram<T> {
   HistogramCountType _total_distinct_count;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

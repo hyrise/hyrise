@@ -5,7 +5,7 @@
 #include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * AbstractReadOnlyOperator is the superclass for all operators that not need write access to their input tables.
@@ -31,4 +31,4 @@ class AbstractReadOnlyOperator : public AbstractOperator {
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

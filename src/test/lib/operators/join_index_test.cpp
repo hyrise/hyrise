@@ -16,7 +16,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsJoinIndexTest : public BaseTest {
  public:
@@ -276,4 +276,4 @@ TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
                    1, true);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
