@@ -1,7 +1,7 @@
 #include "partial_hash_index_impl.hpp"
 #include "storage/segment_iterate.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DataType>
 TableIndexFlattenedSparseMapIterator<DataType>::TableIndexFlattenedSparseMapIterator(MapIteratorType itr)
@@ -247,4 +247,4 @@ std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_id
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(PartialHashIndexImpl);
 
-}  // namespace opossum
+}  // namespace hyrise

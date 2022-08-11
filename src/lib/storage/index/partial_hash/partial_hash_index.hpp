@@ -6,7 +6,7 @@
 #include "partial_hash_index_impl.hpp"
 #include "storage/index/abstract_table_index.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PartialHashIndexTest;
 
@@ -57,4 +57,4 @@ class PartialHashIndex : public AbstractTableIndex {
   std::shared_ptr<BasePartialHashIndexImpl> _impl;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

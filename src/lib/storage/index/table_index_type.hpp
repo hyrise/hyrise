@@ -4,7 +4,7 @@
 
 // #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -24,4 +24,4 @@ TableIndexType get_table_index_type_of() {
   return detail::table_index_map[hana::type_c<IndexType>];
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,6 +1,6 @@
 #include "abstract_table_index.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BaseTableIndexIterator::reference BaseTableIndexIterator::operator*() const {
   Fail("cannot dereference on empty iterator");
@@ -98,4 +98,4 @@ std::unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
   return _get_indexed_chunk_ids();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

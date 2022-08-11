@@ -8,7 +8,7 @@
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PartialHashIndexTest : public BaseTest {
  protected:
@@ -452,4 +452,4 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
 #endif
 }
 
-}  // namespace opossum
+}  // namespace hyrise

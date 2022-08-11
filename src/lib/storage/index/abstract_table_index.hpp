@@ -9,7 +9,7 @@
 #include "table_index_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the
@@ -168,4 +168,4 @@ class AbstractTableIndex : private Noncopyable {
   const TableIndexType _type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

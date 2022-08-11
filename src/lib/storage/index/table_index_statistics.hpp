@@ -7,7 +7,7 @@
 #include "table_index_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct TableIndexStatistics {
   std::vector<ColumnID> column_ids;
@@ -19,4 +19,4 @@ struct TableIndexStatistics {
 // For googletest
 bool operator==(const TableIndexStatistics& left, const TableIndexStatistics& right);
 
-}  // namespace opossum
+}  // namespace hyrise

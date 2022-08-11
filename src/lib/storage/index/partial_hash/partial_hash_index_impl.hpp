@@ -10,7 +10,7 @@
 #include "storage/index/abstract_table_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractSegment;
 class PartialHashIndexTest;
@@ -137,4 +137,4 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

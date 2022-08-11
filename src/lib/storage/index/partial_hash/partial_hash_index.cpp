@@ -2,7 +2,7 @@
 
 #include "storage/segment_iterate.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
                                    const ColumnID column_id)
@@ -75,4 +75,4 @@ std::unordered_set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const {
   return _impl->get_indexed_chunk_ids();
 }
 
-}  // namespace opossum
+}  // namespace hyrise
