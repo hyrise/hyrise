@@ -46,8 +46,9 @@ TEST_F(MetaExecTest, CallUserExecutableFunctions) {
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
 
   // Test plugin has state and cretes tables with an increasing id.
-  const auto exec_query = "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseTestPlugin', "
-                          "'OurFreelyChoosableFunctionName')";
+  const auto exec_query =
+      "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseTestPlugin', "
+      "'OurFreelyChoosableFunctionName')";
   SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
   // The test plugin creates the below table when the called function is executed
   EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
