@@ -350,7 +350,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
    * stream.
    */
-  auto result_string = std::stringstream{};
+  auto result_stringstream = std::stringstream{};
 
   // These are the character offsets that need to be read in every block.
   auto block_start_offset = start_offset % _block_size;
@@ -412,12 +412,12 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
       const auto end_offset_it = cached_block.cbegin() + static_cast<CachedBlockDifferenceType>(block_end_offset);
       partial_result = pmr_string{start_offset_it, end_offset_it};
     }
-    result_string << partial_result;
+    result_stringstream << partial_result;
 
     // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
     block_start_offset = 0;
   }
-  return std::pair{pmr_string{result_string.str()}, new_cached_block_index};
+  return std::pair{pmr_string{result_stringstream.str()}, new_cached_block_index};
 }
 
 template <typename T>

@@ -230,7 +230,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _predicate_condition(predicate_condition),
         _performance_data(performance_data),
         _output_column_order(output_column_order),
-        _secondary_predicates(secondary_predicates),  // TODO(Martin): verify that reference is lifetime extended
+        _secondary_predicates(secondary_predicates),
         _radix_bits(radix_bits) {}
 
  protected:

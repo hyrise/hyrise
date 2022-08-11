@@ -1096,7 +1096,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available =
-          std::any_of(pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(), [&](const auto& expression) {
+          std::any_of(pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(), [&](const auto& expression) {
             return !static_cast<bool>(find_expression_idx(*expression, output_expressions));
           });
 
@@ -1251,8 +1251,8 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   const auto input_lqp = _current_lqp;
 
   const auto order_list_size = order_list.size();
-  std::vector<std::shared_ptr<AbstractExpression>> expressions(order_list_size);
-  std::vector<SortMode> sort_modes(order_list_size);
+  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(order_list_size);
+  auto sort_modes = std::vector<SortMode>(order_list_size);
   for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
     const auto& order_description = order_list[expression_idx];
     expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
@@ -1260,7 +1260,6 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   }
 
   _current_lqp = _add_expressions_if_unavailable(_current_lqp, expressions);
-
   _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
@@ -1631,7 +1630,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprFunctionRef: {
       // convert to upper-case to find mapping
-      std::transform(name.begin(), name.end(), name.begin(),
+      std::transform(name.cbegin(), name.cend(), name.begin(),
                      [](const auto character) { return std::toupper(character); });
 
       // Some SQL functions have aliases, which we map to one unique identifier here.

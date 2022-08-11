@@ -64,7 +64,8 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
     return _chunk_offsets.end();
   }
 
-  if (_root) {  // _root is nullptr if the index contains NULL positions only
+  // _root is nullptr if the index contains NULL positions only
+  if (_root) {
     return _root->lower_bound(BinaryComparable(value_id), 0);
   }
 
@@ -81,7 +82,8 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<A
     return _chunk_offsets.end();
   }
 
-  if (_root) {  // _root is nullptr if the index contains NULL positions only
+  // _root is nullptr if the index contains NULL positions only
+  if (_root) {
     return _root->lower_bound(BinaryComparable(value_id), 0);
   }
 

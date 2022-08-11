@@ -84,9 +84,9 @@ size_t get_distinct_value_count(const std::shared_ptr<AbstractSegment>& segment)
 
     auto distinct_values = std::unordered_set<ColumnDataType>{};
     auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
-    iterable.with_iterators([&](auto iter, auto end) {
-      for (; iter != end; ++iter) {
-        const auto segment_item = *iter;
+    iterable.with_iterators([&](auto it, const auto end) {
+      for (; it != end; ++it) {
+        const auto segment_item = *it;
         if (!segment_item.is_null()) {
           distinct_values.insert(segment_item.value());
         }

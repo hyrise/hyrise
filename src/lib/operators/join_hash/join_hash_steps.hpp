@@ -136,15 +136,15 @@ class PosHashTable {
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
     _offset_hash_table.shrink_to_fit();
-    const auto hash_table_count = _offset_hash_table.size();
+    const auto hash_table_size = _offset_hash_table.size();
 
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
       // Resize so that we can store the start offset of each range as well as the final end offset.
-      _unified_pos_list->offsets.resize(hash_table_count + 1);
+      _unified_pos_list->offsets.resize(hash_table_size + 1);
 
       auto total_size = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_count; ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
         _unified_pos_list->offsets[hash_table_idx] = total_size;
         total_size += _small_pos_lists[hash_table_idx].size();
       }
@@ -152,7 +152,7 @@ class PosHashTable {
 
       _unified_pos_list->pos_list.resize(total_size);
       auto offset = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_count; ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
         std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
                   _unified_pos_list->pos_list.begin() + offset);
         offset += _small_pos_lists[hash_table_idx].size();
