@@ -6,7 +6,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class RandomGenerator {
  public:
@@ -47,4 +47,4 @@ class RandomGenerator {
  protected:
   std::default_random_engine engine;
 };
-}  // namespace opossum
+}  // namespace hyrise

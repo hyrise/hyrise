@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 SegmentAccessCounter::SegmentAccessCounter() {
   DebugAssert(static_cast<size_t>(AccessType::Count) == access_type_string_mapping.size(),
@@ -130,4 +130,4 @@ bool SegmentAccessCounter::operator!=(const SegmentAccessCounter& other) const {
   return !(*this == other);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

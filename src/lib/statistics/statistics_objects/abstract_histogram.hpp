@@ -12,7 +12,7 @@
 #include "storage/abstract_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using BinID = size_t;
 constexpr BinID INVALID_BIN_ID{std::numeric_limits<BinID>::max()};
@@ -267,4 +267,4 @@ class AbstractHistogram : public AbstractStatisticsObject {
 
 EXPLICITLY_DECLARE_DATA_TYPES(AbstractHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

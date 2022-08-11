@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
+if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
     BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.67-dev 2>/dev/null | grep "install ok installed")
     if [ "" != "$BOOST_INSTALLED" ]; then
          read -p 'libboost1.67-dev is installed but 1.70 is required. Ok to remove 1.67-dev? [y|n] ' -n 1 -r < /dev/tty

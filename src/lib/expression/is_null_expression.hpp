@@ -4,7 +4,7 @@
 #include "abstract_predicate_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class IsNullExpression : public AbstractPredicateExpression {
  public:
@@ -22,4 +22,4 @@ class IsNullExpression : public AbstractPredicateExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

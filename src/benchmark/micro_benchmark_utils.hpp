@@ -2,8 +2,8 @@
 
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 void micro_benchmark_clear_cache();
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -11,7 +11,7 @@
 #include "types.hpp"
 #include "utils/check_table_equal.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class Table;
@@ -46,15 +46,15 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
          contained_in_query_plan(node->right_input(), contains_fn);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 /**
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
-#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
+#define EXPECT_TABLE_EQ(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
   {                                                                                                                   \
     if (const auto table_difference_message =                                                                         \
-            check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
+            check_table_equal(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
                               IgnoreNullable::No)) {                                                                  \
       FAIL() << *table_difference_message;                                                                            \
     }                                                                                                                 \
@@ -64,15 +64,15 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Specialised version of EXPECT_TABLE_EQ
  */
-#define EXPECT_TABLE_EQ_UNORDERED(opossum_table, expected_table)                            \
-  EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
+#define EXPECT_TABLE_EQ_UNORDERED(hyrise_table, expected_table)                            \
+  EXPECT_TABLE_EQ(hyrise_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
 /**
  * Specialised version of EXPECT_TABLE_EQ
  */
-#define EXPECT_TABLE_EQ_ORDERED(opossum_table, expected_table)                               \
-  EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
+#define EXPECT_TABLE_EQ_ORDERED(hyrise_table, expected_table)                               \
+  EXPECT_TABLE_EQ(hyrise_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
 /**
@@ -100,7 +100,7 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 
 #define ASSERT_LQP_TIE(output, input_side, input)           \
   {                                                         \
-    if (!opossum::check_lqp_tie(output, input_side, input)) \
+    if (!hyrise::check_lqp_tie(output, input_side, input)) \
       FAIL();                                               \
   }                                                         \
   static_assert(true, "End call of macro with a semicolon")

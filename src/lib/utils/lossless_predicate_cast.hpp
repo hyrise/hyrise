@@ -3,7 +3,7 @@
 #include "lossless_cast.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 std::optional<float> next_float_towards(double value, double towards);
 
 // Even if lossless_cast is not successful, we might be able to do a cast if we know the predicate that is used.
@@ -62,4 +62,4 @@ std::optional<std::pair<PredicateCondition, Output>> lossless_predicate_cast(con
 
 std::optional<std::pair<PredicateCondition, AllTypeVariant>> lossless_predicate_variant_cast(
     const PredicateCondition condition, const AllTypeVariant& variant, DataType target_data_type);
-}  // namespace opossum
+}  // namespace hyrise

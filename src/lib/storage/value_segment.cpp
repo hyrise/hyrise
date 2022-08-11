@@ -13,7 +13,7 @@
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 ValueSegment<T>::ValueSegment(bool nullable, ChunkOffset capacity) : BaseValueSegment(data_type_from_type<T>()) {
@@ -164,4 +164,4 @@ size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) cons
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(ValueSegment);
 
-}  // namespace opossum
+}  // namespace hyrise

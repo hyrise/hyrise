@@ -19,7 +19,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  protected:
@@ -735,4 +735,4 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
   EXPECT_FALSE(for_segment_no_nulls->null_values());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

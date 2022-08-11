@@ -6,7 +6,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vector<JoinGraph>& join_graphs,
                            std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
@@ -33,7 +33,7 @@ void build_all_in_lqp_impl(const std::shared_ptr<AbstractLQPNode>& lqp, std::vec
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::optional<JoinGraph> JoinGraph::build_from_lqp(const std::shared_ptr<AbstractLQPNode>& lqp) {
   return JoinGraphBuilder{}(lqp);  // NOLINT - doesn't like {} followed by ()
@@ -113,4 +113,4 @@ std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph) {
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

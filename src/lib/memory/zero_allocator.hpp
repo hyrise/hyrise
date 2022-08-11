@@ -2,7 +2,7 @@
 
 #include "tbb/cache_aligned_allocator.h"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename ValueType>
 class ZeroAllocator : public tbb::cache_aligned_allocator<ValueType> {
@@ -19,4 +19,4 @@ class ZeroAllocator : public tbb::cache_aligned_allocator<ValueType> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

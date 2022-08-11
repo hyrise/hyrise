@@ -6,7 +6,7 @@
 #include "micro_benchmark_utils.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableWrapper;
 
@@ -25,4 +25,4 @@ class MicroBenchmarkBasicFixture : public benchmark::Fixture {
   std::shared_ptr<TableWrapper> _table_dict_wrapper;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

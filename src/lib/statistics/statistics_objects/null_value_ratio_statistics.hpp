@@ -2,7 +2,7 @@
 
 #include "abstract_statistics_object.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // A single float value as an AbstractStatisticsObject, to keep architectures consistent....
 class NullValueRatioStatistics : public AbstractStatisticsObject {
@@ -18,4 +18,4 @@ class NullValueRatioStatistics : public AbstractStatisticsObject {
   float ratio;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

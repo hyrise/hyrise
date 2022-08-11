@@ -5,7 +5,7 @@
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/delete_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DeleteNodeTest : public BaseTest {
  protected:
@@ -39,4 +39,4 @@ TEST_F(DeleteNodeTest, Copy) {
   EXPECT_EQ(*_delete_node, *_delete_node->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

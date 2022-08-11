@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TestPlugin : public AbstractPlugin {
  public:
@@ -24,4 +24,4 @@ class TestPlugin : public AbstractPlugin {
   StorageManager& storage_manager;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -24,9 +24,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class ExpressionEvaluatorToValuesTest : public BaseTest {
  public:
@@ -861,4 +861,4 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastNullableStrings) {
                                        {12, std::nullopt, 1234, std::nullopt}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

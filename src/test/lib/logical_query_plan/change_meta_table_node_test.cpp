@@ -6,7 +6,7 @@
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ChangeMetaTableNodeTest : public BaseTest {
  protected:
@@ -44,4 +44,4 @@ TEST_F(ChangeMetaTableNodeTest, Copy) {
   EXPECT_EQ(*_change_meta_table_node, *_change_meta_table_node->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/procedures/tpcc_stock_level.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCBenchmarkItemRunner::TPCCBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config, int num_warehouses)
     : AbstractBenchmarkItemRunner(config), _num_warehouses(num_warehouses) {}
@@ -70,4 +70,4 @@ const std::vector<int>& TPCCBenchmarkItemRunner::weights() const {
   return weights;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

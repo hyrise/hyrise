@@ -1,6 +1,6 @@
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Hyrise::Hyrise() {
   // The default_memory_resource must be initialized before Hyrise's members so that
@@ -42,4 +42,4 @@ void Hyrise::set_scheduler(const std::shared_ptr<AbstractScheduler>& new_schedul
   _scheduler->begin();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

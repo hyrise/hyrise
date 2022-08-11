@@ -4,7 +4,7 @@
 #include "compact_vector.hpp"
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BitPackingVector;
 
@@ -37,4 +37,4 @@ class BitPackingDecompressor : public BaseVectorDecompressor {
   const pmr_compact_vector& _data;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

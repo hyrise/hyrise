@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 int main() {
   std::cout << "Hello world!!" << std::endl;

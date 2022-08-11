@@ -2,7 +2,7 @@
 
 #include "utils/lossless_predicate_cast.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LosslessPredicateCastTest : public BaseTest {};
 
@@ -86,4 +86,4 @@ TEST_F(LosslessPredicateCastTest, FloatTypeWithAdjustedValues) {
             FloatResult(PredicateCondition::GreaterThanEquals, 3.1000001430511474609375f));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

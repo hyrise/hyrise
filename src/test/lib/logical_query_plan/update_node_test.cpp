@@ -8,9 +8,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class UpdateNodeTest : public BaseTest {
  protected:
@@ -67,4 +67,4 @@ TEST_F(UpdateNodeTest, ColumnExpressions) {
   EXPECT_TRUE(_update_node->output_expressions().empty());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

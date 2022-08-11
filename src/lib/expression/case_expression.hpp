@@ -8,7 +8,7 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Named after SQL's CASE.
@@ -33,4 +33,4 @@ class CaseExpression : public AbstractExpression {
   bool _shallow_equals(const AbstractExpression& expression) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

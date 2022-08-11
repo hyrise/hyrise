@@ -9,7 +9,7 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "storage/prepared_plan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CreatePreparedPlanTest : public BaseTest {
  protected:
@@ -50,4 +50,4 @@ TEST_F(CreatePreparedPlanTest, Execute) {
   EXPECT_ANY_THROW(copy->execute());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

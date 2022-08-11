@@ -5,7 +5,7 @@
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SQLiteWrapperTest : public BaseTest {
  public:
@@ -79,4 +79,4 @@ TEST_F(SQLiteWrapperTest, Update) {
                   FloatComparisonMode::AbsoluteDifference);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

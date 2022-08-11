@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // We need a custom iterator for this vector, since we have to perform jumps when iterating over the vector.
 // Depending on OnConstStorage, it either returns a (mutable) FixedString or an (immutable) std::string_view
@@ -77,4 +77,4 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   size_t _pos;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

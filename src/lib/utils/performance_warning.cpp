@@ -1,6 +1,6 @@
 #include "performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool PerformanceWarningClass::_disabled = []() {  // NOLINT
   // static initializer hack to print some warnings in various binaries
@@ -12,4 +12,4 @@ bool PerformanceWarningClass::_disabled = []() {  // NOLINT
   return false;
 }();
 
-}  // namespace opossum
+}  // namespace hyrise

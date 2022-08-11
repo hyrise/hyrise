@@ -6,7 +6,7 @@
 
 constexpr auto CURSES_CTRL_C = (uint('c') & 31u);
 
-namespace opossum {
+namespace hyrise {
 
 Pagination::Pagination(std::stringstream& input) {
   std::string line;
@@ -209,4 +209,4 @@ void Pagination::push_ctrl_c() {
   ungetch(CURSES_CTRL_C);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

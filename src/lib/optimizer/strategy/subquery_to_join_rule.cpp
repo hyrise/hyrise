@@ -25,11 +25,11 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /**
  * Calculates which input LQPs of a node are safe to pull predicates from.
@@ -227,7 +227,7 @@ void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredic
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string SubqueryToJoinRule::name() const {
   static const auto name = std::string{"SubqueryToJoinRule"};
@@ -658,4 +658,4 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

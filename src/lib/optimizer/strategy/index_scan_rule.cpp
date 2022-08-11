@@ -28,7 +28,7 @@ constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string IndexScanRule::name() const {
   static const auto name = std::string{"IndexScanRule"};
@@ -103,4 +103,4 @@ bool IndexScanRule::_is_single_segment_index(const IndexStatistics& index_statis
   return index_statistics.column_ids.size() == 1;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

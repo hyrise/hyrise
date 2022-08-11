@@ -6,7 +6,7 @@
 #include "abstract_rule.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PredicateNode;
 
@@ -57,4 +57,4 @@ class PredicatePlacementRule : public AbstractRule {
   // sufficiently. Look for "pre-join predicates" in the cpp for a detailed description.
   static constexpr auto MAX_SELECTIVITY_FOR_PRE_JOIN_PREDICATE = .25;
 };
-}  // namespace opossum
+}  // namespace hyrise

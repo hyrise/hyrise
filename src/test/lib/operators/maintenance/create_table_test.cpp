@@ -14,9 +14,9 @@
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 class CreateTableTest : public BaseTest {
  public:
@@ -220,4 +220,4 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   EXPECT_EQ(validate_3->get_output()->row_count(), 0);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

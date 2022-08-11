@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class BaseValueSegment;
@@ -52,4 +52,4 @@ class ColumnIsNullTableScanImpl : public AbstractTableScanImpl {
   const PredicateCondition _predicate_condition;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -18,7 +18,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCTableGenerator::TPCCTableGenerator(size_t num_warehouses, const std::shared_ptr<BenchmarkConfig>& benchmark_config)
     : AbstractTableGenerator(benchmark_config), _num_warehouses(num_warehouses) {}
@@ -591,4 +591,4 @@ void TPCCTableGenerator::_add_constraints(
 
 thread_local TPCCRandomGenerator TPCCTableGenerator::_random_gen;  // NOLINT
 
-}  // namespace opossum
+}  // namespace hyrise

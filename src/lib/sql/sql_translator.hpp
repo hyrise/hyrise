@@ -15,7 +15,7 @@
 #include "sql_identifier_resolver_proxy.hpp"
 #include "storage/lqp_view.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AggregateNode;
 class LQPSubqueryExpression;
@@ -220,4 +220,4 @@ class SQLTranslator final {
   std::vector<SelectListElement> _inflated_select_list_elements;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

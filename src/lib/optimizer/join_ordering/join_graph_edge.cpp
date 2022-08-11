@@ -2,7 +2,7 @@
 
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JoinGraphEdge::JoinGraphEdge(const JoinGraphVertexSet& init_vertex_set,
                              const std::vector<std::shared_ptr<AbstractExpression>>& init_predicates)
@@ -17,4 +17,4 @@ std::ostream& operator<<(std::ostream& stream, const JoinGraphEdge& join_graph_e
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

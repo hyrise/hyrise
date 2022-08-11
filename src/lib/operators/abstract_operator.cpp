@@ -18,7 +18,7 @@
 #include "utils/print_directed_acyclic_graph.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
@@ -412,4 +412,4 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -24,7 +24,7 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
@@ -598,4 +598,4 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

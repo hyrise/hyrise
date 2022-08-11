@@ -15,7 +15,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 template <typename T>
 void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,
@@ -72,7 +72,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
@@ -287,4 +287,4 @@ std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
 
 void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

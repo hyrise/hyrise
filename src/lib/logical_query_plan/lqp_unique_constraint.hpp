@@ -3,7 +3,7 @@
 #include "expression/abstract_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Container structure to define uniqueness for subsets of LQP output expressions. Analogous to SQL's UNIQUE
@@ -27,13 +27,13 @@ std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique
 
 using LQPUniqueConstraints = std::vector<LQPUniqueConstraint>;
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 
 template <>
-struct hash<opossum::LQPUniqueConstraint> {
-  size_t operator()(const opossum::LQPUniqueConstraint& lqp_unique_constraint) const;
+struct hash<hyrise::LQPUniqueConstraint> {
+  size_t operator()(const hyrise::LQPUniqueConstraint& lqp_unique_constraint) const;
 };
 
 }  // namespace std

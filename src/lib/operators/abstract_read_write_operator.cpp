@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
                                                      const std::shared_ptr<const AbstractOperator>& left,
@@ -88,4 +88,4 @@ std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& pha
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

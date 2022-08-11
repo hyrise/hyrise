@@ -2,7 +2,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 NullValueRatioStatistics::NullValueRatioStatistics(const float init_ratio)
     : AbstractStatisticsObject(DataType::Null), ratio(init_ratio) {}
@@ -17,4 +17,4 @@ std::shared_ptr<AbstractStatisticsObject> NullValueRatioStatistics::scaled(const
   return std::make_shared<NullValueRatioStatistics>(ratio);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

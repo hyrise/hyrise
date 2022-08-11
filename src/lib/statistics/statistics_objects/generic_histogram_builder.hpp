@@ -5,7 +5,7 @@
 
 #include "generic_histogram.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Utility to build GenericHistograms.
@@ -41,4 +41,4 @@ class GenericHistogramBuilder {
 
 EXPLICITLY_DECLARE_DATA_TYPES(GenericHistogramBuilder);
 
-}  // namespace opossum
+}  // namespace hyrise

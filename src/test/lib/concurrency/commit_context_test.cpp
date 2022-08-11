@@ -9,7 +9,7 @@
 #include "concurrency/commit_context.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CommitContextTest : public BaseTest {
  protected:
@@ -44,4 +44,4 @@ TEST_F(CommitContextTest, TrySetNextFailsIfNotNullptr) {
   EXPECT_FALSE(context->try_set_next(next_context));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

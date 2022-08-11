@@ -17,7 +17,7 @@
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                                  const PredicateCondition init_predicate_condition,
@@ -145,4 +145,4 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   return result;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

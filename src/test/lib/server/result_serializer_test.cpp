@@ -4,7 +4,7 @@
 #include "server/postgres_protocol_handler.hpp"
 #include "server/result_serializer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ResultSerializerTest : public BaseTest {
  protected:
@@ -50,4 +50,4 @@ TEST_F(ResultSerializerTest, CommandCompleteMessage) {
   EXPECT_EQ(ResultSerializer::build_command_complete_message(OperatorType::Projection, 1), "SELECT 1");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

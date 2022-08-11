@@ -6,7 +6,7 @@
 #include "storage/table.hpp"
 #include "synthetic_table_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SyntheticTableGeneratorTest : public BaseTest {};
 
@@ -116,4 +116,4 @@ INSTANTIATE_TEST_SUITE_P(SyntheticTableGeneratorDataType, SyntheticTableGenerato
                                                           ColumnDataDistribution::make_pareto_config(),
                                                           ColumnDataDistribution::make_skewed_normal_config(1'000.0))),
                          formatter);
-}  // namespace opossum
+}  // namespace hyrise

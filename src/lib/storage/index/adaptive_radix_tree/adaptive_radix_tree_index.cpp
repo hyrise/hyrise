@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
@@ -197,4 +197,4 @@ bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

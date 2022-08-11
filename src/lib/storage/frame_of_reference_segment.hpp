@@ -12,7 +12,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -105,4 +105,4 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
 
 extern template class FrameOfReferenceSegment<int32_t>;
 
-}  // namespace opossum
+}  // namespace hyrise

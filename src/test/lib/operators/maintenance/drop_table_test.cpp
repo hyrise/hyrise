@@ -8,7 +8,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DropTableTest : public BaseTest {
  public:
@@ -52,4 +52,4 @@ TEST_F(DropTableTest, ExecuteWithIfExists) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

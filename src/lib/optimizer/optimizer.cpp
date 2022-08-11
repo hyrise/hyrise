@@ -27,7 +27,7 @@
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
@@ -257,4 +257,4 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

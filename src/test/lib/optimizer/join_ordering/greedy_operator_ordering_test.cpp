@@ -9,9 +9,9 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class GreedyOperatorOrderingTest : public BaseTest {
  public:
@@ -168,4 +168,4 @@ TEST_F(GreedyOperatorOrderingTest, UncorrelatedPredicate) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

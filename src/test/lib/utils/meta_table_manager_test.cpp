@@ -18,7 +18,7 @@
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using MetaTable = std::shared_ptr<AbstractMetaTable>;
 using MetaTables = std::vector<MetaTable>;
@@ -125,4 +125,4 @@ TEST_P(MetaTableManagerMultiTablesTest, ForwardsMutationInfo) {
   EXPECT_EQ(mtm.can_delete_from(table->name()), table->can_delete());
   EXPECT_EQ(mtm.can_update(table->name()), table->can_update());
 }
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,9 +10,9 @@
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class ExpressionUtilsTest : public BaseTest {
  public:
@@ -250,4 +250,4 @@ TEST_F(ExpressionUtilsTest, FindExpressionIDx) {
   EXPECT_EQ(*find_expression_idx(*a_a_copy, expression_vector), ColumnID{0});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

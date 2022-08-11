@@ -17,7 +17,7 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 struct MaterializedValue {
@@ -162,4 +162,4 @@ class ColumnMaterializer {
   bool _materialize_null;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

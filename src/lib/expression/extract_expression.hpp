@@ -4,7 +4,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_component);
 
@@ -31,4 +31,4 @@ class ExtractExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

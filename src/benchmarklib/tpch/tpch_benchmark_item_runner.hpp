@@ -5,7 +5,7 @@
 #include "abstract_benchmark_item_runner.hpp"
 #include "tpch_constants.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // We want to provide both "classical" TPC-H queries (i.e., regular SQL queries), and prepared statements. To do so,
 // we use tpch_queries.cpp as a basis and either build PREPARE and EXECUTE statements or replace the question marks
@@ -62,4 +62,4 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   friend class TPCHTest;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

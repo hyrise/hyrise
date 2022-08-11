@@ -3,7 +3,7 @@
 #include <iomanip>
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 std::string format_bytes(size_t bytes) {
   std::stringstream stream;
@@ -32,4 +32,4 @@ std::string format_bytes(size_t bytes) {
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 #include "import_export/file_type.hpp"
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents the COPY TO management command.
@@ -28,4 +28,4 @@ class ExportNode : public EnableMakeForLQPNode<ExportNode>, public AbstractNonQu
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -27,4 +27,4 @@ class BaseVectorCompressor {
   virtual std::unique_ptr<BaseVectorCompressor> create_new() const = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

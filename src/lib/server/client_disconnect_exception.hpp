@@ -5,7 +5,7 @@
 #include <sstream>
 #include <stdexcept>
 
-namespace opossum {
+namespace hyrise {
 
 // Server-specific exception used to handle errors when reading data from or writing data to the network socket.
 class ClientDisconnectException : public std::runtime_error {
@@ -13,4 +13,4 @@ class ClientDisconnectException : public std::runtime_error {
   explicit ClientDisconnectException(const std::string& what_arg) : std::runtime_error(what_arg) {}
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -92,4 +92,4 @@ class DictionarySegment : public BaseDictionarySegment {
 
 EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);
 
-}  // namespace opossum
+}  // namespace hyrise

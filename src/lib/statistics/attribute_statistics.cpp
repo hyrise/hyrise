@@ -8,7 +8,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 AttributeStatistics<T>::AttributeStatistics() : BaseAttributeStatistics(data_type_from_type<T>()) {}
@@ -130,4 +130,4 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AttributeStatistics);
 
-}  // namespace opossum
+}  // namespace hyrise

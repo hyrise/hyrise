@@ -8,7 +8,7 @@
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractEncodedSegment;
 class BaseSegmentEncoder;
@@ -31,4 +31,4 @@ SegmentEncodingSpec get_segment_encoding_spec(const std::shared_ptr<const Abstra
  */
 VectorCompressionType parent_vector_compression_type(const CompressedVectorType compressed_vector_type);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 
 #include "tpcc_delivery.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor) {
@@ -89,4 +89,4 @@ bool TPCCDelivery::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

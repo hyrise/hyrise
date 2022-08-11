@@ -10,7 +10,7 @@
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CreateViewTest : public BaseTest {
  protected:
@@ -80,4 +80,4 @@ TEST_F(CreateViewTest, ExecuteWithIfNotExists) {
   EXPECT_NO_THROW(cv_2->execute());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

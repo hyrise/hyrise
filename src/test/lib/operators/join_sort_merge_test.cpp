@@ -4,7 +4,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsJoinSortMergeTest : public BaseTest {
  public:
@@ -117,4 +117,4 @@ TEST_F(OperatorsJoinSortMergeTest, SetSortedFlagOnJoinColumns) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

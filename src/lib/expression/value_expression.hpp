@@ -3,7 +3,7 @@
 #include "abstract_expression.hpp"
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Wraps an AllTypeVariant
@@ -26,4 +26,4 @@ class ValueExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

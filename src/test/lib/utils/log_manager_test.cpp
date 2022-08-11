@@ -2,7 +2,7 @@
 
 #include "utils/log_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LogManagerTest : public BaseTest {
  protected:
@@ -18,4 +18,4 @@ TEST_F(LogManagerTest, InsertMessage) {
   EXPECT_EQ(entry.log_level, LogLevel::Info);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

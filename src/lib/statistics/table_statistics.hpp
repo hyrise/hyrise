@@ -9,7 +9,7 @@
 
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseAttributeStatistics;
 class Table;
@@ -40,4 +40,4 @@ class TableStatistics {
 
 std::ostream& operator<<(std::ostream& stream, const TableStatistics& table_statistics);
 
-}  // namespace opossum
+}  // namespace hyrise

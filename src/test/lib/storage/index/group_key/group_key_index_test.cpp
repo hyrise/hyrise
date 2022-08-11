@@ -16,7 +16,7 @@
 // In this domain input modeling is explicitly used.
 // https://github.com/hyrise/hyrise/wiki/Input-Domain-Modeling
 
-namespace opossum {
+namespace hyrise {
 
 class GroupKeyIndexTest : public BaseTest {
  protected:
@@ -194,4 +194,4 @@ TEST_F(GroupKeyIndexTest, IteratorBeginEnd) {
   EXPECT_THROW(index->upper_bound({NULL_VALUE}), std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

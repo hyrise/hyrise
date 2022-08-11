@@ -18,10 +18,10 @@
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
- * This parser reads an Opossum binary file and creates a table from that input.
+ * This parser reads an Hyrise binary file and creates a table from that input.
  * Documentation of the file formats can be found in BinaryWriter header file.
  */
 class BinaryParser {
@@ -113,4 +113,4 @@ class BinaryParser {
   static T _read_value(std::ifstream& file);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

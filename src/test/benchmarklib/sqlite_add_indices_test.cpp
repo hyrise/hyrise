@@ -8,7 +8,7 @@
 #include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SQLiteAddIndicesTest : public BaseTest {
  protected:
@@ -44,4 +44,4 @@ TEST_F(SQLiteAddIndicesTest, AddIndexTest) {
   sqlite_wrapper->main_connection.raw_execute_query("DROP INDEX index_1;");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

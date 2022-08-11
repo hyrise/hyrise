@@ -13,7 +13,7 @@
 #include "visualization/abstract_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PQPVisualizer::PQPVisualizer() = default;
 
@@ -191,4 +191,4 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   _add_vertex(op, info);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class CompressedVectorType : uint8_t;
 
@@ -26,4 +26,4 @@ class AbstractEncodedSegment : public AbstractSegment {
   virtual std::optional<CompressedVectorType> compressed_vector_type() const = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

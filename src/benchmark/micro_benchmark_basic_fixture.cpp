@@ -8,7 +8,7 @@
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
   const auto chunk_size = ChunkOffset{2'000};
@@ -31,11 +31,11 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 }
 
 void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
-  opossum::Hyrise::reset();
+  Hyrise::reset();
 }
 
 void MicroBenchmarkBasicFixture::_clear_cache() {
   micro_benchmark_clear_cache();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

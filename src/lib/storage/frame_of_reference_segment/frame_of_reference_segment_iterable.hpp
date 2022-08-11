@@ -7,7 +7,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<FrameOfReferenceSegmentIterable<T>> {
@@ -157,4 +157,4 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

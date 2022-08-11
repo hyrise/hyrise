@@ -6,7 +6,7 @@
 
 #include "abstract_read_write_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionContext;
 
@@ -48,4 +48,4 @@ class ChangeMetaTable : public AbstractReadWriteOperator {
   const MetaTableChangeType _change_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

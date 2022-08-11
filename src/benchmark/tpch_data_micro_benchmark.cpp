@@ -21,9 +21,9 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class TableWrapper;
 
@@ -313,4 +313,4 @@ BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(bench
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

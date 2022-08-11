@@ -4,7 +4,7 @@
 
 #include "constant_mappings.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CastExpression::CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type)
     : AbstractExpression(ExpressionType::Cast, {argument}), _data_type(data_type) {}
@@ -41,4 +41,4 @@ size_t CastExpression::_shallow_hash() const {
   return std::hash<DataTypeUnderlyingType>{}(static_cast<DataTypeUnderlyingType>(_data_type));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

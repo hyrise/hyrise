@@ -11,7 +11,7 @@
 #include "constant_mappings.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
@@ -130,4 +130,4 @@ TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecompressor) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

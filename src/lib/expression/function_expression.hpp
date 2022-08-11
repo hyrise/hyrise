@@ -2,7 +2,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // For a possible list of functions, see https://www.w3schools.com/sql/sql_ref_sqlserver.asp
 enum class FunctionType {
@@ -27,4 +27,4 @@ class FunctionExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

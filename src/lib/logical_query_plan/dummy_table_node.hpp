@@ -6,7 +6,7 @@
 
 #include "abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents a dummy table that is used to project literals.
@@ -27,4 +27,4 @@ class DummyTableNode : public EnableMakeForLQPNode<DummyTableNode>, public Abstr
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

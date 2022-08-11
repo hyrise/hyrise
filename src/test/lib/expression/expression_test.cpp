@@ -17,9 +17,9 @@
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Tests for most expression types, excluding Subqueries, since they have no complex behaviour that would warrant their
@@ -565,4 +565,4 @@ TEST_F(ExpressionTest, IsCountStar) {
   EXPECT_FALSE(AggregateExpression::is_count_star(*a));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

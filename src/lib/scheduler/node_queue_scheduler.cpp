@@ -13,7 +13,7 @@
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
@@ -167,4 +167,4 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

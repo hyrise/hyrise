@@ -8,7 +8,7 @@
 #include "utils/string_utils.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
                                                  const std::string& data_path,
@@ -347,4 +347,4 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include <boost/hana/hash.hpp>
 #include <boost/hana/value.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @defgroup Definition of Enum Constants
@@ -59,7 +59,7 @@ inline constexpr bool is_enum_constant_v = is_enum_constant<T>::value;
 
 /**@}*/
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace boost::hana {
 
@@ -67,7 +67,7 @@ namespace boost::hana {
  * Implementation of hana::value in order to meet requirements for concept “Constant”
  */
 template <typename E>
-struct value_impl<E, when<opossum::is_enum_constant_v<E>>> {
+struct value_impl<E, when<hyrise::is_enum_constant_v<E>>> {
   template <typename C>
   static constexpr auto apply() {
     return C::value;
@@ -78,10 +78,10 @@ struct value_impl<E, when<opossum::is_enum_constant_v<E>>> {
  * Implementation of hana::hash in order to meet requirements for concept “Hashable”
  */
 template <typename E>
-struct hash_impl<E, when<opossum::is_enum_constant_v<E>>> {
+struct hash_impl<E, when<hyrise::is_enum_constant_v<E>>> {
   template <typename X>
   static constexpr auto apply(const X& /*x*/) {
-    return type_c<opossum::enum_constant<decltype(X::value), X::value>>;
+    return type_c<hyrise::enum_constant<decltype(X::value), X::value>>;
   }
 };
 

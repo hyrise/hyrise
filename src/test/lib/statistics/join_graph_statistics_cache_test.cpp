@@ -11,9 +11,9 @@
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/table_statistics.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class JoinGraphStatisticsCacheTest : public BaseTest {
  public:
@@ -184,4 +184,4 @@ TEST_F(JoinGraphStatisticsCacheTest, Caching) {
   EXPECT_EQ(cached_b_a->column_statistics[4], statistics_a_a);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

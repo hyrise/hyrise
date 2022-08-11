@@ -15,7 +15,7 @@
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsExportTest : public BaseTest {
  protected:
@@ -133,4 +133,4 @@ TEST_F(OperatorsExportTest, UnknownFileExtension) {
   EXPECT_THROW(std::make_shared<Export>(table_wrapper, "not_existing_file.mp3"), std::exception);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

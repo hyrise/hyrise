@@ -18,7 +18,7 @@
 
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -203,4 +203,4 @@ constexpr DataType data_type_from_type() {
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

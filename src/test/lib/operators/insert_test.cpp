@@ -15,9 +15,9 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsInsertTest : public BaseTest {
  protected:
@@ -117,7 +117,7 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   // 3 Rows
   auto table = load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table(table_name, table);
-  opossum::ChunkEncoder::encode_all_chunks(table);
+  ChunkEncoder::encode_all_chunks(table);
 
   // 10 Rows
   auto table2 = load_table("resources/test_data/tbl/10_ints.tbl");
@@ -320,4 +320,4 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

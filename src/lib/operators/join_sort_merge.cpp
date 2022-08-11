@@ -21,7 +21,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // TODO(anyone) >> todos and nice-to-haves for the sort-merge join:
 //    - outer not-equal join (outer !=)
@@ -939,4 +939,4 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise
