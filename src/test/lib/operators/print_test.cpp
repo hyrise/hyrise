@@ -92,11 +92,11 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   gt->never_clear_output();
   gt->execute();
 
-  auto pr = std::make_shared<Print>(gt, PrintFlags::None, output);
-  pr->execute();
+  const auto print = std::make_shared<Print>(gt, PrintFlags::None, output);
+  print->execute();
 
   // check if table is correctly passed
-  EXPECT_EQ(pr->get_output(), gt->get_output());
+  EXPECT_EQ(print->get_output(), gt->get_output());
 
   auto output_string = output.str();
 
