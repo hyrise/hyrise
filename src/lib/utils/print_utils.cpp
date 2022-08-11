@@ -119,4 +119,4 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
     const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
     const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
 
-}  //  namespace opossum
+}  // namespace opossum
