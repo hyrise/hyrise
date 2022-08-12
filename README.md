@@ -145,10 +145,11 @@ When trying to optimize the time spent building the project, it is often helpful
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
 
 ## Maintainers
-- Jan Kossmann
-- Marcel Weisgut
 - Martin Boissier
 - Stefan Halfpap
+- Jan    Kossmann
+- Daniel Lindner
+- Marcel Weisgut
 
 Contact: firstname.lastname@hpi.de
 
@@ -190,7 +191,6 @@ Contact: firstname.lastname@hpi.de
 -   Sven      Lehmann
 -   Till      Lehmann
 -   Tom       Lichtenstein
--   Daniel    Lindner
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer
