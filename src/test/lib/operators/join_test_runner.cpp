@@ -816,9 +816,13 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Index scope: " << magic_enum::enum_name(*configuration.right_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range->first << ", "
               << configuration.right_input.indexed_chunk_range->second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
-              << configuration.right_input.single_chunk_reference_range->first << ", "
-              << configuration.right_input.single_chunk_reference_range->second << ")" << std::endl;
+    std::cout << "Chunk range with single chunk ref. guarantee: ";
+    if (configuration.right_input.single_chunk_reference_range) {
+      std::cout << "[" << configuration.right_input.single_chunk_reference_range->first << ", "
+                << configuration.right_input.single_chunk_reference_range->second << ")" << std::endl;
+    } else {
+      std::cout << "none" << std::endl;
+    }
     std::cout << get_table_path(configuration.right_input) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
