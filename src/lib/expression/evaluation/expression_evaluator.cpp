@@ -729,7 +729,7 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
 
   const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
-  const auto subquery_result_table_count = ChunkOffset{subquery_result_tables.size()};
+  const auto subquery_result_table_count = static_cast<ChunkOffset>(subquery_result_tables.size());
   pmr_vector<ExpressionEvaluator::Bool> result_values(subquery_result_table_count);
 
   switch (exists_expression.exists_expression_type) {
