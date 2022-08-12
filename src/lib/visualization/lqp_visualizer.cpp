@@ -89,29 +89,29 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 }
 
-void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from_node,
-                                    const std::shared_ptr<AbstractLQPNode>& to_node, const InputSide side) {
+void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
+                                    const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side) {
   float row_count = NAN;
   double pen_width = 1.0;
   auto row_percentage = 100.0f;
 
   try {
-    row_count = _cardinality_estimator.estimate_cardinality(from_node);
+    row_count = _cardinality_estimator.estimate_cardinality(source_node);
     pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
   }
 
-  if (from_node->left_input()) {
+  if (source_node->left_input()) {
     try {
-      float input_count = _cardinality_estimator.estimate_cardinality(from_node->left_input());
+      float input_count = _cardinality_estimator.estimate_cardinality(source_node->left_input());
 
       // Include right side in cardinality estimation unless it is a semi/anti join
-      const auto join_node = std::dynamic_pointer_cast<JoinNode>(from_node);
-      if (from_node->right_input() &&
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
+      if (source_node->right_input() &&
           (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
                           join_node->join_mode != JoinMode::AntiNullAsFalse))) {
-        input_count *= _cardinality_estimator.estimate_cardinality(from_node->right_input());
+        input_count *= _cardinality_estimator.estimate_cardinality(source_node->right_input());
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {
@@ -139,20 +139,20 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
 
   // Edge Tooltip: Node Output Expressions
   tooltip_stream << "Output Expressions: \n";
-  const auto& output_expressions = from_node->output_expressions();
+  const auto& output_expressions = source_node->output_expressions();
   const auto output_expression_count = output_expressions.size();
   for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
     tooltip_stream << " (" << column_id + 1 << ") ";
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
-    if (from_node->is_column_nullable(column_id)) {
+    if (source_node->is_column_nullable(column_id)) {
       tooltip_stream << " NULL";
     }
     tooltip_stream << "\n";
   }
 
-  if (!dynamic_pointer_cast<AbstractNonQueryNode>(from_node)) {
+  if (!dynamic_pointer_cast<AbstractNonQueryNode>(source_node)) {
     // Edge Tooltip: Unique Constraints
-    const auto& unique_constraints = from_node->unique_constraints();
+    const auto& unique_constraints = source_node->unique_constraints();
     tooltip_stream << "\n"
                    << "Unique Constraints: \n";
     if (unique_constraints->empty()) {
@@ -160,15 +160,15 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     }
 
     const auto unique_constraint_count = unique_constraints->size();
-    for (auto uc_idx = size_t{0}; uc_idx < unique_constraint_count; ++uc_idx) {
-      tooltip_stream << " (" << uc_idx + 1 << ") ";
-      tooltip_stream << unique_constraints->at(uc_idx) << "\n";
+    for (auto constraint_index = size_t{0}; constraint_index < unique_constraint_count; ++constraint_index) {
+      tooltip_stream << " (" << constraint_index + 1 << ") ";
+      tooltip_stream << unique_constraints->at(constraint_index) << "\n";
     }
 
     // Edge Tooltip: Trivial FDs
     auto trivial_fds = std::vector<FunctionalDependency>();
     if (!unique_constraints->empty()) {
-      trivial_fds = fds_from_unique_constraints(from_node, unique_constraints);
+      trivial_fds = fds_from_unique_constraints(source_node, unique_constraints);
     }
     tooltip_stream << "\n"
                    << "Functional Dependencies (trivial): \n";
@@ -183,7 +183,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     }
 
     // Edge Tooltip: Non-trivial FDs
-    const auto& fds = from_node->non_trivial_functional_dependencies();
+    const auto& fds = source_node->non_trivial_functional_dependencies();
     tooltip_stream << "\n"
                    << "Functional Dependencies (non-trivial): \n";
     if (fds.empty()) {
@@ -201,11 +201,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   info.label = label_stream.str();
   info.label_tooltip = tooltip_stream.str();
   info.pen_width = pen_width;
-  if (to_node->input_count() == 2) {
+  if (target_node->input_count() == 2) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
-  _add_edge(from_node, to_node, info);
+  _add_edge(source_node, target_node, info);
 }
 
 }  // namespace opossum
