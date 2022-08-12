@@ -645,7 +645,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
-            if (chunk_id >= single_chunk_reference_range->first && chunk_id < single_chunk_reference_range->second) {
+            if (single_chunk_reference_range && chunk_id >= single_chunk_reference_range->first &&
+                chunk_id < single_chunk_reference_range->second) {
               pos_list->guarantee_single_chunk();
             }
 
@@ -659,7 +660,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
-              if (chunk_id >= single_chunk_reference_range->first && chunk_id < single_chunk_reference_range->second) {
+              if (single_chunk_reference_range && chunk_id >= single_chunk_reference_range->first &&
+                  chunk_id < single_chunk_reference_range->second) {
                 pos_list->guarantee_single_chunk();
               }
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
@@ -701,8 +703,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         auto& storage_manager = Hyrise::get().storage_manager;
         const auto stored_table_name = "JoinTestTable"s;
         storage_manager.add_table(stored_table_name, data_table);
-        auto get_table =
-            std::make_shared<GetTable>(stored_table_name, std::vector<ChunkID>{}, *pruned_column_ids);
+        auto get_table = std::make_shared<GetTable>(stored_table_name, std::vector<ChunkID>{}, *pruned_column_ids);
         get_table->execute();
         auto pruned_table = get_table->get_output();
         data_table = std::const_pointer_cast<Table>(pruned_table);
@@ -799,9 +800,13 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Index scope: " << magic_enum::enum_name(*configuration.left_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range->first << ", "
               << configuration.left_input.indexed_chunk_range->second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ["
-              << configuration.left_input.single_chunk_reference_range->first << ", "
-              << configuration.left_input.single_chunk_reference_range->second << ")" << std::endl;
+    std::cout << "Chunk range with single chunk ref. guarantee: ";
+    if (configuration.left_input.single_chunk_reference_range) {
+      std::cout << "[" << configuration.left_input.single_chunk_reference_range->first << ", "
+                << configuration.left_input.single_chunk_reference_range->second << ")" << std::endl;
+    } else {
+      std::cout << "none" << std::endl;
+    }
     std::cout << get_table_path(configuration.left_input) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
