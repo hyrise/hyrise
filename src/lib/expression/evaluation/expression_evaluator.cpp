@@ -518,7 +518,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           const auto result_size = _result_size(left_view.size(), subquery_results.size());
 
           result_values.resize(result_size);
-          // TODO(anybody): The InExpression doesn't in all cases need to return a nullable
+          // TODO(anybody): The InExpression does not, in all cases, need to return a nullable.
           result_nulls.resize(result_size);
 
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size);
