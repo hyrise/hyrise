@@ -645,7 +645,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
-            if (chunk_id >= single_chunk_reference_range->first && chunk_id < single_chunk_reference_range->second) {
+            if (chunk_id >= single_chunk_reference_range.first && chunk_id < single_chunk_reference_range.second) {
               pos_list->guarantee_single_chunk();
             }
 
@@ -659,7 +659,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
-              if (chunk_id >= single_chunk_reference_range->first && chunk_id < single_chunk_reference_range->second) {
+              if (chunk_id >= single_chunk_reference_range.first && chunk_id < single_chunk_reference_range.second) {
                 pos_list->guarantee_single_chunk();
               }
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
@@ -796,15 +796,11 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Chunk size: " << configuration.left_input.chunk_size << std::endl;
     std::cout << "Table type: " << magic_enum::enum_name(configuration.left_input.table_type) << std::endl;
     std::cout << "Index scope: " << magic_enum::enum_name(*configuration.left_input.index_scope) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range->first << ", "
-              << configuration.left_input.indexed_chunk_range->second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: ";
-    if (configuration.left_input.single_chunk_reference_range) {
-      std::cout << "[" << configuration.left_input.single_chunk_reference_range->first << ", "
-                << configuration.left_input.single_chunk_reference_range->second << ")" << std::endl;
-    } else {
-      std::cout << "none" << std::endl;
-    }
+    std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
+              << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
+    std::cout << "Chunk range with single chunk ref. guarantee: "
+              << "[" << configuration.left_input.single_chunk_reference_range.first << ", "
+              << configuration.left_input.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.left_input) << std::endl;
     std::cout << std::endl;
     std::cout << "===================== Right Input Table ====================" << std::endl;
@@ -812,15 +808,11 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Chunk size: " << configuration.right_input.chunk_size << std::endl;
     std::cout << "Table size: " << magic_enum::enum_name(configuration.right_input.table_type) << std::endl;
     std::cout << "Index scope: " << magic_enum::enum_name(*configuration.right_input.index_scope) << std::endl;
-    std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range->first << ", "
-              << configuration.right_input.indexed_chunk_range->second << ")" << std::endl;
+    std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
+              << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: ";
-    if (configuration.right_input.single_chunk_reference_range) {
-      std::cout << "[" << configuration.right_input.single_chunk_reference_range->first << ", "
-                << configuration.right_input.single_chunk_reference_range->second << ")" << std::endl;
-    } else {
-      std::cout << "none" << std::endl;
-    }
+              << "[" << configuration.right_input.single_chunk_reference_range.first << ", "
+                << configuration.right_input.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.right_input) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
