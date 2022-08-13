@@ -38,7 +38,7 @@ using ColumnIDs = std::vector<ColumnID>;
 
 enum class InputSide { Left, Right };
 
-enum class IndexScope { Table, Chunk };
+enum class IndexScope { Table, Chunk, None };
 
 // Join operators might build internal PosLists that they have to de-reference when assembling the output Table if the
 // input itself is already a reference Table.
@@ -63,7 +63,7 @@ struct InputTableConfiguration {
   // Only for JoinIndex. Chunk range of join column segments that reference only one chunk.
   ChunkRange single_chunk_reference_range{};
   // Only for JoinIndex.
-  std::optional<IndexScope> index_scope{};
+  IndexScope index_scope{};
   // Only for JoinIndex.
   std::optional<ColumnIDs> pruned_column_ids{};
 
@@ -114,7 +114,7 @@ struct JoinTestConfiguration {
 
   auto to_tuple() const {
     return std::tie(left_input, right_input, join_mode, data_type_left, data_type_right, nullable_left, nullable_right,
-                    predicate_condition, secondary_predicates);
+                    predicate_condition, secondary_predicates, radix_bits, index_side);
   }
 };
 
@@ -223,10 +223,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
         InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), ChunkRange{}, ChunkRange{}, std::nullopt, std::nullopt},
+        all_encoding_types.front(), ChunkRange{0,0}, ChunkRange{0,0}, IndexScope::None, std::nullopt},
       InputTableConfiguration{
         InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), ChunkRange{}, ChunkRange{}, std::nullopt, std::nullopt},
+        all_encoding_types.front(), ChunkRange{0,0}, ChunkRange{0,0}, IndexScope::None, std::nullopt},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -765,9 +765,10 @@ TEST_P(JoinTestRunner, TestJoin) {
     config.chunk_size = {};
     config.table_type = {};
     config.encoding_type = {};
-    config.index_scope = {};
     config.indexed_chunk_range = {};
     config.single_chunk_reference_range = {};
+    config.index_scope = {};
+    config.pruned_column_ids = {};
     return config;
   };
 
@@ -795,7 +796,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     Print::print(left_input_table, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.left_input.chunk_size << std::endl;
     std::cout << "Table type: " << magic_enum::enum_name(configuration.left_input.table_type) << std::endl;
-    std::cout << "Index scope: " << magic_enum::enum_name(*configuration.left_input.index_scope) << std::endl;
+    std::cout << "Index scope: " << magic_enum::enum_name(configuration.left_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
               << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: "
@@ -807,7 +808,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     Print::print(right_input_table, PrintFlags::IgnoreChunkBoundaries);
     std::cout << "Chunk size: " << configuration.right_input.chunk_size << std::endl;
     std::cout << "Table size: " << magic_enum::enum_name(configuration.right_input.table_type) << std::endl;
-    std::cout << "Index scope: " << magic_enum::enum_name(*configuration.right_input.index_scope) << std::endl;
+    std::cout << "Index scope: " << magic_enum::enum_name(configuration.right_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.right_input.indexed_chunk_range.first << ", "
               << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: "
