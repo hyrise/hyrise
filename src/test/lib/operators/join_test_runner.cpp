@@ -58,12 +58,12 @@ struct InputTableConfiguration {
   InputTableType table_type{};
   EncodingType encoding_type{EncodingType::Unencoded};
 
+  // Only for JoinIndex. Chunk range of indexed join column segments.
+  ChunkRange indexed_chunk_range{};
+  // Only for JoinIndex. Chunk range of join column segments that reference only one chunk.
+  ChunkRange single_chunk_reference_range{};
   // Only for JoinIndex.
   std::optional<IndexScope> index_scope{};
-  // Only for JoinIndex. Chunk range of indexed join column segments.
-  std::optional<ChunkRange> indexed_chunk_range{};
-  // Only for JoinIndex. Chunk range of join column segments that reference only one chunk.
-  std::optional<ChunkRange> single_chunk_reference_range{};
   // Only for JoinIndex.
   std::optional<ColumnIDs> pruned_column_ids{};
 
@@ -95,10 +95,10 @@ struct JoinTestConfiguration {
   std::vector<OperatorJoinPredicate> secondary_predicates;
   std::shared_ptr<BaseJoinOperatorFactory> join_operator_factory;
 
-  // Only for JoinHash.
+  // Only for JoinHash
   std::optional<size_t> radix_bits;
 
-  // Only for JoinIndex.
+  // Only for JoinIndex
   std::optional<IndexSide> index_side;
 
   void swap_input_sides() {
@@ -214,7 +214,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
+    constexpr auto all_index_scopes = magic_enum::enum_values<IndexScope>();
 
     // Vectors of pruned ColumnIDs with which the tests should be performed
     const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
@@ -223,10 +223,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
         InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), std::nullopt, std::nullopt, std::nullopt, std::nullopt},
+        all_encoding_types.front(), ChunkRange{}, ChunkRange{}, std::nullopt, std::nullopt},
       InputTableConfiguration{
         InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), std::nullopt, std::nullopt, std::nullopt, std::nullopt},
+        all_encoding_types.front(), ChunkRange{}, ChunkRange{}, std::nullopt, std::nullopt},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -645,8 +645,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               pos_list->emplace_back(RowID{chunk_id, chunk_offset});
             }
 
-            if (single_chunk_reference_range && chunk_id >= single_chunk_reference_range->first &&
-                chunk_id < single_chunk_reference_range->second) {
+            if (chunk_id >= single_chunk_reference_range->first && chunk_id < single_chunk_reference_range->second) {
               pos_list->guarantee_single_chunk();
             }
 
@@ -660,8 +659,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < input_chunk->size(); ++chunk_offset) {
                 pos_list->emplace_back(RowID{chunk_id, chunk_offset});
               }
-              if (single_chunk_reference_range && chunk_id >= single_chunk_reference_range->first &&
-                  chunk_id < single_chunk_reference_range->second) {
+              if (chunk_id >= single_chunk_reference_range->first && chunk_id < single_chunk_reference_range->second) {
                 pos_list->guarantee_single_chunk();
               }
               reference_segments.emplace_back(std::make_shared<ReferenceSegment>(data_table, column_id, pos_list));
