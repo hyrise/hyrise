@@ -214,7 +214,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto all_input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    constexpr auto all_index_scopes = magic_enum::enum_values<IndexScope>();
+    const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
     // Vectors of pruned ColumnIDs with which the tests should be performed
     const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
@@ -768,7 +768,6 @@ TEST_P(JoinTestRunner, TestJoin) {
     config.indexed_chunk_range = {};
     config.single_chunk_reference_range = {};
     config.index_scope = {};
-    config.pruned_column_ids = {};
     return config;
   };
 
