@@ -589,8 +589,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static std::string get_table_path(const InputTableConfiguration& key) {
-    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, index_scope, indexed_chunk_range,
-                 single_chunk_reference_range, pruned_column_ids] = key;
+    const auto& [side, chunk_size, table_size, input_table_type, encoding_type, indexed_chunk_range,
+                 single_chunk_reference_range, index_scope, pruned_column_ids] = key;
 
     const auto side_str = side == InputSide::Left ? "left" : "right";
     const auto table_size_str = std::to_string(table_size);
