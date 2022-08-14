@@ -223,10 +223,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
         InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), ChunkRange{0,0}, ChunkRange{0,0}, IndexScope::None, std::nullopt},
+        all_encoding_types.front(), ChunkRange{0, 0}, ChunkRange{0, 0}, IndexScope::None, std::nullopt},
       InputTableConfiguration{
         InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), ChunkRange{0,0}, ChunkRange{0,0}, IndexScope::None, std::nullopt},
+        all_encoding_types.front(), ChunkRange{0, 0}, ChunkRange{0, 0}, IndexScope::None, std::nullopt},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -812,7 +812,7 @@ TEST_P(JoinTestRunner, TestJoin) {
               << configuration.right_input.indexed_chunk_range.second << ")" << std::endl;
     std::cout << "Chunk range with single chunk ref. guarantee: "
               << "[" << configuration.right_input.single_chunk_reference_range.first << ", "
-                << configuration.right_input.single_chunk_reference_range.second << ")" << std::endl;
+              << configuration.right_input.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.right_input) << std::endl;
     std::cout << std::endl;
     std::cout << "==================== Actual Output Table ===================" << std::endl;
