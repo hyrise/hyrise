@@ -385,9 +385,8 @@ void AbstractTableGenerator::_create_table_indexes(
     auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
     std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
     for (const auto& index_columns : indexes) {
-      if (index_columns.size() > 1) {
-        std::cout << "-  Requested multi-column index is stored as multiple single-column indexes." << std::endl;
-      }
+      Assert(index_columns.size() == 1, "Multi-column indexes are currently not supported.");
+
       for (const auto& index_column : index_columns) {
         std::cout << "-  Creating table index on " << table_name << " [" << index_column << " with " << chunk_ids.size()
                   << " indexed chunks]" << std::flush;
@@ -404,6 +403,8 @@ void AbstractTableGenerator::_create_table_indexes(
 }
 
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {
+  // Currently, indexes are not used by the benchmarks. Therefore it doesn't make sense to create them since it would
+  // just create unnecessary memory consumption.
   return {};
 }
 
