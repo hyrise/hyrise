@@ -147,14 +147,14 @@ When trying to optimize the time spent building the project, it is often helpful
 ## Maintainers
 - Martin Boissier
 - Stefan Halfpap
-- Jan    Kossmann
 - Daniel Lindner
 - Marcel Weisgut
 
 Contact: firstname.lastname@hpi.de
 
-## Maintainer emeritus
+## Maintainers emeriti
 - Markus Dreseler
+- Jan    Kossmann
 
 ## Contributors
 -   Yannick   Bäumer

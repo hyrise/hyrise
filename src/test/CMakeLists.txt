@@ -227,6 +227,7 @@ set(
     lib/utils/plugin_manager_test.cpp
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
+    lib/utils/print_utils_test.cpp
     lib/utils/setting_test.cpp
     lib/utils/settings_manager_test.cpp
     lib/utils/singleton_test.cpp

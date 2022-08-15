@@ -15,7 +15,7 @@
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 
 namespace hyrise {
