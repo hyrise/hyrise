@@ -9,7 +9,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Contrary to the functions in lossless_cast.hpp, converts from an AllTypeVariant to any target, even if accuracy/data
@@ -57,4 +57,4 @@ std::optional<Target> lossy_variant_cast(const AllTypeVariant& source) {
   return result;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

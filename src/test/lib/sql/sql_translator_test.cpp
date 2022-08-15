@@ -38,10 +38,10 @@
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
-using namespace std::string_literals;            // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SQLTranslatorTest : public BaseTest {
  public:
@@ -79,7 +79,7 @@ class SQLTranslatorTest : public BaseTest {
     int_int_int_c = stored_table_node_int_int_int->get_column("c");
   }
 
-  std::pair<std::shared_ptr<opossum::AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
+  std::pair<std::shared_ptr<AbstractLQPNode>, SQLTranslationInfo> sql_to_lqp_helper(
       const std::string& query, const UseMvcc use_mvcc = UseMvcc::No) {
     hsql::SQLParserResult parser_result;
     hsql::SQLParser::parseSQLString(query, &parser_result);
@@ -1654,8 +1654,8 @@ TEST_F(SQLTranslatorTest, Extract) {
                                             DatetimeComponent::Day,    DatetimeComponent::Hour,
                                             DatetimeComponent::Minute, DatetimeComponent::Second};
 
-  std::shared_ptr<opossum::AbstractLQPNode> actual_lqp;
-  std::shared_ptr<opossum::AbstractLQPNode> expected_lqp;
+  std::shared_ptr<AbstractLQPNode> actual_lqp;
+  std::shared_ptr<AbstractLQPNode> expected_lqp;
 
   for (const auto& component : components) {
     std::stringstream query_str;
@@ -2359,7 +2359,7 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "  a_smallint SMALLINT,"
       "  a_int INTEGER,"
       "  a_long LONG,"
-      "  a_bigint BIGINT,"
+      "  a_bigint BIGINT UNIQUE,"
       "  a_decimal DECIMAL(5,2),"
       "  a_real REAL,"
       "  a_float FLOAT,"
@@ -2368,19 +2368,22 @@ TEST_F(SQLTranslatorTest, CreateTable) {
       "  a_char_varying CHARACTER VARYING(10),"
       "  a_date DATE,"
       "  a_time TIME,"
-      "  a_datetime DATETIME"
+      "  a_datetime DATETIME,"
+      "  PRIMARY KEY(a_int, a_long)"
       ")");
 
   const auto column_definitions =
-      TableColumnDefinitions{{"a_smallint", DataType::Int, false},   {"a_int", DataType::Int, false},
-                             {"a_long", DataType::Long, false},      {"a_bigint", DataType::Long, false},
-                             {"a_decimal", DataType::Float, false},  {"a_real", DataType::Float, false},
-                             {"a_float", DataType::Float, false},    {"a_double", DataType::Double, true},
-                             {"a_varchar", DataType::String, false}, {"a_char_varying", DataType::String, false},
-                             {"a_date", DataType::String, false},    {"a_time", DataType::String, false},
-                             {"a_datetime", DataType::String, false}};
+      TableColumnDefinitions{{"a_smallint", DataType::Int, true},    {"a_int", DataType::Int, false},
+                             {"a_long", DataType::Long, false},      {"a_bigint", DataType::Long, true},
+                             {"a_decimal", DataType::Float, true},   {"a_real", DataType::Float, true},
+                             {"a_float", DataType::Float, true},     {"a_double", DataType::Double, true},
+                             {"a_varchar", DataType::String, false}, {"a_char_varying", DataType::String, true},
+                             {"a_date", DataType::String, true},     {"a_time", DataType::String, true},
+                             {"a_datetime", DataType::String, true}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+  static_table_node->table->add_soft_key_constraint({{ColumnID{3}}, KeyConstraintType::UNIQUE});
+  static_table_node->table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
   const auto expected_lqp = CreateTableNode::make("a_table", false, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -2404,17 +2407,25 @@ TEST_F(SQLTranslatorTest, CreateTableIfNotExists) {
       ")");
 
   const auto column_definitions =
-      TableColumnDefinitions{{"a_smallint", DataType::Int, false},        {"a_int", DataType::Int, false},
-                             {"a_long", DataType::Long, false},           {"a_decimal", DataType::Float, false},
-                             {"a_real", DataType::Float, false},          {"a_float", DataType::Float, false},
-                             {"a_double", DataType::Double, true},        {"a_varchar", DataType::String, false},
-                             {"a_char_varying", DataType::String, false}, {"a_date", DataType::String, false},
-                             {"a_time", DataType::String, false},         {"a_datetime", DataType::String, false}};
+      TableColumnDefinitions{{"a_smallint", DataType::Int, true},        {"a_int", DataType::Int, true},
+                             {"a_long", DataType::Long, true},           {"a_decimal", DataType::Float, true},
+                             {"a_real", DataType::Float, true},          {"a_float", DataType::Float, true},
+                             {"a_double", DataType::Double, true},       {"a_varchar", DataType::String, false},
+                             {"a_char_varying", DataType::String, true}, {"a_date", DataType::String, true},
+                             {"a_time", DataType::String, true},         {"a_datetime", DataType::String, true}};
 
   const auto static_table_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
   const auto expected_lqp = CreateTableNode::make("a_table", true, static_table_node);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(SQLTranslatorTest, InvalidConstraints) {
+  // PRIMARY KEY must not be nullable.
+  EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER NULL, PRIMARY KEY(a_int))"),
+               InvalidInputException);
+  // Constraints must not contain unknown columns.
+  EXPECT_THROW(sql_to_lqp_helper("CREATE TABLE a_table (a_int INTEGER, UNIQUE(b_int))"), InvalidInputException);
 }
 
 TEST_F(SQLTranslatorTest, CreateTableAsSelect) {
@@ -3165,4 +3176,4 @@ TEST_F(SQLTranslatorTest, CastStatement) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

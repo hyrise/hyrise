@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
@@ -124,4 +124,4 @@ bool GenericHistogram<T>::operator==(const GenericHistogram<T>& rhs) const {
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

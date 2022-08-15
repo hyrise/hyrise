@@ -19,7 +19,7 @@
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * This is an index join implementation. It expects to find an index on the index side column.
@@ -610,4 +610,4 @@ void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, Descript
          << chunks_scanned_with_index << " of " << chunk_count << " chunk" << (chunk_count > 1 ? "s" : "") << ".";
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 #include "read_buffer.hpp"
 #include "write_buffer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using ErrorMessage = std::unordered_map<PostgresMessageType, std::string>;
 
@@ -77,4 +77,4 @@ class PostgresProtocolHandler {
   ReadBuffer<SocketType> _read_buffer;
   WriteBuffer<SocketType> _write_buffer;
 };
-}  // namespace opossum
+}  // namespace hyrise

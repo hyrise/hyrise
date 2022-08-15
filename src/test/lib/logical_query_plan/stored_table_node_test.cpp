@@ -14,9 +14,9 @@
 #include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class StoredTableNodeTest : public BaseTest {
  protected:
@@ -220,8 +220,11 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
 
   EXPECT_EQ(fds.size(), 2);
-  EXPECT_EQ(fds.at(0), fd1_expected);
-  EXPECT_EQ(fds.at(1), fd2_expected);
+  // Funtional dependencies are built from the table's unique constraints. These constraints are stored in a set, and
+  // their order is not relevant. Thus, we only ensure that both expected FDs are generated.
+  const auto fds_set = std::unordered_set<FunctionalDependency>{fds.cbegin(), fds.cend()};
+  EXPECT_TRUE(fds_set.contains(fd1_expected));
+  EXPECT_TRUE(fds_set.contains(fd2_expected));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
@@ -360,4 +363,4 @@ TEST_F(StoredTableNodeTest, HasMatchingUniqueConstraint) {
   EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _c}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

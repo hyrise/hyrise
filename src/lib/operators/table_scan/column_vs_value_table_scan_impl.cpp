@@ -14,7 +14,7 @@
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id,
@@ -264,4 +264,4 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

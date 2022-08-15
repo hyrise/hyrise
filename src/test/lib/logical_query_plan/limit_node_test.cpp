@@ -6,9 +6,9 @@
 #include "logical_query_plan/limit_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LimitNodeTest : public BaseTest {
  protected:
@@ -41,4 +41,4 @@ TEST_F(LimitNodeTest, NodeExpressions) {
   EXPECT_EQ(*_limit_node->node_expressions.at(0u), *value_(10));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

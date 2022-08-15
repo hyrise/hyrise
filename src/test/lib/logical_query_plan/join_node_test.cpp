@@ -11,9 +11,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class JoinNodeTest : public BaseTest {
  protected:
@@ -666,4 +666,4 @@ TEST_F(JoinNodeTest, GetOrFindReducedJoinNodeWithMultiplePredicates) {
   EXPECT_EQ(copied_semi_reduction_node->get_or_find_reduced_join_node(), copied_join_node);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

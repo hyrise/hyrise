@@ -9,7 +9,7 @@
 
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FixedStringVector::FixedStringVector(const FixedStringVector& other, const PolymorphicAllocator<char>& allocator)
     : _string_length(other._string_length), _chars(other._chars, allocator), _size(other._size) {
@@ -129,4 +129,4 @@ size_t FixedStringVector::data_size() const {
   return sizeof(*this) + _chars.capacity();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

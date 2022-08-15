@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief the base class of all table scan impls
@@ -241,4 +241,4 @@ class AbstractTableScanImpl {
   /**@}*/
 };
 
-}  // namespace opossum
+}  // namespace hyrise

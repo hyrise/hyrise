@@ -3,7 +3,7 @@
 #include "operators/get_table.hpp"
 #include "server/query_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class QueryHandlerTest : public BaseTest {
  protected:
@@ -78,4 +78,4 @@ TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

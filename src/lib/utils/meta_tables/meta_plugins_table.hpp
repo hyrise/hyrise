@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class for plugin control via a meta table.
@@ -24,4 +24,4 @@ class MetaPluginsTable : public AbstractMetaTable {
   void _on_remove(const std::vector<AllTypeVariant>& values) final;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

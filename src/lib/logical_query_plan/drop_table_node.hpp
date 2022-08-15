@@ -3,7 +3,7 @@
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public AbstractNonQueryNode {
  public:
@@ -20,4 +20,4 @@ class DropTableNode : public EnableMakeForLQPNode<DropTableNode>, public Abstrac
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

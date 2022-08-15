@@ -7,7 +7,7 @@
 #include "bitpacking_vector_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
  public:
@@ -71,4 +71,4 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   size_t _absolute_index = 0u;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

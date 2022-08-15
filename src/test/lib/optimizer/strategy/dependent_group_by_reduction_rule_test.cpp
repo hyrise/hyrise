@@ -10,9 +10,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class DependentGroupByReductionRuleTest : public StrategyBaseTest {
  public:
@@ -310,4 +310,4 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

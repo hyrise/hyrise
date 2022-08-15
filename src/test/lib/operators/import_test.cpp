@@ -11,7 +11,7 @@
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsImportTest : public BaseTest {
  protected:
@@ -136,4 +136,4 @@ TEST_F(OperatorsImportTest, TargetChunkSize) {
   EXPECT_TABLE_EQ_ORDERED(Hyrise::get().storage_manager.get_table("a"), expected_table);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

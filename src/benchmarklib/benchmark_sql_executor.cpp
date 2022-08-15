@@ -6,7 +6,7 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-namespace opossum {
+namespace hyrise {
 BenchmarkSQLExecutor::BenchmarkSQLExecutor(const std::shared_ptr<SQLiteWrapper>& sqlite_wrapper,
                                            const std::optional<std::string>& visualize_prefix)
     : _sqlite_connection(sqlite_wrapper ? std::optional<SQLiteWrapper::Connection>{sqlite_wrapper->new_connection()}
@@ -167,4 +167,4 @@ void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
   ++_num_visualized_plans;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

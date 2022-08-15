@@ -7,7 +7,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated
 class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
@@ -61,7 +61,7 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
         }
 
         for (auto i = 0; i < 20; ++i) {
-          original_segment->append(opossum::NULL_VALUE);
+          original_segment->append(NULL_VALUE);
         }
       } else {
         for (auto i = 0; i < 100; ++i) {
@@ -163,4 +163,4 @@ INSTANTIATE_TEST_SUITE_P(String, SegmentsUsingAllocatorsTest,
                                             ::testing::Bool()),
                          segments_using_allocator_test_formatter);
 
-}  // namespace opossum
+}  // namespace hyrise

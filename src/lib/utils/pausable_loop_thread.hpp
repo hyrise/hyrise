@@ -7,7 +7,7 @@
 #include <mutex>
 #include <thread>
 
-namespace opossum {
+namespace hyrise {
 
 // This class spawns a thread that executes a procedure in a loop.
 // Between each iteration there is a user-definable sleep period.
@@ -31,4 +31,4 @@ struct PausableLoopThread {
   std::thread _loop_thread;
   std::chrono::milliseconds _loop_sleep_time;
 };
-}  // namespace opossum
+}  // namespace hyrise

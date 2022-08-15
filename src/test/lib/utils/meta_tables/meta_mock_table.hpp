@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class that mocks the behavior of a meta table.
@@ -46,4 +46,4 @@ class MetaMockTable : public AbstractMetaTable {
   std::vector<AllTypeVariant> _update_updated_values;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

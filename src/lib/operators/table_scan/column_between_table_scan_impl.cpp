@@ -17,7 +17,7 @@
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id, const AllTypeVariant& init_left_value,
@@ -210,4 +210,4 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

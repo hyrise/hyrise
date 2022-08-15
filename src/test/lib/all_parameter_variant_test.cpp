@@ -6,7 +6,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AllParameterVariantTest : public BaseTest {};
 
@@ -101,4 +101,4 @@ TEST_F(AllParameterVariantTest, OutputToStream) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

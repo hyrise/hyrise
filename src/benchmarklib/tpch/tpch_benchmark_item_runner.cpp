@@ -19,7 +19,7 @@ extern "C" {
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
@@ -527,4 +527,4 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

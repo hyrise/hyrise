@@ -4,7 +4,7 @@
 #include <optional>
 #include <unordered_map>
 
-namespace opossum {
+namespace hyrise {
 
 inline constexpr size_t DEFAULT_CACHE_CAPACITY = 1024;
 
@@ -58,4 +58,4 @@ class AbstractCache {
   std::atomic_size_t _capacity;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

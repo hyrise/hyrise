@@ -8,7 +8,7 @@
 
 #include "import_export/csv/csv_meta.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class Chunk;
@@ -23,7 +23,7 @@ class Chunk;
  *
  * This parser reads the whole csv file and iterates over it to separate the data into chunks that are aligned with the
  * csv rows.
- * Each data chunk is parsed and converted into a opossum chunk. In the end all chunks are combined to the final table.
+ * Each data chunk is parsed and converted into a Hyrise chunk. In the end all chunks are combined to the final table.
  */
 class CsvParser {
  public:
@@ -69,4 +69,4 @@ class CsvParser {
    */
   static void _sanitize_field(std::string& field, const CsvMeta& meta, const std::string& escaped_linebreak);
 };
-}  // namespace opossum
+}  // namespace hyrise

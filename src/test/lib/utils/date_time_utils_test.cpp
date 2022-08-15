@@ -2,7 +2,7 @@
 
 #include "utils/date_time_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DateTimeUtilsTest : public BaseTest {};
 
@@ -111,4 +111,4 @@ TEST_F(DateTimeUtilsTest, TimestampToString) {
   EXPECT_EQ(timestamp_to_string(timestamp_with_microseconds), "2000-01-31 01:01:01.500000");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

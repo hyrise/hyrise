@@ -3,7 +3,7 @@
 #include "resolve_type.hpp"
 #include "storage/index/segment_index_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                uint32_t value_bytes) {
@@ -54,4 +54,4 @@ std::vector<std::shared_ptr<const AbstractSegment>> BTreeIndex::_get_indexed_seg
   return {_indexed_segment};
 }
 
-}  // namespace opossum
+}  // namespace hyrise

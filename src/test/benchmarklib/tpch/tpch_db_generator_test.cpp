@@ -5,7 +5,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCHTableGeneratorTest : public BaseTest {};
 
@@ -100,4 +100,4 @@ TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
 
   Hyrise::reset();
 }
-}  // namespace opossum
+}  // namespace hyrise

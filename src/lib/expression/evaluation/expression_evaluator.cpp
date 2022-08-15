@@ -37,12 +37,12 @@
 #include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
@@ -137,7 +137,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 ExpressionEvaluator::ExpressionEvaluator(
     const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
@@ -1651,7 +1651,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   return results;
 }
 
-// We explicitly instantiate these template functions because (at least) clang-12 does not instantiate them for us.
+// We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
 template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
     const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(
@@ -1661,4 +1661,4 @@ template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::eval
 template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
     const AbstractExpression& expression);
 
-}  // namespace opossum
+}  // namespace hyrise

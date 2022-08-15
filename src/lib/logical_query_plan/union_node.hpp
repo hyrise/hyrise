@@ -7,7 +7,7 @@
 #include "abstract_lqp_node.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type is used to:
@@ -43,4 +43,4 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
-}  // namespace opossum
+}  // namespace hyrise

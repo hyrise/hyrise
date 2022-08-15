@@ -1,18 +1,18 @@
 #include "base_test.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The fixture for testing class Foo.
-class OpossumTestTemplate : public BaseTest {
+class HyriseTestTemplate : public BaseTest {
  protected:
   // You can remove any or all of the following functions if its body
   // is empty.
 
-  OpossumTestTemplate() {
+  HyriseTestTemplate() {
     // You can do set-up work for each test here.
   }
 
-  ~OpossumTestTemplate() override {
+  ~HyriseTestTemplate() override {
     // You can do clean-up work that doesn't throw exceptions here.
   }
 
@@ -35,4 +35,4 @@ class OpossumTestTemplate : public BaseTest {
 /**
  * Write tests for fixtures with TEST_F instead of TEST
  */
-}  // namespace opossum
+}  // namespace hyrise

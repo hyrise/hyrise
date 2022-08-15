@@ -10,7 +10,7 @@
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageFixedStringDictionarySegmentTest : public BaseTest {
  protected:
@@ -142,4 +142,4 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   EXPECT_EQ(dictionary_segment->memory_usage(), empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

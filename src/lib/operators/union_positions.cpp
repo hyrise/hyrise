@@ -55,7 +55,7 @@
  *
  * The sorting, which is the most expensive part of this operator, could probably be parallelized.
  */
-namespace opossum {
+namespace hyrise {
 
 UnionPositions::UnionPositions(const std::shared_ptr<const AbstractOperator>& left,
                                const std::shared_ptr<const AbstractOperator>& right)
@@ -380,4 +380,4 @@ bool UnionPositions::VirtualPosListCmpContext::operator()(size_t left, size_t ri
   return false;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

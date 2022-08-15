@@ -3,7 +3,7 @@
 #include "commit_context.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CommitContext::CommitContext(const CommitID commit_id) : _commit_id{commit_id}, _pending{false} {}
 
@@ -55,4 +55,4 @@ bool CommitContext::try_set_next(const std::shared_ptr<CommitContext>& next) {
   return std::atomic_compare_exchange_strong(&_next, &context_nullptr, next);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

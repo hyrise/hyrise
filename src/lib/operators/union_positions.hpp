@@ -7,7 +7,7 @@
 #include "operators/abstract_read_only_operator.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * ## Purpose
@@ -76,7 +76,7 @@ class UnionPositions : public AbstractReadOnlyOperator {
 
  private:
   // See docs at the top of the cpp
-  using ReferenceMatrix = std::vector<opossum::RowIDPosList>;
+  using ReferenceMatrix = std::vector<RowIDPosList>;
   using VirtualPosList = std::vector<size_t>;
 
   /**
@@ -123,4 +123,4 @@ class UnionPositions : public AbstractReadOnlyOperator {
   // For each column_idx in the input tables, specifies the referenced column in the referenced table
   std::vector<ColumnID> _referenced_column_ids;
 };
-}  // namespace opossum
+}  // namespace hyrise

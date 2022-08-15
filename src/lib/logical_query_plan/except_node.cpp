@@ -9,7 +9,7 @@
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ExceptNode::ExceptNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Except), set_operation_mode(init_operation_mode) {}
@@ -52,4 +52,4 @@ bool ExceptNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
   return set_operation_mode == except_node.set_operation_mode;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

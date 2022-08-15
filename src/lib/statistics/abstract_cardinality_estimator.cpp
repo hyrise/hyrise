@@ -1,6 +1,6 @@
 #include "abstract_cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void AbstractCardinalityEstimator::guarantee_join_graph(const JoinGraph& join_graph) {
   cardinality_estimation_cache.join_graph_statistics_cache.emplace(
@@ -11,4 +11,4 @@ void AbstractCardinalityEstimator::guarantee_bottom_up_construction() {
   cardinality_estimation_cache.statistics_by_lqp.emplace();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

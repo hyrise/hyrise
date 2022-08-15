@@ -5,7 +5,7 @@
 #include "abstract_rule.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This rule turns PredicateNodes with (nested) conjunctions ("and") and disjunctions ("or")
@@ -39,4 +39,4 @@ class PredicateSplitUpRule : public AbstractRule {
   bool _split_disjunctions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

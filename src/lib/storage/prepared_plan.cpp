@@ -9,7 +9,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
@@ -53,7 +53,7 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp,
                            const std::vector<ParameterID>& init_parameter_ids)
@@ -108,4 +108,4 @@ std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 
 #include "operators/print.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // All graphviz options, e.g. color, shape, format, can be looked up at
 // http://www.graphviz.org/doc/info/attrs.html
@@ -317,4 +317,4 @@ class AbstractVisualizer {
   size_t _random_color_index{0};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

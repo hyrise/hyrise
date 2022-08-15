@@ -12,7 +12,7 @@
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
@@ -357,4 +357,4 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

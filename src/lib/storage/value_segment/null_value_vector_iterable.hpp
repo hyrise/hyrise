@@ -6,7 +6,7 @@
 #include "storage/segment_iterables.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is an iterable for the null value vector of a value segment.
@@ -108,4 +108,4 @@ class NullValueVectorIterable : public PointAccessibleSegmentIterable<NullValueV
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

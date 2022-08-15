@@ -11,7 +11,7 @@
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageDictionarySegmentTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
@@ -217,4 +217,4 @@ TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerMemoryUsageEstimation) {
             empty_memory_usage + 3 * size_of_attribute);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

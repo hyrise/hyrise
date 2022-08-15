@@ -11,7 +11,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id)
     : ChunkCompressionTask{table_name, std::vector<ChunkID>{chunk_id}} {}
@@ -58,4 +58,4 @@ bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chu
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

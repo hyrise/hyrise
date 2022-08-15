@@ -19,7 +19,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
@@ -40,7 +40,7 @@ void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_stati
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
   if (chunk->pruning_statistics()) {
@@ -99,4 +99,4 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

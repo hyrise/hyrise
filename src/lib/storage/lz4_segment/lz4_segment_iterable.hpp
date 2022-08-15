@@ -7,7 +7,7 @@
 #include "storage/lz4_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentIterable<T>> {
@@ -182,4 +182,4 @@ class LZ4SegmentIterable : public PointAccessibleSegmentIterable<LZ4SegmentItera
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -13,9 +13,9 @@
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsLimitTest : public BaseTest {
  protected:
@@ -147,4 +147,4 @@ TEST_F(OperatorsLimitTest, ForwardSortedByFlag) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

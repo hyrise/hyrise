@@ -5,7 +5,7 @@
 #include <boost/container_hash/hash.hpp>
 #include "expression/evaluation/expression_evaluator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const LogicalOperator logical_operator) {
   switch (logical_operator) {
@@ -64,4 +64,4 @@ ExpressionPrecedence LogicalExpression::_precedence() const {
   return ExpressionPrecedence::Logical;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

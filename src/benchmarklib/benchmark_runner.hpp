@@ -25,7 +25,7 @@
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SQLPipeline;
 struct SQLPipelineMetrics;
@@ -109,4 +109,4 @@ class BenchmarkRunner : public Noncopyable {
   int _snapshot_id{0};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

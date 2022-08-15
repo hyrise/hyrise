@@ -13,7 +13,7 @@
 #include "resolve_type.hpp"
 #include "tpcc_random_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -249,4 +249,4 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
-}  // namespace opossum
+}  // namespace hyrise

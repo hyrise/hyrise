@@ -2,7 +2,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
 The following structs describe the different aggregate traits.
@@ -87,4 +87,4 @@ struct AggregateTraits<ColumnType, aggregate_function,
   static constexpr DataType AGGREGATE_DATA_TYPE = DataType::Null;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

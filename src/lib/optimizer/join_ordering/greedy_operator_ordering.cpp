@@ -9,7 +9,7 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
@@ -158,4 +158,4 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

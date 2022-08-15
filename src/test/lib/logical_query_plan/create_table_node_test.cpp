@@ -7,7 +7,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CreateTableNodeTest : public BaseTest {
  public:
@@ -59,4 +59,4 @@ TEST_F(CreateTableNodeTest, Copy) {
   EXPECT_EQ(*create_table_node, *create_table_node->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

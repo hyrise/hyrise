@@ -6,7 +6,7 @@
 #include "operators/limit.hpp"
 #include "operators/pqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PQPUtilsTest : public BaseTest {
  public:
@@ -78,4 +78,4 @@ TEST_F(PQPUtilsTest, VisitPQPConstOperators) {
   EXPECT_EQ(actual_nodes, expected_nodes);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, typename Dictionary>
 class DictionarySegmentIterable : public PointAccessibleSegmentIterable<DictionarySegmentIterable<T, Dictionary>> {
@@ -180,4 +180,4 @@ struct is_dictionary_segment_iterable<Iterable<T, Dictionary>> {
 template <typename T>
 inline constexpr bool is_dictionary_segment_iterable_v = is_dictionary_segment_iterable<T>::value;
 
-}  // namespace opossum
+}  // namespace hyrise

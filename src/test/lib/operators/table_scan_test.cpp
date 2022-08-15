@@ -29,9 +29,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
@@ -159,7 +159,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
     ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{_encoding_type});
 
-    auto table_wrapper = std::make_shared<opossum::TableWrapper>(std::move(table));
+    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->never_clear_output();
     table_wrapper->execute();
 
@@ -1296,4 +1296,4 @@ TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   ASSERT_TRUE(chunk_sorted_by.empty());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

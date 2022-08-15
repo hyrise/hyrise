@@ -13,7 +13,7 @@
 #include "server/server.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // This class tests supported operations of the server implementation. This does not include statements with named
 // portals which are used for CURSOR operations.
@@ -124,13 +124,13 @@ TEST_F(ServerTestRunner, TestInvalidCopyImport) {
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed
-  EXPECT_THROW(transaction.exec("COPY another_table FROM;"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("COPY another_table FROM;"), pqxx::broken_connection);
 
   // File is not existing
-  EXPECT_THROW(transaction.exec("COPY another_table FROM 'not/existing/file.tbl';"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("COPY another_table FROM 'not/existing/file.tbl';"), pqxx::broken_connection);
 
   // Unsupported file extension
-  EXPECT_THROW(transaction.exec("COPY another_table FROM 'resources/test_data/tbl/float';"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("COPY another_table FROM 'resources/test_data/tbl/float';"), pqxx::broken_connection);
 
   // Check whether server is still running and connection established
   const auto result = transaction.exec("SELECT * FROM table_a;");
@@ -154,13 +154,13 @@ TEST_F(ServerTestRunner, TestInvalidCopyExport) {
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed
-  EXPECT_THROW(transaction.exec("COPY table_a TO;"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("COPY table_a TO;"), pqxx::broken_connection);
 
   // Table is not existing
-  EXPECT_THROW(transaction.exec("COPY not_existing TO './does_not_work.tbl';"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("COPY not_existing TO './does_not_work.tbl';"), pqxx::broken_connection);
 
   // Unsupported file extension
-  EXPECT_THROW(transaction.exec("COPY table_a TO './does_not_work.mp3';"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("COPY table_a TO './does_not_work.mp3';"), pqxx::broken_connection);
 
   // Check whether server is still running and connection established
   const auto result = transaction.exec("SELECT * FROM table_a;");
@@ -207,10 +207,10 @@ TEST_F(ServerTestRunner, TestInvalidStatement) {
   pqxx::nontransaction transaction{connection};
 
   // Ill-formed SQL statement
-  EXPECT_THROW(transaction.exec("SELECT * FROM;"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("SELECT * FROM;"), pqxx::broken_connection);
 
   // Well-formed but table does not exist
-  EXPECT_THROW(transaction.exec("SELECT * FROM non_existent;"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("SELECT * FROM non_existent;"), pqxx::broken_connection);
 
   // Check whether server is still running and connection established
   const auto result = transaction.exec("SELECT * FROM table_a;");
@@ -262,7 +262,7 @@ TEST_F(ServerTestRunner, TestInvalidTransactionFlow) {
   pqxx::connection connection{_connection_string};
 
   pqxx::transaction transaction{connection};
-  EXPECT_THROW(transaction.exec("BEGIN;"), pqxx::sql_error);
+  EXPECT_THROW(transaction.exec("BEGIN;"), pqxx::broken_connection);
 }
 
 TEST_F(ServerTestRunner, TestMultipleConnections) {
@@ -371,7 +371,7 @@ TEST_F(ServerTestRunner, TestInvalidPreparedStatement) {
   const auto param = 1234u;
 
   // Ill-formed prepared statement
-  EXPECT_THROW(connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?"), pqxx::sql_error);
+  EXPECT_THROW(connection.prepare(prepared_name, "SELECT * FROM WHERE a > ?"), pqxx::broken_connection);
 
   // Well-formed but table does not exist
   EXPECT_ANY_THROW(connection.prepare(prepared_name, "SELECT * FROM non_existent WHERE a > ?"));
@@ -498,4 +498,4 @@ TEST_F(ServerTestRunner, TestTransactionConflicts) {
   EXPECT_EQ(final_sum - initial_sum, successful_increments);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -16,13 +16,13 @@
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/print_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -64,7 +64,7 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions)
@@ -128,7 +128,7 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
   DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
                   type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
-                  type == LQPNodeType::ChangeMetaTable,
+                  type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
               "This node type does not accept a right input");
   set_input(LQPInputSide::Right, right);
 }
@@ -136,7 +136,7 @@ void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& ri
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
   DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
                   type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::Intersect ||
-                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable,
+                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
               "This node type does not accept a right input");
 
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
@@ -495,4 +495,4 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string TestPlugin::description() const {
   return "This is the Hyrise TestPlugin";
@@ -40,4 +40,4 @@ void TestPlugin::another_user_executable_function() const {
 
 EXPORT_PLUGIN(TestPlugin)
 
-}  // namespace opossum
+}  // namespace hyrise

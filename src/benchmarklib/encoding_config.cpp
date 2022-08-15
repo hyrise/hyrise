@@ -2,7 +2,7 @@
 
 #include "constant_mappings.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
@@ -136,4 +136,4 @@ The encoding is always required, the compression is optional.
   }
 })";
 
-}  // namespace opossum
+}  // namespace hyrise

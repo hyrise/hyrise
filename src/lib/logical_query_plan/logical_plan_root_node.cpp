@@ -4,7 +4,7 @@
 
 #include "abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LogicalPlanRootNode::LogicalPlanRootNode() : AbstractLQPNode(LQPNodeType::Root) {}
 
@@ -28,4 +28,4 @@ bool LogicalPlanRootNode::_on_shallow_equals(const AbstractLQPNode& rhs, const L
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

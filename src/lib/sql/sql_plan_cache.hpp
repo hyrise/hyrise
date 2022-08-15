@@ -5,7 +5,7 @@
 
 #include "cache/gdfs_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractOperator;
 class AbstractLQPNode;
@@ -13,4 +13,4 @@ class AbstractLQPNode;
 using SQLPhysicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractOperator>>;
 using SQLLogicalPlanCache = GDFSCache<std::string, std::shared_ptr<AbstractLQPNode>>;
 
-}  // namespace opossum
+}  // namespace hyrise

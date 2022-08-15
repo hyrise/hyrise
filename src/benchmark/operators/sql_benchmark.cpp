@@ -12,7 +12,7 @@
 #include "sql/sql_translator.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using hsql::SQLParser;
 using hsql::SQLParserResult;
@@ -95,4 +95,4 @@ BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) {
   BM_QueryPlanCache(st);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

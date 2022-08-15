@@ -2,7 +2,7 @@
 
 #include "abstract_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Super class of value segments
@@ -27,4 +27,4 @@ class BaseValueSegment : public AbstractSegment {
    */
   virtual const pmr_vector<bool>& null_values() const = 0;
 };
-}  // namespace opossum
+}  // namespace hyrise

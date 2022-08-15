@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class for showing dynamic system information such as CPU and RAM load.
@@ -43,4 +43,4 @@ class MetaSystemUtilizationTable : public AbstractMetaTable {
   static std::vector<int64_t> _parse_value_string(std::string& input_string);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

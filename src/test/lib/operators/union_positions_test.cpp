@@ -13,7 +13,7 @@
 #include "operators/union_positions.hpp"
 #include "storage/reference_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class UnionPositionsTest : public BaseTest {
  public:
@@ -341,4 +341,4 @@ TEST_F(UnionPositionsTest, SameColumnsDifferentTables) {
   EXPECT_THROW(union_positions_op->execute(), std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,7 +12,7 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Base Class for tests that should be run with various encodings
 class EncodingTest : public BaseTestWithParam<SegmentEncodingSpec> {
@@ -45,4 +45,4 @@ inline std::string all_segment_encoding_specs_formatter(
   return string;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -21,7 +21,7 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string NullScanRemovalRule::name() const {
   static const auto name = std::string{"NullScanRemovalRule"};
@@ -99,4 +99,4 @@ void NullScanRemovalRule::_apply_to_plan_without_subqueries(const std::shared_pt
   Fail("Did not expect this function to be called.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

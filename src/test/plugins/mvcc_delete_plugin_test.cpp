@@ -20,7 +20,7 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MvccDeletePluginTest : public BaseTest {
  public:
@@ -213,4 +213,4 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
