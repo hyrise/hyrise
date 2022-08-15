@@ -378,7 +378,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
              "Another key constraint for the same column set has already been defined.");
     }
 
-    _table_key_constraints.push_back(table_key_constraint);
+    _table_key_constraints.insert(table_key_constraint);
   }
 }
 

@@ -2,10 +2,9 @@
 
 namespace hyrise {
 
-AbstractTableConstraint::AbstractTableConstraint(std::unordered_set<ColumnID> init_columns)
-    : _columns(std::move(init_columns)) {}
+AbstractTableConstraint::AbstractTableConstraint(std::set<ColumnID> init_columns) : _columns(std::move(init_columns)) {}
 
-const std::unordered_set<ColumnID>& AbstractTableConstraint::columns() const {
+const std::set<ColumnID>& AbstractTableConstraint::columns() const {
   return _columns;
 }
 
