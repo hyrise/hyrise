@@ -903,8 +903,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   const auto subquery_results = _prune_tables_to_expression_results<Result>(subquery_result_tables);
 
   const auto subquery_result_count = static_cast<ChunkOffset>(subquery_results.size());
-  pmr_vector<Result> result_values(subquery_result_count);
-  pmr_vector<bool> result_nulls;
+  auto result_values = pmr_vector<Result>(subquery_result_count);
+  auto result_nulls = pmr_vector<bool>{};
 
   // Materialize values
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_count; ++chunk_offset) {
