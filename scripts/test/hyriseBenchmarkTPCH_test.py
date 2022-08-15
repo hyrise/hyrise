@@ -48,7 +48,7 @@ def main():
     benchmark.expect_exact("Using prepared statements: yes")
     benchmark.expect_exact("Loading/Generating tables done")
     benchmark.expect_exact("Sorting tables")
-    benchmark.expect_exact("Creating index on customer [ c_custkey ]")
+    benchmark.expect_exact("No indexes defined by benchmark")
     benchmark.expect_exact("Preparing queries")
 
     close_benchmark(benchmark)

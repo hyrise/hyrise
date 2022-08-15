@@ -375,7 +375,8 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
 
     for (const auto& chunk_id : chunk_ids) {
       const auto& chunk = get_chunk(chunk_id);
-      Assert(!chunk->is_mutable(), "Cannot index mutable chunk");
+      Assert(chunk, "Requested index on deleted chunk.");
+      Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
       chunks_to_index.emplace_back(std::make_pair(chunk_id, chunk));
     }
 
@@ -390,7 +391,7 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
 template <typename Index>
 void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
   static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
-                "'Index' template argument is not an AbstractChunkIndex");
+                "'Index' template argument is not an AbstractChunkIndex.");
 
   const auto chunk_index_type = get_chunk_index_type_of<Index>();
 
