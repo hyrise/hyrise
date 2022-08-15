@@ -25,10 +25,8 @@ void Session::run() {
   while (!_terminate_session) {
     try {
       _handle_request();
-      // clang-format off
     } catch (const ClientDisconnectException& /* exception */) {
       return;
-      // clang-format on
     } catch (const std::exception& e) {
       std::cerr << "Exception in session with client port " << _socket->remote_endpoint().port() << ":" << std::endl
                 << e.what() << std::endl;
