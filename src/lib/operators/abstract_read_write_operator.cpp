@@ -19,15 +19,15 @@ void AbstractReadWriteOperator::execute() {
   transaction_context()->register_read_write_operator(
       std::static_pointer_cast<AbstractReadWriteOperator>(shared_from_this()));
 
-  // try {
+  //try {
   AbstractOperator::execute();
-  // } catch (...) {
+  //} catch (...) {
   // No matter what goes wrong, we need to mark the operators as failed. Otherwise, when the transaction context
   // gets destroyed, it will cause another exception that hides the one that caused the actual error. We are NOT
   // trying to handle the exception here - just making sure that we are not misled when we debug things.
-  // _mark_as_failed();
-  // throw;
-  // }
+  //_mark_as_failed();
+  //throw;
+  //}
 
   if (_rw_state == ReadWriteOperatorState::Conflicted) {
     return;

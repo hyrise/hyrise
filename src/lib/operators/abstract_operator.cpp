@@ -107,7 +107,6 @@ void AbstractOperator::execute() {
     performance_data->has_output = true;
     performance_data->output_row_count = _output->row_count();
     performance_data->output_chunk_count = _output->chunk_count();
-    performance_data->output_column_count = _output->column_count();
     performance_data->output_table_type = _output->type();
     const auto chunk_count = _output->chunk_count();
     auto& chunks_sorted_by = performance_data->output_chunks_sorted_by;

@@ -17,9 +17,9 @@ class CostModelFeaturePlugin : public AbstractPlugin {
 
   void stop() final;
 
-  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const final;
+  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() final;
 
-  void export_operator_features() const;
+  void export_operator_features();
 
  protected:
   class OutputPath : public AbstractSetting {
@@ -40,6 +40,8 @@ class CostModelFeaturePlugin : public AbstractPlugin {
   std::shared_ptr<OutputPath> _output_path;
   std::shared_ptr<PlanExporter> _plan_exporter;
   std::shared_ptr<QueryExporter> _query_exporter;
+
+  std::thread _worker_thread;
 };
 
 }  // namespace hyrise

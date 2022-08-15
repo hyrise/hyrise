@@ -17,39 +17,47 @@ void CostModelFeaturePlugin::start() {
 }
 
 void CostModelFeaturePlugin::stop() {
-  Assert(_output_path, "Output path was never set");
-  Assert(_query_exporter, "QueryExporter was never set");
-  Assert(_plan_exporter, "QueryExporter was never set");
+  if (_worker_thread.joinable()) {
+    _worker_thread.join();
+    Assert(_output_path, "Output path was never set");
+    Assert(_query_exporter, "QueryExporter was never set");
+    Assert(_plan_exporter, "QueryExporter was never set");
 
-  std::filesystem::create_directories(_output_path->get());
+    std::filesystem::create_directories(_output_path->get());
+    _query_exporter->export_queries(_output_path->get());
+    _plan_exporter->export_plans(_output_path->get());
+  } else {
+    std::cout << "Feature extraction was never executed. Stopping plugin" << std::endl;
+  }
+
   _output_path->unregister_at_settings_manager();
-  _query_exporter->export_queries(_output_path->get());
-  _plan_exporter->export_plans(_output_path->get());
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
-CostModelFeaturePlugin::provided_user_executable_functions() const {
+CostModelFeaturePlugin::provided_user_executable_functions() {
   return {{"ExtractOperatorFeatures", [&]() { this->export_operator_features(); }}};
 }
 
-void CostModelFeaturePlugin::export_operator_features() const {
-  std::cout << "export operator features" << std::endl;
-  const auto& pqp_cache = Hyrise::get().default_pqp_cache;
-  Assert(pqp_cache, "No PQPCache");
+void CostModelFeaturePlugin::export_operator_features() {
+  _worker_thread = std::thread{[&] {
+    std::cout << "export operator features" << std::endl;
+    const auto& pqp_cache = Hyrise::get().default_pqp_cache;
+    Assert(pqp_cache, "No PQPCache");
 
-  const auto& cache_snapshot = pqp_cache->snapshot();
-  for (const auto& [key, entry] : cache_snapshot) {
-    const auto& pqp = entry.value;
-    // Skip maintenance operators
-    if (!operator_type_mapping.contains(pqp->type())) {
-      continue;
+    const auto& cache_snapshot = pqp_cache->snapshot();
+    for (const auto& [key, entry] : cache_snapshot) {
+      const auto& pqp = entry.value;
+      // Skip maintenance operators
+      if (!operator_type_mapping.contains(pqp->type())) {
+        continue;
+      }
+
+      const auto& query_hash = QueryExporter::query_hash(key);
+      const auto query = std::make_shared<Query>(query_hash, key, *entry.frequency);
+      _query_exporter->add_query(query);
+      _plan_exporter->add_plan(query, pqp);
     }
-
-    const auto& query_hash = QueryExporter::query_hash(key);
-    const auto query = std::make_shared<Query>(query_hash, key, *entry.frequency);
-    _query_exporter->add_query(query);
-    _plan_exporter->add_plan(query, pqp);
-  }
+  }};
 }
 
 CostModelFeaturePlugin::OutputPath::OutputPath(const std::string& init_name) : AbstractSetting(init_name) {}

@@ -21,7 +21,7 @@ std::shared_ptr<ResultTableFeatureNode> ResultTableFeatureNode::from_operator(
   const auto& performance_data = *op->performance_data;
   return std::make_shared<ResultTableFeatureNode>(performance_data.output_table_type, performance_data.output_row_count,
                                                   performance_data.output_chunk_count,
-                                                  performance_data.output_column_count, op);
+                                                  static_cast<uint16_t>(op->lqp_node->output_expressions().size()), op);
 }
 
 size_t ResultTableFeatureNode::_on_shallow_hash() const {
