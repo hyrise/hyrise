@@ -1060,7 +1060,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
 
       auto n_lineitems = 0;
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 9, WS_ORDER_NUMBER);
-      for (auto lineitem_index = 0; lineitem_index < n_lineitems; ++lineitem_index) {
+      for (auto lineitem_index = size_t{0}; lineitem_index < n_lineitems; ++lineitem_index) {
         auto was_returned = 0;
         mk_w_web_sales_detail(&web_sales, 0, &web_returns, &was_returned, 0);
 
