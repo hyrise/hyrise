@@ -786,18 +786,20 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_value_o
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_function_expression(
     const FunctionExpression& expression) {
-  if constexpr (!std::is_same_v<Result, pmr_string>) {
-    Fail("Function can only be evaluated to a string");
-  }
-
   switch (expression.function_type) {
     case FunctionType::Concatenate:
-      return _evaluate_concatenate(expression.arguments);
     case FunctionType::Substring:
-      return _evaluate_substring(expression.arguments);
+      if constexpr (std::is_same_v<Result, pmr_string>) {
+        switch (expression.function_type) {
+          case FunctionType::Substring:
+            return _evaluate_substring(expression.arguments);
+          case FunctionType::Concatenate:
+            return _evaluate_concatenate(expression.arguments);
+        }
+      }
+      Fail("Function can only be evaluated to a string");
   }
-
-  Fail("Invalid function type.");
+  Fail("Invalid enum value");
 }
 
 template <typename Result>
@@ -875,17 +877,17 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
   _resolve_to_expression_result(*unary_minus_expression.argument(), [&](const auto& argument_result) {
     using ArgumentType = typename std::decay_t<decltype(argument_result)>::Type;
 
-    if constexpr (std::is_same_v<ArgumentType, pmr_string> || !std::is_same_v<Result, ArgumentType>) {
-      Fail("Cannot negate strings or an argument to a different type");
+    if constexpr (!std::is_same_v<ArgumentType, pmr_string> && std::is_same_v<Result, ArgumentType>) {
+      const auto argument_result_count = static_cast<ChunkOffset>(argument_result.size());
+      values.resize(argument_result_count);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result_count; ++chunk_offset) {
+        // NOTE: Actual negation happens in this line
+        values[chunk_offset] = -argument_result.values[chunk_offset];
+      }
+      nulls = argument_result.nulls;
+    } else {
+      Fail("Can't negate a Strings, can't negate an argument to a different type");
     }
-
-    const auto argument_result_count = static_cast<ChunkOffset>(argument_result.size());
-    values.resize(argument_result_count);
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < argument_result_count; ++chunk_offset) {
-      // NOTE: Actual negation happens in this line
-      values[chunk_offset] = -argument_result.values[chunk_offset];
-    }
-    nulls = argument_result.nulls;
   });
 
   return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
