@@ -2,7 +2,7 @@
 
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BaseTableFeatureNode::BaseTableFeatureNode(const uint64_t row_count, const uint32_t chunk_count,
                                            const uint16_t column_count, const std::shared_ptr<Table>& table,
@@ -60,4 +60,4 @@ uint32_t BaseTableFeatureNode::chunk_count() const {
   return _table->chunk_count();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

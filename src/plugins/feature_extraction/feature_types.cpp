@@ -1,6 +1,6 @@
 #include "feature_types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 QueryOperatorType map_operator_type(const OperatorType operator_type) {
   Assert(operator_type_mapping.contains(operator_type),
@@ -28,4 +28,4 @@ std::ostream& operator<<(std::ostream& stream, const FeatureVector& feature_vect
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

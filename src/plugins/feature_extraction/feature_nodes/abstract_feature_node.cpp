@@ -3,7 +3,7 @@
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractFeatureNode::AbstractFeatureNode(const FeatureNodeType type,
                                          const std::shared_ptr<AbstractFeatureNode>& left_input,
@@ -56,4 +56,4 @@ size_t AbstractFeatureNode::_on_shallow_hash() const {
   Fail("Not implemented");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "feature_types.hpp"
 #include "utils/settings/abstract_setting.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class QueryExporter {
  public:
@@ -38,4 +38,4 @@ class QueryExporter {
   std::vector<std::shared_ptr<Query>> _queries;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

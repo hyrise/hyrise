@@ -8,7 +8,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/encoding_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SegmentFeatureNode::SegmentFeatureNode(const Tier tier, const EncodingType encoding_type)
     : AbstractFeatureNode{FeatureNodeType::Segment, nullptr}, _tier{tier}, _encoding_type{encoding_type} {}
@@ -35,4 +35,4 @@ std::shared_ptr<FeatureVector> SegmentFeatureNode::_on_to_feature_vector() const
   return feature_vector;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

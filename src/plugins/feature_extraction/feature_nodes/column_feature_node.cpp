@@ -10,7 +10,7 @@
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnFeatureNode::ColumnFeatureNode(const bool is_reference, const std::shared_ptr<AbstractFeatureNode>& input_node,
                                      const ColumnID column_id,
@@ -134,4 +134,4 @@ const std::vector<std::shared_ptr<SegmentFeatureNode>>& ColumnFeatureNode::segme
   return _segments;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

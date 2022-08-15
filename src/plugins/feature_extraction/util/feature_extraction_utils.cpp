@@ -4,7 +4,7 @@
 #include "feature_extraction/feature_nodes/operator_feature_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::vector<std::shared_ptr<BaseTableFeatureNode>> find_base_tables(
     const std::shared_ptr<AbstractFeatureNode>& root_node) {
@@ -86,4 +86,4 @@ void feature_vector_to_stream(std::ostream& stream, const FeatureVector& feature
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "feature_extraction/feature_types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class FeatureNodeType { Operator, Predicate, AggregateFunction, Table, Column, Segment };
 
@@ -36,4 +36,4 @@ class AbstractFeatureNode : public std::enable_shared_from_this<AbstractFeatureN
   std::shared_ptr<FeatureVector> _feature_vector;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

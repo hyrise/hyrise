@@ -11,7 +11,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorFeatureNode : public AbstractFeatureNode {
  public:
@@ -72,4 +72,4 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   std::vector<std::shared_ptr<AbstractFeatureNode>> _subqueries;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

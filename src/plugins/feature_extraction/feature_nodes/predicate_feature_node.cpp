@@ -13,7 +13,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 std::shared_ptr<AbstractExpression> resolve_uncorrelated_subqueries(
     const std::shared_ptr<AbstractExpression>& predicate) {
@@ -71,7 +71,7 @@ std::shared_ptr<AbstractExpression> resolve_uncorrelated_subqueries(
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 PredicateFeatureNode::PredicateFeatureNode(const std::shared_ptr<AbstractExpression>& lqp_expression,
                                            const std::shared_ptr<AbstractExpression>& pqp_expression,
@@ -156,9 +156,23 @@ PredicateFeatureNode::PredicateFeatureNode(const std::shared_ptr<AbstractExpress
   _is_complex = true;
 }
 
+PredicateFeatureNode::PredicateFeatureNode(const std::shared_ptr<const BinaryPredicateExpression>& predicate_expression,
+                                           const OperatorJoinPredicate& join_predicate,
+                                           const std::shared_ptr<AbstractFeatureNode>& left_operator_node_input,
+                                           const std::shared_ptr<AbstractFeatureNode>& right_operator_node_input)
+    : AbstractFeatureNode(FeatureNodeType::Predicate, nullptr, nullptr) {
+  _predicate_condition = predicate_expression->predicate_condition;
+
+  _column_vs_column = true;
+  _left_input = ColumnFeatureNode::from_expression(left_operator_node_input, predicate_expression->arguments[0],
+                                                   join_predicate.column_ids.first);
+  _right_input = ColumnFeatureNode::from_expression(right_operator_node_input, predicate_expression->arguments[1],
+                                                    join_predicate.column_ids.second);
+}
+
 std::shared_ptr<FeatureVector> PredicateFeatureNode::_on_to_feature_vector() const {
-  if (!predicate_condition) {
-    return std::make_shared<FeatureVector>(feature_headers.size());
+  if (!_predicate_condition) {
+    return std::make_shared<FeatureVector>(feature_headers().size());
   }
   return one_hot_encoding<PredicateCondition>(*_predicate_condition);
 }
@@ -172,4 +186,4 @@ const std::vector<std::string>& PredicateFeatureNode::headers() {
   return ohe_headers_condition;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "abstract_feature_node.hpp"
 #include "storage/encoding_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SegmentFeatureNode : public AbstractFeatureNode {
  public:
@@ -24,4 +24,4 @@ class SegmentFeatureNode : public AbstractFeatureNode {
   EncodingType _encoding_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

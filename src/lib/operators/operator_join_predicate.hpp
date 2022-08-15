@@ -36,6 +36,8 @@ struct OperatorJoinPredicate {
   // `.first` is the Column in the left input, `.second` is the column in the right input
   ColumnIDPair column_ids;
   PredicateCondition predicate_condition;
+
+ private:
   bool flipped = false;
 };
 

@@ -5,7 +5,7 @@
 #include "operators/abstract_operator.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PlanExporter {
  public:
@@ -22,4 +22,4 @@ class PlanExporter {
   std::vector<std::shared_ptr<AbstractFeatureNode>> _feature_graphs;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

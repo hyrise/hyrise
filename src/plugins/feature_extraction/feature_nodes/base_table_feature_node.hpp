@@ -5,7 +5,7 @@
 #include "operators/abstract_operator.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseTableFeatureNode : public AbstractTableFeatureNode {
  public:
@@ -39,4 +39,4 @@ class BaseTableFeatureNode : public AbstractTableFeatureNode {
   std::optional<std::string> _table_name;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

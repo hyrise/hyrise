@@ -2,7 +2,7 @@
 
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractTableFeatureNode::AbstractTableFeatureNode(const TableNodeType node_type, const TableType table_type,
                                                    const uint64_t row_count, const uint32_t chunk_count,
@@ -60,4 +60,4 @@ void AbstractTableFeatureNode::register_column(const std::shared_ptr<ColumnFeatu
   _columns[column_id] = column;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

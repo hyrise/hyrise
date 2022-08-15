@@ -2,7 +2,7 @@
 
 #include <fstream>
 
-namespace opossum {
+namespace hyrise {
 
 std::string QueryExporter::query_hash(const std::string& query) {
   std::stringstream query_hex_hash;
@@ -59,4 +59,4 @@ void QueryExporter::FileName::set(const std::string& value) {
   _value = value;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

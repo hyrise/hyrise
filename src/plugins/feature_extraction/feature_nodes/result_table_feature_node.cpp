@@ -1,13 +1,14 @@
 #include "result_table_feature_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ResultTableFeatureNode::ResultTableFeatureNode(const TableType table_type, const uint64_t row_count,
                                                const uint32_t chunk_count, const uint16_t column_count,
                                                const std::shared_ptr<const AbstractOperator>& op)
     : AbstractTableFeatureNode{AbstractTableFeatureNode::TableNodeType::ResultTable, table_type, row_count, chunk_count,
                                column_count},
-      _op{op} {
+      _op{op},
+      _output_expressions{op->lqp_node->output_expressions()} {
   if (table_type == TableType::Data) {
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       set_column_materialized(column_id);
@@ -48,11 +49,11 @@ TableType ResultTableFeatureNode::table_type() const {
 }
 
 bool ResultTableFeatureNode::column_is_nullable(const ColumnID column_id) const {
-  return _op->performance_data->output_columns_nullable.at(column_id);
+  return _op->lqp_node->is_column_nullable(column_id);
 }
 
 DataType ResultTableFeatureNode::column_data_type(const ColumnID column_id) const {
-  return _op->performance_data->output_data_types.at(column_id);
+  return _output_expressions.at(column_id)->data_type();
 }
 
 uint32_t ResultTableFeatureNode::sorted_segment_count(const ColumnID column_id) const {
@@ -74,10 +75,4 @@ uint32_t ResultTableFeatureNode::chunk_count() const {
   return _op->performance_data->output_chunk_count;
 }
 
-bool ResultTableFeatureNode::column_is_reference(const ColumnID column_id) const {
-  const auto& segment_types = _op->performance_data->output_segment_types;
-  return std::none_of(segment_types.cbegin(), segment_types.cend(),
-                      [&](const auto& chunk_segment_types) { return chunk_segment_types.at(column_id); });
-}
-
-}  // namespace opossum
+}  // namespace hyrise

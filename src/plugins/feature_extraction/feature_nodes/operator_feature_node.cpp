@@ -1,15 +1,20 @@
 #include "operator_feature_node.hpp"
 
+#include "expression/binary_predicate_expression.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "feature_extraction/feature_nodes/base_table_feature_node.hpp"
 #include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/projection_node.hpp"
+#include "operators/operator_join_predicate.hpp"
 
 namespace {
 
-using namespace opossum;
+using namespace hyrise;
 
 std::shared_ptr<OperatorFeatureNode> _recursively_build_graph_from_pqp(
     const std::shared_ptr<const AbstractOperator>& op) {
@@ -19,9 +24,36 @@ std::shared_ptr<OperatorFeatureNode> _recursively_build_graph_from_pqp(
   return std::make_shared<OperatorFeatureNode>(op, left_input, right_input);
 }
 
+std::shared_ptr<PredicateFeatureNode> resolve_join_predicate(
+    OperatorJoinPredicate& join_op_predicate, const std::shared_ptr<AbstractExpression>& join_lqp_predicate,
+    const std::shared_ptr<OperatorFeatureNode>& left_input, const std::shared_ptr<OperatorFeatureNode>& right_input,
+    const bool operator_flipped_inputs) {
+  auto adjusted_lqp_predicate = std::static_pointer_cast<BinaryPredicateExpression>(join_lqp_predicate->deep_copy());
+  Assert(adjusted_lqp_predicate,
+         "Join predicate is not BinaryPredicateExpression: " + join_lqp_predicate->description());
+  // flip PQP predicate if operator flipped it (again)
+  if (operator_flipped_inputs) {
+    join_op_predicate.flip();
+  }
+
+  // flip LQP predicate if PQP predicate is flipped
+  if (join_op_predicate.is_flipped()) {
+    adjusted_lqp_predicate = std::make_shared<BinaryPredicateExpression>(
+        flip_predicate_condition(adjusted_lqp_predicate->predicate_condition), adjusted_lqp_predicate->right_operand(),
+        adjusted_lqp_predicate->left_operand());
+  }
+
+  // now, LQP and PQP predicate have build input left and probe input right
+  Assert(expression_evaluable_on_lqp(adjusted_lqp_predicate->left_operand(), *left_input->get_operator()->lqp_node),
+         "Left operand not from left input");
+  Assert(expression_evaluable_on_lqp(adjusted_lqp_predicate->right_operand(), *right_input->get_operator()->lqp_node),
+         "Right operand not from right input");
+  return std::make_shared<PredicateFeatureNode>(adjusted_lqp_predicate, join_op_predicate, left_input, right_input);
+}
+
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 OperatorFeatureNode::OperatorFeatureNode(const std::shared_ptr<const AbstractOperator>& op,
                                          const std::shared_ptr<AbstractFeatureNode>& left_input,
@@ -138,32 +170,54 @@ const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::su
 void OperatorFeatureNode::_handle_general_operator(const AbstractOperator& op) {}
 
 void OperatorFeatureNode::_handle_join_hash(const JoinHash& join_hash) {
-  Assert(_right_input, "Join needs two inputs");
+  Assert(_right_input && _left_input->type() == FeatureNodeType::Operator &&
+             _right_input->type() == FeatureNodeType::Operator,
+         "Join needs two input operators");
 
-  const auto& performance_data = static_cast<JoinHash::PerformanceData&>(_op->performance_data);
+  const auto& performance_data = static_cast<JoinHash::PerformanceData&>(*_op->performance_data);
   // for us, the right input is ALWAYS the probe column and the left input is the build side
   auto flipped_inputs = !performance_data.left_input_is_build_side;
   if (flipped_inputs) {
     std::swap(_left_input, _right_input);
   }
 
-  // if the operator flipped the sides, all predicates were flipped as well
-  // however, they could have been flipped on instantiation, and we don't know which sides of the
-  // LQP node's predicates belong to them
-  // need to handle that for the predicates...
+  const auto left_input_node = std::static_pointer_cast<OperatorFeatureNode>(_left_input);
+  const auto right_input_node = std::static_pointer_cast<OperatorFeatureNode>(_right_input);
 
-
+  auto join_op_predicates = std::vector<OperatorJoinPredicate>{join_hash.primary_predicate()};
+  const auto& secondary_predicates = join_hash.secondary_predicates();
+  join_op_predicates.insert(join_op_predicates.end(), secondary_predicates.cbegin(), secondary_predicates.cend());
+  const auto& join_node = static_cast<const JoinNode&>(*join_hash.lqp_node);
+  const auto& join_lqp_predicates = join_node.join_predicates();
+  const auto join_predicate_count = join_op_predicates.size();
+  Assert(join_predicate_count == join_lqp_predicates.size(), "LQP and PQP predicates do not match");
+  for (auto predicate_id = ColumnID{0}; predicate_id < join_predicate_count; ++predicate_id) {
+    _predicates.push_back(resolve_join_predicate(join_op_predicates.at(predicate_id),
+                                                 join_lqp_predicates.at(predicate_id), left_input_node,
+                                                 right_input_node, flipped_inputs));
+  }
 }
+
 void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {
   Assert(_right_input, "Join needs two inputs");
 
   // for us, the right input is ALWAYS the index column
-  const auto& performance_data = static_cast<JoinIndex::PerformanceData&>(_op->performance_data);
+  const auto& performance_data = static_cast<JoinIndex::PerformanceData&>(*_op->performance_data);
   // for us, the right input is ALWAYS the probe column and the left input is the build side
   auto flipped_inputs = !performance_data.right_input_has_index;
   if (flipped_inputs) {
     std::swap(_left_input, _right_input);
   }
+
+  const auto left_input_node = std::static_pointer_cast<OperatorFeatureNode>(_left_input);
+  const auto right_input_node = std::static_pointer_cast<OperatorFeatureNode>(_right_input);
+
+  auto join_op_predicate = join_index.primary_predicate();
+  Assert(join_index.secondary_predicates().empty(), "Index Joinx with secondary predicates found");
+  const auto& join_node = static_cast<const JoinNode&>(*join_index.lqp_node);
+  const auto& join_lqp_predicate = *join_node.join_predicates().cbegin();
+  _predicates.push_back(
+      resolve_join_predicate(join_op_predicate, join_lqp_predicate, left_input_node, right_input_node, flipped_inputs));
 }
 
 void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
@@ -186,7 +240,7 @@ void OperatorFeatureNode::_handle_projection(const Projection& projection) {
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
     const auto& expression = expressions[column_id];
     if (expression->type == ExpressionType::PQPColumn) {
-      forwarded_pqp_columns.emplace(expression_id);
+      forwarded_pqp_columns.emplace(expression);
     }
   }
 
@@ -211,14 +265,14 @@ void OperatorFeatureNode::_handle_projection(const Projection& projection) {
     }
   }
 
-  const auto& projection_node = static_cast<ProjectionNode&>(projection.lqp_node);
+  const auto& projection_node = static_cast<const ProjectionNode&>(*projection.lqp_node);
   const auto& output_expressions = projection_node.output_expressions();
   for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
     const auto& expression = expressions[column_id];
     if (!forwarded_pqp_columns.contains(expression)) {
       _output_table->set_column_materialized(column_id);
-      _predicates.push_back(std::make_shared<PredicateFeatureNode>(output_expressions.at(column_id)), expression,
-                            _left_input)
+      _predicates.push_back(
+          std::make_shared<PredicateFeatureNode>(output_expressions.at(column_id), expression, _left_input));
     }
   }
 }
@@ -243,4 +297,4 @@ const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::pr
   return _predicates;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

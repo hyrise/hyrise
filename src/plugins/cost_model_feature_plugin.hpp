@@ -5,7 +5,7 @@
 #include "utils/abstract_plugin.hpp"
 #include "utils/settings/abstract_setting.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CostModelFeaturePlugin : public AbstractPlugin {
  public:
@@ -42,4 +42,4 @@ class CostModelFeaturePlugin : public AbstractPlugin {
   std::shared_ptr<QueryExporter> _query_exporter;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

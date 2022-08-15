@@ -10,7 +10,7 @@
 #include "feature_extraction/feature_nodes/base_table_feature_node.hpp"
 #include "feature_extraction/feature_types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename EnumType>
 std::shared_ptr<FeatureVector> one_hot_encoding(const EnumType value) {
@@ -86,4 +86,4 @@ std::pair<std::shared_ptr<AbstractTableFeatureNode>, ColumnID> find_original_col
 
 void feature_vector_to_stream(std::ostream& stream, const FeatureVector& feature_vector);
 
-}  // namespace opossum
+}  // namespace hyrise

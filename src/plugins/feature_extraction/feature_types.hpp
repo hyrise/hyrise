@@ -6,7 +6,7 @@
 
 STRONG_TYPEDEF(double, Feature);
 
-namespace opossum {
+namespace hyrise {
 
 enum class QueryOperatorType {
   Aggregate,
@@ -63,4 +63,4 @@ std::string feature_vector_to_string(const FeatureVector& feature_vector);
 
 std::ostream& operator<<(std::ostream& stream, const FeatureVector& feature_vector);
 
-}  // namespace opossum
+}  // namespace hyrise

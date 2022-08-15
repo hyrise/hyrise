@@ -4,7 +4,7 @@
 #include "feature_extraction/feature_nodes/column_feature_node.hpp"
 #include "operators/abstract_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ResultTableFeatureNode : public AbstractTableFeatureNode {
  public:
@@ -28,14 +28,14 @@ class ResultTableFeatureNode : public AbstractTableFeatureNode {
   uint32_t sorted_segment_count(const ColumnID column_id) const final;
   uint32_t chunk_count() const final;
 
-  bool column_is_reference(const ColumnID column_id) const;
-
  protected:
   size_t _on_shallow_hash() const final;
 
   std::unordered_set<ColumnID> _materialized_columns{};
 
   std::shared_ptr<const AbstractOperator> _op;
+
+  std::vector<std::shared_ptr<AbstractExpression>> _output_expressions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

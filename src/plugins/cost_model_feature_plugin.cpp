@@ -3,7 +3,7 @@
 #include "feature_extraction/feature_types.hpp"
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string CostModelFeaturePlugin::description() const {
   return "This is the Hyrise CostModelFeaturePlugin";
@@ -69,4 +69,4 @@ void CostModelFeaturePlugin::OutputPath::set(const std::string& value) {
 
 EXPORT_PLUGIN(CostModelFeaturePlugin)
 
-}  // namespace opossum
+}  // namespace hyrise

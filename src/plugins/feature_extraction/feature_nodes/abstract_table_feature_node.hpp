@@ -3,7 +3,7 @@
 #include "feature_extraction/feature_nodes/abstract_feature_node.hpp"
 #include "feature_extraction/feature_nodes/column_feature_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractTableFeatureNode : public AbstractFeatureNode {
  public:
@@ -41,4 +41,4 @@ class AbstractTableFeatureNode : public AbstractFeatureNode {
   std::vector<std::weak_ptr<ColumnFeatureNode>> _columns;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

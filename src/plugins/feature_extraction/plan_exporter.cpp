@@ -11,7 +11,7 @@
 #include "feature_extraction/feature_nodes/segment_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void PlanExporter::add_plan(const std::shared_ptr<Query>& query, const std::shared_ptr<const AbstractOperator>& pqp) {
   _feature_graphs.push_back(OperatorFeatureNode::from_pqp(pqp, query));
@@ -154,4 +154,4 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

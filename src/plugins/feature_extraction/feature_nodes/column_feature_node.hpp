@@ -6,7 +6,7 @@
 #include "feature_extraction/feature_nodes/segment_feature_node.hpp"
 #include "operators/operator_performance_data.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ColumnFeatureNode : public AbstractFeatureNode {
  public:
@@ -50,4 +50,4 @@ class ColumnFeatureNode : public AbstractFeatureNode {
   std::vector<std::shared_ptr<SegmentFeatureNode>> _segments;
 };
 
-}  // namespace opossum
+}  // namespace hyrise
