@@ -120,15 +120,17 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
   iterable.with_iterators([&](auto input_begin, auto input_end) {
     auto sorted_segment_search =
         SortedSegmentSearch(input_begin, input_end, _sorted_by, _nullable, _predicate_condition, _search_value);
-    sorted_segment_search.scan_sorted_segment([&](auto output_begin, auto output_end) {
-      ASSERT_EQ(std::distance(output_begin, output_end), _expected.size());
+    auto matches = RowIDPosList{};
+    const auto initial_chunk_id = ChunkID{0};
+    sorted_segment_search.scan_sorted_segment(initial_chunk_id, matches, nullptr);
 
-      size_t index = 0;
-      for (; output_begin < output_end; ++output_begin, ++index) {
-        ASSERT_FALSE(output_begin->is_null()) << "row " << index << " is null";
-        ASSERT_EQ(output_begin->value(), _expected[index]) << "row " << index << " is invalid";
-      }
-    });
+    ASSERT_EQ(matches.size(), _expected.size());
+    for (auto index = size_t{0}; index < _expected.size(); ++index) {
+      const auto& [chunk_id, chunk_offset] = matches[index];
+      EXPECT_EQ(chunk_id, initial_chunk_id);
+      EXPECT_FALSE(_segment->is_null(chunk_offset)) << "row " << index << " is null";
+      EXPECT_EQ(_segment->get(chunk_offset), _expected[index]) << "row " << index << " is invalid";
+    }
   });
 }
 

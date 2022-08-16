@@ -185,9 +185,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
         auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, sort_mode, _column_is_nullable,
                                                          predicate_condition, boost::get<ColumnDataType>(value));
 
-        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter);
-        });
+        sorted_segment_search.scan_sorted_segment(chunk_id, matches, position_filter);
 
         if (sorted_segment_search.no_rows_matching) {
           ++num_chunks_with_early_out;
