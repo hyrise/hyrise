@@ -125,19 +125,19 @@ class SortedSegmentSearch {
         no_rows_matching = first_value > _first_search_value || last_value < _first_search_value;
         break;
       case PredicateCondition::GreaterThanEquals:
-        all_rows_matching = first_value >= _first_search_value && last_value >= _first_search_value;
+        all_rows_matching = first_value >= _first_search_value;
         no_rows_matching = last_value < _first_search_value;
         break;
       case PredicateCondition::GreaterThan:
-        all_rows_matching = first_value > _first_search_value && last_value > _first_search_value;
+        all_rows_matching = first_value > _first_search_value;
         no_rows_matching = last_value <= _first_search_value;
         break;
       case PredicateCondition::LessThanEquals:
-        all_rows_matching = first_value <= _first_search_value && last_value <= _first_search_value;
+        all_rows_matching = last_value <= _first_search_value;
         no_rows_matching = first_value > _first_search_value;
         break;
       case PredicateCondition::LessThan:
-        all_rows_matching = first_value < _first_search_value && last_value < _first_search_value;
+        all_rows_matching = last_value < _first_search_value;
         no_rows_matching = first_value >= _first_search_value;
         break;
       default:
