@@ -16,7 +16,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<const Table>& table_to_sort,
                                                       const std::vector<ColumnID>& column_ids) {
@@ -38,7 +38,7 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& op,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
@@ -791,4 +791,4 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
                                                                                    : aggregate->as_column_name();
   _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
 }
-}  // namespace opossum
+}  // namespace hyrise

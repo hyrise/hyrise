@@ -4,7 +4,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::optional<OperatorJoinPredicate> OperatorJoinPredicate::from_expression(const AbstractExpression& predicate,
                                                                             const AbstractLQPNode& left_input,
@@ -85,4 +85,4 @@ bool operator==(const OperatorJoinPredicate& lhs, const OperatorJoinPredicate& r
   return std::tie(lhs.column_ids, lhs.predicate_condition) == std::tie(rhs.column_ids, rhs.predicate_condition);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/table_statistics.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGraph& join_graph) {
   VertexIndexMap vertex_indices;
@@ -144,4 +144,4 @@ void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
 
   _cache.emplace(bitmask, std::move(cache_entry));
 }
-}  // namespace opossum
+}  // namespace hyrise

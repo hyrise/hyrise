@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractSetting::AbstractSetting(const std::string& init_name) : name(init_name) {}
 
@@ -15,4 +15,4 @@ void AbstractSetting::unregister_at_settings_manager() {
   Hyrise::get().settings_manager._remove(name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -15,7 +15,7 @@
  * Exclusion Set        of a vertex: all vertices with a lower index than this vertex
  */
 
-namespace opossum {
+namespace hyrise {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
     : _num_vertices(num_vertices), _edges(std::move(edges)) {
@@ -226,4 +226,4 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
   return subsets;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

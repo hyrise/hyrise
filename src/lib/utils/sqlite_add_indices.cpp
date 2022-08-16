@@ -11,7 +11,7 @@
 #include "utils/sqlite_wrapper.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void add_indices_to_sqlite(const std::string& schema_file_path, const std::string& create_indices_file_path,
                            std::shared_ptr<SQLiteWrapper>& sqlite_wrapper) {
@@ -71,4 +71,4 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   std::cout << "- Added indexes to SQLite (" << timer.lap_formatted() << ")" << std::endl;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

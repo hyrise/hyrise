@@ -16,7 +16,7 @@
 #include "utils/list_directory.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
   json = {{"generation_duration", metrics.generation_duration.count()},
@@ -407,4 +407,4 @@ std::unordered_map<std::string, BenchmarkTableInfo> AbstractTableGenerator::_loa
   return table_info_by_name;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

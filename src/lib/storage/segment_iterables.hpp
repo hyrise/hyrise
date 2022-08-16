@@ -7,7 +7,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief base class of all segment iterables
@@ -198,4 +198,4 @@ template <typename T>
 constexpr auto is_point_accessible_segment_iterable_v =
     std::is_base_of_v<PointAccessibleSegmentIterable<std::decay_t<T>>, T>;
 
-}  // namespace opossum
+}  // namespace hyrise

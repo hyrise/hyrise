@@ -6,7 +6,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Return type of segment iterators
@@ -136,4 +136,4 @@ class IsNullSegmentPosition final : public AbstractSegmentPosition<boost::blank>
   alignas(8) const ChunkOffset _chunk_offset;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

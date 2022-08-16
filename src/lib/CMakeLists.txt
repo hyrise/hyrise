@@ -620,7 +620,8 @@ set(
     utils/performance_warning.hpp
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
-    utils/print_directed_acyclic_graph.hpp
+    utils/print_utils.cpp
+    utils/print_utils.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
@@ -655,7 +656,7 @@ set(
     magic_enum
     sqlparser
     uninitialized_vector
-    zstd
+    libzstd_static
     ${CMAKE_DL_LIBS}
     # Additional libraries added with target_link_libraries_system below
 )

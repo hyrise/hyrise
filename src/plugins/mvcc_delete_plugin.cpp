@@ -8,7 +8,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string MvccDeletePlugin::description() const {
   return "Physical MVCC delete plugin";
@@ -186,4 +186,4 @@ void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& ta
 
 EXPORT_PLUGIN(MvccDeletePlugin)
 
-}  // namespace opossum
+}  // namespace hyrise

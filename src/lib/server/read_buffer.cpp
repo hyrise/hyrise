@@ -2,7 +2,7 @@
 
 #include "client_disconnect_exception.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename SocketType>
 size_t ReadBuffer<SocketType>::size() const {
@@ -114,4 +114,4 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
 template class ReadBuffer<Socket>;
 template class ReadBuffer<boost::asio::posix::stream_descriptor>;
 
-}  // namespace opossum
+}  // namespace hyrise

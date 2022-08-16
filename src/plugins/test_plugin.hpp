@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TestPlugin : public AbstractPlugin {
  public:
@@ -27,4 +27,4 @@ class TestPlugin : public AbstractPlugin {
   size_t _added_tables_count{0};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

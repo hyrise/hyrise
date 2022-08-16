@@ -4,10 +4,10 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<const Table> AbstractReadOnlyOperator::_on_execute(std::shared_ptr<TransactionContext> /*context*/) {
   return _on_execute();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

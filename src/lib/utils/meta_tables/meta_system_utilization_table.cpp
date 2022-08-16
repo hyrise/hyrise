@@ -13,7 +13,7 @@
 #include "hyrise.hpp"
 #include "meta_system_utilization_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
     : AbstractMetaTable(TableColumnDefinitions{{"cpu_system_time", DataType::Long, false},
@@ -334,4 +334,4 @@ std::vector<int64_t> MetaSystemUtilizationTable::_parse_value_string(std::string
 }
 #endif
 
-}  // namespace opossum
+}  // namespace hyrise

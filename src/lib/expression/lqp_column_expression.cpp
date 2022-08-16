@@ -9,7 +9,7 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPColumnExpression::LQPColumnExpression(const std::shared_ptr<const AbstractLQPNode>& init_original_node,
                                          const ColumnID init_original_column_id)
@@ -126,4 +126,4 @@ bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) con
       "AbstractExpression::is_nullable_on_lqp()");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

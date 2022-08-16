@@ -1,6 +1,6 @@
 #include "meta_mock_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaMockTable::MetaMockTable() : AbstractMetaTable(TableColumnDefinitions{{"mock", DataType::String, false}}) {}
 
@@ -77,4 +77,4 @@ void MetaMockTable::_on_update(const std::vector<AllTypeVariant>& selected_value
   _update_updated_values = update_values;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

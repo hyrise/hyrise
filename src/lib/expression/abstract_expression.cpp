@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 AbstractExpression::AbstractExpression(const ExpressionType init_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
@@ -105,4 +105,4 @@ std::string AbstractExpression::_enclose_argument(const AbstractExpression& argu
   return argument.description(mode);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

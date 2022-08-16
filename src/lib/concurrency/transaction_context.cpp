@@ -8,7 +8,7 @@
 #include "operators/abstract_read_write_operator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TransactionContext::TransactionContext(const TransactionID transaction_id, const CommitID snapshot_commit_id,
                                        const AutoCommit is_auto_commit)
@@ -249,4 +249,4 @@ std::ostream& operator<<(std::ostream& stream, const TransactionPhase& phase) {
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

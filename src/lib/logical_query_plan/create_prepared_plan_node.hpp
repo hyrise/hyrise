@@ -2,7 +2,7 @@
 
 #include "logical_query_plan/abstract_non_query_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PreparedPlan;
 
@@ -24,4 +24,4 @@ class CreatePreparedPlanNode : public EnableMakeForLQPNode<CreatePreparedPlanNod
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

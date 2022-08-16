@@ -14,9 +14,9 @@
 #include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorTaskTest : public BaseTest {
  protected:
@@ -107,4 +107,4 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 }
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FunctionExpression::FunctionExpression(const FunctionType init_function_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
@@ -68,4 +68,4 @@ size_t FunctionExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(function_type));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

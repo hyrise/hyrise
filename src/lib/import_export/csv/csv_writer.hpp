@@ -9,7 +9,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * With the CsvWriter, selected tables of a database
@@ -97,4 +97,4 @@ class CsvWriter {
   static void _write_string_value(const pmr_string& value, std::ofstream& ofstream, const ParseConfig& config);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

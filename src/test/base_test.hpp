@@ -26,7 +26,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using namespace expression_functional;  // NOLINT
 
@@ -104,4 +104,4 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::FrameOfReference},
     SegmentEncodingSpec{EncodingType::LZ4},
     SegmentEncodingSpec{EncodingType::RunLength}};
-}  // namespace opossum
+}  // namespace hyrise

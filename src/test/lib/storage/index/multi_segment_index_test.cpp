@@ -11,7 +11,7 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DerivedIndex>
 class MultiSegmentIndexTest : public BaseTest {
@@ -213,4 +213,4 @@ TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   EXPECT_TRUE(indexes_int_str[0]->is_index_for({this->dict_segment_int, this->dict_segment_str}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

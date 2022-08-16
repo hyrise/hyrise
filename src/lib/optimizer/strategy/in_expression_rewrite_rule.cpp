@@ -18,8 +18,8 @@
 #include "storage/table.hpp"
 
 namespace {
-using namespace opossum;                         // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_expression,
@@ -99,7 +99,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string InExpressionRewriteRule::name() const {
   static const auto name = std::string{"InExpressionRewriteRule"};
@@ -192,4 +192,4 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

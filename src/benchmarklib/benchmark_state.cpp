@@ -2,9 +2,9 @@
 
 #include <chrono>
 
-namespace opossum {
+namespace hyrise {
 
-BenchmarkState::BenchmarkState(const opossum::Duration init_max_duration) : max_duration(init_max_duration) {}
+BenchmarkState::BenchmarkState(const Duration init_max_duration) : max_duration(init_max_duration) {}
 
 // NOLINTNEXTLINE(bugprone-unhandled-self-assignment,cert-oop54-cpp)
 BenchmarkState& BenchmarkState::operator=(const BenchmarkState& other) {
@@ -48,4 +48,4 @@ bool BenchmarkState::is_done() const {
   return state == State::Over;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct SortTestParam {
   std::vector<SortColumnDefinition> sort_columns;
@@ -234,4 +234,4 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
   EXPECT_EQ(sort.get_output()->type(), TableType::Data);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

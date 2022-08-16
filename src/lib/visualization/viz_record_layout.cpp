@@ -3,7 +3,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 VizRecordLayout& VizRecordLayout::add_label(const std::string& label) {
   content.emplace_back(escape(label));
@@ -60,4 +60,4 @@ std::string VizRecordLayout::escape(const std::string& input) {
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 SQLIdentifier::SQLIdentifier(const std::string& init_column_name, const std::optional<std::string>& init_table_name)
     : column_name(init_column_name), table_name(init_table_name) {}
@@ -20,4 +20,4 @@ std::string SQLIdentifier::as_string() const {
   return sstream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

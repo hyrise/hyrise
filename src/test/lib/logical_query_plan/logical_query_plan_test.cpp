@@ -14,9 +14,9 @@
 #include "utils/load_table.hpp"
 #include "utils/string_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LogicalQueryPlanTest : public BaseTest {
  public:
@@ -442,4 +442,4 @@ TEST_F(LogicalQueryPlanTest, OutputResetOnNodeDelete) {
   EXPECT_EQ(mock_node_b->output_count(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct TopologyCpu final {
   explicit TopologyCpu(CpuID init_cpu_id) : cpu_id(init_cpu_id) {}
@@ -96,4 +96,4 @@ class Topology final : public Noncopyable {
 
 std::ostream& operator<<(std::ostream& stream, const Topology& topology);
 
-}  // namespace opossum
+}  // namespace hyrise

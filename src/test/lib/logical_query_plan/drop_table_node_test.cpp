@@ -2,7 +2,7 @@
 
 #include "logical_query_plan/drop_table_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DropTableNodeTest : public BaseTest {
  public:
@@ -33,4 +33,4 @@ TEST_F(DropTableNodeTest, Copy) {
   EXPECT_EQ(*drop_table_node, *drop_table_node->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

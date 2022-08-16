@@ -17,7 +17,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 ChunkEncodingSpec get_chunk_encoding_spec(const Chunk& chunk) {
   auto chunk_encoding_spec = ChunkEncodingSpec{chunk.column_count()};
@@ -56,7 +56,7 @@ bool is_chunk_encoding_spec_satisfied(const ChunkEncodingSpec& expected_chunk_en
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::shared_ptr<Table>& table,
                                    const EncodingConfig& encoding_config) {
@@ -133,4 +133,4 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
   return encoding_performed;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

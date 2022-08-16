@@ -14,9 +14,9 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 class OperatorsDifferenceTest : public BaseTest {
  protected:
   void SetUp() override {
@@ -117,4 +117,4 @@ TEST_F(OperatorsDifferenceTest, ForwardSortedByFlag) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

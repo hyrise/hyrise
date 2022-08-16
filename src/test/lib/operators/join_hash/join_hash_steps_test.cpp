@@ -7,7 +7,7 @@
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
   The purpose of this test case is to test the single steps of the Hash Join (e.g., build(), probe(), etc.).
@@ -329,4 +329,4 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
                std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

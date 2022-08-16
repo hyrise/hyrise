@@ -6,7 +6,7 @@
 #include "types.hpp"
 #include "variable_length_key_base.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyProxy;
 class VariableLengthKeyConstProxy;
@@ -60,4 +60,4 @@ class VariableLengthKey {
   std::unique_ptr<VariableLengthKeyWord[]> _owned_data;
   VariableLengthKeyBase _impl;
 };
-}  // namespace opossum
+}  // namespace hyrise

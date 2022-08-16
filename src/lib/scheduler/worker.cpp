@@ -23,13 +23,13 @@ namespace {
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<opossum::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
+thread_local std::weak_ptr<hyrise::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 }  // namespace
 
 // The sleep time was determined experimentally
 static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() {
   return ::this_thread_worker.lock();
@@ -230,4 +230,4 @@ void Worker::_set_affinity() {
 #endif
 }
 
-}  // namespace opossum
+}  // namespace hyrise

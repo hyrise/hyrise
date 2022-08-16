@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
  public:
@@ -118,4 +118,4 @@ class FrameOfReferenceEncoder : public SegmentEncoder<FrameOfReferenceEncoder> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

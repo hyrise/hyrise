@@ -6,7 +6,7 @@
  * ExpressionEvaluator internal functor objects.
  */
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Indicates whether T is a valid argument type to a logical expression
@@ -216,4 +216,4 @@ struct CaseEvaluator {
   // Implementation is in ExpressionEvaluator::_evaluate_case_expression
 };
 
-}  // namespace opossum
+}  // namespace hyrise

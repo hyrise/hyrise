@@ -22,7 +22,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 AbstractHistogram<T>::AbstractHistogram(const HistogramDomain<T>& domain)
@@ -887,4 +887,4 @@ Cardinality AbstractHistogram<T>::_scale_distinct_count(Cardinality value_count,
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(AbstractHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

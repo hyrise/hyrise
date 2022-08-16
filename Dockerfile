@@ -47,4 +47,4 @@ RUN apt-get update \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
     && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
 
-ENV OPOSSUM_HEADLESS_SETUP=true
+ENV HYRISE_HEADLESS_SETUP=true

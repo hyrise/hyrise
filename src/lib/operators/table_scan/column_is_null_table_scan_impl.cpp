@@ -12,7 +12,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                      const ColumnID column_id,
@@ -151,4 +151,4 @@ void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, RowIDPosList& m
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

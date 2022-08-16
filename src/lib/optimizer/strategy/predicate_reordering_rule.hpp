@@ -6,7 +6,7 @@
 
 #include "abstract_rule.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class PredicateNode;
@@ -34,4 +34,4 @@ class PredicateReorderingRule : public AbstractRule {
   void _reorder_predicates(const std::vector<std::shared_ptr<AbstractLQPNode>>& predicates) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

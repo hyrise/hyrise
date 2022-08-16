@@ -10,7 +10,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& parse_result) {
   const auto default_config = BenchmarkConfig::get_default_config();
@@ -235,4 +235,4 @@ bool CLIConfigParser::print_help_if_requested(const cxxopts::Options& options,
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

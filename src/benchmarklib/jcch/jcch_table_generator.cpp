@@ -5,7 +5,7 @@
 
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                                        ClusteringConfiguration clustering_configuration, ChunkOffset chunk_size)
@@ -99,4 +99,4 @@ void JCCHTableGenerator::_add_constraints(
   TPCHTableGenerator::_add_constraints(table_info_by_name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

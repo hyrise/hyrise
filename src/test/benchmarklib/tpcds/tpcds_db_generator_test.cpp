@@ -5,7 +5,7 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 namespace {
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
@@ -15,7 +15,7 @@ std::shared_ptr<Table> load_csv(const std::string& file_name) {
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class TPCDSTableGeneratorTest : public BaseTest {};
 
@@ -111,4 +111,4 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
   Hyrise::reset();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

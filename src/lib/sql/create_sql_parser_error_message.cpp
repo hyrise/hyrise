@@ -5,7 +5,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 std::string create_sql_parser_error_message(const std::string& sql, const hsql::SQLParserResult& result) {
   std::stringstream error_msg;
@@ -42,4 +42,4 @@ std::string create_sql_parser_error_message(const std::string& sql, const hsql::
   return error_msg.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

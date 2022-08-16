@@ -2,7 +2,7 @@
 
 #include "server/query_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionHandlingTest : public BaseTest {};
 
@@ -196,4 +196,4 @@ TEST_F(TransactionHandlingTest, InvalidTransactionTransitions) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

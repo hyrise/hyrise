@@ -4,7 +4,7 @@
 
 #include "./plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PluginManagerTest : public BaseTest {
  protected:
@@ -196,4 +196,4 @@ TEST_F(PluginManagerTest, UnloadNotLoadedPlugin) {
   EXPECT_THROW(pm.unload_plugin("NotLoadedPlugin"), std::exception);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

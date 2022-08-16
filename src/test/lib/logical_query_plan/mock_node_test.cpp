@@ -9,9 +9,9 @@
 #include "statistics/generate_pruning_statistics.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class MockNodeTest : public BaseTest {
  protected:
@@ -131,4 +131,4 @@ TEST_F(MockNodeTest, UniqueConstraintsPrunedColumns) {
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

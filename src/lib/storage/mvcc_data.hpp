@@ -6,7 +6,7 @@
 #include "types.hpp"
 #include "utils/copyable_atomic.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Stores visibility information for multiversion concurrency control.
@@ -56,4 +56,4 @@ struct MvccData {
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractStatisticsObject;
 enum class PredicateCondition;
@@ -55,4 +55,4 @@ class BaseAttributeStatistics {
   const DataType data_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

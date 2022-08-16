@@ -5,7 +5,7 @@
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DummyTableNodeTest : public BaseTest {
  protected:
@@ -40,4 +40,4 @@ TEST_F(DummyTableNodeTest, NodeExpressions) {
   ASSERT_EQ(_dummy_table_node->node_expressions.size(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

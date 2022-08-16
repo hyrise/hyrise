@@ -19,7 +19,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
@@ -96,7 +96,7 @@ void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& va
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 void BinaryWriter::write(const Table& table, const std::string& filename) {
   std::ofstream ofstream;
@@ -386,4 +386,4 @@ size_t BinaryWriter::_size(const pmr_string& object) {
   return object.length();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

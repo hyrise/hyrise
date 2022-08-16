@@ -14,7 +14,7 @@
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -227,4 +227,4 @@ std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_ty
 
 EXPLICITLY_DECLARE_DATA_TYPES(LZ4Segment);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -11,7 +11,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Wraps an SQL LIKE pattern (e.g. "Hello%Wo_ld") which strings can be tested against.
@@ -161,4 +161,4 @@ class LikeMatcher {
 
 std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wildcard);
 
-}  // namespace opossum
+}  // namespace hyrise

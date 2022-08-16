@@ -116,7 +116,7 @@ std::vector<std::string> tokenize(std::string input) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 // Console implementation
 
@@ -1032,18 +1032,18 @@ char* Console::_command_generator_setting_scheduler(const char* text, int state)
   return _command_generator(text, state, {"on", "off"});
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 int main(int argc, char** argv) {
   // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
   // problems (#1635)
-  opossum::Hyrise::get();
+  hyrise::Hyrise::get();
 
-  using Return = opossum::Console::ReturnCode;
-  auto& console = opossum::Console::get();
+  using Return = hyrise::Console::ReturnCode;
+  auto& console = hyrise::Console::get();
 
   // Bind CTRL-C to behaviour specified in Console::handle_signal
-  static_cast<void>(std::signal(SIGINT, &opossum::Console::handle_signal));
+  static_cast<void>(std::signal(SIGINT, &hyrise::Console::handle_signal));
 
   console.set_prompt("> ");
   console.set_logfile("console.log");

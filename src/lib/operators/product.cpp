@@ -8,7 +8,7 @@
 
 #include "storage/reference_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(OperatorType::Product, left, right) {}
@@ -134,4 +134,4 @@ std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
 
 void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

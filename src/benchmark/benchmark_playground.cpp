@@ -3,7 +3,7 @@
 #include "benchmark/benchmark.h"
 #include "micro_benchmark_basic_fixture.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Welcome to the benchmark playground. Here, you can quickly compare two
@@ -96,4 +96,4 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

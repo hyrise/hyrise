@@ -13,7 +13,7 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "visualization/abstract_visualizer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<AbstractLQPNode>>> {
  public:
@@ -35,4 +35,4 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
   CardinalityEstimator _cardinality_estimator;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

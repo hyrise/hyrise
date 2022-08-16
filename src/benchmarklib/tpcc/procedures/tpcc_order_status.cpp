@@ -3,7 +3,7 @@
 
 #include "tpcc_order_status.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCOrderStatus::TPCCOrderStatus(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor) {
@@ -78,4 +78,4 @@ bool TPCCOrderStatus::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

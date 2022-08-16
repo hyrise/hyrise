@@ -39,7 +39,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
@@ -67,9 +67,9 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -1045,4 +1045,4 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

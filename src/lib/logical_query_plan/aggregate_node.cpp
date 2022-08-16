@@ -17,10 +17,10 @@
 
 namespace {
 using NodeExpressionsDifferenceType =
-    typename std::iterator_traits<decltype(opossum::AggregateNode::node_expressions)::iterator>::difference_type;
+    typename std::iterator_traits<decltype(hyrise::AggregateNode::node_expressions)::iterator>::difference_type;
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
@@ -195,4 +195,4 @@ bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
                                                            node_mapping) &&
          aggregate_expressions_begin_idx == aggregate_node.aggregate_expressions_begin_idx;
 }
-}  // namespace opossum
+}  // namespace hyrise

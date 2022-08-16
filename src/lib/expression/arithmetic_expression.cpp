@@ -6,7 +6,7 @@
 
 #include "expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
@@ -91,4 +91,4 @@ ExpressionPrecedence ArithmeticExpression::_precedence() const {
   Fail("Invalid enum value");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

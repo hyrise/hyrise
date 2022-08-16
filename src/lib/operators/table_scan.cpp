@@ -38,7 +38,7 @@
 #include "utils/lossless_predicate_cast.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& op,
                      const std::shared_ptr<AbstractExpression>& predicate)
@@ -471,4 +471,4 @@ void TableScan::_on_cleanup() {
   _impl.reset();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

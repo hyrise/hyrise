@@ -8,7 +8,7 @@
 #include "tpcc/constants.hpp"
 #include "tpcc/tpcc_benchmark_item_runner.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-C benchmark. As with the other TPC-* benchmarks, we

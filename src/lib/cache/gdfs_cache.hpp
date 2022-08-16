@@ -8,7 +8,7 @@
 #include "abstract_cache.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Generic cache implementation using the GDFS policy.
@@ -151,4 +151,4 @@ class GDFSCache : public AbstractCache<Key, Value> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

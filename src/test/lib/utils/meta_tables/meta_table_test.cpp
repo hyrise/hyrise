@@ -16,7 +16,7 @@
 
 #include "meta_mock_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using MetaTable = std::shared_ptr<AbstractMetaTable>;
 using MetaTables = std::vector<MetaTable>;
@@ -208,4 +208,4 @@ TEST_F(MetaTableTest, IsNotCached) {
   EXPECT_EQ(mock_table->generate_calls(), 8);
   EXPECT_EQ(mock_table->update_calls(), 2);
 }
-}  // namespace opossum
+}  // namespace hyrise

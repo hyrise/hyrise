@@ -6,7 +6,7 @@
 #include <mutex>
 #include <thread>
 
-namespace opossum {
+namespace hyrise {
 
 PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time,
                                        const std::function<void(size_t)>& loop_func)
@@ -64,4 +64,4 @@ void PausableLoopThread::set_loop_sleep_time(std::chrono::milliseconds loop_slee
   _loop_sleep_time = loop_sleep_time;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

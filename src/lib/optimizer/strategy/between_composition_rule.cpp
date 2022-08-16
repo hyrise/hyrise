@@ -14,10 +14,10 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {
@@ -40,7 +40,7 @@ PredicateCondition get_between_predicate_condition(bool left_inclusive, bool rig
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string BetweenCompositionRule::name() const {
   static const auto name = std::string{"BetweenCompositionRule"};
@@ -435,4 +435,4 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_b
   };
 }
 
-}  // namespace opossum
+}  // namespace hyrise

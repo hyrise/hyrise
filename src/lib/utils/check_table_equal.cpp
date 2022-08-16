@@ -18,7 +18,7 @@ static constexpr auto EPSILON = 0.0001;
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 constexpr int HEADER_SIZE = 3;
 
@@ -99,7 +99,7 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 bool check_segment_equal(const std::shared_ptr<AbstractSegment>& actual_segment,
                          const std::shared_ptr<AbstractSegment>& expected_segment, OrderSensitivity order_sensitivity,
@@ -322,4 +322,4 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   return std::nullopt;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

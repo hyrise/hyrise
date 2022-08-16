@@ -14,7 +14,7 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                          const ColumnID left_column_id,
@@ -183,4 +183,4 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
   return matches_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

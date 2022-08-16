@@ -19,7 +19,7 @@
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const ChunkOffset chunk_size,
                                         const std::optional<CsvMeta>& csv_meta) {
@@ -243,4 +243,4 @@ void CsvParser::_sanitize_field(std::string& field, const CsvMeta& meta, const s
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

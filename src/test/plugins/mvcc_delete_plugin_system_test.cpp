@@ -21,7 +21,7 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 class MvccDeletePluginSystemTest : public BaseTest {
  public:

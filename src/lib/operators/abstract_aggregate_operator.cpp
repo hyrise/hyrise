@@ -5,7 +5,7 @@
 #include "expression/pqp_column_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractAggregateOperator::AbstractAggregateOperator(
     const std::shared_ptr<AbstractOperator>& op, const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
@@ -87,4 +87,4 @@ void AbstractAggregateOperator::_validate_aggregates() const {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

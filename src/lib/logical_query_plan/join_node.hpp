@@ -11,7 +11,7 @@
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type is used to represent any type of Join, including cross products.
@@ -103,4 +103,4 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Worker;
 
@@ -220,4 +220,4 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::string _description;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

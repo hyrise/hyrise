@@ -23,7 +23,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void test_aggregate_output(const std::shared_ptr<AbstractOperator> in,
                            const std::vector<std::pair<ColumnID, AggregateFunction>>& aggregate_definitions,
@@ -209,4 +209,4 @@ TEST_F(AggregateSortTest, AggregateOnPresortedValueClustered) {
   test_clustered_table_input(to_simple_reference_table(table_sorted_value_clustered));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

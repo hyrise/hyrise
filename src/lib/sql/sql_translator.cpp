@@ -66,12 +66,12 @@
 
 #include "SQLParser.h"
 
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},
@@ -157,7 +157,7 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
     : SQLTranslator(use_mvcc, nullptr, std::make_shared<ParameterIDAllocator>(),
@@ -1346,6 +1346,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
     input_node = _translate_select_statement(*create_statement.select);
   } else {
     auto column_definitions = TableColumnDefinitions{create_statement.columns->size()};
+    auto table_key_constraints = TableKeyConstraints{};
 
     for (auto column_id = ColumnID{0}; column_id < create_statement.columns->size(); ++column_id) {
       const auto* parser_column_definition = create_statement.columns->at(column_id);
@@ -1410,9 +1411,71 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hs
 
       column_definition.name = parser_column_definition->name;
       column_definition.nullable = parser_column_definition->nullable;
+
+      // Translate column constraints. We only address UNIQUE/PRIMARY KEY constraints for now.
+      DebugAssert(parser_column_definition->column_constraints,
+                  "Column " + column_definition.name + " is missing constraint information");
+      for (const auto& column_constraint : *parser_column_definition->column_constraints) {
+        if (column_constraint != hsql::ConstraintType::Unique &&
+            column_constraint != hsql::ConstraintType::PrimaryKey) {
+          continue;
+        }
+        const auto constraint_type = column_constraint == hsql::ConstraintType::PrimaryKey
+                                         ? KeyConstraintType::PRIMARY_KEY
+                                         : KeyConstraintType::UNIQUE;
+        table_key_constraints.emplace(std::set<ColumnID>{column_id}, constraint_type);
+        std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " constraint for column "
+                  << column_definition.name << " will not be enforced\n";
+      }
     }
-    input_node = StaticTableNode::make(Table::create_dummy_table(column_definitions));
+
+    // Translate table constraints. Note that a table constraint is either a unique constraint, a referential con-
+    // straint, or a table check constraint per SQL standard. Some constraints can be set (i) when describing a single
+    // column, see above, or (ii) as a property of the table, containing multiple columns. We only address UNIQUE/
+    // PRIMARY KEY constraints for now.
+    const auto column_count = column_definitions.size();
+    for (const auto& table_constraint : *create_statement.tableConstraints) {
+      Assert(table_constraint->type == hsql::ConstraintType::PrimaryKey ||
+                 table_constraint->type == hsql::ConstraintType::Unique,
+             "Only UNIQUE and PRIMARY KEY constraints are expected on a table level");
+      const auto constraint_type = table_constraint->type == hsql::ConstraintType::PrimaryKey
+                                       ? KeyConstraintType::PRIMARY_KEY
+                                       : KeyConstraintType::UNIQUE;
+
+      // Resolve column IDs
+      DebugAssert(table_constraint->columnNames,
+                  std::string{magic_enum::enum_name(constraint_type)} + " table constraint must contain columns");
+      auto column_ids = std::set<ColumnID>{};
+      for (const auto& constraint_column_name : *table_constraint->columnNames) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+          auto& column_definition = column_definitions[column_id];
+          if (column_definition.name == constraint_column_name) {
+            column_ids.emplace(column_id);
+            if (constraint_type == KeyConstraintType::PRIMARY_KEY) {
+              column_definition.nullable = false;
+              AssertInput(
+                  !create_statement.columns->at(column_id)->column_constraints->contains(hsql::ConstraintType::Null),
+                  "PRIMARY KEY column " + constraint_column_name + " must not be nullable");
+            }
+            break;
+          }
+        }
+      }
+      AssertInput(
+          column_ids.size() == table_constraint->columnNames->size(),
+          "Could not resolve columns of " + std::string{magic_enum::enum_name(constraint_type)} + " table constraint");
+      table_key_constraints.emplace(column_ids, constraint_type);
+      std::cout << "WARNING: " << magic_enum::enum_name(constraint_type) << " table constraint will not be enforced\n";
+    }
+
+    // Set table key constraints
+    const auto table = Table::create_dummy_table(column_definitions);
+    for (const auto& table_key_constraint : table_key_constraints) {
+      table->add_soft_key_constraint(table_key_constraint);
+    }
+    input_node = StaticTableNode::make(table);
   }
+
   return CreateTableNode::make(create_statement.tableName, create_statement.ifNotExists, input_node);
 }
 
@@ -2082,4 +2145,4 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

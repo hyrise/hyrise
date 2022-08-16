@@ -2,7 +2,7 @@
 
 #include "constant_mappings.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void SQLiteTestRunner::SetUpTestCase() {
   /**
@@ -227,4 +227,4 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   _last_run_successful = true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

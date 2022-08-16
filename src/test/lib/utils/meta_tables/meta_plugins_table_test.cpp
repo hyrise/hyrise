@@ -5,7 +5,7 @@
 
 #include "../plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaPluginsTest : public BaseTest {
  protected:
@@ -101,4 +101,4 @@ TEST_F(MetaPluginsTest, RepeatedInsert) {
   EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 1);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

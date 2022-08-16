@@ -12,7 +12,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ChunkCompressionTaskTest : public BaseTest {};
 
@@ -111,4 +111,4 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   EXPECT_EQ(validate->get_output()->row_count(), 12u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -15,7 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -166,4 +166,4 @@ class SegmentEncoder : public BaseSegmentEncoder {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -19,7 +19,7 @@
 #include "utils/enum_constant.hpp"
 #include "utils/template_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -76,4 +76,4 @@ void resolve_encoded_segment_type(const AbstractEncodedSegment& segment, const F
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

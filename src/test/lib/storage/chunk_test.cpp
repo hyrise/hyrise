@@ -10,7 +10,7 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageChunkTest : public BaseTest {
  protected:
@@ -308,4 +308,4 @@ TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
                std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

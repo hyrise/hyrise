@@ -5,7 +5,7 @@
 
 #include "variable_length_key_proxy.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 VariableLengthKeyStore::VariableLengthKeyStore(ChunkOffset size, CompositeKeyLength bytes_per_key)
     : _bytes_per_key{bytes_per_key} {
@@ -80,4 +80,4 @@ VariableLengthKeyStore::const_iterator VariableLengthKeyStore::cend() const {
   return const_iterator(_bytes_per_key, _key_alignment, self->_data.data() + _data.size());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

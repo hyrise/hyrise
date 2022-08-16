@@ -7,7 +7,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractReadWriteOperator;
 class CommitContext;
@@ -210,4 +210,4 @@ class TransactionContext : public std::enable_shared_from_this<TransactionContex
   mutable std::condition_variable _active_operators_cv;
   mutable std::mutex _active_operators_mutex;
 };
-}  // namespace opossum
+}  // namespace hyrise

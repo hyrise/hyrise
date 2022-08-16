@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                    const std::vector<SortMode>& init_sort_modes)
@@ -60,4 +60,4 @@ bool SortNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMappi
          sort_modes == sort_node.sort_modes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -50,4 +50,4 @@ class ColumnBetweenTableScanImpl : public AbstractDereferencedColumnTableScanImp
   const bool _column_is_nullable;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

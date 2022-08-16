@@ -4,7 +4,7 @@
 #include "tpcc/tpcc_random_generator.hpp"
 #include "tpcc_new_order.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCNewOrder::TPCCNewOrder(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor), c_id{static_cast<int>(_tpcc_random_generator.nurand(1023, 1, 3000))} {
@@ -188,4 +188,4 @@ bool TPCCNewOrder::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

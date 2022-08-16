@@ -8,7 +8,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 
@@ -40,4 +40,4 @@ struct JoinGraphEdge final {
 
 std::ostream& operator<<(std::ostream& stream, const JoinGraphEdge& join_graph_edge);
 
-}  // namespace opossum
+}  // namespace hyrise

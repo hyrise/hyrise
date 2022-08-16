@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FixedString::FixedString(char* mem, size_t string_length)
     : _mem(mem), _maximum_length(string_length), _owns_memory(false) {}
@@ -137,4 +137,4 @@ bool operator==(const char* lhs, const FixedString& rhs) {
   return lhs == rhs.string_view();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

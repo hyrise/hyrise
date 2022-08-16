@@ -16,7 +16,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
@@ -73,7 +73,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
@@ -236,4 +236,4 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const 
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

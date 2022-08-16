@@ -5,7 +5,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 std::vector<std::string> trim_and_split(const std::string& input) {
   auto converted = input;
@@ -52,4 +52,4 @@ std::string replace_addresses(const std::string& input) {
   return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{4,}"}, "0x00000000");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

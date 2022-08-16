@@ -12,7 +12,7 @@
 #include "storage/index/group_key/variable_length_key_store.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyStoreTest : public BaseTest {
  protected:
@@ -200,4 +200,4 @@ TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
   EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

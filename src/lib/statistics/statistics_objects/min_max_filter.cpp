@@ -11,7 +11,7 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T init_min, T init_max)
@@ -208,4 +208,4 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(MinMaxFilter);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -9,7 +9,7 @@
 #include "statistics/statistics_objects/abstract_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class AbstractHistogram;
@@ -230,4 +230,4 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
   /** @} */
 };
-}  // namespace opossum
+}  // namespace hyrise

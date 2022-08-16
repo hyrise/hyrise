@@ -13,9 +13,9 @@
 #include "pqp_subquery_expression.hpp"
 #include "value_expression.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
@@ -404,4 +404,4 @@ std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_exp
   return std::nullopt;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

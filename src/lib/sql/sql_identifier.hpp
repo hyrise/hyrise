@@ -3,7 +3,7 @@
 #include <optional>
 #include <string>
 
-namespace opossum {
+namespace hyrise {
 
 struct SQLIdentifier final {
   SQLIdentifier(const std::string& init_column_name, const std::optional<std::string>& init_table_name =
@@ -17,4 +17,4 @@ struct SQLIdentifier final {
   std::optional<std::string> table_name = std::nullopt;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

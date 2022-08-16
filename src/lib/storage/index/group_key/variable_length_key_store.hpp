@@ -8,7 +8,7 @@
 
 #include "variable_length_key.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyProxy;
 class VariableLengthKeyConstProxy;
@@ -174,4 +174,4 @@ class VariableLengthKeyStore {
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
     const std::string& query, const SendExecutionInfo send_execution_info,
@@ -133,4 +133,4 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
     }
   }
 }
-}  // namespace opossum
+}  // namespace hyrise

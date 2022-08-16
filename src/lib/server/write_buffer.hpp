@@ -4,7 +4,7 @@
 #include "server_types.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Dedicated buffer for write operations. It flushes itself automatically if a new value does not fit into the
 // available memory. Strings inserted use the remaining space first. The buffer can also be force flushed. In contrast
@@ -59,4 +59,4 @@ class WriteBuffer {
   std::shared_ptr<SocketType> _socket;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

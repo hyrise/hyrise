@@ -2,7 +2,7 @@
 
 #include "./mock_setting.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SettingTest : public BaseTest {
  protected:
@@ -27,4 +27,4 @@ TEST_F(SettingTest, RegistrationAtSettingsManager) {
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

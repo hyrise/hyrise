@@ -13,7 +13,7 @@
 
 #include "micro_benchmark_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 static std::shared_ptr<Table> generate_custom_table(const size_t row_count, const DataType data_type = DataType::Int,
                                                     const float null_ratio = 0.0f) {
@@ -98,4 +98,4 @@ BENCHMARK(BM_SortWithReferenceSegments)->RangeMultiplier(100)->Range(100, 1'000'
 BENCHMARK(BM_SortWithReferenceSegmentsTwoColumns)->RangeMultiplier(100)->Range(100, 1'000'000);
 BENCHMARK(BM_SortWithStrings)->RangeMultiplier(100)->Range(100, 1'000'000);
 
-}  // namespace opossum
+}  // namespace hyrise

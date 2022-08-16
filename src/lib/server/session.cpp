@@ -5,7 +5,7 @@
 #include "query_handler.hpp"
 #include "result_serializer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Session::Session(boost::asio::io_service& io_service, const SendExecutionInfo send_execution_info)
     : _socket(std::make_shared<Socket>(io_service)),
@@ -216,4 +216,4 @@ void Session::_handle_execute() {
       ResultSerializer::build_command_complete_message(physical_plan->type(), row_count));
   // Ready for query + flush will be done after reading sync message
 }
-}  // namespace opossum
+}  // namespace hyrise

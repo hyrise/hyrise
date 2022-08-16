@@ -7,7 +7,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
 
@@ -277,4 +277,4 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   }
   return output_chunks;
 }
-}  // namespace opossum
+}  // namespace hyrise

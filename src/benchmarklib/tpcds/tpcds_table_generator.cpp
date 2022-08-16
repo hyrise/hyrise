@@ -41,7 +41,7 @@ extern "C" {
 #include "utils/timer.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 using tpcds_key_t = int32_t;
 
@@ -259,7 +259,7 @@ const auto web_site_column_names = boost::hana::make_tuple("web_site_sk" , "web_
 // clang-format on
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 TPCDSTableGenerator::TPCDSTableGenerator(uint32_t scale_factor, ChunkOffset chunk_size, int rng_seed)
     : AbstractTableGenerator(create_benchmark_config_with_chunk_size(chunk_size)), _scale_factor{scale_factor} {
@@ -1296,4 +1296,4 @@ void TPCDSTableGenerator::_add_constraints(
       {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

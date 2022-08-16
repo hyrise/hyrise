@@ -23,7 +23,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * Operator to aggregate columns by certain functions such as min, max, sum, average, and count with a sort-based
@@ -129,4 +129,4 @@ class AggregateSort : public AbstractAggregateOperator {
   static Segments _get_segments_of_chunk(const std::shared_ptr<const Table>& input_table, ChunkID chunk_id);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

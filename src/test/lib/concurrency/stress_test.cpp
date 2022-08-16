@@ -6,7 +6,7 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StressTest : public BaseTest {
  protected:
@@ -210,4 +210,4 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

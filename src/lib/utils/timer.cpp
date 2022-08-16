@@ -2,7 +2,7 @@
 
 #include "utils/format_duration.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Timer::Timer() {
   _begin = std::chrono::steady_clock::now();
@@ -19,4 +19,4 @@ std::string Timer::lap_formatted() {
   return format_duration(lap());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

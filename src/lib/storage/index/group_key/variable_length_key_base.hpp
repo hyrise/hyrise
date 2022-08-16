@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <ostream>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Internal type to save the provided data. Parts of the current implementation expecting
@@ -65,4 +65,4 @@ bool operator>=(const VariableLengthKeyBase& left, const VariableLengthKeyBase& 
  */
 std::ostream& operator<<(std::ostream& stream, const VariableLengthKeyBase& key);
 
-}  // namespace opossum
+}  // namespace hyrise

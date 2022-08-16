@@ -11,7 +11,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MultiPredicateJoinEvaluator;
 using IndexRange = std::pair<AbstractIndex::Iterator, AbstractIndex::Iterator>;
@@ -108,4 +108,4 @@ class JoinIndex : public AbstractJoinOperator {
   std::vector<std::vector<bool>> _index_matches;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

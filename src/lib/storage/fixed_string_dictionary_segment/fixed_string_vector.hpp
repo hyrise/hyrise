@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // FixedStringVector is a data type, which stores all its values in a vector and
 // is capable of storing FixedStrings.
@@ -97,4 +97,4 @@ class FixedStringVector {
   size_t _size = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
@@ -118,4 +118,4 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

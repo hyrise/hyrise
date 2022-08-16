@@ -7,9 +7,9 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SortNodeTest : public BaseTest {
  protected:
@@ -75,4 +75,4 @@ TEST_F(SortNodeTest, NodeExpressions) {
   EXPECT_EQ(*_sort_node->node_expressions.at(0), *_a_i);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

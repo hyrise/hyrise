@@ -18,10 +18,10 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /*
- * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
+ * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_statement, int column_count) {
   std::vector<bool> column_nullable(column_count, false);
@@ -93,7 +93,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
 }
 
 /*
- * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
+ * Adds a single row to given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* sqlite_statement,
                                     int column_count) {
@@ -135,7 +135,7 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 // We include the address of this wrapper in the URI for the sqlite db so that two wrappers don't interfere
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
@@ -372,4 +372,4 @@ void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset
   main_connection.raw_execute_query(command_ss.str());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

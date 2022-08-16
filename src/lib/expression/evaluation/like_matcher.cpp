@@ -7,7 +7,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LikeMatcher::LikeMatcher(const pmr_string& pattern) {
   _pattern_variant = pattern_string_to_pattern_variant(pattern);
@@ -165,4 +165,4 @@ std::ostream& operator<<(std::ostream& stream, const LikeMatcher::Wildcard& wild
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

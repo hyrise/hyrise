@@ -2,7 +2,7 @@
 
 #include <magic_enum.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 std::optional<boost::posix_time::ptime> string_to_timestamp(const std::string& timestamp_string) {
   // We catch parsing exceptions since we return a std::nullopt if the input string is not a valid timestamp.
@@ -58,4 +58,4 @@ std::string timestamp_to_string(const boost::posix_time::ptime& timestamp) {
   return string_representation;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

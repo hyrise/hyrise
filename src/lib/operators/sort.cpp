@@ -5,7 +5,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Ceiling of integer division
 size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
@@ -226,7 +226,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 Sort::Sort(const std::shared_ptr<const AbstractOperator>& op, const std::vector<SortColumnDefinition>& sort_definitions,
            const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
@@ -481,4 +481,4 @@ class Sort::SortImpl {
   std::vector<RowIDValuePair> _null_value_rows;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -17,7 +17,7 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
   return std::make_shared<Table>(column_definitions, TableType::Data);
@@ -378,7 +378,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
              "Another key constraint for the same column set has already been defined.");
     }
 
-    _table_key_constraints.push_back(table_key_constraint);
+    _table_key_constraints.insert(table_key_constraint);
   }
 }
 
@@ -450,4 +450,4 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise
