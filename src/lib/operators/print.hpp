@@ -21,8 +21,8 @@ enum class PrintFlags : uint32_t { None = 0u, Mvcc = 1u << 0u, IgnoreChunkBounda
  */
 class Print : public AbstractReadOnlyOperator {
  public:
-  explicit Print(const std::shared_ptr<const AbstractOperator>& op, const PrintFlags flags = PrintFlags::None,
-                 std::ostream& out = std::cout);
+  explicit Print(const std::shared_ptr<const AbstractOperator>& input_operator,
+                 const PrintFlags flags = PrintFlags::None, std::ostream& out = std::cout);
 
   const std::string& name() const override;
 

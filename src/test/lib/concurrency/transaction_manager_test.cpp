@@ -19,6 +19,7 @@ class TransactionManagerTest : public BaseTest {
   static void register_transaction(CommitID snapshot_commit_id) {
     Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
   }
+
   static void deregister_transaction(CommitID snapshot_commit_id) {
     Hyrise::get().transaction_manager._deregister_transaction(snapshot_commit_id);
   }

@@ -217,8 +217,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     table_data.append(
         [
             name,
-            f"{(old_avg_successful_duration / 1e6):>7.1f}" if old_avg_successful_duration else "nan",
-            f"{(new_avg_successful_duration / 1e6):>7.1f}" if new_avg_successful_duration else "nan",
+            f"{(old_avg_successful_duration / 1e6):>7.6f}" if old_avg_successful_duration else "nan",
+            f"{(new_avg_successful_duration / 1e6):>7.6f}" if new_avg_successful_duration else "nan",
             diff_duration_formatted + note if not math.isnan(diff_duration) else "",
             f'{old["items_per_second"]:>8.2f}',
             f'{new["items_per_second"]:>8.2f}',

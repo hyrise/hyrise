@@ -9,9 +9,9 @@
 
 namespace hyrise {
 
-Export::Export(const std::shared_ptr<const AbstractOperator>& op, const std::string& filename,
+Export::Export(const std::shared_ptr<const AbstractOperator>& input_operator, const std::string& filename,
                const FileType& file_type)
-    : AbstractReadOnlyOperator(OperatorType::Export, op), _filename(filename), _file_type(file_type) {
+    : AbstractReadOnlyOperator(OperatorType::Export, input_operator), _filename(filename), _file_type(file_type) {
   if (_file_type == FileType::Auto) {
     _file_type = file_type_from_filename(filename);
   }

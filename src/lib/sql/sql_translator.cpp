@@ -2136,10 +2136,10 @@ void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   }
 
   // This should be ::merge, but that is not yet supported by clang.
-  // elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
-  for (auto& element : rhs.elements_by_table_name) {
-    elements_by_table_name.try_emplace(element.first, std::move(element.second));
-  }
+  elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
+  // for (auto& element : rhs.elements_by_table_name) {
+  //   elements_by_table_name.try_emplace(element.first, std::move(element.second));
+  // }
 
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));

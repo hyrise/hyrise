@@ -34,8 +34,8 @@ bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
 
 namespace hyrise {
 
-Print::Print(const std::shared_ptr<const AbstractOperator>& op, const PrintFlags flags, std::ostream& out)
-    : AbstractReadOnlyOperator(OperatorType::Print, op), _flags(flags), _out(out) {}
+Print::Print(const std::shared_ptr<const AbstractOperator>& input_operator, const PrintFlags flags, std::ostream& out)
+    : AbstractReadOnlyOperator(OperatorType::Print, input_operator), _flags(flags), _out(out) {}
 
 const std::string& Print::name() const {
   static const auto name = std::string{"Print"};

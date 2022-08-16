@@ -40,10 +40,10 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
 
 namespace hyrise {
 
-AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& op,
+AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(op, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
 
 const std::string& AggregateSort::name() const {
   static const auto name = std::string{"AggregateSort"};

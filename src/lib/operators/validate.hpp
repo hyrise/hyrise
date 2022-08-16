@@ -20,7 +20,7 @@ class Validate : public AbstractReadOnlyOperator {
   friend class OperatorsValidateTest;
 
  public:
-  explicit Validate(const std::shared_ptr<AbstractOperator>& op);
+  explicit Validate(const std::shared_ptr<AbstractOperator>& input_operator);
 
   const std::string& name() const override;
 

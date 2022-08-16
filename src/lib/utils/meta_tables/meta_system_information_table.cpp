@@ -74,6 +74,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
   struct sysinfo memory_info {};
+
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
 

@@ -60,6 +60,7 @@ inline size_t hash_value(const NullValue& /*value*/) {
 #if !defined(BOOST_NO_IOSTREAM)
 
 BOOST_TEMPLATED_STREAM_TEMPLATE(E, T)
+
 inline BOOST_TEMPLATED_STREAM(ostream, E, T) & operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
                                                           const NullValue&) {
   out << "NULL";

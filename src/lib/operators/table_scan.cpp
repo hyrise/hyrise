@@ -40,9 +40,9 @@
 
 namespace hyrise {
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& op,
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, op, nullptr, std::make_unique<PerformanceData>()},
+    : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
   /**
    * Register as a consumer for all uncorrelated subqueries.

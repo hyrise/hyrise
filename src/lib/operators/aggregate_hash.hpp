@@ -138,7 +138,7 @@ using DistinctAggregateType = int8_t;
 
 class AggregateHash : public AbstractAggregateOperator {
  public:
-  AggregateHash(const std::shared_ptr<AbstractOperator>& op,
+  AggregateHash(const std::shared_ptr<AbstractOperator>& input_operator,
                 const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
