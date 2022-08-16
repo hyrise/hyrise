@@ -1005,7 +1005,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
     const auto& command = *it;
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)
-      (void)snprintf(completion, command.size() + 1, "%s", command.c_str());
+      static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
   }
@@ -1043,7 +1043,7 @@ int main(int argc, char** argv) {
   auto& console = opossum::Console::get();
 
   // Bind CTRL-C to behaviour specified in Console::handle_signal
-  (void)std::signal(SIGINT, &opossum::Console::handle_signal);
+  static_cast<void>(std::signal(SIGINT, &opossum::Console::handle_signal));
 
   console.set_prompt("> ");
   console.set_logfile("console.log");

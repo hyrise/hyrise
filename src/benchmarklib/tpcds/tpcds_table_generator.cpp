@@ -477,7 +477,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
       auto n_lineitems = int{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 4, 14, 0, CS_ORDER_NUMBER);
       for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = 0;
+        auto was_returned = int{0};
         mk_w_catalog_sales_detail(&catalog_sales, 0, &catalog_returns, &was_returned);
 
         if (catalog_sales_builder.row_count() < static_cast<size_t>(max_rows)) {
@@ -902,7 +902,7 @@ std::pair<std::shared_ptr<Table>, std::shared_ptr<Table>> TPCDSTableGenerator::g
       auto n_lineitems = int{0};
       genrand_integer(&n_lineitems, DIST_UNIFORM, 8, 16, 0, SS_TICKET_NUMBER);
       for (auto lineitem_index = int{0}; lineitem_index < n_lineitems; ++lineitem_index) {
-        auto was_returned = 0;
+        auto was_returned = int{0};
         mk_w_store_sales_detail(&store_sales, 0, &store_returns, &was_returned);
 
         if (store_sales_builder.row_count() < static_cast<size_t>(max_rows)) {

@@ -59,14 +59,14 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   template <typename T>
   std::vector<std::optional<T>> _generate_inner_order_line_column(
-      std::vector<size_t> indices, OrderLineCounts order_line_counts,
-      const std::function<std::optional<T>(std::vector<size_t>&)>& generator_function);
+      const std::vector<size_t>& indices, OrderLineCounts order_line_counts,
+      const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function);
 
   template <typename T>
   void _add_order_line_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                               std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
                               OrderLineCounts order_line_counts,
-                              const std::function<std::optional<T>(std::vector<size_t>&)>& generator_function);
+                              const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function);
 
   // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
   // TPC-C Specification.
@@ -103,7 +103,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<std::vector<std::optional<T>>(std::vector<size_t>&)>& generator_function) {
+                   const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
     bool is_first_column = column_definitions.size() == 0;
@@ -223,9 +223,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<T(std::vector<size_t>&)>& generator_function) {
-    const std::function<std::vector<T>(std::vector<size_t>&)> wrapped_generator_function =
-        [generator_function](std::vector<size_t>& indices) { return std::vector<T>({generator_function(indices)}); };
+                   const std::function<T(const std::vector<size_t>&)>& generator_function) {
+    const std::function<std::vector<T>(const std::vector<size_t>&)> wrapped_generator_function =
+        [generator_function](const std::vector<size_t>& indices) { return std::vector<T>({generator_function(indices)}); };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 
@@ -241,9 +241,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<std::optional<T>(std::vector<size_t>&)>& generator_function) {
-    const std::function<std::vector<std::optional<T>>(std::vector<size_t>&)> wrapped_generator_function =
-        [generator_function](std::vector<size_t>& indices) {
+                   const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
+    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)> wrapped_generator_function =
+        [generator_function](const std::vector<size_t>& indices) {
           return std::vector<std::optional<T>>({generator_function(indices)});
         };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
