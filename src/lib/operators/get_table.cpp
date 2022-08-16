@@ -239,8 +239,41 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
+  // Check if a table index is irrelevant because of pruning.
+  const auto check_if_index_is_irrelevant_lambda = [this](std::shared_ptr<AbstractTableIndex> table_index) {
+
+    // Check if indexed ColumnID has been pruned.
+    for (const auto column_id: _pruned_column_ids) {
+      if (table_index->is_index_for(column_id)) {
+        return true;
+      }
+    }
+
+    const auto indexed_chunk_ids = table_index->get_indexed_chunk_ids();
+    
+    // Early out if index is empty.
+    if (indexed_chunk_ids.empty()) {
+      return false;
+    }
+
+    auto indexed_chunk_ids_vector = std::vector<ChunkID>(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
+    std::sort(indexed_chunk_ids_vector.begin(), indexed_chunk_ids_vector.end());
+    DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Pruned ChunkIDs should be sorted.");
+
+    // Check if index indexes only chunks that have been pruned.
+    if (std::includes(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end(),
+                      indexed_chunk_ids_vector.begin(), indexed_chunk_ids_vector.end())) {
+      return true;
+    }
+
+    return false;
+  };
+
+  auto table_indexes = stored_table->get_table_indexes();
+  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), check_if_index_is_irrelevant_lambda), table_indexes.end());
+
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
-                                 stored_table->uses_mvcc(), stored_table->get_table_indexes());
+                                 stored_table->uses_mvcc(), table_indexes);
 }
 
 }  // namespace hyrise
