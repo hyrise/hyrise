@@ -14,7 +14,7 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
   _loop_thread = std::thread([&, loop_func] {
     size_t counter = 0;
     while (!_shutdown_flag) {
-      std::unique_lock<std::mutex> lock(_mutex);
+      auto lock = std::unique_lock<std::mutex>{_mutex};
       if (_loop_sleep_time > std::chrono::milliseconds(0)) {
         _cv.wait_for(lock, _loop_sleep_time, [&] { return static_cast<bool>(_shutdown_flag); });
       }
