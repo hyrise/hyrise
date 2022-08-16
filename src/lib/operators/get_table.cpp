@@ -242,7 +242,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // Check if a table index is irrelevant because of pruning.
   const auto check_if_index_is_irrelevant_lambda = [this](std::shared_ptr<AbstractTableIndex> table_index) {
     // Check if indexed ColumnID has been pruned.
-    for (const auto column_id : _pruned_column_ids) {
+    for (const auto& column_id : _pruned_column_ids) {
       if (table_index->is_index_for(column_id)) {
         return true;
       }
