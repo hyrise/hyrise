@@ -45,6 +45,37 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   void initialize();
 
  protected:
+  struct AbstractAdditionalOperatorInfo : public Noncopyable {
+    virtual ~AbstractAdditionalOperatorInfo() = default;
+
+    virtual const std::vector<std::string>& feature_headers() const = 0;
+
+    virtual const FeatureVector to_feature_vector() const = 0;
+  };
+
+  struct TableScanOperatorInfo : public AbstractAdditionalOperatorInfo {
+    const std::vector<std::string>& feature_headers() const final {
+      return headers();
+    }
+
+    static const std::vector<std::string>& headers() {
+      static auto headers =
+          std::vector<std::string>{"table_scan.skipped_chunks_none_match", "table_scan.skipped_chunks_all_match",
+                                   "table_scan.skipped_chunks_binary_search"};
+      return headers;
+    }
+
+    const FeatureVector to_feature_vector() const final {
+      return FeatureVector{Feature{static_cast<Feature>(skipped_chunks_none_match)},
+                           Feature{static_cast<Feature>(skipped_chunks_all_match)},
+                           Feature{static_cast<Feature>(skipped_chunks_binary_search)}};
+    }
+
+    size_t skipped_chunks_none_match{0};
+    size_t skipped_chunks_all_match{0};
+    size_t skipped_chunks_binary_search{0};
+  };
+
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
   size_t _on_shallow_hash() const final;
 
@@ -70,6 +101,8 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   bool _is_root_node = false;
 
   std::vector<std::shared_ptr<AbstractFeatureNode>> _subqueries;
+
+  std::unique_ptr<AbstractAdditionalOperatorInfo> _additional_info;
 };
 
 }  // namespace hyrise

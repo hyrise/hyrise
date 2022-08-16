@@ -6,7 +6,7 @@ namespace hyrise {
 
 enum class FeatureNodeType { Operator, Predicate, AggregateFunction, Table, Column, Segment };
 
-class AbstractFeatureNode : public std::enable_shared_from_this<AbstractFeatureNode>, private Noncopyable {
+class AbstractFeatureNode : public std::enable_shared_from_this<AbstractFeatureNode>, public Noncopyable {
  public:
   AbstractFeatureNode(const FeatureNodeType type, const std::shared_ptr<AbstractFeatureNode>& left_input,
                       const std::shared_ptr<AbstractFeatureNode>& right_input = nullptr);

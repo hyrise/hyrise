@@ -119,7 +119,17 @@ size_t OperatorFeatureNode::_on_shallow_hash() const {
 std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() const {
   auto feature_vector = one_hot_encoding<QueryOperatorType>(_op_type);
   const auto& output_feature_vector = _output_table->to_feature_vector();
-  feature_vector->insert(feature_vector->end(), output_feature_vector.begin(), output_feature_vector.end());
+  feature_vector->insert(feature_vector->end(), output_feature_vector.cbegin(), output_feature_vector.cend());
+
+  if (!_additional_info) {
+    feature_vector->resize(headers().size());
+    return feature_vector;
+  }
+
+  if (_op_type == QueryOperatorType::TableScan) {
+    const auto& scan_features = _additional_info->to_feature_vector();
+    feature_vector->insert(feature_vector->end(), scan_features.cbegin(), scan_features.cend());
+  }
   return feature_vector;
 }
 
@@ -131,7 +141,9 @@ const std::vector<std::string>& OperatorFeatureNode::headers() {
   static auto ohe_headers_type = one_hot_headers<QueryOperatorType>("operator_type.");
   static const auto output_headers = AbstractTableFeatureNode::headers();
   if (ohe_headers_type.size() == magic_enum::enum_count<QueryOperatorType>()) {
-    ohe_headers_type.insert(ohe_headers_type.end(), output_headers.begin(), output_headers.end());
+    ohe_headers_type.insert(ohe_headers_type.end(), output_headers.cbegin(), output_headers.cend());
+    const auto& table_scan_headers = TableScanOperatorInfo::headers();
+    ohe_headers_type.insert(ohe_headers_type.end(), table_scan_headers.cbegin(), table_scan_headers.cend());
   }
   return ohe_headers_type;
 }
@@ -225,6 +237,14 @@ void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
   _predicates.push_back(
       std::make_shared<PredicateFeatureNode>(predicate_node.predicate(), table_scan.predicate(), _left_input));
   _add_subqueries(table_scan.predicate()->arguments);
+
+  const auto& performance_data = static_cast<TableScan::PerformanceData&>(*table_scan.performance_data);
+  _additional_info = std::make_unique<TableScanOperatorInfo>();
+
+  auto& scan_additional_info = static_cast<TableScanOperatorInfo&>(*_additional_info);
+  scan_additional_info.skipped_chunks_none_match = performance_data.num_chunks_with_early_out;
+  scan_additional_info.skipped_chunks_all_match = performance_data.num_chunks_with_all_rows_matching;
+  scan_additional_info.skipped_chunks_binary_search = performance_data.num_chunks_with_binary_search;
 }
 
 void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {}

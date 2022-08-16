@@ -39,7 +39,7 @@ CostModelFeaturePlugin::provided_user_executable_functions() {
 }
 
 void CostModelFeaturePlugin::export_operator_features() {
-  _worker_thread = std::thread{[&] {
+  _worker_thread = std::thread{[&]() {
     std::cout << "export operator features" << std::endl;
     const auto& pqp_cache = Hyrise::get().default_pqp_cache;
     Assert(pqp_cache, "No PQPCache");

@@ -35,7 +35,7 @@ void QueryExporter::export_queries(const std::string& file_path) {
     auto query_single_line{query->query};
     query_single_line.erase(std::remove(query_single_line.begin(), query_single_line.end(), '\n'),
                             query_single_line.end());
-    std::cout << query_single_line << std::endl;
+    // std::cout << query_single_line << std::endl;
     // add escapes to query to allow for ; at end of statements
     output_file << query->hash << ";\"" << query_single_line << "\";" << query->frequency << "\n";
   }
