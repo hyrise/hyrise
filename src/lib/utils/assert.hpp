@@ -50,7 +50,7 @@ namespace detail {
 }
 }  // namespace detail
 
-#define Fail(msg)                                                                                               \
+#define Fail(msg)                                                                                             \
   hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   static_assert(true, "End call of macro with a semicolon")
 

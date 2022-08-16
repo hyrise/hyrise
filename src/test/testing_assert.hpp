@@ -52,13 +52,13 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
 #define EXPECT_TABLE_EQ(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
-  {                                                                                                                   \
-    if (const auto table_difference_message =                                                                         \
+  {                                                                                                                  \
+    if (const auto table_difference_message =                                                                        \
             check_table_equal(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
-                              IgnoreNullable::No)) {                                                                  \
-      FAIL() << *table_difference_message;                                                                            \
-    }                                                                                                                 \
-  }                                                                                                                   \
+                              IgnoreNullable::No)) {                                                                 \
+      FAIL() << *table_difference_message;                                                                           \
+    }                                                                                                                \
+  }                                                                                                                  \
   static_assert(true, "End call of macro with a semicolon")
 
 /**

@@ -52,13 +52,11 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
 // clang-format on
 
 const std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
-    {TPCHTable::Part, PART},     {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP},
-    {TPCHTable::Customer, CUST}, {TPCHTable::Orders, ORDER},   {TPCHTable::LineItem, LINE},
-    {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
+    {TPCHTable::Part, PART},    {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP}, {TPCHTable::Customer, CUST},
+    {TPCHTable::Orders, ORDER}, {TPCHTable::LineItem, LINE},  {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table,
-                      Args... args) {
+DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table, Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */

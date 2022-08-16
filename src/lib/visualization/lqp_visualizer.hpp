@@ -29,8 +29,8 @@ class LQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                       std::unordered_set<std::shared_ptr<const AbstractLQPNode>>& visualized_nodes,
                       ExpressionUnorderedSet& visualized_sub_queries);
 
-  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node, const std::shared_ptr<AbstractLQPNode>& target_node,
-                       const InputSide side);
+  void _build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
+                       const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side);
 
   CardinalityEstimator _cardinality_estimator;
 };

@@ -34,7 +34,6 @@ using namespace hyrise;  // NOLINT
 using NodeExpressionsDifferenceType =
     typename std::iterator_traits<decltype(AggregateNode::node_expressions)::iterator>::difference_type;
 
-
 /**
  * Calculates which input LQPs of a node are safe to pull predicates from.
  *

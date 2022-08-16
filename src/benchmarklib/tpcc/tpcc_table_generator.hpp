@@ -225,7 +225,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
                    const std::function<T(const std::vector<size_t>&)>& generator_function) {
     const std::function<std::vector<T>(const std::vector<size_t>&)> wrapped_generator_function =
-        [generator_function](const std::vector<size_t>& indices) { return std::vector<T>({generator_function(indices)}); };
+        [generator_function](const std::vector<size_t>& indices) {
+          return std::vector<T>({generator_function(indices)});
+        };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 
