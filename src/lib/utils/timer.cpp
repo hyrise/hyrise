@@ -10,7 +10,7 @@ Timer::Timer() {
 
 std::chrono::nanoseconds Timer::lap() {
   const auto now = std::chrono::steady_clock::now();
-  const auto lap_duration = static_cast<std::chrono::nanoseconds>(now - _begin);
+  const auto lap_duration = std::chrono::nanoseconds{now - _begin};
   _begin = now;
   return lap_duration;
 }
