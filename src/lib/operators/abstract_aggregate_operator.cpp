@@ -8,10 +8,11 @@
 namespace hyrise {
 
 AbstractAggregateOperator::AbstractAggregateOperator(
-    const std::shared_ptr<AbstractOperator>& op, const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
+    const std::shared_ptr<AbstractOperator>& input_operator,
+    const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
     const std::vector<ColumnID>& groupby_column_ids,
     std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
-    : AbstractReadOnlyOperator(OperatorType::Aggregate, op, nullptr, std::move(init_performance_data)),
+    : AbstractReadOnlyOperator(OperatorType::Aggregate, input_operator, nullptr, std::move(init_performance_data)),
       _aggregates{aggregates},
       _groupby_column_ids{groupby_column_ids} {
   /*
