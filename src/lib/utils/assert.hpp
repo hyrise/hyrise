@@ -12,10 +12,9 @@
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
- * used
- * to both harden code by programming by contract and document the invariants enforced in messages.
+ * used to both harden code by programming by contract and document the invariants enforced in messages.
  *
- * --> Use DebugAssert() whenever a certain invariant must hold, as in
+ * --> Use DebugAssert() whenever a certain invariant must hold, as in:
  *
  * int divide(int numerator, int denominator) {
  *   DebugAssert(denominator == 0, "Divisions by zero are not allowed");
@@ -34,7 +33,7 @@
  * }
  *
  * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
- *     very cheap or the invariant is considered very important
+ *     very cheap or the invariant is considered very important.
  *
  * --> Use AssertInput() to check if the user input is correct. This provides a more specific error handling since an
  *     invalid input might want to be caught.

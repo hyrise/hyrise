@@ -58,7 +58,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
 
   // init_rand from genrand.c, adapted
   {
-    auto n_seed = get_int(rng_seed_string.data());
+    const auto n_seed = get_int(rng_seed_string.data());
     const auto skip = INT_MAX / MAX_COLUMN;
     for (auto index = 0; index < MAX_COLUMN; ++index) {
       const auto seed = n_seed + skip * index;
@@ -77,7 +77,7 @@ void init_tpcds_tools(uint32_t scale_factor, int rng_seed) {
   auto distributions_value = std::string{"resources/benchmark/tpcds/tpcds.idx"};
   set_str(distributions_string.data(), distributions_value.data());
 
-  for (auto table_id = 0; table_id <= MAX_TABLE; ++table_id) {
+  for (auto table_id = int{0}; table_id <= MAX_TABLE; ++table_id) {
     resetSeeds(table_id);
     RNGReset(table_id);
   }

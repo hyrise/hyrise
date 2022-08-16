@@ -20,7 +20,7 @@ uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet_header() {
     return read_startup_packet_header();
   }
 
-  // Subtract uint32_t twice, since both packet length and protocol version have been read already
+  // Subtract uint32_t twice since both the packet length and protocol version have been read already.
   return body_length - 2 * LENGTH_FIELD_SIZE;
 }
 
