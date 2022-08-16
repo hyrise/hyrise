@@ -32,7 +32,7 @@ boost::gregorian::date date_interval(const boost::gregorian::date& start_date, i
     case DatetimeComponent::Year: {
       // We obtain an iterator that adds offset years when incremented. Thus, we have to actually increment and
       // dereference it. The same applies to the other cases.
-      return *(++boost::gregorian::year_iterator(start_date, static_cast<int>(offset)));
+      return *(++boost::gregorian::year_iterator{start_date, static_cast<int>(offset)});
     }
     case DatetimeComponent::Month: {
       return *(++boost::gregorian::month_iterator(start_date, static_cast<int>(offset)));
