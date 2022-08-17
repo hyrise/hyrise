@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief the base class of all table scan impls
@@ -146,7 +146,9 @@ class AbstractTableScanImpl {
         }
 
         ++left_it;
-        if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
+        if constexpr (!std::is_same_v<RightIterator, std::false_type>) {
+          ++right_it;
+        }
       }
 
       if (!mask) {
@@ -239,4 +241,4 @@ class AbstractTableScanImpl {
   /**@}*/
 };
 
-}  // namespace opossum
+}  // namespace hyrise

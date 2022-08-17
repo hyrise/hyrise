@@ -4,7 +4,7 @@
 
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FixedStringVectorTest : public BaseTest {
  protected:
@@ -92,7 +92,9 @@ TEST_F(FixedStringVectorTest, ReverseIterator) {
   }
 }
 
-TEST_F(FixedStringVectorTest, Size) { EXPECT_EQ(fixed_string_vector->size(), 3u); }
+TEST_F(FixedStringVectorTest, Size) {
+  EXPECT_EQ(fixed_string_vector->size(), 3u);
+}
 
 TEST_F(FixedStringVectorTest, Erase) {
   EXPECT_EQ(fixed_string_vector->size(), 3u);
@@ -206,4 +208,4 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
   EXPECT_EQ(*(fixed_string_vector->data() + 17), '\0');
 }
 
-}  // namespace opossum
+}  // namespace hyrise

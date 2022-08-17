@@ -13,7 +13,7 @@
 #include "storage/reference_segment.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 
@@ -48,7 +48,9 @@ bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chun
 
   const auto& mvcc_data = chunk->mvcc_data();
   const auto max_begin_cid = mvcc_data->max_begin_cid;
-  if (!max_begin_cid) return false;
+  if (!max_begin_cid) {
+    return false;
+  }
 
   return snapshot_commit_id >= max_begin_cid && chunk->invalid_row_count() == 0;
 }
@@ -196,7 +198,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           RowIDPosList temp_pos_list;
           temp_pos_list.guarantee_single_chunk();
           for (auto row_id : *pos_list_in) {
-            if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+            if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
               temp_pos_list.emplace_back(row_id);
             }
           }
@@ -232,7 +234,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
           const auto referenced_chunk = referenced_table->get_chunk(row_id.chunk_id);
 
           auto mvcc_data = referenced_chunk->mvcc_data();
-          if (opossum::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
+          if (hyrise::is_row_visible(our_tid, snapshot_commit_id, row_id.chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(row_id);
           }
         }
@@ -265,7 +267,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
         // Generate pos_list_out.
         auto chunk_size = chunk_in->size();  // The compiler fails to optimize this in the for clause :(
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-          if (opossum::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
+          if (hyrise::is_row_visible(our_tid, snapshot_commit_id, chunk_offset, *mvcc_data)) {
             temp_pos_list.emplace_back(RowID{chunk_id, chunk_offset});
           }
         }
@@ -295,4 +297,4 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& in_table, co
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

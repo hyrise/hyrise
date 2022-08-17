@@ -3,7 +3,7 @@
 #include "abstract_operator.hpp"
 #include "abstract_read_only_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Forward the input columns in the specified order with updated column names
@@ -30,4 +30,4 @@ class AliasOperator : public AbstractReadOnlyOperator {
   const std::vector<std::string> _aliases;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

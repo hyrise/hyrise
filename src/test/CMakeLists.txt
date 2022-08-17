@@ -208,7 +208,7 @@ set(
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
-    lib/utils/date_utils_test.cpp
+    lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/load_table_test.cpp
@@ -228,6 +228,7 @@ set(
     lib/utils/plugin_manager_test.cpp
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
+    lib/utils/print_utils_test.cpp
     lib/utils/setting_test.cpp
     lib/utils/settings_manager_test.cpp
     lib/utils/singleton_test.cpp
@@ -296,5 +297,5 @@ endif()
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest pqxx_static)
+target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

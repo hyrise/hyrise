@@ -13,7 +13,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PQPSubqueryExpression;
 
@@ -69,4 +69,4 @@ class Projection : public AbstractReadOnlyOperator {
   std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

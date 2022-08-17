@@ -9,7 +9,7 @@
 #include "expression_precedence.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class AbstractOperator;
@@ -156,8 +156,13 @@ inline std::ostream& operator<<(std::ostream& stream, const AbstractExpression& 
 
 // Wrapper around expression->hash(), to enable hash based containers containing std::shared_ptr<AbstractExpression>
 struct ExpressionSharedPtrHash final {
-  size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const { return expression->hash(); }
-  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const { return expression->hash(); }
+  size_t operator()(const std::shared_ptr<AbstractExpression>& expression) const {
+    return expression->hash();
+  }
+
+  size_t operator()(const std::shared_ptr<const AbstractExpression>& expression) const {
+    return expression->hash();
+  }
 };
 
 // Wrapper around AbstractExpression::operator==(), to enable hash based containers containing
@@ -188,4 +193,4 @@ using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const Abs
 using ExpressionUnorderedSet =
     std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
-}  // namespace opossum
+}  // namespace hyrise

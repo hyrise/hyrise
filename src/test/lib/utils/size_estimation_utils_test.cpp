@@ -3,7 +3,7 @@
 #include "types.hpp"
 #include "utils/size_estimation_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SizeEstimationUtilsTest : public BaseTest {};
 
@@ -64,4 +64,4 @@ TEST_F(SizeEstimationUtilsTest, StringVectorExceedingSSOLengths) {
   EXPECT_EQ(string_vector_memory_usage(string_vector, MemoryUsageCalculationMode::Full), expected_size_full);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

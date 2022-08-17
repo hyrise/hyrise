@@ -5,7 +5,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Wraps a ColumnID and its associated data_type/nullability/column_name
@@ -37,4 +37,4 @@ class PQPColumnExpression : public AbstractExpression {
   const std::string _column_name;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

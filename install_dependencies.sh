@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
+if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
     BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.67-dev 2>/dev/null | grep "install ok installed")
     if [ "" != "$BOOST_INSTALLED" ]; then
          read -p 'libboost1.67-dev is installed but 1.70 is required. Ok to remove 1.67-dev? [y|n] ' -n 1 -r < /dev/tty
@@ -68,7 +68,7 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                 fi
 
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl dos2unix g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip systemtap systemtap-sdt-dev valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl dos2unix g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."

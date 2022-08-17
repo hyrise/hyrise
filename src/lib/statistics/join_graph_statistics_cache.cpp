@@ -4,7 +4,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/table_statistics.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGraph& join_graph) {
   VertexIndexMap vertex_indices;
@@ -34,7 +34,9 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
 
   visit_lqp(lqp, [&](const auto& node) {
     // Early out if `bitmask.reset()` was called during the search below
-    if (!bitmask.has_value()) return LQPVisitation::DoNotVisitInputs;
+    if (!bitmask.has_value()) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
 
     if (const auto vertex_iter = _vertex_indices.find(node); vertex_iter != _vertex_indices.end()) {
       DebugAssert(vertex_iter->second < bitmask->size(), "Vertex index out of range");
@@ -140,4 +142,4 @@ void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
 
   _cache.emplace(bitmask, std::move(cache_entry));
 }
-}  // namespace opossum
+}  // namespace hyrise

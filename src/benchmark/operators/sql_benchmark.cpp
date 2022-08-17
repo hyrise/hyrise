@@ -12,7 +12,7 @@
 #include "sql/sql_translator.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using hsql::SQLParser;
 using hsql::SQLParserResult;
@@ -79,9 +79,20 @@ class SQLBenchmark : public MicroBenchmarkBasicFixture {
         HAVING COUNT(orderitems.o_orderkey) >= 100;)";
 };
 
-BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) { BM_CompileQuery(st); }
-BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) { BM_ParseQuery(st); }
-BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) { BM_PlanQuery(st); }
-BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) { BM_QueryPlanCache(st); }
+BENCHMARK_F(SQLBenchmark, BM_CompileQuery)(benchmark::State& st) {
+  BM_CompileQuery(st);
+}
 
-}  // namespace opossum
+BENCHMARK_F(SQLBenchmark, BM_ParseQuery)(benchmark::State& st) {
+  BM_ParseQuery(st);
+}
+
+BENCHMARK_F(SQLBenchmark, BM_PlanQuery)(benchmark::State& st) {
+  BM_PlanQuery(st);
+}
+
+BENCHMARK_F(SQLBenchmark, BM_QueryPlanCacheQuery)(benchmark::State& st) {
+  BM_QueryPlanCache(st);
+}
+
+}  // namespace hyrise

@@ -8,9 +8,9 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
@@ -40,7 +40,9 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     null_in_expression = in_(col_a, list_(1, NULL_VALUE));
 
     auto hundred_elements = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (auto i = 0; i < 100; ++i) hundred_elements.emplace_back(value_(i));
+    for (auto i = 0; i < 100; ++i) {
+      hundred_elements.emplace_back(value_(i));
+    }
     hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col_a,
                                                                    std::make_shared<ListExpression>(hundred_elements));
     hundred_element_in_expression_large_input = std::make_shared<InExpression>(
@@ -82,9 +84,7 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
 
     std::sort(values_found_in_predicates.begin(), values_found_in_predicates.end());
 
-    if (values_found_in_predicates == expected_values) return true;
-
-    return false;
+    return values_found_in_predicates == expected_values;
   }
 
   std::shared_ptr<MockNode> node, many_row_node;
@@ -311,7 +311,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto i = 0; i < 100; ++i) table->append({i});
+    for (auto i = 0; i < 100; ++i) {
+      table->append({i});
+    }
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp = JoinNode::make(JoinMode::Semi, equals_(col_a, right_col), node, static_table_node);
@@ -329,7 +331,9 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto i = 0; i < 100; ++i) table->append({i});
+    for (auto i = 0; i < 100; ++i) {
+      table->append({i});
+    }
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
     const auto expected_lqp =
@@ -369,4 +373,4 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

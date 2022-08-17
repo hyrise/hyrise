@@ -13,7 +13,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated
 class FSSTSimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
@@ -171,4 +171,4 @@ TEST_F(StorageFSSTSegmentTest, FSSTSegmentPointIterableTest) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

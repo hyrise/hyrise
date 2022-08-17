@@ -14,9 +14,11 @@ std::vector<T> concatenate(const std::vector<T>& l, const std::vector<T>& r) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-bool JoinVerification::supports(const JoinConfiguration config) { return true; }
+bool JoinVerification::supports(const JoinConfiguration config) {
+  return true;
+}
 
 JoinVerification::JoinVerification(const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
@@ -202,4 +204,4 @@ std::shared_ptr<AbstractOperator> JoinVerification::_on_deep_copy(
 
 void JoinVerification::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "../plugins/test_plugin.hpp"
 #include "./plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SingletonTest : public BaseTest {
  protected:
@@ -24,4 +24,4 @@ TEST_F(SingletonTest, SingleInstance) {
   EXPECT_EQ(&a, &b);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

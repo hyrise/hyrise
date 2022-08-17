@@ -8,7 +8,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Operator to calculate the cartesian product (unconditional join)
@@ -31,4 +31,4 @@ class Product : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Unary minus
@@ -22,4 +22,4 @@ class UnaryMinusExpression : public AbstractExpression {
   bool _shallow_equals(const AbstractExpression& expression) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

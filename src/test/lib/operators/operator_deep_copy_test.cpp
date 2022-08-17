@@ -23,9 +23,9 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 // At the moment all the deep_copy() methods just call the constructor again. At first sight, these tests
 // do not seem to add too much value because. This might change in the future. Then, these tests will
@@ -315,4 +315,4 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
   EXPECT_EQ(copied_get_table_b->consumer_count(), get_table_b->consumer_count());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

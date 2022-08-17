@@ -7,7 +7,7 @@
 
 #include "abstract_read_only_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * PrintFlags::Mvcc:                   If set, print begin commit id and end commit id and transaction id for each tuple
@@ -52,4 +52,4 @@ class Print : public AbstractReadOnlyOperator {
   static constexpr uint16_t _min_cell_width = 8;
   static constexpr uint16_t _max_cell_width = 20;
 };
-}  // namespace opossum
+}  // namespace hyrise

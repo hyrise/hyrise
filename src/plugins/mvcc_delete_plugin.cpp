@@ -8,9 +8,11 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-std::string MvccDeletePlugin::description() const { return "Physical MVCC delete plugin"; }
+std::string MvccDeletePlugin::description() const {
+  return "Physical MVCC delete plugin";
+}
 
 void MvccDeletePlugin::start() {
   _loop_thread_logical_delete =
@@ -36,7 +38,9 @@ void MvccDeletePlugin::_logical_delete_loop() {
 
   // Check all tables
   for (auto& [table_name, table] : tables) {
-    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) continue;
+    if (table->empty() || table->uses_mvcc() != UseMvcc::Yes) {
+      continue;
+    }
     size_t saved_memory = 0;
     size_t num_chunks = 0;
 
@@ -182,4 +186,4 @@ void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& ta
 
 EXPORT_PLUGIN(MvccDeletePlugin)
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -9,7 +9,7 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractCostEstimator> CostEstimatorLogical::new_instance() const {
   return std::make_shared<CostEstimatorLogical>(cardinality_estimator->new_instance());
@@ -71,4 +71,4 @@ float CostEstimatorLogical::_get_expression_cost_multiplier(const std::shared_pt
   return multiplier;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -14,9 +14,9 @@
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 class CreateTableTest : public BaseTest {
  public:
@@ -51,6 +51,28 @@ TEST_F(CreateTableTest, NameAndDescription) {
             "CreateTable 't' ('a' int NOT NULL\n'b' float NULL)");
 }
 
+TEST_F(CreateTableTest, NameAndDescriptionWithConstraints) {
+  const auto& input_table = std::const_pointer_cast<Table>(dummy_table_wrapper->table);
+  input_table->add_soft_key_constraint({{input_table->column_id_by_name("a")}, KeyConstraintType::PRIMARY_KEY});
+  input_table->add_soft_key_constraint({{input_table->column_id_by_name("b")}, KeyConstraintType::UNIQUE});
+
+  EXPECT_EQ(create_table->name(), "CreateTable");
+  // Case (i): CreateTable operator can retrieve the columns' information from the input operator's output table.
+  EXPECT_EQ(create_table->description(DescriptionMode::SingleLine),
+            "CreateTable 't' ('a' int NOT NULL, 'b' float NULL, PRIMARY_KEY(a), UNIQUE(b))");
+
+  // Create the table and clear the input operator's output.
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  create_table->set_transaction_context(context);
+  create_table->execute();
+  context->commit();
+  dummy_table_wrapper->clear_output();
+
+  // Case (ii): CreateTable operator has to retrieve the columns' information from the created and stored table.
+  EXPECT_EQ(create_table->description(DescriptionMode::MultiLine),
+            "CreateTable 't' ('a' int NOT NULL\n'b' float NULL\nPRIMARY_KEY(a)\nUNIQUE(b))");
+}
+
 TEST_F(CreateTableTest, Execute) {
   const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
   create_table->set_transaction_context(context);
@@ -64,6 +86,24 @@ TEST_F(CreateTableTest, Execute) {
 
   EXPECT_EQ(table->row_count(), 0);
   EXPECT_EQ(table->column_definitions(), column_definitions);
+}
+
+TEST_F(CreateTableTest, SoftKeyConstraints) {
+  const auto input_table = const_pointer_cast<Table>(dummy_table_wrapper->table);
+  const auto unique_constraint = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  input_table->add_soft_key_constraint(unique_constraint);
+
+  const auto context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
+  create_table->set_transaction_context(context);
+  create_table->execute();
+  context->commit();
+
+  EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
+
+  const auto table = Hyrise::get().storage_manager.get_table("t");
+  const auto& table_key_constraints = table->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 1);
+  EXPECT_TRUE(table_key_constraints.contains(unique_constraint));
 }
 
 TEST_F(CreateTableTest, TableAlreadyExists) {
@@ -220,4 +260,4 @@ TEST_F(CreateTableTest, CreateTableWithDifferentTransactionContexts) {
   EXPECT_EQ(validate_3->get_output()->row_count(), 0);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

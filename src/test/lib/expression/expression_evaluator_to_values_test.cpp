@@ -24,9 +24,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class ExpressionEvaluatorToValuesTest : public BaseTest {
  public:
@@ -42,8 +42,6 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
     s1 = PQPColumnExpression::from_table(*table_a, "s1");
     s2 = PQPColumnExpression::from_table(*table_a, "s2");
     s3 = PQPColumnExpression::from_table(*table_a, "s3");
-    dates = PQPColumnExpression::from_table(*table_a, "dates");
-    dates2 = PQPColumnExpression::from_table(*table_a, "dates2");
     a_plus_b = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, b);
     a_plus_c = std::make_shared<ArithmeticExpression>(ArithmeticOperator::Addition, a, c);
     s1_gt_s2 = std::make_shared<BinaryPredicateExpression>(PredicateCondition::GreaterThan, s1, s2);
@@ -60,6 +58,11 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
     bool_a = PQPColumnExpression::from_table(*table_bools, "a");
     bool_b = PQPColumnExpression::from_table(*table_bools, "b");
     bool_c = PQPColumnExpression::from_table(*table_bools, "c");
+
+    // Load table date_time
+    table_date_time = load_table("resources/test_data/tbl/expression_evaluator/input_date_time.tbl");
+    dates = PQPColumnExpression::from_table(*table_date_time, "dates");
+    timestamps = PQPColumnExpression::from_table(*table_date_time, "timestamps");
 
     // Create table_empty
     TableColumnDefinitions empty_table_columns;
@@ -89,7 +92,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
 
     result.as_view([&](const auto& resolved) {
       for (auto idx = size_t{0}; idx < result.size(); ++idx) {
-        if (!resolved.is_null(idx)) normalized[idx] = resolved.value(idx);
+        if (!resolved.is_null(idx)) {
+          normalized[idx] = resolved.value(idx);
+        }
       }
     });
 
@@ -116,7 +121,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
         ExpressionEvaluator{table, ChunkID{0}, uncorrelated_subquery_results}.evaluate_expression_to_result<R>(
             expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
-    if (actual_normalized == expected) return true;
+    if (actual_normalized == expected) {
+      return true;
+    }
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
@@ -132,7 +139,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
   bool test_expression(const AbstractExpression& expression, const std::vector<std::optional<R>>& expected) {
     const auto actual_result = ExpressionEvaluator{}.evaluate_expression_to_result<R>(expression);
     const auto actual_normalized = normalize_expression_result(*actual_result);
-    if (actual_normalized == expected) return true;
+    if (actual_normalized == expected) {
+      return true;
+    }
 
     std::cout << "Actual:\n  ";
     print(actual_normalized);
@@ -144,9 +153,9 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
     return false;
   }
 
-  std::shared_ptr<Table> table_empty, table_a, table_b, table_bools;
+  std::shared_ptr<Table> table_empty, table_a, table_b, table_bools, table_date_time;
 
-  std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, s3, dates, dates2, x, bool_a, bool_b, bool_c;
+  std::shared_ptr<PQPColumnExpression> a, b, c, d, e, f, s1, s2, s3, x, bool_a, bool_b, bool_c, dates, timestamps;
   std::shared_ptr<PQPColumnExpression> empty_a, empty_b, empty_s;
   std::shared_ptr<ArithmeticExpression> a_plus_b;
   std::shared_ptr<ArithmeticExpression> a_plus_c;
@@ -600,7 +609,9 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated)
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalculated) {
   // Make sure the expression evaluator complains if it has been given a list of preevaluated sub queries but one is
   // missing
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   // PQP that returns the column "a"
   const auto table_wrapper_a = std::make_shared<TableWrapper>(table_a);
@@ -756,35 +767,64 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractLiterals) {
-  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Year, "1992-09-30"), {"1992"}));
-  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Month, "1992-09-30"), {"09"}));
-  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Day, "1992-09-30"), {"30"}));
-  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Year, null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Month, null_()), {std::nullopt}));
-  EXPECT_TRUE(test_expression<pmr_string>(*extract_(DatetimeComponent::Day, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Year, "1992-09-30"), {1992}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Month, "1992-09-30"), {9}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Day, "1992-09-30"), {30}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Hour, "1992-09-30 01:02:03.5"), {1}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Minute, "1992-09-30 01:02:03.5"), {2}));
+  EXPECT_TRUE(test_expression<double>(*extract_(DatetimeComponent::Second, "1992-09-30 01:02:03.5"), {3.5}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Year, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Month, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Day, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Hour, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(*extract_(DatetimeComponent::Minute, null_()), {std::nullopt}));
+  EXPECT_TRUE(test_expression<double>(*extract_(DatetimeComponent::Second, null_()), {std::nullopt}));
 
-  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {"30"}), std::logic_error);
-  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {"30"}),
-               std::logic_error);
-  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Second, "1992-09-30"), {"30"}),
-               std::logic_error);
+  EXPECT_THROW(test_expression<pmr_string>(*extract_(DatetimeComponent::Hour, "1992-09-30"), {}), std::logic_error);
+  EXPECT_THROW(test_expression<float>(*extract_(DatetimeComponent::Minute, "1992-09-30"), {}), std::logic_error);
+  EXPECT_THROW(test_expression<int32_t>(*extract_(DatetimeComponent::Second, "1992-09-30"), {}), std::logic_error);
+  EXPECT_THROW(test_expression<int32_t>(*extract_(DatetimeComponent::Year, "1999-13-34"), {}), std::logic_error);
 
-  EXPECT_EQ(extract_(DatetimeComponent::Year, "1993-08-01")->data_type(), DataType::String);
+  EXPECT_EQ(extract_(DatetimeComponent::Year, "1993-08-01")->data_type(), DataType::Int);
+  EXPECT_EQ(extract_(DatetimeComponent::Month, "1993-08-01")->data_type(), DataType::Int);
+  EXPECT_EQ(extract_(DatetimeComponent::Day, "1993-08-01")->data_type(), DataType::Int);
+  EXPECT_EQ(extract_(DatetimeComponent::Hour, "1993-08-01")->data_type(), DataType::Int);
+  EXPECT_EQ(extract_(DatetimeComponent::Minute, "1993-08-01")->data_type(), DataType::Int);
+  EXPECT_EQ(extract_(DatetimeComponent::Second, "1993-08-01")->data_type(), DataType::Double);
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractSeries) {
-  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Year, dates),
-                                          {"2017", "2014", "2011", "2010"}));
-  EXPECT_TRUE(
-      test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Month, dates), {"12", "08", "09", "01"}));
-  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Day, dates), {"06", "05", "03", "02"}));
-  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Year, dates2),
-                                          {"2017", "2014", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Month, dates2),
-                                          {"12", "08", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<pmr_string>(table_a, *extract_(DatetimeComponent::Day, dates2),
-                                          {"06", "05", std::nullopt, std::nullopt}));
-  EXPECT_TRUE(test_expression<pmr_string>(table_empty, *extract_(DatetimeComponent::Day, empty_s), {}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Year, dates),
+                                       {2017, 2014, 2011, 2010, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Month, dates),
+                                       {12, 8, 9, 1, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Day, dates),
+                                       {6, 5, 3, 2, std::nullopt, std::nullopt}));
+
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Year, timestamps),
+                                       {2017, 2014, 2011, 2010, 2010, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Month, timestamps),
+                                       {12, 8, 9, 1, 1, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Day, timestamps),
+                                       {6, 5, 3, 3, 2, std::nullopt}));
+
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Hour, dates),
+                                       {0, 0, 0, 0, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Minute, dates),
+                                       {0, 0, 0, 0, std::nullopt, std::nullopt}));
+  EXPECT_TRUE(test_expression<double>(table_date_time, *extract_(DatetimeComponent::Second, dates),
+                                      {0, 0, 0, 0, std::nullopt, std::nullopt}));
+
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Hour, timestamps),
+                                       {1, 2, 3, 2, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<int32_t>(table_date_time, *extract_(DatetimeComponent::Minute, timestamps),
+                                       {2, 3, 4, 2, 0, std::nullopt}));
+  EXPECT_TRUE(test_expression<double>(table_date_time, *extract_(DatetimeComponent::Second, timestamps),
+                                      {3, 4, 5.0001, 1.5, 0, std::nullopt}));
+
+  EXPECT_TRUE(test_expression<int32_t>(table_empty, *extract_(DatetimeComponent::Day, empty_s), {}));
+  EXPECT_THROW(test_expression<int32_t>(table_a, *extract_(DatetimeComponent::Day, a), {}), std::logic_error);
+  EXPECT_THROW(test_expression<int32_t>(table_a, *extract_(DatetimeComponent::Day, s1), {}), std::logic_error);
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, CastLiterals) {
@@ -813,4 +853,12 @@ TEST_F(ExpressionEvaluatorToValuesTest, CastSeries) {
       test_expression<pmr_string>(table_a, *cast_(c, DataType::String), {"33", std::nullopt, "34", std::nullopt}));
 }
 
-}  // namespace opossum
+TEST_F(ExpressionEvaluatorToValuesTest, CastNullableStrings) {
+  auto table_string_nullable = load_table("resources/test_data/tbl/string_numbers_null.tbl");
+  auto string_column = PQPColumnExpression::from_table(*table_string_nullable, "a");
+
+  EXPECT_TRUE(test_expression<int32_t>(table_string_nullable, *cast_(string_column, DataType::Int),
+                                       {12, std::nullopt, 1234, std::nullopt}));
+}
+
+}  // namespace hyrise

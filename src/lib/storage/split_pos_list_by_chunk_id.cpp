@@ -1,6 +1,6 @@
 #include "split_pos_list_by_chunk_id.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const AbstractPosList>& input_pos_list,
                                              const size_t number_of_chunks) {
@@ -39,4 +39,4 @@ PosListsByChunkID split_pos_list_by_chunk_id(const std::shared_ptr<const Abstrac
   return pos_lists_by_chunk_id;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "abstract_benchmark_item_runner.hpp"
 #include "benchmark_config.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
  public:
@@ -38,4 +38,4 @@ class FileBasedBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   std::vector<BenchmarkItemID> _items;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

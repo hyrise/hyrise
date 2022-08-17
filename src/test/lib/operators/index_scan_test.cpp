@@ -24,7 +24,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DerivedIndex>
 class OperatorsIndexScanTest : public BaseTest {
@@ -258,7 +258,7 @@ TYPED_TEST(OperatorsIndexScanTest, PosListGuarenteesSingleChunkReference) {
 TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
+  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
                                                    PredicateCondition::GreaterThanEquals, right_values);
 
   EXPECT_EQ(scan->name(), "IndexScan");
@@ -267,7 +267,7 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
 TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-  auto scan = std::make_shared<opossum::IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_column_ids,
+  auto scan = std::make_shared<IndexScan>(this->_int_int, SegmentIndexType::Invalid, this->_column_ids,
                                                    PredicateCondition::GreaterThan, right_values);
   EXPECT_THROW(scan->execute(), std::logic_error);
 }
@@ -282,7 +282,9 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
   // Test correct LQP-Translation. For some reason, only GroupKeyIndexes are currently used.
-  if (this->_index_type != SegmentIndexType::GroupKey) return;
+  if (this->_index_type != SegmentIndexType::GroupKey) {
+    return;
+  }
   const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
 
   auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
@@ -312,4 +314,4 @@ TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
       load_table("resources/test_data/tbl/int_int_shuffled_appended_and_filtered.tbl", ChunkOffset{10}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

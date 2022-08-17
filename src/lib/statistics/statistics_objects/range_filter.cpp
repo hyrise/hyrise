@@ -12,7 +12,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
@@ -278,7 +278,9 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
       const auto value2 = boost::get<T>(*variant_value2);
 
       // a BETWEEN 5 AND 4 will always be empty
-      if (value2 < value) return true;
+      if (value2 < value) {
+        return true;
+      }
 
       // Smaller than the segment's minimum.
       if (does_not_contain(PredicateCondition::LessThanEquals, std::max(value, value2))) {
@@ -314,4 +316,4 @@ template class RangeFilter<int64_t>;
 template class RangeFilter<float>;
 template class RangeFilter<double>;
 
-}  // namespace opossum
+}  // namespace hyrise

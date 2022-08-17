@@ -14,7 +14,7 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                          const ColumnID left_column_id,
@@ -25,7 +25,9 @@ ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<c
       _predicate_condition(predicate_condition),
       _right_column_id{right_column_id} {}
 
-std::string ColumnVsColumnTableScanImpl::description() const { return "ColumnVsColumn"; }
+std::string ColumnVsColumnTableScanImpl::description() const {
+  return "ColumnVsColumn";
+}
 
 std::shared_ptr<RowIDPosList> ColumnVsColumnTableScanImpl::scan_chunk(ChunkID chunk_id) {
   const auto chunk = _in_table->get_chunk(chunk_id);
@@ -180,4 +182,4 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
   return matches_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

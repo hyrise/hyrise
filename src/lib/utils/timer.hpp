@@ -3,7 +3,7 @@
 #include <chrono>
 #include <string>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Starts a std::chrono::steady_clock base timer on construction and returns and resets measurement when
@@ -27,4 +27,4 @@ class Timer final {
   std::chrono::steady_clock::time_point _begin;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

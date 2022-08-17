@@ -11,15 +11,19 @@
 #include "constant_mappings.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
   void SetUp() override {}
 
-  auto min() { return 1'024; }
+  auto min() {
+    return 1'024;
+  }
 
-  auto max() { return 34'624; }
+  auto max() {
+    return 34'624;
+  }
 
   pmr_vector<uint32_t> generate_sequence(size_t count, uint32_t increment) {
     auto sequence = pmr_vector<uint32_t>(count);
@@ -28,7 +32,9 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
       elem = value;
 
       value += increment;
-      if (value > max()) value = min();
+      if (value > max()) {
+        value = min();
+      }
     }
 
     return sequence;
@@ -124,4 +130,4 @@ TEST_P(CompressedVectorTest, DecodeSequenceOfZerosUsingDecompressor) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,31 +10,30 @@
 
 namespace {
 
-using namespace opossum;                         // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {
-  auto value = AllParameterVariant{};
-
   if (const auto* value_expression = dynamic_cast<const ValueExpression*>(&expression)) {
-    value = value_expression->value;
-  } else if (const auto column_id = node.find_column_id(expression)) {
-    value = *column_id;
-  } else if (const auto* const parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
-    value = parameter_expression->parameter_id;
-  } else if (const auto* const placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
-    value = placeholder_expression->parameter_id;
-  } else {
-    return std::nullopt;
+    return value_expression->value;
+  }
+  if (const auto column_id = node.find_column_id(expression)) {
+    return *column_id;
+  }
+  if (const auto* const parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
+    return parameter_expression->parameter_id;
+  }
+  if (const auto* const placeholder_expression = dynamic_cast<const PlaceholderExpression*>(&expression)) {
+    return placeholder_expression->parameter_id;
   }
 
-  return value;
+  return std::nullopt;
 }
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
                                                       const std::shared_ptr<const Table>& table) const {
@@ -61,14 +60,18 @@ std::ostream& OperatorScanPredicate::output_to_stream(std::ostream& stream,
 std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_expression(
     const AbstractExpression& expression, const AbstractLQPNode& node) {
   const auto* predicate = dynamic_cast<const AbstractPredicateExpression*>(&expression);
-  if (!predicate) return std::nullopt;
+  if (!predicate) {
+    return std::nullopt;
+  }
 
   Assert(!predicate->arguments.empty(), "Expect PredicateExpression to have one or more arguments");
 
   auto predicate_condition = predicate->predicate_condition;
 
   auto argument_a = resolve_all_parameter_variant(*predicate->arguments[0], node);
-  if (!argument_a) return std::nullopt;
+  if (!argument_a) {
+    return std::nullopt;
+  }
 
   if (predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
     if (is_column_id(*argument_a)) {
@@ -82,7 +85,9 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
   Assert(predicate->arguments.size() > 1, "Expect non-unary PredicateExpression to have two or more arguments");
 
   auto argument_b = resolve_all_parameter_variant(*expression.arguments[1], node);
-  if (!argument_b) return std::nullopt;
+  if (!argument_b) {
+    return std::nullopt;
+  }
 
   // We can handle x BETWEEN a AND b if a and b are scalar values of the same data type. Otherwise, the condition gets
   // translated into two scans. Theoretically, we could also implement all variations where x, a and b are
@@ -92,7 +97,9 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
     Assert(predicate->arguments.size() == 3, "Expect ternary PredicateExpression to have three arguments");
 
     auto argument_c = resolve_all_parameter_variant(*expression.arguments[2], node);
-    if (!argument_c) return std::nullopt;
+    if (!argument_c) {
+      return std::nullopt;
+    }
 
     if (is_column_id(*argument_a) && is_variant(*argument_b) && is_variant(*argument_c) &&
         predicate->arguments[1]->data_type() == predicate->arguments[2]->data_type() &&
@@ -123,7 +130,9 @@ std::optional<std::vector<OperatorScanPredicate>> OperatorScanPredicate::from_ex
       upper_bound_predicates = from_expression(*less_than_(predicate->arguments[0], predicate->arguments[2]), node);
     }
 
-    if (!lower_bound_predicates || !upper_bound_predicates) return std::nullopt;
+    if (!lower_bound_predicates || !upper_bound_predicates) {
+      return std::nullopt;
+    }
 
     auto predicates = *lower_bound_predicates;
     predicates.insert(predicates.end(), upper_bound_predicates->begin(), upper_bound_predicates->end());
@@ -164,4 +173,4 @@ std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& pred
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

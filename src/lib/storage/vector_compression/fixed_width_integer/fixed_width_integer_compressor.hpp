@@ -9,7 +9,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FixedWidthIntegerCompressor : public BaseVectorCompressor {
  public:
@@ -31,4 +31,4 @@ class FixedWidthIntegerCompressor : public BaseVectorCompressor {
                                                                          const pmr_vector<uint32_t>& vector);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

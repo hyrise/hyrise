@@ -5,7 +5,7 @@
 
 #include <boost/asio.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 using AsioStreamDescriptor = boost::asio::posix::stream_descriptor;
 
@@ -26,16 +26,22 @@ class MockSocket {
     std::filesystem::remove(std::filesystem::path{_path});
   }
 
-  std::shared_ptr<AsioStreamDescriptor> get_socket() { return _stream; }
+  std::shared_ptr<AsioStreamDescriptor> get_socket() {
+    return _stream;
+  }
 
-  void write(const std::string& value) { std::ofstream(std::filesystem::path{_path}, std::ios_base::app) << value; }
+  void write(const std::string& value) {
+    std::ofstream(std::filesystem::path{_path}, std::ios_base::app) << value;
+  }
 
   std::string read() {
     std::ifstream AsioStreamDescriptor(_path);
     return {std::istreambuf_iterator<char>(AsioStreamDescriptor), std::istreambuf_iterator<char>()};
   }
 
-  bool empty() { return std::ifstream(std::filesystem::path{_path}).peek() == std::ifstream::traits_type::eof(); }
+  bool empty() {
+    return std::ifstream(std::filesystem::path{_path}).peek() == std::ifstream::traits_type::eof();
+  }
 
  private:
   const std::string _path;
@@ -60,4 +66,4 @@ class NetworkConversionHelper {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "utils/string_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StringUtilsTest : public BaseTest {};
 
@@ -38,4 +38,4 @@ TEST_F(StringUtilsTest, trim_source_file_path) {
   EXPECT_EQ(trim_source_file_path("hello/file.cpp"), "hello/file.cpp");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

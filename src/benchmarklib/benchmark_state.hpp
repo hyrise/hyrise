@@ -4,7 +4,7 @@
 
 #include "benchmark_config.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Loosely copying the functionality of benchmark::State
@@ -27,4 +27,4 @@ struct BenchmarkState {
   Duration max_duration;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

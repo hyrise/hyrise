@@ -19,7 +19,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
@@ -45,7 +45,9 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   export_values(ofstream, string_lengths);
 
   // We do not have to iterate over values if all strings are empty.
-  if (total_length == 0) return;
+  if (total_length == 0) {
+    return;
+  }
 
   // Write all string contents into to buffer.
   pmr_vector<char> buffer(total_length);
@@ -94,7 +96,7 @@ void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& va
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 void BinaryWriter::write(const Table& table, const std::string& filename) {
   std::ofstream ofstream;
@@ -172,7 +174,9 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
   // We materialize reference segments and save them as value segments
   export_value(ofstream, EncodingType::Unencoded);
 
-  if (reference_segment.size() == 0) return;
+  if (reference_segment.size() == 0) {
+    return;
+  }
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
     auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};
@@ -422,4 +426,4 @@ size_t BinaryWriter::_size(const pmr_string& object) {
   return object.length();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

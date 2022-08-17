@@ -26,7 +26,7 @@
 #include "types.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using namespace expression_functional;  // NOLINT
 
@@ -43,7 +43,9 @@ class BaseTestWithParam
    * safely without preventing the BaseTest-cleanup from happening.
    * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
    */
-  ~BaseTestWithParam() override { Hyrise::reset(); }
+  ~BaseTestWithParam() override {
+    Hyrise::reset();
+  }
 };
 
 using BaseTest = BaseTestWithParam<void>;
@@ -103,4 +105,4 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::LZ4},
     SegmentEncodingSpec{EncodingType::FSST},
     SegmentEncodingSpec{EncodingType::RunLength}};
-}  // namespace opossum
+}  // namespace hyrise

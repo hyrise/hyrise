@@ -10,9 +10,9 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/join_graph_builder.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class JoinGraphBuilderTest : public BaseTest {
  public:
@@ -332,4 +332,4 @@ TEST_F(JoinGraphBuilderTest, MultiPredicateJoin) {
   EXPECT_EQ(*join_graph->edges.at(0).predicates.at(2), *less_than_equals_(a_c, b_c));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

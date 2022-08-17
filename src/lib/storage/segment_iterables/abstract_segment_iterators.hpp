@@ -6,7 +6,7 @@
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief base class of all iterators used by iterables
@@ -77,11 +77,17 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_position_filter_it; }
+  void increment() {
+    ++_position_filter_it;
+  }
 
-  void decrement() { --_position_filter_it; }
+  void decrement() {
+    --_position_filter_it;
+  }
 
-  void advance(std::ptrdiff_t n) { _position_filter_it += n; }
+  void advance(std::ptrdiff_t n) {
+    _position_filter_it += n;
+  }
 
   bool equal(const AbstractPointAccessSegmentIterator& other) const {
     return (_position_filter_it == other._position_filter_it);
@@ -96,4 +102,4 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   PosListIteratorType _position_filter_it;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

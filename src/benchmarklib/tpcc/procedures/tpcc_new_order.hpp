@@ -4,7 +4,7 @@
 
 #include "abstract_tpcc_procedure.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCCNewOrder : public AbstractTPCCProcedure {
  public:
@@ -39,4 +39,4 @@ class TPCCNewOrder : public AbstractTPCCProcedure {
   int32_t o_id{-1};  // Order ID, initialized with invalid value
 };
 
-}  // namespace opossum
+}  // namespace hyrise

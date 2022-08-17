@@ -10,7 +10,7 @@
 #include "utils/assert.hpp"
 #include "utils/column_ids_after_pruning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -29,7 +29,9 @@ void StoredTableNode::set_pruned_chunk_ids(const std::vector<ChunkID>& pruned_ch
   _pruned_chunk_ids = pruned_chunk_ids;
 }
 
-const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const { return _pruned_chunk_ids; }
+const std::vector<ChunkID>& StoredTableNode::pruned_chunk_ids() const {
+  return _pruned_chunk_ids;
+}
 
 void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids) {
   DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
@@ -48,7 +50,9 @@ void StoredTableNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_
   _output_expressions.reset();
 }
 
-const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const { return _pruned_column_ids; }
+const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
+  return _pruned_column_ids;
+}
 
 std::string StoredTableNode::description(const DescriptionMode mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
@@ -184,4 +188,4 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
          _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

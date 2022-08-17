@@ -14,9 +14,9 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SchedulerTest : public BaseTest {
  protected:
@@ -290,4 +290,4 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
   Hyrise::get().scheduler()->finish();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

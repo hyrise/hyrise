@@ -5,14 +5,16 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
     const std::string& query, const SendExecutionInfo send_execution_info,
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) {
+    Hyrise::get().storage_manager.drop_prepared_plan("");
+  }
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
               "Auto-commit transaction contexts should not be passed around this far");
@@ -130,4 +132,4 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
     }
   }
 }
-}  // namespace opossum
+}  // namespace hyrise

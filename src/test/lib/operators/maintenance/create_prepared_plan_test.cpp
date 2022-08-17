@@ -9,7 +9,7 @@
 #include "operators/maintenance/create_prepared_plan.hpp"
 #include "storage/prepared_plan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CreatePreparedPlanTest : public BaseTest {
  protected:
@@ -22,7 +22,9 @@ class CreatePreparedPlanTest : public BaseTest {
   std::shared_ptr<CreatePreparedPlan> create_prepared_plan;
 };
 
-TEST_F(CreatePreparedPlanTest, OperatorName) { EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan"); }
+TEST_F(CreatePreparedPlanTest, OperatorName) {
+  EXPECT_EQ(create_prepared_plan->name(), "CreatePreparedPlan");
+}
 
 TEST_F(CreatePreparedPlanTest, OperatorDescription) {
   EXPECT_EQ(replace_addresses(create_prepared_plan->description(DescriptionMode::SingleLine)),
@@ -48,4 +50,4 @@ TEST_F(CreatePreparedPlanTest, Execute) {
   EXPECT_ANY_THROW(copy->execute());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -11,7 +11,7 @@
 #include "types.hpp"
 #include "utils/check_table_equal.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class Table;
@@ -21,28 +21,40 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInpu
 
 template <typename Functor>
 bool contained_in_lqp(const std::shared_ptr<AbstractLQPNode>& node, Functor contains_fn) {
-  if (!node) return false;
-  if (contains_fn(node)) return true;
+  if (!node) {
+    return false;
+  }
+
+  if (contains_fn(node)) {
+    return true;
+  }
+
   return contained_in_lqp(node->left_input(), contains_fn) || contained_in_lqp(node->right_input(), contains_fn);
 }
 
 template <typename Functor>
 bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node, Functor contains_fn) {
-  if (!node) return false;
-  if (contains_fn(node)) return true;
+  if (!node) {
+    return false;
+  }
+
+  if (contains_fn(node)) {
+    return true;
+  }
+
   return contained_in_query_plan(node->left_input(), contains_fn) ||
          contained_in_query_plan(node->right_input(), contains_fn);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 /**
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
-#define EXPECT_TABLE_EQ(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
+#define EXPECT_TABLE_EQ(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
   {                                                                                                                   \
     if (const auto table_difference_message =                                                                         \
-            check_table_equal(opossum_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
+            check_table_equal(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
                               IgnoreNullable::No)) {                                                                  \
       FAIL() << *table_difference_message;                                                                            \
     }                                                                                                                 \
@@ -52,15 +64,15 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
 /**
  * Specialised version of EXPECT_TABLE_EQ
  */
-#define EXPECT_TABLE_EQ_UNORDERED(opossum_table, expected_table)                            \
-  EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
+#define EXPECT_TABLE_EQ_UNORDERED(hyrise_table, expected_table)                            \
+  EXPECT_TABLE_EQ(hyrise_table, expected_table, OrderSensitivity::No, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
 /**
  * Specialised version of EXPECT_TABLE_EQ
  */
-#define EXPECT_TABLE_EQ_ORDERED(opossum_table, expected_table)                               \
-  EXPECT_TABLE_EQ(opossum_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
+#define EXPECT_TABLE_EQ_ORDERED(hyrise_table, expected_table)                               \
+  EXPECT_TABLE_EQ(hyrise_table, expected_table, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                   FloatComparisonMode::AbsoluteDifference)
 
 /**
@@ -86,10 +98,11 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                     FloatComparisonMode::AbsoluteDifference)
 
-#define ASSERT_LQP_TIE(output, input_side, input)                   \
-  {                                                                 \
-    if (!opossum::check_lqp_tie(output, input_side, input)) FAIL(); \
-  }                                                                 \
+#define ASSERT_LQP_TIE(output, input_side, input)           \
+  {                                                         \
+    if (!hyrise::check_lqp_tie(output, input_side, input)) \
+      FAIL();                                               \
+  }                                                         \
   static_assert(true, "End call of macro with a semicolon")
 
 #define EXPECT_LQP_EQ(lhs, rhs)                                                                           \

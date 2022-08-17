@@ -18,7 +18,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> BinaryParser::parse(const std::string& filename) {
   std::ifstream file;
@@ -126,7 +126,9 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   const auto mvcc_data = std::make_shared<MvccData>(row_count, CommitID{0});
   table->append_chunk(output_segments, mvcc_data);
   table->last_chunk()->finalize();
-  if (num_sorted_columns > 0) table->last_chunk()->set_individually_sorted_by(sorted_columns);
+  if (num_sorted_columns > 0) {
+    table->last_chunk()->set_individually_sorted_by(sorted_columns);
+  }
 }
 
 std::shared_ptr<AbstractSegment> BinaryParser::_import_segment(std::ifstream& file, ChunkOffset row_count,
@@ -375,4 +377,4 @@ std::shared_ptr<FixedStringVector> BinaryParser::_import_fixed_string_vector(std
   return std::make_shared<FixedStringVector>(std::move(values), string_length);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
     : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
@@ -27,7 +27,9 @@ std::shared_ptr<LQPColumnExpression> MockNode::get_column(const std::string& col
   Fail("Couldn't find column named '"s + column_name + "' in MockNode");
 }
 
-const MockNode::ColumnDefinitions& MockNode::column_definitions() const { return _column_definitions; }
+const MockNode::ColumnDefinitions& MockNode::column_definitions() const {
+  return _column_definitions;
+}
 
 std::vector<std::shared_ptr<AbstractExpression>> MockNode::output_expressions() const {
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain that
@@ -96,7 +98,9 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
   return unique_constraints;
 }
 
-const std::vector<ColumnID>& MockNode::pruned_column_ids() const { return _pruned_column_ids; }
+const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
+  return _pruned_column_ids;
+}
 
 std::string MockNode::description(const DescriptionMode mode) const {
   std::ostringstream stream;
@@ -117,7 +121,9 @@ std::string MockNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const { return _table_statistics; }
+const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {
+  return _table_statistics;
+}
 
 void MockNode::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
@@ -127,7 +133,9 @@ void MockNode::set_key_constraints(const TableKeyConstraints& key_constraints) {
   _table_key_constraints = key_constraints;
 }
 
-const TableKeyConstraints& MockNode::key_constraints() const { return _table_key_constraints; }
+const TableKeyConstraints& MockNode::key_constraints() const {
+  return _table_key_constraints;
+}
 
 void MockNode::set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
   _functional_dependencies = fds;
@@ -165,4 +173,4 @@ bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMappi
          mock_node.functional_dependencies() == _functional_dependencies;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

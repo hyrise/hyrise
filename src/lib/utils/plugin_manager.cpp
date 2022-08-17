@@ -8,7 +8,7 @@
 
 #include "plugin_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const {
   const auto& plugin_ref = *plugin;
@@ -125,6 +125,8 @@ void PluginManager::_clean_up() {
   }
 }
 
-PluginManager::~PluginManager() { _clean_up(); }
+PluginManager::~PluginManager() {
+  _clean_up();
+}
 
-}  // namespace opossum
+}  // namespace hyrise

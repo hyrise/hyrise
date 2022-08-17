@@ -9,7 +9,7 @@
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class IndexSide { Left, Right };
 
@@ -59,4 +59,4 @@ class AbstractJoinOperator : public AbstractReadOnlyOperator {
                                              const TableType table_type = TableType::References) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

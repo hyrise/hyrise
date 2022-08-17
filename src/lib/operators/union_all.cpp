@@ -7,7 +7,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 UnionAll::UnionAll(const std::shared_ptr<const AbstractOperator>& left_in,
                    const std::shared_ptr<const AbstractOperator>& right_in)
     : AbstractReadOnlyOperator(OperatorType::UnionAll, left_in, right_in) {
@@ -20,8 +20,8 @@ const std::string& UnionAll::name() const {
 }
 
 std::shared_ptr<const Table> UnionAll::_on_execute() {
-  DebugAssert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
-              "Input tables must have same number of columns");
+  Assert(left_input_table()->column_definitions() == right_input_table()->column_definitions(),
+         "Input tables must have same number of columns");
   DebugAssert(left_input_table()->type() == right_input_table()->type(), "Input tables must have the same type");
 
   auto output_chunks =
@@ -62,4 +62,4 @@ std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
 
 void UnionAll::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

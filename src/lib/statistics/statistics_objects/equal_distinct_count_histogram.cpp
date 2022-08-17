@@ -16,22 +16,24 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Think of this as an unordered_map<T, HistogramCountType>. The hash, equals, and allocator template parameter are
 // defaults so that we can set the last parameter. It controls whether the hash for a value should be cached. Doing
 // so reduces the cost of rehashing at the cost of slightly higher memory consumption. We only do it for strings,
 // where hashing is somewhat expensive.
 template <typename T>
-using ValueDistributionMap = tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
-                                            std::allocator<std::pair<T, HistogramCountType>>,
-                                            std::is_same_v<std::decay_t<T>, pmr_string>>;
+using ValueDistributionMap =
+    tsl::robin_map<T, HistogramCountType, std::hash<T>, std::equal_to<T>,
+                   std::allocator<std::pair<T, HistogramCountType>>, std::is_same_v<std::decay_t<T>, pmr_string>>;
 
 template <typename T>
 void add_segment_to_value_distribution(const AbstractSegment& segment, ValueDistributionMap<T>& value_distribution,
                                        const HistogramDomain<T>& domain) {
   segment_iterate<T>(segment, [&](const auto& iterator_value) {
-    if (iterator_value.is_null()) return;
+    if (iterator_value.is_null()) {
+      return;
+    }
 
     if constexpr (std::is_same_v<T, pmr_string>) {
       // Do "contains()" check first to avoid the string copy incurred by string_to_domain() where possible
@@ -54,7 +56,9 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     add_segment_to_value_distribution<T>(*chunk->get_segment(column_id), value_distribution_map, domain);
   }
@@ -69,7 +73,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 EqualDistinctCountHistogram<T>::EqualDistinctCountHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
@@ -230,4 +234,4 @@ HistogramCountType EqualDistinctCountHistogram<T>::total_distinct_count() const 
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(EqualDistinctCountHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

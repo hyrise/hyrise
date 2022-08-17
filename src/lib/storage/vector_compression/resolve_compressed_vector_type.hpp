@@ -9,7 +9,7 @@
 
 #include "compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Resolves the type of a compressed vector
@@ -41,4 +41,4 @@ void resolve_compressed_vector_type(const BaseCompressedVector& vector, const Fu
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

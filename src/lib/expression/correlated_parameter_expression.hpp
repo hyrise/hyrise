@@ -2,7 +2,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Represents an external value in a correlated subquery
@@ -53,4 +53,4 @@ class CorrelatedParameterExpression : public AbstractExpression {
   std::optional<AllTypeVariant> _value;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 #include "storage/table.hpp"
 #include "tpcc/tpcc_random_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractTPCCProcedure {
  public:
@@ -32,4 +32,4 @@ class AbstractTPCCProcedure {
   BenchmarkSQLExecutor& _sql_executor;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

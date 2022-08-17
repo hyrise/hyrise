@@ -14,7 +14,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
@@ -78,10 +78,14 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
   auto job_task = std::make_shared<JobTask>([this, chunk_id, &output_mutex]() {
     // The output chunk is allocated on the same NUMA node as the input chunk.
     const auto chunk = _in_table->get_chunk(chunk_id);
-    if (!chunk) return;
+    if (!chunk) {
+      return;
+    }
 
     const auto matches_out = std::make_shared<RowIDPosList>(_scan_chunk(chunk_id));
-    if (matches_out->empty()) return;
+    if (matches_out->empty()) {
+      return;
+    }
 
     Segments segments;
 
@@ -201,4 +205,4 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   return matches_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

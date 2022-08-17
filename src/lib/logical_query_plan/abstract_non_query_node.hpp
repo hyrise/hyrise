@@ -2,7 +2,7 @@
 
 #include "abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Base class for LQP nodes that do not query data (e.g, DML and DDL nodes) and therefore do not output columns.
@@ -19,4 +19,4 @@ class AbstractNonQueryNode : public AbstractLQPNode {
   bool is_column_nullable(const ColumnID column_id) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

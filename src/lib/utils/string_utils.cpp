@@ -5,7 +5,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim_all.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 std::vector<std::string> trim_and_split(const std::string& input) {
   std::string converted = input;
@@ -40,7 +40,9 @@ std::string plugin_name_from_path(const std::filesystem::path& path) {
 
 std::string trim_source_file_path(const std::string& path) {
   const auto src_pos = path.find("/src/");
-  if (src_pos == std::string::npos) return path;
+  if (src_pos == std::string::npos) {
+    return path;
+  }
 
   // "+ 1", since we want "src/lib/file.cpp" and not "/src/lib/file.cpp"
   return path.substr(src_pos + 1);
@@ -50,4 +52,4 @@ std::string replace_addresses(const std::string& input) {
   return std::regex_replace(input, std::regex{"0x[0-9A-Fa-f]{4,}"}, "0x00000000");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

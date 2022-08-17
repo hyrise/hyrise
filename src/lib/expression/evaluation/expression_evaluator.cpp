@@ -34,14 +34,15 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
+#include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {
@@ -136,7 +137,7 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 ExpressionEvaluator::ExpressionEvaluator(
     const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
@@ -269,7 +270,9 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
   auto predicate_condition = expression.predicate_condition;
   const bool flip = predicate_condition == PredicateCondition::GreaterThan ||
                     predicate_condition == PredicateCondition::GreaterThanEquals;
-  if (flip) predicate_condition = flip_predicate_condition(predicate_condition);
+  if (flip) {
+    predicate_condition = flip_predicate_condition(predicate_condition);
+  }
   const auto& left = flip ? *expression.right_operand() : *expression.left_operand();
   const auto& right = flip ? *expression.left_operand() : *expression.right_operand();
 
@@ -426,7 +429,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
           all_elements_are_values_of_left_type = false;
         } else {
           const auto& value_expression = std::static_pointer_cast<ValueExpression>(element);
-          if (value_expression->value.type() != typeid(LeftDataType)) all_elements_are_values_of_left_type = false;
+          if (value_expression->value.type() != typeid(LeftDataType)) {
+            all_elements_are_values_of_left_type = false;
+          }
         }
       }
     });
@@ -528,7 +533,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
               // here as well.
               EqualsEvaluator{}(result_values[chunk_offset], list.value(list_element_idx),
                                 left_view.value(chunk_offset));
-              if (result_values[chunk_offset]) break;
+              if (result_values[chunk_offset]) {
+                break;
+              }
 
               list_contains_null |= list.is_null(list_element_idx);
             }
@@ -536,7 +543,9 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
             result_nulls[chunk_offset] =
                 (result_values[chunk_offset] == 0 && list_contains_null) || left_view.is_null(chunk_offset);
 
-            if (in_expression.is_negated()) result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
+            if (in_expression.is_negated()) {
+              result_values[chunk_offset] = result_values[chunk_offset] == 0 ? 1 : 0;
+            }
           }
 
         } else {
@@ -677,9 +686,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
   });
   /**
    * Implements SQL's CAST with the following semantics
-   *    Float/Double -> Int/Long:           Value gets floor()ed
-   *    String -> Int/Long/Float/Double:    Conversion is attempted, on error zero is returned
-   *                                        in accordance with SQLite. (" 5hallo" AS INT) -> 5
+   *    Float/Double -> Int/Long:           Value gets floor()ed.
+   *    String -> Int/Long/Float/Double:    Conversion is attempted, abort on error.
    *    NULL -> Any type                    A nulled value of the requested type is returned.
    */
 
@@ -687,27 +695,24 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_cast_ex
   auto nulls = pmr_vector<bool>{};
 
   _resolve_to_expression_result(*cast_expression.argument(), [&](const auto& argument_result) {
-    using ArgumentDataType = typename std::decay_t<decltype(argument_result)>::Type;
-
-    const auto result_size = _result_size(argument_result.size());
-    values.resize(result_size);
-
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
-      const auto& argument_value = argument_result.value(chunk_offset);
-
-      // "NULL to <Something>" cast is handled by the `nulls` vector
-      if constexpr (!std::is_same_v<ArgumentDataType, NullValue>) {
-        try {
-          values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
-        } catch (boost::bad_lexical_cast&) {
-          std::stringstream error_message;
-          error_message << "Cannot cast '" << argument_value << "' as "
-                        << magic_enum::enum_name(cast_expression.data_type());
-          Fail(error_message.str());
+    argument_result.as_view([&](const auto& argument_result_view) {
+      const auto result_size = _result_size(argument_result_view.size());
+      values.resize(result_size);
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
+        if (!argument_result_view.is_null(chunk_offset)) {
+          const auto& argument_value = argument_result_view.value(chunk_offset);
+          try {
+            values[chunk_offset] = *lossy_variant_cast<Result>(argument_value);
+          } catch (boost::bad_lexical_cast& /* exception */) {
+            std::stringstream error_message;
+            error_message << "Cannot cast '" << argument_value << "' as "
+                          << magic_enum::enum_name(cast_expression.data_type());
+            Fail(error_message.str());
+          }
         }
       }
-    }
-    nulls = argument_result.nulls;
+      nulls = argument_result.nulls;
+    });
   });
 
   return std::make_shared<ExpressionResult<Result>>(std::move(values), std::move(nulls));
@@ -796,52 +801,70 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_functio
   Fail("Invalid enum value");
 }
 
-template <>
-std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_expression<pmr_string>(
-    const ExtractExpression& extract_expression) {
-  const auto from_result = evaluate_expression_to_result<pmr_string>(*extract_expression.from());
-
-  switch (extract_expression.datetime_component) {
-    case DatetimeComponent::Year:
-      return _evaluate_extract_substr<0, 4>(*from_result);
-    case DatetimeComponent::Month:
-      return _evaluate_extract_substr<5, 2>(*from_result);
-    case DatetimeComponent::Day:
-      return _evaluate_extract_substr<8, 2>(*from_result);
-
-    case DatetimeComponent::Hour:
-    case DatetimeComponent::Minute:
-    case DatetimeComponent::Second:
-      Fail("Hour, Minute and Second not available in String Datetimes");
-  }
-  Fail("Invalid enum value");
-}
-
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract_expression(
     const ExtractExpression& extract_expression) {
-  Fail("Only Strings (YYYY-MM-DD) supported for Dates right now");
+  const auto datetime_component = extract_expression.datetime_component;
+  const auto& from_result = *evaluate_expression_to_result<pmr_string>(*extract_expression.from());
+
+  if constexpr (std::is_same_v<Result, int32_t>) {
+    switch (datetime_component) {
+      case DatetimeComponent::Year:
+        return _evaluate_extract_component<int32_t>(from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().year(); });
+      case DatetimeComponent::Month:
+        return _evaluate_extract_component<int32_t>(from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().month(); });
+      case DatetimeComponent::Day:
+        return _evaluate_extract_component<int32_t>(from_result,
+                                                    [](const auto& timestamp) { return timestamp.date().day(); });
+      case DatetimeComponent::Hour:
+        return _evaluate_extract_component<int32_t>(
+            from_result, [](const auto& timestamp) { return timestamp.time_of_day().hours(); });
+      case DatetimeComponent::Minute:
+        return _evaluate_extract_component<int32_t>(
+            from_result, [](const auto& timestamp) { return timestamp.time_of_day().minutes(); });
+      case DatetimeComponent::Second:
+        Fail("SECOND must be extracted as Double");
+    }
+  }
+
+  if constexpr (std::is_same_v<Result, double>) {
+    Assert(datetime_component == DatetimeComponent::Second, "Only SECOND is extracted as Double");
+    return _evaluate_extract_component<double>(from_result, [](const auto& timestamp) {
+      const auto& time_of_day = timestamp.time_of_day();
+      return static_cast<double>(time_of_day.seconds()) + static_cast<double>(time_of_day.fractional_seconds()) /
+                                                              static_cast<double>(time_of_day.ticks_per_second());
+    });
+  }
+
+  Fail("Invalid Result type: ExtractExpression result either has to be Int or Dobule");
 }
 
-template <size_t offset, size_t count>
-std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_extract_substr(
-    const ExpressionResult<pmr_string>& from_result) {
-  std::shared_ptr<ExpressionResult<pmr_string>> result;
-
-  pmr_vector<pmr_string> values(from_result.size());
+template <typename Result, typename Functor>
+std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_extract_component(
+    const ExpressionResult<pmr_string>& from_result, const Functor extract_component) {
+  auto values = pmr_vector<Result>(from_result.size());
 
   from_result.as_view([&](const auto& from_view) {
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(from_view.size());
-         ++chunk_offset) {
+    const auto from_view_size = from_view.size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < from_view_size; ++chunk_offset) {
       if (!from_view.is_null(chunk_offset)) {
-        DebugAssert(from_view.value(chunk_offset).size() == 10u,
-                    "Invalid DatetimeString '"s + std::string{from_view.value(chunk_offset)} + "'");  // NOLINT
-        values[chunk_offset] = from_view.value(chunk_offset).substr(offset, count);
+        const auto& value = std::string{from_view.value(chunk_offset)};
+        // Usually, checking whether the stored values are correct dates/timestamps should be checked on tuple
+        // insertion or when values are loaded from files. However, we do not have proper date/timestamp data types and
+        // do lazy checks only whenever required. Though parsing the string values leads to degraded performance
+        // compared to, e.g., accessing substrings or accessing member variables, we ensure correct results.
+        // TODO(anyone): Revisit for performance if we use this in actual benchmarks.
+        Assert(value.size() >= 10u, "Invalid ISO 8601 extended timestamp '" + value + "'");
+        const auto& timestamp = string_to_timestamp(value);
+        Assert(timestamp, "Invalid ISO 8601 extended timestamp '" + value + "'");
+        values[chunk_offset] = extract_component(*timestamp);
       }
     }
   });
 
-  return std::make_shared<ExpressionResult<pmr_string>>(std::move(values), from_result.nulls);
+  return std::make_shared<ExpressionResult<Result>>(std::move(values), from_result.nulls);
 }
 
 template <typename Result>
@@ -1060,12 +1083,16 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
                                                                      RightDataType>::value) {
                 for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                      ++chunk_offset) {
-                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) continue;
+                  if (left_result.is_null(chunk_offset) || right_result.is_null(chunk_offset)) {
+                    continue;
+                  }
 
                   auto matches = ExpressionEvaluator::Bool{0};
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
-                  if (matches != 0) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  if (matches != 0) {
+                    result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  }
                 }
               } else {
                 Fail("Argument types not compatible");
@@ -1088,12 +1115,16 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             if (is_null_expression.predicate_condition == PredicateCondition::IsNull) {
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
-                if (result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                if (result.is_null(chunk_offset)) {
+                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                }
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
-                if (!result.is_null(chunk_offset)) result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                if (!result.is_null(chunk_offset)) {
+                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                }
               }
             }
           });
@@ -1339,7 +1370,9 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
   //        no matter whether there is a (potentially) non-empty Chunk involved or not.
   //        So 5+3 always gives you one result element: 8
 
-  if (((row_counts == 0) || ...)) return ChunkOffset{0};
+  if (((row_counts == 0) || ...)) {
+    return ChunkOffset{0};
+  }
 
   return static_cast<ChunkOffset>(std::max({row_counts...}));
 }
@@ -1374,7 +1407,9 @@ pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vec
 void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const ColumnID column_id) {
   Assert(_chunk, "Cannot access columns in this Expression as it doesn't operate on a Table/Chunk");
 
-  if (_segment_materializations[column_id]) return;
+  if (_segment_materializations[column_id]) {
+    return;
+  }
 
   const auto& segment = *_chunk->get_segment(column_id);
 
@@ -1448,7 +1483,9 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
     const auto signed_string_size = static_cast<int32_t>(string.size());
 
     auto length = lengths->value(chunk_offset);
-    if (length <= 0) continue;
+    if (length <= 0) {
+      continue;
+    }
 
     auto start = starts->value(chunk_offset);
 
@@ -1543,7 +1580,9 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
           // but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). I can't see
           // how there was anything uninitialised given the `result_nulls.resize(result_size, false);` above.
           // Anyway, changing it to the line below silences valgrind.
-          if (argument_view.is_null(chunk_offset)) result_nulls[chunk_offset] = true;
+          if (argument_view.is_null(chunk_offset)) {
+            result_nulls[chunk_offset] = true;
+          }
         }
       });
     }
@@ -1612,7 +1651,7 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
   return results;
 }
 
-// We explicitly instantiate these template functions because (at least) clang-12 does not instantiate them for us.
+// We explicitly instantiate these template functions because clang-12(+) does not instantiate them for us.
 template std::shared_ptr<ExpressionResult<int32_t>> ExpressionEvaluator::evaluate_expression_to_result<int32_t>(
     const AbstractExpression& expression);
 template std::shared_ptr<ExpressionResult<float>> ExpressionEvaluator::evaluate_expression_to_result<float>(
@@ -1622,4 +1661,4 @@ template std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::eval
 template std::shared_ptr<ExpressionResult<double>> ExpressionEvaluator::evaluate_expression_to_result<double>(
     const AbstractExpression& expression);
 
-}  // namespace opossum
+}  // namespace hyrise

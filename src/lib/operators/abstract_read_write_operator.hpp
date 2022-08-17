@@ -11,7 +11,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class ReadWriteOperatorState {
   Pending,     // The operator has been instantiated.
@@ -92,4 +92,4 @@ class AbstractReadWriteOperator : public AbstractOperator {
   ReadWriteOperatorState _rw_state;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

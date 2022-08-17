@@ -14,10 +14,10 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 PredicateCondition get_between_predicate_condition(bool left_inclusive, bool right_inclusive) {
   if (left_inclusive && right_inclusive) {
@@ -34,7 +34,7 @@ PredicateCondition get_between_predicate_condition(bool left_inclusive, bool rig
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string BetweenCompositionRule::name() const {
   static const auto name = std::string{"BetweenCompositionRule"};
@@ -73,7 +73,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
      */
     auto current_predicate_chain = PredicateChain();
     visit_lqp_upwards(node, [&](const auto& current_node) {
-      if (visited_nodes.contains(current_node)) return LQPUpwardVisitation::DoNotVisitOutputs;
+      if (visited_nodes.contains(current_node)) {
+        return LQPUpwardVisitation::DoNotVisitOutputs;
+      }
       visited_nodes.insert(current_node);
 
       // Add to current predicate chain or finalize it when a non-PredicateNode follows
@@ -82,7 +84,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
         current_predicate_chain.push_back(current_predicate_node);
       } else if (!current_predicate_chain.empty()) {
         for (const auto& output_node : current_node->outputs()) {
-          if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
+          if (!visited_nodes.contains(output_node)) {
+            node_queue.push(output_node);
+          }
         }
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
@@ -91,7 +95,9 @@ void BetweenCompositionRule::_apply_to_plan_without_subqueries(const std::shared
       if (current_node->outputs().size() > 1) {
         for (const auto& output_node : current_node->outputs()) {
           // Prepare the next iteration of visit_lqp_upwards
-          if (!visited_nodes.contains(output_node)) node_queue.push(output_node);
+          if (!visited_nodes.contains(output_node)) {
+            node_queue.push(output_node);
+          }
         }
         return LQPUpwardVisitation::DoNotVisitOutputs;
       }
@@ -428,4 +434,4 @@ BetweenCompositionRule::ColumnBoundary BetweenCompositionRule::_create_inverse_b
   };
 }
 
-}  // namespace opossum
+}  // namespace hyrise

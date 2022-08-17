@@ -13,7 +13,7 @@
 #include "prepared_plan.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class AbstractLQPNode;
@@ -74,4 +74,4 @@ class StorageManager : public Noncopyable {
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
 
-}  // namespace opossum
+}  // namespace hyrise

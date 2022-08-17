@@ -6,7 +6,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/logical_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -34,6 +34,12 @@ class ExpressionReductionRule : public AbstractRule {
       std::shared_ptr<AbstractExpression>& input_expression);
 
   /**
+   * Rewrite `a LIKE 'abc%'` to `a BetweenUpperExclusive 'abc' AND 'abd'`
+   * Rewrite `a NOT LIKE 'abc%'` to `a < 'abc' OR a >= 'abcd'`
+   */
+  static void rewrite_like_prefix_wildcard(std::shared_ptr<AbstractExpression>& input_expression);
+
+  /**
    * Rewrite `5 + 3` to `8`
    */
   static void reduce_constant_expression(std::shared_ptr<AbstractExpression>& input_expression);
@@ -49,4 +55,4 @@ class ExpressionReductionRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

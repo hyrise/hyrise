@@ -127,7 +127,7 @@ Subsets of all available tests can be selected via `--gtest_filter=`.
 ### Coverage
 `./scripts/coverage.sh` will print a summary to the command line and create detailed html reports at ./coverage/index.html
 
-*Supports only clang on MacOS and only gcc on linux*
+*Requires clang on macOS and Linux.*
 
 ### Address/UndefinedBehavior Sanitizers
 `cmake -DENABLE_ADDR_UB_SANITIZATION=ON` will generate Makefiles with AddressSanitizer and Undefined Behavior options.
@@ -145,15 +145,16 @@ When trying to optimize the time spent building the project, it is often helpful
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
 
 ## Maintainers
-- Jan Kossmann
-- Marcel Weisgut
 - Martin Boissier
 - Stefan Halfpap
+- Daniel Lindner
+- Marcel Weisgut
 
 Contact: firstname.lastname@hpi.de
 
-## Maintainer emeritus
+## Maintainers emeriti
 - Markus Dreseler
+- Jan    Kossmann
 
 ## Contributors
 See main repository.

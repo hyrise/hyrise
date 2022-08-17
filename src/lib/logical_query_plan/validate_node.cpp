@@ -2,11 +2,13 @@
 
 #include <string>
 
-namespace opossum {
+namespace hyrise {
 
 ValidateNode::ValidateNode() : AbstractLQPNode(LQPNodeType::Validate) {}
 
-std::string ValidateNode::description(const DescriptionMode mode) const { return "[Validate]"; }
+std::string ValidateNode::description(const DescriptionMode mode) const {
+  return "[Validate]";
+}
 
 std::shared_ptr<LQPUniqueConstraints> ValidateNode::unique_constraints() const {
   return _forward_left_unique_constraints();
@@ -20,4 +22,4 @@ bool ValidateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeM
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

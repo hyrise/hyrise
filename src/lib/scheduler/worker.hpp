@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TaskQueue;
 
@@ -72,4 +72,4 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   size_t _no_task_count{0};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

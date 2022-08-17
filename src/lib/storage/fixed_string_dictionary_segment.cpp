@@ -9,7 +9,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
@@ -89,7 +89,9 @@ ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value
   const auto typed_value = boost::get<pmr_string>(value);
 
   auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  if (it == _dictionary->cend()) {
+    return INVALID_VALUE_ID;
+  }
   return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
@@ -100,7 +102,9 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
   const auto typed_value = boost::get<pmr_string>(value);
 
   auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-  if (it == _dictionary->cend()) return INVALID_VALUE_ID;
+  if (it == _dictionary->cend()) {
+    return INVALID_VALUE_ID;
+  }
   return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
@@ -127,4 +131,4 @@ ValueID FixedStringDictionarySegment<T>::null_value_id() const {
 
 template class FixedStringDictionarySegment<pmr_string>;
 
-}  // namespace opossum
+}  // namespace hyrise

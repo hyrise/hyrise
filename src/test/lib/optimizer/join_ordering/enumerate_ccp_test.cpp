@@ -6,7 +6,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& lhs,
             const std::pair<unsigned long, unsigned long>& rhs) {  // NOLINT - doesn't like unsigned long
@@ -16,7 +16,7 @@ bool equals(const std::pair<boost::dynamic_bitset<>, boost::dynamic_bitset<>>& l
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class EnumerateCcpTest : public BaseTest {};
 
@@ -164,4 +164,4 @@ TEST_F(EnumerateCcpTest, ArbitraryVertexNumbering) {
   EXPECT_TRUE(equals(pairs[3], std::make_pair(0b101ul, 0b010ul)));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

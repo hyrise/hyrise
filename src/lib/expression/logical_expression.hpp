@@ -4,7 +4,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class LogicalOperator { And, Or };
 
@@ -32,4 +32,4 @@ class LogicalExpression : public AbstractExpression {
   ExpressionPrecedence _precedence() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

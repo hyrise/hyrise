@@ -7,7 +7,7 @@
 #include "read_buffer.hpp"
 #include "write_buffer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using ErrorMessage = std::unordered_map<PostgresMessageType, std::string>;
 
@@ -68,11 +68,13 @@ class PostgresProtocolHandler {
   void send_execution_info(const std::string& execution_information);
 
   // This method is required for testing. Otherwise we cannot make the protocol handler flush its data.
-  void force_flush() { _write_buffer.flush(); }
+  void force_flush() {
+    _write_buffer.flush();
+  }
 
  private:
   void _ssl_deny();
   ReadBuffer<SocketType> _read_buffer;
   WriteBuffer<SocketType> _write_buffer;
 };
-}  // namespace opossum
+}  // namespace hyrise

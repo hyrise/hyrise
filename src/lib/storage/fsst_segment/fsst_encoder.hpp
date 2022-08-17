@@ -13,7 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
  public:
@@ -199,4 +199,4 @@ class FSSTEncoder : public SegmentEncoder<FSSTEncoder> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

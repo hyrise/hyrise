@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Encodes a segment using dictionary encoding and compresses its attribute vector using vector compression.
@@ -50,7 +50,9 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
           dense_values.push_back(segment_value);
 
           if constexpr (Encoding == EncodingType::FixedStringDictionary) {
-            if (segment_value.size() > max_string_length) max_string_length = segment_value.size();
+            if (segment_value.size() > max_string_length) {
+              max_string_length = segment_value.size();
+            }
           }
         } else {
           null_values[current_position] = true;
@@ -106,4 +108,4 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

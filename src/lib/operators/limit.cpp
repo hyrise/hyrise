@@ -11,7 +11,7 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Limit::Limit(const std::shared_ptr<const AbstractOperator>& in,
              const std::shared_ptr<AbstractExpression>& row_count_expression)
@@ -22,7 +22,9 @@ const std::string& Limit::name() const {
   return name;
 }
 
-std::shared_ptr<AbstractExpression> Limit::row_count_expression() const { return _row_count_expression; }
+std::shared_ptr<AbstractExpression> Limit::row_count_expression() const {
+  return _row_count_expression;
+}
 
 std::shared_ptr<AbstractOperator> Limit::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -121,4 +123,4 @@ void Limit::_on_set_transaction_context(const std::weak_ptr<TransactionContext>&
   expression_set_transaction_context(_row_count_expression, transaction_context);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

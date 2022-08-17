@@ -21,7 +21,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
 
 /**
@@ -69,7 +69,9 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
         auto belongs_to_predicate_pruning_chain = true;
         const auto& predicate_expression = predicate_node->predicate();
         visit_expression(predicate_expression, [&](const auto& expression) {
-          if (expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          if (expression->type != ExpressionType::LQPColumn) {
+            return ExpressionVisitation::VisitArguments;
+          }
           const auto& column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
           if (column_expression->original_node.lock() != stored_table_node) {
             // PredicateNode does not filter stored_table_node.
@@ -78,14 +80,18 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
           }
           return ExpressionVisitation::DoNotVisitArguments;
         });
-        if (belongs_to_predicate_pruning_chain) current_predicate_pruning_chain.emplace_back(predicate_node);
+        if (belongs_to_predicate_pruning_chain) {
+          current_predicate_pruning_chain.emplace_back(predicate_node);
+        }
       } break;
       case LQPNodeType::Join: {
         // Check whether the predicate pruning chain can continue after the join
         predicate_pruning_chain_continues = false;
         auto join_node = std::static_pointer_cast<JoinNode>(current_node);
         for (const auto& expression : join_node->output_expressions()) {
-          if (expression->type != ExpressionType::LQPColumn) continue;
+          if (expression->type != ExpressionType::LQPColumn) {
+            continue;
+          }
           const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
           if (column_expression->original_node.lock() == stored_table_node) {
             // At least one column expression of stored_table_node survives the join.
@@ -129,7 +135,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string ChunkPruningRule::name() const {
   static const auto name = std::string{"ChunkPruningRule"};
@@ -149,7 +155,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   }
   // (2) Set pruned chunks for each StoredTableNode
   for (const auto& [stored_table_node, predicate_pruning_chains] : predicate_pruning_chains_by_stored_table_node) {
-    if (predicate_pruning_chains.empty()) continue;
+    if (predicate_pruning_chains.empty()) {
+      continue;
+    }
 
     // (2.1) Determine set of pruned chunks per predicate pruning chain
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
@@ -160,7 +168,9 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
 
     // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains
     auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
-    if (pruned_chunk_ids.empty()) continue;
+    if (pruned_chunk_ids.empty()) {
+      continue;
+    }
 
     // (2.3) Set the pruned chunk ids of stored_table_node
     DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
@@ -225,19 +235,21 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
                                                                             *stored_table_node_without_column_pruning);
     // End of hacky
 
-    if (!operator_predicates) return {};
+    if (!operator_predicates) {
+      return {};
+    }
 
     std::set<ChunkID> current_excluded_chunk_ids;
     auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
 
+    const auto stored_table_node_output_expressions = stored_table_node_without_column_pruning->output_expressions();
     for (const auto& operator_predicate : *operator_predicates) {
       // Cannot prune column-to-column predicates, at the moment. Column-to-placeholder predicates are never prunable.
       if (!is_variant(operator_predicate.value)) {
         continue;
       }
 
-      const auto column_data_type =
-          stored_table_node_without_column_pruning->output_expressions()[operator_predicate.column_id]->data_type();
+      const auto column_data_type = stored_table_node_output_expressions[operator_predicate.column_id]->data_type();
 
       // If `value` cannot be converted losslessly to the column data type, we rather skip pruning than running into
       // errors with lossful casting and pruning Chunks that we shouldn't have pruned.
@@ -267,10 +279,14 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       auto num_rows_pruned = size_t{0};
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
-        if (!chunk) continue;
+        if (!chunk) {
+          continue;
+        }
 
         const auto pruning_statistics = chunk->pruning_statistics();
-        if (!pruning_statistics) continue;
+        if (!pruning_statistics) {
+          continue;
+        }
 
         const auto segment_statistics = (*pruning_statistics)[operator_predicate.column_id];
         if (_can_prune(*segment_statistics, condition, *value, value2)) {
@@ -378,13 +394,19 @@ std::shared_ptr<TableStatistics> ChunkPruningRule::_prune_table_statistics(const
 }
 
 std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets) {
-  if (chunk_id_sets.empty() || chunk_id_sets.at(0).empty()) return {};
-  if (chunk_id_sets.size() == 1) return chunk_id_sets.at(0);
+  if (chunk_id_sets.empty() || chunk_id_sets.at(0).empty()) {
+    return {};
+  }
+  if (chunk_id_sets.size() == 1) {
+    return chunk_id_sets.at(0);
+  }
 
   std::set<ChunkID> chunk_id_set = chunk_id_sets.at(0);
   for (size_t set_idx = 1; set_idx < chunk_id_sets.size(); ++set_idx) {
     auto current_chunk_id_set = chunk_id_sets.at(set_idx);
-    if (current_chunk_id_set.empty()) return {};
+    if (current_chunk_id_set.empty()) {
+      return {};
+    }
 
     std::set<ChunkID> intersection;
     std::set_intersection(chunk_id_set.begin(), chunk_id_set.end(), current_chunk_id_set.begin(),
@@ -395,4 +417,4 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
   return chunk_id_set;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,7 +12,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsPrintTest : public BaseTest {
  protected:
@@ -55,7 +55,9 @@ class PrintWrapper : public Print {
     return _truncate_cell(cell, max_width);
   }
 
-  uint16_t get_max_cell_width() { return _max_cell_width; }
+  uint16_t get_max_cell_width() {
+    return _max_cell_width;
+  }
 
   bool is_printing_mvcc_information() {
     return static_cast<uint32_t>(_flags) & static_cast<uint32_t>(PrintFlags::Mvcc);
@@ -90,11 +92,11 @@ TEST_F(OperatorsPrintTest, FilledTable) {
   gt->never_clear_output();
   gt->execute();
 
-  auto pr = std::make_shared<Print>(gt, PrintFlags::None, output);
-  pr->execute();
+  const auto print = std::make_shared<Print>(gt, PrintFlags::None, output);
+  print->execute();
 
   // check if table is correctly passed
-  EXPECT_EQ(pr->get_output(), gt->get_output());
+  EXPECT_EQ(print->get_output(), gt->get_output());
 
   auto output_string = output.str();
 
@@ -146,7 +148,7 @@ TEST_F(OperatorsPrintTest, GetColumnWidths) {
 }
 
 TEST_F(OperatorsPrintTest, OperatorName) {
-  auto pr = std::make_shared<opossum::Print>(_gt, PrintFlags::None, output);
+  auto pr = std::make_shared<Print>(_gt, PrintFlags::None, output);
 
   EXPECT_EQ(pr->name(), "Print");
 }
@@ -349,4 +351,4 @@ TEST_F(OperatorsPrintTest, EmptyTable) {
   EXPECT_FALSE(wrapper.is_printing_mvcc_information());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

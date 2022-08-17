@@ -4,7 +4,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum::detail {
+namespace hyrise::detail {
 template <typename T>
 std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
     const std::shared_ptr<const AbstractSegment>& segment) {
@@ -63,4 +63,4 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
   return accessor;
 }
 EXPLICITLY_INSTANTIATE_DATA_TYPES(CreateSegmentAccessor);
-}  // namespace opossum::detail
+}  // namespace hyrise::detail

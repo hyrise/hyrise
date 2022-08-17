@@ -6,7 +6,7 @@
 #include "type_comparison.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
 The AggregateFunctionBuilder is used to create the lambda function that will be used by
@@ -16,7 +16,9 @@ Therefore, we partially specialize the whole class and define the get_aggregate_
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_function>
 class AggregateFunctionBuilder {
  public:
-  void get_aggregate_function() { Fail("Invalid aggregate function"); }
+  void get_aggregate_function() {
+    Fail("Invalid aggregate function");
+  }
 };
 
 using StandardDeviationSampleData = std::array<double, 4>;
@@ -151,4 +153,4 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
   TableColumnDefinitions _output_column_definitions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

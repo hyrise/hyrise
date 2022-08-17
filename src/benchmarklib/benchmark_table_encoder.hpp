@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-namespace opossum {
+namespace hyrise {
 
 class EncodingConfig;
 class Table;
@@ -17,4 +17,4 @@ class BenchmarkTableEncoder {
                      const EncodingConfig& encoding_config);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

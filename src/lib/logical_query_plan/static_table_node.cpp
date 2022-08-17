@@ -5,8 +5,9 @@
 #include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
+#include "utils/print_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
     : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
@@ -23,6 +24,11 @@ std::string StaticTableNode::description(const DescriptionMode mode) const {
     if (column_id + 1u < table->column_definitions().size()) {
       stream << ", ";
     }
+  }
+
+  if (!table->soft_key_constraints().empty()) {
+    stream << ", ";
+    print_table_key_constraints(table, stream);
   }
   stream << ")";
 
@@ -67,6 +73,10 @@ size_t StaticTableNode::_on_shallow_hash() const {
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
+  for (const auto& table_key_constraint : table->soft_key_constraints()) {
+    boost::hash_combine(hash, table_key_constraint.hash());
+  }
+
   return hash;
 }
 
@@ -76,7 +86,8 @@ std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
-  return table->column_definitions() == static_table_node.table->column_definitions();
+  return table->column_definitions() == static_table_node.table->column_definitions() &&
+         table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

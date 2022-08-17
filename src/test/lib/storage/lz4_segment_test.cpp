@@ -13,7 +13,7 @@
 #include "storage/value_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageLZ4SegmentTest : public BaseTest {
  protected:
@@ -343,4 +343,4 @@ TEST_F(StorageLZ4SegmentTest, CompressDictionaryIntSegment) {
   EXPECT_EQ(decompressed_data[20124], 40248);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

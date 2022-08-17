@@ -4,7 +4,7 @@
 
 #include "abstract_tpcc_procedure.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCCPayment : public AbstractTPCCProcedure {
  public:
@@ -28,4 +28,4 @@ class TPCCPayment : public AbstractTPCCProcedure {
   int32_t c_id{-1};  // Customer ID, initialized with invalid value
 };
 
-}  // namespace opossum
+}  // namespace hyrise

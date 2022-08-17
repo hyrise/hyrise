@@ -9,7 +9,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractTask;
 
@@ -55,4 +55,4 @@ class TaskQueue {
   std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 class AbstractLPQNode;
@@ -43,4 +43,4 @@ struct OperatorScanPredicate {
 bool operator==(const OperatorScanPredicate& lhs, const OperatorScanPredicate& rhs);
 std::ostream& operator<<(std::ostream& stream, const OperatorScanPredicate& predicate);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,7 +7,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
   constexpr auto TIME_UNIT_ORDER =
@@ -41,4 +41,4 @@ std::string format_duration(const std::chrono::nanoseconds& total_nanoseconds) {
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

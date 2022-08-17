@@ -8,7 +8,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Filters are data structures that are primarily used for probabilistic membership queries. In Hyrise, they are
@@ -53,4 +53,4 @@ std::ostream& operator<<(std::ostream& stream, const MinMaxFilter<T>& filter) {
 
 EXPLICITLY_DECLARE_DATA_TYPES(MinMaxFilter);
 
-}  // namespace opossum
+}  // namespace hyrise

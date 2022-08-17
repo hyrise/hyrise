@@ -7,7 +7,7 @@
 #include "abstract_read_only_operator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Operator that wraps a table.
@@ -29,4 +29,4 @@ class TableWrapper : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };
-}  // namespace opossum
+}  // namespace hyrise

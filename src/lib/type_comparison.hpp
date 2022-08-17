@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // source: http://stackoverflow.com/questions/16893992/check-if-type-can-be-explicitly-converted
 template <class From, class To>
@@ -168,4 +168,4 @@ void with_comparator(const PredicateCondition predicate_condition, const Functor
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

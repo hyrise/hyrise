@@ -8,13 +8,13 @@
 #include "expression/correlated_parameter_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
 /**
  * AllParameterVariant holds either an AllTypeVariant, a ColumnID or a Placeholder.
- * It should be used to generalize Opossum operator calls.
+ * It should be used to generalize Hyrise operator calls.
  */
 
 // This holds pairs of all types and their respective string representation
@@ -34,14 +34,20 @@ using ParameterTypesAsMplVector =
 using AllParameterVariant = typename boost::make_variant_over<ParameterTypesAsMplVector>::type;
 
 // Function to check if AllParameterVariant is AllTypeVariant
-inline bool is_variant(const AllParameterVariant& variant) { return (variant.type() == typeid(AllTypeVariant)); }
+inline bool is_variant(const AllParameterVariant& variant) {
+  return (variant.type() == typeid(AllTypeVariant));
+}
 
 // Function to check if AllParameterVariant is a column id
-inline bool is_column_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ColumnID)); }
+inline bool is_column_id(const AllParameterVariant& variant) {
+  return (variant.type() == typeid(ColumnID));
+}
 
 // Function to check if AllParameterVariant is a ParameterID
-inline bool is_parameter_id(const AllParameterVariant& variant) { return (variant.type() == typeid(ParameterID)); }
+inline bool is_parameter_id(const AllParameterVariant& variant) {
+  return (variant.type() == typeid(ParameterID));
+}
 
 std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& variant);
 
-}  // namespace opossum
+}  // namespace hyrise

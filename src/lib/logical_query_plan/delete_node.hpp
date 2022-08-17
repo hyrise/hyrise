@@ -5,7 +5,7 @@
 
 #include "abstract_non_query_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Node type to represent deletion (more specifically, invalidation) in a table.
@@ -23,4 +23,4 @@ class DeleteNode : public EnableMakeForLQPNode<DeleteNode>, public AbstractNonQu
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

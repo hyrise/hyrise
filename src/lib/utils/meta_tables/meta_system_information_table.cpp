@@ -12,7 +12,7 @@
 #include "hyrise.hpp"
 #include "meta_system_information_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSystemInformationTable::MetaSystemInformationTable()
     : AbstractMetaTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
@@ -45,7 +45,9 @@ size_t MetaSystemInformationTable::_cpu_count() {
     cpu_info_file.open("/proc/cpuinfo", std::ifstream::in);
     std::string cpu_info_line;
     while (std::getline(cpu_info_file, cpu_info_line)) {
-      if (cpu_info_line.starts_with("processor")) ++processors;
+      if (cpu_info_line.starts_with("processor")) {
+        ++processors;
+      }
     }
 
     cpu_info_file.close();
@@ -124,4 +126,4 @@ std::string MetaSystemInformationTable::_cpu_model() {
   Fail("Method not implemented for this platform");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -35,7 +35,7 @@
  * them small and use type erasure when performance is not crucial.
  */
 
-namespace opossum {
+namespace hyrise {
 
 struct ResolveDataTypeTag {};
 
@@ -120,4 +120,4 @@ void segment_iterate(const AbstractSegment& abstract_segment, const Functor& fun
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

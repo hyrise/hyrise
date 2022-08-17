@@ -12,7 +12,7 @@
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 
@@ -72,4 +72,4 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
   Fail("Invalid enum value");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 
 #include "expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const ArithmeticOperator arithmetic_operator) {
   switch (arithmetic_operator) {
@@ -35,9 +35,13 @@ ArithmeticExpression::ArithmeticExpression(const ArithmeticOperator init_arithme
     : AbstractExpression(ExpressionType::Arithmetic, {left_operand, right_operand}),
       arithmetic_operator(init_arithmetic_operator) {}
 
-const std::shared_ptr<AbstractExpression>& ArithmeticExpression::left_operand() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& ArithmeticExpression::left_operand() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& ArithmeticExpression::right_operand() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& ArithmeticExpression::right_operand() const {
+  return arguments[1];
+}
 
 std::shared_ptr<AbstractExpression> ArithmeticExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
@@ -87,4 +91,4 @@ ExpressionPrecedence ArithmeticExpression::_precedence() const {
   Fail("Invalid enum value");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

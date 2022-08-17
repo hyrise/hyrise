@@ -20,18 +20,22 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MvccDeletePluginTest : public BaseTest {
  public:
-  static void SetUpTestCase() { _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a"); }
+  static void SetUpTestCase() {
+    _column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  }
 
   void SetUp() override {
     const auto& table = load_table("resources/test_data/tbl/int3.tbl", _chunk_size);
     Hyrise::get().storage_manager.add_table(_table_name, table);
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
  protected:
   void _increment_all_values_by_one() {
@@ -209,4 +213,4 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

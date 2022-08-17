@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaLogTest : public BaseTest {
  protected:
@@ -12,9 +12,13 @@ class MetaLogTest : public BaseTest {
     Hyrise::get().log_manager.add_message("foo", "bar", LogLevel::Info);
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
-  const std::shared_ptr<Table> generate_meta_table() const { return meta_log_table->_on_generate(); }
+  const std::shared_ptr<Table> generate_meta_table() const {
+    return meta_log_table->_on_generate();
+  }
 
   std::shared_ptr<MetaLogTable> meta_log_table;
 };
@@ -50,4 +54,4 @@ TEST_F(MetaLogTest, TableGeneration) {
   EXPECT_EQ(values[5], AllTypeVariant{pmr_string{"bar"}});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

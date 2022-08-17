@@ -13,7 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 FSSTSegment<T>::FSSTSegment(pmr_vector<unsigned char>& compressed_values,
@@ -161,4 +161,4 @@ const pmr_vector<uint64_t>& FSSTSegment<T>::reference_offsets() const {
 
 template class FSSTSegment<pmr_string>;
 
-}  // namespace opossum
+}  // namespace hyrise

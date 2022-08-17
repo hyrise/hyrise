@@ -7,7 +7,7 @@
 #include "storage/fsst_segment.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIterable<T>> {
@@ -98,4 +98,4 @@ class FSSTSegmentIterable : public PointAccessibleSegmentIterable<FSSTSegmentIte
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

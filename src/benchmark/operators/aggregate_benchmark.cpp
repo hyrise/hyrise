@@ -10,9 +10,9 @@
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& state) {
   _clear_cache();
@@ -150,4 +150,4 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

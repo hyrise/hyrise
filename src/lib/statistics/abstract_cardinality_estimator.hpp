@@ -5,7 +5,7 @@
 #include "cardinality_estimation_cache.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class TableStatistics;
@@ -47,4 +47,4 @@ class AbstractCardinalityEstimator {
   mutable CardinalityEstimationCache cardinality_estimation_cache;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

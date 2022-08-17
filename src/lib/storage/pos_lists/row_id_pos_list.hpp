@@ -7,7 +7,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The RowIDPosList is the most generic type of PosList. It holds a list of RowIDs where ChunkID and ChunkOffset can
 // vary freely. Not only can it point to different chunks, but it can also contain NULLs (as, e.g., produced by an
@@ -73,8 +73,13 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::get_allocator;
 
   // Element access
-  RowID operator[](const size_t index) const final { return Vector::operator[](index); }
-  RowID& operator[](const size_t index) { return Vector::operator[](index); }
+  RowID operator[](const size_t index) const final {
+    return Vector::operator[](index);
+  }
+
+  RowID& operator[](const size_t index) {
+    return Vector::operator[](index);
+  }
 
   using Vector::back;
   using Vector::data;
@@ -91,8 +96,12 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::max_size;
   using Vector::reserve;
   using Vector::shrink_to_fit;
-  size_t size() const final { return Vector::size(); }
-  bool empty() const final { return Vector::empty(); }
+  size_t size() const final {
+    return Vector::size();
+  }
+  bool empty() const final {
+    return Vector::empty();
+  }
 
   // Modifiers
   using Vector::clear;
@@ -111,4 +120,4 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   bool _references_single_chunk = false;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

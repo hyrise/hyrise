@@ -17,9 +17,9 @@
 #include "utils/load_table.hpp"
 
 using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Tests for most expression types, excluding Subqueries, since they have no complex behaviour that would warrant their
@@ -200,7 +200,9 @@ TEST_F(ExpressionTest, DeepCopySubplanDeduplication) {
       const auto& copied_pqp_subquery_expression =
           std::dynamic_pointer_cast<PQPSubqueryExpression>(copied_arguments.at(argument_idx));
       // Skip e.g. ValueExpressions
-      if (!copied_pqp_subquery_expression) continue;
+      if (!copied_pqp_subquery_expression) {
+        continue;
+      }
 
       // (1) Check for TableWrapper / subplan reuse inside a PQPSubqueryExpression
       const auto& copied_projection = copied_pqp_subquery_expression->pqp;
@@ -563,4 +565,4 @@ TEST_F(ExpressionTest, IsCountStar) {
   EXPECT_FALSE(AggregateExpression::is_count_star(*a));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

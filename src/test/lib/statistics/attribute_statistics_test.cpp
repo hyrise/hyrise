@@ -5,7 +5,7 @@
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AttributeStatisticsTest : public BaseTest {};
 
@@ -85,4 +85,4 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   EXPECT_FLOAT_EQ(attribute_statistics.null_value_ratio->ratio, 0.2f);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

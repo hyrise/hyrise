@@ -5,7 +5,7 @@
 
 #include "abstract_non_query_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Node type to represent deleting a view from the StorageManager
@@ -25,4 +25,4 @@ class DropViewNode : public EnableMakeForLQPNode<DropViewNode>, public AbstractN
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

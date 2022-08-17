@@ -25,7 +25,7 @@
 #include "null_value.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -83,7 +83,9 @@ using DataType = detail::DataType;
 using AllTypeVariant = detail::AllTypeVariant;
 
 // Function to check if AllTypeVariant is null
-inline bool variant_is_null(const AllTypeVariant& variant) { return (variant.which() == 0); }
+inline bool variant_is_null(const AllTypeVariant& variant) {
+  return (variant.which() == 0);
+}
 
 bool is_floating_point_data_type(const DataType data_type);
 
@@ -131,13 +133,13 @@ inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_v
   return static_cast<DataType>(all_type_variant.which());
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 
 template <>
-struct hash<opossum::AllTypeVariant> {
-  size_t operator()(const opossum::AllTypeVariant& all_type_variant) const;
+struct hash<hyrise::AllTypeVariant> {
+  size_t operator()(const hyrise::AllTypeVariant& all_type_variant) const;
 };
 
 }  // namespace std

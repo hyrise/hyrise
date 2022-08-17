@@ -7,7 +7,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractCostEstimator::AbstractCostEstimator(
     const std::shared_ptr<AbstractCardinalityEstimator>& init_cardinality_estimator)
@@ -45,8 +45,13 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       continue;
     } else {
       cost += estimate_node_cost(current_node);
-      if (current_node->left_input()) bfs_queue.push(current_node->left_input());
-      if (current_node->right_input()) bfs_queue.push(current_node->right_input());
+      if (current_node->left_input()) {
+        bfs_queue.push(current_node->left_input());
+      }
+
+      if (current_node->right_input()) {
+        bfs_queue.push(current_node->right_input());
+      }
     }
   }
 
@@ -79,13 +84,15 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
   }
 
   // Check whether the cache entry can be used: This is only the case if the entire subplan has not yet been
-  // visited. If any node in it has already has been visited, and we'd use the cache entry anyway, costs would get
+  // visited. If any node in it has already been visited, and we'd use the cache entry anyway, costs would get
   // counted twice
   auto subplan_already_visited = false;
   auto subplan_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
 
   for (const auto& current_node_input : {lqp->left_input(), lqp->right_input()}) {
-    if (!current_node_input) continue;
+    if (!current_node_input) {
+      continue;
+    }
 
     visit_lqp(current_node_input, [&](const auto& node) {
       subplan_already_visited |= visited.find(node) != visited.end();
@@ -106,4 +113,4 @@ std::optional<Cost> AbstractCostEstimator::_get_subplan_cost_from_cache(
   return cost_estimation_cache_iter->second;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

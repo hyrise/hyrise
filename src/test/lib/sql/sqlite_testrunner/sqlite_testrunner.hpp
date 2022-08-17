@@ -31,7 +31,7 @@
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using SQLiteTestRunnerParam = std::tuple<std::pair<size_t /* line */, std::string /* sql */>, EncodingType>;
 
@@ -76,4 +76,4 @@ inline auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLi
          encoding_type_to_string.left.at(encoding_type);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

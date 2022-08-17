@@ -14,9 +14,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 std::string LikeRewriteRule::name() const {
   static const auto name = std::string{"LikeRewriteRule"};
@@ -111,4 +111,4 @@ void LikeRewriteRule::rewrite_like_prefix_wildcard(const std::shared_ptr<Abstrac
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

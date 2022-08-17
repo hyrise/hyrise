@@ -13,7 +13,7 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * A JoinGraph contains
@@ -57,4 +57,4 @@ class JoinGraph final {
 
 std::ostream& operator<<(std::ostream& stream, const JoinGraph& join_graph);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -14,7 +14,7 @@
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id,
@@ -28,7 +28,9 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
          "ExpressionEvaluatorTableScanImpl.");
 }
 
-std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
+std::string ColumnVsValueTableScanImpl::description() const {
+  return "ColumnVsValue";
+}
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
@@ -255,4 +257,4 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

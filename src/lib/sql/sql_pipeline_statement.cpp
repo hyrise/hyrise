@@ -25,9 +25,8 @@
 #include "sql/sql_plan_cache.hpp"
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
-#include "utils/tracing/probes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
@@ -54,7 +53,9 @@ void SQLPipelineStatement::set_transaction_context(const std::shared_ptr<Transac
   _transaction_context = transaction_context;
 }
 
-const std::string& SQLPipelineStatement::get_sql_string() { return _sql_string; }
+const std::string& SQLPipelineStatement::get_sql_string() {
+  return _sql_string;
+}
 
 const std::shared_ptr<hsql::SQLParserResult>& SQLPipelineStatement::get_parsed_sql_statement() {
   if (_parsed_sql_statement) {
@@ -192,7 +193,9 @@ const std::shared_ptr<AbstractOperator>& SQLPipelineStatement::get_physical_plan
 
   done = std::chrono::steady_clock::now();
 
-  if (_use_mvcc == UseMvcc::Yes) _physical_plan->set_transaction_context_recursively(_transaction_context);
+  if (_use_mvcc == UseMvcc::Yes) {
+    _physical_plan->set_transaction_context_recursively(_transaction_context);
+  }
 
   // Cache newly created plan for the according sql statement (only if not already cached)
   if (pqp_cache && !_metrics->query_plan_cache_hit && _translation_info.cacheable) {
@@ -269,9 +272,6 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
 
   const auto started = std::chrono::steady_clock::now();
 
-  DTRACE_PROBE3(HYRISE, TASKS_PER_STATEMENT, reinterpret_cast<uintptr_t>(&tasks), _sql_string.c_str(),
-                reinterpret_cast<uintptr_t>(this));
-
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   if (has_failed()) {
@@ -301,7 +301,9 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     if constexpr (HYRISE_DEBUG) {
       for (const auto& task : tasks) {
         const auto operator_task = std::static_pointer_cast<OperatorTask>(task);
-        if (operator_task == _root_operator_task) continue;
+        if (operator_task == _root_operator_task) {
+          continue;
+        }
         Assert(operator_task->get_operator()->state() == OperatorState::ExecutedAndCleared,
                "Expected non-root operator to be in OperatorState::ExecutedAndCleared.");
       }
@@ -310,12 +312,9 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     _root_operator_task->get_operator()->clear_output();
   }
 
-  if (!_result_table) _query_has_output = false;
-
-  DTRACE_PROBE8(HYRISE, SUMMARY, _sql_string.c_str(), _metrics->sql_translation_duration.count(),
-                _metrics->optimization_duration.count(), _metrics->lqp_translation_duration.count(),
-                _metrics->plan_execution_duration.count(), _metrics->query_plan_cache_hit, get_tasks().size(),
-                reinterpret_cast<uintptr_t>(this));
+  if (!_result_table) {
+    _query_has_output = false;
+  }
 
   return {SQLPipelineStatus::Success, _result_table};
 }
@@ -324,7 +323,9 @@ const std::shared_ptr<TransactionContext>& SQLPipelineStatement::transaction_con
   return _transaction_context;
 }
 
-const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const { return _metrics; }
+const std::shared_ptr<SQLPipelineStatementMetrics>& SQLPipelineStatement::metrics() const {
+  return _metrics;
+}
 
 void SQLPipelineStatement::_precheck_ddl_operators(const std::shared_ptr<AbstractOperator>& pqp) {
   const auto& storage_manager = Hyrise::get().storage_manager;
@@ -379,4 +380,4 @@ bool SQLPipelineStatement::_is_transaction_statement() {
   return get_parsed_sql_statement()->getStatements().front()->isType(hsql::kStmtTransaction);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

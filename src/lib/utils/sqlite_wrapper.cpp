@@ -18,9 +18,9 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 /*
- * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
+ * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_statement, int column_count) {
   std::vector<bool> column_nullable(column_count, false);
@@ -92,7 +92,7 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
 }
 
 /*
- * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
+ * Adds a single row to given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* sqlite_statement,
                                     int column_count) {
@@ -134,7 +134,7 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 // We include the address of this wrapper in the URI for the sqlite db so that two wrappers don't interfere
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
@@ -160,7 +160,9 @@ SQLiteWrapper::Connection::Connection(const std::string& uri) {
   raw_execute_query("PRAGMA case_sensitive_like = true;");
 }
 
-SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db) { other.db = nullptr; }
+SQLiteWrapper::Connection::Connection(Connection&& other) noexcept : db(other.db) {
+  other.db = nullptr;
+}
 
 SQLiteWrapper::Connection::~Connection() {
   if (db) {
@@ -168,7 +170,9 @@ SQLiteWrapper::Connection::~Connection() {
   }
 }
 
-SQLiteWrapper::Connection SQLiteWrapper::new_connection() const { return Connection{_uri}; }
+SQLiteWrapper::Connection SQLiteWrapper::new_connection() const {
+  return Connection{_uri};
+}
 
 std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::string& sql) const {
   sqlite3_stmt* sqlite_statement;
@@ -189,8 +193,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
       Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + "\n");
     }
 
-    while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {
-    }
+    while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
   }
 
   rc = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
@@ -294,7 +297,9 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   const auto chunk_count = table.chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table.get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
       for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
@@ -357,11 +362,11 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
 
 void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset,
                                           const std::string& table_name_to_copy_from) const {
-  std::stringstream command_ss;
-  command_ss << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
-  command_ss << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
+  std::stringstream command_sstream;
+  command_sstream << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
+  command_sstream << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
 
-  main_connection.raw_execute_query(command_ss.str());
+  main_connection.raw_execute_query(command_sstream.str());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

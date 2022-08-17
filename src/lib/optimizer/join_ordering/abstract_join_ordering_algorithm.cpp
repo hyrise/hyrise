@@ -5,7 +5,7 @@
 #include "operators/operator_join_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_to_plan(
     const std::shared_ptr<AbstractLQPNode>& lqp, const std::vector<std::shared_ptr<AbstractExpression>>& predicates,
@@ -20,7 +20,9 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_predicates_
    * directly on top of `lqp`
    */
 
-  if (predicates.empty()) return lqp;
+  if (predicates.empty()) {
+    return lqp;
+  }
 
   auto predicate_nodes_and_cost = std::vector<std::pair<std::shared_ptr<AbstractLQPNode>, Cost>>{};
   predicate_nodes_and_cost.reserve(predicates.size());
@@ -105,4 +107,4 @@ std::shared_ptr<AbstractLQPNode> AbstractJoinOrderingAlgorithm::_add_join_to_pla
   return lqp;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

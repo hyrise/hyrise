@@ -9,7 +9,7 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ChangeMetaTableTest : public BaseTest {
  protected:
@@ -36,7 +36,9 @@ class ChangeMetaTableTest : public BaseTest {
     context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::Yes);
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   std::shared_ptr<AbstractOperator> left_input;
   std::shared_ptr<AbstractOperator> right_input;
@@ -97,4 +99,4 @@ TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {
   transaction_context->rollback(RollbackReason::Conflict);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

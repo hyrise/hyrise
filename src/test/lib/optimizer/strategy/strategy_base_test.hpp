@@ -4,7 +4,7 @@
 
 #include "base_test.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class AbstractRule;
@@ -19,4 +19,4 @@ class StrategyBaseTest : public BaseTest {
                                               const std::shared_ptr<AbstractLQPNode>& input);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

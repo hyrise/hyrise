@@ -21,7 +21,7 @@
 #include "scheduler/job_task.hpp"
 #include "storage/reference_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // TODO(anyone) >> todos and nice-to-haves for the sort-merge join:
 //    - outer not-equal join (outer !=)
@@ -84,7 +84,9 @@ std::shared_ptr<const Table> JoinSortMerge::_on_execute() {
   return _impl->_on_execute();
 }
 
-void JoinSortMerge::_on_cleanup() { _impl.reset(); }
+void JoinSortMerge::_on_cleanup() {
+  _impl.reset();
+}
 
 const std::string& JoinSortMerge::name() const {
   static const auto name = std::string{"JoinSortMerge"};
@@ -94,11 +96,11 @@ const std::string& JoinSortMerge::name() const {
 template <typename T>
 class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
  public:
-  JoinSortMergeImpl<T>(JoinSortMerge& sort_merge_join, const std::shared_ptr<const Table>& left_input_table,
-                       const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id,
-                       ColumnID right_column_id, const PredicateCondition op, JoinMode mode,
-                       const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
-                       OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
+  JoinSortMergeImpl(JoinSortMerge& sort_merge_join, const std::shared_ptr<const Table>& left_input_table,
+                    const std::shared_ptr<const Table>& right_input_table, ColumnID left_column_id,
+                    ColumnID right_column_id, const PredicateCondition op, JoinMode mode,
+                    const std::vector<OperatorJoinPredicate>& secondary_join_predicates,
+                    OperatorPerformanceData<JoinSortMerge::OperatorSteps>& performance_data)
       : _sort_merge_join{sort_merge_join},
         _left_input_table{left_input_table},
         _right_input_table{right_input_table},
@@ -107,8 +109,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
         _primary_right_column_id{right_column_id},
         _primary_predicate_condition{op},
         _mode{mode},
-        _secondary_join_predicates{secondary_join_predicates} {
-    _cluster_count = _determine_number_of_clusters();
+        _secondary_join_predicates{secondary_join_predicates},
+        _cluster_count{_determine_number_of_clusters()} {
     _output_pos_lists_left.resize(_cluster_count);
     _output_pos_lists_right.resize(_cluster_count);
   }
@@ -169,7 +171,9 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
     size_t cluster;
     size_t index;
 
-    TableRange to(TablePosition position) { return TableRange(*this, position); }
+    TableRange to(TablePosition position) {
+      return TableRange(*this, position);
+    }
   };
 
   TablePosition _end_of_left_table;
@@ -433,7 +437,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       // add null value combinations for right row ids that have no match.
       right_range.for_every_row_id(_sorted_right_table, [&](RowID right_row_id) {
         // right_row_ids_with_match has no key `right_row_id`
-        if (matched_right_row_ids.count(right_row_id) == 0) {
+        if (!matched_right_row_ids.contains(right_row_id)) {
           _emit_combination(output_cluster, NULL_ROW_ID, right_row_id);
         }
       });
@@ -485,7 +489,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
       end = values.end();
     }
 
-    const auto linear_search_result = std::find_if(begin, end, [&](const auto& v) { return v.value > run_value; });
+    const auto linear_search_result =
+        std::find_if(begin, end, [&](const auto& mat_value) { return mat_value.value > run_value; });
     if (linear_search_result != end) {
       // Match found within the linearly scanned part.
       return std::distance(begin, linear_search_result);
@@ -507,11 +512,13 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   CompareResult _compare(const T& left, const T& right) {
     if (left < right) {
       return CompareResult::Less;
-    } else if (left == right) {
-      return CompareResult::Equal;
-    } else {
-      return CompareResult::Greater;
     }
+
+    if (left == right) {
+      return CompareResult::Equal;
+    }
+
+    return CompareResult::Greater;
   }
 
   // Performs the join on a single cluster. Runs of entries with the same value are identified and handled together.
@@ -932,4 +939,4 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

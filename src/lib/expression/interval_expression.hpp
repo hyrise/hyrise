@@ -4,7 +4,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * SQL's INTERVAL
@@ -28,4 +28,4 @@ class IntervalExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

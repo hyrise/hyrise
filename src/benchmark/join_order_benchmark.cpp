@@ -18,7 +18,7 @@
  * Its 113 queries are obtained from the "third_party/join-order-benchmark" submodule
  */
 
-using namespace opossum;               // NOLINT
+using namespace hyrise;               // NOLINT
 using namespace std::string_literals;  // NOLINT
 
 /**
@@ -128,7 +128,9 @@ int main(int argc, char* argv[]) {
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
-  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
+    return 0;
+  }
 
   query_path = cli_parse_result["query_path"].as<std::string>();
   table_path = cli_parse_result["table_path"].as<std::string>();

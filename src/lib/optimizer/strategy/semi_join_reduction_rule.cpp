@@ -7,7 +7,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string SemiJoinReductionRule::name() const {
   static const auto name = std::string{"SemiJoinReductionRule"};
@@ -30,7 +30,9 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
   estimator->guarantee_bottom_up_construction();
 
   visit_lqp(lqp_root, [&](const auto& node) {
-    if (node->type != LQPNodeType::Join) return LQPVisitation::VisitInputs;
+    if (node->type != LQPNodeType::Join) {
+      return LQPVisitation::VisitInputs;
+    }
     const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
     // As multi-predicate joins are expensive, we do not want to create semi join reductions that use them. Instead, we
@@ -54,8 +56,8 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
         auto reducer_node_cardinality = estimator->estimate_cardinality(reducer_node);
 
         const auto semi_join_reduction_node = JoinNode::make(JoinMode::Semi, predicate_expression);
-        semi_join_reduction_node->mark_as_reducer();
-        semi_join_reduction_node->comment = "Semi Reduction";
+        semi_join_reduction_node->mark_as_semi_reduction(join_node);
+        semi_join_reduction_node->comment = name();
         lqp_insert_node(join_node, side_of_join, semi_join_reduction_node);
         semi_join_reduction_node->set_right_input(reducer_node);
 
@@ -116,8 +118,9 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
             return true;
           };
 
-          if (try_deeper_reducer_node(LQPInputSide::Left)) continue;
-          if (try_deeper_reducer_node(LQPInputSide::Right)) continue;
+          if (try_deeper_reducer_node(LQPInputSide::Left) || try_deeper_reducer_node(LQPInputSide::Right)) {
+            continue;
+          }
           break;
         }
 
@@ -154,4 +157,4 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
     lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
 }
-}  // namespace opossum
+}  // namespace hyrise

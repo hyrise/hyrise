@@ -12,7 +12,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                      const ColumnID column_id,
@@ -22,7 +22,9 @@ ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const
               "Invalid PredicateCondition");
 }
 
-std::string ColumnIsNullTableScanImpl::description() const { return "IsNullScan"; }
+std::string ColumnIsNullTableScanImpl::description() const {
+  return "IsNullScan";
+}
 
 std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkID chunk_id) {
   const auto& chunk = _in_table->get_chunk(chunk_id);
@@ -146,4 +148,4 @@ void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, RowIDPosList& m
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

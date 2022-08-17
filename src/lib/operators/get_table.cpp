@@ -10,7 +10,7 @@
 #include "hyrise.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
 
@@ -46,18 +46,26 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   stream << "(" << table_name() << ")" << separator;
   stream << "pruned:" << separator;
   stream << _pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s)";
-  if (description_mode == DescriptionMode::SingleLine) stream << ",";
+  if (description_mode == DescriptionMode::SingleLine) {
+    stream << ",";
+  }
   stream << separator;
   stream << _pruned_column_ids.size() << "/" << stored_table->column_count() << " column(s)";
 
   return stream.str();
 }
 
-const std::string& GetTable::table_name() const { return _name; }
+const std::string& GetTable::table_name() const {
+  return _name;
+}
 
-const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const { return _pruned_chunk_ids; }
+const std::vector<ChunkID>& GetTable::pruned_chunk_ids() const {
+  return _pruned_chunk_ids;
+}
 
-const std::vector<ColumnID>& GetTable::pruned_column_ids() const { return _pruned_column_ids; }
+const std::vector<ColumnID>& GetTable::pruned_column_ids() const {
+  return _pruned_column_ids;
+}
 
 std::shared_ptr<AbstractOperator> GetTable::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
@@ -235,4 +243,4 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
                                  stored_table->uses_mvcc());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

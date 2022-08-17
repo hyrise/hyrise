@@ -3,7 +3,7 @@
 #include "benchmark/benchmark.h"
 #include "micro_benchmark_basic_fixture.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Welcome to the benchmark playground. Here, you can quickly compare two
@@ -47,7 +47,9 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
       return v;
     });
   }
-  void TearDown(::benchmark::State& state) override { MicroBenchmarkBasicFixture::TearDown(state); }
+  void TearDown(::benchmark::State& state) override {
+    MicroBenchmarkBasicFixture::TearDown(state);
+  }
 
  protected:
   std::vector<ValueT> _vec;
@@ -93,4 +95,4 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

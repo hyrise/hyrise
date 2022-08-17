@@ -6,7 +6,7 @@
 
 STRONG_TYPEDEF(uint16_t, ValuePlaceholderID);
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Allocates ParameterIDs for ValuePlaceholders and correlated expressions during SQL translation
@@ -23,4 +23,4 @@ class ParameterIDAllocator {
   std::unordered_map<ValuePlaceholderID, ParameterID> _value_placeholders;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

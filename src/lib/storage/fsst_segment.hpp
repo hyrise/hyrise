@@ -15,7 +15,7 @@
 #include "storage/vector_compression/base_vector_decompressor.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class FSSTSegment : public AbstractEncodedSegment {
@@ -75,4 +75,4 @@ class FSSTSegment : public AbstractEncodedSegment {
 
 extern template class FSSTSegment<pmr_string>;
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,6 +1,6 @@
 #include "log_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void LogManager::add_message(const std::string& reporter, const std::string& message, const LogLevel log_level) {
   const auto now = std::chrono::system_clock::now();
@@ -8,6 +8,8 @@ void LogManager::add_message(const std::string& reporter, const std::string& mes
   _log_entries.emplace_back(log_entry);
 }
 
-const tbb::concurrent_vector<LogEntry>& LogManager::log_entries() const { return _log_entries; }
+const tbb::concurrent_vector<LogEntry>& LogManager::log_entries() const {
+  return _log_entries;
+}
 
-}  // namespace opossum
+}  // namespace hyrise

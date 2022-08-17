@@ -15,7 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractLQPNode(LQPNodeType::Predicate, {predicate}) {}
@@ -32,9 +32,13 @@ std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const 
   return _forward_left_unique_constraints();
 }
 
-std::shared_ptr<AbstractExpression> PredicateNode::predicate() const { return node_expressions[0]; }
+std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
+  return node_expressions[0];
+}
 
-size_t PredicateNode::_on_shallow_hash() const { return boost::hash_value(scan_type); }
+size_t PredicateNode::_on_shallow_hash() const {
+  return boost::hash_value(scan_type);
+}
 
 std::shared_ptr<AbstractLQPNode> PredicateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<PredicateNode>(expression_copy_and_adapt_to_different_lqp(*predicate(), node_mapping));
@@ -48,4 +52,4 @@ bool PredicateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
   return equal;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,13 +8,17 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}
 
-std::string DummyTableNode::description(const DescriptionMode mode) const { return "[DummyTable]"; }
+std::string DummyTableNode::description(const DescriptionMode mode) const {
+  return "[DummyTable]";
+}
 
-std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::output_expressions() const { return {}; }
+std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::output_expressions() const {
+  return {};
+}
 
 bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
   Fail("DummyTable does not output any columns");
@@ -32,4 +36,4 @@ bool DummyTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNod
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

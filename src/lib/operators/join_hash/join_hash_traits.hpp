@@ -3,7 +3,7 @@
 #include <string>
 #include <type_traits>
 
-namespace opossum {
+namespace hyrise {
 
 // JoinHashTraits
 
@@ -38,4 +38,4 @@ struct JoinHashTraits<L, R, std::enable_if_t<std::is_same_v<R, pmr_string> || st
   using HashType = pmr_string;
 };
 
-}  // namespace opossum
+}  // namespace hyrise
