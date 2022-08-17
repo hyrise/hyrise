@@ -1,5 +1,7 @@
 #include "base_test.hpp"
 
+#include <magic_enum.hpp>
+
 #include "operators/table_scan/sorted_segment_search.hpp"
 #include "storage/segment_iterate.hpp"
 
@@ -12,11 +14,14 @@ struct TestData {
   std::vector<int32_t> expected;
 };
 
-using Params = std::tuple<TestData, hyrise::SortMode, bool>;
+enum class NullValueUsage { WithNulls, WithoutNulls, OnlyNulls };
+
+using Params = std::tuple<TestData, hyrise::SortMode, NullValueUsage>;
 
 auto table_scan_sorted_segment_search_test_formatter = [](const ::testing::TestParamInfo<Params> info) {
-  return hyrise::sort_mode_to_string.left.at(std::get<1>(info.param)) +
-         std::get<0>(info.param).predicate_condition_string + (std::get<2>(info.param) ? "WithNulls" : "WithoutNulls");
+  return std::string{magic_enum::enum_name(std::get<1>(info.param))} +
+         std::get<0>(info.param).predicate_condition_string +
+         std::string{magic_enum::enum_name(std::get<2>(info.param))};
 };
 
 }  // namespace
@@ -26,13 +31,14 @@ namespace hyrise {
 class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::testing::WithParamInterface<Params> {
  protected:
   void SetUp() override {
-    bool nullable;
     TestData test_data;
-    std::tie(test_data, _sorted_by, nullable) = GetParam();
+    NullValueUsage null_value_usage;
+    std::tie(test_data, _sorted_by, null_value_usage) = GetParam();
     _predicate_condition = test_data.predicate_condition;
-    _nullable = nullable;
     _search_value = test_data.search_value;
     _expected = test_data.expected;
+    _nullable = null_value_usage != NullValueUsage::WithoutNulls;
+    _all_values_null = null_value_usage == NullValueUsage::OnlyNulls;
 
     const bool ascending = _sorted_by == SortMode::Ascending;
 
@@ -48,6 +54,10 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
       _segment->append(NULL_VALUE);
     }
 
+    if (_all_values_null) {
+      return;
+    }
+
     const auto table_size = 5;
     for (int32_t row = 0; row < table_size; ++row) {
       _segment->append(ascending ? row : table_size - row - 1);
@@ -58,6 +68,7 @@ class OperatorsTableScanSortedSegmentSearchTest : public BaseTest, public ::test
   std::unique_ptr<ValueSegment<int32_t>> _segment;
   PredicateCondition _predicate_condition;
   bool _nullable;
+  bool _all_values_null;
   int32_t _search_value;
   std::vector<int32_t> _expected;
   SortMode _sorted_by;
@@ -98,8 +109,8 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"LessThanEqualsAboveRange", PredicateCondition::LessThanEquals, 5, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
             TestData{"LessThanEqualsRangeMaximum", PredicateCondition::LessThanEquals, 4, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
 
-            TestData{"GreaterThanBelowRange", PredicateCondition::GreaterThan, -1, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
-            TestData{"GreaterThanRangeMinimum", PredicateCondition::GreaterThan, 0, {1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
+            TestData{"GreaterThanBelowRange", PredicateCondition::GreaterThan, -1, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},
+            TestData{"GreaterThanRangeMinimum", PredicateCondition::GreaterThan, 0, {1, 1, 2, 2, 3, 3, 4, 4}},
             TestData{"GreaterThan", PredicateCondition::GreaterThan, 2, {3, 3, 4, 4}},
             TestData{"GreaterThanAboveRange", PredicateCondition::GreaterThan, 5, {}},
             TestData{"GreaterThanRangeMaximum", PredicateCondition::GreaterThan, 4, {}},
@@ -107,11 +118,11 @@ INSTANTIATE_TEST_SUITE_P(
             TestData{"GreaterThanEqualsBelowRange", PredicateCondition::GreaterThanEquals, -1, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
             TestData{"GreaterThanEqualsRangeMinimum", PredicateCondition::GreaterThanEquals, 0, {0, 0, 1, 1, 2, 2, 3, 3, 4, 4}},  // NOLINT
             TestData{"GreaterThanEquals", PredicateCondition::GreaterThanEquals, 2, {2, 2, 3, 3, 4, 4}},
-            TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {}},  // NOLINT
-            TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {4, 4}}),  // NOLINT
+            TestData{"GreaterThanEqualsAboveRange", PredicateCondition::GreaterThanEquals, 5, {}},
+            TestData{"GreaterThanEqualsRangeMaximum", PredicateCondition::GreaterThanEquals, 4, {4, 4}}),
 
         ::testing::Values(SortMode::Ascending, SortMode::Descending),
-        ::testing::Bool()),  // nullable
+        ::testing::Values(NullValueUsage::WithoutNulls, NullValueUsage::WithNulls, NullValueUsage::OnlyNulls)),
     table_scan_sorted_segment_search_test_formatter);
 // clang-format on
 
@@ -123,6 +134,11 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
     auto matches = RowIDPosList{};
     const auto initial_chunk_id = ChunkID{0};
     sorted_segment_search.scan_sorted_segment(initial_chunk_id, matches, nullptr);
+
+    if (_all_values_null) {
+      EXPECT_TRUE(matches.empty());
+      return;
+    }
 
     ASSERT_EQ(matches.size(), _expected.size());
     for (auto index = size_t{0}; index < _expected.size(); ++index) {
