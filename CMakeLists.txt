@@ -70,14 +70,6 @@ if (${ENABLE_THREAD_SANITIZATION})
     set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=thread")
 endif()
 
-# Link profiling libraries for coverage builds
-if(${ENABLE_COVERAGE})
-    # add_compile_options() wants list, CMAKE_EXE_LINKER_FLAGS a string. There are probably cleverer ways than
-    # duplicating the flags, but this is probably the simplest solution.
-    add_link_options(-fprofile-instr-generate)
-    set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate")
-endif()
-
 # Set default build type if none was passed on the command line
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Debug")
