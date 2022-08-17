@@ -10,7 +10,7 @@ namespace hyrise {
 
 namespace hana = boost::hana;
 
-enum class ChunkIndexType : uint8_t { Invalid, GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree };
+enum class ChunkIndexType : uint8_t { GroupKey, CompositeGroupKey, AdaptiveRadixTree, BTree };
 
 class GroupKeyIndex;
 class CompositeGroupKeyIndex;

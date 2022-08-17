@@ -264,14 +264,6 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   EXPECT_EQ(scan->name(), "IndexScan");
 }
 
-TYPED_TEST(OperatorsIndexScanTest, InvalidIndexTypeThrows) {
-  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
-
-  auto scan = std::make_shared<IndexScan>(this->_int_int, ChunkIndexType::Invalid, this->_column_ids,
-                                                   PredicateCondition::GreaterThan, right_values);
-  EXPECT_THROW(scan->execute(), std::logic_error);
-}
-
 TYPED_TEST(OperatorsIndexScanTest, AddedChunk) {
   // We want to make sure that all chunks are covered even if they have been added after SQL translation
 

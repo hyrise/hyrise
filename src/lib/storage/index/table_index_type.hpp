@@ -8,7 +8,7 @@ namespace hyrise {
 
 namespace hana = boost::hana;
 
-enum class TableIndexType : uint8_t { Invalid, PartialHash };
+enum class TableIndexType : uint8_t { PartialHash };
 
 class PartialHashIndex;
 
