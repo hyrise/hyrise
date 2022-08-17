@@ -58,11 +58,16 @@ struct InputTableConfiguration {
   InputTableType table_type{};
   EncodingType encoding_type{EncodingType::Unencoded};
 
-  // Only for JoinIndex. Chunk range of indexed join column segments.
+  // Only for JoinIndex. Chunk range of indexed join column segments. Initially, this should have been an optional, but
+  // valgrind reported access to uninitialized memory in release builds (and ONLY in them!). We think it is a false
+  // positive.
   ChunkRange indexed_chunk_range{};
-  // Only for JoinIndex. Chunk range of join column segments that reference only one chunk.
+  // Only for JoinIndex. Chunk range of join column segments that reference only one chunk. Initially, this should have
+  // been an optional, but valgrind reported access to uninitialized memory in release builds (and ONLY in them!). We
+  // think it is a false positive.
   ChunkRange single_chunk_reference_range{};
-  // Only for JoinIndex.
+  // Only for JoinIndex. Initially, this should have been an optional, but valgrind reported access to uninitialized
+  // memory in release builds (and ONLY in them!). We think it is a false positive.
   IndexScope index_scope{};
   // Only for JoinIndex.
   std::optional<ColumnIDs> pruned_column_ids{};
