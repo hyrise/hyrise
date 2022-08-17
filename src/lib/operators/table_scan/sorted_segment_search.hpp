@@ -44,8 +44,15 @@ class SortedSegmentSearch {
                            const std::shared_ptr<const AbstractPosList>& position_filter) {
     if (_nullable) {
       // Decrease the effective sort range by excluding null values.
-      _begin = std::lower_bound(_begin, _end, false,
-                                [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+      _begin = std::lower_bound(_begin, _end, false, [](const auto& segment_position, const auto& /* unused */) {
+        return segment_position.is_null();
+      });
+    }
+
+    // Early out if segment contains only NULLs.
+    if (_begin == _end) {
+      no_rows_matching = true;
+      return;
     }
 
     if (_predicate_condition == PredicateCondition::NotEquals) {
@@ -103,48 +110,45 @@ class SortedSegmentSearch {
 
   // This function sets the offset(s) which delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end_positions_for_vs_value_scan() {
-    if (_begin == _end) {
-      no_rows_matching = true;
-      return;
-    }
-
-    auto first_value = _begin->value();
-    auto last_value = (_end - 1)->value();
+    auto first_segment_value = _begin->value();
+    auto last_segment_value = (_end - 1)->value();
     auto predicate_condition = _predicate_condition;
 
     // If descending: exchange predicate condition and first/last values.
     if (!_is_ascending) {
-      std::swap(first_value, last_value);
+      std::swap(first_segment_value, last_segment_value);
       predicate_condition = flip_predicate_condition(_predicate_condition);
     }
 
     // Decide on early out when either everything or nothing matches.
     switch (_predicate_condition) {
       case PredicateCondition::Equals:
-        all_rows_matching = first_value == _first_search_value && last_value == _first_search_value;
-        no_rows_matching = first_value > _first_search_value || last_value < _first_search_value;
+        all_rows_matching = first_segment_value == _first_search_value && last_segment_value == _first_search_value;
+        no_rows_matching = first_segment_value > _first_search_value || last_segment_value < _first_search_value;
         break;
       case PredicateCondition::GreaterThanEquals:
-        all_rows_matching = first_value >= _first_search_value;
-        no_rows_matching = last_value < _first_search_value;
+        all_rows_matching = first_segment_value >= _first_search_value;
+        no_rows_matching = last_segment_value < _first_search_value;
         break;
       case PredicateCondition::GreaterThan:
-        all_rows_matching = first_value > _first_search_value;
-        no_rows_matching = last_value <= _first_search_value;
+        all_rows_matching = first_segment_value > _first_search_value;
+        no_rows_matching = last_segment_value <= _first_search_value;
         break;
       case PredicateCondition::LessThanEquals:
-        all_rows_matching = last_value <= _first_search_value;
-        no_rows_matching = first_value > _first_search_value;
+        all_rows_matching = last_segment_value <= _first_search_value;
+        no_rows_matching = first_segment_value > _first_search_value;
         break;
       case PredicateCondition::LessThan:
-        all_rows_matching = last_value < _first_search_value;
-        no_rows_matching = first_value >= _first_search_value;
+        all_rows_matching = last_segment_value < _first_search_value;
+        no_rows_matching = first_segment_value >= _first_search_value;
         break;
       default:
         Fail("Unsupported predicate condition encountered");
     }
 
     if (no_rows_matching) {
+      // _write_rows_to_matches receives _end and iterates until it reaches _end. By setting _begin = _end, it does not
+      // write a PosList.
       _begin = _end;
     }
 
@@ -177,13 +181,8 @@ class SortedSegmentSearch {
   // This function sets the offset(s) that delimit the result set based on the predicate condition and the sort order
   void _set_begin_and_end_positions_for_between_scan() {
     DebugAssert(_second_search_value, "Second Search Value must be set for between scan");
-    if (_begin == _end) {
-      no_rows_matching = true;
-      return;
-    }
-
-    auto first_value = _begin->value();
-    auto last_value = (_end - 1)->value();
+    auto first_segment_value = _begin->value();
+    auto last_segment_value = (_end - 1)->value();
 
     auto predicate_condition = _predicate_condition;
     auto first_search_value = _first_search_value;
@@ -205,7 +204,7 @@ class SortedSegmentSearch {
           Fail("Unsupported predicate condition encountered");
       }
 
-      std::swap(first_value, last_value);
+      std::swap(first_segment_value, last_segment_value);
       std::swap(first_search_value, second_search_value);
     }
 
@@ -215,22 +214,24 @@ class SortedSegmentSearch {
                                  _predicate_condition == PredicateCondition::BetweenUpperExclusive;
 
     // Early out if everything matches.
-    const auto first_value_matches =
-        lower_exclusive ? first_value > _first_search_value : first_value >= _first_search_value;
-    const auto last_value_matches =
-        upper_exclusive ? last_value < *_second_search_value : last_value <= *_second_search_value;
-    if (first_value_matches && last_value_matches) {
+    const auto lower_bound_smaller_than_segment =
+        lower_exclusive ? first_segment_value > _first_search_value : first_segment_value >= _first_search_value;
+    const auto upper_bound_larger_than_segment =
+        upper_exclusive ? last_segment_value < *_second_search_value : last_segment_value <= *_second_search_value;
+    if (lower_bound_smaller_than_segment && upper_bound_larger_than_segment) {
       all_rows_matching = true;
       return;
     }
 
     // Early out if nothing matches.
-    const auto first_value_matches_not =
-        upper_exclusive ? first_value >= *_second_search_value : first_value > *_second_search_value;
-    const auto last_value_matches_not =
-        lower_exclusive ? last_value <= _first_search_value : last_value < _first_search_value;
-    if (first_value_matches_not || last_value_matches_not) {
+    const auto upper_bound_smaller_than_segment =
+        upper_exclusive ? first_segment_value >= *_second_search_value : first_segment_value > *_second_search_value;
+    const auto lower_bound_larger_than_segment =
+        lower_exclusive ? last_segment_value <= _first_search_value : last_segment_value < _first_search_value;
+    if (upper_bound_smaller_than_segment || lower_bound_larger_than_segment) {
       no_rows_matching = true;
+      // _write_rows_to_matches receives _end and iterates until it reaches _end. By setting _begin = _end, it does not
+      // write a PosList.
       _begin = _end;
       return;
     }
@@ -262,13 +263,30 @@ class SortedSegmentSearch {
 
   /*
    * NotEquals may result in two matching ranges (one below and one above the search_value) and needs special handling.
-   * The function contains four early outs. These are all only for performance reasons and, if removed, would not
+   * The function contains five early outs. These are all only for performance reasons and, if removed, would not
    * change the functionality.
    *
    * Note: All comments within this method are written from the point of ranges in ascending sort order.
    */
   void _handle_not_equals(const ChunkID chunk_id, RowIDPosList& matches,
                           const std::shared_ptr<const AbstractPosList>& position_filter) {
+    auto first_segment_value = _begin->value();
+    auto last_segment_value = (_end - 1)->value();
+    if (!_is_ascending) {
+      std::swap(first_segment_value, last_segment_value);
+    }
+
+    if (_first_search_value < first_segment_value || _first_search_value > last_segment_value) {
+      all_rows_matching = true;
+      _write_rows_to_matches(_begin, _end, chunk_id, matches, position_filter);
+      return;
+    }
+
+    if (_first_search_value == first_segment_value && _first_search_value == last_segment_value) {
+      no_rows_matching = true;
+      return;
+    }
+
     const auto first_bound = _get_first_bound(_first_search_value, _begin, _end);
     if (first_bound == _end) {
       // Neither the search value nor anything greater than it are found. Output the whole range and skip the call to
@@ -322,7 +340,7 @@ class SortedSegmentSearch {
     matches.resize(matches.size() + std::distance(begin, end));
 
     /**
-     * If the range of matches consists of continuous ChunkOffsets we can speed up the writing by calculating the
+     * If the range of matches consists of continuous ChunkOffsets, we can speed up the writing by calculating the
      * offsets based on the first offset instead of calling chunk_offset() for every match. ChunkOffsets in
      * position_filter are not necessarily continuous. The same is true for NotEquals because the result might consist
      * of 2 ranges.
@@ -341,8 +359,8 @@ class SortedSegmentSearch {
     }
   }
 
-  // _begin and _end will be modified to match the search range and will be passed to the ResultConsumer, except when
-  // handling NotEquals (see _handle_not_equals).
+  // _begin and _end will be modified to match the search range and will be passed to _write_rows_to_matches, except
+  // when handling NotEquals (see _handle_not_equals).
   IteratorType _begin;
   IteratorType _end;
   const PredicateCondition _predicate_condition;

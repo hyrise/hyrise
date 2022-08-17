@@ -173,12 +173,19 @@ TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {
     const auto initial_chunk_id = ChunkID{0};
     sorted_segment_search.scan_sorted_segment(initial_chunk_id, matches, nullptr);
 
+    if (matches.empty()) {
+      EXPECT_TRUE(sorted_segment_search.no_rows_matching);
+    } else if (matches.size() == _segment->size()) {
+      EXPECT_TRUE(sorted_segment_search.all_rows_matching);
+    }
+
     if (_all_values_null) {
       EXPECT_TRUE(matches.empty());
       return;
     }
 
     ASSERT_EQ(matches.size(), _expected.size());
+
     for (auto index = size_t{0}; index < _expected.size(); ++index) {
       const auto& [chunk_id, chunk_offset] = matches[index];
       EXPECT_EQ(chunk_id, initial_chunk_id);
