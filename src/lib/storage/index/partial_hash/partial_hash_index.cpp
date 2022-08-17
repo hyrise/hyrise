@@ -60,9 +60,9 @@ PartialHashIndex::Iterator PartialHashIndex::_null_cend() const {
 }
 
 size_t PartialHashIndex::_memory_usage() const {
-  size_t bytes{0u};
-  bytes += sizeof(_impl);
+  auto bytes = size_t{0u};
   bytes += sizeof(_column_id);
+  bytes += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
   bytes += _impl->memory_usage();
   return bytes;
 }

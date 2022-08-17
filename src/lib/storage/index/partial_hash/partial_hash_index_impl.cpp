@@ -226,12 +226,15 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::memory_usage() const {
-  size_t bytes{0u};
-  bytes += (sizeof(std::unordered_set<ChunkID>) + sizeof(ChunkID) * _indexed_chunk_ids.size());
+  auto bytes = size_t{0u};
 
-  // TODO(anyone): Find a clever way to estimate the hash sizes in the maps. For now we estimate a hash size of 8 byte
+  bytes += sizeof(_indexed_chunk_ids);
+  bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
+
   bytes += sizeof(_map);
-  bytes += (8 /* hash size */ + sizeof(std::vector<RowID>)) * _map.size();
+  // TODO(anyone): Find a clever way to estimate the hash sizes in the maps. For now we estimate a hash size of 8 byte
+  bytes += 8 * _map.size();
+  bytes += sizeof(std::vector<RowID>) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
   bytes += sizeof(_null_values);  // NOLINT
