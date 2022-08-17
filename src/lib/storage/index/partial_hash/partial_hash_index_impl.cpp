@@ -228,7 +228,7 @@ template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::memory_usage() const {
   auto bytes = size_t{0u};
 
-  bytes += sizeof(_indexed_chunk_ids);
+  bytes += sizeof(_indexed_chunk_ids);  // NOLINT
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
