@@ -75,4 +75,8 @@ std::unordered_set<ChunkID> PartialHashIndex::_get_indexed_chunk_ids() const {
   return _impl->get_indexed_chunk_ids();
 }
 
+ColumnID PartialHashIndex::_get_indexed_column_id() const {
+  return _column_id;
+}
+
 }  // namespace hyrise

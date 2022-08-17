@@ -98,4 +98,8 @@ std::unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
   return _get_indexed_chunk_ids();
 }
 
+ColumnID AbstractTableIndex::get_indexed_column_id() const {
+  return _get_indexed_column_id();
+}
+
 }  // namespace hyrise
