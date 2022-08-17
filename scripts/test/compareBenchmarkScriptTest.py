@@ -14,7 +14,8 @@ def assert_latency_equals(item_count, runtimes, latency_string):
         assert "nan" in latency_string
         return
     avg_latency = sum(runtimes) / item_count / 1_000_000
-    assert str(round(avg_latency, 1))[:-1] in latency_string  # Due to rounding, we need to ignore the last char/digit.
+    avg_latency_truncated = str(int(avg_latency * 10) / 10)  # We truncate (not round!) to check for string containment
+    assert avg_latency_truncated in latency_string
 
 
 def assert_throughput_equals(item_count, duration, throughput_string):
