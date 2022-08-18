@@ -70,19 +70,19 @@ OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& init_column_ids
 void OperatorJoinPredicate::flip() {
   std::swap(column_ids.first, column_ids.second);
   predicate_condition = flip_predicate_condition(predicate_condition);
-  flipped = true;
+  flipped = !flipped;
 }
 
 bool OperatorJoinPredicate::is_flipped() const {
   return flipped;
 }
 
-bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
-  return std::tie(l.column_ids, l.predicate_condition) < std::tie(r.column_ids, r.predicate_condition);
+bool operator<(const OperatorJoinPredicate& lhs, const OperatorJoinPredicate& rhs) {
+  return std::tie(lhs.column_ids, lhs.predicate_condition) < std::tie(rhs.column_ids, rhs.predicate_condition);
 }
 
-bool operator==(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r) {
-  return std::tie(l.column_ids, l.predicate_condition) == std::tie(r.column_ids, r.predicate_condition);
+bool operator==(const OperatorJoinPredicate& lhs, const OperatorJoinPredicate& rhs) {
+  return std::tie(lhs.column_ids, lhs.predicate_condition) == std::tie(rhs.column_ids, rhs.predicate_condition);
 }
 
 }  // namespace hyrise
