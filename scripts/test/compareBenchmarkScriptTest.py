@@ -14,8 +14,10 @@ def assert_latency_equals(item_count, runtimes, latency_string):
         assert "nan" in latency_string
         return
     avg_latency = sum(runtimes) / item_count / 1_000_000
-    avg_latency_truncated = str(float(int(avg_latency * 10) / 10))  # We truncate (not round!) to check for string containment
-    avg_latency_truncated = str(int(avg_latency))  # We truncate (not round!) to check for string containment
+
+    # We truncate (not round!) to check for string containment
+    # avg_latency_truncated = str(float(int(avg_latency * 10) / 10))  
+    avg_latency_truncated = str(int(avg_latency))
     if avg_latency_truncated not in latency_string:
         print(avg_latency_truncated, " === ", latency_string)
     assert avg_latency_truncated in latency_string
