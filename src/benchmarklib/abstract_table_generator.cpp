@@ -403,8 +403,7 @@ void AbstractTableGenerator::_create_table_indexes(
 }
 
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {
-  // Currently, indexes are not used by the benchmarks. Therefore it doesn't make sense to create them since it would
-  // just create unnecessary memory consumption.
+  // Indexes can be specified in a derived concrete class by overriding this function.
   return {};
 }
 
