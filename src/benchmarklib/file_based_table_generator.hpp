@@ -24,6 +24,7 @@ class FileBasedTableGenerator : virtual public AbstractTableGenerator {
  protected:
   const std::string _path;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
+  SortOrderByTable _sort_order_by_table() const override;
   std::function<void(std::unordered_map<std::string, BenchmarkTableInfo>&)> _add_constraints_callback;
 };
 

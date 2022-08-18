@@ -52,13 +52,11 @@ const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name"
 // clang-format on
 
 std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
-    {TPCHTable::Part, PART},     {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP},
-    {TPCHTable::Customer, CUST}, {TPCHTable::Orders, ORDER},   {TPCHTable::LineItem, LINE},
-    {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
+    {TPCHTable::Part, PART},    {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP}, {TPCHTable::Customer, CUST},
+    {TPCHTable::Orders, ORDER}, {TPCHTable::LineItem, LINE},  {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table,
-                      Args... args) {
+DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table, Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
@@ -312,18 +310,7 @@ AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() c
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
-  if (_clustering_configuration == ClusteringConfiguration::Pruning) {
-    // This clustering improves the pruning of chunks for the two largest tables in TPC-H, lineitem and orders. Both
-    // tables are frequently filtered by the sorted columns, which improves the pruning rate significantly.
-    // Allowed as per TPC-H Specification, paragraph 1.5.2.
-    return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}};
-  }
-
-  // Even though the generated TPC-H data is implicitly sorted by the primary keys, we do neither set the corresponding
-  // flags in the table nor in the chunks. This is done on purpose, as the non-clustered mode is designed to pass as
-  // little extra information into Hyrise as possible. In the future, these sort orders might be automatically
-  // identified with flags being set automatically.
-  return {};
+  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}, {"part", "p_brand"}};
 }
 
 void TPCHTableGenerator::_add_constraints(

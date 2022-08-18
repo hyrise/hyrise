@@ -66,6 +66,7 @@ class TPCDSTableGenerator final : public AbstractTableGenerator {
 
  protected:
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
+  SortOrderByTable _sort_order_by_table() const override;
 
  private:
   std::shared_ptr<Table> _generate_table(const std::string& table_name) const;

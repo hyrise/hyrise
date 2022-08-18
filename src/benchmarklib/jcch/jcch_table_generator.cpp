@@ -93,4 +93,8 @@ void JCCHTableGenerator::_add_constraints(
   TPCHTableGenerator::_add_constraints(table_info_by_name);
 }
 
+AbstractTableGenerator::SortOrderByTable JCCHTableGenerator::_sort_order_by_table() const {
+  return {{"lineitem", "l_shipdate"}, {"orders", "o_orderdate"}, {"part", "p_brand"}};
+}
+
 }  // namespace hyrise

@@ -118,4 +118,14 @@ void FileBasedTableGenerator::_add_constraints(
   }
 }
 
+AbstractTableGenerator::SortOrderByTable FileBasedTableGenerator::_sort_order_by_table() const {
+  return {
+      {"movie_info", "info"},       {"info_type", "info"},       {"company_name", "country_code"},
+      {"title", "production_year"}, {"movie_companies", "note"}, {"keyword", "keyword"},
+      {"comp_cast_type", "kind"},   {"cast_info", "note"},       {"kind_type", "kind"},
+      {"name", "gender"},           {"company_type", "kind"},    {"movie_info_idx", "info"},
+      {"role_type", "role"},        {"link_type", "link"},       {"char_name", "name"},
+  };
+}
+
 }  // namespace hyrise

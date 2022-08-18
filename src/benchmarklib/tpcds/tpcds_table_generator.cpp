@@ -1259,4 +1259,15 @@ void TPCDSTableGenerator::_add_constraints(
       {{time_dim_table->column_id_by_name("t_time_sk")}, KeyConstraintType::PRIMARY_KEY});
 }
 
+AbstractTableGenerator::SortOrderByTable TPCDSTableGenerator::_sort_order_by_table() const {
+  return {{"customer_address", "ca_state"},
+          {"household_demographics", "hd_dep_count"},
+          {"date_dim", "d_moy"},
+          {"time_dim", "t_hour"},
+          {"store", "s_store_name"},
+          {"item", "i_manager_id"},
+          {"store_sales", "ss_sales_price"},
+          {"web_sales", "ws_net_profit"}};
+}
+
 }  // namespace hyrise

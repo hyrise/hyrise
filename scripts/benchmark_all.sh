@@ -11,7 +11,7 @@ then
   exit 1
 fi
 
-benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkTPCC hyriseBenchmarkJoinOrder'
+benchmarks='hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder'
 # Set to 1 because even a single warmup run of a query makes the observed runtimes much more stable. See discussion in #2405 for some preliminary reasoning.
 warmup_seconds=1
 mt_shuffled_runtime=1200
@@ -84,25 +84,9 @@ do
   cd ..  # hyriseBenchmarkJoinOrder needs to run from project root
   for benchmark in $benchmarks
   do
-    if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
-      echo "Running $benchmark for $commit... (single-threaded)"
-      # Warming up does not make sense/much of a difference for TPCC.
-      ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
-    else
-      echo "Running $benchmark for $commit... (single-threaded)"
-      ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
-    fi
+    echo "Running $benchmark for $commit... (single-threaded)"
+    ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
 
-    if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
-      echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
-
-      echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
-    fi
-
-    echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
-    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
