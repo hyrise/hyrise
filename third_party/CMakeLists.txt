@@ -18,6 +18,8 @@ add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
 add_subdirectory(tpch-dbgen)
+add_subdirectory(abseil-cpp)
+
 
 # Build sql-parser library
 set(PARSER_DIR sql-parser)

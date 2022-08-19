@@ -718,6 +718,7 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    absl::flat_hash_map
     compact_vector
     cpp-btree
     cxxopts
