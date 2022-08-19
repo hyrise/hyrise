@@ -8,8 +8,6 @@
 #include <boost/lexical_cast.hpp>
 #include <uninitialized_vector.hpp>
 
-#include "tsl/robin_map.h"
-
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"

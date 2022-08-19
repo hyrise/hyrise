@@ -21,7 +21,7 @@ TEST_F(MemoryResourceManagerTest, GetMemoryResources) {
   const auto& resource_record_1 = _memory_resource_manager.memory_resources()[0];
   EXPECT_EQ(resource_record_1.operator_type, OperatorType::Mock);
   EXPECT_EQ(resource_record_1.operator_data_structure, "my_data_structure");
-  EXPECT_EQ(resource_record_1.resource_pointer, memory_resource_pointer_1);
+  EXPECT_EQ(resource_record_1.resource_pointer.get(), memory_resource_pointer_1);
 
   const auto& memory_resource_pointer_2 =
       _memory_resource_manager.get_memory_resource(OperatorType::Mock, "my_data_structure_2");
@@ -29,7 +29,7 @@ TEST_F(MemoryResourceManagerTest, GetMemoryResources) {
   const auto& resource_record_2 = _memory_resource_manager.memory_resources()[1];
   EXPECT_EQ(resource_record_2.operator_type, OperatorType::Mock);
   EXPECT_EQ(resource_record_2.operator_data_structure, "my_data_structure_2");
-  EXPECT_EQ(resource_record_2.resource_pointer, memory_resource_pointer_2);
+  EXPECT_EQ(resource_record_2.resource_pointer.get(), memory_resource_pointer_2);
 }
 
 TEST_F(MemoryResourceManagerTest, GetMemoryResourceForSamePurposeMultipleTimes) {
@@ -65,7 +65,7 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   }
 
   // Ensure that the number of memory resources matches the number of threads.
-  const auto memory_resources = _memory_resource_manager.memory_resources();
+  const auto& memory_resources = _memory_resource_manager.memory_resources();
   ASSERT_EQ(memory_resources.size(), N_THREADS);
 
   // The total allocated amount should be as expected. We expect a total of 1 + 2 + .. + N_THREADS = ((N_THREADS^2 +

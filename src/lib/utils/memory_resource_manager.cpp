@@ -14,8 +14,8 @@ boost::container::pmr::memory_resource* MemoryResourceManager::get_memory_resour
   }
 
   auto resource_pointer = new TrackingMemoryResource(); // NOLINT
-  auto tracked_resource = ResourceRecord{operator_type, operator_data_structure, resource_pointer};
-  _memory_resources.push_back(tracked_resource);
+  auto tracked_resource = ResourceRecord{operator_type, operator_data_structure, std::unique_ptr<TrackingMemoryResource>{resource_pointer}};
+  _memory_resources.push_back(std::move(tracked_resource));
   return resource_pointer;
 }
 
