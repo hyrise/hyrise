@@ -67,7 +67,7 @@
 {
    <False_positive_optional_LZ4Segment>
    Memcheck:Cond
-   fun:_ZNK7opossum10LZ4SegmentINSt7__cxx1112basic_stringIcSt11char_traitsIcEN5boost9container3pmr21polymorphic_allocatorIcEEEEE10decompressERKNS_11ChunkOffsetESt8optionalImERSt6vectorIcSaIcEE
+   fun:_ZNK6hyrise10LZ4SegmentINSt7__cxx1112basic_stringIcSt11char_traitsIcEN5boost9container3pmr21polymorphic_allocatorIcEEEEE10decompressERKNS_11ChunkOffsetESt8optionalImERSt6vectorIcSaIcEE
 }
 
 # Similar to the suppression introduced via https://github.com/hyrise/hyrise/pull/1851#issuecomment-618937388, we need
