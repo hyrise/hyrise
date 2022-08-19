@@ -9,6 +9,7 @@
 
 #include "tsl/robin_map.h"
 
+#include "../../../../third_party/parallel-hashmap/parallel_hashmap/phmap.h"
 #include "hyrise.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/multi_predicate_join/multi_predicate_join_evaluator.hpp"
@@ -96,7 +97,7 @@ class PosHashTable {
 
   // Tessil's robin:map is used because it is very fast and does not consume too much memory.
   // If memory consumption is prioritized above performance, it maybe should exchanged (e.g. with Tessil's sparse_map).
-  using OffsetHashTable = tsl::robin_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>,
+  using OffsetHashTable = phmap::flat_hash_map<HashedType, Offset, std::hash<HashedType>, std::equal_to<HashedType>,
                                          PolymorphicAllocator<std::pair<HashedType, Offset>>>;
 
   // The small_vector holds the first n values in local storage and only resorts to heap storage after that. 1 is chosen
@@ -143,6 +144,8 @@ class PosHashTable {
 
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
+    // _offset_hash_table.shrink_to_fit();
+    
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
       // Resize so that we can store the start offset of each range as well as the final end offset.
