@@ -566,6 +566,7 @@ set(
     types.cpp
     types.hpp
     uid_allocator.hpp
+    utils/abstract_plugin.cpp
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
