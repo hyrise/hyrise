@@ -348,9 +348,9 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // + map size
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
-   expected_memory_usage += 9 * 8;
+  expected_memory_usage += 9 * 8;
   // + number of different non-NULL values * vector size
-   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
+  expected_memory_usage += 9 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 11 * sizeof(RowID);
   // + vector size NULL values (index NULL positions)
@@ -469,7 +469,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * 8;
-  // + number of different non-NULL values * vector size 
+  // + number of different non-NULL values * vector size
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
