@@ -300,6 +300,7 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
     MemoryUsageNulls
     MemoryUsageMixed
     MemoryUsageEmpty
+    MemoryUsageNoChunk
   Tested functions:
     size_t memory_usage() const;
 
@@ -308,14 +309,16 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
   |[A] index is empty               |    true |   false |
   |[B] index has NULL positions     |    true |   false |
   |[C] index has non-NULL positions |    true |   false |
+  |[D] index has at least one chunk |    true |   false |
 
   Base Choice:
-    A2, B1, C1
+    A2, B1, C1, D1
   Further derived combinations:
-    A2, B1, C2
-    A2, B2, C1
-   (A1, B1, C1) --infeasible---+
-    A1, B2, C2 <-alternative-<-+
+    A2, B1, C2, D1
+    A2, B2, C1, D1
+    A1, B2, C2, D1
+    A1, B2, C2, D2
+    D2 => A1, A1 => B2 && C2, therefore there are no more options.
 */
 
 // A2, B2, C1
@@ -331,31 +334,31 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-  // auto expected_memory_usage = size_t{0u};
-  // //   TableIndexType
-  // expected_memory_usage += sizeof(TableIndexType);
-  // // + indexed ColumnID
-  // expected_memory_usage += sizeof(ColumnID);
-  // // + pointer to BaseParialHashIndexImpl
-  // expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
-  // // +  ChunkIDs set
-  // expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
-  // // +  number of indexed chunks * ChunkID
-  // expected_memory_usage += 1 * sizeof(ChunkID);
-  // // + map size
-  // expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
-  // // + number of different non-NULL values * hash size
-  //  expected_memory_usage += 9 * 8;
-  // // + number of different non-NULL values (9) * vector size (24)
-  //  expected_memory_usage += 9 * sizeof(std::vector<RowID>);
-  // // + number of non-NULL values * RowID
-  // expected_memory_usage += 11 * sizeof(RowID);
-  // // + vector size NULL values (index NULL positions)
-  // expected_memory_usage += sizeof(std::vector<RowID>);
-  // // + number of NULL values * RowID
-  // expected_memory_usage += 0 * sizeof(RowID);
+  auto expected_memory_usage = size_t{0u};
+  //   TableIndexType
+  expected_memory_usage += sizeof(TableIndexType);
+  // + indexed ColumnID
+  expected_memory_usage += sizeof(ColumnID);
+  // + pointer to BaseParialHashIndexImpl
+  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  // +  ChunkIDs set
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  // +  number of indexed chunks * ChunkID
+  expected_memory_usage += 1 * sizeof(ChunkID);
+  // + map size
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + number of different non-NULL values * hash size
+   expected_memory_usage += 9 * 8;
+  // + number of different non-NULL values * vector size
+   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
+  // + number of non-NULL values * RowID
+  expected_memory_usage += 11 * sizeof(RowID);
+  // + vector size NULL values (index NULL positions)
+  expected_memory_usage += sizeof(std::vector<RowID>);
+  // + number of NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
 
-  // EXPECT_EQ(index->memory_usage(), expected_memory_usage);
+  EXPECT_EQ(index->memory_usage(), expected_memory_usage);
 }
 
 // A2, B1, C2
@@ -386,7 +389,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * 8;
-  // + number of different non-NULL values (9) * vector size (24)
+  // + number of different non-NULL values * vector size
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
@@ -427,7 +430,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * 8;
-  // + number of different non-NULL values (9) * vector size (24)
+  // + number of different non-NULL values * vector size
   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 11 * sizeof(RowID);
@@ -466,7 +469,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * 8;
-  // + number of different non-NULL values (9) * vector size (24)
+  // + number of different non-NULL values * vector size 
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
@@ -497,7 +500,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * 8;
-  // + number of different non-NULL values (9) * vector size (24)
+  // + number of different non-NULL values * vector size
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);

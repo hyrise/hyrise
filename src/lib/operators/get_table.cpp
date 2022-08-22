@@ -240,7 +240,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   // Check if a table index is irrelevant because of pruning.
-  const auto check_if_index_is_irrelevant_lambda = [this](const std::shared_ptr<AbstractTableIndex>& table_index) {
+  const auto indexed_column_or_chunks_pruned = [this](const std::shared_ptr<AbstractTableIndex>& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
     if (std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), indexed_column_id) !=
@@ -255,18 +255,18 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       return false;
     }
 
-    auto indexed_chunk_ids_vector = std::vector<ChunkID>(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
-    std::sort(indexed_chunk_ids_vector.begin(), indexed_chunk_ids_vector.end());
+    auto sorted_indexed_chunk_ids = std::vector<ChunkID>(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
+    std::sort(sorted_indexed_chunk_ids.begin(), sorted_indexed_chunk_ids.end());
     DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
                 "Pruned ChunkIDs should be sorted.");
 
-    // Check if index indexes only chunks that have been pruned.
+    // Check if the indexed chunks have been pruned.
     return (std::includes(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end(),
-                          indexed_chunk_ids_vector.begin(), indexed_chunk_ids_vector.end()));
+                          sorted_indexed_chunk_ids.begin(), sorted_indexed_chunk_ids.end()));
   };
 
   auto table_indexes = stored_table->get_table_indexes();
-  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), check_if_index_is_irrelevant_lambda),
+  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), indexed_column_or_chunks_pruned),
                       table_indexes.end());
 
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
