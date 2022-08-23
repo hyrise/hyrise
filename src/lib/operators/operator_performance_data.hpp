@@ -29,7 +29,6 @@ struct AbstractOperatorPerformanceData : public Noncopyable {
   uint64_t output_row_count{0};
   uint32_t output_chunk_count{0};
   std::vector<std::vector<SortColumnDefinition>> output_chunks_sorted_by{};
-  // std::vector<std::vector<std::optional<EncodingType>>> output_segment_types{};
   TableType output_table_type{};
 };
 

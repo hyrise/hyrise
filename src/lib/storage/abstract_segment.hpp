@@ -13,6 +13,8 @@ namespace hyrise {
 // e.g., ValueSegment, ReferenceSegment
 class AbstractSegment : private Noncopyable {
  public:
+  enum class Tier { Memory, HDD };
+
   explicit AbstractSegment(const DataType data_type);
 
   virtual ~AbstractSegment() = default;
@@ -35,6 +37,8 @@ class AbstractSegment : private Noncopyable {
   virtual size_t memory_usage(const MemoryUsageCalculationMode mode) const = 0;
 
   mutable SegmentAccessCounter access_counter;
+
+  mutable Tier tier = Tier::Memory;
 
  private:
   const DataType _data_type;

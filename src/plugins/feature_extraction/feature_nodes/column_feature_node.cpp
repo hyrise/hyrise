@@ -34,11 +34,10 @@ ColumnFeatureNode::ColumnFeatureNode(const bool is_reference, const std::shared_
     }
 
     const auto& segment = chunk->get_segment(_column_id);
-    const auto tier = SegmentFeatureNode::Tier::Memory;
     if (auto encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
-      _segments.push_back(std::make_shared<SegmentFeatureNode>(tier, encoded_segment->encoding_type()));
+      _segments.push_back(std::make_shared<SegmentFeatureNode>(segment->tier, encoded_segment->encoding_type()));
     } else if (auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
-      _segments.push_back(std::make_shared<SegmentFeatureNode>(tier, EncodingType::Unencoded));
+      _segments.push_back(std::make_shared<SegmentFeatureNode>(segment->tier, EncodingType::Unencoded));
     } else {
       Fail("Did not expect ReferenceSegment in base table");
     }
@@ -67,8 +66,7 @@ ColumnFeatureNode::ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>&
 
   // materialized segments are always ValueSegments in main memeory
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    _segments.push_back(
-        std::make_shared<SegmentFeatureNode>(SegmentFeatureNode::Tier::Memory, EncodingType::Unencoded));
+    _segments.push_back(std::make_shared<SegmentFeatureNode>(AbstractSegment::Tier::Memory, EncodingType::Unencoded));
   }
 }
 
@@ -85,7 +83,7 @@ std::shared_ptr<ColumnFeatureNode> ColumnFeatureNode::from_expression(
     return input_table->get_column(column_id);
   }
 
-  std::shared_ptr<ColumnFeatureNode> column_node = nullptr;
+  auto column_node = std::shared_ptr<ColumnFeatureNode>{};
   if (original_table->is_base_table()) {
     column_node =
         std::make_shared<ColumnFeatureNode>(is_reference, input_table, column_id, original_table, original_column_id);

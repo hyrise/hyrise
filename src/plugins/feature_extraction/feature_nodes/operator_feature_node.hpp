@@ -38,9 +38,9 @@ class OperatorFeatureNode : public AbstractFeatureNode {
 
   std::shared_ptr<ResultTableFeatureNode> output_table() const;
 
-  const std::vector<std::shared_ptr<AbstractFeatureNode>>& subqueries() const;
+  const std::vector<std::shared_ptr<OperatorFeatureNode>>& subqueries() const;
 
-  const std::vector<std::shared_ptr<AbstractFeatureNode>>& predicates() const;
+  const std::vector<std::shared_ptr<AbstractFeatureNode>>& expressions() const;
 
   void initialize();
 
@@ -51,6 +51,10 @@ class OperatorFeatureNode : public AbstractFeatureNode {
     virtual const std::vector<std::string>& feature_headers() const = 0;
 
     virtual const FeatureVector to_feature_vector() const = 0;
+
+    size_t feature_count() const {
+      return feature_headers().size();
+    }
   };
 
   struct TableScanOperatorInfo : public AbstractAdditionalOperatorInfo {
@@ -76,6 +80,36 @@ class OperatorFeatureNode : public AbstractFeatureNode {
     size_t skipped_chunks_binary_search{0};
   };
 
+  struct JoinHashOperatorInfo : public AbstractAdditionalOperatorInfo {
+    const std::vector<std::string>& feature_headers() const final {
+      return headers();
+    }
+
+    static const std::vector<std::string>& headers() {
+      static auto headers = std::vector<std::string>{"join_hash.radix_bits",
+                                                     "join_hash.build_side_materialized_value_count",
+                                                     "join_hash.build_side_materialized_value_count",
+                                                     "join_hash.probe_side_materialized_value_count",
+                                                     "join_hash.hash_tables_distinct_value_count",
+                                                     "join_hash.hash_tables_position_count"};
+      return headers;
+    }
+
+    const FeatureVector to_feature_vector() const final {
+      return FeatureVector{Feature{static_cast<Feature>(radix_bits)},
+                           Feature{static_cast<Feature>(build_side_materialized_value_count)},
+                           Feature{static_cast<Feature>(probe_side_materialized_value_count)},
+                           Feature{static_cast<Feature>(hash_tables_distinct_value_count)},
+                           Feature{static_cast<Feature>(hash_tables_position_count)}};
+    }
+
+    size_t radix_bits{0};
+    size_t build_side_materialized_value_count{0};
+    size_t probe_side_materialized_value_count{0};
+    size_t hash_tables_distinct_value_count{0};
+    size_t hash_tables_position_count{0};
+  };
+
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
   size_t _on_shallow_hash() const final;
 
@@ -95,12 +129,12 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   std::chrono::nanoseconds _run_time;
   std::shared_ptr<Query> _query;
 
-  std::vector<std::shared_ptr<AbstractFeatureNode>> _predicates;
+  std::vector<std::shared_ptr<AbstractFeatureNode>> _expressions;
   std::shared_ptr<ResultTableFeatureNode> _output_table;
 
   bool _is_root_node = false;
 
-  std::vector<std::shared_ptr<AbstractFeatureNode>> _subqueries;
+  std::vector<std::shared_ptr<OperatorFeatureNode>> _subqueries;
 
   std::unique_ptr<AbstractAdditionalOperatorInfo> _additional_info;
 };

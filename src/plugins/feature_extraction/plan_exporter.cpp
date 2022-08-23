@@ -98,7 +98,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         operator_file << ";" << operator_node.run_time().count() << ";"
                       << cardinality_estimator.estimate_cardinality(operator_node.get_operator()->lqp_node) << "\n";
 
-        const auto& predicates = operator_node.predicates();
+        const auto& predicates = operator_node.expressions();
         const auto num_predicates = predicates.size();
         for (auto predicate_id = size_t{0}; predicate_id < num_predicates; ++predicate_id) {
           const auto& predicate = predicates[predicate_id];

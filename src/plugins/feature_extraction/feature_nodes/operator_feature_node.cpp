@@ -3,10 +3,12 @@
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "feature_extraction/feature_nodes/aggregate_function_feature_node.hpp"
 #include "feature_extraction/feature_nodes/base_table_feature_node.hpp"
 #include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -121,15 +123,14 @@ std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() cons
   const auto& output_feature_vector = _output_table->to_feature_vector();
   feature_vector->insert(feature_vector->end(), output_feature_vector.cbegin(), output_feature_vector.cend());
 
-  if (!_additional_info) {
-    feature_vector->resize(headers().size());
-    return feature_vector;
+  feature_vector->reserve(headers().size());
+
+  if (_additional_info) {
+    const auto& additional_features = _additional_info->to_feature_vector();
+    feature_vector->insert(feature_vector->end(), additional_features.cbegin(), additional_features.cend());
   }
 
-  if (_op_type == QueryOperatorType::TableScan) {
-    const auto& scan_features = _additional_info->to_feature_vector();
-    feature_vector->insert(feature_vector->end(), scan_features.cbegin(), scan_features.cend());
-  }
+  feature_vector->resize(headers().size());
   return feature_vector;
 }
 
@@ -141,9 +142,13 @@ const std::vector<std::string>& OperatorFeatureNode::headers() {
   static auto ohe_headers_type = one_hot_headers<QueryOperatorType>("operator_type.");
   static const auto output_headers = AbstractTableFeatureNode::headers();
   if (ohe_headers_type.size() == magic_enum::enum_count<QueryOperatorType>()) {
+    const auto max_additional_features =
+        std::max({TableScanOperatorInfo{}.feature_count(), JoinHashOperatorInfo{}.feature_count()});
+    ohe_headers_type.reserve(ohe_headers_type.size() + output_headers.size() + max_additional_features);
     ohe_headers_type.insert(ohe_headers_type.end(), output_headers.cbegin(), output_headers.cend());
-    const auto& table_scan_headers = TableScanOperatorInfo::headers();
-    ohe_headers_type.insert(ohe_headers_type.end(), table_scan_headers.cbegin(), table_scan_headers.cend());
+    for (auto feature_index = size_t{0}; feature_index < max_additional_features; ++feature_index) {
+      ohe_headers_type.emplace_back("additional_feature." + std::to_string(feature_index));
+    }
   }
   return ohe_headers_type;
 }
@@ -175,7 +180,7 @@ std::shared_ptr<ResultTableFeatureNode> OperatorFeatureNode::output_table() cons
   return _output_table;
 }
 
-const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::subqueries() const {
+const std::vector<std::shared_ptr<OperatorFeatureNode>>& OperatorFeatureNode::subqueries() const {
   return _subqueries;
 }
 
@@ -204,10 +209,18 @@ void OperatorFeatureNode::_handle_join_hash(const JoinHash& join_hash) {
   const auto join_predicate_count = join_op_predicates.size();
   Assert(join_predicate_count == join_lqp_predicates.size(), "LQP and PQP predicates do not match");
   for (auto predicate_id = ColumnID{0}; predicate_id < join_predicate_count; ++predicate_id) {
-    _predicates.push_back(resolve_join_predicate(join_op_predicates.at(predicate_id),
-                                                 join_lqp_predicates.at(predicate_id), left_input_node,
-                                                 right_input_node, flipped_inputs));
+    _expressions.push_back(resolve_join_predicate(join_op_predicates.at(predicate_id),
+                                                  join_lqp_predicates.at(predicate_id), left_input_node,
+                                                  right_input_node, flipped_inputs));
   }
+
+  _additional_info = std::make_unique<JoinHashOperatorInfo>();
+  auto& join_additional_info = static_cast<JoinHashOperatorInfo&>(*_additional_info);
+  join_additional_info.radix_bits = performance_data.radix_bits;
+  join_additional_info.build_side_materialized_value_count = performance_data.build_side_materialized_value_count;
+  join_additional_info.probe_side_materialized_value_count = performance_data.probe_side_materialized_value_count;
+  join_additional_info.hash_tables_distinct_value_count = performance_data.hash_tables_distinct_value_count;
+  join_additional_info.hash_tables_position_count = performance_data.hash_tables_position_count.value_or(0);
 }
 
 void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {
@@ -228,13 +241,13 @@ void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {
   Assert(join_index.secondary_predicates().empty(), "Index Joinx with secondary predicates found");
   const auto& join_node = static_cast<const JoinNode&>(*join_index.lqp_node);
   const auto& join_lqp_predicate = *join_node.join_predicates().cbegin();
-  _predicates.push_back(
+  _expressions.push_back(
       resolve_join_predicate(join_op_predicate, join_lqp_predicate, left_input_node, right_input_node, flipped_inputs));
 }
 
 void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
   const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
-  _predicates.push_back(
+  _expressions.push_back(
       std::make_shared<PredicateFeatureNode>(predicate_node.predicate(), table_scan.predicate(), _left_input));
   _add_subqueries(table_scan.predicate()->arguments);
 
@@ -249,7 +262,25 @@ void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
 
 void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {}
 
-void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {}
+void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {
+  const auto& aggregate_node = static_cast<const AggregateNode&>(*aggregate.lqp_node);
+  const auto& groupby_column_ids = aggregate.groupby_column_ids();
+  const auto groupby_count = groupby_column_ids.size();
+  const auto lqp_expressions = aggregate_node.node_expressions;
+  Assert(groupby_count == aggregate_node.aggregate_expressions_begin_idx, "Mismatching group by columns");
+  for (auto expression_id = ColumnID{0}; expression_id < groupby_count; ++expression_id) {
+    _expressions.push_back(ColumnFeatureNode::from_expression(_left_input, lqp_expressions[expression_id],
+                                                              groupby_column_ids[expression_id]));
+  }
+
+  const auto& aggregate_expressions = aggregate.aggregates();
+  const auto aggregate_count = aggregate_expressions.size();
+  Assert(groupby_count + aggregate_count == lqp_expressions.size(), "Expressions not equal");
+  for (auto expression_id = ColumnID{0}; expression_id < aggregate_count; ++expression_id) {
+    _expressions.push_back(std::make_shared<AggregateFunctionFeatureNode>(
+        lqp_expressions[groupby_count + expression_id], aggregate_expressions[expression_id], _left_input));
+  }
+}
 
 void OperatorFeatureNode::_handle_projection(const Projection& projection) {
   const auto& expressions = projection.expressions;
@@ -291,7 +322,7 @@ void OperatorFeatureNode::_handle_projection(const Projection& projection) {
     const auto& expression = expressions[column_id];
     if (!forwarded_pqp_columns.contains(expression)) {
       _output_table->set_column_materialized(column_id);
-      _predicates.push_back(
+      _expressions.push_back(
           std::make_shared<PredicateFeatureNode>(output_expressions.at(column_id), expression, _left_input));
     }
   }
@@ -313,8 +344,8 @@ void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<Abst
   }
 }
 
-const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::predicates() const {
-  return _predicates;
+const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::expressions() const {
+  return _expressions;
 }
 
 }  // namespace hyrise

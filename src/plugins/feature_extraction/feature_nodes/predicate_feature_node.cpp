@@ -171,10 +171,15 @@ PredicateFeatureNode::PredicateFeatureNode(const std::shared_ptr<const BinaryPre
 }
 
 std::shared_ptr<FeatureVector> PredicateFeatureNode::_on_to_feature_vector() const {
+  auto feature_vector = std::shared_ptr<FeatureVector>{};
   if (!_predicate_condition) {
-    return std::make_shared<FeatureVector>(feature_headers().size());
+    feature_vector = std::make_shared<FeatureVector>(headers().size());
+  } else {
+    feature_vector = one_hot_encoding<PredicateCondition>(*_predicate_condition);
   }
-  return one_hot_encoding<PredicateCondition>(*_predicate_condition);
+
+  feature_vector->emplace_back(static_cast<Feature>(_is_complex));
+  return feature_vector;
 }
 
 const std::vector<std::string>& PredicateFeatureNode::feature_headers() const {
@@ -182,7 +187,10 @@ const std::vector<std::string>& PredicateFeatureNode::feature_headers() const {
 }
 
 const std::vector<std::string>& PredicateFeatureNode::headers() {
-  static const auto ohe_headers_condition = one_hot_headers<PredicateCondition>("condition.");
+  static auto ohe_headers_condition = one_hot_headers<PredicateCondition>("condition.");
+  if (ohe_headers_condition.size() == magic_enum::enum_count<PredicateCondition>()) {
+    ohe_headers_condition.emplace_back("is_complex");
+  }
   return ohe_headers_condition;
 }
 
