@@ -1,34 +1,12 @@
 #include "plan_exporter.hpp"
 
-#include <fstream>
-
 #include <boost/algorithm/string.hpp>
 
 #include "feature_extraction/feature_nodes/aggregate_function_feature_node.hpp"
-#include "feature_extraction/feature_nodes/column_feature_node.hpp"
 #include "feature_extraction/feature_nodes/operator_feature_node.hpp"
 #include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/feature_nodes/segment_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
-
-namespace {
-using namespace hyrise;  // NOLINT
-
-void export_column(ColumnFeatureNode& column_node, std::unordered_map<FeatureNodeType, std::ofstream>& output_files,
-                   const std::string& prefix, const size_t column_id) {
-  auto& column_file = output_files.at(FeatureNodeType::Column);
-  column_file << prefix << column_id << ";" << column_node.to_feature_vector() << "\n";
-
-  const auto& segments = column_node.segments();
-  const auto segment_count = segments.size();
-  for (auto segment_id = ChunkID{0}; segment_id < segment_count; ++segment_id) {
-    const auto& segment = segments[segment_id];
-    auto& segment_file = output_files.at(FeatureNodeType::Segment);
-    segment_file << prefix << column_id << ";" << segment_id << ";" << segment->to_feature_vector() << "\n";
-  }
-}
-
-}  // namespace
 
 namespace hyrise {
 
@@ -70,25 +48,24 @@ void PlanExporter::export_plans(const std::string& file_name) {
   operator_file  << ";left_input;right_input;runtime;estimated_cardinality\n";
   // clang-format on
 
-  auto output_files = std::unordered_map<FeatureNodeType, std::ofstream>{};
-  output_files[FeatureNodeType::Table] = std::move(table_file);
-  output_files[FeatureNodeType::Column] = std::move(column_file);
-  output_files[FeatureNodeType::Segment] = std::move(segment_file);
-  output_files[FeatureNodeType::Operator] = std::move(operator_file);
-  output_files[FeatureNodeType::Predicate] = std::move(predicate_file);
-  output_files[FeatureNodeType::AggregateFunction] = std::move(aggregate_file);
+  _output_files[FeatureNodeType::Table] = std::move(table_file);
+  _output_files[FeatureNodeType::Column] = std::move(column_file);
+  _output_files[FeatureNodeType::Segment] = std::move(segment_file);
+  _output_files[FeatureNodeType::Operator] = std::move(operator_file);
+  _output_files[FeatureNodeType::Predicate] = std::move(predicate_file);
+  _output_files[FeatureNodeType::AggregateFunction] = std::move(aggregate_file);
 
-  for (auto& [type, output_file] : output_files) {
+  for (auto& [type, output_file] : _output_files) {
     Assert(output_file.is_open(), "File not open: " + std::string{magic_enum::enum_name(type)});
   }
 
   for (const auto& node : _feature_graphs) {
     const auto& root = static_cast<OperatorFeatureNode&>(*node);
     auto cardinality_estimator = CardinalityEstimator{};
-    _features_to_csv(root.query()->hash, node, output_files, cardinality_estimator);
+    _features_to_csv(root.query()->hash, node, cardinality_estimator);
   }
 
-  for (auto& [type, output_file] : output_files) {
+  for (auto& [type, output_file] : _output_files) {
     Assert(output_file.good(), "error writing to file for " + std::string{magic_enum::enum_name(type)});
     output_file.flush();
     output_file.close();
@@ -96,9 +73,8 @@ void PlanExporter::export_plans(const std::string& file_name) {
 }
 
 void PlanExporter::_features_to_csv(const std::string& query, const std::shared_ptr<AbstractFeatureNode>& graph,
-                                    std::unordered_map<FeatureNodeType, std::ofstream>& output_files,
                                     CardinalityEstimator& cardinality_estimator, const std::optional<size_t>& subquery,
-                                    const std::optional<size_t>& subquery_id) const {
+                                    const std::optional<size_t>& subquery_id) {
   const auto subquery_string = subquery ? std::to_string(*subquery) : "";
   const auto subquery_id_string = subquery ? std::to_string(*subquery) : "";
 
@@ -110,7 +86,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         const auto& operator_node = static_cast<OperatorFeatureNode&>(*node);
         const auto hash = node->hash();
 
-        auto& operator_file = output_files.at(FeatureNodeType::Operator);
+        auto& operator_file = _output_files.at(FeatureNodeType::Operator);
         operator_file << query << ";" << subquery_string << ";" << subquery_id_string << ";" << hash
                       << node->to_feature_vector();
         for (const auto& input : {node->left_input(), node->right_input()}) {
@@ -127,7 +103,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         for (auto expression_id = size_t{0}; expression_id < num_expressions; ++expression_id) {
           const auto& expression = expressions[expression_id];
           const auto expression_type = expression->type();
-          auto& output_file = output_files.at(expression_type);
+          auto& output_file = _output_files.at(expression_type);
           switch (expression_type) {
             case FeatureNodeType::Predicate: {
               auto prefix = std::stringstream{};
@@ -143,7 +119,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
                   continue;
                 }
                 Assert(column->type() == FeatureNodeType::Column, "expected column");
-                export_column(static_cast<ColumnFeatureNode&>(*column), output_files, prefix_str, column_id);
+                _export_column(static_cast<ColumnFeatureNode&>(*column), prefix_str, column_id);
                 ++column_id;
               }
             } break;
@@ -153,7 +129,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
               prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";"
                      << ";";
               const auto prefix_str = prefix.str();
-              export_column(static_cast<ColumnFeatureNode&>(*expression), output_files, prefix_str, expression_id);
+              _export_column(static_cast<ColumnFeatureNode&>(*expression), prefix_str, expression_id);
             } break;
 
             case FeatureNodeType::AggregateFunction: {
@@ -162,8 +138,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
                      << ";";
               const auto prefix_str = prefix.str();
               output_file << prefix_str << expression->to_feature_vector();
-              export_column(static_cast<ColumnFeatureNode&>(*expression->left_input()), output_files, prefix_str,
-                            expression_id);
+              _export_column(static_cast<ColumnFeatureNode&>(*expression->left_input()), prefix_str, expression_id);
 
             } break;
 
@@ -175,15 +150,14 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         const auto& subqueries = operator_node.subqueries();
         const auto num_subqueries = subqueries.size();
         for (auto op_subquery_id = size_t{0}; op_subquery_id < num_subqueries; ++op_subquery_id) {
-          _features_to_csv(query, subqueries[op_subquery_id], output_files, cardinality_estimator, hash,
-                           op_subquery_id);
+          _features_to_csv(query, subqueries[op_subquery_id], cardinality_estimator, hash, op_subquery_id);
         }
 
         return FeatureNodeVisitation::VisitInputs;
       }
 
       case FeatureNodeType::Table: {
-        auto& table_file = output_files.at(FeatureNodeType::Table);
+        auto& table_file = _output_files.at(FeatureNodeType::Table);
         table_file << node->hash() << ";" << node->to_feature_vector() << "\n";
 
         return FeatureNodeVisitation::DoNotVisitInputs;
@@ -193,6 +167,19 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         Fail("Unexpected node in graph: " + std::string{magic_enum::enum_name(node_type)});
     }
   });
+}
+
+void PlanExporter::_export_column(ColumnFeatureNode& column_node, const std::string& prefix, const size_t column_id) {
+  auto& column_file = _output_files.at(FeatureNodeType::Column);
+  column_file << prefix << column_id << ";" << column_node.to_feature_vector() << "\n";
+
+  const auto& segments = column_node.segments();
+  const auto segment_count = segments.size();
+  for (auto segment_id = ChunkID{0}; segment_id < segment_count; ++segment_id) {
+    const auto& segment = segments[segment_id];
+    auto& segment_file = _output_files.at(FeatureNodeType::Segment);
+    segment_file << prefix << column_id << ";" << segment_id << ";" << segment->to_feature_vector() << "\n";
+  }
 }
 
 }  // namespace hyrise
