@@ -4,12 +4,31 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "feature_extraction/feature_nodes/abstract_table_feature_node.hpp"
+#include "feature_extraction/feature_nodes/aggregate_function_feature_node.hpp"
 #include "feature_extraction/feature_nodes/column_feature_node.hpp"
 #include "feature_extraction/feature_nodes/operator_feature_node.hpp"
 #include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/feature_nodes/segment_feature_node.hpp"
 #include "feature_extraction/util/feature_extraction_utils.hpp"
+
+namespace {
+using namespace hyrise;  // NOLINT
+
+void export_column(ColumnFeatureNode& column_node, std::unordered_map<FeatureNodeType, std::ofstream>& output_files,
+                   const std::string& prefix, const size_t column_id) {
+  auto& column_file = output_files.at(FeatureNodeType::Column);
+  column_file << prefix << column_id << ";" << column_node.to_feature_vector() << "\n";
+
+  const auto& segments = column_node.segments();
+  const auto segment_count = segments.size();
+  for (auto segment_id = ChunkID{0}; segment_id < segment_count; ++segment_id) {
+    const auto& segment = segments[segment_id];
+    auto& segment_file = output_files.at(FeatureNodeType::Segment);
+    segment_file << prefix << column_id << ";" << segment_id << ";" << segment->to_feature_vector() << "\n";
+  }
+}
+
+}  // namespace
 
 namespace hyrise {
 
@@ -24,25 +43,29 @@ void PlanExporter::export_plans(const std::string& file_name) {
   auto segment_file_name = file_name + "/segments.csv";
   auto operator_file_name = file_name + "/operators.csv";
   auto predicate_file_name = file_name + "/predicates.csv";
+  auto aggregate_file_name = file_name + "/aggregate_functions.csv";
 
   auto table_file = std::ofstream{table_file_name};
   auto column_file = std::ofstream{column_file_name};
   auto segment_file = std::ofstream{segment_file_name};
   auto operator_file = std::ofstream{operator_file_name};
   auto predicate_file = std::ofstream{predicate_file_name};
+  auto aggregate_file = std::ofstream{aggregate_file_name};
 
   // clang-format off
-  table_file    << "table_id";
-  column_file    << "query;subquery;subquery_id;operator_id;predicate_id;column_id";
-  segment_file   << "query;subquery;subquery_id;operator_id;predicate_id;column_id;segment_id";
+  table_file     << "table_id";
+  column_file    << "query;subquery;subquery_id;operator_id;expression_id;column_id";
+  segment_file   << "query;subquery;subquery_id;operator_id;expression_id;column_id;segment_id";
   operator_file  << "query;subquery;subquery_id;operator_id;";
-  predicate_file << "query;subquery;subquery_id;operator_id;predicate_id";
+  predicate_file << "query;subquery;subquery_id;operator_id;expression_id";
+  aggregate_file << "query;subquery;subquery_id;operator_id;expression_id";
 
   table_file     << boost::algorithm::join(AbstractTableFeatureNode::headers(), ";") << "\n";
   column_file    << boost::algorithm::join(ColumnFeatureNode::headers(), ";") << "\n";
   segment_file   << boost::algorithm::join(SegmentFeatureNode::headers(), ";") << "\n";
   operator_file  << boost::algorithm::join(OperatorFeatureNode::headers(), ";");
   predicate_file << boost::algorithm::join(PredicateFeatureNode::headers(), ";") << "\n";
+  aggregate_file << boost::algorithm::join(AggregateFunctionFeatureNode::headers(), ";") << "\n";
 
   operator_file  << ";left_input;right_input;runtime;estimated_cardinality\n";
   // clang-format on
@@ -53,6 +76,7 @@ void PlanExporter::export_plans(const std::string& file_name) {
   output_files[FeatureNodeType::Segment] = std::move(segment_file);
   output_files[FeatureNodeType::Operator] = std::move(operator_file);
   output_files[FeatureNodeType::Predicate] = std::move(predicate_file);
+  output_files[FeatureNodeType::AggregateFunction] = std::move(aggregate_file);
 
   for (auto& [type, output_file] : output_files) {
     Assert(output_file.is_open(), "File not open: " + std::string{magic_enum::enum_name(type)});
@@ -98,36 +122,53 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         operator_file << ";" << operator_node.run_time().count() << ";"
                       << cardinality_estimator.estimate_cardinality(operator_node.get_operator()->lqp_node) << "\n";
 
-        const auto& predicates = operator_node.expressions();
-        const auto num_predicates = predicates.size();
-        for (auto predicate_id = size_t{0}; predicate_id < num_predicates; ++predicate_id) {
-          const auto& predicate = predicates[predicate_id];
-          auto& predicate_file = output_files.at(FeatureNodeType::Predicate);
-          predicate_file << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << predicate_id
-                         << ";" << predicate->to_feature_vector() << "\n";
-          auto column_id = ColumnID{0};
-          for (const auto& column : {predicate->left_input(), predicate->right_input()}) {
-            if (!column) {
-              Assert(column_id != ColumnID{0}, "expected left input column before right input column");
-              ++column_id;
-              continue;
-            }
-            Assert(column->type() == FeatureNodeType::Column, "expected column");
-            auto& column_file = output_files.at(FeatureNodeType::Column);
-            column_file << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << predicate_id
-                        << ";" << column_id << ";" << column->to_feature_vector() << "\n";
+        const auto& expressions = operator_node.expressions();
+        const auto num_expressions = expressions.size();
+        for (auto expression_id = size_t{0}; expression_id < num_expressions; ++expression_id) {
+          const auto& expression = expressions[expression_id];
+          const auto expression_type = expression->type();
+          auto& output_file = output_files.at(expression_type);
+          switch (expression_type) {
+            case FeatureNodeType::Predicate: {
+              auto prefix = std::stringstream{};
+              prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << expression_id
+                     << ";";
+              const auto prefix_str = prefix.str();
+              output_file << prefix_str << expression->to_feature_vector() << "\n";
+              auto column_id = ColumnID{0};
+              for (const auto& column : {expression->left_input(), expression->right_input()}) {
+                if (!column) {
+                  Assert(column_id != ColumnID{0}, "expected left input column before right input column");
+                  ++column_id;
+                  continue;
+                }
+                Assert(column->type() == FeatureNodeType::Column, "expected column");
+                export_column(static_cast<ColumnFeatureNode&>(*column), output_files, prefix_str, column_id);
+                ++column_id;
+              }
+            } break;
 
-            const auto& column_node = static_cast<ColumnFeatureNode&>(*column);
-            const auto& segments = column_node.segments();
-            const auto segment_count = segments.size();
-            for (auto segment_id = ChunkID{0}; segment_id < segment_count; ++segment_id) {
-              const auto& segment = segments[segment_id];
-              auto& segment_file = output_files.at(FeatureNodeType::Segment);
-              segment_file << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";"
-                           << predicate_id << ";" << column_id << ";" << segment_id << ";"
-                           << segment->to_feature_vector() << "\n";
-            }
-            ++column_id;
+            case FeatureNodeType::Column: {
+              auto prefix = std::stringstream{};
+              prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";"
+                     << ";";
+              const auto prefix_str = prefix.str();
+              export_column(static_cast<ColumnFeatureNode&>(*expression), output_files, prefix_str, expression_id);
+            } break;
+
+            case FeatureNodeType::AggregateFunction: {
+              auto prefix = std::stringstream{};
+              prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << expression_id
+                     << ";";
+              const auto prefix_str = prefix.str();
+              output_file << prefix_str << expression->to_feature_vector();
+              export_column(static_cast<ColumnFeatureNode&>(*expression->left_input()), output_files, prefix_str,
+                            expression_id);
+
+            } break;
+
+            default:
+              Fail("Unexpected feature node: " + std::string{magic_enum::enum_name(expression_type)});
           }
         }
 
