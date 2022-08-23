@@ -32,7 +32,8 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   BitPackingIterator on_begin() const;
   BitPackingIterator on_end() const;
 
-  std::unique_ptr<const AbstractCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+  std::unique_ptr<const AbstractCompressedVector> on_copy_using_allocator(
+      const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
   const pmr_compact_vector _data;

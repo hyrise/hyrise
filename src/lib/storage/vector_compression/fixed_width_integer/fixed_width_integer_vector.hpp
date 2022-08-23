@@ -56,7 +56,8 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
     return _data.cend();
   }
 
-  std::unique_ptr<const AbstractCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::unique_ptr<const AbstractCompressedVector> on_copy_using_allocator(
+      const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::make_unique<FixedWidthIntegerVector<UnsignedIntType>>(std::move(data_copy));
   }
