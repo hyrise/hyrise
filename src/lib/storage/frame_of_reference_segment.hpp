@@ -9,12 +9,12 @@
 #include <boost/hana/type.hpp>
 
 #include "abstract_encoded_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 
 /**
  * @brief Segment implementing frame-of-reference encoding
@@ -55,11 +55,11 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
   static constexpr auto block_size = 2048u;
 
   explicit FrameOfReferenceSegment(pmr_vector<T> block_minima, std::optional<pmr_vector<bool>> null_values,
-                                   std::unique_ptr<const BaseCompressedVector> offset_values);
+                                   std::unique_ptr<const AbstractCompressedVector> offset_values);
 
   const pmr_vector<T>& block_minima() const;
   const std::optional<pmr_vector<bool>>& null_values() const;
-  const BaseCompressedVector& offset_values() const;
+  const AbstractCompressedVector& offset_values() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -99,8 +99,8 @@ class FrameOfReferenceSegment : public AbstractEncodedSegment {
  private:
   const pmr_vector<T> _block_minima;
   const std::optional<pmr_vector<bool>> _null_values;
-  const std::unique_ptr<const BaseCompressedVector> _offset_values;
-  std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  const std::unique_ptr<const AbstractCompressedVector> _offset_values;
+  std::unique_ptr<AbstractVectorDecompressor> _decompressor;
 };
 
 extern template class FrameOfReferenceSegment<int32_t>;

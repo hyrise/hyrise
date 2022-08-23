@@ -11,8 +11,8 @@
 #include <vector>
 
 #include "storage/base_dictionary_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
-#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
@@ -66,7 +66,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
 
   auto attribute_vector_widths_and_decompressors = [&]() {
     auto decompressors =
-        std::vector<std::pair<size_t, std::unique_ptr<BaseVectorDecompressor>>>(_indexed_segments.size());
+        std::vector<std::pair<size_t, std::unique_ptr<AbstractVectorDecompressor>>>(_indexed_segments.size());
 
     std::transform(
         _indexed_segments.cbegin(), _indexed_segments.cend(), decompressors.begin(), [](const auto& segment) {

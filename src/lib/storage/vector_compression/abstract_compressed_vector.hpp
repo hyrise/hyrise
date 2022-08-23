@@ -4,7 +4,7 @@
 
 #include <boost/iterator/iterator_facade.hpp>
 
-#include "base_vector_decompressor.hpp"
+#include "abstract_vector_decompressor.hpp"
 #include "compressed_vector_type.hpp"
 
 #include "types.hpp"
@@ -17,18 +17,18 @@ namespace hyrise {
  * A compressed vector stores uint32_t
  *
  * Every compression scheme consists of four parts:
- * - the encoder, which encapsulates the encoding algorithm (base class: BaseVectorCompressor)
- * - the vector, which is returned by the encoder and contains the encoded data (base class: BaseCompressedVector)
- * - the iterator, for sequentially decoding the vector (base class: BaseCompressedVectorIterator)
- * - the decompressor, which implements point access into the vector (base class: BaseVectorDecompressor)
+ * - the encoder, which encapsulates the encoding algorithm (abstract class: AbstractVectorCompressor)
+ * - the vector, which is returned by the encoder and contains the encoded data (abstract class: AbstractCompressedVector)
+ * - the iterator, for sequentially decoding the vector (abstract class: AbstractCompressedVectorIterator)
+ * - the decompressor, which implements point access into the vector (abstract class: AbstractVectorDecompressor)
  *
  * The iterators and decompressors are created via virtual and non-virtual methods of the vector interface.
  *
  * Sub-classes must be added in compressed_vector_type.hpp
  */
-class BaseCompressedVector : private Noncopyable {
+class AbstractCompressedVector : private Noncopyable {
  public:
-  virtual ~BaseCompressedVector() = default;
+  virtual ~AbstractCompressedVector() = default;
 
   /**
    * @brief Returns the number of elements in the vector
@@ -42,9 +42,9 @@ class BaseCompressedVector : private Noncopyable {
 
   virtual CompressedVectorType type() const = 0;
 
-  virtual std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const = 0;
+  virtual std::unique_ptr<AbstractVectorDecompressor> create_base_decompressor() const = 0;
 
-  virtual std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
+  virtual std::unique_ptr<const AbstractCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
 
@@ -53,7 +53,7 @@ class BaseCompressedVector : private Noncopyable {
  * by CompressedVector::cbegin() and CompressedVector::cend()
  */
 template <typename Derived>
-using BaseCompressedVectorIterator =
+using AbstractCompressedVectorIterator =
     boost::iterator_facade<Derived, uint32_t, boost::random_access_traversal_tag, uint32_t>;
 
 /**
@@ -62,7 +62,7 @@ using BaseCompressedVectorIterator =
  * Sub-classes must implement all method starting with `on_`.
  */
 template <typename Derived>
-class CompressedVector : public BaseCompressedVector {
+class CompressedVector : public AbstractCompressedVector {
  public:
   /**
    * @defgroup Non-virtual interface
@@ -71,7 +71,7 @@ class CompressedVector : public BaseCompressedVector {
 
   /**
    * @brief Returns a vector specific decompressor
-   * @return a unique_ptr of subclass of BaseVectorDecompressor
+   * @return a unique_ptr of subclass of AbstractVectorDecompressor
    */
   auto create_decompressor() const {
     return _self().on_create_decompressor();
@@ -120,11 +120,11 @@ class CompressedVector : public BaseCompressedVector {
     return get_compressed_vector_type<Derived>();
   }
 
-  std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const final {
+  std::unique_ptr<AbstractVectorDecompressor> create_base_decompressor() const final {
     return _self().on_create_base_decompressor();
   }
 
-  std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
+  std::unique_ptr<const AbstractCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const final {
     return _self().on_copy_using_allocator(alloc);
   }

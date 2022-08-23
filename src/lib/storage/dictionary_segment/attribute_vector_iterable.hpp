@@ -51,7 +51,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   }
 
  private:
-  const BaseCompressedVector& _attribute_vector;
+  const AbstractCompressedVector& _attribute_vector;
   const ValueID _null_value_id;
   SegmentAccessCounter& _access_counter;
 

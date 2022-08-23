@@ -7,8 +7,8 @@
 #include <string>
 
 #include "resolve_type.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
-#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_vector_decompressor.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -31,7 +31,7 @@ LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::option
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
-                          pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
+                          pmr_vector<char>&& dictionary, std::unique_ptr<const AbstractCompressedVector>&& string_offsets,
                           const size_t block_size, const size_t last_block_size, const size_t compressed_size,
                           const size_t num_elements)
     : AbstractEncodedSegment{data_type_from_type<T>()},
@@ -71,7 +71,7 @@ const std::optional<pmr_vector<bool>>& LZ4Segment<T>::null_values() const {
 }
 
 template <typename T>
-std::unique_ptr<BaseVectorDecompressor> LZ4Segment<T>::string_offset_decompressor() const {
+std::unique_ptr<AbstractVectorDecompressor> LZ4Segment<T>::string_offset_decompressor() const {
   if (_string_offsets) {
     return _string_offsets->create_base_decompressor();
   } else {
@@ -105,7 +105,7 @@ size_t LZ4Segment<T>::last_block_size() const {
 }
 
 template <typename T>
-const std::unique_ptr<const BaseCompressedVector>& LZ4Segment<T>::string_offsets() const {
+const std::unique_ptr<const AbstractCompressedVector>& LZ4Segment<T>::string_offsets() const {
   return _string_offsets;
 }
 

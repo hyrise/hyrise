@@ -15,7 +15,7 @@
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 enum class CompressedVectorType : uint8_t;
 
 class BinaryWriter {
@@ -228,7 +228,7 @@ class BinaryWriter {
 
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                        const BaseCompressedVector& compressed_vector);
+                                        const AbstractCompressedVector& compressed_vector);
 
   template <typename T>
   static size_t _size(const T& object);

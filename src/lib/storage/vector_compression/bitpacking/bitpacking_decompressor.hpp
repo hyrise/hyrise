@@ -2,13 +2,13 @@
 
 #include "bitpacking_vector_type.hpp"
 #include "compact_vector.hpp"
-#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/abstract_vector_decompressor.hpp"
 
 namespace hyrise {
 
 class BitPackingVector;
 
-class BitPackingDecompressor : public BaseVectorDecompressor {
+class BitPackingDecompressor : public AbstractVectorDecompressor {
  public:
   explicit BitPackingDecompressor(const pmr_compact_vector& data) : _data{data} {}
   BitPackingDecompressor(const BitPackingDecompressor& other) = default;

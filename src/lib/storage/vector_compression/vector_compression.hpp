@@ -4,7 +4,7 @@
 #include <memory>
 #include <optional>
 
-#include "base_compressed_vector.hpp"
+#include "abstract_compressed_vector.hpp"
 
 #include "types.hpp"
 
@@ -33,7 +33,7 @@ struct UncompressedVectorInfo final {
  *
  * @param meta_info optional struct that provides the compression algorithms with additional information
  */
-std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector,
+std::unique_ptr<const AbstractCompressedVector> compress_vector(const pmr_vector<uint32_t>& vector,
                                                             const VectorCompressionType type,
                                                             const PolymorphicAllocator<size_t>& alloc,
                                                             const UncompressedVectorInfo& meta_info = {});

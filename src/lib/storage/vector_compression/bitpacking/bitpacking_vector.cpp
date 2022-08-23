@@ -18,7 +18,7 @@ size_t BitPackingVector::on_data_size() const {
   return _data.bytes();
 }
 
-std::unique_ptr<BaseVectorDecompressor> BitPackingVector::on_create_base_decompressor() const {
+std::unique_ptr<AbstractVectorDecompressor> BitPackingVector::on_create_base_decompressor() const {
   return std::make_unique<BitPackingDecompressor>(_data);
 }
 
@@ -34,7 +34,7 @@ BitPackingIterator BitPackingVector::on_end() const {
   return BitPackingIterator(_data, _data.size());
 }
 
-std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_allocator(
+std::unique_ptr<const AbstractCompressedVector> BitPackingVector::on_copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
   auto data_copy = pmr_compact_vector(_data.bits(), _data.size(), alloc);
 

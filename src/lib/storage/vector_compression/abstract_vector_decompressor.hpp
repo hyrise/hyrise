@@ -15,12 +15,12 @@ namespace hyrise {
  *       are marked `final` so that the compiler can omit
  *       expensive virtual method calls!
  */
-class BaseVectorDecompressor {
+class AbstractVectorDecompressor {
  public:
-  virtual ~BaseVectorDecompressor() = default;
-  BaseVectorDecompressor() = default;
-  BaseVectorDecompressor(const BaseVectorDecompressor&) = default;
-  BaseVectorDecompressor(BaseVectorDecompressor&&) = default;
+  virtual ~AbstractVectorDecompressor() = default;
+  AbstractVectorDecompressor() = default;
+  AbstractVectorDecompressor(const AbstractVectorDecompressor&) = default;
+  AbstractVectorDecompressor(AbstractVectorDecompressor&&) = default;
 
   virtual uint32_t get(size_t i) = 0;
   virtual size_t size() const = 0;

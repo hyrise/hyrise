@@ -287,7 +287,7 @@ std::shared_ptr<LZ4Segment<T>> BinaryParser::_import_lz4_segment(std::ifstream& 
   }
 }
 
-std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
+std::shared_ptr<AbstractCompressedVector> BinaryParser::_import_attribute_vector(
     std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {
@@ -305,7 +305,7 @@ std::shared_ptr<BaseCompressedVector> BinaryParser::_import_attribute_vector(
   }
 }
 
-std::unique_ptr<const BaseCompressedVector> BinaryParser::_import_offset_value_vector(
+std::unique_ptr<const AbstractCompressedVector> BinaryParser::_import_offset_value_vector(
     std::ifstream& file, const ChunkOffset row_count, const CompressedVectorTypeID compressed_vector_type_id) {
   const auto compressed_vector_type = static_cast<CompressedVectorType>(compressed_vector_type_id);
   switch (compressed_vector_type) {

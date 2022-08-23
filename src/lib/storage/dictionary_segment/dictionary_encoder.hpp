@@ -9,7 +9,7 @@
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
@@ -85,7 +85,7 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     // NULL.
     const auto max_value_id = null_value_id;
 
-    const auto compressed_attribute_vector = std::shared_ptr<const BaseCompressedVector>(compress_vector(
+    const auto compressed_attribute_vector = std::shared_ptr<const AbstractCompressedVector>(compress_vector(
         uncompressed_attribute_vector, SegmentEncoder<DictionaryEncoder<Encoding>>::vector_compression_type(),
         allocator, {max_value_id}));
 

@@ -25,7 +25,7 @@ namespace hyrise {
  *   });
  */
 template <typename Functor>
-void resolve_compressed_vector_type(const BaseCompressedVector& vector, const Functor& functor) {
+void resolve_compressed_vector_type(const AbstractCompressedVector& vector, const Functor& functor) {
   hana::fold(compressed_vector_for_type, false, [&](auto match_found, auto pair) {
     const auto vector_type_c = hana::first(pair);
     const auto vector_t = hana::second(pair);

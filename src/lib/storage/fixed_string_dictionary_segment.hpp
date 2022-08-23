@@ -6,11 +6,11 @@
 #include "base_dictionary_segment.hpp"
 #include "fixed_string_dictionary_segment/fixed_string_vector.hpp"
 #include "types.hpp"
-#include "vector_compression/base_compressed_vector.hpp"
+#include "vector_compression/abstract_compressed_vector.hpp"
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 
 /**
  * @brief Segment implementing dictionary encoding for strings
@@ -22,7 +22,7 @@ template <typename T>
 class FixedStringDictionarySegment : public BaseDictionarySegment {
  public:
   explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
-                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+                                        const std::shared_ptr<const AbstractCompressedVector>& attribute_vector);
 
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
@@ -63,7 +63,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   ValueID::base_type unique_values_count() const final;
 
-  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  std::shared_ptr<const AbstractCompressedVector> attribute_vector() const final;
 
   ValueID null_value_id() const final;
 
@@ -71,8 +71,8 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
  protected:
   const std::shared_ptr<const FixedStringVector> _dictionary;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
-  const std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  const std::shared_ptr<const AbstractCompressedVector> _attribute_vector;
+  const std::unique_ptr<AbstractVectorDecompressor> _decompressor;
 };
 
 extern template class FixedStringDictionarySegment<pmr_string>;

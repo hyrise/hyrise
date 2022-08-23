@@ -9,22 +9,22 @@
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 
 /**
  * @brief Base class of all vector compressors
  *
  * Sub-classes must be added in vector_compression.cpp
  */
-class BaseVectorCompressor {
+class AbstractVectorCompressor {
  public:
-  virtual ~BaseVectorCompressor() = default;
+  virtual ~AbstractVectorCompressor() = default;
 
-  virtual std::unique_ptr<const BaseCompressedVector> compress(const pmr_vector<uint32_t>& vector,
+  virtual std::unique_ptr<const AbstractCompressedVector> compress(const pmr_vector<uint32_t>& vector,
                                                                const PolymorphicAllocator<size_t>& alloc,
                                                                const UncompressedVectorInfo& meta_info = {}) = 0;
 
-  virtual std::unique_ptr<BaseVectorCompressor> create_new() const = 0;
+  virtual std::unique_ptr<AbstractVectorCompressor> create_new() const = 0;
 };
 
 }  // namespace hyrise

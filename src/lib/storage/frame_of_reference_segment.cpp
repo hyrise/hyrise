@@ -1,7 +1,7 @@
 #include "frame_of_reference_segment.hpp"
 
 #include "resolve_type.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
@@ -10,7 +10,7 @@ namespace hyrise {
 template <typename T, typename U>
 FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima,
                                                        std::optional<pmr_vector<bool>> null_values,
-                                                       std::unique_ptr<const BaseCompressedVector> offset_values)
+                                                       std::unique_ptr<const AbstractCompressedVector> offset_values)
     : AbstractEncodedSegment{data_type_from_type<T>()},
       _block_minima{std::move(block_minima)},
       _null_values{std::move(null_values)},
@@ -28,7 +28,7 @@ const std::optional<pmr_vector<bool>>& FrameOfReferenceSegment<T, U>::null_value
 }
 
 template <typename T, typename U>
-const BaseCompressedVector& FrameOfReferenceSegment<T, U>::offset_values() const {
+const AbstractCompressedVector& FrameOfReferenceSegment<T, U>::offset_values() const {
   return *_offset_values;
 }
 

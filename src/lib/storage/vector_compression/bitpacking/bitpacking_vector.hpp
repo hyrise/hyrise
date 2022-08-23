@@ -4,7 +4,7 @@
 #include "bitpacking_iterator.hpp"
 #include "bitpacking_vector_type.hpp"
 #include "compact_vector.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 
 namespace hyrise {
 
@@ -26,13 +26,13 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   size_t on_size() const;
   size_t on_data_size() const;
 
-  std::unique_ptr<BaseVectorDecompressor> on_create_base_decompressor() const;
+  std::unique_ptr<AbstractVectorDecompressor> on_create_base_decompressor() const;
   BitPackingDecompressor on_create_decompressor() const;
 
   BitPackingIterator on_begin() const;
   BitPackingIterator on_end() const;
 
-  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+  std::unique_ptr<const AbstractCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
 
  private:
   const pmr_compact_vector _data;

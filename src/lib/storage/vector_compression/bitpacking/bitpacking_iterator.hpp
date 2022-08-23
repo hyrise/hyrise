@@ -5,11 +5,11 @@
 
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_vector_type.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 
 namespace hyrise {
 
-class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
+class BitPackingIterator : public AbstractCompressedVectorIterator<BitPackingIterator> {
  public:
   explicit BitPackingIterator(const pmr_compact_vector& data, const size_t absolute_index = 0u)
       : _data{data}, _absolute_index{absolute_index} {}

@@ -7,7 +7,7 @@
 #include <boost/hana/type.hpp>
 
 #include "fixed_width_integer_decompressor.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -56,7 +56,7 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
     return _data.cend();
   }
 
-  std::unique_ptr<const BaseCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
+  std::unique_ptr<const AbstractCompressedVector> on_copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const {
     auto data_copy = pmr_vector<UnsignedIntType>{_data, alloc};
     return std::make_unique<FixedWidthIntegerVector<UnsignedIntType>>(std::move(data_copy));
   }

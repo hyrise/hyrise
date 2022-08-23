@@ -1,13 +1,13 @@
 #pragma once
 
-#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/abstract_vector_decompressor.hpp"
 
 #include "types.hpp"
 
 namespace hyrise {
 
 template <typename UnsignedIntType>
-class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
+class FixedWidthIntegerDecompressor : public AbstractVectorDecompressor {
  public:
   explicit FixedWidthIntegerDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
   FixedWidthIntegerDecompressor(const FixedWidthIntegerDecompressor&) = default;

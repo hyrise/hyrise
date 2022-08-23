@@ -7,7 +7,7 @@
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 
 /**
  * @brief Segment implementing run-length encoding

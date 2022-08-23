@@ -10,13 +10,13 @@
 
 #include "abstract_encoded_segment.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
-#include "storage/vector_compression/base_vector_decompressor.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_vector_decompressor.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 
 template <typename T>
 class LZ4Segment : public AbstractEncodedSegment {
@@ -91,17 +91,17 @@ class LZ4Segment : public AbstractEncodedSegment {
    *                     are.
    */
   explicit LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
-                      pmr_vector<char>&& dictionary, std::unique_ptr<const BaseCompressedVector>&& string_offsets,
+                      pmr_vector<char>&& dictionary, std::unique_ptr<const AbstractCompressedVector>&& string_offsets,
                       const size_t block_size, const size_t last_block_size, const size_t compressed_size,
                       const size_t num_elements);
 
   const std::optional<pmr_vector<bool>>& null_values() const;
-  std::unique_ptr<BaseVectorDecompressor> string_offset_decompressor() const;
+  std::unique_ptr<AbstractVectorDecompressor> string_offset_decompressor() const;
   const pmr_vector<char>& dictionary() const;
   const pmr_vector<pmr_vector<char>>& lz4_blocks() const;
   size_t block_size() const;
   size_t last_block_size() const;
-  const std::unique_ptr<const BaseCompressedVector>& string_offsets() const;
+  const std::unique_ptr<const AbstractCompressedVector>& string_offsets() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -173,7 +173,7 @@ class LZ4Segment : public AbstractEncodedSegment {
   const pmr_vector<pmr_vector<char>> _lz4_blocks;
   const std::optional<pmr_vector<bool>> _null_values;
   const pmr_vector<char> _dictionary;
-  const std::unique_ptr<const BaseCompressedVector> _string_offsets;
+  const std::unique_ptr<const AbstractCompressedVector> _string_offsets;
   const size_t _block_size;
   const size_t _last_block_size;
   const size_t _compressed_size;

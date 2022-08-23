@@ -4,12 +4,12 @@
 #include <string>
 
 #include "base_dictionary_segment.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
-class BaseCompressedVector;
+class AbstractCompressedVector;
 
 /**
  * @brief Segment implementing dictionary encoding
@@ -20,7 +20,7 @@ template <typename T>
 class DictionarySegment : public BaseDictionarySegment {
  public:
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+                             const std::shared_ptr<const AbstractCompressedVector>& attribute_vector);
 
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
@@ -78,7 +78,7 @@ class DictionarySegment : public BaseDictionarySegment {
 
   ValueID::base_type unique_values_count() const final;
 
-  std::shared_ptr<const BaseCompressedVector> attribute_vector() const final;
+  std::shared_ptr<const AbstractCompressedVector> attribute_vector() const final;
 
   ValueID null_value_id() const final;
 
@@ -86,8 +86,8 @@ class DictionarySegment : public BaseDictionarySegment {
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
-  std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  const std::shared_ptr<const AbstractCompressedVector> _attribute_vector;
+  std::unique_ptr<AbstractVectorDecompressor> _decompressor;
 };
 
 EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);

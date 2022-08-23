@@ -4,7 +4,7 @@
 #include <string>
 
 #include "resolve_type.hpp"
-#include "storage/vector_compression/base_compressed_vector.hpp"
+#include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 #include "utils/size_estimation_utils.hpp"
@@ -13,7 +13,7 @@ namespace hyrise {
 
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
-                                        const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
+                                        const std::shared_ptr<const AbstractCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<T>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
@@ -119,7 +119,7 @@ ValueID::base_type DictionarySegment<T>::unique_values_count() const {
 }
 
 template <typename T>
-std::shared_ptr<const BaseCompressedVector> DictionarySegment<T>::attribute_vector() const {
+std::shared_ptr<const AbstractCompressedVector> DictionarySegment<T>::attribute_vector() const {
   return _attribute_vector;
 }
 

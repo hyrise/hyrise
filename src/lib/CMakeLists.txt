@@ -531,9 +531,9 @@ set(
     storage/value_segment.hpp
     storage/value_segment/null_value_vector_iterable.hpp
     storage/value_segment/value_segment_iterable.hpp
-    storage/vector_compression/base_compressed_vector.hpp
-    storage/vector_compression/base_vector_compressor.hpp
-    storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/abstract_compressed_vector.hpp
+    storage/vector_compression/abstract_vector_compressor.hpp
+    storage/vector_compression/abstract_vector_decompressor.hpp
     storage/vector_compression/compressed_vector_type.hpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp

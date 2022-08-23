@@ -357,7 +357,7 @@ CompressedVectorTypeID BinaryWriter::_compressed_vector_type_id(
 }
 
 void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
-                                             const BaseCompressedVector& compressed_vector) {
+                                             const AbstractCompressedVector& compressed_vector) {
   switch (type) {
     case CompressedVectorType::FixedWidthInteger4Byte:
       export_values(ofstream, dynamic_cast<const FixedWidthIntegerVector<uint32_t>&>(compressed_vector).data());
