@@ -18,7 +18,7 @@ namespace hyrise {
  *
  * Every compression scheme consists of four parts:
  * - the encoder, which encapsulates the encoding algorithm (abstract class: AbstractVectorCompressor)
- * - the vector, which is returned by the encoder and contains the encoded data (abstract class: AbstractCompressedVector)
+ * - the vector, is returned by the encoder and contains the encoded data (abstract class: AbstractCompressedVector)
  * - the iterator, for sequentially decoding the vector (abstract class: AbstractCompressedVectorIterator)
  * - the decompressor, which implements point access into the vector (abstract class: AbstractVectorDecompressor)
  *
