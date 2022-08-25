@@ -45,35 +45,18 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   void initialize();
 
  protected:
+  friend class PlanExporter;
+
   struct AbstractAdditionalOperatorInfo : public Noncopyable {
     virtual ~AbstractAdditionalOperatorInfo() = default;
-
-    virtual const std::vector<std::string>& feature_headers() const = 0;
-
     virtual const FeatureVector to_feature_vector() const = 0;
-
-    size_t feature_count() const {
-      return feature_headers().size();
-    }
+    virtual size_t feature_count() const = 0;
   };
 
   struct TableScanOperatorInfo : public AbstractAdditionalOperatorInfo {
-    const std::vector<std::string>& feature_headers() const final {
-      return headers();
-    }
-
-    static const std::vector<std::string>& headers() {
-      static auto headers =
-          std::vector<std::string>{"table_scan.skipped_chunks_none_match", "table_scan.skipped_chunks_all_match",
-                                   "table_scan.skipped_chunks_binary_search"};
-      return headers;
-    }
-
-    const FeatureVector to_feature_vector() const final {
-      return FeatureVector{Feature{static_cast<Feature>(skipped_chunks_none_match)},
-                           Feature{static_cast<Feature>(skipped_chunks_all_match)},
-                           Feature{static_cast<Feature>(skipped_chunks_binary_search)}};
-    }
+    static const std::vector<std::string>& headers();
+    const FeatureVector to_feature_vector() const final;
+    size_t feature_count() const final;
 
     size_t skipped_chunks_none_match{0};
     size_t skipped_chunks_all_match{0};
@@ -81,27 +64,9 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   };
 
   struct JoinHashOperatorInfo : public AbstractAdditionalOperatorInfo {
-    const std::vector<std::string>& feature_headers() const final {
-      return headers();
-    }
-
-    static const std::vector<std::string>& headers() {
-      static auto headers = std::vector<std::string>{"join_hash.radix_bits",
-                                                     "join_hash.build_side_materialized_value_count",
-                                                     "join_hash.build_side_materialized_value_count",
-                                                     "join_hash.probe_side_materialized_value_count",
-                                                     "join_hash.hash_tables_distinct_value_count",
-                                                     "join_hash.hash_tables_position_count"};
-      return headers;
-    }
-
-    const FeatureVector to_feature_vector() const final {
-      return FeatureVector{Feature{static_cast<Feature>(radix_bits)},
-                           Feature{static_cast<Feature>(build_side_materialized_value_count)},
-                           Feature{static_cast<Feature>(probe_side_materialized_value_count)},
-                           Feature{static_cast<Feature>(hash_tables_distinct_value_count)},
-                           Feature{static_cast<Feature>(hash_tables_position_count)}};
-    }
+    static const std::vector<std::string>& headers();
+    const FeatureVector to_feature_vector() const final;
+    size_t feature_count() const final;
 
     size_t radix_bits{0};
     size_t build_side_materialized_value_count{0};
@@ -110,6 +75,16 @@ class OperatorFeatureNode : public AbstractFeatureNode {
     size_t hash_tables_position_count{0};
   };
 
+  struct AggregateHashOperatorInfo : public AbstractAdditionalOperatorInfo {
+    static const std::vector<std::string>& headers();
+    const FeatureVector to_feature_vector() const final;
+    size_t feature_count() const final;
+
+    size_t groupby_column_count{0};
+    size_t aggregate_column_count{0};
+  };
+
+ private:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
   size_t _on_shallow_hash() const final;
 
@@ -132,7 +107,7 @@ class OperatorFeatureNode : public AbstractFeatureNode {
   std::vector<std::shared_ptr<AbstractFeatureNode>> _expressions;
   std::shared_ptr<ResultTableFeatureNode> _output_table;
 
-  bool _is_root_node = false;
+  bool _is_root_node{false};
 
   std::vector<std::shared_ptr<OperatorFeatureNode>> _subqueries;
 

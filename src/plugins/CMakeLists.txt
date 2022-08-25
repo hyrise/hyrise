@@ -70,6 +70,7 @@ add_plugin(NAME hyriseCostModelFeaturePlugin
   DEPS
     sqlparser
     magic_enum
+    nlohmann_json
     uninitialized_vector
 )
 

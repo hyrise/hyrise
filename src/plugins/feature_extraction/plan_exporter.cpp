@@ -1,6 +1,7 @@
 #include "plan_exporter.hpp"
 
 #include <boost/algorithm/string.hpp>
+#include <nlohmann/json.hpp>
 
 #include "feature_extraction/feature_nodes/aggregate_function_feature_node.hpp"
 #include "feature_extraction/feature_nodes/operator_feature_node.hpp"
@@ -14,14 +15,16 @@ void PlanExporter::add_plan(const std::shared_ptr<Query>& query, const std::shar
   _feature_graphs.push_back(OperatorFeatureNode::from_pqp(pqp, query));
 }
 
-void PlanExporter::export_plans(const std::string& file_name) {
-  std::cout << "export plans to " << file_name << std::endl;
-  auto table_file_name = file_name + "/tables.csv";
-  auto column_file_name = file_name + "/columns.csv";
-  auto segment_file_name = file_name + "/segments.csv";
-  auto operator_file_name = file_name + "/operators.csv";
-  auto predicate_file_name = file_name + "/predicates.csv";
-  auto aggregate_file_name = file_name + "/aggregate_functions.csv";
+void PlanExporter::export_plans(const std::string& output_directory) {
+  std::cout << "export plans to " << output_directory << std::endl;
+  _export_additional_operator_info(output_directory);
+
+  auto table_file_name = output_directory + "/tables.csv";
+  auto column_file_name = output_directory + "/columns.csv";
+  auto segment_file_name = output_directory + "/segments.csv";
+  auto operator_file_name = output_directory + "/operators.csv";
+  auto predicate_file_name = output_directory + "/predicates.csv";
+  auto aggregate_file_name = output_directory + "/aggregate_functions.csv";
 
   auto table_file = std::ofstream{table_file_name};
   auto column_file = std::ofstream{column_file_name};
@@ -32,13 +35,13 @@ void PlanExporter::export_plans(const std::string& file_name) {
 
   // clang-format off
   table_file     << "table_id";
-  column_file    << "query;subquery;subquery_id;operator_id;expression_id;column_id";
-  segment_file   << "query;subquery;subquery_id;operator_id;expression_id;column_id;segment_id";
-  operator_file  << "query;subquery;subquery_id;operator_id;";
-  predicate_file << "query;subquery;subquery_id;operator_id;expression_id";
-  aggregate_file << "query;subquery;subquery_id;operator_id;expression_id";
+  column_file    << "query;operator_id;expression_id;column_id";
+  segment_file   << "query;operator_id;expression_id;column_id;segment_id";
+  operator_file  << "query;operator_id;";
+  predicate_file << "query;operator_id;expression_id";
+  aggregate_file << "query;operator_id;expression_id";
 
-  table_file     << boost::algorithm::join(AbstractTableFeatureNode::headers(), ";") << "\n";
+  table_file     << boost::algorithm::join(AbstractTableFeatureNode::headers(), ";") << ";subqueries"<< "\n";
   column_file    << boost::algorithm::join(ColumnFeatureNode::headers(), ";") << "\n";
   segment_file   << boost::algorithm::join(SegmentFeatureNode::headers(), ";") << "\n";
   operator_file  << boost::algorithm::join(OperatorFeatureNode::headers(), ";");
@@ -73,11 +76,7 @@ void PlanExporter::export_plans(const std::string& file_name) {
 }
 
 void PlanExporter::_features_to_csv(const std::string& query, const std::shared_ptr<AbstractFeatureNode>& graph,
-                                    CardinalityEstimator& cardinality_estimator, const std::optional<size_t>& subquery,
-                                    const std::optional<size_t>& subquery_id) {
-  const auto subquery_string = subquery ? std::to_string(*subquery) : "";
-  const auto subquery_id_string = subquery ? std::to_string(*subquery) : "";
-
+                                    CardinalityEstimator& cardinality_estimator) {
   visit_feature_nodes(graph, [&](const auto& node) {
     // std::cout << "    " << node->hash() << std::endl;
     const auto node_type = node->type();
@@ -87,16 +86,23 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
         const auto hash = node->hash();
 
         auto& operator_file = _output_files.at(FeatureNodeType::Operator);
-        operator_file << query << ";" << subquery_string << ";" << subquery_id_string << ";" << hash
-                      << node->to_feature_vector();
+        operator_file << query << ";" << hash << node->to_feature_vector();
         for (const auto& input : {node->left_input(), node->right_input()}) {
           operator_file << ";";
           if (input) {
             operator_file << input->hash();
           }
         }
+
+        const auto& subqueries = operator_node.subqueries();
+        auto subquery_hashes = std::vector<std::string>{};
+        subquery_hashes.reserve(subqueries.size());
+        std::for_each(subqueries.cbegin(), subqueries.cend(),
+                      [&](const auto& subquery) { subquery_hashes.emplace_back(std::to_string(subquery->hash())); });
+
         operator_file << ";" << operator_node.run_time().count() << ";"
-                      << cardinality_estimator.estimate_cardinality(operator_node.get_operator()->lqp_node) << "\n";
+                      << cardinality_estimator.estimate_cardinality(operator_node.get_operator()->lqp_node) << ";"
+                      << boost::algorithm::join(subquery_hashes, ",") << "\n";
 
         const auto& expressions = operator_node.expressions();
         const auto num_expressions = expressions.size();
@@ -107,8 +113,7 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
           switch (expression_type) {
             case FeatureNodeType::Predicate: {
               auto prefix = std::stringstream{};
-              prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << expression_id
-                     << ";";
+              prefix << query << ";" << hash << ";" << expression_id << ";";
               const auto prefix_str = prefix.str();
               output_file << prefix_str << expression->to_feature_vector() << "\n";
               auto column_id = ColumnID{0};
@@ -126,16 +131,14 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
 
             case FeatureNodeType::Column: {
               auto prefix = std::stringstream{};
-              prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";"
-                     << ";";
+              prefix << query << ";" << hash << ";;";
               const auto prefix_str = prefix.str();
               _export_column(static_cast<ColumnFeatureNode&>(*expression), prefix_str, expression_id);
             } break;
 
             case FeatureNodeType::AggregateFunction: {
               auto prefix = std::stringstream{};
-              prefix << query << ";" << subquery_string << ";" << subquery_id_string << hash << ";" << expression_id
-                     << ";";
+              prefix << query << ";" << hash << ";" << expression_id << ";";
               const auto prefix_str = prefix.str();
               output_file << prefix_str << expression->to_feature_vector();
               _export_column(static_cast<ColumnFeatureNode&>(*expression->left_input()), prefix_str, expression_id);
@@ -147,10 +150,8 @@ void PlanExporter::_features_to_csv(const std::string& query, const std::shared_
           }
         }
 
-        const auto& subqueries = operator_node.subqueries();
-        const auto num_subqueries = subqueries.size();
-        for (auto op_subquery_id = size_t{0}; op_subquery_id < num_subqueries; ++op_subquery_id) {
-          _features_to_csv(query, subqueries[op_subquery_id], cardinality_estimator, hash, op_subquery_id);
+        for (const auto& subquery : subqueries) {
+          _features_to_csv(query, subquery, cardinality_estimator);
         }
 
         return FeatureNodeVisitation::VisitInputs;
@@ -180,6 +181,19 @@ void PlanExporter::_export_column(ColumnFeatureNode& column_node, const std::str
     auto& segment_file = _output_files.at(FeatureNodeType::Segment);
     segment_file << prefix << column_id << ";" << segment_id << ";" << segment->to_feature_vector() << "\n";
   }
+}
+
+void PlanExporter::_export_additional_operator_info(const std::string& output_directory) {
+  const auto headers_per_operator = std::unordered_map<QueryOperatorType, std::vector<std::string>>{
+      {QueryOperatorType::TableScan, OperatorFeatureNode::TableScanOperatorInfo::headers()},
+      {QueryOperatorType::JoinHash, OperatorFeatureNode::JoinHashOperatorInfo::headers()},
+      {QueryOperatorType::Aggregate, OperatorFeatureNode::AggregateHashOperatorInfo::headers()}};
+
+  auto headers_json = nlohmann::json{};
+  for (const auto& [type, headers] : headers_per_operator) {
+    headers_json[std::string{magic_enum::enum_name(type)}] = headers;
+  }
+  std::ofstream{output_directory + "/additional_operator_headers.json"} << std::setw(2) << headers_json << std::endl;
 }
 
 }  // namespace hyrise

@@ -10,7 +10,7 @@ namespace hyrise {
 
 class SegmentFeatureNode : public AbstractFeatureNode {
  public:
-  SegmentFeatureNode(const AbstractSegment::Tier tier, const EncodingType encoding_type,
+  SegmentFeatureNode(const AbstractSegment::Tier tier, const EncodingType encoding_type, const bool sorted,
                      const std::optional<CompressedVectorType>& compressed_vector_type = std::nullopt);
 
   const std::vector<std::string>& feature_headers() const final;
@@ -22,6 +22,7 @@ class SegmentFeatureNode : public AbstractFeatureNode {
 
   AbstractSegment::Tier _tier;
   EncodingType _encoding_type;
+  bool _sorted;
   std::optional<CompressedVectorType> _compressed_vector_type;
 };
 

@@ -26,9 +26,9 @@ class PredicateFeatureNode : public AbstractFeatureNode {
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
 
   std::optional<PredicateCondition> _predicate_condition;
-  bool _column_vs_value = false;
-  bool _column_vs_column = false;
-  bool _is_complex = false;
+  bool _column_vs_value{false};
+  bool _column_vs_column{false};
+  bool _is_complex{false};
 };
 
 }  // namespace hyrise

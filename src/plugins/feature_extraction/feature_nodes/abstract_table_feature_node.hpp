@@ -31,7 +31,6 @@ class AbstractTableFeatureNode : public AbstractFeatureNode {
 
  protected:
   std::shared_ptr<FeatureVector> _on_to_feature_vector() const final;
-  //size_t _on_shallow_hash() const final;
 
   TableNodeType _node_type;
   TableType _table_type;

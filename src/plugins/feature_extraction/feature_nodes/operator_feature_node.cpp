@@ -106,16 +106,6 @@ size_t OperatorFeatureNode::_on_shallow_hash() const {
   const auto& lqp_node = _op->lqp_node;
   Assert(lqp_node, "Operator does not have LQPNode");
   return lqp_node->hash();
-  /*size_t hash{0};
-
-  for (const auto& predicate : _predicates) {
-    boost::hash_combine(hash, predicate->type());
-    boost::hash_combine(hash, predicate->hash());
-  }
-
-  boost::hash_combine(hash, _op_type);
-
-  return hash;*/
 }
 
 std::shared_ptr<FeatureVector> OperatorFeatureNode::_on_to_feature_vector() const {
@@ -209,9 +199,9 @@ void OperatorFeatureNode::_handle_join_hash(const JoinHash& join_hash) {
   const auto join_predicate_count = join_op_predicates.size();
   Assert(join_predicate_count == join_lqp_predicates.size(), "LQP and PQP predicates do not match");
   for (auto predicate_id = ColumnID{0}; predicate_id < join_predicate_count; ++predicate_id) {
-    _expressions.push_back(resolve_join_predicate(join_op_predicates.at(predicate_id),
-                                                  join_lqp_predicates.at(predicate_id), left_input_node,
-                                                  right_input_node, flipped_inputs));
+    _expressions.emplace_back(resolve_join_predicate(join_op_predicates.at(predicate_id),
+                                                     join_lqp_predicates.at(predicate_id), left_input_node,
+                                                     right_input_node, flipped_inputs));
   }
 
   _additional_info = std::make_unique<JoinHashOperatorInfo>();
@@ -241,13 +231,13 @@ void OperatorFeatureNode::_handle_join_index(const JoinIndex& join_index) {
   Assert(join_index.secondary_predicates().empty(), "Index Joinx with secondary predicates found");
   const auto& join_node = static_cast<const JoinNode&>(*join_index.lqp_node);
   const auto& join_lqp_predicate = *join_node.join_predicates().cbegin();
-  _expressions.push_back(
+  _expressions.emplace_back(
       resolve_join_predicate(join_op_predicate, join_lqp_predicate, left_input_node, right_input_node, flipped_inputs));
 }
 
 void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
   const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
-  _expressions.push_back(
+  _expressions.emplace_back(
       std::make_shared<PredicateFeatureNode>(predicate_node.predicate(), table_scan.predicate(), _left_input));
   _add_subqueries(table_scan.predicate()->arguments);
 
@@ -260,7 +250,9 @@ void OperatorFeatureNode::_handle_table_scan(const TableScan& table_scan) {
   scan_additional_info.skipped_chunks_binary_search = performance_data.num_chunks_with_binary_search;
 }
 
-void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {}
+void OperatorFeatureNode::_handle_index_scan(const IndexScan& index_scan) {
+  // TODO
+}
 
 void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {
   const auto& aggregate_node = static_cast<const AggregateNode&>(*aggregate.lqp_node);
@@ -269,17 +261,22 @@ void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {
   const auto lqp_expressions = aggregate_node.node_expressions;
   Assert(groupby_count == aggregate_node.aggregate_expressions_begin_idx, "Mismatching group by columns");
   for (auto expression_id = ColumnID{0}; expression_id < groupby_count; ++expression_id) {
-    _expressions.push_back(ColumnFeatureNode::from_expression(_left_input, lqp_expressions[expression_id],
-                                                              groupby_column_ids[expression_id]));
+    _expressions.emplace_back(ColumnFeatureNode::from_expression(_left_input, lqp_expressions[expression_id],
+                                                                 groupby_column_ids[expression_id]));
   }
 
   const auto& aggregate_expressions = aggregate.aggregates();
   const auto aggregate_count = aggregate_expressions.size();
   Assert(groupby_count + aggregate_count == lqp_expressions.size(), "Expressions not equal");
   for (auto expression_id = ColumnID{0}; expression_id < aggregate_count; ++expression_id) {
-    _expressions.push_back(std::make_shared<AggregateFunctionFeatureNode>(
+    _expressions.emplace_back(std::make_shared<AggregateFunctionFeatureNode>(
         lqp_expressions[groupby_count + expression_id], aggregate_expressions[expression_id], _left_input));
   }
+
+  _additional_info = std::make_unique<AggregateHashOperatorInfo>();
+  auto& aggregate_additional_info = static_cast<AggregateHashOperatorInfo&>(*_additional_info);
+  aggregate_additional_info.groupby_column_count = groupby_count;
+  aggregate_additional_info.aggregate_column_count = aggregate_count;
 }
 
 void OperatorFeatureNode::_handle_projection(const Projection& projection) {
@@ -322,7 +319,7 @@ void OperatorFeatureNode::_handle_projection(const Projection& projection) {
     const auto& expression = expressions[column_id];
     if (!forwarded_pqp_columns.contains(expression)) {
       _output_table->set_column_materialized(column_id);
-      _expressions.push_back(
+      _expressions.emplace_back(
           std::make_shared<PredicateFeatureNode>(output_expressions.at(column_id), expression, _left_input));
     }
   }
@@ -338,7 +335,7 @@ void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<Abst
   for (const auto& expression : expressions) {
     if (auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression)) {
       if (!subquery_expression->is_correlated()) {
-        _subqueries.push_back(_recursively_build_graph_from_pqp(subquery_expression->pqp));
+        _subqueries.emplace_back(_recursively_build_graph_from_pqp(subquery_expression->pqp));
       }
     }
   }
@@ -346,6 +343,64 @@ void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<Abst
 
 const std::vector<std::shared_ptr<AbstractFeatureNode>>& OperatorFeatureNode::expressions() const {
   return _expressions;
+}
+
+// Additional Operator Info
+// TableScan Info
+const std::vector<std::string>& OperatorFeatureNode::TableScanOperatorInfo::headers() {
+  static auto headers =
+      std::vector<std::string>{"table_scan.skipped_chunks_none_match", "table_scan.skipped_chunks_all_match",
+                               "table_scan.skipped_chunks_binary_search"};
+  return headers;
+}
+
+const FeatureVector OperatorFeatureNode::TableScanOperatorInfo::to_feature_vector() const {
+  return FeatureVector{Feature{static_cast<Feature>(skipped_chunks_none_match)},
+                       Feature{static_cast<Feature>(skipped_chunks_all_match)},
+                       Feature{static_cast<Feature>(skipped_chunks_binary_search)}};
+}
+
+size_t OperatorFeatureNode::TableScanOperatorInfo::feature_count() const {
+  return headers().size();
+}
+
+// JoinHash Info
+const std::vector<std::string>& OperatorFeatureNode::JoinHashOperatorInfo::headers() {
+  static auto headers = std::vector<std::string>{"join_hash.radix_bits",
+                                                 "join_hash.build_side_materialized_value_count",
+                                                 "join_hash.build_side_materialized_value_count",
+                                                 "join_hash.probe_side_materialized_value_count",
+                                                 "join_hash.hash_tables_distinct_value_count",
+                                                 "join_hash.hash_tables_position_count"};
+  return headers;
+}
+
+const FeatureVector OperatorFeatureNode::JoinHashOperatorInfo::to_feature_vector() const {
+  return FeatureVector{Feature{static_cast<Feature>(radix_bits)},
+                       Feature{static_cast<Feature>(build_side_materialized_value_count)},
+                       Feature{static_cast<Feature>(probe_side_materialized_value_count)},
+                       Feature{static_cast<Feature>(hash_tables_distinct_value_count)},
+                       Feature{static_cast<Feature>(hash_tables_position_count)}};
+}
+
+size_t OperatorFeatureNode::JoinHashOperatorInfo::feature_count() const {
+  return headers().size();
+}
+
+// AggregateHash Info
+const std::vector<std::string>& OperatorFeatureNode::AggregateHashOperatorInfo::headers() {
+  static auto headers =
+      std::vector<std::string>{"aggregate_hash.groupby_column_count", "aggregate_hash.aggregate_column_count"};
+  return headers;
+}
+
+const FeatureVector OperatorFeatureNode::AggregateHashOperatorInfo::to_feature_vector() const {
+  return FeatureVector{Feature{static_cast<Feature>(groupby_column_count)},
+                       Feature{static_cast<Feature>(aggregate_column_count)}};
+}
+
+size_t OperatorFeatureNode::AggregateHashOperatorInfo::feature_count() const {
+  return headers().size();
 }
 
 }  // namespace hyrise

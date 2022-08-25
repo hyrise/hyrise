@@ -33,11 +33,17 @@ ColumnFeatureNode::ColumnFeatureNode(const bool is_reference, const std::shared_
       continue;
     }
 
-    const auto& segment = chunk->get_segment(_column_id);
+    const auto& chunk_sorted_by = chunk->individually_sorted_by();
+    const bool is_sorted =
+        std::any_of(chunk_sorted_by.cbegin(), chunk_sorted_by.cend(),
+                    [&](const auto& sort_definition) { return sort_definition.column == original_column_id; });
+
+    const auto& segment = chunk->get_segment(original_column_id);
     if (auto encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
-      _segments.push_back(std::make_shared<SegmentFeatureNode>(segment->tier, encoded_segment->encoding_type()));
+      _segments.push_back(
+          std::make_shared<SegmentFeatureNode>(segment->tier, encoded_segment->encoding_type(), is_sorted));
     } else if (auto value_segment = std::dynamic_pointer_cast<BaseValueSegment>(segment)) {
-      _segments.push_back(std::make_shared<SegmentFeatureNode>(segment->tier, EncodingType::Unencoded));
+      _segments.push_back(std::make_shared<SegmentFeatureNode>(segment->tier, EncodingType::Unencoded, is_sorted));
     } else {
       Fail("Did not expect ReferenceSegment in base table");
     }
@@ -64,9 +70,11 @@ ColumnFeatureNode::ColumnFeatureNode(const std::shared_ptr<AbstractFeatureNode>&
   const auto chunk_count = performance_data.output_chunk_count;
   _segments.reserve(performance_data.output_chunk_count);
 
-  // materialized segments are always ValueSegments in main memeory
+  // materialized segments are always ValueSegments in main memory
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    _segments.push_back(std::make_shared<SegmentFeatureNode>(AbstractSegment::Tier::Memory, EncodingType::Unencoded));
+    // sorted if:
+    _segments.push_back(
+        std::make_shared<SegmentFeatureNode>(AbstractSegment::Tier::Memory, EncodingType::Unencoded, false));
   }
 }
 
