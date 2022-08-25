@@ -7,8 +7,6 @@ namespace hyrise {
 
 class QueryExporter {
  public:
-  static std::string query_hash(const std::string& query);
-
   QueryExporter();
 
   ~QueryExporter();
@@ -17,7 +15,6 @@ class QueryExporter {
 
   void export_queries(const std::string& file_path);
 
- protected:
  protected:
   class FileName : public AbstractSetting {
    public:

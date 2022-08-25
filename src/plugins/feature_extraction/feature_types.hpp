@@ -48,11 +48,18 @@ const auto operator_type_mapping = std::unordered_map<OperatorType, QueryOperato
 QueryOperatorType map_operator_type(const OperatorType operator_type);
 
 struct Query {
-  Query(const std::string& init_hash, const std::string& init_query, const size_t init_frequency)
-      : hash{init_hash}, query{init_query}, frequency{init_frequency} {}
-  std::string hash;
+  Query(const std::string& init_query, const size_t init_frequency) : query{init_query}, frequency{init_frequency} {
+    std::stringstream query_hex_hash;
+    query_hex_hash << std::hex << std::hash<std::string>{}(query);
+    // auto query_single_line{query};
+    // query_single_line.erase(std::remove(query_single_line.begin(), query_single_line.end(), '\n'),
+    // query_single_line.end());
+    hash = query_hex_hash.str();
+  }
+
   std::string query;
   size_t frequency;
+  std::string hash;
 };
 
 using FeatureVector = std::vector<Feature>;

@@ -2,6 +2,7 @@
 
 #include "feature_extraction/plan_exporter.hpp"
 #include "feature_extraction/query_exporter.hpp"
+#include "feature_extraction/statistics_exporter.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/settings/abstract_setting.hpp"
 
@@ -40,6 +41,7 @@ class CostModelFeaturePlugin : public AbstractPlugin {
   std::shared_ptr<OutputPath> _output_path;
   std::shared_ptr<PlanExporter> _plan_exporter;
   std::shared_ptr<QueryExporter> _query_exporter;
+  std::shared_ptr<StatisticsExporter> _statistics_exporter;
 
   std::thread _worker_thread;
 };

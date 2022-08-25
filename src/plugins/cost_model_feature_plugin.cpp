@@ -14,6 +14,7 @@ void CostModelFeaturePlugin::start() {
   _output_path->register_at_settings_manager();
   _query_exporter = std::make_shared<QueryExporter>();
   _plan_exporter = std::make_shared<PlanExporter>();
+  _statistics_exporter = std::make_shared<StatisticsExporter>();
 }
 
 void CostModelFeaturePlugin::stop() {
@@ -22,10 +23,13 @@ void CostModelFeaturePlugin::stop() {
     Assert(_output_path, "Output path was never set");
     Assert(_query_exporter, "QueryExporter was never set");
     Assert(_plan_exporter, "QueryExporter was never set");
+    Assert(_statistics_exporter, "SatisticsExporter was never set");
 
-    std::filesystem::create_directories(_output_path->get());
-    _query_exporter->export_queries(_output_path->get());
-    _plan_exporter->export_plans(_output_path->get());
+    const auto& output_path = _output_path->get();
+    std::filesystem::create_directories(output_path);
+    _statistics_exporter->export_statistics(output_path);
+    _query_exporter->export_queries(output_path);
+    _plan_exporter->export_plans(output_path);
   } else {
     std::cout << "Feature extraction was never executed. Stopping plugin" << std::endl;
   }
@@ -52,8 +56,7 @@ void CostModelFeaturePlugin::export_operator_features() {
         continue;
       }
 
-      const auto& query_hash = QueryExporter::query_hash(key);
-      const auto query = std::make_shared<Query>(query_hash, key, *entry.frequency);
+      const auto query = std::make_shared<Query>(key, *entry.frequency);
       _query_exporter->add_query(query);
       _plan_exporter->add_plan(query, pqp);
     }

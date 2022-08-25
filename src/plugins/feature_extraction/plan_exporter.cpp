@@ -11,20 +11,30 @@
 
 namespace hyrise {
 
+PlanExporter::PlanExporter() : _sub_directory{std::make_shared<SubDirectory>("PlanExporter.SubDirectory")} {
+  _sub_directory->register_at_settings_manager();
+}
+
+PlanExporter::~PlanExporter() {
+  _sub_directory->unregister_at_settings_manager();
+}
+
 void PlanExporter::add_plan(const std::shared_ptr<Query>& query, const std::shared_ptr<const AbstractOperator>& pqp) {
   _feature_graphs.push_back(OperatorFeatureNode::from_pqp(pqp, query));
 }
 
 void PlanExporter::export_plans(const std::string& output_directory) {
-  std::cout << "export plans to " << output_directory << std::endl;
-  _export_additional_operator_info(output_directory);
+  const auto sub_directory = output_directory + _sub_directory->get();
+  std::cout << "export plans to " << sub_directory << std::endl;
+  std::filesystem::create_directories(sub_directory);
+  _export_additional_operator_info(sub_directory);
 
-  auto table_file_name = output_directory + "/tables.csv";
-  auto column_file_name = output_directory + "/columns.csv";
-  auto segment_file_name = output_directory + "/segments.csv";
-  auto operator_file_name = output_directory + "/operators.csv";
-  auto predicate_file_name = output_directory + "/predicates.csv";
-  auto aggregate_file_name = output_directory + "/aggregate_functions.csv";
+  auto table_file_name = sub_directory + "/tables.csv";
+  auto column_file_name = sub_directory + "/columns.csv";
+  auto segment_file_name = sub_directory + "/segments.csv";
+  auto operator_file_name = sub_directory + "/operators.csv";
+  auto predicate_file_name = sub_directory + "/predicates.csv";
+  auto aggregate_file_name = sub_directory + "/aggregate_functions.csv";
 
   auto table_file = std::ofstream{table_file_name};
   auto column_file = std::ofstream{column_file_name};
@@ -194,6 +204,21 @@ void PlanExporter::_export_additional_operator_info(const std::string& output_di
     headers_json[std::string{magic_enum::enum_name(type)}] = headers;
   }
   std::ofstream{output_directory + "/additional_operator_headers.json"} << std::setw(2) << headers_json << std::endl;
+}
+
+PlanExporter::SubDirectory::SubDirectory(const std::string& init_name) : AbstractSetting(init_name) {}
+
+const std::string& PlanExporter::SubDirectory::description() const {
+  static const auto description = std::string{"Output directory for the plan features"};
+  return description;
+}
+
+const std::string& PlanExporter::SubDirectory::get() {
+  return _value;
+}
+
+void PlanExporter::SubDirectory::set(const std::string& value) {
+  _value = value;
 }
 
 }  // namespace hyrise

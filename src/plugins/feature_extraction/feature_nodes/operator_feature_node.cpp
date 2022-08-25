@@ -281,6 +281,7 @@ void OperatorFeatureNode::_handle_aggregate(const AggregateHash& aggregate) {
 
 void OperatorFeatureNode::_handle_projection(const Projection& projection) {
   const auto& expressions = projection.expressions;
+  _add_subqueries(expressions);
 
   // set mterialized columns if table is not data table
   // First gather all forwardable PQP column expressions.
@@ -333,10 +334,11 @@ void OperatorFeatureNode::_handle_get_table(const GetTable& get_table) {
 
 void OperatorFeatureNode::_add_subqueries(const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
   for (const auto& expression : expressions) {
-    if (auto subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(expression)) {
-      if (!subquery_expression->is_correlated()) {
-        _subqueries.emplace_back(_recursively_build_graph_from_pqp(subquery_expression->pqp));
-      }
+    const auto& subquery_expressions = find_pqp_subquery_expressions(expression);
+    for (const auto& subquery_expression : subquery_expressions) {
+      // if (!subquery_expression->is_correlated()) {
+      _subqueries.emplace_back(_recursively_build_graph_from_pqp(subquery_expression->pqp));
+      // }
     }
   }
 }

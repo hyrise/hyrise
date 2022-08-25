@@ -4,16 +4,7 @@
 
 namespace hyrise {
 
-std::string QueryExporter::query_hash(const std::string& query) {
-  std::stringstream query_hex_hash;
-  query_hex_hash << std::hex << std::hash<std::string>{}(query);
-  // auto query_single_line{query};
-  // query_single_line.erase(std::remove(query_single_line.begin(), query_single_line.end(), '\n'),
-  // query_single_line.end());
-  return query_hex_hash.str();
-}
-
-QueryExporter::QueryExporter() : _file_name{std::make_shared<QueryExporter::FileName>("QueryExporter.FileName")} {
+QueryExporter::QueryExporter() : _file_name{std::make_shared<FileName>("QueryExporter.FileName")} {
   _file_name->register_at_settings_manager();
 }
 
