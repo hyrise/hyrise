@@ -121,7 +121,7 @@ std::string MetaSystemInformationTable::_cpu_model() {
   const auto ret = sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
 
-  return std::string(&buffer[0]);
+  return std::string{buffer.data()}
 #endif
 
   Fail("Method not implemented for this platform");
