@@ -247,8 +247,12 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
             f"{(np.mean(new_unsuccessful_durations)):>7.1f}" if len(new_unsuccessful_durations) > 0 else "nan"
         )
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
-            diff_throughput_unsuccessful_str = format_diff(new_unsuccessful_per_second / old_unsuccessful_per_second)  # noqa: F821
-            diff_duration_unsuccessful_str = format_diff(new_avg_unsuccessful_duration / old_avg_unsuccessful_duration)  # noqa: F821
+            diff_throughput_unsuccessful_str = format_diff(
+                new_unsuccessful_per_second / old_unsuccessful_per_second  # noqa: F821
+            )
+            diff_duration_unsuccessful_str = format_diff(
+                new_avg_unsuccessful_duration / old_avg_unsuccessful_duration  # noqa: F821
+            )
         else:
             diff_throughput_unsuccessful = " "
             diff_duration_unsuccessful_str = " "
