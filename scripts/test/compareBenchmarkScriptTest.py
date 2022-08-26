@@ -1,31 +1,50 @@
 #!/usr/bin/env python3
 
 import json
+import math
+import re
 import subprocess
 
 # This helper test class takes two JSON result files, runs the compare_benchmarks.py script, and checks that the output
 # is as expected. It is called from benchmark tests such as hyriseBenchmarkTPCC_test.py.
 
 
-# The next two functions check for string matches instead of using math.isclose() since extracting values from
-# ANSI-colored text turned out to be too cumbersome.
+# Function removes any ansi escape sequences, which we use for color coding.
+# Gratefully taken from https://stackoverflow.com/a/14693789/1147726
+def clean_ansi_escape_sequences(input_string):
+    ansi_escape = re.compile(r'''
+    \x1B  # ESC
+    (?:   # 7-bit C1 Fe (except CSI)
+        [@-Z\\-_]
+    |     # or [ for CSI, followed by a control sequence
+        \[
+        [0-?]*  # Parameter bytes
+        [ -/]*  # Intermediate bytes
+        [@-~]   # Final byte
+    )
+    ''', re.VERBOSE)
+    return ansi_escape.sub('', input_string)
+
+
+# As different precisions are used (latency for successful and unsucceful runs, throughput), string comparisons with
+# rounding are hard when we don't want to assume known precisions. We thus clean the strings from the colour oding,
+# parse the string as floats and use math.isclose().
 def assert_latency_equals(item_count, runtimes, latency_string):
     if item_count == 0:
         assert "nan" in latency_string
         return
-    avg_latency = sum(runtimes) / item_count / 1_000_000
 
-    # We truncate (not round!) to check for string containment
-    # avg_latency_truncated = str(float(int(avg_latency * 10) / 10))
-    avg_latency_truncated = str(int(avg_latency))
-    if avg_latency_truncated not in latency_string:
-        print(avg_latency_truncated, " === ", latency_string)
-    assert avg_latency_truncated in latency_string
+    avg_latency = sum(runtimes) / item_count / 1_000_000
+    latency_string_cleaned = clean_ansi_escape_sequences(latency_string)
+
+    assert math.isclose(float(latency_string_cleaned), avg_latency, rel_tol=0.1)
 
 
 def assert_throughput_equals(item_count, duration, throughput_string):
     throughput = item_count / duration * 1_000_000_000
-    assert str(round(throughput, 2)) in throughput_string
+    throughput_string_cleaned = clean_ansi_escape_sequences(throughput_string)
+
+    assert math.isclose(float(throughput_string_cleaned), throughput, rel_tol=0.1)
 
 
 class CompareBenchmarkScriptTest:
