@@ -9,10 +9,11 @@ import subprocess
 # is as expected. It is called from benchmark tests such as hyriseBenchmarkTPCC_test.py.
 
 
-# Function removes any ansi escape sequences, which we use for color coding.
+# Function removes any ANSI escape sequences, which we use for color coding.
 # Gratefully taken from https://stackoverflow.com/a/14693789/1147726
 def clean_ansi_escape_sequences(input_string):
-    ansi_escape = re.compile(r'''
+    ansi_escape = re.compile(
+        r"""
     \x1B  # ESC
     (?:   # 7-bit C1 Fe (except CSI)
         [@-Z\\-_]
@@ -22,13 +23,15 @@ def clean_ansi_escape_sequences(input_string):
         [ -/]*  # Intermediate bytes
         [@-~]   # Final byte
     )
-    ''', re.VERBOSE)
-    return ansi_escape.sub('', input_string)
+    """,
+        re.VERBOSE,
+    )
+    return ansi_escape.sub("", input_string)
 
 
-# As different precisions are used (latency for successful and unsucceful runs, throughput), string comparisons with
-# rounding are hard when we don't want to assume known precisions. We thus clean the strings from the colour oding,
-# parse the string as floats and use math.isclose().
+# As different precisions are used (i.e., precision for rounded latencies is different from rounding precision of
+# throughputs), string comparisons with rounding are hard when we don't want to assume known precisions. We thus clean
+# the strings from the colour coding, parse the strings as floats, and use math.isclose().
 def assert_latency_equals(item_count, runtimes, latency_string):
     if item_count == 0:
         assert "nan" in latency_string
