@@ -36,18 +36,12 @@ add_plugin(NAME hyriseSecondTestPlugin SRCS second_test_plugin.cpp second_test_p
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS sqlparser)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp)
 
-add_plugin(NAME hyriseCostModelFeaturePlugin
+add_plugin(NAME hyriseFeatureExtractionPlugin
   SRCS
-    cost_model_feature_plugin.cpp
-    cost_model_feature_plugin.hpp
-    feature_extraction/plan_exporter.cpp
-    feature_extraction/plan_exporter.hpp
-    feature_extraction/query_exporter.cpp
-    feature_extraction/query_exporter.hpp
-    feature_extraction/statistics_exporter.cpp
-    feature_extraction/statistics_exporter.hpp
-    feature_extraction/feature_types.cpp
-    feature_extraction/feature_types.hpp
+    feature_extraction_plugin.cpp
+    feature_extraction_plugin.hpp
+    feature_extraction/feature_extraction_utils.cpp
+    feature_extraction/feature_extraction_utils.hpp
     feature_extraction/feature_nodes/abstract_feature_node.cpp
     feature_extraction/feature_nodes/abstract_feature_node.hpp
     feature_extraction/feature_nodes/aggregate_function_feature_node.cpp
@@ -66,21 +60,40 @@ add_plugin(NAME hyriseCostModelFeaturePlugin
     feature_extraction/feature_nodes/result_table_feature_node.hpp
     feature_extraction/feature_nodes/segment_feature_node.cpp
     feature_extraction/feature_nodes/segment_feature_node.hpp
-    feature_extraction/util/feature_extraction_utils.cpp
-    feature_extraction/util/feature_extraction_utils.hpp
+    feature_extraction/feature_types.cpp
+    feature_extraction/feature_types.hpp
+    feature_extraction/plan_exporter.cpp
+    feature_extraction/plan_exporter.hpp
+    feature_extraction/query_exporter.cpp
+    feature_extraction/query_exporter.hpp
+    feature_extraction/statistics_exporter.cpp
+    feature_extraction/statistics_exporter.hpp
 
   DEPS
-    sqlparser
     magic_enum
     nlohmann_json
+    sqlparser
     uninitialized_vector
 )
 
 target_link_libraries_system(
-    hyriseCostModelFeaturePlugin
+    hyriseFeatureExtractionPlugin
 
     flat-hash-map
     robin_map
+)
+
+add_plugin(NAME hyrisePhysicalConfigurationPlugin
+  SRCS
+    physical_configuration_plugin.cpp
+    physical_configuration_plugin.hpp
+    physical_configuration/physical_config.cpp
+    physical_configuration/physical_config.hpp
+
+  DEPS
+    magic_enum
+    nlohmann_json
+    sqlparser
 )
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes

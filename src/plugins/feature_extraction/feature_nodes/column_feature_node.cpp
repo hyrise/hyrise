@@ -3,10 +3,10 @@
 #include <boost/container_hash/hash.hpp>
 
 #include "expression/expression_utils.hpp"
+#include "feature_extraction/feature_extraction_utils.hpp"
 #include "feature_extraction/feature_nodes/base_table_feature_node.hpp"
 #include "feature_extraction/feature_nodes/operator_feature_node.hpp"
 #include "feature_extraction/feature_nodes/result_table_feature_node.hpp"
-#include "feature_extraction/util/feature_extraction_utils.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/base_value_segment.hpp"
 

@@ -1,9 +1,8 @@
 #include "segment_feature_node.hpp"
 
 #include <magic_enum.hpp>
-//#include <numeric>
 
-#include "feature_extraction/util/feature_extraction_utils.hpp"
+#include "feature_extraction/feature_extraction_utils.hpp"
 
 namespace hyrise {
 

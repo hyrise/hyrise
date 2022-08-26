@@ -3,15 +3,16 @@
 #include <boost/algorithm/string.hpp>
 #include <nlohmann/json.hpp>
 
+#include "feature_extraction/feature_extraction_utils.hpp"
 #include "feature_extraction/feature_nodes/aggregate_function_feature_node.hpp"
 #include "feature_extraction/feature_nodes/operator_feature_node.hpp"
 #include "feature_extraction/feature_nodes/predicate_feature_node.hpp"
 #include "feature_extraction/feature_nodes/segment_feature_node.hpp"
-#include "feature_extraction/util/feature_extraction_utils.hpp"
 
 namespace hyrise {
 
-PlanExporter::PlanExporter() : _sub_directory{std::make_shared<SubDirectory>("PlanExporter.SubDirectory")} {
+PlanExporter::PlanExporter()
+    : _sub_directory{std::make_shared<SubDirectory>("FeatureExtractionPlugin.PlanExporter.SubDirectory")} {
   _sub_directory->register_at_settings_manager();
 }
 

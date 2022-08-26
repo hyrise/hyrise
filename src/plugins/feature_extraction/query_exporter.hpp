@@ -18,7 +18,7 @@ class QueryExporter {
  protected:
   class FileName : public AbstractSetting {
    public:
-    static constexpr const char* DEFAULT_FILE_NAME = "queries.csv";
+    static inline const std::string DEFAULT_FILE_NAME{"queries.csv"};
     explicit FileName(const std::string& init_name);
 
     const std::string& description() const final;

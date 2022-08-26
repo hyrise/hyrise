@@ -6,7 +6,7 @@
 namespace hyrise {
 
 StatisticsExporter::StatisticsExporter()
-    : _sub_directory{std::make_shared<SubDirectory>("StatisticsExporter.SubDirectory")} {
+    : _sub_directory{std::make_shared<SubDirectory>("FeatureExtractionPlugin.StatisticsExporter.SubDirectory")} {
   _sub_directory->register_at_settings_manager();
 }
 

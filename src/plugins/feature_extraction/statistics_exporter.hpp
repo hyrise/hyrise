@@ -15,7 +15,7 @@ class StatisticsExporter {
  protected:
   class SubDirectory : public AbstractSetting {
    public:
-    static constexpr const char* DEFAULT_SUB_DIRECTORY = "/statistics";
+    static inline const std::string DEFAULT_SUB_DIRECTORY{"/statistics"};
     explicit SubDirectory(const std::string& init_name);
 
     const std::string& description() const final;

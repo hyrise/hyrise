@@ -8,8 +8,8 @@
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "expression/pqp_subquery_expression.hpp"
+#include "feature_extraction/feature_extraction_utils.hpp"
 #include "feature_extraction/feature_nodes/column_feature_node.hpp"
-#include "feature_extraction/util/feature_extraction_utils.hpp"
 
 namespace {
 

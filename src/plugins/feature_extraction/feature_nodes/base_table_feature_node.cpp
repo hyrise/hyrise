@@ -1,6 +1,6 @@
 #include "base_table_feature_node.hpp"
 
-#include "feature_extraction/util/feature_extraction_utils.hpp"
+#include "feature_extraction/feature_extraction_utils.hpp"
 
 namespace hyrise {
 

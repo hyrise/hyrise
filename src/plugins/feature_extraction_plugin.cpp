@@ -1,23 +1,23 @@
-#include "cost_model_feature_plugin.hpp"
+#include "feature_extraction_plugin.hpp"
 
 #include "feature_extraction/feature_types.hpp"
 #include "hyrise.hpp"
 
 namespace hyrise {
 
-std::string CostModelFeaturePlugin::description() const {
-  return "This is the Hyrise CostModelFeaturePlugin";
+std::string FeatureExtractionPlugin::description() const {
+  return "This is the Hyrise FeatureExtractionPlugin";
 }
 
-void CostModelFeaturePlugin::start() {
-  _output_path = std::make_shared<OutputPath>("hyriseCostModelFeaturePlugin.OutputPath");
+void FeatureExtractionPlugin::start() {
+  _output_path = std::make_unique<OutputPath>("FeatureExtractionPlugin.OutputPath");
   _output_path->register_at_settings_manager();
-  _query_exporter = std::make_shared<QueryExporter>();
-  _plan_exporter = std::make_shared<PlanExporter>();
-  _statistics_exporter = std::make_shared<StatisticsExporter>();
+  _query_exporter = std::make_unique<QueryExporter>();
+  _plan_exporter = std::make_unique<PlanExporter>();
+  _statistics_exporter = std::make_unique<StatisticsExporter>();
 }
 
-void CostModelFeaturePlugin::stop() {
+void FeatureExtractionPlugin::stop() {
   if (_worker_thread.joinable()) {
     _worker_thread.join();
     Assert(_output_path, "Output path was never set");
@@ -38,11 +38,11 @@ void CostModelFeaturePlugin::stop() {
 }
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
-CostModelFeaturePlugin::provided_user_executable_functions() {
+FeatureExtractionPlugin::provided_user_executable_functions() {
   return {{"ExtractOperatorFeatures", [&]() { this->export_operator_features(); }}};
 }
 
-void CostModelFeaturePlugin::export_operator_features() {
+void FeatureExtractionPlugin::export_operator_features() {
   _worker_thread = std::thread{[&]() {
     std::cout << "export operator features" << std::endl;
     const auto& pqp_cache = Hyrise::get().default_pqp_cache;
@@ -63,21 +63,21 @@ void CostModelFeaturePlugin::export_operator_features() {
   }};
 }
 
-CostModelFeaturePlugin::OutputPath::OutputPath(const std::string& init_name) : AbstractSetting(init_name) {}
+FeatureExtractionPlugin::OutputPath::OutputPath(const std::string& init_name) : AbstractSetting(init_name) {}
 
-const std::string& CostModelFeaturePlugin::OutputPath::description() const {
+const std::string& FeatureExtractionPlugin::OutputPath::description() const {
   static const auto description = std::string{"Output path for the Cost Model features"};
   return description;
 }
 
-const std::string& CostModelFeaturePlugin::OutputPath::get() {
+const std::string& FeatureExtractionPlugin::OutputPath::get() {
   return _value;
 }
 
-void CostModelFeaturePlugin::OutputPath::set(const std::string& value) {
+void FeatureExtractionPlugin::OutputPath::set(const std::string& value) {
   _value = value;
 }
 
-EXPORT_PLUGIN(CostModelFeaturePlugin)
+EXPORT_PLUGIN(FeatureExtractionPlugin)
 
 }  // namespace hyrise

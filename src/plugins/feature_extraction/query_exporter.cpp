@@ -4,7 +4,8 @@
 
 namespace hyrise {
 
-QueryExporter::QueryExporter() : _file_name{std::make_shared<FileName>("QueryExporter.FileName")} {
+QueryExporter::QueryExporter()
+    : _file_name{std::make_shared<FileName>("FeatureExtractionPlugin.QueryExporter.FileName")} {
   _file_name->register_at_settings_manager();
 }
 
