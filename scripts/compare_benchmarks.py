@@ -246,6 +246,9 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
         new_avg_unsuccessful_duration_str = (
             f"{(np.mean(new_unsuccessful_durations)):>7.1f}" if len(new_unsuccessful_durations) > 0 else "nan"
         )
+
+        # The 'noqa' comments ("no quality assurance") are used to ignore an issue with pyflakes (see
+        # https://github.com/PyCQA/pyflakes/issues/633).
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
             diff_throughput_unsuccessful_str = format_diff(
                 new_unsuccessful_per_second / old_unsuccessful_per_second  # noqa: F821
@@ -257,8 +260,6 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
             diff_throughput_unsuccessful = " "
             diff_duration_unsuccessful_str = " "
 
-        # The 'noqa' comments ("no quality assurance") are used to ignore an issue with pyflakes (see
-        # https://github.com/PyCQA/pyflakes/issues/633).
         unsuccessful_info = [
             "   unsucc.:",
             old_avg_unsuccessful_duration_str,
