@@ -229,6 +229,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     )
 
     if len(old["unsuccessful_runs"]) > 0 or len(new["unsuccessful_runs"]) > 0:
+        old_unsuccessful_per_second = 0.0
+        new_unsuccessful_per_second = 0.0
         if old_data["context"]["benchmark_mode"] == "Ordered":
             old_unsuccessful_per_second = float(len(old_unsuccessful_durations)) / (float(old["duration"]) / 1e9)
             new_unsuccessful_per_second = float(len(new_unsuccessful_durations)) / (float(new["duration"]) / 1e9)
