@@ -235,6 +235,7 @@ set(
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
+    plugins/memory_tracking_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
     utils/constraint_test_utils.hpp
