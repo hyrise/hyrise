@@ -255,7 +255,7 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
                 np.mean(new_unsuccessful_durations) / np.mean(old_unsuccessful_durations)
             )
         else:
-            diff_throughput_unsuccessful = " "
+            diff_throughput_unsuccessful_str = " "
             diff_duration_unsuccessful_str = " "
 
         unsuccessful_info = [
