@@ -31,6 +31,8 @@ class MemoryResourceManager : public Noncopyable {
   // Disbales memory tracking. In this case, the MemoryResourceManager returns default MemoryResources.
   void disable_temporary_memory_tracking();
 
+  bool tracking_is_enabled() const;
+
   const tbb::concurrent_vector<ResourceRecord>& memory_resources() const;
 
   boost::container::pmr::memory_resource* get_memory_resource(const OperatorType operator_type,

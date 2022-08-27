@@ -19,6 +19,10 @@ boost::container::pmr::memory_resource* MemoryResourceManager::get_memory_resour
   return resource_pointer;
 }
 
+bool MemoryResourceManager::tracking_is_enabled() const {
+  return _tracking_is_enabled;
+}
+
 void MemoryResourceManager::enable_temporary_memory_tracking() {
   _tracking_is_enabled = true;
 }
