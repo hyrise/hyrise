@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class MemoryTrackingPlugin;
+
 struct ResourceRecord {
   OperatorType operator_type;
   std::string operator_data_structure;
@@ -42,6 +44,7 @@ class MemoryResourceManager : public Noncopyable {
   // Make sure that only Hyrise (and tests) can create new instances.
   friend class Hyrise;
   friend class MemoryResourceManagerTest;
+  friend class MemoryTrackingPlugin;
   MemoryResourceManager() = default;
 
   tbb::concurrent_vector<ResourceRecord> _memory_resources;

@@ -47,4 +47,30 @@ TEST_F(MemoryTrackingPluginTest, AllocationsTrackedAfterEnable) {
   ASSERT_EQ(_memory_resource_manager->memory_resources().size(), 1);
 }
 
+TEST_F(MemoryTrackingPluginTest, Cleanup) {
+  _plugin.enable();
+  const auto mem_resource_1 = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "test_data_structure");
+  const auto mem_resource_2 = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "test_data_structure");
+  mem_resource_1->allocate(10);
+  mem_resource_1->allocate(20);
+  mem_resource_2->allocate(30);
+
+  ASSERT_EQ(_memory_resource_manager->memory_resources().size(), 2);
+
+  _plugin.cleanup();
+  ASSERT_EQ(_memory_resource_manager->memory_resources().size(), 0);
+}
+
+TEST_F(MemoryTrackingPluginTest, DisablePerformsCleanup) {
+  _plugin.enable();
+  const auto mem_resource = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "test_data_structure");
+  mem_resource->allocate(10);
+
+  ASSERT_EQ(_memory_resource_manager->memory_resources().size(), 1);
+
+  _plugin.disable();
+  ASSERT_EQ(_memory_resource_manager->memory_resources().size(), 0);
+  ASSERT_EQ(_memory_resource_manager->memory_resources().capacity(), 0);
+}
+
 }  // namespace opossum

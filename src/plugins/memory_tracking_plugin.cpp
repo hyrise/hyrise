@@ -34,7 +34,12 @@ void MemoryTrackingPlugin::disable() const {
 }
 
 void MemoryTrackingPlugin::cleanup() const {
-  std::cout << "CLEANUP NOW" << std::endl;
+  // Calling clear on the vector has the effect that the desctructor is called for each ResourceRecord. This 
+  // invalidates the unique pointer to the TrackingMemoryResource stored there. Thus, the TrackingMemoryResource and
+  // its stored data are freed.
+  // TODO: confirm if this actually works.
+  _memory_resource_manager._memory_resources.clear();
+  _memory_resource_manager._memory_resources.shrink_to_fit();
 }
 
 EXPORT_PLUGIN(MemoryTrackingPlugin)
