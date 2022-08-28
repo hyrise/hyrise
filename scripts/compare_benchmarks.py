@@ -218,11 +218,11 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     table_data.append(
         [
             name,
-            f"{(old_avg_successful_duration / 1e6):>7.3f}" if old_avg_successful_duration else "nan",
-            f"{(new_avg_successful_duration / 1e6):>7.3f}" if new_avg_successful_duration else "nan",
+            f"{(old_avg_successful_duration / 1e6):>7.2f}" if old_avg_successful_duration else "nan",
+            f"{(new_avg_successful_duration / 1e6):>7.2f}" if new_avg_successful_duration else "nan",
             diff_duration_formatted + note if not math.isnan(diff_duration) else "",
-            f'{old["items_per_second"]:>8.3f}',
-            f'{new["items_per_second"]:>8.3f}',
+            f'{old["items_per_second"]:>8.2f}',
+            f'{new["items_per_second"]:>8.2f}',
             diff_throughput_formatted + note,
             p_value_formatted,
         ]
@@ -241,10 +241,10 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
             )
 
         old_avg_unsuccessful_duration_str = (
-            f"{(np.mean(old_unsuccessful_durations) / 1e6):>7.3f}" if len(old_unsuccessful_durations) > 0 else "nan"
+            f"{(np.mean(old_unsuccessful_durations) / 1e6):>7.2f}" if len(old_unsuccessful_durations) > 0 else "nan"
         )
         new_avg_unsuccessful_duration_str = (
-            f"{(np.mean(new_unsuccessful_durations) / 1e6):>7.3f}" if len(new_unsuccessful_durations) > 0 else "nan"
+            f"{(np.mean(new_unsuccessful_durations) / 1e6):>7.2f}" if len(new_unsuccessful_durations) > 0 else "nan"
         )
 
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
@@ -263,8 +263,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
             old_avg_unsuccessful_duration_str,
             new_avg_unsuccessful_duration_str,
             diff_duration_unsuccessful_str + " ",  # space added to align diff with "note" char (see above)
-            f"{old_unsuccessful_per_second:>.3f}",
-            f"{new_unsuccessful_per_second:>.3f}",
+            f"{old_unsuccessful_per_second:>.2f}",
+            f"{new_unsuccessful_per_second:>.2f}",
             diff_throughput_unsuccessful_str + " "
         ]
 
@@ -276,8 +276,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
 table_data.append(
     [
         "Sum",
-        f"{(total_runtime_old / 1e6):>7.3f}",
-        f"{(total_runtime_new / 1e6):>7.3f}",
+        f"{(total_runtime_old / 1e6):>7.2f}",
+        f"{(total_runtime_new / 1e6):>7.2f}",
         color_diff(total_runtime_new / total_runtime_old, True) + " ",
     ]
 )
