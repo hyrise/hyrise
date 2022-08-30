@@ -170,6 +170,7 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
 
     if (condition_was_flipped) {
       const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
+      // NOLINTNEXTLINE(readability-suspicious-call-argument) - flipped arguments by intention
       AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id, *matches_out,
                                                         left_it);
     } else {

@@ -29,7 +29,7 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       metrics(init_metrics) {}
 
 BenchmarkConfig BenchmarkConfig::get_default_config() {
-  return BenchmarkConfig();
+  return BenchmarkConfig{};
 }
 
 }  // namespace hyrise

@@ -28,8 +28,8 @@ class PQPVisualizer : public AbstractVisualizer<std::vector<std::shared_ptr<Abst
                              const std::shared_ptr<AbstractExpression>& expression,
                              std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops);
 
-  void _build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                       const std::shared_ptr<const AbstractOperator>& to, const InputSide side);
+  void _build_dataflow(const std::shared_ptr<const AbstractOperator>& source_node,
+                       const std::shared_ptr<const AbstractOperator>& target_node, const InputSide side);
 
   void _add_operator(const std::shared_ptr<const AbstractOperator>& op);
 

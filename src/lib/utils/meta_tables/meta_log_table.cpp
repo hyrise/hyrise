@@ -30,7 +30,9 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
     //   why-is-there-no-c11-threadsafe-alternative-to-stdlocaltime-and-stdgmtime
     std::ostringstream timestamp;
     auto time = std::chrono::system_clock::to_time_t(entry.timestamp);
+
     struct tm buffer {};
+
     timestamp << std::put_time(localtime_r(&time, &buffer), "%F %T");
     output_table->append(
         {timestamp_ns, pmr_string{timestamp.str()}, pmr_string{log_level_to_string.left.at(entry.log_level)},

@@ -24,11 +24,12 @@ std::string SortNode::description(const DescriptionMode mode) const {
 
   stream << "[Sort] ";
 
-  for (auto expression_idx = ColumnID{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+  const auto node_expression_count = node_expressions.size();
+  for (auto expression_idx = ColumnID{0}; expression_idx < node_expression_count; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode) << " ";
     stream << "(" << sort_modes[expression_idx] << ")";
 
-    if (expression_idx + 1u < node_expressions.size()) {
+    if (expression_idx + 1u < node_expression_count) {
       stream << ", ";
     }
   }
@@ -40,7 +41,7 @@ std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const {
 }
 
 size_t SortNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   for (const auto& sort_mode : sort_modes) {
     boost::hash_combine(hash, sort_mode);
   }

@@ -43,15 +43,15 @@ Cost AbstractCostEstimator::estimate_plan_cost(const std::shared_ptr<AbstractLQP
       // Cost for subplan successfully retrieved from cache, no need to look at the inputs of the current_node
       cost += *cached_cost;
       continue;
-    } else {
-      cost += estimate_node_cost(current_node);
-      if (current_node->left_input()) {
-        bfs_queue.push(current_node->left_input());
-      }
+    }
 
-      if (current_node->right_input()) {
-        bfs_queue.push(current_node->right_input());
-      }
+    cost += estimate_node_cost(current_node);
+    if (current_node->left_input()) {
+      bfs_queue.push(current_node->left_input());
+    }
+
+    if (current_node->right_input()) {
+      bfs_queue.push(current_node->right_input());
     }
   }
 

@@ -176,7 +176,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     new_successful_durations = np.array([run["duration"] for run in new["successful_runs"]], dtype=np.float64)
     old_unsuccessful_durations = np.array([run["duration"] for run in old["unsuccessful_runs"]], dtype=np.float64)
     new_unsuccessful_durations = np.array([run["duration"] for run in new["unsuccessful_runs"]], dtype=np.float64)
-    old_avg_successful_duration = np.mean(old_successful_durations)  # defaults to np.float64 for int input
+    # np.mean() defaults to np.float64 for int input
+    old_avg_successful_duration = np.mean(old_successful_durations)
     new_avg_successful_duration = np.mean(new_successful_durations)
 
     total_runtime_old += old_avg_successful_duration if not math.isnan(old_avg_successful_duration) else 0.0
@@ -217,8 +218,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
     table_data.append(
         [
             name,
-            f"{(old_avg_successful_duration / 1e6):>7.1f}" if old_avg_successful_duration else "nan",
-            f"{(new_avg_successful_duration / 1e6):>7.1f}" if new_avg_successful_duration else "nan",
+            f"{(old_avg_successful_duration / 1e6):>7.2f}" if old_avg_successful_duration else "nan",
+            f"{(new_avg_successful_duration / 1e6):>7.2f}" if new_avg_successful_duration else "nan",
             diff_duration_formatted + note if not math.isnan(diff_duration) else "",
             f'{old["items_per_second"]:>8.2f}',
             f'{new["items_per_second"]:>8.2f}',
@@ -239,27 +240,32 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
                 float(new_data["summary"]["total_duration"]) / 1e9
             )
 
-        old_avg_unsuccessful_duration = np.mean(old_unsuccessful_durations)
-        new_avg_unsuccessful_duration = np.mean(new_unsuccessful_durations)
+        old_avg_unsuccessful_duration_str = (
+            f"{(np.mean(old_unsuccessful_durations) / 1e6):>7.2f}" if len(old_unsuccessful_durations) > 0 else "nan"
+        )
+        new_avg_unsuccessful_duration_str = (
+            f"{(np.mean(new_unsuccessful_durations) / 1e6):>7.2f}" if len(new_unsuccessful_durations) > 0 else "nan"
+        )
+
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
-            diff_throughput_unsuccessful = float(new_unsuccessful_per_second / old_unsuccessful_per_second)
-            diff_duration_unsuccessful = new_avg_unsuccessful_duration / old_avg_unsuccessful_duration
+            diff_throughput_unsuccessful_str = format_diff(
+                new_unsuccessful_per_second / old_unsuccessful_per_second
+            )
+            diff_duration_unsuccessful_str = format_diff(
+                np.mean(new_unsuccessful_durations) / np.mean(old_unsuccessful_durations)
+            )
         else:
-            diff_throughput_unsuccessful = float("nan")
-            diff_duration_unsuccessful = float("nan")
+            diff_throughput_unsuccessful_str = " "
+            diff_duration_unsuccessful_str = " "
 
         unsuccessful_info = [
             "   unsucc.:",
-            f"{(old_avg_unsuccessful_duration / 1e6):>7.1f}"
-            if not math.isnan(old_avg_unsuccessful_duration)
-            else "nan",
-            f"{(new_avg_unsuccessful_duration / 1e6):>7.1f}"
-            if not math.isnan(new_avg_unsuccessful_duration)
-            else "nan",
-            format_diff(diff_duration_unsuccessful) + " " if not math.isnan(diff_duration_unsuccessful) else " ",
+            old_avg_unsuccessful_duration_str,
+            new_avg_unsuccessful_duration_str,
+            diff_duration_unsuccessful_str + " ",  # space added to align diff with "note" char (see above)
             f"{old_unsuccessful_per_second:>.2f}",
             f"{new_unsuccessful_per_second:>.2f}",
-            format_diff(diff_throughput_unsuccessful) + " " if not math.isnan(diff_throughput_unsuccessful) else " ",
+            diff_throughput_unsuccessful_str + " "
         ]
 
         unsuccessful_info_colored = [colored(text, attrs=["dark"]) for text in unsuccessful_info]
@@ -270,8 +276,8 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
 table_data.append(
     [
         "Sum",
-        f"{(total_runtime_old / 1e6):>7.1f}",
-        f"{(total_runtime_new / 1e6):>7.1f}",
+        f"{(total_runtime_old / 1e6):>7.2f}",
+        f"{(total_runtime_new / 1e6):>7.2f}",
         color_diff(total_runtime_new / total_runtime_old, True) + " ",
     ]
 )

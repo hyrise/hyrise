@@ -21,7 +21,7 @@ class AbstractTask;
  */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
+  IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const SegmentIndexType index_type,
             const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
             const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
 

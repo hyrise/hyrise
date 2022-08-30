@@ -17,6 +17,7 @@ static void BM_TPCHTableGenerator(benchmark::State& state) {  // NOLINT
     Hyrise::reset();
   }
 }
+
 BENCHMARK(BM_TPCHTableGenerator);
 
 }  // namespace hyrise

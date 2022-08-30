@@ -68,7 +68,7 @@ class FixedString {
   friend bool operator==(const char* lhs, const FixedString& rhs);
 
   // Prints FixedString as string
-  friend std::ostream& operator<<(std::ostream& os, const FixedString& obj);
+  friend std::ostream& operator<<(std::ostream& stream, const FixedString& obj);
 
   // Support swappable concept needed for sorting values. See: http://en.cppreference.com/w/cpp/concept/Swappable
   friend void swap(FixedString lhs, FixedString rhs);

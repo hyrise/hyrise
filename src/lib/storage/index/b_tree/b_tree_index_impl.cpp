@@ -40,9 +40,9 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::lower_bound(DataType valu
   auto result = _btree.lower_bound(value);
   if (result == _btree.end()) {
     return _chunk_offsets.end();
-  } else {
-    return _chunk_offsets.begin() + result->second;
   }
+
+  return _chunk_offsets.begin() + result->second;
 }
 
 template <typename DataType>
@@ -50,9 +50,9 @@ BaseBTreeIndexImpl::Iterator BTreeIndexImpl<DataType>::upper_bound(DataType valu
   auto result = _btree.upper_bound(value);
   if (result == _btree.end()) {
     return _chunk_offsets.end();
-  } else {
-    return _chunk_offsets.begin() + result->second;
   }
+
+  return _chunk_offsets.begin() + result->second;
 }
 
 template <typename DataType>
@@ -83,7 +83,7 @@ void BTreeIndexImpl<DataType>::_bulk_insert(const std::shared_ptr<const Abstract
   }
 
   // Sort
-  std::sort(values.begin(), values.end(), [](const auto& a, const auto& b) { return a.second < b.second; });
+  std::sort(values.begin(), values.end(), [](const auto& lhs, const auto& rhs) { return lhs.second < rhs.second; });
   _chunk_offsets.resize(values.size());
   for (size_t i = 0; i < values.size(); i++) {
     _chunk_offsets[i] = values[i].first;

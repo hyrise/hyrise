@@ -570,7 +570,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

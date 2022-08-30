@@ -239,7 +239,7 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -255,7 +255,7 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -273,7 +273,7 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -291,7 +291,7 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

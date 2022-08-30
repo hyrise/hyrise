@@ -219,7 +219,8 @@ class LZ4Segment : public AbstractEncodedSegment {
 template <>
 std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const;
 template <>
-std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset&, const std::optional<size_t>,
+std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset&,
+                                                                 const std::optional<size_t> cached_block_index,
                                                                  std::vector<char>&) const;
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const;

@@ -104,7 +104,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
 
   pm.exec_user_function("hyriseTestPlugin", "OurFreelyChoosableFunctionName");
   // The test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin"));
+  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
 
   // The PluginManager adds log messages when user executable functions are called
   EXPECT_EQ(lm.log_entries().size(), 1);

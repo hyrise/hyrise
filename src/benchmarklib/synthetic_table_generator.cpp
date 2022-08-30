@@ -161,9 +161,9 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           **/
           values.push_back(static_cast<int>(column_data_distribution.min_value));
           values.push_back(static_cast<int>(column_data_distribution.max_value));
-          for (auto row_offset = size_t{0}; row_offset < chunk_size - 2; ++row_offset) {
+          for (auto row_offset = ChunkOffset{0}; row_offset < chunk_size - 2; ++row_offset) {
             // bounds check
-            if (chunk_index * chunk_size + (row_offset + 1) > num_rows - 2) {
+            if (static_cast<size_t>(chunk_index * chunk_size) + row_offset + 1 > num_rows - 2) {
               break;
             }
             values.push_back(generate_value_by_distribution_type());

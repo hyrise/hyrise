@@ -44,9 +44,9 @@ bool VariableLengthKeyConstProxy::operator<(const VariableLengthKey& other) cons
   return _impl < other._impl;
 }
 
-std::ostream& operator<<(std::ostream& os, const VariableLengthKeyConstProxy& key) {
-  os << key._impl;
-  return os;
+std::ostream& operator<<(std::ostream& ostream, const VariableLengthKeyConstProxy& key) {
+  ostream << key._impl;
+  return ostream;
 }
 
 // Mutable VariableLengthKeyProxy

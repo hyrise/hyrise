@@ -202,9 +202,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       if (typed_value) {
         return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
-      } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
       }
+      return SegmentPosition<T>{T{}, true, pos_list_offset};
     }
 
     void _create_accessor(const ChunkID chunk_id) const {
