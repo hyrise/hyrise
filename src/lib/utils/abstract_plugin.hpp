@@ -36,9 +36,7 @@ class AbstractPlugin {
   // exec_user_function method. If you are writing a plugin and provide user-exectuable functions it
   // is YOUR responsibility to keep these function calls as short and efficient as possible, e.g.,
   // by spinning up a thread inside the plugin to execute the actual functionality.
-  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() {
-    return {};
-  }
+  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions();
 };
 
 }  // namespace hyrise
