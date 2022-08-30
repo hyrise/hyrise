@@ -13,7 +13,7 @@ namespace hyrise {
 // e.g., ValueSegment, ReferenceSegment
 class AbstractSegment : private Noncopyable {
  public:
-  enum class Tier { Memory, HDD };
+  enum class Tier { Memory, SSD };
 
   explicit AbstractSegment(const DataType data_type);
 

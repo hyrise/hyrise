@@ -35,7 +35,7 @@ class PhysicalConfigurationPlugin : public AbstractPlugin {
     std::string _value = DEFAULT_CONFIG_PATH;
   };
 
-  std::unique_ptr<ConfigPath> _config_path;
+  std::shared_ptr<ConfigPath> _config_path;
 };
 
 }  // namespace hyrise

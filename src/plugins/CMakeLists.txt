@@ -91,9 +91,16 @@ add_plugin(NAME hyrisePhysicalConfigurationPlugin
     physical_configuration/physical_config.hpp
 
   DEPS
+    compact_vector
     magic_enum
     nlohmann_json
     sqlparser
+)
+
+target_link_libraries_system(
+    hyrisePhysicalConfigurationPlugin
+
+    compact_vector
 )
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes

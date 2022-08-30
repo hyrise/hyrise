@@ -14,7 +14,12 @@ namespace hyrise {
  * PrintFlags::IgnoreChunkBoundaries:  If set, print a logical view of the Table, i.e., do not print info about Chunks or
  *                              Segment types.
  */
-enum class PrintFlags : uint32_t { None = 0u, Mvcc = 1u << 0u, IgnoreChunkBoundaries = 1u << 1u };
+enum class PrintFlags : uint32_t {
+  None = 0u,
+  Mvcc = 1u << 0u,
+  IgnoreChunkBoundaries = 1u << 1u,
+  IgnoreCellWidth = 1u << 2u
+};
 
 /**
  * operator to print the table with its data

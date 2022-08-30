@@ -30,6 +30,10 @@ bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
   return static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries) & static_cast<uint32_t>(flags);
 }
 
+bool has_print_ignore_cell_width_flag(const PrintFlags flags) {
+  return static_cast<uint32_t>(PrintFlags::IgnoreCellWidth) & static_cast<uint32_t>(flags);
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -77,7 +81,9 @@ void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& 
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, left_input_table());
+  const auto max_cell_width =
+      has_print_ignore_cell_width_flag(_flags) ? std::numeric_limits<uint16_t>::max() : _max_cell_width;
+  auto widths = _column_string_widths(_min_cell_width, max_cell_width, left_input_table());
 
   // print column headers
   _out << "=== Columns" << std::endl;

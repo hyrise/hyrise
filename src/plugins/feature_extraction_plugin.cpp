@@ -10,7 +10,7 @@ std::string FeatureExtractionPlugin::description() const {
 }
 
 void FeatureExtractionPlugin::start() {
-  _output_path = std::make_unique<OutputPath>("FeatureExtractionPlugin.OutputPath");
+  _output_path = std::make_shared<OutputPath>("FeatureExtractionPlugin.OutputPath");
   _output_path->register_at_settings_manager();
   _query_exporter = std::make_unique<QueryExporter>();
   _plan_exporter = std::make_unique<PlanExporter>();

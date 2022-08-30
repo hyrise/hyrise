@@ -2,13 +2,14 @@
 
 namespace hyrise {
 
+/*
 constexpr SegmentPhysicalConfig::SegmentPhysicalConfig()
     : encoding_spec{SegmentEncodingSpec{}}, tier{AbstractSegment::Tier::Memory}, sorted{false} {}
 
 constexpr SegmentPhysicalConfig::SegmentPhysicalConfig(const SegmentEncodingSpec& init_encoding_spec,
                                              const AbstractSegment::Tier init_tier, const bool init_sorted)
     : encoding_spec{init_encoding_spec}, tier{init_tier}, sorted{init_sorted} {}
-
+*/
 PhysicalConfig::PhysicalConfig() : fallback_config{SegmentPhysicalConfig{}} {}
 
 PhysicalConfig::PhysicalConfig(const SegmentPhysicalConfig& init_fallback_config)

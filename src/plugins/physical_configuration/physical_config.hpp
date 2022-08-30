@@ -8,9 +8,11 @@
 namespace hyrise {
 
 struct SegmentPhysicalConfig {
-  constexpr SegmentPhysicalConfig();
+  constexpr SegmentPhysicalConfig()
+      : encoding_spec{SegmentEncodingSpec{}}, tier{AbstractSegment::Tier::Memory}, sorted{false} {}
   constexpr SegmentPhysicalConfig(const SegmentEncodingSpec& init_encoding_spec, const AbstractSegment::Tier init_tier,
-                        const bool init_sorted);
+                                  const bool init_sorted)
+      : encoding_spec{init_encoding_spec}, tier{init_tier}, sorted{init_sorted} {}
   SegmentEncodingSpec encoding_spec;
   AbstractSegment::Tier tier;
   bool sorted;
