@@ -295,7 +295,6 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  // TODO(Martin): check with PR #2402 whether GCC still needs the `.load()` (some used in abstract_task.cpp twice).
   if (_cleanup_commit_id.load() == CommitID{0}) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
