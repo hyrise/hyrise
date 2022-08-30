@@ -40,14 +40,14 @@ def assert_latency_equals(item_count, runtimes, latency_string):
     avg_latency = sum(runtimes) / item_count / 1_000_000
     latency_string_cleaned = clean_ansi_escape_sequences(latency_string)
 
-    assert math.isclose(float(latency_string_cleaned), avg_latency, rel_tol=0.1)
+    assert math.isclose(float(latency_string_cleaned), avg_latency, abs_tol=0.1)
 
 
 def assert_throughput_equals(item_count, duration, throughput_string):
     throughput = item_count / duration * 1_000_000_000
     throughput_string_cleaned = clean_ansi_escape_sequences(throughput_string)
 
-    assert math.isclose(float(throughput_string_cleaned), throughput, rel_tol=0.1)
+    assert math.isclose(float(throughput_string_cleaned), throughput, abs_tol=0.1)
 
 
 class CompareBenchmarkScriptTest:
