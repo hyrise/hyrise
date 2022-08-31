@@ -218,6 +218,7 @@ set(
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
     lib/utils/meta_tables/meta_plugins_table_test.cpp
+    lib/utils/meta_tables/meta_segments_accurate_test.cpp
     lib/utils/meta_tables/meta_settings_table_test.cpp
     lib/utils/meta_tables/meta_system_utilization_table_test.cpp
     lib/utils/meta_tables/meta_table_test.cpp

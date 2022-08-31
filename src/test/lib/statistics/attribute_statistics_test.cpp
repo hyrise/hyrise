@@ -1,6 +1,7 @@
 #include "base_test.hpp"
 
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
@@ -16,6 +17,7 @@ TEST_F(AttributeStatisticsTest, SetStatisticsObject) {
   EXPECT_EQ(attribute_statistics.min_max_filter, nullptr);
   EXPECT_EQ(attribute_statistics.range_filter, nullptr);
   EXPECT_EQ(attribute_statistics.null_value_ratio, nullptr);
+  EXPECT_EQ(attribute_statistics.distinct_value_count, nullptr);
 
   attribute_statistics.set_statistics_object(GenericHistogram<int32_t>::with_single_bin(0, 100, 40, 20));
   EXPECT_NE(attribute_statistics.histogram, nullptr);
@@ -29,6 +31,9 @@ TEST_F(AttributeStatisticsTest, SetStatisticsObject) {
 
   attribute_statistics.set_statistics_object(std::make_shared<NullValueRatioStatistics>(0.2f));
   EXPECT_NE(attribute_statistics.null_value_ratio, nullptr);
+
+  attribute_statistics.set_statistics_object(std::make_shared<DistinctValueCount>(123));
+  EXPECT_NE(attribute_statistics.distinct_value_count, nullptr);
 }
 
 TEST_F(AttributeStatisticsTest, Scaled) {
@@ -38,6 +43,7 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   attribute_statistics.range_filter =
       std::make_shared<RangeFilter<int32_t>>(std::vector{std::pair<int32_t, int32_t>(0, 100)});
   attribute_statistics.null_value_ratio = std::make_shared<NullValueRatioStatistics>(0.2f);
+  attribute_statistics.distinct_value_count = std::make_shared<DistinctValueCount>(123);
 
   const auto scaled_attribute_statistics =
       std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(attribute_statistics.scaled(0.5f));
@@ -56,6 +62,8 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
 
   EXPECT_FLOAT_EQ(attribute_statistics.null_value_ratio->ratio, 0.2f);
+
+  EXPECT_EQ(attribute_statistics.distinct_value_count->count, 123);
 }
 
 TEST_F(AttributeStatisticsTest, Sliced) {
@@ -65,6 +73,7 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   attribute_statistics.range_filter =
       std::make_shared<RangeFilter<int32_t>>(std::vector{std::pair<int32_t, int32_t>(0, 100)});
   attribute_statistics.null_value_ratio = std::make_shared<NullValueRatioStatistics>(0.2f);
+  attribute_statistics.distinct_value_count = std::make_shared<DistinctValueCount>(123);
 
   const auto scaled_attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<int32_t>>(
       attribute_statistics.sliced(PredicateCondition::GreaterThanEquals, 51));
@@ -83,6 +92,8 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   EXPECT_EQ(scaled_attribute_statistics->range_filter->ranges.at(0).second, 100);
 
   EXPECT_FLOAT_EQ(attribute_statistics.null_value_ratio->ratio, 0.2f);
+
+  EXPECT_EQ(attribute_statistics.distinct_value_count->count, 123);
 }
 
 }  // namespace hyrise

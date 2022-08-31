@@ -77,7 +77,7 @@ bool MetaTableManager::can_update(const std::string& table_name) const {
 }
 
 void MetaTableManager::insert_into(const std::string& table_name, const std::shared_ptr<const Table>& values) {
-  const auto rows = values->get_rows();
+  const auto& rows = _materialize_values(values);
 
   for (const auto& row : rows) {
     _meta_tables.at(table_name)->_insert(row);
@@ -85,7 +85,7 @@ void MetaTableManager::insert_into(const std::string& table_name, const std::sha
 }
 
 void MetaTableManager::delete_from(const std::string& table_name, const std::shared_ptr<const Table>& values) {
-  const auto& rows = values->get_rows();
+  const auto& rows = _materialize_values(values);
 
   for (const auto& row : rows) {
     _meta_tables.at(table_name)->_remove(row);
@@ -94,8 +94,8 @@ void MetaTableManager::delete_from(const std::string& table_name, const std::sha
 
 void MetaTableManager::update(const std::string& table_name, const std::shared_ptr<const Table>& selected_values,
                               const std::shared_ptr<const Table>& update_values) {
-  const auto& selected_rows = selected_values->get_rows();
-  const auto& update_rows = update_values->get_rows();
+  const auto& selected_rows = _materialize_values(selected_values);
+  const auto& update_rows = _materialize_values(update_values);
   Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
 
   const auto row_count = selected_rows.size();
@@ -106,6 +106,12 @@ void MetaTableManager::update(const std::string& table_name, const std::shared_p
 
 std::string MetaTableManager::_trim_table_name(const std::string& table_name) {
   return is_meta_table_name(table_name) ? table_name.substr(MetaTableManager::META_PREFIX.size()) : table_name;
+}
+
+std::vector<std::vector<AllTypeVariant>> MetaTableManager::_materialize_values(
+    const std::shared_ptr<const Table>& values) {
+  PerformanceWarningDisabler pwd;
+  return values->get_rows();
 }
 
 }  // namespace hyrise

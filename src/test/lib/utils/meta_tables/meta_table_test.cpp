@@ -3,7 +3,6 @@
 
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
@@ -13,8 +12,6 @@
 #include "utils/meta_tables/meta_segments_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
-
-#include "meta_mock_table.hpp"
 
 namespace hyrise {
 
@@ -52,10 +49,9 @@ class MetaTableTest : public BaseTest {
   }
 
  protected:
-  const std::string test_file_path = "resources/test_data/tbl/meta_tables/meta_";
+  const std::string test_file_path{"resources/test_data/tbl/meta_tables/meta_"};
   std::shared_ptr<Table> int_int;
   std::shared_ptr<Table> int_int_int_null;
-  std::shared_ptr<const Table> mock_manipulation_values;
 
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
@@ -70,13 +66,6 @@ class MetaTableTest : public BaseTest {
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
-
-    const auto column_definitions = MetaMockTable().column_definitions();
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
-    table->append({pmr_string{"foo"}});
-    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-    table_wrapper->execute();
-    mock_manipulation_values = table_wrapper->get_output();
   }
 
   void TearDown() override {
@@ -208,4 +197,5 @@ TEST_F(MetaTableTest, IsNotCached) {
   EXPECT_EQ(mock_table->generate_calls(), 8);
   EXPECT_EQ(mock_table->update_calls(), 2);
 }
+
 }  // namespace hyrise
