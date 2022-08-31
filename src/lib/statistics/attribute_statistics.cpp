@@ -28,6 +28,9 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
   } else if (const auto null_value_ratio_object =
                  std::dynamic_pointer_cast<NullValueRatioStatistics>(statistics_object)) {
     null_value_ratio = null_value_ratio_object;
+  } else if (const auto distinct_value_count_object =
+                 std::dynamic_pointer_cast<DistinctValueCount>(statistics_object)) {
+    distinct_value_count = distinct_value_count_object;
   } else {
     if constexpr (std::is_arithmetic_v<
                       T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
