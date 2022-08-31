@@ -69,8 +69,7 @@ TEST_F(OperatorsGetTableTest, Description) {
   EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine),
             "GetTable\n(int_int_float)\npruned:\n0/4 chunk(s)\n0/3 column(s)");
 
-  auto get_table_b =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  auto get_table_b = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 1/4 chunk(s), 1/3 column(s)");
   EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine),
@@ -107,8 +106,8 @@ TEST_F(OperatorsGetTableTest, PassThroughInvalidRowCount) {
 }
 
 TEST_F(OperatorsGetTableTest, PrunedChunks) {
-  auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}},
-                                                       std::vector<ColumnID>{});
+  auto get_table =
+      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}}, std::vector<ColumnID>{});
 
   get_table->execute();
 
@@ -126,8 +125,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunks) {
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumns) {
-  auto get_table =
-      std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+  auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
 
   get_table->execute();
 
@@ -148,8 +146,8 @@ TEST_F(OperatorsGetTableTest, PrunedColumns) {
 }
 
 TEST_F(OperatorsGetTableTest, PrunedColumnsAndChunks) {
-  auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}},
-                                                       std::vector{ColumnID{0}});
+  auto get_table =
+      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}, ChunkID{2}}, std::vector{ColumnID{0}});
 
   get_table->execute();
 
@@ -256,8 +254,7 @@ TEST_F(OperatorsGetTableTest, PrunedChunksCombined) {
   EXPECT_FALSE(original_table->get_chunk(ChunkID{2}));
 
   // 2. --- Logical deletion of a chunk
-  auto get_table_2 =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
+  auto get_table_2 = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector<ColumnID>{});
 
   auto context2 = std::make_shared<TransactionContext>(TransactionID{1}, CommitID{3}, AutoCommit::No);
 
@@ -297,8 +294,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // single column pruned
   {
-    auto get_table =
-        std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
+    auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{1}});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -313,8 +309,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // multiple columns pruned
   {
-    auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{},
-                                                         std::vector{ColumnID{0}, ColumnID{1}});
+    auto get_table =
+        std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{0}, ColumnID{1}});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -327,8 +323,7 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // no columns pruned
   {
-    auto get_table =
-        std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
+    auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector<ColumnID>{});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();
@@ -341,8 +336,8 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 
   // pruning the columns on which chunks are sorted
   {
-    auto get_table = std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{},
-                                                         std::vector{ColumnID{0}, ColumnID{2}});
+    auto get_table =
+        std::make_shared<GetTable>("int_int_float", std::vector<ChunkID>{}, std::vector{ColumnID{0}, ColumnID{2}});
     get_table->execute();
 
     const auto& get_table_output = get_table->get_output();

@@ -27,7 +27,9 @@ void expression_bind_placeholders_impl(
       sub_expression = parameter_iter->second;
 
       return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
+    }
+
+    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
       lqp_bind_placeholders_impl(subquery_expression->lqp, parameters, visited_nodes);
     }
 

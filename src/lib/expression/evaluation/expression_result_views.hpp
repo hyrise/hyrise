@@ -121,7 +121,7 @@ class ExpressionResultLiteral {
   }
 
   size_t size() const {
-    return 1u;
+    return 1;
   }
 
   const T& value(const size_t /*value*/) const {

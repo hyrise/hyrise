@@ -116,7 +116,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    * Task ids are determined on scheduling, no one else but the Scheduler should have any reason to call this
    * @param id id, unique during the lifetime of the program, of the task
    */
-  void set_id(TaskID id);
+  void set_id(TaskID task_id);
 
   /**
    * Make this Task the dependency of another

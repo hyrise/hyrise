@@ -31,6 +31,7 @@ class IntersectNodeTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _b;
   std::shared_ptr<LQPColumnExpression> _c;
 };
+
 TEST_F(IntersectNodeTest, Description) {
   EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: Positions");
 }

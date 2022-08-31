@@ -65,14 +65,17 @@ class LikeMatcher {
   struct StartsWithPattern final {
     pmr_string string;
   };
+
   // '%hello'
   struct EndsWithPattern final {
     pmr_string string;
   };
+
   // '%hello%'
   struct ContainsPattern final {
     pmr_string string;
   };
+
   // '%hello%world%nice%weather%'
   struct MultipleContainsPattern final {
     std::vector<pmr_string> strings;

@@ -22,11 +22,11 @@ const auto vector_compressor_for_type = std::map<VectorCompressionType, std::sha
     {VectorCompressionType::BitPacking, std::make_shared<BitPackingCompressor>()}};
 
 std::unique_ptr<AbstractVectorCompressor> create_compressor_by_type(VectorCompressionType type) {
-  auto it = vector_compressor_for_type.find(type);
-  Assert(it != vector_compressor_for_type.cend(),
+  auto iter = vector_compressor_for_type.find(type);
+  Assert(iter != vector_compressor_for_type.cend(),
          "All vector compression types must be in vector_compressor_for_type.");
 
-  const auto& compressor = it->second;
+  const auto& compressor = iter->second;
   return compressor->create_new();
 }
 

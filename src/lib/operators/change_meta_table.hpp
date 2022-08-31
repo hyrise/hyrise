@@ -40,7 +40,9 @@ class ChangeMetaTable : public AbstractReadWriteOperator {
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
+
   void _on_commit_records(const CommitID cid) override {}
+
   void _on_rollback_records() override {}
 
  private:

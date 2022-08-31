@@ -100,6 +100,7 @@ class CompressedVector : public AbstractCompressedVector {
   auto cend() const {
     return end();
   }
+
   /**@}*/
 
  public:

@@ -65,9 +65,10 @@ TEST_F(OperatorsDifferenceTest, DifferneceOnReferenceTables) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
+
   auto table_wrapper_c = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int.tbl", ChunkOffset{2}));
   table_wrapper_c->execute();
 
@@ -77,7 +78,7 @@ TEST_F(OperatorsDifferenceTest, ThrowWrongColumnNumberException) {
 }
 
 TEST_F(OperatorsDifferenceTest, ThrowWrongColumnOrderException) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

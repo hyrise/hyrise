@@ -16,7 +16,7 @@
 
 #include "utils/load_table.hpp"
 
-using namespace std::string_literals;            // NOLINT
+using namespace std::string_literals;           // NOLINT
 using namespace hyrise::expression_functional;  // NOLINT
 
 namespace hyrise {

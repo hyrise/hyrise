@@ -609,7 +609,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated)
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithBrokenPrecalculated) {
   // Make sure the expression evaluator complains if it has been given a list of preevaluated sub queries but one is
   // missing
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

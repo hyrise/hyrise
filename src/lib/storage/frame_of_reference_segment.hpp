@@ -19,26 +19,20 @@ class AbstractCompressedVector;
 /**
  * @brief Segment implementing frame-of-reference encoding
  *
- * Frame-of-Reference encoding divides the values of segment into
- * fixed-size blocks. The values of each block are encoded
- * as an offset from the block’s minimum value. These offsets,
- * which can ideally be represented by fewer bits, are then
- * compressed using vector compression (null suppression).
- * FOR encoding on its own without vector compression does not
- * add any benefit.
+ * Frame-of-Reference encoding divides the values of segment into fixed-size blocks. The values of each block are
+ * encoded as an offset from the block's minimum value. These offsets, which can ideally be represented by fewer bits,
+ * are then compressed using vector compression (null suppression).
  *
- * Null values are stored in a separate vector. Note, for correct
- * offset handling, the minimum of each frame is stored in the
- * offset_values vector at each position that is NULL.
+ * FOR encoding on its own without vector compression does not add any benefit.
  *
- * std::enable_if_t must be used here and cannot be replaced by a
- * static_assert in order to prevent instantiation of
- * FrameOfReferenceSegment<T> with T other than int32_t. Otherwise,
- * the compiler might instantiate FrameOfReferenceSegment with other
- * types even if they are never actually needed.
- * "If the function selected by overload resolution can be determined
- * without instantiating a class template definition, it is unspecified
- * whether that instantiation actually takes place." Draft Std. N4800 12.8.1.8
+ * Null values are stored in a separate vector. Note, for correct offset handling, the minimum of each frame is stored 
+ * in the offset_values vector at each position that is NULL.
+ *
+ * std::enable_if_t must be used here and cannot be replaced by a static_assert in order to prevent instantiation of
+ * FrameOfReferenceSegment<T> with T other than int32_t. Otherwise, the compiler might instantiate
+ * FrameOfReferenceSegment with other types even if they are never actually needed.
+ * "If the function selected by overload resolution can be determined without instantiating a class template
+ *  definition, it is unspecified whether that instantiation actually takes place." Draft Std. N4800 12.8.1.8
  */
 template <typename T, typename = std::enable_if_t<encoding_supports_data_type(
                           enum_c<EncodingType, EncodingType::FrameOfReference>, hana::type_c<T>)>>

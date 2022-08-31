@@ -202,9 +202,9 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
-  } else {
-    return std::atomic_load(&_chunks[chunk_id]);
   }
+
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
@@ -212,9 +212,9 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   if (_type == TableType::References) {
     // see comment in non-const function
     return _chunks[chunk_id];
-  } else {
-    return std::atomic_load(&_chunks[chunk_id]);
   }
+
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<Chunk> Table::last_chunk() const {
@@ -222,9 +222,9 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks.back();
-  } else {
-    return std::atomic_load(&_chunks.back());
   }
+
+  return std::atomic_load(&_chunks.back());
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
@@ -285,14 +285,14 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
     if (row_idx < chunk->size()) {
       auto row = std::vector<AllTypeVariant>(column_count());
 
-      for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
         row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
       }
 
       return row;
-    } else {
-      row_idx -= chunk->size();
     }
+
+    row_idx -= chunk->size();
   }
 
   Fail("row_idx out of bounds");

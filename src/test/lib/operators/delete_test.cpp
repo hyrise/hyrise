@@ -304,7 +304,7 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 

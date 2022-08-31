@@ -61,7 +61,7 @@ namespace hyrise {
  */
 class AggregateSort : public AbstractAggregateOperator {
  public:
-  AggregateSort(const std::shared_ptr<AbstractOperator>& in,
+  AggregateSort(const std::shared_ptr<AbstractOperator>& input_operator,
                 const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 

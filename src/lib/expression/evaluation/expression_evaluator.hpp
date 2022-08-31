@@ -157,18 +157,18 @@ class ExpressionEvaluator final {
       const AbstractExpression& left_expression, const AbstractExpression& right_expression);
 
   template <typename Functor>
-  void _resolve_to_expression_result_view(const AbstractExpression& expression, const Functor& fn);
+  void _resolve_to_expression_result_view(const AbstractExpression& expression, const Functor& functor);
 
   template <typename Functor>
   void _resolve_to_expression_result_views(const AbstractExpression& left_expression,
-                                           const AbstractExpression& right_expression, const Functor& fn);
+                                           const AbstractExpression& right_expression, const Functor& functor);
 
   template <typename Functor>
   void _resolve_to_expression_results(const AbstractExpression& left_expression,
-                                      const AbstractExpression& right_expression, const Functor& fn);
+                                      const AbstractExpression& right_expression, const Functor& functor);
 
   template <typename Functor>
-  void _resolve_to_expression_result(const AbstractExpression& expression, const Functor& fn);
+  void _resolve_to_expression_result(const AbstractExpression& expression, const Functor& functor);
 
   /**
    * Compute the number of rows that any kind expression produces, given the number of rows in its parameters
