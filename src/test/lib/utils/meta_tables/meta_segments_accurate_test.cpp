@@ -13,10 +13,6 @@ class MetaSegmentsAccurateTest : public BaseTest {
     int_int = load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("int_int", int_int);
   }
-
-  void TearDown() override {
-    Hyrise::reset();
-  }
 };
 
 TEST_F(MetaSegmentsAccurateTest, UsesDistinctCountStatistics) {

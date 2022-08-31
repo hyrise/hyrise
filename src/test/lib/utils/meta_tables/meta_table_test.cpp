@@ -68,10 +68,6 @@ class MetaTableTest : public BaseTest {
     storage_manager.add_table("int_int_int_null", int_int_int_null);
   }
 
-  void TearDown() override {
-    Hyrise::reset();
-  }
-
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager.add_table(table);
   }
@@ -119,7 +115,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
         ->get_chunk(ChunkID{0})
         ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
-
+  std::cout << test_file_path + GetParam()->name() + suffix + "_updated.tbl" << std::endl;
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
   const auto meta_table = generate_meta_table(GetParam());
 
