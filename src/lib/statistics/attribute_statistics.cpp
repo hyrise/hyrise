@@ -67,6 +67,10 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Se
     }
   }
 
+  if (distinct_value_count) {
+    statistics->set_statistics_object(distinct_value_count->scaled(selectivity));
+  }
+
   return statistics;
 }
 
@@ -93,6 +97,10 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     if (range_filter) {
       statistics->set_statistics_object(range_filter->sliced(predicate_condition, variant_value, variant_value2));
     }
+  }
+
+  if (distinct_value_count) {
+    statistics->set_statistics_object(distinct_value_count->sliced(predicate_condition, variant_value, variant_value2));
   }
 
   return statistics;
@@ -126,6 +134,10 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
     if (range_filter) {
       Fail("Pruning not implemented for range filters");
     }
+  }
+
+  if (distinct_value_count) {
+    Fail("Pruning not implemented for distinct value count");
   }
 
   return statistics;

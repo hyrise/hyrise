@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-// General behavior of MetaSegmentsAccurateTable is tested in meta_table_test.cpp
+// General behavior of MetaSegmentsAccurateTable is tested in meta_table_test.cpp.
 class MetaSegmentsAccurateTest : public BaseTest {
  protected:
   std::shared_ptr<Table> int_int;
