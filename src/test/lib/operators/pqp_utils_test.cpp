@@ -13,6 +13,7 @@ class PQPUtilsTest : public BaseTest {
   void SetUp() override {
     node_a = std::make_shared<GetTable>("foo");
   }
+
   std::shared_ptr<AbstractOperator> node_a;
 };
 

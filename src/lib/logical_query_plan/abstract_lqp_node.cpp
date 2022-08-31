@@ -96,9 +96,9 @@ size_t AbstractLQPNode::hash() const {
       boost::hash_combine(hash, node->type);
       boost::hash_combine(hash, node->_on_shallow_hash());
       return LQPVisitation::VisitInputs;
-    } else {
-      return LQPVisitation::DoNotVisitInputs;
     }
+
+    return LQPVisitation::DoNotVisitInputs;
   });
 
   return hash;
@@ -170,11 +170,13 @@ size_t AbstractLQPNode::input_count() const {
 LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const {
   if (output->_inputs[0].get() == this) {
     return LQPInputSide::Left;
-  } else if (output->_inputs[1].get() == this) {
-    return LQPInputSide::Right;
-  } else {
-    Fail("Specified output node is not actually an output node of this node.");
   }
+
+  if (output->_inputs[1].get() == this) {
+    return LQPInputSide::Right;
+  }
+
+  Fail("Specified output node is not actually an output node of this node.");
 }
 
 std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
@@ -226,7 +228,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
   const auto outputs = this->outputs();
   const auto input_sides = get_input_sides();
 
-  for (size_t output_idx = 0; output_idx < output_relations.size(); ++output_idx) {
+  const auto output_relation_count = output_relations.size();
+  for (auto output_idx = size_t{0}; output_idx < output_relation_count; ++output_idx) {
     output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
   }
 
@@ -255,8 +258,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_express
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
-  const auto& output_expressions = this->output_expressions();
-  return find_expression_idx(expression, output_expressions);
+  const auto& expressions_of_output = output_expressions();
+  return find_expression_idx(expression, expressions_of_output);
 }
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
@@ -341,10 +344,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_depend
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->non_trivial_functional_dependencies();
-  } else {
-    // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
-    return {};
   }
+
+  // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
+  return {};
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
@@ -359,8 +362,8 @@ bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
-  std::shared_ptr<AbstractLQPNode> copied_left_input;
-  std::shared_ptr<AbstractLQPNode> copied_right_input;
+  auto copied_left_input = std::shared_ptr<AbstractLQPNode>{};
+  auto copied_right_input = std::shared_ptr<AbstractLQPNode>{};
 
   if (left_input()) {
     copied_left_input = left_input()->_deep_copy_impl(node_mapping);

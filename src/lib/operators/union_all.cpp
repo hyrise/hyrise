@@ -40,7 +40,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
       Segments output_segments;
 
       // iterating over all segments of the current chunk
-      for (ColumnID column_id{0}; column_id < input->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < input->column_count(); ++column_id) {
         output_segments.push_back(chunk->get_segment(column_id));
       }
 
@@ -53,6 +53,7 @@ std::shared_ptr<const Table> UnionAll::_on_execute() {
   return std::make_shared<Table>(left_input_table()->column_definitions(), left_input_table()->type(),
                                  std::move(output_chunks));
 }
+
 std::shared_ptr<AbstractOperator> UnionAll::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,

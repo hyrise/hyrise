@@ -164,7 +164,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
 
   const auto encoding_spec_from_json = [](const nlohmann::json& json_spec) {
     Assert(json_spec.count("encoding"), "Need to specify encoding type.");
-    const auto encoding_str = json_spec["encoding"];
+    const auto& encoding_str = json_spec["encoding"];
     const auto compression_str = json_spec.value("compression", "");
     return EncodingConfig::encoding_spec_from_strings(encoding_str, compression_str);
   };

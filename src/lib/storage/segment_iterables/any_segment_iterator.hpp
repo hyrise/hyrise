@@ -121,10 +121,12 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   template <typename Iterator>
   explicit AnySegmentIterator(const Iterator& iterator)
       : _wrapper{std::make_unique<detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
+
   /**@}*/
 
  public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
+
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
     if (this == &other) {
       return *this;

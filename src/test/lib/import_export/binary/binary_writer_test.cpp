@@ -508,8 +508,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{100'000});
-  auto null_values = {NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE,
-                      NULL_VALUE};
+  auto null_values = {NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE};
 
   table->append(null_values);
   table->append(null_values);

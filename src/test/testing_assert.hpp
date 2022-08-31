@@ -52,13 +52,13 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
  * Compare two tables with respect to OrderSensitivity, TypeCmpMode and FloatComparisonMode
  */
 #define EXPECT_TABLE_EQ(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode)       \
-  {                                                                                                                   \
-    if (const auto table_difference_message =                                                                         \
+  {                                                                                                                  \
+    if (const auto table_difference_message =                                                                        \
             check_table_equal(hyrise_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode, \
-                              IgnoreNullable::No)) {                                                                  \
-      FAIL() << *table_difference_message;                                                                            \
-    }                                                                                                                 \
-  }                                                                                                                   \
+                              IgnoreNullable::No)) {                                                                 \
+      FAIL() << *table_difference_message;                                                                           \
+    }                                                                                                                \
+  }                                                                                                                  \
   static_assert(true, "End call of macro with a semicolon")
 
 /**
@@ -98,11 +98,12 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
   EXPECT_SEGMENT_EQ(segment_to_test, expected_segment, OrderSensitivity::Yes, TypeCmpMode::Strict, \
                     FloatComparisonMode::AbsoluteDifference)
 
-#define ASSERT_LQP_TIE(output, input_side, input)           \
-  {                                                         \
-    if (!hyrise::check_lqp_tie(output, input_side, input)) \
-      FAIL();                                               \
-  }                                                         \
+#define ASSERT_LQP_TIE(output, input_side, input)            \
+  {                                                          \
+    if (!hyrise::check_lqp_tie(output, input_side, input)) { \
+      FAIL();                                                \
+    }                                                        \
+  }                                                          \
   static_assert(true, "End call of macro with a semicolon")
 
 #define EXPECT_LQP_EQ(lhs, rhs)                                                                           \
@@ -110,18 +111,17 @@ bool contained_in_query_plan(const std::shared_ptr<const AbstractOperator>& node
     Assert(lhs != rhs, "Comparing an LQP with itself is always true. Did you mean to take a deep copy?"); \
     const auto mismatch = lqp_find_subplan_mismatch(lhs, rhs);                                            \
     if (mismatch) {                                                                                       \
-      std::cout << "Differing subtrees" << std::endl;                                                     \
-      std::cout << "-------------- Actual LQP --------------" << std::endl;                               \
+      std::cout << "Differing subtrees\n";                                                                \
+      std::cout << "-------------- Actual LQP --------------\n";                                          \
       if (mismatch->first)                                                                                \
         std::cout << *mismatch->first;                                                                    \
       else                                                                                                \
-        std::cout << "NULL" << std::endl;                                                                 \
-      std::cout << std::endl;                                                                             \
-      std::cout << "------------- Expected LQP -------------" << std::endl;                               \
+        std::cout << "NULL\n";                                                                            \
+      std::cout << "\n------------- Expected LQP -------------\n";                                        \
       if (mismatch->second)                                                                               \
         std::cout << *mismatch->second;                                                                   \
       else                                                                                                \
-        std::cout << "NULL" << std::endl;                                                                 \
+        std::cout << "NULL\n";                                                                            \
       std::cout << "-------------..............-------------" << std::endl;                               \
       GTEST_FAIL();                                                                                       \
     }                                                                                                     \

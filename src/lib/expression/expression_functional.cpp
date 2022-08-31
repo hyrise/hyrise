@@ -49,6 +49,7 @@ std::shared_ptr<ExistsExpression> not_exists_(const std::shared_ptr<AbstractExpr
 std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const DatetimeComponent unit) {  // NOLINT - clang-tidy doesn't like the suffix
   return std::make_shared<IntervalExpression>(duration, unit);
 }
+
 // clang-format on
 
 }  // namespace hyrise::expression_functional

@@ -67,7 +67,7 @@ std::vector<std::pair<T, HistogramCountType>> value_distribution_from_column(con
       std::vector<std::pair<T, HistogramCountType>>{value_distribution_map.begin(), value_distribution_map.end()};
   value_distribution_map.clear();  // Maps can be large and sorting slow. Free space early.
   boost::sort::pdqsort(value_distribution.begin(), value_distribution.end(),
-                       [&](const auto& l, const auto& r) { return l.first < r.first; });
+                       [&](const auto& lhs, const auto& rhs) { return lhs.first < rhs.first; });
 
   return value_distribution;
 }
@@ -143,7 +143,9 @@ std::shared_ptr<EqualDistinctCountHistogram<T>> EqualDistinctCountHistogram<T>::
     bin_heights[bin_idx] =
         std::accumulate(value_distribution.cbegin() + min_value_idx, value_distribution.cbegin() + max_value_idx + 1,
                         HistogramCountType{0},
-                        [](HistogramCountType a, const std::pair<T, HistogramCountType>& b) { return a + b.second; });
+                        [](HistogramCountType bin_height, const std::pair<T, HistogramCountType>& value_and_count) {
+                          return bin_height + value_and_count.second;
+                        });
 
     min_value_idx = max_value_idx + 1;
   }
@@ -177,10 +179,10 @@ BinID EqualDistinctCountHistogram<T>::bin_count() const {
 
 template <typename T>
 BinID EqualDistinctCountHistogram<T>::_bin_for_value(const T& value) const {
-  const auto it = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
-  const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), it));
+  const auto iter = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
+  const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 
-  if (it == _bin_maxima.cend() || value < bin_minimum(index) || value > bin_maximum(index)) {
+  if (iter == _bin_maxima.cend() || value < bin_minimum(index) || value > bin_maximum(index)) {
     return INVALID_BIN_ID;
   }
 

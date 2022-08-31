@@ -10,6 +10,7 @@ namespace hyrise {
 class FixedStringTest : public BaseTest {
  public:
   void SetUp() override {}
+
   std::vector<char> char_vector1 = {'f', 'o', 'o'};
   std::vector<char> char_vector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
   FixedString fixed_string1 = FixedString(&char_vector1[0], 3u);

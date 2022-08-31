@@ -45,6 +45,7 @@ class Insert : public AbstractReadWriteOperator {
     ChunkOffset begin_chunk_offset{};
     ChunkOffset end_chunk_offset{};
   };
+
   std::vector<ChunkRange> _target_chunk_ranges;
 
   std::shared_ptr<Table> _target_table;

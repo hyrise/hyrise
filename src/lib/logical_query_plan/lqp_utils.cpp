@@ -191,7 +191,8 @@ void lqp_replace_node(const std::shared_ptr<AbstractLQPNode>& original_node,
   /**
    * Tie the replacement_node with this nodes outputs.
    */
-  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+  const auto output_count = outputs.size();
+  for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], replacement_node);
   }
 
@@ -223,7 +224,8 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node, const AllowRi
    * Tie this node's previous outputs with this nodes previous left input
    * If left_input is nullptr, still call set_input so this node will get untied from the LQP.
    */
-  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+  const auto output_count = outputs.size();
+  for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], left_input);
   }
 }
@@ -351,9 +353,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       auto left_input_expression = lqp_subplan_to_boolean_expression_impl(begin->left_input(), end, expression);
       if (left_input_expression) {
         return left_input_expression;
-      } else {
-        return expression;
       }
+
+      return expression;
     }
 
     case LQPNodeType::Union: {
@@ -364,9 +366,9 @@ std::shared_ptr<AbstractExpression> lqp_subplan_to_boolean_expression_impl(
       if (left_input_expression && right_input_expression) {
         const auto or_expression = or_(left_input_expression, right_input_expression);
         return subsequent_expression ? and_(or_expression, *subsequent_expression) : or_expression;
-      } else {
-        return nullptr;
       }
+
+      return nullptr;
     }
 
     case LQPNodeType::Projection:
@@ -413,9 +415,9 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   visit_lqp(lqp, [&](const auto& node) {
     if (node->input_count() > 0) {
       return LQPVisitation::VisitInputs;
-    } else {
-      nodes.emplace_back(node);
     }
+
+    nodes.emplace_back(node);
     return LQPVisitation::DoNotVisitInputs;
   });
 
@@ -518,6 +520,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   if (fds.empty()) {
     return;
   }
+
   const auto& output_expressions = lqp->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
@@ -591,7 +594,9 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
         is_diamond = false;
       }
       return LQPVisitation::DoNotVisitInputs;
-    } else if (!diamond_node->left_input()) {
+    }
+
+    if (!diamond_node->left_input()) {
       // The traversal ends because we reached a MockNode, StoredTableNode or StaticTableNode. Since we did not find a
       // node with multiple outputs yet, union_root_node cannot be considered the root of a diamond.
       is_diamond = false;

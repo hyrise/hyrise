@@ -37,7 +37,7 @@ class VariableLengthKeyConstProxy {
   bool operator<(const VariableLengthKeyConstProxy& other) const;
   bool operator<(const VariableLengthKey& other) const;
 
-  friend std::ostream& operator<<(std::ostream& os, const VariableLengthKeyConstProxy& key);
+  friend std::ostream& operator<<(std::ostream& ostream, const VariableLengthKeyConstProxy& key);
 
  protected:
   explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);

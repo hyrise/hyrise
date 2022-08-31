@@ -16,11 +16,7 @@ std::optional<float> next_float_towards(const double value, const double towards
 
   const auto casted_value = static_cast<float>(value);
 
-  if (casted_value < value && towards < value) {
-    return casted_value;
-  }
-
-  if (casted_value > value && towards > value) {
+  if ((casted_value < value && towards < value) || (casted_value > value && towards > value)) {
     return casted_value;
   }
 
