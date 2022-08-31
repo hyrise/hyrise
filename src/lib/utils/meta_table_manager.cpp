@@ -110,7 +110,7 @@ std::string MetaTableManager::_trim_table_name(const std::string& table_name) {
 
 std::vector<std::vector<AllTypeVariant>> MetaTableManager::_materialize_values(
     const std::shared_ptr<const Table>& values) {
-  PerformanceWarningDisabler pwd;
+  auto performance_warning_disabler = PerformanceWarningDisabler{};
   return values->get_rows();
 }
 

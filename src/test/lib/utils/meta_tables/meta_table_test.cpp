@@ -115,7 +115,7 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
         ->get_chunk(ChunkID{0})
         ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
-  std::cout << test_file_path + GetParam()->name() + suffix + "_updated.tbl" << std::endl;
+
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
   const auto meta_table = generate_meta_table(GetParam());
 

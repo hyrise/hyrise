@@ -75,7 +75,7 @@ void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& 
 }
 
 std::shared_ptr<const Table> Print::_on_execute() {
-  PerformanceWarningDisabler pwd;
+  auto pwd = PerformanceWarningDisabler{};
 
   const auto widths = _column_string_widths(_min_cell_width, _max_cell_width, left_input_table());
   const auto column_count = left_input_table()->column_count();
