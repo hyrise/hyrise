@@ -2,6 +2,7 @@
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/dictionary_segment.hpp"
@@ -21,7 +22,8 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
       for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
         const auto& segment = chunk->get_segment(column_id);
 
-        const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+        const auto data_type = table->column_data_type(column_id);
+        const auto data_type_str = pmr_string{data_type_to_string.left.at(data_type)};
 
         const auto estimated_size = segment->memory_usage(mode);
         AllTypeVariant encoding = NULL_VALUE;
@@ -39,9 +41,29 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
         const auto& access_counter = segment->access_counter;
 
         if (mode == MemoryUsageCalculationMode::Full) {
-          const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
+          auto distinct_value_count = std::optional<int64_t>{};
+          const auto& pruning_statistics = chunk->pruning_statistics();
+          if (pruning_statistics) {
+            Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics");
+
+            resolve_data_type(data_type, [&](auto type) {
+              using ColumnDataType = typename decltype(type)::type;
+
+              const auto& attribute_statistics =
+                  static_cast<AttributeStatistics<ColumnDataType>&>(*pruning_statistics->at(column_id));
+              const auto& distinct_value_count_object = attribute_statistics.distinct_value_count;
+              if (distinct_value_count_object) {
+                distinct_value_count = static_cast<int64_t>(distinct_value_count_object->count);
+              }
+            });
+          }
+
+          if (!distinct_value_count) {
+            distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
+          }
+
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
+                              pmr_string{table->column_name(column_id)}, data_type_str, *distinct_value_count, encoding,
                               vector_compression, static_cast<int64_t>(estimated_size),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
@@ -50,7 +72,7 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
         } else {
           meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
+                              pmr_string{table->column_name(column_id)}, data_type_str, encoding, vector_compression,
                               static_cast<int64_t>(estimated_size),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
