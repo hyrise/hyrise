@@ -126,7 +126,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
 
     // chunk_in – Copy by value since copy by reference is not possible due to the limited scope of the for-iteration.
     auto perform_table_scan = [this, chunk_id, chunk_in, &in_table, &output_mutex, &output_chunks]() {
-      // The actual scan happens in the sub classes of BaseTableScanImpl
+      // The actual scan happens in the sub classes of AbstractTableScanImpl
       const auto matches_out = _impl->scan_chunk(chunk_id);
       if (matches_out->empty()) {
         return;
