@@ -164,8 +164,10 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
   // The TablePosition is a utility struct that is used to define a specific position in a sorted input table.
   struct TableRange;
+
   struct TablePosition {
     TablePosition() = default;
+
     TablePosition(size_t init_cluster, size_t init_index) : cluster{init_cluster}, index{init_index} {}
 
     size_t cluster;
@@ -183,6 +185,7 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
   // a start position to an end position.
   struct TableRange {
     TableRange(TablePosition start_position, TablePosition end_position) : start(start_position), end(end_position) {}
+
     TableRange(size_t cluster, size_t start_index, size_t end_index)
         : start{TablePosition(cluster, start_index)}, end{TablePosition(cluster, end_index)} {}
 

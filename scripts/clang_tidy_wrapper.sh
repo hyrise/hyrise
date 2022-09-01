@@ -11,12 +11,13 @@ file_relative_to_source=${file//$cmake_source_dir/}             # Remove the sou
 file_relative_to_source=${file_relative_to_source/..\/src/src}  # Remove `../src`, which gets added by Ninja
 
 if grep "$file_relative_to_source" $cmake_source_dir/.clang-tidy-ignore > /dev/null; then
-	echo "clang-tidy: Ignoring $file_relative_to_source"
-	exit 0
+    echo "clang-tidy: Ignoring $file_relative_to_source"
+    exit 0
 else
-	if [ -x /usr/local/bin/brew ]; then
-		exec $(brew --prefix llvm)/bin/clang-tidy $file $@
-	else
-		exec clang-tidy-10 $file $@
-	fi
+    which brew > /dev/null
+    if [[ $? != 0 ]] ; then
+        exec clang-tidy $file $@
+    else
+        exec $(brew --prefix llvm)/bin/clang-tidy $file $@
+    fi
 fi

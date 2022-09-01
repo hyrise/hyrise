@@ -6,9 +6,9 @@
 namespace {
 
 template <typename T>
-std::vector<T> concatenate(const std::vector<T>& l, const std::vector<T>& r) {
-  auto result = l;
-  result.insert(result.end(), r.begin(), r.end());
+std::vector<T> concatenate(const std::vector<T>& left, const std::vector<T>& right) {
+  auto result = left;
+  result.insert(result.end(), right.begin(), right.end());
   return result;
 }
 
@@ -166,8 +166,8 @@ bool JoinVerification::_tuples_match(const Tuple& tuple_left, const Tuple& tuple
 bool JoinVerification::_evaluate_predicate(const OperatorJoinPredicate& predicate, const Tuple& tuple_left,
                                            const Tuple& tuple_right) const {
   auto result = false;
-  const auto variant_left = tuple_left[predicate.column_ids.first];
-  const auto variant_right = tuple_right[predicate.column_ids.second];
+  const auto& variant_left = tuple_left[predicate.column_ids.first];
+  const auto& variant_right = tuple_right[predicate.column_ids.second];
 
   if (variant_is_null(variant_left) || variant_is_null(variant_right)) {
     // AntiNullAsTrue is the only JoinMode that treats null-booleans as TRUE, all others treat it as FALSE

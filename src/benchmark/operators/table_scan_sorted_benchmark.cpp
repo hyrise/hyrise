@@ -264,6 +264,7 @@ class StartUp {
     registerTableScanSortedBenchmarks();
   }
 };
+
 StartUp startup;
 
 }  // namespace

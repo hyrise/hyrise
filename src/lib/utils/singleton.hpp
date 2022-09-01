@@ -23,6 +23,7 @@ class Singleton : public Noncopyable {
   // If you need to overwrite the constructor make sure to friend this Singleton class. Otherwise it cannot call
   // the protected constructor of a derived class.
   Singleton() {}
+
   Singleton& operator=(Singleton&&) = default;
 };
 

@@ -100,7 +100,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   TableColumnDefinitions output_column_definitions;
 
   // Preparing output table by adding segments from left table
-  for (ColumnID column_id{0}; column_id < left_in_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < left_in_table->column_count(); ++column_id) {
     const auto nullable = (left_may_produce_null || left_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(left_in_table->column_name(column_id),
                                            left_in_table->column_data_type(column_id), nullable);
@@ -108,7 +108,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
 
   // Preparing output table by adding segments from right table
   if (_mode != JoinMode::Semi && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse) {
-    for (ColumnID column_id{0}; column_id < right_in_table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < right_in_table->column_count(); ++column_id) {
       const auto nullable = (right_may_produce_null || right_in_table->column_is_nullable(column_id));
       output_column_definitions.emplace_back(right_in_table->column_name(column_id),
                                              right_in_table->column_data_type(column_id), nullable);

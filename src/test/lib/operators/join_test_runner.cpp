@@ -172,6 +172,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     }
   }
 };
+
 // Order of columns in the input tables
 const std::unordered_map<DataType, uint16_t> data_type_order = {
     {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},

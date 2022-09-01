@@ -259,7 +259,7 @@ TYPED_TEST(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
   auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
-                                                   PredicateCondition::GreaterThanEquals, right_values);
+                                          PredicateCondition::GreaterThanEquals, right_values);
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }

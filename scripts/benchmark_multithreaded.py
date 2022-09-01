@@ -137,13 +137,13 @@ def get_formatted_queries(args):
 
 
 def is_square(n):
-    return n**0.5 == int(n**0.5)
+    return n ** 0.5 == int(n ** 0.5)
 
 
 def get_subplot_row_and_column_count(num_plots):
     while not is_square(num_plots):
         num_plots += 1
-    return num_plots**0.5
+    return num_plots ** 0.5
 
 
 def run_benchmarks(args, hyrise_args, core_counts, result_dir):
