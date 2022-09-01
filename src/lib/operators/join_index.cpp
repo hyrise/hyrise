@@ -540,7 +540,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
                                        const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   const auto column_count = input_table->column_count();
-  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {

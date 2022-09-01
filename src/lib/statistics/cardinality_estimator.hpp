@@ -135,6 +135,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
 
     return builder.build();
   }
+
   /** @} */
 
   /**

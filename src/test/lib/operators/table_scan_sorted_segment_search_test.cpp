@@ -159,6 +159,7 @@ INSTANTIATE_TEST_SUITE_P(
         ::testing::Values(SortMode::Ascending, SortMode::Descending),
         ::testing::Values(NullValueUsage::WithoutNulls, NullValueUsage::WithNulls, NullValueUsage::OnlyNulls)),
     table_scan_sorted_segment_search_test_formatter);
+
 // clang-format on
 
 TEST_P(OperatorsTableScanSortedSegmentSearchTest, ScanSortedSegment) {

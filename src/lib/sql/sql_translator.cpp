@@ -349,7 +349,8 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   // Save mappings: ColumnID -> ColumnName
   std::unordered_map<ColumnID, std::string> column_names;
   const auto output_expressions = lqp->output_expressions();
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+  const auto output_expression_count = output_expressions.size();
+  for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
     for (const auto& identifier : with_translator._inflated_select_list_elements[column_id].identifiers) {
       column_names.insert_or_assign(column_id, identifier.column_name);
     }
@@ -358,7 +359,7 @@ void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc
   // Store resolved WithDescription / temporary view
   const auto lqp_view = std::make_shared<LQPView>(lqp, column_names);
   // A WITH description masks a preceding WITH description if their aliases are identical
-  AssertInput(_with_descriptions.count(desc.alias) == 0, "Invalid redeclaration of WITH alias.");
+  AssertInput(!_with_descriptions.contains(desc.alias), "Invalid redeclaration of WITH alias.");
   _with_descriptions.emplace(desc.alias, lqp_view);
 }
 
@@ -616,8 +617,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
         // Add all named columns to the IdentifierContext
         const auto output_expressions = lqp_view->lqp->output_expressions();
-        for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-          const auto expression = output_expressions[column_id];
+        const auto output_expression_count = output_expressions.size();
+        for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+          const auto& expression = output_expressions[column_id];
 
           const auto column_name_iter = lqp_view->column_names.find(column_id);
           if (column_name_iter != lqp_view->column_names.end()) {
@@ -640,8 +642,9 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
          * Add all named columns from the view to the IdentifierContext
          */
         const auto output_expressions = view->lqp->output_expressions();
-        for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-          const auto expression = output_expressions[column_id];
+        const auto output_expression_count = output_expressions.size();
+        for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
+          const auto& expression = output_expressions[column_id];
 
           const auto column_name_iter = view->column_names.find(column_id);
           if (column_name_iter != view->column_names.end()) {
@@ -681,11 +684,12 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       }
 
       const auto output_expressions = lqp->output_expressions();
-      Assert(identifiers.size() == output_expressions.size(),
+      const auto output_expression_count = output_expressions.size();
+      Assert(identifiers.size() == output_expression_count,
              "There have to be as many identifier lists as output expressions");
-      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < output_expressions.size();
+      for (auto select_list_element_idx = size_t{0}; select_list_element_idx < output_expression_count;
            ++select_list_element_idx) {
-        const auto subquery_expression = output_expressions[select_list_element_idx];
+        const auto& subquery_expression = output_expressions[select_list_element_idx];
 
         // Make sure each column from the Subquery has a name
         if (identifiers.empty()) {
@@ -711,13 +715,14 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
   if (hsql_table_ref.alias && hsql_table_ref.alias->columns) {
     const auto& output_expressions = lqp->output_expressions();
 
-    AssertInput(hsql_table_ref.alias->columns->size() == output_expressions.size(),
+    const auto table_ref_alias_column_count = hsql_table_ref.alias->columns->size();
+    AssertInput(table_ref_alias_column_count == output_expressions.size(),
                 "Must specify a name for exactly each column");
-    Assert(hsql_table_ref.alias->columns->size() == select_list_elements.size(),
+    Assert(table_ref_alias_column_count == select_list_elements.size(),
            "There have to be as many aliases as output expressions");
 
     std::set<std::shared_ptr<AbstractExpression>> renamed_expressions;
-    for (auto column_id = ColumnID{0}; column_id < hsql_table_ref.alias->columns->size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < table_ref_alias_column_count; ++column_id) {
       const auto& expression = output_expressions[column_id];
 
       if (renamed_expressions.find(expression) == renamed_expressions.end()) {
@@ -948,7 +953,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_natural_join(const hsq
   }
 
   // Add remaining join predicates as normal predicates
-  for (auto join_predicate_idx = size_t{1}; join_predicate_idx < join_predicates.size(); ++join_predicate_idx) {
+  const auto join_predicate_count = join_predicates.size();
+  for (auto join_predicate_idx = size_t{1}; join_predicate_idx < join_predicate_count; ++join_predicate_idx) {
     lqp = PredicateNode::make(join_predicates[join_predicate_idx], lqp);
   }
 
@@ -968,7 +974,8 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_cross_product(const st
 
   auto result_table_source_state = _translate_table_ref(*tables.front());
 
-  for (auto table_idx = size_t{1}; table_idx < tables.size(); ++table_idx) {
+  const auto table_count = tables.size();
+  for (auto table_idx = size_t{1}; table_idx < table_count; ++table_idx) {
     auto table_source_state = _translate_table_ref(*tables[table_idx]);
     result_table_source_state.lqp =
         JoinNode::make(JoinMode::Cross, result_table_source_state.lqp, table_source_state.lqp);
@@ -1089,8 +1096,9 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
     if (!pre_aggregate_expressions.empty()) {
       const auto& output_expressions = _current_lqp->output_expressions();
       const auto any_expression_not_yet_available = std::any_of(
-          pre_aggregate_expressions.begin(), pre_aggregate_expressions.end(),
-          [&](const auto& expression) { return find_expression_idx(*expression, output_expressions) ? false : true; });
+          pre_aggregate_expressions.cbegin(), pre_aggregate_expressions.cend(), [&](const auto& expression) {
+            return !static_cast<bool>(find_expression_idx(*expression, output_expressions));
+          });
 
       if (any_expression_not_yet_available) {
         _current_lqp = ProjectionNode::make(pre_aggregate_expressions, _current_lqp);
@@ -1198,11 +1206,13 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
   const auto right_output_expressions = right_input_lqp->output_expressions();
 
-  AssertInput(left_output_expressions.size() == right_output_expressions.size(),
+  const auto left_output_expression_count = left_output_expressions.size();
+  const auto right_output_expression_count = right_output_expressions.size();
+  AssertInput(left_output_expression_count == right_output_expression_count,
               "Mismatching number of input columns for set operation");
 
   // Check to see if both input LQPs use the same data type for each column
-  for (auto expression_idx = ColumnID{0}; expression_idx < left_output_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < left_output_expression_count; ++expression_idx) {
     const auto& left_expression = left_output_expressions[expression_idx];
     const auto& right_expression = right_output_expressions[expression_idx];
 
@@ -1240,16 +1250,16 @@ void SQLTranslator::_translate_order_by(const std::vector<hsql::OrderDescription
   // So we can later reset the available Expressions to the Expressions of this LQP
   const auto input_lqp = _current_lqp;
 
-  std::vector<std::shared_ptr<AbstractExpression>> expressions(order_list.size());
-  std::vector<SortMode> sort_modes(order_list.size());
-  for (auto expression_idx = size_t{0}; expression_idx < order_list.size(); ++expression_idx) {
+  const auto order_list_size = order_list.size();
+  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>(order_list_size);
+  auto sort_modes = std::vector<SortMode>(order_list_size);
+  for (auto expression_idx = size_t{0}; expression_idx < order_list_size; ++expression_idx) {
     const auto& order_description = order_list[expression_idx];
     expressions[expression_idx] = _translate_hsql_expr(*order_description->expr, _sql_identifier_resolver);
     sort_modes[expression_idx] = order_type_to_sort_mode.at(order_description->type);
   }
 
   _current_lqp = _add_expressions_if_unavailable(_current_lqp, expressions);
-
   _current_lqp = SortNode::make(expressions, sort_modes, _current_lqp);
 
   // If any Expressions were added to perform the sorting, remove them again
@@ -1307,14 +1317,16 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 
   if (create_statement.viewColumns) {
     // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
-    AssertInput(create_statement.viewColumns->size() == output_expressions.size(),
+    const auto view_column_count = create_statement.viewColumns->size();
+    AssertInput(view_column_count == output_expressions.size(),
                 "Number of Columns in CREATE VIEW does not match SELECT statement");
 
-    for (auto column_id = ColumnID{0}; column_id < create_statement.viewColumns->size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < view_column_count; ++column_id) {
       column_names.insert_or_assign(column_id, (*create_statement.viewColumns)[column_id]);
     }
   } else {
-    for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    const auto output_expression_count = output_expressions.size();
+    for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
       for (const auto& identifier : _inflated_select_list_elements[column_id].identifiers) {
         column_names.insert_or_assign(column_id, identifier.column_name);
       }
@@ -1681,7 +1693,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprFunctionRef: {
       // convert to upper-case to find mapping
-      std::transform(name.begin(), name.end(), name.begin(), [](const auto c) { return std::toupper(c); });
+      std::transform(name.cbegin(), name.cend(), name.begin(),
+                     [](const auto character) { return std::toupper(character); });
 
       // Some SQL functions have aliases, which we map to one unique identifier here.
       static const std::unordered_map<std::string, std::string> function_aliases{{{"SUBSTRING"}, {"SUBSTR"}}};
@@ -1787,9 +1800,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         }
 
         return std::make_shared<FunctionExpression>(function_iter->second, arguments);
-      } else {
-        FailInput("Couldn't resolve function '"s + name + "'");
       }
+
+      FailInput("Couldn't resolve function '"s + name + "'");
     }
 
     case hsql::kExprOperator: {
@@ -1825,7 +1838,9 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
         if (is_binary_predicate_condition(predicate_condition)) {
           Assert(left && right, "Unexpected SQLParserResult. Didn't receive two arguments for binary_expression");
           return std::make_shared<BinaryPredicateExpression>(predicate_condition, left, right);
-        } else if (predicate_condition == PredicateCondition::BetweenInclusive) {
+        }
+
+        if (predicate_condition == PredicateCondition::BetweenInclusive) {
           Assert(expr.exprList && expr.exprList->size() == 2, "Expected two arguments for BETWEEN");
           return between_inclusive_(left, _translate_hsql_expr(*(*expr.exprList)[0], sql_identifier_resolver),
                                     _translate_hsql_expr(*(*expr.exprList)[1], sql_identifier_resolver));
@@ -1847,21 +1862,20 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
             // `a IN (SELECT ...)`
             const auto subquery = _translate_hsql_subquery(*expr.select, sql_identifier_resolver);
             return in_(left, subquery);
-
-          } else {
-            // `a IN (x, y, z)`
-            std::vector<std::shared_ptr<AbstractExpression>> arguments;
-
-            AssertInput(expr.exprList && !expr.exprList->empty(), "IN clauses with an empty list are invalid");
-
-            arguments.reserve(expr.exprList->size());
-            for (const auto* hsql_argument : *expr.exprList) {
-              arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_resolver));
-            }
-
-            const auto array = std::make_shared<ListExpression>(arguments);
-            return in_(left, array);
           }
+
+          // `a IN (x, y, z)`
+          std::vector<std::shared_ptr<AbstractExpression>> arguments;
+
+          AssertInput(expr.exprList && !expr.exprList->empty(), "IN clauses with an empty list are invalid");
+
+          arguments.reserve(expr.exprList->size());
+          for (const auto* hsql_argument : *expr.exprList) {
+            arguments.emplace_back(_translate_hsql_expr(*hsql_argument, sql_identifier_resolver));
+          }
+
+          const auto array = std::make_shared<ListExpression>(arguments);
+          return in_(left, array);
         }
 
         case hsql::kOpIsNull:
@@ -2030,22 +2044,26 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
         return std::make_shared<BinaryPredicateExpression>(
             inverse_predicate_condition(binary_predicate_expression->predicate_condition),
             binary_predicate_expression->left_operand(), binary_predicate_expression->right_operand());
-      } else if (const auto* const is_null_expression = dynamic_cast<const IsNullExpression*>(&expression);
-                 is_null_expression) {
+      }
+
+      if (const auto* const is_null_expression = dynamic_cast<const IsNullExpression*>(&expression);
+          is_null_expression) {
         // NOT (IS NULL ...) -> IS NOT NULL ...
         return std::make_shared<IsNullExpression>(inverse_predicate_condition(is_null_expression->predicate_condition),
                                                   is_null_expression->operand());
-      } else if (const auto* const between_expression = dynamic_cast<const BetweenExpression*>(&expression);
-                 between_expression) {
+      }
+
+      if (const auto* const between_expression = dynamic_cast<const BetweenExpression*>(&expression);
+          between_expression) {
         // a BETWEEN b AND c -> a < b OR a > c
         return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
                    greater_than_(between_expression->value(), between_expression->upper_bound()));
-      } else {
-        const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
-        Assert(in_expression, "Expected InExpression");
-        return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
-                                              in_expression->value(), in_expression->set());
       }
+
+      const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
+      Assert(in_expression, "Expected InExpression");
+      return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
+                                            in_expression->value(), in_expression->set());
     } break;
 
     case ExpressionType::Logical: {
@@ -2113,16 +2131,11 @@ SQLTranslator::TableSourceState::TableSourceState(
 
 void SQLTranslator::TableSourceState::append(TableSourceState&& rhs) {
   for (auto& table_name_and_elements : rhs.elements_by_table_name) {
-    const auto unique = elements_by_table_name.count(table_name_and_elements.first) == 0;
+    const auto unique = !elements_by_table_name.contains(table_name_and_elements.first);
     AssertInput(unique, "Table Name '"s + table_name_and_elements.first + "' in FROM clause is not unique");
   }
 
-  // This should be ::merge, but that is not yet supported by clang.
-  // elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
-  for (auto& kv : rhs.elements_by_table_name) {
-    elements_by_table_name.try_emplace(kv.first, std::move(kv.second));
-  }
-
+  elements_by_table_name.merge(std::move(rhs.elements_by_table_name));
   elements_in_order.insert(elements_in_order.end(), rhs.elements_in_order.begin(), rhs.elements_in_order.end());
   sql_identifier_resolver->append(std::move(*rhs.sql_identifier_resolver));
 }

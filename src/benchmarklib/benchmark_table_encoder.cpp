@@ -71,7 +71,7 @@ bool BenchmarkTableEncoder::encode(const std::string& table_name, const std::sha
 
   ChunkEncodingSpec chunk_encoding_spec;
 
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
     // Check if a column specific encoding was specified
     if (table_has_custom_encoding) {
       const auto& column_name = table->column_name(column_id);

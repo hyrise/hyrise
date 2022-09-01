@@ -9,7 +9,7 @@
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
 
-using namespace std::string_literals;            // NOLINT
+using namespace std::string_literals;           // NOLINT
 using namespace hyrise::expression_functional;  // NOLINT
 
 namespace hyrise {

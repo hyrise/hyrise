@@ -344,7 +344,8 @@ std::shared_ptr<Table> Projection::dummy_table() {
 ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType table_type) const {
   // First gather all forwardable PQP column expressions.
   auto forwarded_pqp_columns = ExpressionUnorderedSet{};
-  for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+  const auto expression_count = expressions.size();
+  for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
     const auto& expression = expressions[column_id];
     if (expression->type == ExpressionType::PQPColumn) {
       forwarded_pqp_columns.emplace(expression);
@@ -356,7 +357,7 @@ ExpressionUnorderedSet Projection::_determine_forwarded_columns(const TableType 
   // forwarded column does not need to be accessed via its position list later. And since the following operator might
   // have optimizations for accessing an encoded segment, we always forward for data tables.
   if (table_type == TableType::References) {
-    for (auto column_id = ColumnID{0}; column_id < expressions.size(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
       const auto& expression = expressions[column_id];
 
       if (expression->type == ExpressionType::PQPColumn) {

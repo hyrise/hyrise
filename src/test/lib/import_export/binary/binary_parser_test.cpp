@@ -196,8 +196,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  auto null_values = {NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE,
-                      NULL_VALUE};
+  auto null_values = {NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE};
 
   expected_table->append(null_values);
   expected_table->append(null_values);

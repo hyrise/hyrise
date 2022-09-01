@@ -110,6 +110,7 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
     set_union->execute();
   }
 }
+
 BENCHMARK(BM_UnionPositions);
 
 /**
@@ -135,5 +136,6 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
     std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
   }
 }
+
 BENCHMARK(BM_UnionPositionsBaseLine);
 }  // namespace hyrise

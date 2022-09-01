@@ -45,5 +45,6 @@ std::unique_ptr<AbstractSegmentAccessor<T>> CreateSegmentAccessor<T>::create(
   });
   return accessor;
 }
+
 EXPLICITLY_INSTANTIATE_DATA_TYPES(CreateSegmentAccessor);
 }  // namespace hyrise::detail

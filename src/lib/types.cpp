@@ -120,13 +120,17 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
   if (lower == PredicateCondition::GreaterThan) {
     if (upper == PredicateCondition::LessThan) {
       return PredicateCondition::BetweenExclusive;
-    } else if (upper == PredicateCondition::LessThanEquals) {
+    }
+
+    if (upper == PredicateCondition::LessThanEquals) {
       return PredicateCondition::BetweenLowerExclusive;
     }
   } else if (lower == PredicateCondition::GreaterThanEquals) {
     if (upper == PredicateCondition::LessThan) {
       return PredicateCondition::BetweenUpperExclusive;
-    } else if (upper == PredicateCondition::LessThanEquals) {
+    }
+
+    if (upper == PredicateCondition::LessThanEquals) {
       return PredicateCondition::BetweenInclusive;
     }
   }

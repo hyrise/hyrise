@@ -79,6 +79,7 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
         Fail("Unsupported comparison type encountered");
     }
   }
+
   /**@}*/
  private:
   const bool _column_is_nullable;

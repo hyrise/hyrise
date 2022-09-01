@@ -158,6 +158,7 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},                                                           true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"}              // NOLINT
                           ),  // NOLINT
                          sort_test_formatter);
+
 // clang-format on
 
 TEST_F(SortTest, JoinProducesReferences) {

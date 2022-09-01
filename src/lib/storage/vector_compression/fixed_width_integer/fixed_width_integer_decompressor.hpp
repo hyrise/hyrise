@@ -10,6 +10,7 @@ template <typename UnsignedIntType>
 class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
  public:
   explicit FixedWidthIntegerDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
+
   FixedWidthIntegerDecompressor(const FixedWidthIntegerDecompressor&) = default;
   FixedWidthIntegerDecompressor(FixedWidthIntegerDecompressor&&) = default;
 
@@ -17,6 +18,7 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
     DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
     return *this;
   }
+
   FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) {
     DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
     return *this;

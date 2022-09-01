@@ -30,8 +30,7 @@ struct StoredTableNodeSharedPtrHash final {
 // Modified equals evaluation code for StoredTableNodes where column pruning information is omitted. Struct is used to
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrEqual final {
-  size_t operator()(const std::shared_ptr<StoredTableNode>& lhs,
-                    const std::shared_ptr<StoredTableNode>& rhs) const {
+  size_t operator()(const std::shared_ptr<StoredTableNode>& lhs, const std::shared_ptr<StoredTableNode>& rhs) const {
     DebugAssert(std::is_sorted(lhs->pruned_chunk_ids().cbegin(), lhs->pruned_chunk_ids().cend()),
                 "Expected sorted vector of ChunkIDs");
     DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),

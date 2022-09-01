@@ -652,6 +652,7 @@ set(
 
 set(
     LIBRARIES
+    compact_vector
     lz4
     magic_enum
     sqlparser
@@ -707,14 +708,13 @@ if(NOT APPLE)
     # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions.
     # We need to use a path relative to CMAKE_CURRENT_BINARY_DIR instead of using CMAKE_BINARY_DIR because Hyrise might
     # not be the top-level CMake project (e.g., if it is used as a submodule in a Hyrise plugin repository).
-    target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
+    target_include_directories(hyrise_impl SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
-    compact_vector
     cpp-btree
     cxxopts
     flat-hash-map

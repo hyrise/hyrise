@@ -59,6 +59,7 @@ class PerformanceWarningDisabler {
 
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
+
   ~PerformanceWarningDisabler() {
     if (!_previously_disabled) {
       PerformanceWarningClass::enable();

@@ -27,6 +27,7 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
     nullable_table_node_column = lqp_column_(nullable_table_node, ColumnID{0});
     table_node_column = lqp_column_(table_node, ColumnID{0});
   }
+
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<NullScanRemovalRule> rule;
   std::shared_ptr<LQPColumnExpression> mock_node_column, nullable_table_node_column, table_node_column;

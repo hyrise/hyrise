@@ -11,7 +11,7 @@ namespace hyrise {
 // operator to limit the input to n rows
 class Limit : public AbstractReadOnlyOperator {
  public:
-  Limit(const std::shared_ptr<const AbstractOperator>& in,
+  Limit(const std::shared_ptr<const AbstractOperator>& input_operator,
         const std::shared_ptr<AbstractExpression>& row_count_expression);
 
   const std::string& name() const override;

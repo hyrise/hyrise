@@ -36,8 +36,7 @@ class ReferenceSegmentTest : public BaseTest {
     TableColumnDefinitions column_definitions2;
     column_definitions2.emplace_back("a", DataType::Int, false);
     column_definitions2.emplace_back("b", DataType::Int, false);
-    _test_table_dict =
-        std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
+    _test_table_dict = std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
     for (auto index = int32_t{0}; index <= 24; index += 2) {
       _test_table_dict->append({index, 100 + index});
     }

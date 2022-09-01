@@ -51,7 +51,7 @@
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \
-  struct hash<::hyrise::D> : public unary_function<::hyrise::D, size_t> {                                         \
+  struct hash<::hyrise::D> {                                                                                      \
     size_t operator()(const ::hyrise::D& x) const {                                                               \
       return hash<T>{}(x);                                                                                        \
     }                                                                                                             \

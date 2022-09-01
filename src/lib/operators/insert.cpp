@@ -86,7 +86,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
 
   Assert(_target_table->target_chunk_size() > 0, "Expected target chunk size of target table to be greater than zero");
-  for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < _target_table->column_count(); ++column_id) {
     // This is not really a strong limitation, we just did not want the compile time of all type combinations.
     // If you really want this, it should be only a couple of lines to implement.
     Assert(left_input_table()->column_data_type(column_id) == _target_table->column_data_type(column_id),
