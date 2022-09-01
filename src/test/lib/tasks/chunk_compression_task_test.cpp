@@ -97,8 +97,8 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression});
 
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count() - 1; ++chunk_id) {
-    auto dict_segment =
-        std::dynamic_pointer_cast<const AbstractDictionarySegment>(table->get_chunk(chunk_id)->get_segment(ColumnID{0}));
+    auto dict_segment = std::dynamic_pointer_cast<const AbstractDictionarySegment>(
+        table->get_chunk(chunk_id)->get_segment(ColumnID{0}));
     ASSERT_NE(dict_segment, nullptr);
   }
 
