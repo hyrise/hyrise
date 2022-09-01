@@ -240,11 +240,11 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   // Check if a table index is irrelevant because of pruning.
-  const auto indexed_column_or_chunks_pruned = [this](const std::shared_ptr<AbstractTableIndex>& table_index) {
+  const auto all_indexed_segments_pruned = [this](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
-    if (std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), indexed_column_id) !=
-      _pruned_column_ids.end()) {
+    if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), indexed_column_id) !=
+      _pruned_column_ids.cend()) {
       return true;
     }
 
@@ -255,19 +255,16 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       return false;
     }
 
-    auto sorted_indexed_chunk_ids = std::vector<ChunkID>(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
-    std::sort(sorted_indexed_chunk_ids.begin(), sorted_indexed_chunk_ids.end());
-    DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
-                "Pruned ChunkIDs should be sorted.");
+    const auto pruned_chunk_ids = std::unordered_set(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
 
     // Check if the indexed chunks have been pruned.
-    return (std::includes(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end(),
-                          sorted_indexed_chunk_ids.begin(), sorted_indexed_chunk_ids.end()));
+    return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(),
+            [&](const auto chunk_id) { return pruned_chunk_ids.contains(chunk_id); });
   };
 
   auto table_indexes = stored_table->get_table_indexes();
-  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), indexed_column_or_chunks_pruned),
-                      table_indexes.end());
+  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), all_indexed_segments_pruned),
+                      table_indexes.cend());
 
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
                                  stored_table->uses_mvcc(), table_indexes);

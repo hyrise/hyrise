@@ -23,7 +23,7 @@
 /**
  * This file contains the main tests for Hyrise's join operators.
  * Testing is done by comparing the result of any given join operator with that of the JoinVerification for a
- * number of configurations (i.e. JoinModes, predicates, data types, ...)
+ * number of configurations (i.e. JoinModes, predicates, data types, ...).
  */
 
 using namespace std::string_literals;  // NOLINT
@@ -43,11 +43,11 @@ enum class IndexScope { Table, Chunk, None };
 // Join operators might build internal PosLists that they have to de-reference when assembling the output Table if the
 // input itself is already a reference Table.
 enum class InputTableType {
-  // Input Tables are data
+  // Input Tables are data.
   Data,
   // Input Tables are reference Tables with all Segments of a Chunk having the same PosList.
   SharedPosList,
-  // Input Tables are reference Tables with each Segment using a different PosList
+  // Input Tables are reference Tables with each Segment using a different PosList.
   IndividualPosLists
 };
 
@@ -98,10 +98,10 @@ struct JoinTestConfiguration {
   std::vector<OperatorJoinPredicate> secondary_predicates;
   std::shared_ptr<BaseJoinOperatorFactory> join_operator_factory;
 
-  // Only for JoinHash
+  // Only for JoinHash.
   std::optional<size_t> radix_bits;
 
-  // Only for JoinIndex
+  // Only for JoinIndex.
   std::optional<IndexSide> index_side;
 
   void swap_input_sides() {
@@ -129,7 +129,7 @@ bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) 
   return l.to_tuple() == r.to_tuple();
 }
 
-// Virtual interface to create a join operator
+// Virtual interface to create a join operator.
 class BaseJoinOperatorFactory {
  public:
   virtual ~BaseJoinOperatorFactory() = default;
@@ -173,7 +173,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
   }
 };
 
-// Order of columns in the input tables
+// Order of columns in the input tables.
 const std::unordered_map<DataType, uint16_t> data_type_order = {
     {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
 };
@@ -192,57 +192,82 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
      * For each `all_*` set, the first element is used to build the default/base configuration
      * (`JoinTestConfiguration default_configuration`). Thus the first elements are chosen to be sensible defaults.
      */
-    auto all_data_types = std::vector<DataType>{};
+    auto data_types = std::vector<DataType>{};
     hana::for_each(data_type_pairs, [&](auto pair) {
       const DataType d = hana::first(pair);
-      all_data_types.emplace_back(d);
+      data_types.emplace_back(d);
     });
 
-    const auto all_predicate_conditions = std::vector{
+    const auto predicate_conditions = std::vector{
         PredicateCondition::Equals,      PredicateCondition::NotEquals,
         PredicateCondition::GreaterThan, PredicateCondition::GreaterThanEquals,
         PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
     };
-    const auto all_join_modes = std::vector{JoinMode::Inner,         JoinMode::Left, JoinMode::Right,
+    const auto join_modes = std::vector{JoinMode::Inner,         JoinMode::Left, JoinMode::Right,
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
                                             JoinMode::AntiNullAsTrue};
-    const auto all_table_sizes = std::vector{10u, 15u, 0u};
-    const auto all_chunk_sizes = std::vector{ChunkOffset{10}, ChunkOffset{3}, ChunkOffset{1}};
-    const auto all_secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
+    const auto table_sizes = std::vector{10u, 15u, 0u};
+    const auto chunk_sizes = std::vector{ChunkOffset{10}, ChunkOffset{3}, ChunkOffset{1}};
+    const auto secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
         {},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::GreaterThanEquals}},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals}}};
-    const auto all_index_sides = std::vector{IndexSide::Left, IndexSide::Right};
+    const auto index_sides = std::vector{IndexSide::Left, IndexSide::Right};
 
-    const auto all_input_table_types =
+    const auto input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    const auto all_index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
+    const auto index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
 
-    // Vectors of pruned ColumnIDs with which the tests should be performed
+    // Vectors of pruned ColumnIDs with which the tests should be performed.
     const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
 
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), ChunkRange{0, 0}, ChunkRange{0, 0}, IndexScope::None, std::nullopt},
+        InputSide::Left, chunk_sizes.front(), table_sizes.front(), input_table_types.front(),
+        encoding_types.front(), ChunkRange{0, 0}, ChunkRange{0, 0}, IndexScope::None, std::nullopt},
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(),
-        all_encoding_types.front(), ChunkRange{0, 0}, ChunkRange{0, 0}, IndexScope::None, std::nullopt},
+        InputSide::Right, chunk_sizes.front(), table_sizes.front(), input_table_types.front(),
+        encoding_types.front(), ChunkRange{0, 0}, ChunkRange{0, 0}, IndexScope::None, std::nullopt},
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
       true,
       true,
       PredicateCondition::Equals,
-      all_secondary_predicate_sets.front(),
+      secondary_predicate_sets.front(),
       std::make_shared<JoinOperatorFactory<JoinOperator>>(),
       std::nullopt,
       std::nullopt
     };
     // clang-format on
+
+    const auto indexed_column_is_pruned = [](const auto& pruned_column_ids, const auto& index_side, const auto& configuration) {
+
+      if (pruned_column_ids.empty()) {
+        return false;
+      }
+
+      auto indexed_join_column_id = ColumnID{};
+      auto nullable_offset = bool{};
+      auto data_type_column_id = ColumnID{};
+
+      if (index_side == IndexSide::Left) {
+        nullable_offset = configuration.nullable_left;
+        data_type_column_id = data_type_order.at(configuration.data_type_left);
+      } else {
+        nullable_offset = configuration.nullable_right;
+        data_type_column_id = data_type_order.at(configuration.data_type_right);
+      }
+
+      indexed_join_column_id = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_column_id + nullable_offset)};
+
+      const auto search_iter =
+          std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
+      return search_iter != pruned_column_ids.cend();
+    }; 
 
     /**
      * Returns a set of adapted configurations if the join type provides further configuration possibilities that
@@ -264,14 +289,14 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         //    column pruning in the GetTable operator, the original columns might not correspond to the resulting
         //    columns anymore.
 
-        // share of indexed segments; 1 means all segments are indexed
+        // Share of indexed segments; 1 means all segments are indexed.
         std::array<float, 2> indexed_segment_shares{1.0f, .1f};
 
         std::vector<JoinTestConfiguration> variations{};
-        variations.reserve(all_index_sides.size() * indexed_segment_shares.size() * all_index_scopes.size() *
+        variations.reserve(index_sides.size() * indexed_segment_shares.size() * index_scopes.size() *
                            column_pruning_configurations.size());
-        for (const auto& index_side : all_index_sides) {
-          // calculate index chunk counts, eliminate duplicates by using the unordered set
+        for (const auto& index_side : index_sides) {
+          // Calculate index chunk counts, eliminate duplicates by using the unordered set.
           auto& indexed_input = index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
           const auto chunk_count = indexed_input.table_size == 0
                                        ? uint32_t{0}
@@ -285,36 +310,11 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           }
 
           for (const auto& indexed_chunk_range : indexed_chunk_ranges) {
-            for (const auto index_scope : all_index_scopes) {
+            for (const auto index_scope : index_scopes) {
               for (const auto& pruned_column_ids : column_pruning_configurations) {
-                // If a pruned column id equals the join column id, we cannot join on the column. Thus, we do not
-                // create a JoinTestConfiguration in this case.
-                auto is_indexed_column_id_pruned = [&]() {
-                  if (pruned_column_ids.empty()) {
-                    return false;
-                  }
-
-                  auto indexed_join_column_id = ColumnID{};
-                  auto nullable_offset = bool{};
-                  auto data_type_column_id = ColumnID{};
-
-                  if (index_side == IndexSide::Left) {
-                    nullable_offset = configuration.nullable_left;
-                    data_type_column_id = data_type_order.at(configuration.data_type_left);
-                  } else {
-                    nullable_offset = configuration.nullable_right;
-                    data_type_column_id = data_type_order.at(configuration.data_type_right);
-                  }
-
-                  indexed_join_column_id =
-                      ColumnID{static_cast<ColumnID::base_type>(2 * data_type_column_id + nullable_offset)};
-
-                  const auto search_iter =
-                      std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
-                  return search_iter != pruned_column_ids.cend();
-                };
-
-                if (is_indexed_column_id_pruned()) {
+                // If a column is pruned, we cannot join on the it. Thus, we do not create a JoinTestConfiguration
+                // in this case.
+                if (indexed_column_is_pruned(pruned_column_ids, index_side, configuration)) {
                   continue;
                 }
 
@@ -359,7 +359,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     const auto add_configurations_if_supported = [&](const auto& configuration_candidates) {
       for (const auto& configuration : configuration_candidates) {
-        // String vs non-String comparisons are not supported in Hyrise and therefore cannot be tested
+        // String vs non-String comparisons are not supported in Hyrise and therefore cannot be tested.
         if ((configuration.data_type_left == DataType::String) != (configuration.data_type_right == DataType::String)) {
           return;
         }
@@ -385,10 +385,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     };
 
     // JoinOperators (e.g. JoinHash) might pick a "common type" from the columns used by the primary predicate and cast
-    // all values to that (e.g., joining float + long will cast everything to double)
-    // Test that this works for all data_type_left/data_type_right combinations
-    for (const auto data_type_left : all_data_types) {
-      for (const auto data_type_right : all_data_types) {
+    // all values to that (e.g., joining float + long will cast everything to double).
+    // Test that this works for all data_type_left/data_type_right combinations.
+    for (const auto data_type_left : data_types) {
+      for (const auto data_type_right : data_types) {
         auto join_test_configuration = default_configuration;
         join_test_configuration.data_type_left = data_type_left;
         join_test_configuration.data_type_right = data_type_right;
@@ -398,12 +398,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     }
 
     // JoinOperators (e.g. JoinHash) swap input sides depending on TableSize and JoinMode.
-    // Test that predicate_condition and secondary predicates are flipped accordingly
+    // Test that predicate_condition and secondary predicates are flipped accordingly.
     for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
-      for (const auto join_mode : all_join_modes) {
-        for (const auto left_table_size : all_table_sizes) {
-          for (const auto right_table_size : all_table_sizes) {
-            for (const auto& secondary_predicates : all_secondary_predicate_sets) {
+      for (const auto join_mode : join_modes) {
+        for (const auto left_table_size : table_sizes) {
+          for (const auto right_table_size : table_sizes) {
+            for (const auto& secondary_predicates : secondary_predicate_sets) {
               auto join_test_configuration = default_configuration;
               join_test_configuration.predicate_condition = predicate_condition;
               join_test_configuration.join_mode = join_mode;
@@ -422,8 +422,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Also test table sizes, as an empty right input table is a special case where a NULL value from the left side
     // would get emitted.
     for (const auto join_mode : {JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
-      for (const auto left_table_size : all_table_sizes) {
-        for (const auto right_table_size : all_table_sizes) {
+      for (const auto left_table_size : table_sizes) {
+        for (const auto right_table_size : table_sizes) {
           auto join_test_configuration = default_configuration;
           join_test_configuration.join_mode = join_mode;
           join_test_configuration.nullable_left = true;
@@ -436,11 +436,11 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // JoinOperators need to deal with differently sized Chunks (e.g., smaller last Chunk)
-    // Trigger those via testing all table_size/chunk_size combinations
-    for (const auto& left_table_size : all_table_sizes) {
-      for (const auto& right_table_size : all_table_sizes) {
-        for (const auto& chunk_size : all_chunk_sizes) {
+    // JoinOperators need to deal with differently sized Chunks (e.g., smaller last Chunk).
+    // Trigger those via testing all table_size/chunk_size combinations.
+    for (const auto& left_table_size : table_sizes) {
+      for (const auto& right_table_size : table_sizes) {
+        for (const auto& chunk_size : chunk_sizes) {
           auto join_test_configuration = default_configuration;
           join_test_configuration.left_input.table_size = left_table_size;
           join_test_configuration.right_input.table_size = right_table_size;
@@ -453,9 +453,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     }
 
     // Join operators tend to instantiate templates for data types, but also for JoinModes (see probe_semi_anti() in
-    // join_hash_steps.hpp) so combinations of those are issued
-    for (const auto join_mode : all_join_modes) {
-      for (const auto data_type : all_data_types) {
+    // join_hash_steps.hpp) so combinations of those are issued.
+    for (const auto join_mode : join_modes) {
+      for (const auto data_type : data_types) {
         auto join_test_configuration = default_configuration;
         join_test_configuration.data_type_left = data_type;
         join_test_configuration.data_type_right = data_type;
@@ -467,9 +467,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // Different JoinModes have different handling of NULL values.
     // Additionally, JoinOperators (e.g., JoinSortMerge) have vastly different paths for different PredicateConditions
-    // Test all combinations
-    for (const auto& join_mode : all_join_modes) {
-      for (const auto predicate_condition : all_predicate_conditions) {
+    // Test all combinations.
+    for (const auto& join_mode : join_modes) {
+      for (const auto predicate_condition : predicate_conditions) {
         auto join_test_configuration = default_configuration;
         join_test_configuration.join_mode = join_mode;
         join_test_configuration.nullable_left = true;
@@ -482,9 +482,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
     // The input tables are designed to have exclusive values (i.e. values not contained in the other tables).
     // Test that these are handled correctly for different JoinModes by swapping the input tables.
-    // Additionally, go through all PredicateCondition to test especially the JoinSortMerge's different paths for these
-    for (const auto& predicate_condition : all_predicate_conditions) {
-      for (const auto& join_mode : all_join_modes) {
+    // Additionally, go through all PredicateCondition to test especially the JoinSortMerge's different paths for these.
+    for (const auto& predicate_condition : predicate_conditions) {
+      for (const auto& join_mode : join_modes) {
         auto join_test_configuration = default_configuration;
         join_test_configuration.join_mode = join_mode;
         join_test_configuration.predicate_condition = predicate_condition;
@@ -495,10 +495,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
     }
 
-    // Test all combinations of reference/data input tables. This tests mostly the composition of the output table
-    for (const auto table_size : {0u, all_table_sizes.front()}) {
-      for (const auto& left_input_table_type : all_input_table_types) {
-        for (const auto& right_input_table_type : all_input_table_types) {
+    // Test all combinations of reference/data input tables. This tests mostly the composition of the output table.
+    for (const auto table_size : {0u, table_sizes.front()}) {
+      for (const auto& left_input_table_type : input_table_types) {
+        for (const auto& right_input_table_type : input_table_types) {
           auto join_test_configuration = default_configuration;
           join_test_configuration.left_input.table_type = left_input_table_type;
           join_test_configuration.left_input.table_size = table_size;
@@ -511,9 +511,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     }
 
     // Test multi-predicate join support for all join modes. Swap the input tables to trigger cases especially in the
-    // Anti* modes where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded
-    for (const auto& join_mode : all_join_modes) {
-      for (const auto& secondary_predicates : all_secondary_predicate_sets) {
+    // Anti* modes where a secondary predicate evaluating to FALSE might "save" a tuple from being discarded.
+    for (const auto& join_mode : join_modes) {
+      for (const auto& secondary_predicates : secondary_predicate_sets) {
         for (const auto& predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
           for (const auto swap_input_sides : {false, true}) {
             auto join_test_configuration = default_configuration;
@@ -535,10 +535,10 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Dictionaries.
     // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
     // Use both Equals and LessThan to trigger sorting/non-sorting mode of JoinSortedMerge's ColumnMaterializer.
-    for (const auto encoding_type : all_encoding_types) {
-      for (const auto data_type : all_data_types) {
+    for (const auto encoding_type : encoding_types) {
+      for (const auto data_type : data_types) {
         for (const auto nullable : {false, true}) {
-          for (const auto table_type : all_input_table_types) {
+          for (const auto table_type : input_table_types) {
             for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::LessThan}) {
               auto join_test_configuration = default_configuration;
               join_test_configuration.left_input.encoding_type = encoding_type;
@@ -564,9 +564,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     if constexpr (std::is_same_v<JoinOperator, JoinHash>) {
       for (const auto radix_bits : {0, 1, 2, 5}) {
         for (const auto join_mode : {JoinMode::Inner, JoinMode::Right, JoinMode::Semi}) {
-          for (const auto left_table_size : all_table_sizes) {
-            for (const auto right_table_size : all_table_sizes) {
-              for (const auto& chunk_size : all_chunk_sizes) {
+          for (const auto left_table_size : table_sizes) {
+            for (const auto right_table_size : table_sizes) {
+              for (const auto& chunk_size : chunk_sizes) {
                 for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
                   auto join_test_configuration = default_configuration;
                   join_test_configuration.join_mode = join_mode;
@@ -701,7 +701,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       }
 
       if (pruned_column_ids && !pruned_column_ids->empty()) {
-        // Prune Columns using the GetTable operator
+        // Prune Columns using the GetTable operator.
         auto& storage_manager = Hyrise::get().storage_manager;
         const auto stored_table_name = "JoinTestTable"s;
         storage_manager.add_table(stored_table_name, data_table);
@@ -722,7 +722,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   }
 
   static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
-  // Cache reference table to avoid redundant computation of the same
+  // Cache reference table to avoid redundant computation of the same.
   static inline std::map<JoinTestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
 };  // namespace hyrise
 
@@ -740,7 +740,7 @@ TEST_P(JoinTestRunner, TestJoin) {
   auto column_id_right = ColumnID{static_cast<ColumnID::base_type>(
       2 * data_type_order.at(configuration.data_type_right) + configuration.nullable_right)};
 
-  // If columns are pruned, we have to adjust the corresponding column IDs.
+  // If columns are pruned, we have to adjust the corresponding ColumnIDs.
   auto adjust_column_id = [](auto& column_id, const auto original_column_id, const auto& pruned_column_ids) {
     if (!pruned_column_ids) {
       return;
@@ -761,7 +761,7 @@ TEST_P(JoinTestRunner, TestJoin) {
   const auto join_op = configuration.join_operator_factory->create_operator(input_operator_left, input_operator_right,
                                                                             primary_predicate, configuration);
 
-  // Configuration parameters that are not used by the JoinVerification operator are irrelevant for caching
+  // Configuration parameters that are not used by the JoinVerification operator are irrelevant for caching.
   auto cached_output_configuration = configuration;
 
   const auto cleared_input_table_configuration = [](const InputTableConfiguration& input_table_configuration) {
@@ -802,8 +802,8 @@ TEST_P(JoinTestRunner, TestJoin) {
     std::cout << "Index scope: " << magic_enum::enum_name(configuration.left_input.index_scope) << std::endl;
     std::cout << "Indexed chunk range: [" << configuration.left_input.indexed_chunk_range.first << ", "
               << configuration.left_input.indexed_chunk_range.second << ")" << std::endl;
-    std::cout << "Chunk range with single chunk ref. guarantee: "
-              << "[" << configuration.left_input.single_chunk_reference_range.first << ", "
+    std::cout << "Chunk range with single chunk ref. guarantee: ["
+              << configuration.left_input.single_chunk_reference_range.first << ", "
               << configuration.left_input.single_chunk_reference_range.second << ")" << std::endl;
     std::cout << get_table_path(configuration.left_input) << std::endl;
     std::cout << std::endl;
@@ -841,7 +841,7 @@ TEST_P(JoinTestRunner, TestJoin) {
   try {
     auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
 
-    // Cache reference table to avoid redundant computation of the same
+    // Cache reference table to avoid redundant computation of the same.
     if (expected_output_table_iter == expected_output_tables.end()) {
       join_verification->execute();
       const auto expected_output_table = join_verification->get_output();
@@ -850,10 +850,10 @@ TEST_P(JoinTestRunner, TestJoin) {
     }
     expected_table = expected_output_table_iter->second;
 
-    // Execute the actual join
+    // Execute the actual join.
     join_op->execute();
   } catch (...) {
-    // If an error occurred in the join operator under test, we still want to see the test configuration
+    // If an error occurred in the join operator under test, we still want to see the test configuration.
     print_configuration_info();
     throw;
   }
@@ -867,7 +867,7 @@ TEST_P(JoinTestRunner, TestJoin) {
     FAIL();
   }
 
-  if (configuration.index_side) {  // configuration is a specialized JoinIndex configuration
+  if (configuration.index_side) {  // Configuration is a specialized JoinIndex configuration.
     auto& indexed_input =
         configuration.index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
 

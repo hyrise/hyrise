@@ -82,7 +82,7 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
+inline constexpr std::array encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
                                                EncodingType::RunLength,        EncodingType::LZ4};
 

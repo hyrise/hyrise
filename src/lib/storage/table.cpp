@@ -377,14 +377,14 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
       const auto& chunk = get_chunk(chunk_id);
       Assert(chunk, "Requested index on deleted chunk.");
       Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
-      chunks_to_index.emplace_back(std::make_pair(chunk_id, chunk));
+      chunks_to_index.emplace_back(chunk_id, chunk);
     }
 
     table_index = std::make_shared<Index>(chunks_to_index, column_id);
   }
   _table_indexes.emplace_back(table_index);
 
-  TableIndexStatistics table_indexes_statistics = {{column_id}, chunks_to_index, name, table_index_type};
+  auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index, name, table_index_type};
   _table_indexes_statistics.emplace_back(table_indexes_statistics);
 }
 
@@ -397,9 +397,7 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
 
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    auto chunk = std::atomic_load(&_chunks[chunk_id]);
-    Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-
+    const auto chunk = get_chunk(chunk_id);
     chunk->create_index<Index>(column_ids);
   }
   ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
