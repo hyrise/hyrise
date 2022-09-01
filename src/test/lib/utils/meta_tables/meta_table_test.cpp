@@ -44,7 +44,7 @@ class MetaTableTest : public BaseTest {
     return names;
   }
 
-  const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
+  const std::shared_ptr<Table> generate_meta_table(const MetaTable& table) const {
     return table->_generate();
   }
 
@@ -68,8 +68,21 @@ class MetaTableTest : public BaseTest {
     storage_manager.add_table("int_int_int_null", int_int_int_null);
   }
 
-  void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
+  void _add_meta_table(const MetaTable& table) const {
     Hyrise::get().meta_table_manager.add_table(table);
+  }
+
+  void _insert_into_meta_table(const MetaTable& table, const std::vector<AllTypeVariant>& values) const {
+    return table->_insert(values);
+  }
+
+  void _delete_from_meta_table(const MetaTable& table, const std::vector<AllTypeVariant>& values) const {
+    return table->_remove(values);
+  }
+
+  void _update_meta_table(const MetaTable& table, const std::vector<AllTypeVariant>& old_values,
+                          const std::vector<AllTypeVariant>& new_values) const {
+    return table->_update(old_values, new_values);
   }
 };
 
@@ -92,6 +105,11 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
   EXPECT_FALSE(GetParam()->can_insert());
   EXPECT_FALSE(GetParam()->can_update());
   EXPECT_FALSE(GetParam()->can_delete());
+
+  const auto mock_values = std::vector<AllTypeVariant>(GetParam()->column_definitions().size());
+  EXPECT_THROW(_insert_into_meta_table(GetParam(), mock_values), std::logic_error);
+  EXPECT_THROW(_delete_from_meta_table(GetParam(), mock_values), std::logic_error);
+  EXPECT_THROW(_update_meta_table(GetParam(), mock_values, mock_values), std::logic_error);
 }
 
 TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
@@ -162,7 +180,7 @@ TEST_F(MetaTableTest, SingleGenerationInPipeline) {
 }
 
 TEST_F(MetaTableTest, IsNotCached) {
-  auto mock_table = std::make_shared<MetaMockTable>();
+  const auto mock_table = std::make_shared<MetaMockTable>();
   _add_meta_table(mock_table);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
