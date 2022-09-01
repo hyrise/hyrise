@@ -88,10 +88,6 @@ BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::null_cend() const {
   return Iterator(std::make_shared<BaseTableIndexIterator>());
 }
 
-size_t BasePartialHashIndexImpl::memory_usage() const {
-  return 0;
-}
-
 BasePartialHashIndexImpl::IteratorPair BasePartialHashIndexImpl::range_equals(const AllTypeVariant& value) const {
   return std::make_pair(Iterator(std::make_shared<BaseTableIndexIterator>()),
                         Iterator(std::make_shared<BaseTableIndexIterator>()));
@@ -135,9 +131,6 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       if (position.is_null()) {
         _null_values.push_back(row_id);
       } else {
-        if (!_map.contains(position.value())) {
-          _map[position.value()] = std::vector<RowID>{};
-        }
         _map[position.value()].push_back(row_id);
       }
     });
@@ -161,9 +154,7 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 
   // Checks whether a given RowID's ChunkID is in the set of ChunkIDs to be unindexed.
   auto is_to_unindex = [&indexed_chunks_to_unindex](const RowID& row_id) {
-    const auto find_iter =
-        std::find(indexed_chunks_to_unindex.cbegin(), indexed_chunks_to_unindex.cend(), row_id.chunk_id);
-    return find_iter != indexed_chunks_to_unindex.cend();
+    return indexed_chunks_to_unindex.contains(row_id.chunk_id);
   };
 
   // Iterate over all values stored in the index.
@@ -228,12 +219,13 @@ template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::memory_usage() const {
   auto bytes = size_t{0u};
 
-  bytes += sizeof(_indexed_chunk_ids);  // NOLINT - Linter complains I should use vector.size(), which would be wrong.
+  bytes += sizeof(_indexed_chunk_ids);  // NOLINT - Linter complains size() should be used, which would be wrong.
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
-  // TODO(anyone): Find a clever way to estimate the hash sizes in the maps. For now we estimate a hash size of 8 byte
-  bytes += 8 /* hash size */ * _map.size();
+  // Tessil's sparse_map uses std::hash as hash function, so the hash size equals the size of a size_t.
+  bytes += sizeof(size_t) * _map.size();
+
   bytes += sizeof(std::vector<RowID>) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 

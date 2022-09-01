@@ -18,9 +18,9 @@ class PartialHashIndexTest : public BaseTest {
     table = std::make_shared<Table>(table_column_definitions, TableType::Data);
 
     values1 = {"hotel", "delta", "nullptr", "delta", "apple", "charlie", "charlie", "inbox"};
-    pmr_vector<bool> null_values_1 = {false, false, true, false, false, false, false, false};
+    auto null_values_1 = {false, false, true, false, false, false, false, false};
     values2 = {"hello", "delta", "funny", "names", "nullptr", "paper", "clock", "inbox"};
-    pmr_vector<bool> null_values_2 = {false, false, false, false, true, false, false, false};
+    auto null_values_2 = {false, false, false, false, true, false, false, false};
     segment1 = std::make_shared<ValueSegment<pmr_string>>(std::move(values1), std::move(null_values_1));
     segment2 = std::make_shared<ValueSegment<pmr_string>>(std::move(values2), std::move(null_values_2));
 
@@ -348,7 +348,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // + map size
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
-  expected_memory_usage += 9 * 8;
+  expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
@@ -388,7 +388,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // + map size
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
-  expected_memory_usage += 0 * 8;
+  expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
@@ -429,7 +429,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // + map size
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
-  expected_memory_usage += 9 * 8;
+  expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
@@ -468,7 +468,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // + map size
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
-  expected_memory_usage += 0 * 8;
+  expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
@@ -499,7 +499,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // + map size
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
-  expected_memory_usage += 0 * 8;
+  expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID

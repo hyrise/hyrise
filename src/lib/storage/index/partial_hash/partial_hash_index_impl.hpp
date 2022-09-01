@@ -96,7 +96,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual Iterator cend() const;
   virtual Iterator null_cbegin() const;
   virtual Iterator null_cend() const;
-  virtual size_t memory_usage() const;
+  virtual size_t memory_usage() const = 0;
 
   virtual IteratorPair range_equals(const AllTypeVariant& value) const;
 
