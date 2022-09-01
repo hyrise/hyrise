@@ -148,7 +148,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks_to_unindex) {
-  const size_t size_before = _indexed_chunk_ids.size();
+  const auto size_before = _indexed_chunk_ids.size();
 
   auto indexed_chunks_to_unindex = std::unordered_set<ChunkID>{};
   for (const auto& chunk_id : chunks_to_unindex) {

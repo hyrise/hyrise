@@ -703,7 +703,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       if (pruned_column_ids && !pruned_column_ids->empty()) {
         // Prune Columns using the GetTable operator.
         auto& storage_manager = Hyrise::get().storage_manager;
-        const auto stored_table_name = "JoinTestTable"s;
+        const auto stored_table_name = "JoinTestTable";
         storage_manager.add_table(stored_table_name, data_table);
         auto get_table = std::make_shared<GetTable>(stored_table_name, std::vector<ChunkID>{}, *pruned_column_ids);
         get_table->execute();

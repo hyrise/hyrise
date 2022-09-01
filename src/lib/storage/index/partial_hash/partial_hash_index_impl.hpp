@@ -1,9 +1,9 @@
 #pragma once
 
-#include <tsl/sparse_map.h>
-
 #include <utility>
 #include <vector>
+
+#include <tsl/sparse_map.h>
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
@@ -106,8 +106,8 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
 };
 
-/* Implementation of a partial hash index, that can index any chunk in a column. You can add and remove chunks to
- * the index using the insert_entries and remove_entries methods.
+/* Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
+ * Chunks can be added and removed using the insert_entries() and remove_entries() methods.
  */
 template <typename DataType>
 class PartialHashIndexImpl : public BasePartialHashIndexImpl {
