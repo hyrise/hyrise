@@ -9,9 +9,10 @@ namespace hyrise {
 class AbstractCompressedVector;
 
 /**
- * @brief Base class of DictionarySegment<T> exposing type-independent interface
+ * @brief Abstract class for all DictionarySegments.
+ *        Also exposes type-independent interface.
  */
-class BaseDictionarySegment : public AbstractEncodedSegment {
+class AbstractDictionarySegment : public AbstractEncodedSegment {
  public:
   using AbstractEncodedSegment::AbstractEncodedSegment;
 

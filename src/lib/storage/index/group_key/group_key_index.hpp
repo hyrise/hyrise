@@ -12,7 +12,7 @@
 namespace hyrise {
 
 class AbstractSegment;
-class BaseDictionarySegment;
+class AbstractDictionarySegment;
 class GroupKeyIndexTest;
 
 /**
@@ -90,7 +90,7 @@ class GroupKeyIndex : public AbstractIndex {
   size_t _memory_consumption() const final;
 
  private:
-  const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
+  const std::shared_ptr<const AbstractDictionarySegment> _indexed_segment;
   std::vector<ChunkOffset> _value_start_offsets;  // maps value-ids to offsets in _positions
   std::vector<ChunkOffset> _positions;            // non-NULL record positions in the attribute vector
 };

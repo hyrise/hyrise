@@ -12,7 +12,7 @@
 namespace hyrise {
 
 class CompositeGroupKeyIndexTest;
-class BaseDictionarySegment;
+class AbstractDictionarySegment;
 
 /**
  *
@@ -104,7 +104,7 @@ class CompositeGroupKeyIndex : public AbstractIndex {
 
  private:
   // the segments the index is based on
-  std::vector<std::shared_ptr<const BaseDictionarySegment>> _indexed_segments;
+  std::vector<std::shared_ptr<const AbstractDictionarySegment>> _indexed_segments;
 
   // contains concatenated value-ids
   VariableLengthKeyStore _keys;

@@ -10,7 +10,7 @@
 #include <utility>
 #include <vector>
 
-#include "storage/base_dictionary_segment.hpp"
+#include "storage/abstract_dictionary_segment.hpp"
 #include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "storage/vector_compression/abstract_vector_decompressor.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
@@ -43,7 +43,7 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   // cast and check segments
   _indexed_segments.reserve(segments_to_index.size());
   for (const auto& segment : segments_to_index) {
-    auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
+    auto dict_segment = std::dynamic_pointer_cast<const AbstractDictionarySegment>(segment);
     Assert(static_cast<bool>(dict_segment), "CompositeGroupKeyIndex only works with dictionary segments.");
     Assert(dict_segment->compressed_vector_type(),
            "Expected DictionarySegment to use vector compression for attribute vector");

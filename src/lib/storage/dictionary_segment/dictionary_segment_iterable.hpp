@@ -163,7 +163,7 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
   };
 
  private:
-  const BaseDictionarySegment& _segment;
+  const AbstractDictionarySegment& _segment;
   std::shared_ptr<const Dictionary> _dictionary;
 };
 

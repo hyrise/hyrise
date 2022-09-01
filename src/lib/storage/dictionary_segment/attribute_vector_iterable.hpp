@@ -11,7 +11,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
  public:
   using ValueType = ValueID;
 
-  explicit AttributeVectorIterable(const BaseDictionarySegment& segment, const ValueID null_value_id)
+  explicit AttributeVectorIterable(const AbstractDictionarySegment& segment, const ValueID null_value_id)
       : _attribute_vector{*segment.attribute_vector()},
         _null_value_id{null_value_id},
         _access_counter(segment.access_counter) {}

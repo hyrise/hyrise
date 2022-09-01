@@ -15,7 +15,7 @@ template <typename T>
 FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const FixedStringVector>& dictionary,
     const std::shared_ptr<const AbstractCompressedVector>& attribute_vector)
-    : BaseDictionarySegment(data_type_from_type<pmr_string>()),
+    : AbstractDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
       _attribute_vector{attribute_vector},
       _decompressor{_attribute_vector->create_base_decompressor()} {}

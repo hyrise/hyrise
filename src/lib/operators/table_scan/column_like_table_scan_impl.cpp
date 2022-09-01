@@ -35,7 +35,7 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   // For dictionary segments where the number of unique values is not higher than the number of (potentially filtered)
   // input rows, use an optimized implementation.
-  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment);
+  if (const auto* dictionary_segment = dynamic_cast<const AbstractDictionarySegment*>(&segment);
       dictionary_segment &&
       (!position_filter || dictionary_segment->unique_values_count() <= position_filter->size())) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
@@ -67,7 +67,7 @@ void ColumnLikeTableScanImpl::_scan_generic_segment(
   });
 }
 
-void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id,
+void ColumnLikeTableScanImpl::_scan_dictionary_segment(const AbstractDictionarySegment& segment, const ChunkID chunk_id,
                                                        RowIDPosList& matches,
                                                        const std::shared_ptr<const AbstractPosList>& position_filter) {
   // First, build a bitmap containing 1s/0s for matching/non-matching dictionary values. Second, iterate over the

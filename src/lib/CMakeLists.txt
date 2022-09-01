@@ -420,9 +420,9 @@ set(
     statistics/table_statistics.hpp
     storage/abstract_encoded_segment.cpp
     storage/abstract_encoded_segment.hpp
+    storage/abstract_dictionary_segment.hpp
     storage/abstract_segment.cpp
     storage/abstract_segment.hpp
-    storage/base_dictionary_segment.hpp
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp

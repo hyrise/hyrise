@@ -13,7 +13,7 @@ namespace hyrise {
 class Table;
 class ReferenceSegment;
 class AbstractSegment;
-class BaseDictionarySegment;
+class AbstractDictionarySegment;
 class AttributeVectorIterable;
 
 /**

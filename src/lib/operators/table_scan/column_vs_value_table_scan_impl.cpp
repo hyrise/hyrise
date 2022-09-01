@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "sorted_segment_search.hpp"
-#include "storage/base_dictionary_segment.hpp"
+#include "storage/abstract_dictionary_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
 #include "storage/segment_iterables/create_iterable_from_attribute_vector.hpp"
@@ -47,7 +47,7 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     }
   }
 
-  if (const auto* dictionary_segment = dynamic_cast<const BaseDictionarySegment*>(&segment)) {
+  if (const auto* dictionary_segment = dynamic_cast<const AbstractDictionarySegment*>(&segment)) {
     _scan_dictionary_segment(*dictionary_segment, chunk_id, matches, position_filter);
   } else {
     _scan_generic_segment(segment, chunk_id, matches, position_filter);
@@ -80,7 +80,7 @@ void ColumnVsValueTableScanImpl::_scan_generic_segment(
 }
 
 void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
-    const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+    const AbstractDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) {
   /**
    * ValueID search_vid;              // left value id
@@ -194,7 +194,7 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
   });
 }
 
-ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySegment& segment) const {
+ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const AbstractDictionarySegment& segment) const {
   switch (predicate_condition) {
     case PredicateCondition::Equals:
     case PredicateCondition::NotEquals:
@@ -211,7 +211,7 @@ ValueID ColumnVsValueTableScanImpl::_get_search_value_id(const BaseDictionarySeg
   }
 }
 
-bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment& segment,
+bool ColumnVsValueTableScanImpl::_value_matches_all(const AbstractDictionarySegment& segment,
                                                     const ValueID search_value_id) const {
   switch (predicate_condition) {
     case PredicateCondition::Equals:
@@ -234,7 +234,7 @@ bool ColumnVsValueTableScanImpl::_value_matches_all(const BaseDictionarySegment&
   }
 }
 
-bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment& segment,
+bool ColumnVsValueTableScanImpl::_value_matches_none(const AbstractDictionarySegment& segment,
                                                      const ValueID search_value_id) const {
   switch (predicate_condition) {
     case PredicateCondition::Equals:

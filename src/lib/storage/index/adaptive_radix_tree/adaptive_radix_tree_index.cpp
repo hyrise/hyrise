@@ -8,7 +8,7 @@
 #include <vector>
 
 #include "adaptive_radix_tree_nodes.hpp"
-#include "storage/base_dictionary_segment.hpp"
+#include "storage/abstract_dictionary_segment.hpp"
 #include "storage/index/abstract_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
@@ -26,7 +26,7 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(
     : AbstractIndex{get_index_type_of<AdaptiveRadixTreeIndex>()},
       _indexed_segment(segments_to_index.empty()  // Empty segment list is illegal
                            ? nullptr              // but range check needed for accessing the first segment
-                           : std::dynamic_pointer_cast<const BaseDictionarySegment>(segments_to_index.front())) {
+                           : std::dynamic_pointer_cast<const AbstractDictionarySegment>(segments_to_index.front())) {
   Assert(static_cast<bool>(_indexed_segment), "AdaptiveRadixTree only works with dictionary segments for now");
   Assert((segments_to_index.size() == 1), "AdaptiveRadixTree only works with a single segment");
 

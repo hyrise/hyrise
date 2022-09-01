@@ -12,7 +12,7 @@ namespace hyrise {
 
 class AbstractSegment;
 class ARTNode;
-class BaseDictionarySegment;
+class AbstractDictionarySegment;
 
 /**
  * The AdaptiveRadixTreeIndex (ART) currently works on single DictionarySegments. Conceptually it also works on
@@ -85,7 +85,7 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
 
   size_t _memory_consumption() const final;
 
-  const std::shared_ptr<const BaseDictionarySegment> _indexed_segment;
+  const std::shared_ptr<const AbstractDictionarySegment> _indexed_segment;
   std::vector<ChunkOffset> _chunk_offsets;
   std::shared_ptr<ARTNode> _root;
 };

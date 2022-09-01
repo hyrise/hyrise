@@ -3,7 +3,7 @@
 #include <memory>
 #include <string>
 
-#include "base_dictionary_segment.hpp"
+#include "abstract_dictionary_segment.hpp"
 #include "storage/vector_compression/abstract_compressed_vector.hpp"
 #include "types.hpp"
 
@@ -17,7 +17,7 @@ class AbstractCompressedVector;
  * Uses vector compression schemes for its attribute vector.
  */
 template <typename T>
-class DictionarySegment : public BaseDictionarySegment {
+class DictionarySegment : public AbstractDictionarySegment {
  public:
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                              const std::shared_ptr<const AbstractCompressedVector>& attribute_vector);
@@ -56,7 +56,7 @@ class DictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
   /**
-   * @defgroup BaseDictionarySegment interface
+   * @defgroup AbstractDictionarySegment interface
    * @{
    */
   EncodingType encoding_type() const final;

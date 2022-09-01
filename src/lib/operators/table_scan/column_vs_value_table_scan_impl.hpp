@@ -37,7 +37,7 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
 
   void _scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                              const std::shared_ptr<const AbstractPosList>& position_filter) const;
-  void _scan_dictionary_segment(const BaseDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
+  void _scan_dictionary_segment(const AbstractDictionarySegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
                                 const std::shared_ptr<const AbstractPosList>& position_filter);
 
   void _scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
@@ -49,11 +49,11 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
    * @{
    */
 
-  ValueID _get_search_value_id(const BaseDictionarySegment& segment) const;
+  ValueID _get_search_value_id(const AbstractDictionarySegment& segment) const;
 
-  bool _value_matches_all(const BaseDictionarySegment& segment, const ValueID search_value_id) const;
+  bool _value_matches_all(const AbstractDictionarySegment& segment, const ValueID search_value_id) const;
 
-  bool _value_matches_none(const BaseDictionarySegment& segment, const ValueID search_value_id) const;
+  bool _value_matches_none(const AbstractDictionarySegment& segment, const ValueID search_value_id) const;
 
   template <typename Functor>
   void _with_operator_for_dict_segment_scan(const Functor& func) const {
