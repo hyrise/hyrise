@@ -4,7 +4,6 @@
 
 #include "storage/chunk.hpp"
 #include "storage/index/abstract_table_index.hpp"
-#include "table_index_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {

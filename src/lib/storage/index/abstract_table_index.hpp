@@ -6,10 +6,13 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "table_index_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
+enum class TableIndexType {
+  PartialHash
+};
 
 /**
  * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the

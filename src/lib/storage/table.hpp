@@ -192,8 +192,7 @@ class Table : private Noncopyable {
    * Creates a subclass of AbstractTableIndex on a set of chunks of a specific column and adds the index to the
    * table's index statistics. Table indexes can only be created on a set of immutable chunks.
    */
-  template <typename Index>
-  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
+  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const TableIndexType type,
                           const std::string& name = "");
 
   template <typename Index>
@@ -235,6 +234,13 @@ class Table : private Noncopyable {
   void set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by);
 
  protected:
+  /**
+   * Creates a PartialHashIndex on a set of chunks of a specific column and adds the index to the
+   * table's index statistics. Table indexes can only be created on a set of immutable chunks.
+   */
+  void create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
+                                 const TableIndexType& type, const std::string& name = "");
+
   const TableColumnDefinitions _column_definitions;
   const TableType _type;
   const UseMvcc _use_mvcc;

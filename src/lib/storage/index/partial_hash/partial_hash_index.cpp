@@ -6,7 +6,7 @@ namespace hyrise {
 
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
                                    const ColumnID column_id)
-    : AbstractTableIndex{get_table_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
+    : AbstractTableIndex{TableIndexType::PartialHash}, _column_id(column_id) {
   Assert(!chunks_to_index.empty(), "PartialHashIndex requires chunks_to_index not to be empty.");
   resolve_data_type(chunks_to_index.front().second->get_segment(_column_id)->data_type(),
                     [&](const auto column_data_type) {
@@ -17,7 +17,7 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
 }
 
 PartialHashIndex::PartialHashIndex(const DataType data_type, const ColumnID column_id)
-    : AbstractTableIndex{get_table_index_type_of<PartialHashIndex>()}, _column_id(column_id) {
+    : AbstractTableIndex{TableIndexType::PartialHash}, _column_id(column_id) {
   resolve_data_type(data_type, [&](const auto column_data_type) {
     using ColumnDataType = typename decltype(column_data_type)::type;
     _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(
