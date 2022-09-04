@@ -52,12 +52,31 @@ TEST_F(MetaSegmentsAccurateTest, FallBackValueAccess) {
   expected_table->append({pmr_string{"int_int"}, pmr_string{"b"}, int32_t{0}, int64_t{2}});
   expected_table->append({pmr_string{"int_int"}, pmr_string{"b"}, int32_t{1}, int64_t{1}});
 
-  const auto& result_table =
-      SQLPipelineBuilder{"SELECT table_name, column_name, chunk_id, distinct_value_count FROM meta_segments_accurate"}
-          .create_pipeline()
-          .get_result_table()
-          .second;
-  EXPECT_TABLE_EQ_UNORDERED(result_table, expected_table);
+  {
+    // Case 1: No pruning statistics set.
+    int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
+    int_int->get_chunk(ChunkID{1})->set_pruning_statistics({});
+
+    const auto& result_table =
+        SQLPipelineBuilder{"SELECT table_name, column_name, chunk_id, distinct_value_count FROM meta_segments_accurate"}
+            .create_pipeline()
+            .get_result_table()
+            .second;
+    EXPECT_TABLE_EQ_UNORDERED(result_table, expected_table);
+  }
+  
+  {
+    // Case 2: Pruning statistics without distinct value count.
+    int_int->get_chunk(ChunkID{0})->set_pruning_statistics(ChunkPruningStatistics{2});
+    int_int->get_chunk(ChunkID{1})->set_pruning_statistics(ChunkPruningStatistics{2});
+
+    const auto& result_table =
+        SQLPipelineBuilder{"SELECT table_name, column_name, chunk_id, distinct_value_count FROM meta_segments_accurate"}
+            .create_pipeline()
+            .get_result_table()
+            .second;
+    EXPECT_TABLE_EQ_UNORDERED(result_table, expected_table);
+  }
 }
 
 }  // namespace hyrise
