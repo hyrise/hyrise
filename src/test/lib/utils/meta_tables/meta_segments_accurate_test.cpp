@@ -64,7 +64,7 @@ TEST_F(MetaSegmentsAccurateTest, FallBackValueAccess) {
             .second;
     EXPECT_TABLE_EQ_UNORDERED(result_table, expected_table);
   }
-  
+
   {
     // Case 2: Pruning statistics without distinct value count.
     int_int->get_chunk(ChunkID{0})->set_pruning_statistics(ChunkPruningStatistics{2});

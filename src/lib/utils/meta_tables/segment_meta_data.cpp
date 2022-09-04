@@ -51,11 +51,12 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
             resolve_data_type(data_type, [&](auto type) {
               using ColumnDataType = typename decltype(type)::type;
 
-              const auto& attribute_statistics =
-                  static_cast<AttributeStatistics<ColumnDataType>&>(*pruning_statistics->at(column_id));
-              const auto& distinct_value_count_object = attribute_statistics.distinct_value_count;
-              if (distinct_value_count_object) {
-                distinct_value_count = static_cast<int64_t>(distinct_value_count_object->count);
+              if (const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
+                      pruning_statistics->at(column_id))) {
+                const auto& distinct_value_count_object = attribute_statistics->distinct_value_count;
+                if (distinct_value_count_object) {
+                  distinct_value_count = static_cast<int64_t>(distinct_value_count_object->count);
+                }
               }
             });
           }
