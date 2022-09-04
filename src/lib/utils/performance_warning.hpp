@@ -16,7 +16,7 @@
  * Performance warnings can be disabled using the RAII-style PerformanceWarningDisabler:
  *
  * {
- *   auto pwd = PerformanceWarningDisabler{};
+ *   auto performance_warning_disabler = PerformanceWarningDisabler{};
  *   std::cout << abstract_segment[5] << std::endl; // this does not cause a warning
  * }
  * // warnings are enabled again
