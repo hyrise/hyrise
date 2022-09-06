@@ -236,6 +236,7 @@ set(
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
     plugins/memory_tracking_plugin_test.cpp
+    plugins/memory_tracking_plugin_system_test.cpp
     testing_assert.cpp
     testing_assert.hpp
     utils/constraint_test_utils.hpp
