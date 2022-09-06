@@ -235,6 +235,8 @@ set(
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
+    plugins/memory_tracking_plugin_test.cpp
+    plugins/memory_tracking_plugin_system_test.cpp
     testing_assert.cpp
     testing_assert.hpp
     utils/constraint_test_utils.hpp
@@ -263,6 +265,7 @@ set(
     gmock
     SQLite::SQLite3
     hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
+    hyriseMemoryTrackingPlugin
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -278,7 +281,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseMemoryTrackingPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

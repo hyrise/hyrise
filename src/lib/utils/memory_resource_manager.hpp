@@ -9,6 +9,8 @@
 
 namespace opossum {
 
+class MemoryTrackingPlugin;
+
 struct ResourceRecord {
   OperatorType operator_type;
   std::string operator_data_structure;
@@ -31,6 +33,8 @@ class MemoryResourceManager : public Noncopyable {
   // Disbales memory tracking. In this case, the MemoryResourceManager returns default MemoryResources.
   void disable_temporary_memory_tracking();
 
+  bool tracking_is_enabled() const;
+
   const tbb::concurrent_vector<ResourceRecord>& memory_resources() const;
 
   boost::container::pmr::memory_resource* get_memory_resource(const OperatorType operator_type,
@@ -40,10 +44,11 @@ class MemoryResourceManager : public Noncopyable {
   // Make sure that only Hyrise (and tests) can create new instances.
   friend class Hyrise;
   friend class MemoryResourceManagerTest;
+  friend class MemoryTrackingPlugin;
   MemoryResourceManager() = default;
 
   tbb::concurrent_vector<ResourceRecord> _memory_resources;
-  bool _tracking_is_enabled = true;
+  bool _tracking_is_enabled = false;
 };
 
 }  // namespace opossum

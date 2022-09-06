@@ -82,4 +82,12 @@ TEST_F(MemoryResourceManagerTest, ConcurrentCallsAreHandledCorrectly) {
   EXPECT_EQ(n_deallocated_bytes, -1 * expected_allocation_amount);
 }
 
+TEST_F(MemoryResourceManagerTest, EnablingAndDisablingWorks) {
+  ASSERT_TRUE(_memory_resource_manager.tracking_is_enabled());
+  _memory_resource_manager.disable_temporary_memory_tracking();
+  ASSERT_FALSE(_memory_resource_manager.tracking_is_enabled());
+  _memory_resource_manager.enable_temporary_memory_tracking();
+  ASSERT_TRUE(_memory_resource_manager.tracking_is_enabled());
+}
+
 }  // namespace opossum
