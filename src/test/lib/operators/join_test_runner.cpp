@@ -244,8 +244,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     };
     // clang-format on
 
-    const auto indexed_column_is_pruned = [](const auto& pruned_column_ids, const auto& index_side, const auto& configuration) {
-
+    const auto indexed_column_is_pruned = [](const auto& pruned_column_ids, const auto& index_side,
+                                             const auto& configuration) {
       if (pruned_column_ids.empty()) {
         return false;
       }
@@ -267,7 +267,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
       const auto search_iter =
           std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
       return search_iter != pruned_column_ids.cend();
-    }; 
+    };
 
     /**
      * Returns a set of adapted configurations if the join type provides further configuration possibilities that
@@ -705,7 +705,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         auto& storage_manager = Hyrise::get().storage_manager;
         const auto stored_table_name = "JoinTestTable";
         storage_manager.add_table(stored_table_name, data_table);
-        const auto get_table = std::make_shared<GetTable>(stored_table_name, std::vector<ChunkID>{}, *pruned_column_ids);
+        const auto get_table =
+            std::make_shared<GetTable>(stored_table_name, std::vector<ChunkID>{}, *pruned_column_ids);
         get_table->execute();
         const auto pruned_table = get_table->get_output();
         data_table = std::const_pointer_cast<Table>(pruned_table);

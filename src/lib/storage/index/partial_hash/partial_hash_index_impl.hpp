@@ -3,7 +3,7 @@
 #include <utility>
 #include <vector>
 
-#include <tsl/sparse_map.h>
+#include <tsl/sparse_map.h> // NOLINT
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"

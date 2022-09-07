@@ -60,8 +60,9 @@ ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& ch
  *           call begin() on the next larger child (e.g. 06)
  **/
 
-AbstractChunkIndex::Iterator ARTNode4::_delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                                                     const std::function<Iterator(size_t, size_t)>& function) const {
+AbstractChunkIndex::Iterator ARTNode4::_delegate_to_child(
+    const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+    const std::function<Iterator(size_t, size_t)>& function) const {
   const auto partial_key = key[depth];
   for (auto partial_key_id = uint8_t{0}; partial_key_id < 4; ++partial_key_id) {
     if (_partial_keys[partial_key_id] < partial_key) {
@@ -81,13 +82,15 @@ AbstractChunkIndex::Iterator ARTNode4::_delegate_to_child(const AdaptiveRadixTre
   return end();  // case1a
 }
 
-AbstractChunkIndex::Iterator ARTNode4::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
+AbstractChunkIndex::Iterator ARTNode4::lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                   size_t depth) const {
   return _delegate_to_child(key, depth, [&key, this](size_t index, size_t new_depth) {
     return _children[index]->lower_bound(key, new_depth);
   });
 }
 
-AbstractChunkIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const {
+AbstractChunkIndex::Iterator ARTNode4::upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                   size_t depth) const {
   return _delegate_to_child(key, depth, [&key, this](size_t index, size_t new_depth) {
     return _children[index]->upper_bound(key, new_depth);
   });
@@ -260,8 +263,9 @@ ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNod
  *
  **/
 
-AbstractChunkIndex::Iterator ARTNode48::_delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                                                      const std::function<Iterator(uint8_t, size_t)>& function) const {
+AbstractChunkIndex::Iterator ARTNode48::_delegate_to_child(
+    const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+    const std::function<Iterator(uint8_t, size_t)>& function) const {
   const auto partial_key = key[depth];
   if (_index_to_child[partial_key] != INVALID_INDEX) {
     // case0
