@@ -38,7 +38,7 @@ TEST_F(MemoryTrackingPluginTest, AllocationsTrackedAfterEnable) {
   mem_resource_1->allocate(10);
   mem_resource_1->allocate(20);
   ASSERT_EQ(_memory_resource_manager->memory_resources().size(), 0);
-  
+
   // After tracking is enabled, allocations should be tracked.
   _plugin.enable();
   const auto mem_resource_2 = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "test_data_structure");

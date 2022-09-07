@@ -10,7 +10,8 @@ void MemoryTrackingPlugin::start() {}
 
 void MemoryTrackingPlugin::stop() {}
 
-std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> MemoryTrackingPlugin::provided_user_executable_functions()
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
+  MemoryTrackingPlugin::provided_user_executable_functions()
     const {
   return {
     {"is_enabled", [&]() { this->is_enabled(); }},
@@ -20,7 +21,7 @@ std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> MemoryTracking
   };
 }
 
-bool MemoryTrackingPlugin::is_enabled() const { 
+bool MemoryTrackingPlugin::is_enabled() const {
   return _memory_resource_manager.tracking_is_enabled();
 }
 
@@ -34,7 +35,7 @@ void MemoryTrackingPlugin::disable() const {
 }
 
 void MemoryTrackingPlugin::cleanup() const {
-  // Calling clear on the vector has the effect that the desctructor is called for each ResourceRecord. This 
+  // Calling clear on the vector has the effect that the desctructor is called for each ResourceRecord. This
   // invalidates the unique pointer to the TrackingMemoryResource stored there. Thus, the TrackingMemoryResource and
   // its stored data are freed.
   _memory_resource_manager._memory_resources.clear();

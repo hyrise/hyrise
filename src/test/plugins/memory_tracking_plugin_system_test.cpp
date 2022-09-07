@@ -27,7 +27,7 @@ TEST_F(MemoryTrackingPluginSystemTest, NoTrackingWhenDeactivated) {
     .create_pipeline().get_result_table().second;
   EXPECT_TRUE(table_0->empty());
 
-  // Now, allocate some memory and verify that it is not tracked in the meta table. 
+  // Now, allocate some memory and verify that it is not tracked in the meta table.
   const auto mem_resource = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "my_data_structure");
   mem_resource->allocate(20);
   const auto table_1 = SQLPipelineBuilder("SELECT * FROM meta_temporary_memory_usage;")
@@ -37,7 +37,8 @@ TEST_F(MemoryTrackingPluginSystemTest, NoTrackingWhenDeactivated) {
 
 TEST_F(MemoryTrackingPluginSystemTest, FullFlowWithDeactivate) {
   // Activate the memory tracking.
-  auto pipeline_0 = SQLPipelineBuilder("INSERT INTO meta_exec VALUES ('hyriseMemoryTrackingPlugin', 'enable');").create_pipeline();
+  auto pipeline_0 = SQLPipelineBuilder(
+    "INSERT INTO meta_exec VALUES ('hyriseMemoryTrackingPlugin', 'enable');").create_pipeline();
   EXPECT_EQ(pipeline_0.get_result_table().first, SQLPipelineStatus::Success);
 
   // Allocate some memory and verify that it is tracked in the meta table.
@@ -57,7 +58,7 @@ TEST_F(MemoryTrackingPluginSystemTest, FullFlowWithDeactivate) {
   EXPECT_TRUE(table_1->empty());
   EXPECT_TRUE(_memory_resource_manager->memory_resources().empty());
 
-  // Allocate some memory and verify that it IS NOT tracked in the meta table. 
+  // Allocate some memory and verify that it IS NOT tracked in the meta table.
   const auto mem_resource_1 = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "my_data_structure");
   mem_resource_1->allocate(10);
   const auto table_2 = SQLPipelineBuilder("SELECT * FROM meta_temporary_memory_usage;")
@@ -67,7 +68,8 @@ TEST_F(MemoryTrackingPluginSystemTest, FullFlowWithDeactivate) {
 
 TEST_F(MemoryTrackingPluginSystemTest, FullFlowWithCleanup) {
   // Activate the memory tracking.
-  auto pipeline_0 = SQLPipelineBuilder("INSERT INTO meta_exec VALUES ('hyriseMemoryTrackingPlugin', 'enable');").create_pipeline();
+  auto pipeline_0 = SQLPipelineBuilder(
+    "INSERT INTO meta_exec VALUES ('hyriseMemoryTrackingPlugin', 'enable');").create_pipeline();
   EXPECT_EQ(pipeline_0.get_result_table().first, SQLPipelineStatus::Success);
 
   // Allocate some memory and verify that it is tracked in the meta table.
@@ -77,7 +79,7 @@ TEST_F(MemoryTrackingPluginSystemTest, FullFlowWithCleanup) {
     .create_pipeline().get_result_table().second;
   EXPECT_FALSE(table_0->empty());
 
-  // Call cleanup. Verify that the meta table is now empty once again and that the memory manager does not track any 
+  // Call cleanup. Verify that the meta table is now empty once again and that the memory manager does not track any
   // memory resources.
   auto pipeline_1 = SQLPipelineBuilder("INSERT INTO meta_exec VALUES ('hyriseMemoryTrackingPlugin', 'cleanup');")
     .create_pipeline();
@@ -87,7 +89,7 @@ TEST_F(MemoryTrackingPluginSystemTest, FullFlowWithCleanup) {
   EXPECT_TRUE(table_1->empty());
   EXPECT_TRUE(_memory_resource_manager->memory_resources().empty());
 
-  // Allocate some memory and verify that it IS tracked in the meta table. 
+  // Allocate some memory and verify that it IS tracked in the meta table.
   const auto mem_resource_1 = _memory_resource_manager->get_memory_resource(OperatorType::Mock, "my_data_structure");
   mem_resource_1->allocate(20);
   const auto table_2 = SQLPipelineBuilder("SELECT * FROM meta_temporary_memory_usage;")
