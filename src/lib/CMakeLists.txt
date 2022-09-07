@@ -729,8 +729,6 @@ target_link_libraries_system(
     tbb
 )
 
-set(CMAKE_POSITION_INDEPENDENT_CODE TRUE)
-
 if (NUMA_FOUND)
     target_link_libraries(hyrise_impl PUBLIC numa)
 endif()
