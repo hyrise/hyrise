@@ -8,6 +8,11 @@
 
 namespace hyrise {
 
+/*
+ *  This plugin implements unary Unique Column Combination (UCC) discovery based on previously executed LQPs.
+ *  Not all columns encountered in these LQPs are automatically considered for the UCC validation process.
+ *  Instead, columns are only validated/invalidated as UCCs if their being a UCC could've helped to optimize their LQP.
+ */
 class UCCCandidate {
  public:
   UCCCandidate(const std::string& table_name, const ColumnID column_id)

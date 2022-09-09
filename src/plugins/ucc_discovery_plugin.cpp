@@ -1,9 +1,3 @@
-/*
- *  In this plugin, we implement one way for UCC dependency discovery in table columns.
- *  In general, sort and adjacent_find are used for duplicate detection. The sort is optimized for sorted sub-vectors which are merged as a whole.
- *  Early outs are exploited for dictionary segments.
- */
-
 #include "ucc_discovery_plugin.hpp"
 
 #include "expression/binary_predicate_expression.hpp"
@@ -47,7 +41,7 @@ void UccDiscoveryPlugin::discover_uccs() const {
     const auto chunk_count = table->chunk_count();
 
     // Skip already discovered unique constraints.
-    if (std::any_of(begin(soft_key_constraints), end(soft_key_constraints), [&col_id](const auto key_constraint) {
+    if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&col_id](const auto& key_constraint) {
           const auto& columns = key_constraint.columns();
           return columns.size() == 1 && columns.contains(col_id);
         })) {
@@ -59,17 +53,23 @@ void UccDiscoveryPlugin::discover_uccs() const {
     resolve_data_type(table->column_data_type(col_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      // all_values collects the segment values from all chunks.
-      auto all_values = std::make_unique<std::unordered_set<ColumnDataType>>();
-      auto all_values_size = size_t{0};
-
-      // We can use an early-out if we find a single dict segment that contains a duplicate.
+      // we can trigger an early-out if we find the attribute vector of a dictionary segment to be longer than its dictionary
+      // an attribute vector longer than the dictionary indicates that at least one duplicate value is contained
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& source_chunk = table->get_chunk(chunk_id);
+        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+        if (!source_chunk) {
+          continue;
+        }
         const auto& source_segment = source_chunk->get_segment(col_id);
+        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+        if (!source_segment) {
+          continue;
+        }
 
-        if (std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
-          const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+        // TODO: type check instead?
+        const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+        if (dict_segment) {  
           const auto& dict = dict_segment->dictionary();
           const auto& attr_vector = dict_segment->attribute_vector();
 
@@ -81,17 +81,35 @@ void UccDiscoveryPlugin::discover_uccs() const {
         }
       }
 
-      // If we reach here, we have to make a cross-segment duplicate check.
+      /*  If we reach here, we have to run a cross-segment duplicate check
+       *  We check by inserting all values into an unordered set, 
+       *  if the size increases by less than we had values, there was a duplicate
+       */
+      // all_values collects the segment values from all chunks.
+      auto all_values = std::unordered_set<ColumnDataType>{};
+      auto all_values_size = size_t{0};
+
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& source_chunk = table->get_chunk(chunk_id);
+        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+        if (!source_chunk) {
+          continue;
+        }
         const auto& source_segment = source_chunk->get_segment(col_id);
+        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+        if (!source_segment) {
+          continue;
+        }
 
-        if (std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment)) {
-          const auto& val_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment);
+        // TODO: could also do a type check here?
+        const auto& val_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment);
+        const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+
+        if (val_segment) {
           const auto& values = val_segment->values();
 
-          all_values->insert(begin(values), end(values));
-          if (all_values->size() == all_values_size + values.size()) {
+          all_values.insert(begin(values), end(values));
+          if (all_values.size() == all_values_size + values.size()) {
             all_values_size += values.size();
           } else {
             // If not all elements have been inserted, there must be a duplicate, so the UCC constraint is violated
@@ -99,12 +117,11 @@ void UccDiscoveryPlugin::discover_uccs() const {
             Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
             return;
           }
-        } else if (std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
-          const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+        } else if (dict_segment) {
           const auto& dict = dict_segment->dictionary();
 
-          all_values->insert(begin(*dict), end(*dict));
-          if (all_values->size() == all_values_size + dict->size()) {
+          all_values.insert(begin(*dict), end(*dict));
+          if (all_values.size() == all_values_size + dict->size()) {
             all_values_size += dict->size();
           } else {
             // If not all elements have been inserted, there be a duplicate, so the UCC constraint is violated
@@ -222,14 +239,14 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
             aggregate_node.node_expressions.begin() + aggregate_node.aggregate_expressions_begin_idx};
 
         for (const auto& column_candidate : column_candidates) {
-          const auto casted_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
-          if (!casted_candidate) {
+          const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
+          if (!lqp_column_expression) {
             continue;
           }
           // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
           const auto stored_table_node =
-              std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
-          ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, casted_candidate->original_column_id});
+              std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
+          ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
         }
 
         return LQPVisitation::VisitInputs;
@@ -271,7 +288,7 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
           const auto subtree_root = join_node.left_input();
           // predicate may be swapped, so get proper operand
           auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
-          if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+          if (!expression_evaluable_on_lqp(column_candidate, *subtree_root)) {
             column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
           }
 
@@ -287,7 +304,7 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
         case JoinMode::Inner: {
           const auto column_candidates = {join_predicate->left_operand(), join_predicate->right_operand()};
           for (const auto& column_candidate : column_candidates) {
-            const auto casted_candidate = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
+            const auto lqp_column_expression = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
 
             // determine which subtree (left or right) belongs to the ColumnExpression
             auto subtree_root = join_node.left_input();
@@ -297,10 +314,10 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
 
             // for Join2Semi, this column is already interesting for optimization, add it as a potential candidate
             const auto stored_table_node =
-                std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
-            ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, casted_candidate->original_column_id});
+                std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
+            ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
 
-            auto candidates = generate_valid_candidates(subtree_root, casted_candidate);
+            auto candidates = generate_valid_candidates(subtree_root, lqp_column_expression);
             if (candidates) {
               for (const auto& candidate : *candidates) {
                 ucc_candidates.insert(candidate);
