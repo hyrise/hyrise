@@ -32,7 +32,7 @@ void UccDiscoveryPlugin::start() {}
 
 void UccDiscoveryPlugin::discover_uccs() const {
   const auto current_commit = Hyrise::get().transaction_manager.last_commit_id();
-  const auto ucc_candidates = identify_ucc_candidates();
+  const auto& ucc_candidates = identify_ucc_candidates();
 
   for (const auto& candidate : ucc_candidates) {
     auto candidate_time = Timer();
@@ -62,10 +62,10 @@ void UccDiscoveryPlugin::discover_uccs() const {
 
       // all_values collects the segment values from all chunks.
       auto all_values = std::make_unique<std::unordered_set<ColumnDataType>>();
-      auto all_values_size = all_values->size();
+      auto all_values_size = size_t{0};
 
       // We can use an early-out if we find a single dict segment that contains a duplicate.
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& source_chunk = table->get_chunk(chunk_id);
         const auto& source_segment = source_chunk->get_segment(col_id);
 
@@ -83,7 +83,7 @@ void UccDiscoveryPlugin::discover_uccs() const {
       }
 
       // If we reach here, we have to make a cross-segment duplicate check.
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; chunk_id++) {
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto& source_chunk = table->get_chunk(chunk_id);
         const auto& source_segment = source_chunk->get_segment(col_id);
 
@@ -153,11 +153,11 @@ std::shared_ptr<std::vector<UCCCandidate>> UccDiscoveryPlugin::generate_valid_ca
 
       // when looking at predicate node, check whether the searched column is filtered in this predicate
       // -> if so, it is a valid UCC candidate; if not, still continue search
-      const auto casted_node = std::static_pointer_cast<PredicateNode>(node);
+      const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
 
       // first, ensure that we look at a binary predicate expression checking for equality (e.g., A==B)
-      const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(casted_node->predicate());
-      if ((!predicate) || (predicate->predicate_condition != PredicateCondition::Equals)) {
+      const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
+      if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
         return LQPVisitation::VisitInputs;
       }
 
@@ -169,15 +169,16 @@ std::shared_ptr<std::vector<UCCCandidate>> UccDiscoveryPlugin::generate_valid_ca
         value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->left_operand());
       }
 
-      if ((!column_expression) || (!value_expression)) {
+      if (!column_expression || !value_expression) {
         // predicate needs to look like column = value or value = column; if not, move on
         return LQPVisitation::VisitInputs;
       }
 
       if (column_expression == column_candidate) {
         // equal condition and join column -> candidate for UCC
-        const auto table = std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
-        candidates->push_back(UCCCandidate{table->table_name, column_expression->original_column_id});
+        const auto stored_table_node =
+            std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
+        candidates->push_back(UCCCandidate{stored_table_node->table_name, column_expression->original_column_id});
         return LQPVisitation::VisitInputs;
       }
 
@@ -205,20 +206,20 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
 
   auto ucc_candidates = UCCCandidates{};
 
-  for (const auto& [query, entry] : snapshot) {
+  for (const auto& [_, entry] : snapshot) {
     const auto& root_node = entry.value;
 
     visit_lqp(root_node, [&](auto& node) {
       const auto type = node->type;
-      if ((type != LQPNodeType::Join) && (type != LQPNodeType::Aggregate)) {
+      if (type != LQPNodeType::Join && type != LQPNodeType::Aggregate) {
         // Non-Join and Non-Aggregate (Groupby) nodes are not considered for optimization using UCCs
         return LQPVisitation::VisitInputs;
       }
 
       if (type == LQPNodeType::Aggregate) {
         // in case of aggregate, extract all predicates used in groupby operations
-        auto& aggregate_node = static_cast<AggregateNode&>(*node);
-        auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
+        const auto& aggregate_node = static_cast<AggregateNode&>(*node);
+        const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
             aggregate_node.node_expressions.begin(),
             aggregate_node.node_expressions.begin() + aggregate_node.aggregate_expressions_begin_idx};
 
@@ -228,15 +229,16 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
             continue;
           }
           // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
-          const auto table = std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
-          ucc_candidates.insert(UCCCandidate{table->table_name, casted_candidate->original_column_id});
+          const auto stored_table_node =
+              std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
+          ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, casted_candidate->original_column_id});
         }
 
         return LQPVisitation::VisitInputs;
       }
 
       // if not aggregate node, must be a join node
-      auto& join_node = static_cast<JoinNode&>(*node);
+      const auto& join_node = static_cast<JoinNode&>(*node);
       const auto& join_mode = join_node.join_mode;
       // get join predicate with equals condition, that's the only one we would want to work on
       std::shared_ptr<BinaryPredicateExpression> join_predicate = nullptr;
@@ -250,9 +252,9 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
           continue;
         }
         // check whether both operands are column expressions
-        const auto op_left = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
-        const auto op_right = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
-        if ((!op_left) || (!op_right)) {
+        const auto operand_left = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
+        const auto operand_right = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
+        if (!operand_left || !operand_right) {
           join_predicate = nullptr;
           continue;
         }
@@ -268,14 +270,14 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
       switch (join_mode) {
         case JoinMode::Right: {
           // want to check only the left hand side here, as this is the one that will be removed in the end
-          auto subtree_root = join_node.left_input();
+          const auto subtree_root = join_node.left_input();
           // predicate may be swapped, so get proper operand
           auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
           if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
             column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
           }
 
-          auto candidates = generate_valid_candidates(subtree_root, column_candidate);
+          const auto candidates = generate_valid_candidates(subtree_root, column_candidate);
           if (candidates) {
             for (const auto& candidate : *candidates) {
               ucc_candidates.insert(candidate);
@@ -285,8 +287,7 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
         }
 
         case JoinMode::Inner: {
-          auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{join_predicate->left_operand(),
-                                                                                    join_predicate->right_operand()};
+          const auto column_candidates = {join_predicate->left_operand(), join_predicate->right_operand()};
           for (const auto& column_candidate : column_candidates) {
             const auto casted_candidate = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
 
@@ -297,8 +298,9 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
             }
 
             // for Join2Semi, this column is already interesting for optimization, add it as a potential candidate
-            const auto table = std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
-            ucc_candidates.insert(UCCCandidate{table->table_name, casted_candidate->original_column_id});
+            const auto stored_table_node =
+                std::static_pointer_cast<const StoredTableNode>(casted_candidate->original_node.lock());
+            ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, casted_candidate->original_column_id});
 
             auto candidates = generate_valid_candidates(subtree_root, casted_candidate);
             if (candidates) {
@@ -313,7 +315,7 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
         case JoinMode::Semi:
         case JoinMode::Left: {
           // want to check only the right hand side here, as this is the one that will be removed in the end
-          auto subtree_root = join_node.right_input();
+          const auto subtree_root = join_node.right_input();
           // predicate may be swapped, so get proper operand
           auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
           if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {

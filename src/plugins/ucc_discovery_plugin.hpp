@@ -9,14 +9,15 @@ namespace opossum {
 
 class UCCCandidate {
  public:
-  UCCCandidate(std::string table_name, ColumnID column_id) : _table_name(table_name), _column_id(column_id) {}
+  UCCCandidate(const std::string& table_name, const ColumnID column_id)
+      : _table_name(table_name), _column_id(column_id) {}
 
-  const std::string table_name() const {
-    return this->_table_name;
+  const std::string& table_name() const {
+    return _table_name;
   }
 
   const ColumnID column_id() const {
-    return this->_column_id;
+    return _column_id;
   }
 
   friend bool operator==(const UCCCandidate& lhs, const UCCCandidate& rhs) {
@@ -24,8 +25,8 @@ class UCCCandidate {
   }
 
  protected:
-  std::string _table_name;
-  ColumnID _column_id;
+  const std::string _table_name;
+  const ColumnID _column_id;
 };
 
 using UCCCandidates = std::unordered_set<UCCCandidate>;
@@ -56,7 +57,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 
 template <>
 struct std::hash<opossum::UCCCandidate> {
-  std::size_t operator()(opossum::UCCCandidate const& s) const noexcept {
+  std::size_t operator()(const opossum::UCCCandidate& s) const noexcept {
     std::size_t h1 = std::hash<std::string>{}(s.table_name());
     std::size_t h2 = std::hash<opossum::ColumnID>{}(s.column_id());
     return h1 ^ (h2 << 1);
