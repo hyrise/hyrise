@@ -140,18 +140,18 @@ void BenchmarkRunner::run() {
   }
 
   // Create report
-  if (_config.output_file_path || _config.enable_temporary_memory_tracking) {
+  if (_config.output_file_path) {
     if (!_config.verify && !_config.enable_visualization) {
-      if (_config.enable_temporary_memory_tracking) {
-        write_report_to_file();
-      }
-      if (_config.enable_temporary_memory_tracking) {
-        write_temporary_memory_usage_report_to_file();
-      }
+      write_report_to_file();
     } else {
       std::cout << "- Not writing JSON result as either verification or visualization are activated." << std::endl;
       std::cout << "  These options make the results meaningless." << std::endl;
     }
+  }
+
+  // Create temporary memory usage report
+  if (_config.enable_temporary_memory_tracking) {
+    write_temporary_memory_usage_report_to_file();
   }
 
   // For the Ordered mode, results have already been printed to the console
