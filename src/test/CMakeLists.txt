@@ -135,6 +135,7 @@ set(
     lib/optimizer/strategy/join_ordering_rule_test.cpp
     lib/optimizer/strategy/join_predicate_ordering_rule_test.cpp
     lib/optimizer/strategy/join_to_predicate_rewrite_rule_test.cpp
+    lib/optimizer/strategy/join_to_semi_join_rule_test.cpp
     lib/optimizer/strategy/null_scan_removal_rule_test.cpp
     lib/optimizer/strategy/predicate_merge_rule_test.cpp
     lib/optimizer/strategy/predicate_placement_rule_test.cpp

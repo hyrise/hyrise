@@ -242,51 +242,14 @@ void recursively_gather_required_expressions(
   }
 }
 
-void annotate_join_unused_inputs(
+int annotate_join_unused_inputs(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
+  Assert(node->type == LQPNodeType::Join, "The given node is not a join node as expected.");
   // Identify whether the left or right side of the given join node are not needed anywhere further up in the LQP
   // If one of the sides is not used, add this information to the join node
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+  auto join_node = std::static_pointer_cast<JoinNode>(node);
 
-  auto left_input_is_used = false;
-  auto right_input_is_used = false;
-  for (const auto& output : node->outputs()) {
-    for (const auto& required_expression : required_expressions_by_node.at(output)) {
-      if (expression_evaluable_on_lqp(required_expression, *node->left_input()))
-        left_input_is_used = true;
-      if (expression_evaluable_on_lqp(required_expression, *node->right_input()))
-        right_input_is_used = true;
-    }
-  }
-  DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
-  if (left_input_is_used && right_input_is_used)
-    return;
-
-  if (!left_input_is_used) {
-    auto l = LQPInputSide::Left;
-    join_node->mark_side_as_removable(&l);
-  } else {
-    auto r = LQPInputSide::Right;
-    join_node->mark_side_as_removable(&r);
-  }
-}
-
-void try_join_to_semi_rewrite(
-    const std::shared_ptr<AbstractLQPNode>& node,
-    const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
-  // Sometimes, joins are not actually used to combine tables but only to check the existence of a tuple in a second
-  // table. Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
-  // If the join is on a unique/primary key column, we can rewrite these joins into semi joins. If, however, the
-  // uniqueness is not guaranteed, we cannot perform the rewrite as non-unique joins could possibly emit a matching
-  // line more than once.
-
-  auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
-  if (join_node->join_mode != JoinMode::Inner) {
-    return;
-  }
-
-  // Check whether the left/right inputs are actually needed by following operators
   auto left_input_is_used = false;
   auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
@@ -299,58 +262,17 @@ void try_join_to_semi_rewrite(
       }
     }
   }
-  DebugAssert(left_input_is_used || right_input_is_used, "Did not expect a useless join");
+  Assert(left_input_is_used || right_input_is_used, "Did not expect a useless join.");
+  if (left_input_is_used && right_input_is_used)
+    return 0;
 
-  // Early out, if we need output expressions from both input tables.
-  if (left_input_is_used && right_input_is_used) {
-    return;
-  }
-
-  /**
-   * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check as
-   * follows:
-   * (1) From all predicates of type Equals, we collect the operand expressions by input node.
-   * (2) We determine the input node that should be used for filtering.
-   * (3) We check the input node from (2) for a matching single- or multi-expression unique constraint.
-   *     a) Found match -> Rewrite to semi join
-   *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
-   */
-  const auto& join_predicates = join_node->join_predicates();
-  auto equals_predicate_expressions_left = ExpressionUnorderedSet{};
-  auto equals_predicate_expressions_right = ExpressionUnorderedSet{};
-  for (const auto& join_predicate : join_predicates) {
-    const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicate);
-    // Skip predicates that are not of type Equals (because we need n:1 or 1:1 join cardinality)
-    if (predicate->predicate_condition != PredicateCondition::Equals) {
-      continue;
-    }
-
-    // Collect operand expressions table-wise
-    for (const auto& operand_expression : {predicate->left_operand(), predicate->right_operand()}) {
-      if (join_node->left_input()->has_output_expressions({operand_expression})) {
-        equals_predicate_expressions_left.insert(operand_expression);
-      } else if (join_node->right_input()->has_output_expressions({operand_expression})) {
-        equals_predicate_expressions_right.insert(operand_expression);
-      }
-    }
-  }
-  // Early out, if we did not see any Equals-predicates.
-  if (equals_predicate_expressions_left.empty() || equals_predicate_expressions_right.empty()) {
-    return;
+  if (!left_input_is_used) {
+    join_node->mark_input_side_as_removable(LQPInputSide::Left);
+  } else {
+    join_node->mark_input_side_as_removable(LQPInputSide::Right);
   }
 
-  // Determine, which node to use for Semi-Join-filtering and check for the required uniqueness guarantees
-  if (!left_input_is_used &&
-      join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
-    join_node->join_mode = JoinMode::Semi;
-    const auto temp = join_node->left_input();
-    join_node->set_left_input(join_node->right_input());
-    join_node->set_right_input(temp);
-  }
-  if (!right_input_is_used &&
-      join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
-    join_node->join_mode = JoinMode::Semi;
-  }
+  return 1;
 }
 
 void prune_projection_node(
@@ -440,7 +362,6 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       } break;
 
       case LQPNodeType::Join: {
-        try_join_to_semi_rewrite(node, required_expressions_by_node);
         annotate_join_unused_inputs(node, required_expressions_by_node);
       } break;
 
