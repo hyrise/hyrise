@@ -315,6 +315,8 @@ set(
     optimizer/strategy/join_predicate_ordering_rule.hpp
     optimizer/strategy/join_to_predicate_rewrite_rule.cpp
     optimizer/strategy/join_to_predicate_rewrite_rule.hpp
+    optimizer/strategy/join_to_semi_join_rule.cpp
+    optimizer/strategy/join_to_semi_join_rule.hpp
     optimizer/strategy/null_scan_removal_rule.cpp
     optimizer/strategy/null_scan_removal_rule.hpp
     optimizer/strategy/predicate_merge_rule.cpp

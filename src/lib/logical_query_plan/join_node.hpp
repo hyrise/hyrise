@@ -84,7 +84,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * @param input_side which is no longer used in LQP after the join
    * Note: This function is meant to be called by the ColumnPruningRule, which already has the information on used/unused expressions in the LQP.
    */
-  void mark_side_as_removable(LQPInputSide* input_side);
+  void mark_input_side_as_removable(LQPInputSide input_side);
 
   JoinMode join_mode;
 
@@ -99,7 +99,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * The following flag is set by the ColumnPruningRule. It indicates whether and which input side
    * of a join is no longer needed in the LQP tree above the join and could therefore be removed
-   * during optimization by other rules such as the JoinToPredicateRewriteRule.
+   * during optimization by other rules such as the JoinToSemiJoinRule and the JoinToPredicateRewriteRule.
+   * 
+   * Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
+   * In this target query, the table nation is purely used for filtering out tuples from the customer table. All
+   * attributes of the nation table are completely projected away afterwards.
    * 
    * nullopt if both sides are used further up in the LQP
    */

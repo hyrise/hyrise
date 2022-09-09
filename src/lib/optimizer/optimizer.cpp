@@ -18,6 +18,7 @@
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
 #include "strategy/join_to_predicate_rewrite_rule.hpp"
+#include "strategy/join_to_semi_join_rule.hpp"
 #include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
@@ -69,8 +70,12 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
+  optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
+
   optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
+  // The JoinToPredicateRewriteRule may introduce new predicates in the LQP, so predicate placement is repeated after
+  // this rule.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
