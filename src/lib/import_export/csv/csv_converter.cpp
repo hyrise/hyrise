@@ -3,7 +3,7 @@
 #include <string>
 #include <utility>
 
-namespace opossum {
+namespace hyrise {
 
 void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {
   // String does not contain escaping if it is not surrounded with quotes
@@ -18,12 +18,12 @@ void BaseCsvConverter::unescape(std::string& field, const ParseConfig& config) {
   bool escaped = false;
   // The start and end ranges leave out the surrounding quotes.
   std::copy_if(field.begin() + 1, field.end() - 1, std::back_inserter(unescaped_string),
-               [&escaped, &config](const char c) {
+               [&escaped, &config](const char character) {
                  bool do_copy = true;
 
                  // If escape character is found the first time, don't copy,
                  // and set 'escaped' to true for the next character
-                 if (c == config.escape && !escaped) {
+                 if (character == config.escape && !escaped) {
                    do_copy = false;
                    escaped = true;
                  } else {
@@ -43,4 +43,4 @@ std::string BaseCsvConverter::unescape_copy(const std::string& field, const Pars
   return field_copy;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

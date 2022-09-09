@@ -18,7 +18,7 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SQLPipelineTest : public BaseTest {
  protected:
@@ -120,7 +120,7 @@ TEST_F(SQLPipelineTest, SimpleCreationInvalid) {
 }
 
 TEST_F(SQLPipelineTest, ParseErrorDebugMessage) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -697,4 +697,4 @@ TEST_F(SQLPipelineTest, GetResultTableNoReexecuteOnConflict) {
   EXPECT_EQ(_table_a->row_count(), 5);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

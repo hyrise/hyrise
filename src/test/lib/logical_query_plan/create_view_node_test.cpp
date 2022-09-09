@@ -5,7 +5,7 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/lqp_view.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CreateViewNodeTest : public BaseTest {
  public:
@@ -68,4 +68,4 @@ TEST_F(CreateViewNodeTest, NodeExpressions) {
   ASSERT_EQ(_view_node->node_expressions.size(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

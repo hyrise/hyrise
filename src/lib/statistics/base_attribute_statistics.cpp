@@ -1,6 +1,6 @@
 #include "base_attribute_statistics.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BaseAttributeStatistics::BaseAttributeStatistics(const DataType init_data_type) : data_type(init_data_type) {}
 
@@ -10,4 +10,4 @@ std::shared_ptr<BaseAttributeStatistics> BaseAttributeStatistics::pruned(
   Fail("Pruning has not yet been implemented for the given statistics object");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

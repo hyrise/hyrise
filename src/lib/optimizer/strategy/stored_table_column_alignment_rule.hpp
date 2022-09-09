@@ -58,7 +58,7 @@
  * Please note that this rule aligns the columns of StoredTableNodes across a given plan and all of its subqueries.
  */
 
-namespace opossum {
+namespace hyrise {
 
 class StoredTableColumnAlignmentRule : public AbstractRule {
  public:
@@ -69,4 +69,4 @@ class StoredTableColumnAlignmentRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaExecTable::MetaExecTable()
     : AbstractMetaTable(TableColumnDefinitions{{"plugin_name", DataType::String, false},
@@ -36,4 +36,4 @@ void MetaExecTable::_on_insert(const std::vector<AllTypeVariant>& values) {
   Hyrise::get().plugin_manager.exec_user_function(plugin_name, function_name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

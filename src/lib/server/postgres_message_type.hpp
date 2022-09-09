@@ -1,6 +1,6 @@
 #pragma once
 
-namespace opossum {
+namespace hyrise {
 
 // Each message contains a field (4 bytes) indicating the packet's size including itself. Using extra variable here to
 // avoid magic numbers.
@@ -54,4 +54,4 @@ enum class TransactionStatusIndicator : unsigned char {
 // SQL error codes
 constexpr char TRANSACTION_CONFLICT[] = "40001";
 
-}  // namespace opossum
+}  // namespace hyrise

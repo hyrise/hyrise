@@ -9,7 +9,7 @@
 #include "expression_precedence.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class AbstractOperator;
@@ -193,4 +193,4 @@ using ConstExpressionUnorderedMap = std::unordered_map<std::shared_ptr<const Abs
 using ExpressionUnorderedSet =
     std::unordered_set<std::shared_ptr<AbstractExpression>, ExpressionSharedPtrHash, ExpressionSharedPtrEqual>;
 
-}  // namespace opossum
+}  // namespace hyrise

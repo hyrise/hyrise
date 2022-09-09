@@ -8,7 +8,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Operator to retrieve a table from the StorageManager by specifying its name. Depending on how the operator was
 // constructed, chunks and columns may be pruned if they are irrelevant for the final result. The returned table is NOT
@@ -48,4 +48,4 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
 };
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const std::shared_ptr<const AbstractExpression>& expression,
@@ -20,4 +20,4 @@ std::shared_ptr<RowIDPosList> ExpressionEvaluatorTableScanImpl::scan_chunk(Chunk
           *_expression));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

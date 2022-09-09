@@ -9,7 +9,7 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class QueryPlanCacheTest : public BaseTest {
  protected:
@@ -111,4 +111,4 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   EXPECT_EQ(1, query_frequency(Q1));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

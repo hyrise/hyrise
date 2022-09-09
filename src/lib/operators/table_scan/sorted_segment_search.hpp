@@ -12,7 +12,7 @@
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Generic class which handles the actual scanning of a sorted segment
 template <typename IteratorType, typename SearchValueType>
@@ -319,4 +319,4 @@ class SortedSegmentSearch {
   const bool _is_ascending;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

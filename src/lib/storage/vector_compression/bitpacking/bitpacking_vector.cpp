@@ -3,7 +3,7 @@
 #include "bitpacking_decompressor.hpp"
 #include "bitpacking_iterator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BitPackingVector::BitPackingVector(pmr_compact_vector data) : _data{std::move(data)} {}
 
@@ -14,6 +14,7 @@ const pmr_compact_vector& BitPackingVector::data() const {
 size_t BitPackingVector::on_size() const {
   return _data.size();
 }
+
 size_t BitPackingVector::on_data_size() const {
   return _data.bytes();
 }
@@ -47,4 +48,4 @@ std::unique_ptr<const BaseCompressedVector> BitPackingVector::on_copy_using_allo
   return std::make_unique<BitPackingVector>(std::move(data_copy));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

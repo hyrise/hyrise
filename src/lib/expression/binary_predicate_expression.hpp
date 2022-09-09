@@ -4,7 +4,7 @@
 #include "abstract_predicate_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BinaryPredicateExpression : public AbstractPredicateExpression {
  public:
@@ -24,4 +24,4 @@ class BinaryPredicateExpression : public AbstractPredicateExpression {
   ExpressionPrecedence _precedence() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

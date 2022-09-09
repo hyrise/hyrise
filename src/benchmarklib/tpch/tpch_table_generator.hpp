@@ -13,17 +13,17 @@
 #include "tpch_constants.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Chunk;
 class Table;
 
 enum class TPCHTable { Part, PartSupp, Supplier, Customer, Orders, LineItem, Nation, Region };
 
-extern std::unordered_map<opossum::TPCHTable, std::string> tpch_table_names;
+extern const std::unordered_map<TPCHTable, std::string> tpch_table_names;
 
 /**
- * Wrapper around the official tpch-dbgen tool, making it directly generate opossum::Table instances without having
+ * Wrapper around the official tpch-dbgen tool, making it directly generate hyrise::Table instances without having
  * to generate and then load .tbl files.
  *
  * NOT thread safe because the underlying tpch-dbgen is not (since it has global data and malloc races).
@@ -48,4 +48,4 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   const float _scale_factor;
   const ClusteringConfiguration _clustering_configuration;
 };
-}  // namespace opossum
+}  // namespace hyrise

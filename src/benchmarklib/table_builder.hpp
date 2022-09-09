@@ -13,9 +13,9 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-// helper structs and functions for compile time, the actual code is in namespace opossum
+// helper structs and functions for compile time, the actual code is in namespace hyrise
 namespace table_builder {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // boost::hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
@@ -246,4 +246,4 @@ class TableBuilder {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

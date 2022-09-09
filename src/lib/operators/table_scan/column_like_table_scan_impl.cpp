@@ -17,7 +17,7 @@
 #include "storage/value_segment.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnLikeTableScanImpl::ColumnLikeTableScanImpl(const std::shared_ptr<const Table>& in_table, const ColumnID column_id,
                                                  const PredicateCondition init_predicate_condition,
@@ -47,16 +47,16 @@ void ColumnLikeTableScanImpl::_scan_non_reference_segment(
 void ColumnLikeTableScanImpl::_scan_generic_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
     const std::shared_ptr<const AbstractPosList>& position_filter) const {
-  segment_with_iterators_filtered(segment, position_filter, [&](auto it, [[maybe_unused]] const auto end) {
+  segment_with_iterators_filtered(segment, position_filter, [&](auto iter, [[maybe_unused]] const auto end) {
     // Don't instantiate this for ReferenceSegments to save compile time as ReferenceSegments are handled
     // via position_filter
-    if constexpr (!is_reference_segment_iterable_v<typename decltype(it)::IterableType>) {
-      using ColumnDataType = typename decltype(it)::ValueType;
+    if constexpr (!is_reference_segment_iterable_v<typename decltype(iter)::IterableType>) {
+      using ColumnDataType = typename decltype(iter)::ValueType;
 
       if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
         _matcher.resolve(_invert_results, [&](const auto& resolved_matcher) {
           const auto functor = [&](const auto& position) { return resolved_matcher(position.value()); };
-          _scan_with_iterators<true>(functor, it, end, chunk_id, matches);
+          _scan_with_iterators<true>(functor, iter, end, chunk_id, matches);
         });
       } else {
         Fail("Can only handle strings");
@@ -90,9 +90,9 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   // LIKE matches all rows, but we still need to check for NULL
   if (match_count == dictionary_matches.size()) {
-    attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
+    attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
       static const auto always_true = [](const auto&) { return true; };
-      _scan_with_iterators<true>(always_true, it, end, chunk_id, matches);
+      _scan_with_iterators<true>(always_true, iter, end, chunk_id, matches);
     });
 
     return;
@@ -108,8 +108,8 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
     return dictionary_matches[position.value()];
   };
 
-  attribute_vector_iterable.with_iterators(position_filter, [&](auto it, auto end) {
-    _scan_with_iterators<true>(dictionary_lookup, it, end, chunk_id, matches);
+  attribute_vector_iterable.with_iterators(position_filter, [&](auto iter, auto end) {
+    _scan_with_iterators<true>(dictionary_lookup, iter, end, chunk_id, matches);
   });
 }
 
@@ -145,4 +145,4 @@ std::pair<size_t, std::vector<bool>> ColumnLikeTableScanImpl::_find_matches_in_d
   return result;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

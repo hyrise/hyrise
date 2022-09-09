@@ -2,7 +2,7 @@
 
 #include "join_graph_statistics_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // See `AbstractCardinalityEstimator::guarantee_join_graph()/guarantee_bottom_up_construction()`
 class CardinalityEstimationCache {
@@ -13,4 +13,4 @@ class CardinalityEstimationCache {
   std::optional<StatisticsByLQP> statistics_by_lqp;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

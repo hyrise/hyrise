@@ -10,7 +10,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& parse_result) {
   const auto default_config = BenchmarkConfig::get_default_config();
@@ -164,7 +164,7 @@ EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encodin
 
   const auto encoding_spec_from_json = [](const nlohmann::json& json_spec) {
     Assert(json_spec.count("encoding"), "Need to specify encoding type.");
-    const auto encoding_str = json_spec["encoding"];
+    const auto& encoding_str = json_spec["encoding"];
     const auto compression_str = json_spec.value("compression", "");
     return EncodingConfig::encoding_spec_from_strings(encoding_str, compression_str);
   };
@@ -235,4 +235,4 @@ bool CLIConfigParser::print_help_if_requested(const cxxopts::Options& options,
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

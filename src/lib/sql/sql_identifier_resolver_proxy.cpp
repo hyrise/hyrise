@@ -4,7 +4,7 @@
 #include "parameter_id_allocator.hpp"
 #include "sql_identifier_resolver.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLIdentifierResolverProxy::SQLIdentifierResolverProxy(
     const std::shared_ptr<SQLIdentifierResolver>& wrapped_resolver,
@@ -29,10 +29,10 @@ std::shared_ptr<AbstractExpression> SQLIdentifierResolverProxy::resolve_identifi
     }
 
     return std::make_shared<CorrelatedParameterExpression>(parameter_id, *expression);
-  } else {
-    if (_outer_context_proxy) {
-      return _outer_context_proxy->resolve_identifier_relaxed(identifier);
-    }
+  }
+
+  if (_outer_context_proxy) {
+    return _outer_context_proxy->resolve_identifier_relaxed(identifier);
   }
 
   return nullptr;
@@ -42,4 +42,4 @@ const ExpressionUnorderedMap<ParameterID>& SQLIdentifierResolverProxy::accessed_
   return _accessed_expressions;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "nlohmann/json.hpp"
 #include "storage/chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct ColumnMeta {
   std::string name;
@@ -62,11 +62,11 @@ CsvMeta process_csv_meta_file(const std::string& filename);
 /*
  * Functions used internally when converting CsvMeta to nlohmann::json and the other way round:
  *
- * opossum::CsvMeta meta{};
+ * hyrise::CsvMeta meta{};
  * nlohmann::json json = meta;
  *
  * nlohmann::json json = nlohmann::json::parse("{ ... }");
- * opossum::CsvMeta meta = json;
+ * hyrise::CsvMeta meta = json;
  */
 void from_json(const nlohmann::json& json, CsvMeta& meta);
 void to_json(nlohmann::json& json, const CsvMeta& meta);
@@ -76,4 +76,4 @@ void to_json(nlohmann::json& json, const CsvMeta& meta);
  */
 bool operator==(const CsvMeta& left, const CsvMeta& right);
 
-}  // namespace opossum
+}  // namespace hyrise

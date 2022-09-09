@@ -20,7 +20,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 bool has_print_mvcc_flag(const PrintFlags flags) {
   return static_cast<uint32_t>(PrintFlags::Mvcc) & static_cast<uint32_t>(flags);
@@ -32,10 +32,10 @@ bool has_print_ignore_chunk_boundaries_flag(const PrintFlags flags) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-Print::Print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out)
-    : AbstractReadOnlyOperator(OperatorType::Print, in), _flags(flags), _out(out) {}
+Print::Print(const std::shared_ptr<const AbstractOperator>& input_operator, const PrintFlags flags, std::ostream& out)
+    : AbstractReadOnlyOperator(OperatorType::Print, input_operator), _flags(flags), _out(out) {}
 
 const std::string& Print::name() const {
   static const auto name = std::string{"Print"};
@@ -57,8 +57,8 @@ void Print::print(const std::shared_ptr<const Table>& table, const PrintFlags fl
   Print(table_wrapper, flags, out).execute();
 }
 
-void Print::print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags, std::ostream& out) {
-  Print(in, flags, out).execute();
+void Print::print(const std::shared_ptr<const AbstractOperator>& op, const PrintFlags flags, std::ostream& out) {
+  Print(op, flags, out).execute();
 }
 
 void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& out) {
@@ -77,25 +77,26 @@ void Print::print(const std::string& sql, const PrintFlags flags, std::ostream& 
 std::shared_ptr<const Table> Print::_on_execute() {
   PerformanceWarningDisabler pwd;
 
-  auto widths = _column_string_widths(_min_cell_width, _max_cell_width, left_input_table());
+  const auto widths = _column_string_widths(_min_cell_width, _max_cell_width, left_input_table());
+  const auto column_count = left_input_table()->column_count();
 
   // print column headers
   _out << "=== Columns" << std::endl;
-  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     _out << "|" << std::setw(widths[column_id]) << left_input_table()->column_name(column_id) << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
     _out << "||        MVCC        ";
   }
   _out << "|" << std::endl;
-  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     _out << "|" << std::setw(widths[column_id]) << left_input_table()->column_data_type(column_id) << std::setw(0);
   }
   if (has_print_mvcc_flag(_flags)) {
     _out << "||_BEGIN|_END  |_TID  ";
   }
   _out << "|" << std::endl;
-  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto nullable = left_input_table()->column_is_nullable(column_id);
     _out << "|" << std::setw(widths[column_id]) << (nullable ? "null" : "not null") << std::setw(0);
   }
@@ -106,7 +107,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
 
   // print each chunk
   const auto chunk_count = left_input_table()->chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = left_input_table()->get_chunk(chunk_id);
     if (!chunk) {
       continue;
@@ -121,7 +122,7 @@ std::shared_ptr<const Table> Print::_on_execute() {
       }
 
       // print the encoding information
-      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto column_width = widths[column_id];
         const auto& segment = chunk->get_segment(column_id);
         _out << "|" << std::setw(column_width) << std::left << _segment_type(segment) << std::right << std::setw(0);
@@ -133,9 +134,10 @@ std::shared_ptr<const Table> Print::_on_execute() {
     }
 
     // print the rows in the chunk
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+    const auto chunk_size = chunk->size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
       _out << "|";
-      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         // well yes, we use AbstractSegment::operator[] here, but since Print is not an operation that should
         // be part of a regular query plan, let's keep things simple here
         auto column_width = widths[column_id];
@@ -171,22 +173,25 @@ std::shared_ptr<const Table> Print::_on_execute() {
 // `min` and `max` can be used to limit the width of the columns - however, every column fits at least the column's name
 std::vector<uint16_t> Print::_column_string_widths(uint16_t min, uint16_t max,
                                                    const std::shared_ptr<const Table>& table) const {
-  std::vector<uint16_t> widths(table->column_count());
+  const auto column_count = table->column_count();
+  std::vector<uint16_t> widths(column_count);
   // calculate the length of the column name
-  for (ColumnID column_id{0}; column_id < table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     widths[column_id] = std::max(min, static_cast<uint16_t>(table->column_name(column_id).size()));
   }
 
   // go over all rows and find the maximum length of the printed representation of a value, up to max
   const auto chunk_count = left_input_table()->chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = left_input_table()->get_chunk(chunk_id);
     if (!chunk) {
       continue;
     }
 
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
+    const auto column_count = chunk->column_count();
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      const auto chunk_size = chunk->size();
+      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
         std::ostringstream stream;
         stream << (*chunk->get_segment(column_id))[chunk_offset];
         auto cell_length = static_cast<uint16_t>(stream.str().size());
@@ -268,4 +273,4 @@ std::string Print::_segment_type(const std::shared_ptr<AbstractSegment>& segment
   return segment_type;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

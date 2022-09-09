@@ -12,7 +12,7 @@
 #include "storage/index/group_key/variable_length_key_base.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyBaseTest : public BaseTest {
  protected:
@@ -197,4 +197,4 @@ TEST_F(VariableLengthKeyBaseTest, ShiftAndSet) {
   EXPECT_EQ(0xFF000000FF00FF00, memory);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

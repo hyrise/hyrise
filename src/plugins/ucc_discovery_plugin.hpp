@@ -2,10 +2,11 @@
 
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 #include "utils/pausable_loop_thread.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class UCCCandidate {
  public:
@@ -39,7 +40,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 
   void stop() final;
 
-  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const final;
+  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() final;
 
  protected:
   friend class UccDiscoveryPluginTest;
@@ -53,13 +54,13 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   std::unique_ptr<PausableLoopThread> _loop_thread_start;
 };
 
-}  // namespace opossum
+}  // namespace hyrise
 
 template <>
-struct std::hash<opossum::UCCCandidate> {
-  std::size_t operator()(const opossum::UCCCandidate& s) const noexcept {
+struct std::hash<hyrise::UCCCandidate> {
+  std::size_t operator()(const hyrise::UCCCandidate& s) const noexcept {
     std::size_t h1 = std::hash<std::string>{}(s.table_name());
-    std::size_t h2 = std::hash<opossum::ColumnID>{}(s.column_id());
+    std::size_t h2 = std::hash<hyrise::ColumnID>{}(s.column_id());
     return h1 ^ (h2 << 1);
   }
 };

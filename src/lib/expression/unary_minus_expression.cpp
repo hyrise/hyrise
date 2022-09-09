@@ -4,7 +4,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 UnaryMinusExpression::UnaryMinusExpression(const std::shared_ptr<AbstractExpression>& argument)
     : AbstractExpression(ExpressionType::UnaryMinus, {argument}) {
@@ -36,4 +36,4 @@ bool UnaryMinusExpression::_shallow_equals(const AbstractExpression& expression)
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

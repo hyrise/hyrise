@@ -5,7 +5,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, typename U>
 FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima,
@@ -93,4 +93,4 @@ template class FrameOfReferenceSegment<int32_t>;
 // int64_t disabled for now, as vector compression cannot handle 64 bit values - also in reference_segment_iterable.hpp
 // template class FrameOfReferenceSegment<int64_t>;
 
-}  // namespace opossum
+}  // namespace hyrise

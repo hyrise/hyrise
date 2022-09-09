@@ -4,7 +4,7 @@
 #include "operators/table_wrapper.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaSettingsTest : public BaseTest {
  protected:
@@ -77,4 +77,4 @@ TEST_F(MetaSettingsTest, Update) {
   EXPECT_TABLE_EQ_UNORDERED(meta_table, table_wrapper->get_output());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

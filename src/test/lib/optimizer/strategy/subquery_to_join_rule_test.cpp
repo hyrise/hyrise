@@ -15,9 +15,9 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/subquery_to_join_rule.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SubqueryToJoinRuleTest : public StrategyBaseTest {
  public:
@@ -1546,4 +1546,4 @@ TEST_F(SubqueryToJoinRuleTest, ComplexArithmeticExpression) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

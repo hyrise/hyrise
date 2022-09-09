@@ -11,7 +11,7 @@
 #include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 
@@ -32,10 +32,10 @@ const auto encoder_for_type = std::map<EncodingType, std::shared_ptr<BaseSegment
 std::unique_ptr<BaseSegmentEncoder> create_encoder(EncodingType encoding_type) {
   Assert(encoding_type != EncodingType::Unencoded, "Encoding type must not be Unencoded`.");
 
-  auto it = encoder_for_type.find(encoding_type);
-  Assert(it != encoder_for_type.cend(), "All encoding types must be in encoder_for_type.");
+  auto iter = encoder_for_type.find(encoding_type);
+  Assert(iter != encoder_for_type.cend(), "All encoding types must be in encoder_for_type.");
 
-  const auto& encoder = it->second;
+  const auto& encoder = iter->second;
   return encoder->create_new();
 }
 
@@ -70,4 +70,4 @@ VectorCompressionType parent_vector_compression_type(const CompressedVectorType 
   Fail("Invalid enum value");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

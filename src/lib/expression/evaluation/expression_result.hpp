@@ -11,7 +11,7 @@
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseExpressionResult {
  public:
@@ -127,4 +127,4 @@ class ExpressionResult : public BaseExpressionResult {
   pmr_vector<bool> nulls;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

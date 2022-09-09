@@ -53,6 +53,7 @@
   * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or
     `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
+  * Prefer pre-increment over post-increment. See the [LLVM Coding Standards](https://llvm.org/docs/CodingStandards.html#prefer-preincrement)
   * Consider structured bindings: `const auto& [iterator, added] = unordered_map.emplace(...);`
   * Use braced control statements, even for single-line blocks. Moreover, unless the block
     is empty (e.g., `while (!ready) {}`), add line breaks. Instead of `if (...) x();` (or `if (...) { x(); }`), write:

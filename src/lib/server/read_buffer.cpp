@@ -2,7 +2,7 @@
 
 #include "client_disconnect_exception.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename SocketType>
 size_t ReadBuffer<SocketType>::size() const {
@@ -22,8 +22,8 @@ bool ReadBuffer<SocketType>::full() const {
 
 template <typename SocketType>
 std::string ReadBuffer<SocketType>::get_string() {
-  auto string_end = RingBufferIterator(_data);
-  std::string result;
+  auto string_end = RingBufferIterator{_data};
+  auto result = std::string{};
 
   // First, use bytes available in buffer
   if (size() != 0) {
@@ -88,7 +88,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   boost::system::error_code error_code;
   // We cannot forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.
-  if (std::distance(&*_start_position, &*_current_position) < 0 || &*_start_position == &_data[0]) {
+  if (std::distance(&*_start_position, &*_current_position) < 0 || &*_start_position == _data.data()) {
     bytes_read = boost::asio::read(*_socket, boost::asio::buffer(&*_current_position, maximum_readable_size),
                                    boost::asio::transfer_at_least(bytes_required - size()), error_code);
   } else {
@@ -114,4 +114,4 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
 template class ReadBuffer<Socket>;
 template class ReadBuffer<boost::asio::posix::stream_descriptor>;
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 
 #include "storage/fixed_string_dictionary_segment/fixed_string_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FixedStringVectorTest : public BaseTest {
  protected:
@@ -12,6 +12,7 @@ class FixedStringVectorTest : public BaseTest {
     std::vector<pmr_string> strings = {"foo", "barbaz", "str3"};
     fixed_string_vector = std::make_shared<FixedStringVector>(FixedStringVector(strings.begin(), strings.end(), 6u));
   }
+
   std::shared_ptr<FixedStringVector> fixed_string_vector = nullptr;
 };
 
@@ -208,4 +209,4 @@ TEST_F(FixedStringVectorTest, MemoryLayout) {
   EXPECT_EQ(*(fixed_string_vector->data() + 17), '\0');
 }
 
-}  // namespace opossum
+}  // namespace hyrise

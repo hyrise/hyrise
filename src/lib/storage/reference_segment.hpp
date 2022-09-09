@@ -14,7 +14,7 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // ReferenceSegment is a specific segment type that stores all its values as position list of a referenced segment
 class ReferenceSegment : public AbstractSegment {
@@ -48,4 +48,4 @@ class ReferenceSegment : public AbstractSegment {
   const std::shared_ptr<const AbstractPosList> _pos_list;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

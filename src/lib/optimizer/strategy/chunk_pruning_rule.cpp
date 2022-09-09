@@ -21,7 +21,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
 
 /**
@@ -135,7 +135,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string ChunkPruningRule::name() const {
   static const auto name = std::string{"ChunkPruningRule"};
@@ -402,8 +402,8 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
   }
 
   std::set<ChunkID> chunk_id_set = chunk_id_sets.at(0);
-  for (size_t set_idx = 1; set_idx < chunk_id_sets.size(); ++set_idx) {
-    auto current_chunk_id_set = chunk_id_sets.at(set_idx);
+  for (auto set_idx = size_t{1}; set_idx < chunk_id_sets.size(); ++set_idx) {
+    const auto& current_chunk_id_set = chunk_id_sets.at(set_idx);
     if (current_chunk_id_set.empty()) {
       return {};
     }
@@ -417,4 +417,4 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
   return chunk_id_set;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

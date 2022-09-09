@@ -16,7 +16,7 @@
 #include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
@@ -162,7 +162,7 @@ bool Chunk::references_exactly_one_table() const {
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
-  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
+  for (auto column_id = ColumnID{1}; column_id < column_count(); ++column_id) {
     const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
     if (!segment) {
       return false;
@@ -245,6 +245,7 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
+
 void Chunk::increase_invalid_row_count(const ChunkOffset count) const {
   _invalid_row_count += count;
 }
@@ -294,7 +295,6 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  // TODO(Martin): check with PR #2402 whether GCC still needs the `.load()` (some used in abstract_task.cpp twice).
   if (_cleanup_commit_id.load() == CommitID{0}) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
@@ -307,4 +307,4 @@ void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   _cleanup_commit_id.store(cleanup_commit_id);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

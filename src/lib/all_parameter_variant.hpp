@@ -8,13 +8,13 @@
 #include "expression/correlated_parameter_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
 /**
  * AllParameterVariant holds either an AllTypeVariant, a ColumnID or a Placeholder.
- * It should be used to generalize Opossum operator calls.
+ * It should be used to generalize Hyrise operator calls.
  */
 
 // This holds pairs of all types and their respective string representation
@@ -50,4 +50,4 @@ inline bool is_parameter_id(const AllParameterVariant& variant) {
 
 std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& variant);
 
-}  // namespace opossum
+}  // namespace hyrise

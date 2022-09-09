@@ -15,7 +15,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 template <typename T>
 void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstract_segment,
@@ -72,7 +72,7 @@ void copy_value_range(const std::shared_ptr<const AbstractSegment>& source_abstr
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 Insert::Insert(const std::string& target_table_name, const std::shared_ptr<const AbstractOperator>& values_to_insert)
     : AbstractReadWriteOperator(OperatorType::Insert, values_to_insert), _target_table_name(target_table_name) {}
@@ -86,7 +86,7 @@ std::shared_ptr<const Table> Insert::_on_execute(std::shared_ptr<TransactionCont
   _target_table = Hyrise::get().storage_manager.get_table(_target_table_name);
 
   Assert(_target_table->target_chunk_size() > 0, "Expected target chunk size of target table to be greater than zero");
-  for (ColumnID column_id{0}; column_id < _target_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < _target_table->column_count(); ++column_id) {
     // This is not really a strong limitation, we just did not want the compile time of all type combinations.
     // If you really want this, it should be only a couple of lines to implement.
     Assert(left_input_table()->column_data_type(column_id) == _target_table->column_data_type(column_id),
@@ -287,4 +287,4 @@ std::shared_ptr<AbstractOperator> Insert::_on_deep_copy(
 
 void Insert::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -13,7 +13,7 @@
 
 namespace {
 
-constexpr auto REFERENCED_TABLE_CHUNK_COUNT = opossum::ChunkID{10};
+constexpr auto REFERENCED_TABLE_CHUNK_COUNT = hyrise::ChunkID{10};
 
 // actually, for ease of implementation, the number of chunks will likely be GENERATED_TABLE_NUM_CHUNKS + 1
 constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
@@ -22,30 +22,30 @@ constexpr auto GENERATED_TABLE_NUM_CHUNKS = 4;
  * Generate a random pos_list of length pos_list_size with ChunkIDs from [0,REFERENCED_TABLE_CHUNK_COUNT)
  * and ChunkOffsets within [0, std::floor(referenced_table_chunk_size))
  */
-std::shared_ptr<opossum::RowIDPosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
+std::shared_ptr<hyrise::RowIDPosList> generate_pos_list(float referenced_table_chunk_size, size_t pos_list_size) {
   std::random_device random_device;
   std::default_random_engine random_engine(random_device());
 
-  std::uniform_int_distribution<opossum::ChunkID::base_type> chunk_id_distribution(
-      0, static_cast<opossum::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
-  std::uniform_int_distribution<opossum::ChunkOffset::base_type> chunk_offset_distribution(
-      opossum::ChunkOffset{0}, static_cast<opossum::ChunkOffset::base_type>(referenced_table_chunk_size - 1));
+  std::uniform_int_distribution<hyrise::ChunkID::base_type> chunk_id_distribution(
+      0, static_cast<hyrise::ChunkID::base_type>(REFERENCED_TABLE_CHUNK_COUNT - 1));
+  std::uniform_int_distribution<hyrise::ChunkOffset::base_type> chunk_offset_distribution(
+      hyrise::ChunkOffset{0}, static_cast<hyrise::ChunkOffset::base_type>(referenced_table_chunk_size - 1));
 
-  auto pos_list = std::make_shared<opossum::RowIDPosList>();
+  auto pos_list = std::make_shared<hyrise::RowIDPosList>();
   pos_list->reserve(pos_list_size);
 
   for (auto pos_list_idx = size_t{0}; pos_list_idx < pos_list_size; ++pos_list_idx) {
-    const auto chunk_id = opossum::ChunkID{chunk_id_distribution(random_engine)};
-    const auto chunk_offset = opossum::ChunkOffset{chunk_offset_distribution(random_engine)};
+    const auto chunk_id = hyrise::ChunkID{chunk_id_distribution(random_engine)};
+    const auto chunk_offset = hyrise::ChunkOffset{chunk_offset_distribution(random_engine)};
 
-    pos_list->emplace_back(opossum::RowID{chunk_id, chunk_offset});
+    pos_list->emplace_back(hyrise::RowID{chunk_id, chunk_offset});
   }
 
   return pos_list;
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> create_reference_table(std::shared_ptr<Table> referenced_table, size_t num_rows,
                                               size_t num_columns) {
@@ -110,6 +110,7 @@ void BM_UnionPositions(::benchmark::State& state) {  // NOLINT
     set_union->execute();
   }
 }
+
 BENCHMARK(BM_UnionPositions);
 
 /**
@@ -135,5 +136,6 @@ void BM_UnionPositionsBaseLine(::benchmark::State& state) {  // NOLINT
     std::set_union(left.begin(), left.end(), right.begin(), right.end(), std::back_inserter(result));
   }
 }
+
 BENCHMARK(BM_UnionPositionsBaseLine);
-}  // namespace opossum
+}  // namespace hyrise

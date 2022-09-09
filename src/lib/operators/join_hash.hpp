@@ -6,7 +6,7 @@
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This operator joins two tables using one column of each table.
@@ -83,4 +83,4 @@ class JoinHash : public AbstractJoinOperator {
   friend class JoinHashImpl;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

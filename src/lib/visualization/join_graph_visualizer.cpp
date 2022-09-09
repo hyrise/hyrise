@@ -6,11 +6,12 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "viz_record_layout.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
   for (const auto& graph : graphs) {
-    for (auto vertex_idx = size_t{0}; vertex_idx < graph.vertices.size(); ++vertex_idx) {
+    const auto vertex_count = graph.vertices.size();
+    for (auto vertex_idx = size_t{0}; vertex_idx < vertex_count; ++vertex_idx) {
       const auto& vertex = graph.vertices[vertex_idx];
       const auto predicates = graph.find_local_predicates(vertex_idx);
 
@@ -68,7 +69,8 @@ void JoinGraphVisualizer::_build_graph(const std::vector<JoinGraph>& graphs) {
         // Render a diamond vertex that contains all the Predicates and connect all hyperedge vertices to that vertex.
 
         std::stringstream vertex_label_stream;
-        for (size_t predicate_idx{0}; predicate_idx < edge.predicates.size(); ++predicate_idx) {
+        const auto edge_predicate_count = edge.predicates.size();
+        for (size_t predicate_idx{0}; predicate_idx < edge_predicate_count; ++predicate_idx) {
           const auto& predicate = edge.predicates[predicate_idx];
           vertex_label_stream << predicate->as_column_name();
           if (predicate_idx + 1 < edge.predicates.size()) {
@@ -117,7 +119,8 @@ std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_pt
     stream << "Tables: ";
   }
 
-  for (auto node_idx = size_t{0}; node_idx < stored_table_nodes.size(); ++node_idx) {
+  const auto stored_table_node_count = stored_table_nodes.size();
+  for (auto node_idx = size_t{0}; node_idx < stored_table_node_count; ++node_idx) {
     stream << stored_table_nodes[node_idx]->table_name;
     if (node_idx + 1u < stored_table_nodes.size()) {
       stream << ", ";
@@ -127,4 +130,4 @@ std::string JoinGraphVisualizer::_create_vertex_description(const std::shared_pt
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

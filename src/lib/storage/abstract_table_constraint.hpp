@@ -1,10 +1,10 @@
 #pragma once
 
-#include <unordered_set>
+#include <set>
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Abstract container class for the definition of table constraints based on a set of column ids.
@@ -13,7 +13,7 @@ namespace opossum {
  */
 class AbstractTableConstraint {
  public:
-  explicit AbstractTableConstraint(std::unordered_set<ColumnID> init_columns);
+  explicit AbstractTableConstraint(std::set<ColumnID> init_columns);
 
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
@@ -22,10 +22,12 @@ class AbstractTableConstraint {
 
   virtual ~AbstractTableConstraint() = default;
 
-  const std::unordered_set<ColumnID>& columns() const;
+  const std::set<ColumnID>& columns() const;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
   bool operator!=(const AbstractTableConstraint& rhs) const;
+
+  virtual size_t hash() const = 0;
 
  protected:
   /**
@@ -35,7 +37,11 @@ class AbstractTableConstraint {
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
  private:
-  std::unordered_set<ColumnID> _columns;
+  /**
+   * Usually, we prefer unordered_set because it ensures lookups in O(1). However, std::set guarantees a well-defined
+   * order when iterating it. We use this property for hashing table constraints.
+   */
+  std::set<ColumnID> _columns;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

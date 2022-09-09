@@ -2,7 +2,7 @@
 
 #include "variable_length_key_base.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKey;
 
@@ -37,7 +37,7 @@ class VariableLengthKeyConstProxy {
   bool operator<(const VariableLengthKeyConstProxy& other) const;
   bool operator<(const VariableLengthKey& other) const;
 
-  friend std::ostream& operator<<(std::ostream& os, const VariableLengthKeyConstProxy& key);
+  friend std::ostream& operator<<(std::ostream& ostream, const VariableLengthKeyConstProxy& key);
 
  protected:
   explicit VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key);
@@ -77,4 +77,4 @@ class VariableLengthKeyProxy : public VariableLengthKeyConstProxy {
   VariableLengthKeyProxy& operator=(const VariableLengthKeyBase& other);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

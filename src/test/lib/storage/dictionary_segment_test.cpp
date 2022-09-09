@@ -11,7 +11,7 @@
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageDictionarySegmentTest : public BaseTestWithParam<VectorCompressionType> {
  protected:
@@ -36,8 +36,8 @@ INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, StorageDictionarySegmentTest,
                          dictionary_segment_test_formatter);
 
 TEST_P(StorageDictionarySegmentTest, LowerUpperBound) {
-  for (int i = 0; i <= 10; i += 2) {
-    vs_int->append(i);
+  for (auto value = int32_t{0}; value <= 10; value += 2) {
+    vs_int->append(value);
   }
 
   auto segment =
@@ -217,4 +217,4 @@ TEST_F(StorageDictionarySegmentTest, FixedWidthIntegerMemoryUsageEstimation) {
             empty_memory_usage + 3 * size_of_attribute);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

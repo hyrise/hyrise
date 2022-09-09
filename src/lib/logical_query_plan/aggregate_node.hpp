@@ -8,7 +8,7 @@
 #include "abstract_lqp_node.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type is used to describe SELECT lists for statements that have at least one of the following:
@@ -44,4 +44,4 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

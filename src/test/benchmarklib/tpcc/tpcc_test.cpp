@@ -10,7 +10,7 @@
 #include "tpcc/procedures/tpcc_payment.hpp"
 #include "tpcc/tpcc_table_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCCTest : public BaseTest {
  public:
@@ -467,4 +467,4 @@ TEST_F(TPCCTest, OrderStatusCustomerById) {
 
 // The dynamic nature of Stock-Level together with the random table generation makes this transaction hard to test.
 
-}  // namespace opossum
+}  // namespace hyrise

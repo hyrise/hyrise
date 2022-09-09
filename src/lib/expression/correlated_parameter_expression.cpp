@@ -8,7 +8,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CorrelatedParameterExpression::CorrelatedParameterExpression(const ParameterID init_parameter_id,
                                                              const AbstractExpression& referenced_expression)
@@ -90,4 +90,4 @@ bool CorrelatedParameterExpression::ReferencedExpressionInfo::operator==(const R
   return data_type == rhs.data_type && column_name == rhs.column_name;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -13,7 +13,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPVisualizer::LQPVisualizer() {
   // Set defaults for this visualizer
@@ -89,29 +89,29 @@ void LQPVisualizer::_build_subtree(const std::shared_ptr<AbstractLQPNode>& node,
   }
 }
 
-void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from,
-                                    const std::shared_ptr<AbstractLQPNode>& to, const InputSide side) {
+void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& source_node,
+                                    const std::shared_ptr<AbstractLQPNode>& target_node, const InputSide side) {
   float row_count = NAN;
   double pen_width = 1.0;
   auto row_percentage = 100.0f;
 
   try {
-    row_count = _cardinality_estimator.estimate_cardinality(from);
+    row_count = _cardinality_estimator.estimate_cardinality(source_node);
     pen_width = row_count;
   } catch (...) {
     // statistics don't exist for this edge
   }
 
-  if (from->left_input()) {
+  if (source_node->left_input()) {
     try {
-      float input_count = _cardinality_estimator.estimate_cardinality(from->left_input());
+      float input_count = _cardinality_estimator.estimate_cardinality(source_node->left_input());
 
       // Include right side in cardinality estimation unless it is a semi/anti join
-      const auto join_node = std::dynamic_pointer_cast<JoinNode>(from);
-      if (from->right_input() &&
+      const auto join_node = std::dynamic_pointer_cast<JoinNode>(source_node);
+      if (source_node->right_input() &&
           (!join_node || (join_node->join_mode != JoinMode::Semi && join_node->join_mode != JoinMode::AntiNullAsTrue &&
                           join_node->join_mode != JoinMode::AntiNullAsFalse))) {
-        input_count *= _cardinality_estimator.estimate_cardinality(from->right_input());
+        input_count *= _cardinality_estimator.estimate_cardinality(source_node->right_input());
       }
       row_percentage = 100 * row_count / input_count;
     } catch (...) {
@@ -119,7 +119,7 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     }
   }
 
-  std::ostringstream label_stream;
+  auto label_stream = std::ostringstream{};
 
   // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
   // be avoided whenever possible. Unfortunately, std::locale stores pointers to the facets and does internal
@@ -135,56 +135,63 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
     label_stream << "no est.";
   }
 
-  std::stringstream tooltip_stream;
+  auto tooltip_stream = std::stringstream{};
 
   // Edge Tooltip: Node Output Expressions
   tooltip_stream << "Output Expressions: \n";
-  const auto& output_expressions = from->output_expressions();
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+  const auto& output_expressions = source_node->output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
     tooltip_stream << " (" << column_id + 1 << ") ";
     tooltip_stream << output_expressions.at(column_id)->as_column_name();
-    if (from->is_column_nullable(column_id)) {
+    if (source_node->is_column_nullable(column_id)) {
       tooltip_stream << " NULL";
     }
     tooltip_stream << "\n";
   }
 
-  if (!dynamic_pointer_cast<AbstractNonQueryNode>(from)) {
+  if (!dynamic_pointer_cast<AbstractNonQueryNode>(source_node)) {
     // Edge Tooltip: Unique Constraints
-    const auto& unique_constraints = from->unique_constraints();
+    const auto& unique_constraints = source_node->unique_constraints();
     tooltip_stream << "\n"
                    << "Unique Constraints: \n";
     if (unique_constraints->empty()) {
       tooltip_stream << " <none>\n";
     }
-    for (auto uc_idx = size_t{0}; uc_idx < unique_constraints->size(); ++uc_idx) {
-      tooltip_stream << " (" << uc_idx + 1 << ") ";
-      tooltip_stream << unique_constraints->at(uc_idx) << "\n";
+
+    const auto unique_constraint_count = unique_constraints->size();
+    for (auto constraint_index = size_t{0}; constraint_index < unique_constraint_count; ++constraint_index) {
+      tooltip_stream << " (" << constraint_index + 1 << ") ";
+      tooltip_stream << unique_constraints->at(constraint_index) << "\n";
     }
 
     // Edge Tooltip: Trivial FDs
     auto trivial_fds = std::vector<FunctionalDependency>();
     if (!unique_constraints->empty()) {
-      trivial_fds = fds_from_unique_constraints(from, unique_constraints);
+      trivial_fds = fds_from_unique_constraints(source_node, unique_constraints);
     }
     tooltip_stream << "\n"
                    << "Functional Dependencies (trivial): \n";
     if (trivial_fds.empty()) {
       tooltip_stream << " <none>\n";
     }
-    for (auto fd_idx = size_t{0}; fd_idx < trivial_fds.size(); ++fd_idx) {
+
+    const auto trivial_fd_count = trivial_fds.size();
+    for (auto fd_idx = size_t{0}; fd_idx < trivial_fd_count; ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
       tooltip_stream << trivial_fds.at(fd_idx) << "\n";
     }
 
     // Edge Tooltip: Non-trivial FDs
-    const auto& fds = from->non_trivial_functional_dependencies();
+    const auto& fds = source_node->non_trivial_functional_dependencies();
     tooltip_stream << "\n"
                    << "Functional Dependencies (non-trivial): \n";
     if (fds.empty()) {
       tooltip_stream << " <none>";
     }
-    for (auto fd_idx = size_t{0}; fd_idx < fds.size(); ++fd_idx) {
+
+    const auto fd_count = fds.size();
+    for (auto fd_idx = size_t{0}; fd_idx < fd_count; ++fd_idx) {
       tooltip_stream << " (" << fd_idx + 1 << ") ";
       tooltip_stream << fds.at(fd_idx) << "\n";
     }
@@ -194,11 +201,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& from
   info.label = label_stream.str();
   info.label_tooltip = tooltip_stream.str();
   info.pen_width = pen_width;
-  if (to->input_count() == 2) {
+  if (target_node->input_count() == 2) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
-  _add_edge(from, to, info);
+  _add_edge(source_node, target_node, info);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

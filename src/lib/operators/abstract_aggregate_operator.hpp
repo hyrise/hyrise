@@ -6,7 +6,7 @@
 #include "type_comparison.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
 The AggregateFunctionBuilder is used to create the lambda function that will be used by
@@ -129,7 +129,7 @@ class AggregateFunctionBuilder<ColumnDataType, AggregateType, AggregateFunction:
 
 class AbstractAggregateOperator : public AbstractReadOnlyOperator {
  public:
-  AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& in,
+  AbstractAggregateOperator(const std::shared_ptr<AbstractOperator>& input_operator,
                             const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                             const std::vector<ColumnID>& groupby_column_ids,
                             std::unique_ptr<AbstractOperatorPerformanceData> performance_data =
@@ -153,4 +153,4 @@ class AbstractAggregateOperator : public AbstractReadOnlyOperator {
   TableColumnDefinitions _output_column_definitions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

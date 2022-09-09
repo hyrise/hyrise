@@ -20,7 +20,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsDeleteTest : public BaseTest {
  protected:
@@ -304,7 +304,7 @@ TEST_F(OperatorsDeleteTest, UseTransactionContextAfterCommit) {
 }
 
 TEST_F(OperatorsDeleteTest, RunOnUnvalidatedTable) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -362,4 +362,4 @@ TEST_F(OperatorsDeleteTest, PrunedInputTable) {
   EXPECT_EQ(_table2->get_chunk(ChunkID{2})->mvcc_data()->get_end_cid(ChunkOffset{1}), expected_end_cid);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

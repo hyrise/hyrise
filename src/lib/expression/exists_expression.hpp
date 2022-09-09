@@ -2,7 +2,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class ExistsExpressionType { Exists, NotExists };
 
@@ -29,4 +29,4 @@ class ExistsExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

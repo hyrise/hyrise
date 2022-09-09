@@ -9,7 +9,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BinaryParserTest : public BaseTest {
  protected:
@@ -174,11 +174,11 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesNullValues) {
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
 
-  expected_table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
-  expected_table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
-  expected_table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
-  expected_table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
-  expected_table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  expected_table->append({2, NULL_VALUE, int64_t{200}, "two", 2.22});
+  expected_table->append({3, 3.3f, NULL_VALUE, "three", 3.33});
+  expected_table->append({4, 4.4f, int64_t{400}, NULL_VALUE, 4.44});
+  expected_table->append({5, 5.5f, int64_t{500}, "five", NULL_VALUE});
 
   const auto reference_filename =
       _reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin";
@@ -196,8 +196,7 @@ TEST_P(BinaryParserMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data);
-  auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
-                      opossum::NULL_VALUE};
+  auto null_values = {NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE};
 
   expected_table->append(null_values);
   expected_table->append(null_values);
@@ -237,14 +236,14 @@ TEST_P(BinaryParserMultiEncodingTest, RunNullValues) {
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{10});
 
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
   expected_table->append({1});
-  expected_table->append({opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({NULL_VALUE});
   expected_table->append({2});
   expected_table->append({2});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
 
   auto table = BinaryParser::parse(_reference_filepath +
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
@@ -299,9 +298,9 @@ TEST_F(BinaryParserTest, FixedStringDictionaryNullValue) {
   expected_table->append({"This"});
   expected_table->append({"is"});
   expected_table->append({"a"});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
   expected_table->append({"test"});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
 
   auto table = BinaryParser::parse(_reference_filepath +
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
@@ -331,9 +330,9 @@ TEST_F(BinaryParserTest, NullValuesFrameOfReferenceSegment) {
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   expected_table->append({1});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
   expected_table->append({2});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
   expected_table->append({5});
 
   auto table = BinaryParser::parse(_reference_filepath +
@@ -347,11 +346,11 @@ TEST_F(BinaryParserTest, AllNullFrameOfReferenceSegment) {
   column_definitions.emplace_back("a", DataType::Int, true);
 
   auto expected_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
-  expected_table->append({opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE});
-  expected_table->append({opossum::NULL_VALUE});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({NULL_VALUE});
+  expected_table->append({NULL_VALUE});
 
   auto table = BinaryParser::parse(_reference_filepath +
                                    ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin");
@@ -424,4 +423,4 @@ TEST_F(BinaryParserTest, SortColumnDefinitions) {
   EXPECT_TRUE(table->get_chunk(ChunkID{2})->individually_sorted_by().empty());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

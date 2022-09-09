@@ -2,7 +2,7 @@
 
 #include "abstract_cost_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 
@@ -21,4 +21,4 @@ class CostEstimatorLogical : public AbstractCostEstimator {
   static float _get_expression_cost_multiplier(const std::shared_ptr<AbstractExpression>& expression);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

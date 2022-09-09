@@ -1,6 +1,6 @@
 #include "postgres_protocol_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename SocketType>
 PostgresProtocolHandler<SocketType>::PostgresProtocolHandler(const std::shared_ptr<SocketType>& socket)
@@ -18,10 +18,10 @@ uint32_t PostgresProtocolHandler<SocketType>::read_startup_packet_header() {
   if (protocol_version == SSL_REQUEST_CODE) {
     _ssl_deny();
     return read_startup_packet_header();
-  } else {
-    // Subtract uint32_t twice, since both packet length and protocol version have been read already
-    return body_length - 2 * LENGTH_FIELD_SIZE;
   }
+
+  // Subtract uint32_t twice since both the packet length and protocol version have been read already.
+  return body_length - 2 * LENGTH_FIELD_SIZE;
 }
 
 template <typename SocketType>
@@ -150,7 +150,7 @@ std::pair<std::string, std::string> PostgresProtocolHandler<SocketType>::read_pa
   // The number of parameter data types specified (can be zero). These data types are ignored currently.
   const auto data_types_specified = _read_buffer.template get_value<uint16_t>();
 
-  for (auto i = 0; i < data_types_specified; i++) {
+  for (auto data_type_id = 0; data_type_id < data_types_specified; ++data_type_id) {
     // Specifies the object ID of the parameter data type.
     // Placing a zero here is equivalent to leaving the type unspecified.
     /*auto data_type = */ _read_buffer.template get_value<int32_t>();
@@ -193,21 +193,21 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
   const auto statement_name = _read_buffer.get_string();
   const auto num_format_codes = _read_buffer.template get_value<int16_t>();
 
-  for (auto i = 0; i < num_format_codes; i++) {
+  for (auto format_code_index = 0; format_code_index < num_format_codes; ++format_code_index) {
     Assert(_read_buffer.template get_value<int16_t>() == 0, "Assuming all parameters to be in text format (0)");
   }
 
   const auto num_parameter_values = _read_buffer.template get_value<int16_t>();
 
   std::vector<AllTypeVariant> parameter_values;
-  for (auto i = 0; i < num_parameter_values; ++i) {
+  for (auto parameter_value = 0; parameter_value < num_parameter_values; ++parameter_value) {
     const auto parameter_value_length = _read_buffer.template get_value<int32_t>();
     parameter_values.emplace_back(pmr_string{_read_buffer.get_string(parameter_value_length, HasNullTerminator::No)});
   }
 
   const auto num_result_column_format_codes = _read_buffer.template get_value<int16_t>();
 
-  for (auto i = 0; i < num_result_column_format_codes; i++) {
+  for (auto format_code = 0; format_code < num_result_column_format_codes; ++format_code) {
     Assert(_read_buffer.template get_value<int16_t>() == 0, "Assuming all result columns to be in text format (0)");
   }
 
@@ -228,20 +228,20 @@ std::string PostgresProtocolHandler<SocketType>::read_execute_packet() {
 }
 
 template <typename SocketType>
-void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessage& error_message) {
+void PostgresProtocolHandler<SocketType>::send_error_message(const ErrorMessages& error_messages) {
   _write_buffer.template put_value(PostgresMessageType::ErrorResponse);
 
   // Calculate size of error message strings
-  auto string_length_sum = 0;
-  for (const auto& kv : error_message) {
-    string_length_sum += kv.second.size() + 1u /* null terminator */;
+  auto string_length_sum = size_t{0};
+  for (const auto& error_message : error_messages) {
+    string_length_sum += error_message.second.size() + 1ul /* null terminator */;
   }
 
-  const auto packet_size = LENGTH_FIELD_SIZE + error_message.size() * sizeof(PostgresMessageType) + string_length_sum +
+  const auto packet_size = LENGTH_FIELD_SIZE + error_messages.size() * sizeof(PostgresMessageType) + string_length_sum +
                            1u /* null terminator */;
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
-  for (const auto& [message_type, content] : error_message) {
+  for (const auto& [message_type, content] : error_messages) {
     _write_buffer.template put_value(message_type);
     _write_buffer.put_string(content);
   }
@@ -276,4 +276,4 @@ template class PostgresProtocolHandler<Socket>;
 // For testing purposes only. stream_descriptor is used to write data to file
 template class PostgresProtocolHandler<boost::asio::posix::stream_descriptor>;
 
-}  // namespace opossum
+}  // namespace hyrise

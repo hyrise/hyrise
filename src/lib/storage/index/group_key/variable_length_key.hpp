@@ -6,7 +6,7 @@
 #include "types.hpp"
 #include "variable_length_key_base.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyProxy;
 class VariableLengthKeyConstProxy;
@@ -50,7 +50,7 @@ class VariableLengthKey {
 
   VariableLengthKey& shift_and_set(uint64_t value, uint8_t bits_to_set);
 
-  friend std::ostream& operator<<(std::ostream& os, const VariableLengthKey& key);
+  friend std::ostream& operator<<(std::ostream& stream, const VariableLengthKey& key);
 
  private:
   explicit VariableLengthKey(const VariableLengthKeyBase& other);
@@ -60,4 +60,4 @@ class VariableLengthKey {
   std::unique_ptr<VariableLengthKeyWord[]> _owned_data;
   VariableLengthKeyBase _impl;
 };
-}  // namespace opossum
+}  // namespace hyrise

@@ -13,7 +13,7 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/singleton.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * One disadvantage of insert-only databases like Hyrise is the accumulation of invalidated
@@ -67,4 +67,4 @@ class MvccDeletePlugin : public AbstractPlugin {
   std::queue<TableAndChunkID> _physical_delete_queue;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

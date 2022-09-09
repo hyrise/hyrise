@@ -2,7 +2,7 @@
 
 #include "statistics/statistics_objects/histogram_domain.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StringHistogramDomainTest : public BaseTest {
  public:
@@ -40,9 +40,10 @@ TEST_F(StringHistogramDomainTest, NextValue) {
 }
 
 TEST_F(StringHistogramDomainTest, NextValueThrowsOnInvalidInput) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
+
   // "A" is not in `domain_a`
   EXPECT_THROW(domain_a.next_value_clamped("A"), std::logic_error);
 }
@@ -120,4 +121,4 @@ TEST_F(StringHistogramDomainTest, Contains) {
   EXPECT_FALSE(domain.contains("zzzzz"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

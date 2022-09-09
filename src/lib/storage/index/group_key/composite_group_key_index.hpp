@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "variable_length_key_store.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CompositeGroupKeyIndexTest;
 class BaseDictionarySegment;
@@ -115,4 +115,4 @@ class CompositeGroupKeyIndex : public AbstractIndex {
   // contains positions, ie ChunkOffsets, for the concatenated value-ids
   std::vector<ChunkOffset> _position_list;
 };
-}  // namespace opossum
+}  // namespace hyrise

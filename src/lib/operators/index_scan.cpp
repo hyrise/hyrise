@@ -14,12 +14,12 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& in, const SegmentIndexType index_type,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const SegmentIndexType index_type,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
-    : AbstractReadOnlyOperator{OperatorType::IndexScan, in},
+    : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       _index_type{index_type},
       _left_column_ids{left_column_ids},
       _predicate_condition{predicate_condition},
@@ -205,4 +205,4 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   return matches_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

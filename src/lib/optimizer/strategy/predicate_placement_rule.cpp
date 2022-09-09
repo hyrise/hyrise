@@ -16,7 +16,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string PredicatePlacementRule::name() const {
   static const auto name = std::string{"PredicatePlacementRule"};
@@ -60,11 +60,14 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
       if (barrier_node->type == LQPNodeType::Predicate) {
         const auto predicate_node = std::static_pointer_cast<PredicateNode>(barrier_node);
         return !_is_expensive_predicate(predicate_node->predicate());
-      } else if (barrier_node->type == LQPNodeType::Join) {
+      }
+
+      if (barrier_node->type == LQPNodeType::Join) {
         const auto join_mode = std::static_pointer_cast<JoinNode>(barrier_node)->join_mode;
         return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
                join_mode == JoinMode::AntiNullAsFalse;
       }
+
       return false;
     }();
 
@@ -187,8 +190,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               //  ^^     ^^                 inner_conjunction holds two (or more) elements from flattening the AND.
               //                            One of these elements is called expression_in_conjunction.
 
-              std::vector<std::shared_ptr<AbstractExpression>> left_disjunction{};
-              std::vector<std::shared_ptr<AbstractExpression>> right_disjunction{};
+              auto left_disjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
+              auto right_disjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
 
               // Tracks whether we had to abort the search for one of the sides as an inner_conjunction was found that
               // did not cover the side.
@@ -200,8 +203,8 @@ void PredicatePlacementRule::_push_down_traversal(const std::shared_ptr<Abstract
               for (const auto& expression_in_disjunction : outer_disjunction) {
                 // For the current expression_in_disjunction, these hold the PredicateExpressions that need to be true
                 // on the left/right side
-                std::vector<std::shared_ptr<AbstractExpression>> left_conjunction{};
-                std::vector<std::shared_ptr<AbstractExpression>> right_conjunction{};
+                auto left_conjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
+                auto right_conjunction = std::vector<std::shared_ptr<AbstractExpression>>{};
 
                 // Fill left/right_conjunction
                 const auto inner_conjunction =
@@ -419,6 +422,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
   if (!current_node) {
     return {};
   }
+
   const auto input_node = current_node->input(input_side);
   if (!input_node) {
     return {};
@@ -452,10 +456,10 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
           join_node->join_mode == JoinMode::Semi || join_node->join_mode == JoinMode::AntiNullAsTrue ||
           join_node->join_mode == JoinMode::AntiNullAsFalse) {
         return candidate_nodes;
-      } else {
-        _insert_nodes(current_node, input_side, candidate_nodes);
-        return {};
       }
+
+      _insert_nodes(current_node, input_side, candidate_nodes);
+      return {};
     } break;
 
     case LQPNodeType::Alias:
@@ -515,9 +519,8 @@ bool PredicatePlacementRule::_is_expensive_predicate(const std::shared_ptr<Abstr
         subquery_expression && subquery_expression->is_correlated()) {
       predicate_contains_correlated_subquery = true;
       return ExpressionVisitation::DoNotVisitArguments;
-    } else {
-      return ExpressionVisitation::VisitArguments;
     }
+    return ExpressionVisitation::VisitArguments;
   });
   return predicate_contains_correlated_subquery;
 }
@@ -558,4 +561,4 @@ bool PredicatePlacementRule::_is_evaluable_on_lqp(const std::shared_ptr<Abstract
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

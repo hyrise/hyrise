@@ -38,11 +38,11 @@
 #include "utils/lossless_predicate_cast.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& in,
+TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
-    : AbstractReadOnlyOperator{OperatorType::TableScan, in, nullptr, std::make_unique<PerformanceData>()},
+    : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
   /**
    * Register as a consumer for all uncorrelated subqueries.
@@ -117,8 +117,8 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   jobs.reserve(in_table->chunk_count() - excluded_chunk_set.size());
 
   const auto chunk_count = in_table->chunk_count();
-  for (ChunkID chunk_id{0u}; chunk_id < chunk_count; ++chunk_id) {
-    if (excluded_chunk_set.count(chunk_id)) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    if (excluded_chunk_set.contains(chunk_id)) {
       continue;
     }
     const auto chunk_in = in_table->get_chunk(chunk_id);
@@ -132,8 +132,9 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
         return;
       }
 
+      const auto column_count = in_table->column_count();
       Segments out_segments;
-      out_segments.reserve(in_table->column_count());
+      out_segments.reserve(column_count);
 
       /**
        * matches_out contains a list of row IDs into this chunk. If this is not a reference table, we can directly use
@@ -148,14 +149,14 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (in_table->type() == TableType::References) {
         if (matches_out->size() == chunk_in->size()) {
           // Shortcut - the entire input reference segment matches, so we can simply forward that chunk
-          for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
+          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
             const auto segment_in = chunk_in->get_segment(column_id);
             out_segments.emplace_back(segment_in);
           }
         } else {
           auto filtered_pos_lists = std::map<std::shared_ptr<const AbstractPosList>, std::shared_ptr<RowIDPosList>>{};
 
-          for (ColumnID column_id{0u}; column_id < in_table->column_count(); ++column_id) {
+          for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
             const auto segment_in = chunk_in->get_segment(column_id);
 
             auto ref_segment_in = std::dynamic_pointer_cast<const ReferenceSegment>(segment_in);
@@ -180,7 +181,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
                 keep_chunk_sort_order = false;
               }
 
-              size_t offset = 0;
+              auto offset = size_t{0};
               for (const auto& match : *matches_out) {
                 const auto row_id = (*pos_list_in)[match.chunk_offset];
                 (*filtered_pos_list)[offset] = row_id;
@@ -202,7 +203,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
                                                std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size()))
                                          : static_cast<std::shared_ptr<AbstractPosList>>(matches_out);
 
-        for (auto column_id = ColumnID{0u}; column_id < in_table->column_count(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           const auto ref_segment_out = std::make_shared<ReferenceSegment>(in_table, column_id, output_pos_list);
           out_segments.push_back(ref_segment_out);
         }
@@ -470,4 +471,4 @@ void TableScan::_on_cleanup() {
   _impl.reset();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

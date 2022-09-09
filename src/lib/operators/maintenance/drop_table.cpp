@@ -2,7 +2,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DropTable::DropTable(const std::string& init_table_name, const bool init_if_exists)
     : AbstractReadOnlyOperator(OperatorType::DropTable), table_name(init_table_name), if_exists(init_if_exists) {}
@@ -36,4 +36,4 @@ void DropTable::_on_set_parameters(const std::unordered_map<ParameterID, AllType
   // No parameters possible for DROP TABLE
 }
 
-}  // namespace opossum
+}  // namespace hyrise

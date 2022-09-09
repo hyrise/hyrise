@@ -8,9 +8,9 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
@@ -40,8 +40,8 @@ class InExpressionRewriteRuleTest : public StrategyBaseTest {
     null_in_expression = in_(col_a, list_(1, NULL_VALUE));
 
     auto hundred_elements = std::vector<std::shared_ptr<AbstractExpression>>{};
-    for (auto i = 0; i < 100; ++i) {
-      hundred_elements.emplace_back(value_(i));
+    for (auto index = 0; index < 100; ++index) {
+      hundred_elements.emplace_back(value_(index));
     }
     hundred_element_in_expression = std::make_shared<InExpression>(PredicateCondition::In, col_a,
                                                                    std::make_shared<ListExpression>(hundred_elements));
@@ -311,8 +311,8 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto i = 0; i < 100; ++i) {
-      table->append({i});
+    for (auto index = int32_t{0}; index < 100; ++index) {
+      table->append({index});
     }
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
@@ -331,8 +331,8 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
 
     const auto column_definitions = TableColumnDefinitions{{"right_values", DataType::Int, false}};
     auto table = std::make_shared<Table>(column_definitions, TableType::Data);
-    for (auto i = 0; i < 100; ++i) {
-      table->append({i});
+    for (auto index = int32_t{0}; index < 100; ++index) {
+      table->append({index});
     }
     const auto static_table_node = StaticTableNode::make(table);
     const auto right_col = lqp_column_(static_table_node, ColumnID{0});
@@ -373,4 +373,4 @@ TEST_F(InExpressionRewriteRuleTest, AutoStrategy) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

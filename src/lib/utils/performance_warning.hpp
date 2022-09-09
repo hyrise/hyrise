@@ -24,7 +24,7 @@
  * Warnings do not print in tests.
  */
 
-namespace opossum {
+namespace hyrise {
 
 class PerformanceWarningDisabler;
 
@@ -59,6 +59,7 @@ class PerformanceWarningDisabler {
 
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
+
   ~PerformanceWarningDisabler() {
     if (!_previously_disabled) {
       PerformanceWarningClass::enable();
@@ -73,4 +74,4 @@ class PerformanceWarningDisabler {
   }                                                                                                    \
   static_assert(true, "End call of macro with a semicolon")
 
-}  // namespace opossum
+}  // namespace hyrise

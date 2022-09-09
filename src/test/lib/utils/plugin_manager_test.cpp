@@ -4,7 +4,7 @@
 
 #include "./plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PluginManagerTest : public BaseTest {
  protected:
@@ -104,7 +104,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
 
   pm.exec_user_function("hyriseTestPlugin", "OurFreelyChoosableFunctionName");
   // The test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin"));
+  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
 
   // The PluginManager adds log messages when user executable functions are called
   EXPECT_EQ(lm.log_entries().size(), 1);
@@ -196,4 +196,4 @@ TEST_F(PluginManagerTest, UnloadNotLoadedPlugin) {
   EXPECT_THROW(pm.unload_plugin("NotLoadedPlugin"), std::exception);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

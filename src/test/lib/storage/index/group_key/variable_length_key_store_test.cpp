@@ -12,7 +12,7 @@
 #include "storage/index/group_key/variable_length_key_store.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyStoreTest : public BaseTest {
  protected:
@@ -186,9 +186,10 @@ TEST_F(VariableLengthKeyStoreTest, WriteAccessViaBracketsOperator) {
 }
 
 TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
+
   // _store is created with 4 bytes per entry
   auto short_key = VariableLengthKey(sizeof(uint16_t));
   auto long_key = VariableLengthKey(sizeof(uint64_t));
@@ -199,4 +200,4 @@ TEST_F(VariableLengthKeyStoreTest, WriteNonFittingKeys) {
   EXPECT_THROW(*_store.begin() = long_key, std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

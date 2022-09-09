@@ -2,7 +2,7 @@
 
 #include "server/query_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionHandlingTest : public BaseTest {};
 
@@ -13,7 +13,7 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
 
   // begin and commit transaction statements are executed successfully
-  EXPECT_TRUE(execution_information.error_message.empty());
+  EXPECT_TRUE(execution_information.error_messages.empty());
   EXPECT_EQ(execution_information.result_table, nullptr);
   EXPECT_EQ(execution_information.custom_command_complete_message.value(), "COMMIT");
   EXPECT_EQ(Hyrise::get().storage_manager.get_table("users")->row_count(), 1);
@@ -30,7 +30,7 @@ TEST_F(TransactionHandlingTest, RollbackTransaction) {
 
   // rollback transaction statement is executed successfully
   // in this case the second insert into the table gets rolled back
-  EXPECT_TRUE(execution_information.error_message.empty());
+  EXPECT_TRUE(execution_information.error_messages.empty());
   EXPECT_EQ(execution_information.result_table->row_count(), 2);
 }
 
@@ -48,7 +48,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
     auto execution_information = execution_info_transaction_context_pair.first;
 
     // The transaction context should be in "auto-commit" mode
-    EXPECT_TRUE(execution_information.error_message.empty());
+    EXPECT_TRUE(execution_information.error_messages.empty());
     EXPECT_EQ(transaction_ctx, nullptr);
 
     transaction_ctx = execution_info_transaction_context_pair.second;
@@ -65,7 +65,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
     // when the user begins a transaction, a new transaction context is created internally (not in "auto-commit" mode)
     // the transaction is therefore still active until the user either rolls back or commits
     EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::Active);
-    EXPECT_TRUE(execution_information.error_message.empty());
+    EXPECT_TRUE(execution_information.error_messages.empty());
     EXPECT_EQ(transaction_ctx->is_auto_commit(), false);
   }
 
@@ -79,7 +79,7 @@ TEST_F(TransactionHandlingTest, TestTransactionContextInternals) {
     // now that the user rolled back,
     // the transaction context is in the successful state of having been rolled back on purpose
     EXPECT_EQ(transaction_ctx->phase(), TransactionPhase::RolledBackByUser);
-    EXPECT_TRUE(execution_information.error_message.empty());
+    EXPECT_TRUE(execution_information.error_messages.empty());
 
     // internally the transaction context returned by the pipeline is nullptr
     // in order to force creating a new one in the next pipeline execution
@@ -100,7 +100,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
         QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
 
     auto execution_information = execution_info_transaction_context_pair.first;
-    EXPECT_TRUE(execution_information.error_message.empty());
+    EXPECT_TRUE(execution_information.error_messages.empty());
 
     transaction_ctx = execution_info_transaction_context_pair.second;
   }
@@ -112,7 +112,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     auto execution_info_transaction_context_pair =
         QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
     auto execution_information = execution_info_transaction_context_pair.first;
-    EXPECT_TRUE(execution_information.error_message.empty());
+    EXPECT_TRUE(execution_information.error_messages.empty());
 
     transaction_ctx = execution_info_transaction_context_pair.second;
   }
@@ -128,7 +128,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
 
     // the DELETE statement from user A has not been committed yet
     // that's why the change is not visible yet
-    EXPECT_TRUE(execution_information_2.error_message.empty());
+    EXPECT_TRUE(execution_information_2.error_messages.empty());
     EXPECT_EQ(execution_information_2.result_table->row_count(), 1);
   }
 
@@ -139,7 +139,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     auto execution_info_transaction_context_pair =
         QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, transaction_ctx);
     auto execution_information = execution_info_transaction_context_pair.first;
-    EXPECT_TRUE(execution_information.error_message.empty());
+    EXPECT_TRUE(execution_information.error_messages.empty());
   }
 
   {
@@ -152,7 +152,7 @@ TEST_F(TransactionHandlingTest, TestTransactionSideEffects) {
     auto execution_information_2 = execution_info_transaction_context_pair_2.first;
 
     // now the changes of the DELETE statement are visible
-    EXPECT_TRUE(execution_information_2.error_message.empty());
+    EXPECT_TRUE(execution_information_2.error_messages.empty());
     EXPECT_EQ(execution_information_2.result_table->row_count(), 0);
   }
 }
@@ -196,4 +196,4 @@ TEST_F(TransactionHandlingTest, InvalidTransactionTransitions) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

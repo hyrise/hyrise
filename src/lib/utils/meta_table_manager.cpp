@@ -13,7 +13,7 @@
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaTableManager::MetaTableManager() {
   const std::vector<std::shared_ptr<AbstractMetaTable>> meta_tables = {std::make_shared<MetaTablesTable>(),
@@ -39,7 +39,7 @@ MetaTableManager::MetaTableManager() {
 
 bool MetaTableManager::is_meta_table_name(const std::string& name) {
   const auto prefix_len = META_PREFIX.size();
-  return name.size() > prefix_len && std::string_view{&name[0], prefix_len} == MetaTableManager::META_PREFIX;
+  return name.size() > prefix_len && std::string_view{name.data(), prefix_len} == MetaTableManager::META_PREFIX;
 }
 
 const std::vector<std::string>& MetaTableManager::table_names() const {
@@ -53,7 +53,7 @@ void MetaTableManager::add_table(const std::shared_ptr<AbstractMetaTable>& table
 }
 
 bool MetaTableManager::has_table(const std::string& table_name) const {
-  return _meta_tables.count(_trim_table_name(table_name));
+  return _meta_tables.contains(_trim_table_name(table_name));
 }
 
 std::shared_ptr<AbstractMetaTable> MetaTableManager::get_table(const std::string& table_name) const {
@@ -98,7 +98,8 @@ void MetaTableManager::update(const std::string& table_name, const std::shared_p
   const auto& update_rows = update_values->get_rows();
   Assert(selected_rows.size() == update_rows.size(), "Selected and updated values need to have the same size.");
 
-  for (size_t row = 0; row < selected_rows.size(); row++) {
+  const auto row_count = selected_rows.size();
+  for (auto row = size_t{0}; row < row_count; ++row) {
     _meta_tables.at(table_name)->_update(selected_rows[row], update_rows[row]);
   }
 }
@@ -107,4 +108,4 @@ std::string MetaTableManager::_trim_table_name(const std::string& table_name) {
   return is_meta_table_name(table_name) ? table_name.substr(MetaTableManager::META_PREFIX.size()) : table_name;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -11,9 +11,9 @@
 
 #include "join_graph_edge.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
   // No need to create a join graph consisting of just one vertex and no predicates
@@ -97,12 +97,12 @@ JoinGraphBuilder::PredicateParseResult JoinGraphBuilder::_parse_predicate(
 
       if (base_node->output_count() > 1) {
         return {base_node, left_predicate};
-      } else {
-        const auto parse_result_right = _parse_predicate(base_node);
-        const auto and_predicate = and_(left_predicate, parse_result_right.predicate);
-
-        return {parse_result_right.base_node, and_predicate};
       }
+
+      const auto parse_result_right = _parse_predicate(base_node);
+      const auto and_predicate = and_(left_predicate, parse_result_right.predicate);
+
+      return {parse_result_right.base_node, and_predicate};
     } break;
 
     default:
@@ -243,4 +243,4 @@ JoinGraphVertexSet JoinGraphBuilder::_get_vertex_set_accessed_by_expression(
   return vertex_set;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

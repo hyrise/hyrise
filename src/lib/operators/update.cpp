@@ -13,7 +13,7 @@
 #include "table_wrapper.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Update::Update(const std::string& table_to_update_name, const std::shared_ptr<AbstractOperator>& fields_to_update_op,
                const std::shared_ptr<AbstractOperator>& update_values_op)
@@ -66,4 +66,4 @@ std::shared_ptr<AbstractOperator> Update::_on_deep_copy(
 
 void Update::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

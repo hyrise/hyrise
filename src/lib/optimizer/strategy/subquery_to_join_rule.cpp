@@ -25,11 +25,14 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
+
+using NodeExpressionsDifferenceType =
+    typename std::iterator_traits<decltype(AggregateNode::node_expressions)::iterator>::difference_type;
 
 /**
  * Calculates which input LQPs of a node are safe to pull predicates from.
@@ -227,7 +230,7 @@ void push_arithmetic_expression_into_subquery(const std::shared_ptr<BinaryPredic
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string SubqueryToJoinRule::name() const {
   static const auto name = std::string{"SubqueryToJoinRule"};
@@ -478,7 +481,8 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
     const std::shared_ptr<AggregateNode>& node,
     const std::vector<std::shared_ptr<AbstractExpression>>& required_output_expressions) {
   std::vector<std::shared_ptr<AbstractExpression>> group_by_expressions(
-      node->node_expressions.cbegin(), node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx);
+      node->node_expressions.cbegin(), node->node_expressions.cbegin() + static_cast<NodeExpressionsDifferenceType>(
+                                                                             node->aggregate_expressions_begin_idx));
   ExpressionUnorderedSet original_group_by_expressions(group_by_expressions.cbegin(), group_by_expressions.cend());
 
   const auto not_found_it = original_group_by_expressions.cend();
@@ -489,7 +493,9 @@ std::shared_ptr<AggregateNode> SubqueryToJoinRule::adapt_aggregate_node(
   }
 
   std::vector<std::shared_ptr<AbstractExpression>> aggregate_expressions(
-      node->node_expressions.cbegin() + node->aggregate_expressions_begin_idx, node->node_expressions.cend());
+      node->node_expressions.cbegin() +
+          static_cast<NodeExpressionsDifferenceType>(node->aggregate_expressions_begin_idx),
+      node->node_expressions.cend());
   return AggregateNode::make(group_by_expressions, aggregate_expressions);
 }
 
@@ -658,4 +664,4 @@ void SubqueryToJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

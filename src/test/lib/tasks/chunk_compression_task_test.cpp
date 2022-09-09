@@ -12,7 +12,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "tasks/chunk_compression_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ChunkCompressionTaskTest : public BaseTest {};
 
@@ -36,10 +36,10 @@ TEST_F(ChunkCompressionTaskTest, CompressionPreservesTableContent) {
   EXPECT_TABLE_EQ_UNORDERED(table, table_dict);
 
   constexpr auto chunk_count = 4u;
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table_dict->get_chunk(chunk_id);
 
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
       auto segment = chunk->get_segment(column_id);
 
       auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
@@ -61,9 +61,9 @@ TEST_F(ChunkCompressionTaskTest, DictionarySize) {
 
   auto dictionary_sizes = std::array<std::vector<size_t>, chunk_count>{{{3u, 3u}, {2u, 3u}}};
 
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = table_dict->get_chunk(chunk_id);
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
       auto segment = chunk->get_segment(column_id);
 
       auto dict_segment = std::dynamic_pointer_cast<const BaseDictionarySegment>(segment);
@@ -96,9 +96,9 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
       "table_insert", std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}});
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks({compression});
 
-  for (auto i = ChunkID{0}; i < table->chunk_count() - 1; ++i) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count() - 1; ++chunk_id) {
     auto dict_segment =
-        std::dynamic_pointer_cast<const BaseDictionarySegment>(table->get_chunk(i)->get_segment(ColumnID{0}));
+        std::dynamic_pointer_cast<const BaseDictionarySegment>(table->get_chunk(chunk_id)->get_segment(ColumnID{0}));
     ASSERT_NE(dict_segment, nullptr);
   }
 
@@ -111,4 +111,4 @@ TEST_F(ChunkCompressionTaskTest, CompressionWithAbortedInsert) {
   EXPECT_EQ(validate->get_output()->row_count(), 12u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

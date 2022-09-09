@@ -14,9 +14,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 
@@ -24,8 +24,8 @@ const auto ROWS = 1'000'000;
 const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
 const auto STRING_SIZE = 512;
 
-opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
-  auto table_column_definitions = opossum::TableColumnDefinitions();
+TableColumnDefinitions create_column_definitions(const DataType data_type) {
+  auto table_column_definitions = TableColumnDefinitions();
   table_column_definitions.emplace_back("a", data_type, true);
   return table_column_definitions;
 }
@@ -264,8 +264,9 @@ class StartUp {
     registerTableScanSortedBenchmarks();
   }
 };
+
 StartUp startup;
 
 }  // namespace
 
-}  // namespace opossum
+}  // namespace hyrise

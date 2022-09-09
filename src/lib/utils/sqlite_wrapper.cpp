@@ -18,19 +18,20 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
+
 /*
- * Creates columns in given opossum table according to an sqlite intermediate statement (one result row).
+ * Creates columns in given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_statement, int column_count) {
   std::vector<bool> column_nullable(column_count, false);
   std::vector<std::string> column_types(column_count, "");
   std::vector<std::string> column_names(column_count, "");
 
-  bool no_result = true;
-  int rc;
-  while ((rc = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
-    for (int column_id = 0; column_id < column_count; ++column_id) {
+  auto no_result = true;
+  auto return_code = int{};
+  while ((return_code = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
+    for (auto column_id = int{0}; column_id < column_count; ++column_id) {
       if (no_result) {
         column_names[column_id] = sqlite3_column_name(sqlite_statement, column_id);
       }
@@ -71,11 +72,11 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
   // If this fails, this is likely because of a transaction conflict within sqlite. This means that the Hyrise
   // and the sqlite states have diverged. When using the SQLite wrapper, the caller must ensure that parallel
   // operations do not conflict.
-  Assert(rc == SQLITE_ROW || rc == SQLITE_DONE, "Unexpected sqlite state");
+  Assert(return_code == SQLITE_ROW || return_code == SQLITE_DONE, "Unexpected sqlite state");
 
   if (!no_result) {
-    TableColumnDefinitions column_definitions;
-    for (int column_id = 0; column_id < column_count; ++column_id) {
+    auto column_definitions = TableColumnDefinitions{};
+    for (auto column_id = int{0}; column_id < column_count; ++column_id) {
       if (column_types[column_id].empty()) {
         // Hyrise does not have explicit NULL columns
         column_types[column_id] = "int";
@@ -92,13 +93,13 @@ std::shared_ptr<Table> create_hyrise_table_from_result(sqlite3_stmt* sqlite_stat
 }
 
 /*
- * Adds a single row to given opossum table according to an sqlite intermediate statement (one result row).
+ * Adds a single row to given Hyrise table according to an sqlite intermediate statement (one result row).
  */
 void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3_stmt* sqlite_statement,
                                     int column_count) {
-  std::vector<AllTypeVariant> row;
+  auto row = std::vector<AllTypeVariant>{};
 
-  for (int column_id = 0; column_id < column_count; ++column_id) {
+  for (auto column_id = int{0}; column_id < column_count; ++column_id) {
     switch (sqlite3_column_type(sqlite_statement, column_id)) {
       case SQLITE_INTEGER: {
         row.emplace_back(AllTypeVariant{sqlite3_column_int(sqlite_statement, column_id)});
@@ -134,7 +135,7 @@ void copy_row_from_sqlite_to_hyrise(const std::shared_ptr<Table>& table, sqlite3
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 // We include the address of this wrapper in the URI for the sqlite db so that two wrappers don't interfere
 // See also https://www.sqlite.org/inmemorydb.html, starting at "If two or more distinct but shareable
@@ -184,11 +185,11 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   std::vector<std::string> queries_before_select(queries.begin(), queries.end() - 1);
   std::string select_query = queries.back();
 
-  int rc;
+  auto return_code = int{};
   for (const auto& query : queries_before_select) {
-    rc = sqlite3_prepare_v2(db, query.c_str(), -1, &sqlite_statement, nullptr);
+    return_code = sqlite3_prepare_v2(db, query.c_str(), -1, &sqlite_statement, nullptr);
 
-    if (rc != SQLITE_OK) {
+    if (return_code != SQLITE_OK) {
       sqlite3_finalize(sqlite_statement);
       Fail("Failed to execute query \"" + query + "\": " + std::string(sqlite3_errmsg(db)) + "\n");
     }
@@ -196,9 +197,9 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
     while (sqlite3_step(sqlite_statement) != SQLITE_DONE) {}
   }
 
-  rc = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
+  return_code = sqlite3_prepare_v2(db, select_query.c_str(), -1, &sqlite_statement, nullptr);
 
-  if (rc != SQLITE_OK) {
+  if (return_code != SQLITE_OK) {
     auto error_message = "Failed to execute query \"" + select_query + "\": " + std::string(sqlite3_errmsg(db));
     sqlite3_finalize(sqlite_statement);
     Fail(error_message);
@@ -216,11 +217,11 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
   sqlite3_reset(sqlite_statement);
 
-  while ((rc = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
+  while ((return_code = sqlite3_step(sqlite_statement)) == SQLITE_ROW) {
     copy_row_from_sqlite_to_hyrise(result_table, sqlite_statement, sqlite3_column_count(sqlite_statement));
   }
 
-  Assert(rc == SQLITE_DONE, "Unexpected sqlite state");
+  Assert(return_code == SQLITE_DONE, "Unexpected sqlite state");
 
   sqlite3_finalize(sqlite_statement);
   return result_table;
@@ -228,9 +229,9 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
 void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql, const bool allow_failure) const {
   char* err_msg;
-  auto rc = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
+  auto return_code = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
-  if (rc != SQLITE_OK) {
+  if (return_code != SQLITE_OK) {
     auto msg = std::string(err_msg);
     sqlite3_free(err_msg);
     Fail("Failed to execute query (" + sql + "). SQL error: " + msg + "\n");
@@ -238,7 +239,7 @@ void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql, const 
 }
 
 void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& table_name) const {
-  std::vector<std::string> column_types;
+  auto column_types = std::vector<std::string>{};
 
   for (const auto& column_definition : table.column_definitions()) {
     switch (column_definition.data_type) {
@@ -262,12 +263,13 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   // SQLite doesn't like an unescaped "ORDER" as a table name, thus we escape all table names.
   const auto escaped_table_name = std::string{"\""} + table_name + "\"";
 
-  std::stringstream create_table_query;
+  auto create_table_query = std::stringstream{};
   create_table_query << "CREATE TABLE " << escaped_table_name << "(";
-  for (auto column_id = ColumnID{0}; column_id < table.column_definitions().size(); column_id++) {
+  const auto column_count = table.column_definitions().size();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     create_table_query << table.column_definitions()[column_id].name << " " << column_types[column_id];
 
-    if (column_id + 1u < table.column_definitions().size()) {
+    if (column_id + 1u < column_count) {
       create_table_query << ", ";
     }
   }
@@ -275,11 +277,11 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
   main_connection.raw_execute_query(create_table_query.str());
 
   // Prepare `INSERT INTO <table_name> VALUES (?, ?, ...)` statement
-  std::stringstream insert_into_stream;
+  auto insert_into_stream = std::stringstream{};
   insert_into_stream << "INSERT INTO " << escaped_table_name << " VALUES (";
-  for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     insert_into_stream << "?";
-    if (static_cast<ColumnCount>(column_id + 1u) < table.column_count()) {
+    if (static_cast<ColumnCount>(column_id + 1u) < column_count) {
       insert_into_stream << ", ";
     }
   }
@@ -301,8 +303,9 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
       continue;
     }
 
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk->size(); ++chunk_offset) {
-      for (auto column_id = ColumnID{0}; column_id < table.column_count(); column_id++) {
+    const auto chunk_size = chunk->size();
+    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto segment = chunk->get_segment(column_id);
         // SQLite's parameter indices are 1-based.
         const auto sqlite_column_id = static_cast<int>(column_id) + 1;
@@ -362,11 +365,11 @@ void SQLiteWrapper::create_sqlite_table(const Table& table, const std::string& t
 
 void SQLiteWrapper::reset_table_from_copy(const std::string& table_name_to_reset,
                                           const std::string& table_name_to_copy_from) const {
-  std::stringstream command_ss;
-  command_ss << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
-  command_ss << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
+  auto command_sstream = std::stringstream{};
+  command_sstream << "DROP TABLE IF EXISTS " << table_name_to_reset << ";";
+  command_sstream << "CREATE TABLE " << table_name_to_reset << " AS SELECT * FROM " << table_name_to_copy_from << ";";
 
-  main_connection.raw_execute_query(command_ss.str());
+  main_connection.raw_execute_query(command_sstream.str());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 HistogramDomain<pmr_string>::HistogramDomain()
     :  // Support most of ASCII with maximum prefix length for number of characters. The character range and the prefix
@@ -131,4 +131,4 @@ uint64_t ipow(uint64_t base, uint64_t exp) {
   return result;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

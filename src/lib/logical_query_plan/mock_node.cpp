@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
     : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
@@ -173,4 +173,4 @@ bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMappi
          mock_node.functional_dependencies() == _functional_dependencies;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

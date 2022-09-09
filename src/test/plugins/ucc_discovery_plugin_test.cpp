@@ -26,7 +26,7 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class UccDiscoveryPluginTest : public BaseTest {
  public:
@@ -188,4 +188,4 @@ TEST_F(UccDiscoveryPluginTest, PluginFullRun) {
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

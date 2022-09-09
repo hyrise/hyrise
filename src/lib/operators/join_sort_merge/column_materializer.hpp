@@ -17,11 +17,12 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 struct MaterializedValue {
   MaterializedValue() = default;
+
   MaterializedValue(RowID row, T v) : row_id{row}, value{v} {}
 
   RowID row_id;
@@ -40,6 +41,7 @@ using MaterializedSegmentList = std::vector<MaterializedSegment<T>>;
 template <typename T>
 struct Subsample {
   explicit Subsample(ChunkOffset sample_count) : samples_to_collect(sample_count), samples(sample_count) {}
+
   const ChunkOffset samples_to_collect;
   std::vector<T> samples;
 };
@@ -162,4 +164,4 @@ class ColumnMaterializer {
   bool _materialize_null;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

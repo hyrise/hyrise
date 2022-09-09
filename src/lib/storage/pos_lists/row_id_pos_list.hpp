@@ -7,7 +7,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The RowIDPosList is the most generic type of PosList. It holds a list of RowIDs where ChunkID and ChunkOffset can
 // vary freely. Not only can it point to different chunks, but it can also contain NULLs (as, e.g., produced by an
@@ -34,22 +34,31 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using const_reverse_iterator = Vector::const_reverse_iterator;
 
   /* (1 ) */ RowIDPosList() noexcept(noexcept(allocator_type())) {}
+
   /* (1 ) */ explicit RowIDPosList(const allocator_type& allocator) noexcept : Vector(allocator) {}
+
   /* (2 ) */ RowIDPosList(size_type count, const RowID& value, const allocator_type& alloc = allocator_type())
       : Vector(count, value, alloc) {}
+
   /* (3 ) */ explicit RowIDPosList(size_type count, const allocator_type& alloc = allocator_type())
       : Vector(count, alloc) {}
+
   /* (4 ) */ template <class InputIt>
   RowIDPosList(InputIt first, InputIt last, const allocator_type& alloc = allocator_type())
       : Vector(std::move(first), std::move(last)) {}
+
   /* (5 ) */  // RowIDPosList(const Vector& other) : Vector(other); - Oh no, you don't.
   /* (5 ) */  // RowIDPosList(const Vector& other, const allocator_type& alloc) : Vector(other, alloc);
   /* (6 ) */ RowIDPosList(RowIDPosList&& other) noexcept
       : Vector(std::move(other)), _references_single_chunk{other._references_single_chunk} {}
+
   /* (6+) */ explicit RowIDPosList(Vector&& other) noexcept : Vector(std::move(other)) {}
+
   /* (7 ) */ RowIDPosList(RowIDPosList&& other, const allocator_type& alloc)
       : Vector(std::move(other), alloc), _references_single_chunk{other._references_single_chunk} {}
+
   /* (7+) */ RowIDPosList(Vector&& other, const allocator_type& alloc) : Vector(std::move(other), alloc) {}
+
   /* (8 ) */ RowIDPosList(std::initializer_list<RowID> init, const allocator_type& alloc = allocator_type())
       : Vector(std::move(init), alloc) {}
 
@@ -96,9 +105,11 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   using Vector::max_size;
   using Vector::reserve;
   using Vector::shrink_to_fit;
+
   size_t size() const final {
     return Vector::size();
   }
+
   bool empty() const final {
     return Vector::empty();
   }
@@ -120,4 +131,4 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
   bool _references_single_chunk = false;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

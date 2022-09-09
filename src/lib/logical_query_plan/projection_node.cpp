@@ -7,7 +7,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractLQPNode(LQPNodeType::Projection, expressions) {}
@@ -85,4 +85,4 @@ bool ProjectionNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNod
   return expressions_equal_to_expressions_in_different_lqp(node_expressions, rhs_expressions, node_mapping);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

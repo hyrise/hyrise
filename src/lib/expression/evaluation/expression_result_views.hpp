@@ -4,7 +4,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * ExpressionResultViews is a Concept used internally in the ExpressionEvaluator to allow the compiler to throw
@@ -121,7 +121,7 @@ class ExpressionResultLiteral {
   }
 
   size_t size() const {
-    return 1u;
+    return 1;
   }
 
   const T& value(const size_t /*value*/) const {
@@ -137,4 +137,4 @@ class ExpressionResultLiteral {
   bool _null;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

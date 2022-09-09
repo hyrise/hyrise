@@ -18,7 +18,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JoinNode::JoinNode(const JoinMode init_join_mode) : AbstractLQPNode(LQPNodeType::Join), join_mode(init_join_mode) {
   Assert(join_mode == JoinMode::Cross, "Only Cross Joins can be constructed without predicate");
@@ -125,11 +125,14 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
     std::copy(right_unique_constraints->begin(), right_unique_constraints->end(),
               std::back_inserter(*unique_constraints));
     return unique_constraints;
+  }
 
-  } else if (left_operand_is_unique) {
+  if (left_operand_is_unique) {
     // Uniqueness on the left prevents duplication of records on the right
     return right_unique_constraints;
-  } else if (right_operand_is_unique) {
+  }
+
+  if (right_operand_is_unique) {
     // Uniqueness on the right prevents duplication of records on the left
     return left_unique_constraints;
   }
@@ -220,11 +223,11 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
 
   if (column_is_from_left_input) {
     return left_input()->is_column_nullable(column_id);
-  } else {
-    ColumnID right_column_id =
-        static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
-    return right_input()->is_column_nullable(right_column_id);
   }
+
+  ColumnID right_column_id =
+      static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
+  return right_input()->is_column_nullable(right_column_id);
 }
 
 const std::vector<std::shared_ptr<AbstractExpression>>& JoinNode::join_predicates() const {
@@ -302,4 +305,4 @@ bool JoinNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMappi
                                                            node_mapping);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

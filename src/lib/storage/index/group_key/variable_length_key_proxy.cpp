@@ -6,7 +6,7 @@
 #include "utils/assert.hpp"
 #include "variable_length_key.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Const VariableLengthKeyProxy
 VariableLengthKeyConstProxy::VariableLengthKeyConstProxy(VariableLengthKeyWord* data, CompositeKeyLength bytes_per_key)
@@ -44,9 +44,9 @@ bool VariableLengthKeyConstProxy::operator<(const VariableLengthKey& other) cons
   return _impl < other._impl;
 }
 
-std::ostream& operator<<(std::ostream& os, const VariableLengthKeyConstProxy& key) {
-  os << key._impl;
-  return os;
+std::ostream& operator<<(std::ostream& ostream, const VariableLengthKeyConstProxy& key) {
+  ostream << key._impl;
+  return ostream;
 }
 
 // Mutable VariableLengthKeyProxy
@@ -87,4 +87,4 @@ VariableLengthKeyProxy& VariableLengthKeyProxy::shift_and_set(uint64_t value, ui
   return *this;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

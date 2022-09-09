@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * Class to display a given stringstream input using pagination in style of the UNIX 'less' command.
@@ -48,4 +48,4 @@ class Pagination {
   size_t _step_size_x{5};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

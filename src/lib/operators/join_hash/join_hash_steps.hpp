@@ -23,7 +23,7 @@
   (e.g., build() and probe()). These free functions are put into this header file to separate
   them from the process flow of the join hash and to make the better testable.
 */
-namespace opossum {
+namespace hyrise {
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
@@ -136,14 +136,15 @@ class PosHashTable {
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
     _offset_hash_table.shrink_to_fit();
+    const auto hash_table_size = _offset_hash_table.size();
 
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
       // Resize so that we can store the start offset of each range as well as the final end offset.
-      _unified_pos_list->offsets.resize(_offset_hash_table.size() + 1);
+      _unified_pos_list->offsets.resize(hash_table_size + 1);
 
       auto total_size = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
         _unified_pos_list->offsets[hash_table_idx] = total_size;
         total_size += _small_pos_lists[hash_table_idx].size();
       }
@@ -151,7 +152,7 @@ class PosHashTable {
 
       _unified_pos_list->pos_list.resize(total_size);
       auto offset = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
         std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
                   _unified_pos_list->pos_list.begin() + offset);
         offset += _small_pos_lists[hash_table_idx].size();
@@ -609,8 +610,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   if constexpr (keep_null_values) {
     for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
       jobs.emplace_back(std::make_shared<JobTask>([&, output_partition_idx]() {
-        for (auto element_idx = size_t{0}; element_idx < output[output_partition_idx].null_values.size();
-             ++element_idx) {
+        const auto null_value_count = output[output_partition_idx].null_values.size();
+        for (auto element_idx = size_t{0}; element_idx < null_value_count; ++element_idx) {
           output[output_partition_idx].null_values[element_idx] =
               null_values_as_char[output_partition_idx][element_idx];
         }
@@ -793,9 +794,11 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(probe_radix_container.size());
 
-  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
+  const auto probe_radix_container_count = probe_radix_container.size();
+  jobs.reserve(probe_radix_container_count);
+
+  for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
       continue;
@@ -905,4 +908,4 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

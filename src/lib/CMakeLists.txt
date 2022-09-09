@@ -557,6 +557,7 @@ set(
     types.cpp
     types.hpp
     uid_allocator.hpp
+    utils/abstract_plugin.cpp
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
@@ -620,7 +621,8 @@ set(
     utils/performance_warning.hpp
     utils/plugin_manager.cpp
     utils/plugin_manager.hpp
-    utils/print_directed_acyclic_graph.hpp
+    utils/print_utils.cpp
+    utils/print_utils.hpp
     utils/settings/abstract_setting.cpp
     utils/settings/abstract_setting.hpp
     utils/settings_manager.cpp
@@ -650,11 +652,12 @@ set(
 
 set(
     LIBRARIES
+    compact_vector
     lz4
     magic_enum
     sqlparser
     uninitialized_vector
-    zstd
+    libzstd_static
     ${CMAKE_DL_LIBS}
     # Additional libraries added with target_link_libraries_system below
 )
@@ -705,14 +708,13 @@ if(NOT APPLE)
     # Add the jemalloc headers to Hyrise so that we can use jemalloc-specific functions.
     # We need to use a path relative to CMAKE_CURRENT_BINARY_DIR instead of using CMAKE_BINARY_DIR because Hyrise might
     # not be the top-level CMake project (e.g., if it is used as a submodule in a Hyrise plugin repository).
-    target_include_directories(hyrise_impl PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
+    target_include_directories(hyrise_impl SYSTEM PUBLIC ${CMAKE_CURRENT_BINARY_DIR}/../../third_party/jemalloc/include)
 endif()
 
 target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
-    compact_vector
     cpp-btree
     cxxopts
     flat-hash-map

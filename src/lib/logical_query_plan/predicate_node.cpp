@@ -15,7 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PredicateNode::PredicateNode(const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractLQPNode(LQPNodeType::Predicate, {predicate}) {}
@@ -52,4 +52,4 @@ bool PredicateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
   return equal;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

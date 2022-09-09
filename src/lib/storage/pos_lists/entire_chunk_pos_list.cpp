@@ -1,6 +1,6 @@
 #include "entire_chunk_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool EntireChunkPosList::references_single_chunk() const {
   return true;
@@ -23,11 +23,11 @@ size_t EntireChunkPosList::memory_usage(const MemoryUsageCalculationMode /*mode*
 }
 
 AbstractPosList::PosListIterator<EntireChunkPosList, RowID> EntireChunkPosList::begin() const {
-  return PosListIterator<EntireChunkPosList, RowID>(this, ChunkOffset{0});
+  return {this, ChunkOffset{0}};
 }
 
 AbstractPosList::PosListIterator<EntireChunkPosList, RowID> EntireChunkPosList::end() const {
-  return PosListIterator<EntireChunkPosList, RowID>(this, static_cast<ChunkOffset>(size()));
+  return {this, static_cast<ChunkOffset>(size())};
 }
 
 AbstractPosList::PosListIterator<EntireChunkPosList, RowID> EntireChunkPosList::cbegin() const {
@@ -38,4 +38,4 @@ AbstractPosList::PosListIterator<EntireChunkPosList, RowID> EntireChunkPosList::
   return end();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

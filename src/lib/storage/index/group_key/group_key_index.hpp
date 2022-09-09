@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractSegment;
 class BaseDictionarySegment;
@@ -94,4 +94,4 @@ class GroupKeyIndex : public AbstractIndex {
   std::vector<ChunkOffset> _value_start_offsets;  // maps value-ids to offsets in _positions
   std::vector<ChunkOffset> _positions;            // non-NULL record positions in the attribute vector
 };
-}  // namespace opossum
+}  // namespace hyrise

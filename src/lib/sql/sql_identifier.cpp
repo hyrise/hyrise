@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 SQLIdentifier::SQLIdentifier(const std::string& init_column_name, const std::optional<std::string>& init_table_name)
     : column_name(init_column_name), table_name(init_table_name) {}
@@ -12,12 +12,12 @@ bool SQLIdentifier::operator==(const SQLIdentifier& rhs) const {
 }
 
 std::string SQLIdentifier::as_string() const {
-  std::stringstream ss;
+  std::stringstream sstream;
   if (table_name) {
-    ss << *table_name << ".";
+    sstream << *table_name << ".";
   }
-  ss << column_name;
-  return ss.str();
+  sstream << column_name;
+  return sstream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

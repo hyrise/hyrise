@@ -13,7 +13,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class RangeFilterTest : public BaseTest {
@@ -57,7 +57,7 @@ TYPED_TEST(RangeFilterTest, ValueRangeTooLarge) {
 }
 
 TYPED_TEST(RangeFilterTest, ThrowOnUnsortedData) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -120,7 +120,7 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
     EXPECT_FALSE(filter->does_not_contain(PredicateCondition::BetweenInclusive, third_gap_min, third_gap_max));
   }
   // starting with 4 ranges, all tested gaps should be covered
-  for (auto range_count : {4, 5, 100, 1'000}) {
+  for (const auto range_count : {4, 5, 100, 1'000}) {
     {
       const auto filter = RangeFilter<TypeParam>::build_filter(this->_values, range_count);
       EXPECT_TRUE(filter->does_not_contain(PredicateCondition::Equals, this->_value_in_gap));
@@ -133,7 +133,7 @@ TYPED_TEST(RangeFilterTest, MultipleRanges) {
     }
   }
   {
-    if (!HYRISE_DEBUG) {
+    if constexpr (!HYRISE_DEBUG) {
       GTEST_SKIP();
     }
 
@@ -340,4 +340,4 @@ TEST_F(RangeFilterTestUntyped, DoNotPruneUnsupportedPredicates) {
   EXPECT_FALSE(filter->does_not_contain(PredicateCondition::Equals, 1, NULL_VALUE));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

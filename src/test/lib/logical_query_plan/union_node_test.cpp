@@ -9,7 +9,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class UnionNodeTest : public BaseTest {
  protected:
@@ -257,4 +257,4 @@ TEST_F(UnionNodeTest, UniqueConstraintsUnionPositionsInvalidInput) {
   EXPECT_THROW(_union_node->unique_constraints(), std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

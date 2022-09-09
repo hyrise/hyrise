@@ -10,7 +10,7 @@
 #include "operator_join_predicate.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
    * This operator joins two tables using one column of each table by performing radix-partition-sort and a merge join.
@@ -65,4 +65,4 @@ class JoinSortMerge : public AbstractJoinOperator {
   std::unique_ptr<AbstractReadOnlyOperatorImpl> _impl;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

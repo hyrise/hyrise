@@ -15,10 +15,10 @@
 #include "utils/assert.hpp"
 #include "utils/format_bytes.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                    const std::shared_ptr<const AbstractOperator>& right,
@@ -45,9 +45,9 @@ AbstractOperator::~AbstractOperator() {
    */
   if constexpr (HYRISE_DEBUG) {
     auto transaction_context = _transaction_context.has_value() ? _transaction_context->lock() : nullptr;
-    bool aborted = transaction_context ? transaction_context->aborted() : false;
-    bool left_has_executed = _left_input ? _left_input->executed() : false;
-    bool right_has_executed = _right_input ? _right_input->executed() : false;
+    auto aborted = transaction_context ? transaction_context->aborted() : false;
+    auto left_has_executed = _left_input ? _left_input->executed() : false;
+    auto right_has_executed = _right_input ? _right_input->executed() : false;
     Assert(executed() || aborted || !left_has_executed || !right_has_executed || _consumer_count == 0,
            "Operator did not execute, but at least one input operator has.");
   }
@@ -183,6 +183,7 @@ void AbstractOperator::clear_output() {
   if (_never_clear_output) {
     return;
   }
+
   _transition_to(OperatorState::ExecutedAndCleared);
   _output = nullptr;
 }
@@ -313,11 +314,11 @@ void AbstractOperator::set_parameters(const std::unordered_map<ParameterID, AllT
   if (parameters.empty()) {
     return;
   }
+
   _on_set_parameters(parameters);
   if (left_input()) {
     mutable_left_input()->set_parameters(parameters);
   }
-
   if (right_input()) {
     mutable_right_input()->set_parameters(parameters);
   }
@@ -412,4 +413,4 @@ void AbstractOperator::_transition_to(OperatorState new_state) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

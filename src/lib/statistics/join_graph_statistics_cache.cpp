@@ -4,7 +4,7 @@
 #include "optimizer/join_ordering/join_graph.hpp"
 #include "statistics/table_statistics.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JoinGraphStatisticsCache JoinGraphStatisticsCache::from_join_graph(const JoinGraph& join_graph) {
   VertexIndexMap vertex_indices;
@@ -42,19 +42,20 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       DebugAssert(vertex_iter->second < bitmask->size(), "Vertex index out of range");
       bitmask->set(vertex_iter->second);
       return LQPVisitation::DoNotVisitInputs;
+    }
 
-    } else if (const auto join_node = std::dynamic_pointer_cast<const JoinNode>(node)) {
+    if (const auto join_node = std::dynamic_pointer_cast<const JoinNode>(node)) {
       if (join_node->join_mode == JoinMode::Inner) {
         for (const auto& join_predicate : join_node->join_predicates()) {
           const auto predicate_index_iter = _predicate_indices.find(join_predicate);
           if (predicate_index_iter == _predicate_indices.end()) {
             bitmask.reset();
             return LQPVisitation::DoNotVisitInputs;
-          } else {
-            Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
-                   "Predicate index out of range");
-            bitmask->set(predicate_index_iter->second + _vertex_indices.size());
           }
+
+          Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(),
+                 "Predicate index out of range");
+          bitmask->set(predicate_index_iter->second + _vertex_indices.size());
         }
       } else if (join_node->join_mode == JoinMode::Cross) {
         return LQPVisitation::VisitInputs;
@@ -69,11 +70,10 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
       if (predicate_index_iter == _predicate_indices.end()) {
         bitmask.reset();
         return LQPVisitation::DoNotVisitInputs;
-      } else {
-        Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
-        bitmask->set(predicate_index_iter->second + _vertex_indices.size());
       }
 
+      Assert(predicate_index_iter->second + _vertex_indices.size() < bitmask->size(), "Predicate index out of range");
+      bitmask->set(predicate_index_iter->second + _vertex_indices.size());
     } else if (node->type == LQPNodeType::Sort) {
       // ignore node type as it doesn't change the cardinality
     } else {
@@ -106,7 +106,8 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   // of the result
   auto cached_column_ids = std::vector<ColumnID>{requested_column_order.size()};
   auto result_column_data_types = std::vector<DataType>{requested_column_order.size()};
-  for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
+  const auto requested_column_order_size = requested_column_order.size();
+  for (auto column_id = ColumnID{0}; column_id < requested_column_order_size; ++column_id) {
     const auto cached_column_id_iter = cache_entry.column_expression_order.find(requested_column_order[column_id]);
     Assert(cached_column_id_iter != cache_entry.column_expression_order.end(), "Column not found in cached statistics");
     const auto cached_column_id = cached_column_id_iter->second;
@@ -115,10 +116,10 @@ std::shared_ptr<TableStatistics> JoinGraphStatisticsCache::get(
   }
 
   // Allocate the TableStatistics to be returned
-  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order.size()};
+  auto output_column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{requested_column_order_size};
 
   // Bring AttributeStatistics into the requested order for each statistics slice
-  for (auto column_id = ColumnID{0}; column_id < requested_column_order.size(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < requested_column_order_size; ++column_id) {
     const auto cached_column_id = cached_column_ids[column_id];
     const auto& cached_column_statistics = cached_table_statistics->column_statistics[cached_column_id];
     output_column_statistics[column_id] = cached_column_statistics;
@@ -136,10 +137,11 @@ void JoinGraphStatisticsCache::set(const Bitmask& bitmask,
   auto cache_entry = CacheEntry{};
   cache_entry.table_statistics = table_statistics;
 
-  for (auto column_id = ColumnID{0}; column_id < column_order.size(); ++column_id) {
+  const auto column_order_count = column_order.size();
+  for (auto column_id = ColumnID{0}; column_id < column_order_count; ++column_id) {
     cache_entry.column_expression_order.emplace(column_order[column_id], column_id);
   }
 
   _cache.emplace(bitmask, std::move(cache_entry));
 }
-}  // namespace opossum
+}  // namespace hyrise

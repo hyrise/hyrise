@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/abstract_plugin.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SecondTestPlugin : public AbstractPlugin {
  public:
@@ -15,11 +15,11 @@ class SecondTestPlugin : public AbstractPlugin {
 
   void stop() final;
 
-  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const final;
+  std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() final;
 
   void a_user_executable_function() const;
 
   StorageManager& storage_manager;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

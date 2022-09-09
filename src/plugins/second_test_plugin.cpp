@@ -2,7 +2,7 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string SecondTestPlugin::description() const {
   return "This is the Hyrise SecondTestPlugin";
@@ -12,8 +12,8 @@ void SecondTestPlugin::start() {}
 
 void SecondTestPlugin::stop() {}
 
-std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> SecondTestPlugin::provided_user_executable_functions()
-    const {
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
+SecondTestPlugin::provided_user_executable_functions() {
   return {{"OurFreelyChoosableFunctionName", [&]() { this->a_user_executable_function(); }}};
 }
 
@@ -27,4 +27,4 @@ void SecondTestPlugin::a_user_executable_function() const {
 
 EXPORT_PLUGIN(SecondTestPlugin)
 
-}  // namespace opossum
+}  // namespace hyrise

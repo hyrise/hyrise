@@ -13,9 +13,9 @@
 #include "pqp_subquery_expression.hpp"
 #include "value_expression.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {
@@ -26,11 +26,12 @@ bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& e
 bool expressions_equal_to_expressions_in_different_lqp(
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_left,
     const std::vector<std::shared_ptr<AbstractExpression>>& expressions_right, const LQPNodeMapping& node_mapping) {
-  if (expressions_left.size() != expressions_right.size()) {
+  const auto expressions_left_count = expressions_left.size();
+  if (expressions_left_count != expressions_right.size()) {
     return false;
   }
 
-  for (auto expression_idx = size_t{0}; expression_idx < expressions_left.size(); ++expression_idx) {
+  for (auto expression_idx = size_t{0}; expression_idx < expressions_left_count; ++expression_idx) {
     const auto& expression_left = *expressions_left[expression_idx];
     const auto& expression_right = *expressions_right[expression_idx];
 
@@ -79,9 +80,9 @@ void expression_deep_replace(std::shared_ptr<AbstractExpression>& expression,
     if (replacement_iter != mapping.end()) {
       sub_expression = replacement_iter->second;
       return ExpressionVisitation::DoNotVisitArguments;
-    } else {
-      return ExpressionVisitation::VisitArguments;
     }
+
+    return ExpressionVisitation::VisitArguments;
   });
 }
 
@@ -247,7 +248,8 @@ std::shared_ptr<AbstractExpression> inflate_logical_expressions(
     inflated = expressions.front();
   }
 
-  for (auto expression_idx = size_t{1}; expression_idx < expressions.size(); ++expression_idx) {
+  const auto expression_count = expressions.size();
+  for (auto expression_idx = size_t{1}; expression_idx < expression_count; ++expression_idx) {
     inflated = std::make_shared<LogicalExpression>(logical_operator, inflated, expressions[expression_idx]);
   }
 
@@ -263,16 +265,16 @@ void expression_set_parameters(const std::shared_ptr<AbstractExpression>& expres
       if (value_iter != parameters.end()) {
         correlated_parameter_expression->set_value(value_iter->second);
       }
-
       return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-               pqp_subquery_expression) {
-      pqp_subquery_expression->pqp->set_parameters(parameters);
-
-      return ExpressionVisitation::DoNotVisitArguments;
-    } else {
-      return ExpressionVisitation::VisitArguments;
     }
+
+    if (const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
+        pqp_subquery_expression) {
+      pqp_subquery_expression->pqp->set_parameters(parameters);
+      return ExpressionVisitation::DoNotVisitArguments;
+    }
+
+    return ExpressionVisitation::VisitArguments;
   });
 }
 
@@ -332,9 +334,13 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
   if (const auto* correlated_parameter_expression = dynamic_cast<const CorrelatedParameterExpression*>(&expression)) {
     DebugAssert(correlated_parameter_expression->value(), "CorrelatedParameterExpression doesn't have a value set");
     return *correlated_parameter_expression->value();
-  } else if (expression.type == ExpressionType::Value) {
+  }
+
+  if (expression.type == ExpressionType::Value) {
     return static_cast<const ValueExpression&>(expression).value;
-  } else if (expression.type == ExpressionType::Cast) {
+  }
+
+  if (expression.type == ExpressionType::Cast) {
     const auto& cast_expression = static_cast<const CastExpression&>(expression);
     Assert(expression.data_type() != DataType::Null, "Cast as NULL is undefined");
     // More complicated casts  should be resolved by ExpressionEvaluator.
@@ -361,6 +367,7 @@ std::optional<AllTypeVariant> expression_get_value_or_parameter(const AbstractEx
     });
     return result;
   }
+
   return std::nullopt;
 }
 
@@ -397,4 +404,4 @@ std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_exp
   return std::nullopt;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

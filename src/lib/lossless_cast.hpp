@@ -26,7 +26,7 @@
  * Those might incur information loss and might thus introduce bugs. See #1306, #1525.
  */
 
-namespace opossum {
+namespace hyrise {
 
 // Identity
 template <typename Target, typename Source>
@@ -219,4 +219,4 @@ std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
 
 std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& variant, DataType target_data_type);
 
-}  // namespace opossum
+}  // namespace hyrise

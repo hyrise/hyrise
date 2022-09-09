@@ -5,7 +5,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 class AbstractLQPNode;
@@ -43,4 +43,4 @@ struct OperatorJoinPredicate {
 bool operator<(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
 bool operator==(const OperatorJoinPredicate& l, const OperatorJoinPredicate& r);
 
-}  // namespace opossum
+}  // namespace hyrise

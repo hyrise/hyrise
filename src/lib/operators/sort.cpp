@@ -5,7 +5,13 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
+
+// Ceiling of integer division
+size_t div_ceil(const size_t lhs, const ChunkOffset rhs) {
+  DebugAssert(rhs > 0, "Divisor must be larger than 0.");
+  return (lhs + rhs - 1u) / rhs;
+}
 
 // Given an unsorted_table and a pos_list that defines the output order, this materializes all columns in the table,
 // creating chunks of output_chunk_size rows at maximum.
@@ -19,8 +25,6 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   // values are not sorted by input chunks anymore, we can't process them chunk by chunk. Instead the values are copied
   // column by column for each output row.
 
-  // Ceiling of integer division
-  const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
@@ -136,8 +140,6 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   const auto resolve_indirection = unsorted_table->type() == TableType::References;
   const auto column_count = output_table->column_count();
 
-  // Ceiling of integer division
-  const auto div_ceil = [](auto x, auto y) { return (x + y - 1u) / y; };
   const auto output_chunk_count = div_ceil(input_pos_list.size(), output_chunk_size);
   Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
@@ -189,7 +191,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
       // Iterate over rows in sorted input pos list, dereference them if necessary, and write a chunk every
       // `output_chunk_size` rows.
-      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list.size();
+      const auto input_pos_list_size = input_pos_list.size();
+      for (auto input_pos_list_offset = size_t{0}; input_pos_list_offset < input_pos_list_size;
            ++input_pos_list_offset) {
         const auto& row_id = input_pos_list[input_pos_list_offset];
         if (resolve_indirection) {
@@ -223,11 +226,12 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-Sort::Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
-           const ChunkOffset output_chunk_size, const ForceMaterialization force_materialization)
-    : AbstractReadOnlyOperator(OperatorType::Sort, in, nullptr,
+Sort::Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
+           const std::vector<SortColumnDefinition>& sort_definitions, const ChunkOffset output_chunk_size,
+           const ForceMaterialization force_materialization)
+    : AbstractReadOnlyOperator(OperatorType::Sort, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       _sort_definitions(sort_definitions),
       _output_chunk_size(output_chunk_size),
@@ -265,9 +269,9 @@ std::shared_ptr<const Table> Sort::_on_execute() {
   if (input_table->row_count() == 0) {
     if (_force_materialization == ForceMaterialization::Yes && input_table->type() == TableType::References) {
       return Table::create_dummy_table(input_table->column_definitions());
-    } else {
-      return input_table;
     }
+
+    return input_table;
   }
 
   std::shared_ptr<Table> sorted_table;
@@ -386,8 +390,9 @@ class Sort::SortImpl {
 
     // 2. After we got our ValueRowID Map we sort the map by the value of the pair
     const auto sort_with_comparator = [&](auto comparator) {
-      std::stable_sort(_row_id_value_vector.begin(), _row_id_value_vector.end(),
-                       [comparator](RowIDValuePair a, RowIDValuePair b) { return comparator(a.second, b.second); });
+      std::stable_sort(
+          _row_id_value_vector.begin(), _row_id_value_vector.end(),
+          [comparator](RowIDValuePair lhs, RowIDValuePair rhs) { return comparator(lhs.second, rhs.second); });
     };
     if (_sort_mode == SortMode::Ascending) {
       sort_with_comparator(std::less<>{});
@@ -477,4 +482,4 @@ class Sort::SortImpl {
   std::vector<RowIDValuePair> _null_value_rows;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

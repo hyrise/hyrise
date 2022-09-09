@@ -2,7 +2,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
   DebugAssert(size > 0, "No point in having empty MVCC data, as it cannot grow");
@@ -83,4 +83,4 @@ size_t MvccData::memory_usage() const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

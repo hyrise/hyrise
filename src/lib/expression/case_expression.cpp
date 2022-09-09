@@ -4,7 +4,7 @@
 
 #include "expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CaseExpression::CaseExpression(const std::shared_ptr<AbstractExpression>& when,
                                const std::shared_ptr<AbstractExpression>& then,
@@ -48,4 +48,4 @@ bool CaseExpression::_shallow_equals(const AbstractExpression& expression) const
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

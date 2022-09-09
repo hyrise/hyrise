@@ -3,7 +3,7 @@
 #include "base_test.hpp"
 #include "memory/zero_allocator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Chunk;
 
@@ -19,4 +19,4 @@ TEST_F(ZeroAllocatorTest, ZeroFilledSharedPointer) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

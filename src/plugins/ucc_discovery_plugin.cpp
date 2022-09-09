@@ -22,7 +22,7 @@
 
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string UccDiscoveryPlugin::description() const {
   return "Unary Unique Column Combination Discovery Plugin";
@@ -31,7 +31,6 @@ std::string UccDiscoveryPlugin::description() const {
 void UccDiscoveryPlugin::start() {}
 
 void UccDiscoveryPlugin::discover_uccs() const {
-  const auto current_commit = Hyrise::get().transaction_manager.last_commit_id();
   const auto& ucc_candidates = identify_ucc_candidates();
 
   for (const auto& candidate : ucc_candidates) {
@@ -121,8 +120,7 @@ void UccDiscoveryPlugin::discover_uccs() const {
       // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
       message << " [confirmed in " << format_duration(candidate_time.lap()) << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-      table->add_soft_key_constraint(TableKeyConstraint(std::unordered_set(std::initializer_list<ColumnID>{col_id}),
-                                                        KeyConstraintType::UNIQUE, current_commit));
+      table->add_soft_key_constraint(TableKeyConstraint({col_id}, KeyConstraintType::UNIQUE));
     });
   }
   Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
@@ -134,7 +132,7 @@ void UccDiscoveryPlugin::discover_uccs() const {
 void UccDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
-UccDiscoveryPlugin::provided_user_executable_functions() const {
+UccDiscoveryPlugin::provided_user_executable_functions() {
   return {{"DiscoverUCCs", [&]() { discover_uccs(); }}};
 }
 
@@ -344,4 +342,4 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
 
 EXPORT_PLUGIN(UccDiscoveryPlugin)
 
-}  // namespace opossum
+}  // namespace hyrise

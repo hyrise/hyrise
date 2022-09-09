@@ -6,13 +6,14 @@
 #include "operators/limit.hpp"
 #include "operators/pqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PQPUtilsTest : public BaseTest {
  public:
   void SetUp() override {
     node_a = std::make_shared<GetTable>("foo");
   }
+
   std::shared_ptr<AbstractOperator> node_a;
 };
 
@@ -78,4 +79,4 @@ TEST_F(PQPUtilsTest, VisitPQPConstOperators) {
   EXPECT_EQ(actual_nodes, expected_nodes);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

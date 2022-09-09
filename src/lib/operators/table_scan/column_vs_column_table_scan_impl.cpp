@@ -14,7 +14,7 @@
 #include "type_comparison.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnVsColumnTableScanImpl::ColumnVsColumnTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                          const ColumnID left_column_id,
@@ -170,6 +170,7 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
 
     if (condition_was_flipped) {
       const auto erased_comparator = conditionally_erase_comparator_type(comparator, right_it, left_it);
+      // NOLINTNEXTLINE(readability-suspicious-call-argument) - flipped arguments by intention
       AbstractTableScanImpl::_scan_with_iterators<true>(erased_comparator, right_it, right_end, chunk_id, *matches_out,
                                                         left_it);
     } else {
@@ -182,4 +183,4 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
   return matches_out;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

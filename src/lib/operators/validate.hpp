@@ -8,7 +8,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Validates visibility of records of a table
@@ -20,7 +20,7 @@ class Validate : public AbstractReadOnlyOperator {
   friend class OperatorsValidateTest;
 
  public:
-  explicit Validate(const std::shared_ptr<AbstractOperator>& in);
+  explicit Validate(const std::shared_ptr<AbstractOperator>& input_operator);
 
   const std::string& name() const override;
 
@@ -29,7 +29,7 @@ class Validate : public AbstractReadOnlyOperator {
                              const CommitID begin_cid, const CommitID end_cid);
 
  private:
-  void _validate_chunks(const std::shared_ptr<const Table>& in_table, const ChunkID chunk_id_start,
+  void _validate_chunks(const std::shared_ptr<const Table>& input_table, const ChunkID chunk_id_start,
                         const ChunkID chunk_id_end, const TransactionID our_tid, const CommitID snapshot_commit_id,
                         std::vector<std::shared_ptr<Chunk>>& output_chunks, std::mutex& output_mutex) const;
 
@@ -49,4 +49,4 @@ class Validate : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

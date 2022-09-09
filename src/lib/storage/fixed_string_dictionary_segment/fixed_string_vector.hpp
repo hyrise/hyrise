@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // FixedStringVector is a data type, which stores all its values in a vector and
 // is capable of storing FixedStrings.
@@ -77,7 +77,7 @@ class FixedStringVector {
   size_t string_length() const;
 
   // Request the vector capacity to be at least enough to contain n elements
-  void reserve(const size_t n);
+  void reserve(const size_t size);
 
   // Remove elements from the vector
   void erase(const FixedStringIterator<false> start, const FixedStringIterator<false> end);
@@ -97,4 +97,4 @@ class FixedStringVector {
   size_t _size = 0;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

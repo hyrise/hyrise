@@ -5,7 +5,7 @@
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class TableStatistics;
@@ -63,4 +63,4 @@ class AbstractCostEstimator {
                                                    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

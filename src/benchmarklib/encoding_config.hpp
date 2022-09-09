@@ -8,7 +8,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using DataTypeEncodingMapping = std::unordered_map<DataType, SegmentEncodingSpec>;
 
@@ -37,7 +37,7 @@ class EncodingConfig {
 
   nlohmann::json to_json() const;
 
-  static const char* description;
+  static const char* const description;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

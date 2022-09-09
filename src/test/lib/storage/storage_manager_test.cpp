@@ -10,7 +10,7 @@
 #include "storage/table.hpp"
 #include "utils/meta_table_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageManagerTest : public BaseTest {
  protected:
@@ -183,9 +183,9 @@ TEST_F(StorageManagerTest, ExportTables) {
   // add a non-empty table
   sm.add_table("third_table", load_table("resources/test_data/tbl/int_float.tbl"));
 
-  sm.export_all_tables_as_csv(opossum::test_data_path);
+  sm.export_all_tables_as_csv(test_data_path);
 
-  const std::string filename = opossum::test_data_path + "/third_table.csv";
+  const std::string filename = test_data_path + "/third_table.csv";
   EXPECT_TRUE(std::filesystem::exists(filename));
   std::filesystem::remove(filename);
 }
@@ -232,4 +232,4 @@ TEST_F(StorageManagerTest, HasPreparedPlan) {
   EXPECT_EQ(sm.has_prepared_plan("first_prepared_plan"), true);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

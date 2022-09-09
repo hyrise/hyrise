@@ -18,7 +18,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ReferenceSegmentTest : public BaseTest {
   void SetUp() override {
@@ -26,7 +26,7 @@ class ReferenceSegmentTest : public BaseTest {
     column_definitions.emplace_back("a", DataType::Int, true);
     column_definitions.emplace_back("b", DataType::Float, false);
 
-    _test_table = std::make_shared<opossum::Table>(column_definitions, TableType::Data, ChunkOffset{3});
+    _test_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
     _test_table->append({123, 456.7f});
     _test_table->append({1234, 457.7f});
     _test_table->append({12345, 458.7f});
@@ -36,8 +36,7 @@ class ReferenceSegmentTest : public BaseTest {
     TableColumnDefinitions column_definitions2;
     column_definitions2.emplace_back("a", DataType::Int, false);
     column_definitions2.emplace_back("b", DataType::Int, false);
-    _test_table_dict =
-        std::make_shared<opossum::Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
+    _test_table_dict = std::make_shared<Table>(column_definitions2, TableType::Data, ChunkOffset{5}, UseMvcc::Yes);
     for (auto index = int32_t{0}; index <= 24; index += 2) {
       _test_table_dict->append({index, 100 + index});
     }
@@ -48,7 +47,7 @@ class ReferenceSegmentTest : public BaseTest {
   }
 
  public:
-  std::shared_ptr<opossum::Table> _test_table, _test_table_dict;
+  std::shared_ptr<Table> _test_table, _test_table_dict;
 };
 
 TEST_F(ReferenceSegmentTest, RetrievesValues) {
@@ -125,4 +124,4 @@ TEST_F(ReferenceSegmentTest, MemoryUsageEstimation) {
             reference_segment_b.memory_usage(MemoryUsageCalculationMode::Sampled) + 2 * sizeof(RowID));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

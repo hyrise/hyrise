@@ -5,7 +5,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -81,4 +81,4 @@ class EnableMakeForLQPNode {
                                                 std::shared_ptr<AbstractLQPNode>>;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

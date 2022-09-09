@@ -1,23 +1,23 @@
 #include "settings_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool SettingsManager::has_setting(const std::string& name) const {
-  return _settings.count(name);
+  return _settings.contains(name);
 }
 
 void SettingsManager::_add(std::shared_ptr<AbstractSetting> setting) {
-  Assert(!_settings.count(setting->name), "A setting with that name already exists.");
+  Assert(!_settings.contains(setting->name), "A setting with that name already exists.");
   _settings[setting->name] = std::move(setting);
 }
 
 void SettingsManager::_remove(const std::string& name) {
-  Assert(_settings.count(name), "A setting with that name does not exist.");
+  Assert(_settings.contains(name), "A setting with that name does not exist.");
   _settings.erase(name);
 }
 
 std::shared_ptr<AbstractSetting> SettingsManager::get_setting(const std::string& name) const {
-  Assert(_settings.count(name), "A setting with that name does not exist.");
+  Assert(_settings.contains(name), "A setting with that name does not exist.");
   return _settings.at(name);
 }
 
@@ -33,4 +33,4 @@ std::vector<std::string> SettingsManager::setting_names() const {
   return settings_list;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

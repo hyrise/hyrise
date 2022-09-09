@@ -18,7 +18,7 @@
  * Its 113 queries are obtained from the "third_party/join-order-benchmark" submodule
  */
 
-using namespace opossum;               // NOLINT
+using namespace hyrise;                // NOLINT
 using namespace std::string_literals;  // NOLINT
 
 /**

@@ -17,9 +17,9 @@
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
@@ -78,7 +78,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _stored_table_a, _stored_table_b, _stored_table_c, _stored_table_d, _stored_table_e;
   std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a;
-  std::shared_ptr<opossum::LQPSubqueryExpression> _subquery_c, _subquery;
+  std::shared_ptr<hyrise::LQPSubqueryExpression> _subquery_c, _subquery;
 };
 
 TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
@@ -922,4 +922,4 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

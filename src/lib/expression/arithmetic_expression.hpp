@@ -4,7 +4,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class ArithmeticOperator { Addition, Subtraction, Multiplication, Division, Modulo };
 
@@ -36,4 +36,4 @@ class ArithmeticExpression : public AbstractExpression {
   ExpressionPrecedence _precedence() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

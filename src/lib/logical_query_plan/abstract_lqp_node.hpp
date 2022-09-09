@@ -10,7 +10,7 @@
 #include "lqp_unique_constraint.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class LQPNodeType {
   Aggregate,
@@ -305,4 +305,4 @@ template <typename Value>
 using LQPNodeUnorderedMap =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, Value, LQPNodeSharedPtrHash, LQPNodeSharedPtrEqual>;
 
-}  // namespace opossum
+}  // namespace hyrise

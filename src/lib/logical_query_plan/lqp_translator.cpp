@@ -72,7 +72,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
   /**
@@ -271,7 +271,7 @@ std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_sca
 }
 
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_alias_node(
-    const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto alias_node = std::dynamic_pointer_cast<AliasNode>(node);
   const auto input_node = alias_node->left_input();
   const auto input_operator = translate_node(input_node);
@@ -372,11 +372,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_join_node(
       return;
     }
 
+    // NOLINTBEGIN(bugprone-use-after-move, hicpp-invalid-access-moved)
+    // clang-tidy complains about the move in the loop as it does not recognize the early out above.
     if (JoinOperator::supports({join_node->join_mode, primary_join_predicate.predicate_condition, left_data_type,
                                 right_data_type, !secondary_join_predicates.empty()})) {
       join_operator = std::make_shared<JoinOperator>(left_input_operator, right_input_operator, join_node->join_mode,
                                                      primary_join_predicate, std::move(secondary_join_predicates));
     }
+    // NOLINTEND(bugprone-use-after-move, hicpp-invalid-access-moved)
   });
   Assert(join_operator, "No operator implementation available for join '"s + join_node->description() + "'");
 
@@ -555,7 +558,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_export_node(
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan_node(
-    const std::shared_ptr<opossum::AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto create_prepared_plan_node = std::dynamic_pointer_cast<CreatePreparedPlanNode>(node);
   return std::make_shared<CreatePreparedPlan>(create_prepared_plan_node->name,
                                               create_prepared_plan_node->prepared_plan);
@@ -672,4 +675,4 @@ std::vector<std::shared_ptr<AbstractExpression>> LQPTranslator::_translate_expre
   return pqp_expressions;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

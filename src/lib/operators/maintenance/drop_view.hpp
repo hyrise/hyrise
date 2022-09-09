@@ -7,7 +7,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operators/abstract_read_only_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // maintenance operator for the "CREATE VIEW" sql statement
 class DropView : public AbstractReadOnlyOperator {
@@ -27,4 +27,4 @@ class DropView : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 };
-}  // namespace opossum
+}  // namespace hyrise

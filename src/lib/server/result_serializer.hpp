@@ -5,7 +5,7 @@
 #include "postgres_protocol_handler.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct ExecutionInformation;
 
@@ -30,4 +30,4 @@ class ResultSerializer {
   static std::string build_command_complete_message(const OperatorType root_operator_type, const uint64_t row_count);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

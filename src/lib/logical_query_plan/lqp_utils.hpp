@@ -10,7 +10,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 class AbstractLQPNode;
@@ -239,8 +239,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
  *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
  */
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::unordered_set<ColumnID>& column_ids);
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids);
 
 /**
  * @return True, if there is unique constraint in the given set of @param unique_constraints matching the given
@@ -268,4 +267,4 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 
-}  // namespace opossum
+}  // namespace hyrise

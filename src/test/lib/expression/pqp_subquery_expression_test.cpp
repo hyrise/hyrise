@@ -15,10 +15,10 @@
 #include "operators/union_positions.hpp"
 #include "utils/load_table.hpp"
 
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PQPSubqueryExpressionTest : public BaseTest {
  public:
@@ -146,4 +146,4 @@ TEST_F(PQPSubqueryExpressionTest, AsColumnName) {
                                 std::regex{"SUBQUERY \\(PQP, 0x[0-9a-f]+\\)"}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

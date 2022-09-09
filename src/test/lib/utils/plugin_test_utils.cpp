@@ -1,6 +1,6 @@
 #include "plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 #ifdef __APPLE__
 #define DYNAMIC_LIBRARY_SUFFIX ".dylib"
@@ -14,4 +14,4 @@ const std::string build_dylib_path(const std::string& name) {
   return std::string(TEST_PLUGIN_DIR) + name + std::string(DYNAMIC_LIBRARY_SUFFIX);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

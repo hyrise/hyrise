@@ -5,9 +5,9 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::string PredicateMergeRule::name() const {
   static const auto name = std::string{"PredicateMergeRule"};
@@ -192,4 +192,4 @@ void PredicateMergeRule::_merge_conjunction(const std::shared_ptr<PredicateNode>
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise
