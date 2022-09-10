@@ -12,9 +12,6 @@ class MemoryTrackingPluginTest : public BaseTest {
   void SetUp() override {
     _memory_resource_manager = &Hyrise::get().memory_resource_manager;
   }
-  void TearDown() override {
-    Hyrise::reset();
-  }
 };
 
 TEST_F(MemoryTrackingPluginTest, EnableAndDisableNoAllocations) {

@@ -59,7 +59,7 @@ TEST_F(MetaTemporaryMemoryUsageTest, TableGeneration) {
 
   ASSERT_EQ(meta_table->row_count(), 6);
 
-  const auto timestamp_ns = std::chrono::nanoseconds{std::chrono::system_clock::now().time_since_epoch()}.count();
+  const auto timestamp_ns = std::chrono::nanoseconds{std::chrono::steady_clock::now().time_since_epoch()}.count();
 
   // Check individual rows (we can't simply compare to a pre-built table because the timestamp values will vary between
   // test runs).
