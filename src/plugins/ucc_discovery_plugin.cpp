@@ -114,7 +114,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UCCCandidates& ucc_candi
 template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_in_dictionary_segments(std::shared_ptr<Table> table, ColumnID col_id) const {
   const auto chunk_count = table->chunk_count();
-  // we can trigger an early-out if we find the attribute vector of a dictionary segment to be longer than its dictionary
+  // trigger an early-out if we find the attribute vector of a dictionary segment to be longer than its dictionary
   // an attribute vector longer than the dictionary indicates that at least one duplicate value is contained
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& source_chunk = table->get_chunk(chunk_id);
@@ -129,7 +129,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_in_dictionary_segments(std::shared_pt
     }
 
     const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
-    if (dict_segment) {  
+    if (dict_segment) {
       if (dict_segment->dictionary()->size() != dict_segment->attribute_vector()->size()) {
         return false;
       }
@@ -138,7 +138,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_in_dictionary_segments(std::shared_pt
   return true;
 }
 
-template <typename ColumnDataType> 
+template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID col_id) const {
   const auto chunk_count = table->chunk_count();
   // all_values collects the segment values from all chunks.
@@ -177,7 +177,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
       if (all_values.size() == all_values_size + dict->size()) {
         all_values_size += dict->size();
       } else {
-        // If not all elements have been inserted, there be a duplicate, so the UCC constraint is violated 
+        // If not all elements have been inserted, there be a duplicate, so the UCC constraint is violated
         return false;
       }
     } else {
@@ -187,7 +187,8 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
   return true;
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const {
+void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
+                                                             UCCCandidates& ucc_candidates) const {
   const auto& aggregate_node = static_cast<AggregateNode&>(*node);
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
       aggregate_node.node_expressions.begin(),
@@ -205,7 +206,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<Abs
   }
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const {
+void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
+                                                        UCCCandidates& ucc_candidates) const {
   const auto& join_node = static_cast<JoinNode&>(*node);
   /* 
    * Fetch the Join Predicate to extract the UCC candidates from.
@@ -214,9 +216,15 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
    * have the capability to rewrite those, therefore the columns are not yet useful candidates.
    */
   const auto& join_predicates = join_node.join_predicates();
-  const std::shared_ptr<BinaryPredicateExpression> equals_join_predicate = (join_predicates.size() == 1) ? std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates[0]) : nullptr;
+  const std::shared_ptr<BinaryPredicateExpression> binary_join_predicate =
+      (join_predicates.size() == 1) ? std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates[0])
+                                    : nullptr;
 
-  if (!equals_join_predicate) {
+  if (!binary_join_predicate) {
+    return;
+  }
+  if (binary_join_predicate->predicate_condition != PredicateCondition::Equals) {
+    // Once they can be utilized by rules, also allow <=, >= and != predicate conditions
     return;
   }
 
@@ -227,9 +235,9 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
       // want to check only the left hand side here, as this is the one that will be removed in the end
       const auto subtree_root = join_node.left_input();
       // predicate may be swapped, so get proper operand
-      auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->left_operand());
+      auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(binary_join_predicate->left_operand());
       if (!expression_evaluable_on_lqp(column_candidate, *subtree_root)) {
-        column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->right_operand());
+        column_candidate = std::static_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
       }
 
       _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
@@ -237,7 +245,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
     }
 
     case JoinMode::Inner: {
-      const auto column_candidates = {equals_join_predicate->left_operand(), equals_join_predicate->right_operand()};
+      const auto column_candidates = {binary_join_predicate->left_operand(), binary_join_predicate->right_operand()};
       for (const auto& column_candidate : column_candidates) {
         const auto lqp_column_expression = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
 
@@ -262,9 +270,9 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
       // want to check only the right hand side here, as this is the one that will be removed in the end
       const auto subtree_root = join_node.right_input();
       // predicate may be swapped, so get proper operand
-      auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->right_operand());
+      auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
       if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
-        column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->left_operand());
+        column_candidate = std::static_pointer_cast<LQPColumnExpression>(binary_join_predicate->left_operand());
       }
 
       _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
@@ -277,7 +285,9 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
   }
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate, UCCCandidates& ucc_candidates) const {
+void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
+    std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate,
+    UCCCandidates& ucc_candidates) const {
   if (!root_node) {
     // input node may already be nullptr in case we try to get right input of node with only one input
     return;

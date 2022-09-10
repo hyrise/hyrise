@@ -101,14 +101,16 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * and a column used in a PredicateNode may be added as a UCC candidate if the Predicate filters the same table that
    * contains the join column.
    */
-  void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,  UCCCandidates& ucc_candidates) const;
+  void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const;
 
   /**
    * Iterates through the LQP underneath the given root node.
    * If a PredicateNode is encountered, checks whether it is a binary predicate checking for column = value.
    * If the predicate column is from the same table as the passed column_candidate, adds both as ucc_candidates
    */
-  void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate, UCCCandidates& ucc_candidates) const;
+  void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
+                                                 std::shared_ptr<LQPColumnExpression> column_candidate,
+                                                 UCCCandidates& ucc_candidates) const;
 };
 
 }  // namespace hyrise
