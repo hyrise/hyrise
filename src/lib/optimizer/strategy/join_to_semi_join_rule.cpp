@@ -31,6 +31,11 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     if (node->type == LQPNodeType::Join) {
       auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
 
+      // We don't rewrite semi- and anti-joins.
+      if (join_node->join_mode != JoinMode::Inner) {
+        return LQPVisitation::VisitInputs;
+      }
+
       /**
        * We can only rewrite an inner join to a semi join when it has a join cardinality of 1:1 or n:1, which we check * as follows:
        * (1) From all predicates of type Equals, we collect the operand expressions by input node.
