@@ -76,8 +76,7 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
         const auto temp = join_node->left_input();
         join_node->set_left_input(join_node->right_input());
         join_node->set_right_input(temp);
-      }
-      if (join_node->get_unused_input().value() == LQPInputSide::Right &&
+      } else if (join_node->get_unused_input().value() == LQPInputSide::Right &&
           join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
         join_node->join_mode = JoinMode::Semi;
       }

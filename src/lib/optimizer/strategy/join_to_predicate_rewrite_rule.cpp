@@ -35,9 +35,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
   });
 
   const auto rewritables_size = rewritables.size();
-  std::cout << "rewritables_size: " << rewritables_size << std::endl;
   for (auto index = size_t{0}; index < rewritables_size; ++index) {
-    std::cout << *std::get<0>(rewritables[index]) << std::endl;
     _perform_rewrite(std::get<0>(rewritables[index]), std::get<1>(rewritables[index]), std::get<2>(rewritables[index]));
   }
 }
