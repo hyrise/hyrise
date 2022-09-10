@@ -10,7 +10,6 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "magic_enum.hpp"
-#include "storage/table.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
@@ -24,9 +23,44 @@ std::string UccDiscoveryPlugin::description() const {
 
 void UccDiscoveryPlugin::start() {}
 
-void UccDiscoveryPlugin::discover_uccs() const {
-  const auto& ucc_candidates = identify_ucc_candidates();
+void UccDiscoveryPlugin::stop() {}
 
+std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
+UccDiscoveryPlugin::provided_user_executable_functions() {
+  return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
+}
+
+UCCCandidates UccDiscoveryPlugin::_identify_ucc_candidates() const {
+  // get a snapshot of the current LQP cache to work on all currently cached queries
+  const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
+
+  auto ucc_candidates = UCCCandidates{};
+
+  for (const auto& [_, entry] : snapshot) {
+    const auto& root_node = entry.value;
+
+    visit_lqp(root_node, [&](auto& node) {
+      const auto type = node->type;
+      if (type != LQPNodeType::Join && type != LQPNodeType::Aggregate) {
+        // Non-Join and Non-Aggregate (Groupby) nodes are not considered for optimization using UCCs
+        return LQPVisitation::VisitInputs;
+      }
+
+      if (type == LQPNodeType::Aggregate) {
+        _ucc_candidates_from_aggregate_node(node, ucc_candidates);
+        return LQPVisitation::VisitInputs;
+      }
+      // no need for if statement; only remaining option is a join node
+      _ucc_candidates_from_join_node(node, ucc_candidates);
+
+      return LQPVisitation::VisitInputs;
+    });
+  }
+
+  return ucc_candidates;
+}
+
+void UccDiscoveryPlugin::_validate_ucc_candidates(const UCCCandidates& ucc_candidates) const {
   for (const auto& candidate : ucc_candidates) {
     auto candidate_time = Timer();
     const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name());
@@ -37,8 +71,6 @@ void UccDiscoveryPlugin::discover_uccs() const {
     message << "Checking candidate " << candidate.table_name() << "." << table->column_name(col_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
-
-    const auto chunk_count = table->chunk_count();
 
     // Skip already discovered unique constraints.
     if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(), [&col_id](const auto& key_constraint) {
@@ -53,85 +85,18 @@ void UccDiscoveryPlugin::discover_uccs() const {
     resolve_data_type(table->column_data_type(col_id), [&](const auto data_type_t) {
       using ColumnDataType = typename decltype(data_type_t)::type;
 
-      // we can trigger an early-out if we find the attribute vector of a dictionary segment to be longer than its dictionary
-      // an attribute vector longer than the dictionary indicates that at least one duplicate value is contained
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto& source_chunk = table->get_chunk(chunk_id);
-        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
-        if (!source_chunk) {
-          continue;
-        }
-        const auto& source_segment = source_chunk->get_segment(col_id);
-        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
-        if (!source_segment) {
-          continue;
-        }
-
-        // TODO: type check instead?
-        const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
-        if (dict_segment) {  
-          const auto& dict = dict_segment->dictionary();
-          const auto& attr_vector = dict_segment->attribute_vector();
-
-          if (dict->size() != attr_vector->size()) {
-            message << " [rejected in " << format_duration(candidate_time.lap()) << "]";
-            Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-            return;
-          }
-        }
+      // utilize efficient check for uniqueness inside each dictionary segment for a potential early out
+      if (!_uniqueness_holds_in_dictionary_segments<ColumnDataType>(table, col_id)) {
+        message << " [rejected in " << format_duration(candidate_time.lap()) << "]";
+        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        return;
       }
 
-      /*  If we reach here, we have to run a cross-segment duplicate check
-       *  We check by inserting all values into an unordered set, 
-       *  if the size increases by less than we had values, there was a duplicate
-       */
-      // all_values collects the segment values from all chunks.
-      auto all_values = std::unordered_set<ColumnDataType>{};
-      auto all_values_size = size_t{0};
-
-      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        const auto& source_chunk = table->get_chunk(chunk_id);
-        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
-        if (!source_chunk) {
-          continue;
-        }
-        const auto& source_segment = source_chunk->get_segment(col_id);
-        // if the chunk does no longer exist, it can't contribute duplicates, so skip it
-        if (!source_segment) {
-          continue;
-        }
-
-        // TODO: could also do a type check here?
-        const auto& val_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment);
-        const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
-
-        if (val_segment) {
-          const auto& values = val_segment->values();
-
-          all_values.insert(begin(values), end(values));
-          if (all_values.size() == all_values_size + values.size()) {
-            all_values_size += values.size();
-          } else {
-            // If not all elements have been inserted, there must be a duplicate, so the UCC constraint is violated
-            message << " [rejected in " << format_duration(candidate_time.lap()) << "]";
-            Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-            return;
-          }
-        } else if (dict_segment) {
-          const auto& dict = dict_segment->dictionary();
-
-          all_values.insert(begin(*dict), end(*dict));
-          if (all_values.size() == all_values_size + dict->size()) {
-            all_values_size += dict->size();
-          } else {
-            // If not all elements have been inserted, there be a duplicate, so the UCC constraint is violated
-            message << " [rejected in " << format_duration(candidate_time.lap()) << "]";
-            Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
-            return;
-          }
-        } else {
-          Fail("The given segment type is not supported for the discovery of UCCs.");
-        }
+      // If we reach here, we have to run the more expensive cross-segment duplicate check
+      if (!_uniqueness_holds_across_segments<ColumnDataType>(table, col_id)) {
+        message << " [rejected in " << format_duration(candidate_time.lap()) << "]";
+        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        return;
       }
 
       // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
@@ -146,11 +111,80 @@ void UccDiscoveryPlugin::discover_uccs() const {
   Hyrise::get().default_pqp_cache->clear();
 }
 
-void UccDiscoveryPlugin::stop() {}
+template <typename ColumnDataType>
+bool UccDiscoveryPlugin::_uniqueness_holds_in_dictionary_segments(std::shared_ptr<Table> table, ColumnID col_id) const {
+  const auto chunk_count = table->chunk_count();
+  // we can trigger an early-out if we find the attribute vector of a dictionary segment to be longer than its dictionary
+  // an attribute vector longer than the dictionary indicates that at least one duplicate value is contained
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& source_chunk = table->get_chunk(chunk_id);
+    // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+    if (!source_chunk) {
+      continue;
+    }
+    const auto& source_segment = source_chunk->get_segment(col_id);
+    // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+    if (!source_segment) {
+      continue;
+    }
 
-std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
-UccDiscoveryPlugin::provided_user_executable_functions() {
-  return {{"DiscoverUCCs", [&]() { discover_uccs(); }}};
+    const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+    if (dict_segment) {  
+      if (dict_segment->dictionary()->size() != dict_segment->attribute_vector()->size()) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+template <typename ColumnDataType> 
+bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID col_id) const {
+  const auto chunk_count = table->chunk_count();
+  // all_values collects the segment values from all chunks.
+  auto all_values = std::unordered_set<ColumnDataType>{};
+  auto all_values_size = size_t{0};
+
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& source_chunk = table->get_chunk(chunk_id);
+    // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+    if (!source_chunk) {
+      continue;
+    }
+    const auto& source_segment = source_chunk->get_segment(col_id);
+    // if the chunk does no longer exist, it can't contribute duplicates, so skip it
+    if (!source_segment) {
+      continue;
+    }
+
+    const auto& val_segment = std::dynamic_pointer_cast<ValueSegment<ColumnDataType>>(source_segment);
+    const auto& dict_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment);
+
+    if (val_segment) {
+      const auto& values = val_segment->values();
+
+      all_values.insert(begin(values), end(values));
+      if (all_values.size() == all_values_size + values.size()) {
+        all_values_size += values.size();
+      } else {
+        // If not all elements have been inserted, there must be a duplicate, so the UCC constraint is violated
+        return false;
+      }
+    } else if (dict_segment) {
+      const auto& dict = dict_segment->dictionary();
+
+      all_values.insert(begin(*dict), end(*dict));
+      if (all_values.size() == all_values_size + dict->size()) {
+        all_values_size += dict->size();
+      } else {
+        // If not all elements have been inserted, there be a duplicate, so the UCC constraint is violated 
+        return false;
+      }
+    } else {
+      Fail("The given segment type is not supported for the discovery of UCCs.");
+    }
+  }
+  return true;
 }
 
 void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const {
@@ -290,36 +324,6 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(std::shared_p
       return LQPVisitation::VisitInputs;
     });
   }
-}
-
-UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
-  // get a snapshot of the current LQP cache to work on all currently cached queries
-  const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
-
-  auto ucc_candidates = UCCCandidates{};
-
-  for (const auto& [_, entry] : snapshot) {
-    const auto& root_node = entry.value;
-
-    visit_lqp(root_node, [&](auto& node) {
-      const auto type = node->type;
-      if (type != LQPNodeType::Join && type != LQPNodeType::Aggregate) {
-        // Non-Join and Non-Aggregate (Groupby) nodes are not considered for optimization using UCCs
-        return LQPVisitation::VisitInputs;
-      }
-
-      if (type == LQPNodeType::Aggregate) {
-        _ucc_candidates_from_aggregate_node(node, ucc_candidates);
-        return LQPVisitation::VisitInputs;
-      }
-      // no need for if statement; only remaining option is a join node
-      _ucc_candidates_from_join_node(node, ucc_candidates);
-
-      return LQPVisitation::VisitInputs;
-    });
-  }
-
-  return ucc_candidates;
 }
 
 EXPORT_PLUGIN(UccDiscoveryPlugin)

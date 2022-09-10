@@ -56,11 +56,11 @@ class UccDiscoveryPluginTest : public BaseTest {
 
  protected:
   UCCCandidates _identify_ucc_candidates() {
-    return _uccPlugin.identify_ucc_candidates();
+    return _uccPlugin._identify_ucc_candidates();
   }
 
   void _discover_uccs() {
-    return _uccPlugin.discover_uccs();
+    return _uccPlugin._validate_ucc_candidates(_uccPlugin._identify_ucc_candidates());
   }
 
   const std::string _table_name_A{"uniquenessTestTableA"};
