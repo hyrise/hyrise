@@ -19,8 +19,8 @@
 
 namespace hyrise {
 
-UCCCandidate::UCCCandidate(const std::string& table_name, const ColumnID column_id)
-    : table_name(table_name), column_id(column_id) {}
+UCCCandidate::UCCCandidate(const std::string& init_table_name, const ColumnID init_column_id)
+    : table_name(init_table_name), column_id(init_column_id) {}
 
 bool UCCCandidate::operator==(const UCCCandidate& other) const {
   return (column_id == other.column_id) && (table_name == other.table_name);

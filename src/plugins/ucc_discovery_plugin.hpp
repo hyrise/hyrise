@@ -15,7 +15,7 @@ namespace hyrise {
  * in the UccDiscoveryPlugin.
  */
 struct UCCCandidate {
-  UCCCandidate(const std::string& table_name, const ColumnID column_id);
+  UCCCandidate(const std::string& init_table_name, const ColumnID init_column_id);
 
   bool operator==(const UCCCandidate& other) const;
   bool operator!=(const UCCCandidate& other) const;
