@@ -196,7 +196,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
       if (all_values.size() == all_values_size + dict->size()) {
         all_values_size += dict->size();
       } else {
-        // If not all elements have been inserted, there be a duplicate, so the UCC constraint is violated
+        // If not all elements have been inserted, there must be a duplicate, so the UCC constraint is violated
         return false;
       }
     } else {

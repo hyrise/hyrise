@@ -48,6 +48,9 @@ class UccDiscoveryPluginTest : public BaseTest {
     _lqp = JoinNode::make(JoinMode::Inner, equals_(_join_col_A, _join_col_B),
                           PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A),
                           PredicateNode::make(equals_(_predicate_col_B, "not"), table_node_B));
+
+    Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
+    Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   }
 
   void TearDown() override {
@@ -83,9 +86,6 @@ TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
 }
 
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-
   Hyrise::get().default_lqp_cache->set("TestLQP", _lqp);
 
   auto ucc_candidates = _identify_ucc_candidates();
@@ -109,9 +109,6 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
   const auto lqp = AggregateNode::make(expression_vector(_join_col_A), expression_vector(),
                                        PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A));
 
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
   auto ucc_candidates = _identify_ucc_candidates();
@@ -132,9 +129,6 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGenerated) {
       UnionNode::make(SetOperationMode::All, PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A),
                       PredicateNode::make(equals_(_predicate_col_B, "not"), table_node_B));
 
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
   auto ucc_candidates = _identify_ucc_candidates();
@@ -143,9 +137,6 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGenerated) {
 }
 
 TEST_F(UccDiscoveryPluginTest, PluginFullRun) {
-  Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
-  Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-
   Hyrise::get().default_lqp_cache->set("TestLQP", _lqp);
 
   // run UCC discovery; we expect both join columns and the predicate on table A to be identified as unique
