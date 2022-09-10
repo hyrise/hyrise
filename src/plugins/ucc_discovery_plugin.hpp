@@ -57,6 +57,25 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   void discover_uccs() const;
 
   std::unique_ptr<PausableLoopThread> _loop_thread_start;
+
+ private:
+  /**
+  * Extracts columns as candidates for ucc validation from the aggregate node, that are used in groupby operations.
+  */
+  void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const;
+
+  /**
+  * Extracts columns as ucc validation candidates from a join node. 
+  * Some criteria have to be fulfilled for this to be done:
+  *   - The Node may only have one predicate.
+  *   - This predicate must have the equals condition. This may be extended in the future to support other conditions.
+  *   - The join must be either a left/right outer, semi or inner join. These cause one of the input sides to no longer
+  *     be needed after the join has been completed and therefore allow for optimization by replacement.
+  * In addition to the column corresponding to the removable side of the join, the removable input side LQP is iterated
+  * and a column used in a PredicateNode may be added as a UCC candidate if the Predicate filters the same table that
+  * contains the join column.
+  */
+  void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,  UCCCandidates& ucc_candidates) const;
 };
 
 }  // namespace hyrise

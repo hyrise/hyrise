@@ -215,6 +215,111 @@ std::shared_ptr<std::vector<UCCCandidate>> UccDiscoveryPlugin::generate_valid_ca
   return candidates;
 }
 
+void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const {
+  const auto& aggregate_node = static_cast<AggregateNode&>(*node);
+  const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
+      aggregate_node.node_expressions.begin(),
+      aggregate_node.node_expressions.begin() + aggregate_node.aggregate_expressions_begin_idx};
+
+  for (const auto& column_candidate : column_candidates) {
+    const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
+    if (!lqp_column_expression) {
+      continue;
+    }
+    // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
+    const auto stored_table_node =
+        std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
+    ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
+  }
+}
+
+void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const {
+  const auto& join_node = static_cast<JoinNode&>(*node);
+  /* 
+   * Fetch the Join Predicate to extract the UCC candidates from.
+   * Right now, limited to only equals predicates. 
+   * Less than, greater than and not equals predicates could be utilized as well, but the optimizer does not yet 
+   * have the capability to rewrite those, therefore the columns are not yet useful candidates.
+   */
+  const auto& join_predicates = join_node.join_predicates();
+  const std::shared_ptr<BinaryPredicateExpression> equals_join_predicate = (join_predicates.size() == 1) ? std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates[0]) : nullptr;
+
+  if (!equals_join_predicate) {
+    return;
+  }
+
+  // we only care about semi, inner (both are potential candidates), right outer (left is potential candidate)
+  // and left outer (right is potential candidate) joins, as those may be rewritten by optimizer rules right now.
+  switch (join_node.join_mode) {
+    case JoinMode::Right: {
+      // want to check only the left hand side here, as this is the one that will be removed in the end
+      const auto subtree_root = join_node.left_input();
+      // predicate may be swapped, so get proper operand
+      auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->left_operand());
+      if (!expression_evaluable_on_lqp(column_candidate, *subtree_root)) {
+        column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->right_operand());
+      }
+
+      const auto candidates = generate_valid_candidates(subtree_root, column_candidate);
+      if (candidates) {
+        for (const auto& candidate : *candidates) {
+          ucc_candidates.insert(candidate);
+        }
+      }
+      return;
+    }
+
+    case JoinMode::Inner: {
+      const auto column_candidates = {equals_join_predicate->left_operand(), equals_join_predicate->right_operand()};
+      for (const auto& column_candidate : column_candidates) {
+        const auto lqp_column_expression = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
+
+        // determine which subtree (left or right) belongs to the ColumnExpression
+        auto subtree_root = join_node.left_input();
+        if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+          subtree_root = join_node.right_input();
+        }
+
+        // for Join2Semi, this column is already interesting for optimization, add it as a potential candidate
+        const auto stored_table_node =
+            std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
+        ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
+
+        auto candidates = generate_valid_candidates(subtree_root, lqp_column_expression);
+        if (candidates) {
+          for (const auto& candidate : *candidates) {
+            ucc_candidates.insert(candidate);
+          }
+        }
+      }
+      return;
+    }
+
+    case JoinMode::Semi:
+    case JoinMode::Left: {
+      // want to check only the right hand side here, as this is the one that will be removed in the end
+      const auto subtree_root = join_node.right_input();
+      // predicate may be swapped, so get proper operand
+      auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->right_operand());
+      if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
+        column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->left_operand());
+      }
+
+      auto candidates = generate_valid_candidates(subtree_root, column_candidate);
+      if (candidates) {
+        for (const auto& candidate : *candidates) {
+          ucc_candidates.insert(candidate);
+        }
+      }
+      return;
+    }
+
+    default: {
+      return;
+    }
+  }
+}
+
 UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
   // get a snapshot of the current LQP cache to work on all currently cached queries
   const auto snapshot = Hyrise::get().default_lqp_cache->snapshot();
@@ -232,123 +337,11 @@ UCCCandidates UccDiscoveryPlugin::identify_ucc_candidates() const {
       }
 
       if (type == LQPNodeType::Aggregate) {
-        // in case of aggregate, extract all predicates used in groupby operations
-        const auto& aggregate_node = static_cast<AggregateNode&>(*node);
-        const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
-            aggregate_node.node_expressions.begin(),
-            aggregate_node.node_expressions.begin() + aggregate_node.aggregate_expressions_begin_idx};
-
-        for (const auto& column_candidate : column_candidates) {
-          const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
-          if (!lqp_column_expression) {
-            continue;
-          }
-          // every ColumnExpression used as a GroupBy expression should be checked for uniqueness
-          const auto stored_table_node =
-              std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
-          ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
-        }
-
+        _ucc_candidates_from_aggregate_node(node, ucc_candidates);
         return LQPVisitation::VisitInputs;
       }
-
-      // if not aggregate node, must be a join node
-      const auto& join_node = static_cast<JoinNode&>(*node);
-      const auto& join_mode = join_node.join_mode;
-      // get join predicate with equals condition, that's the only one we would want to work on
-      std::shared_ptr<BinaryPredicateExpression> join_predicate = nullptr;
-      for (auto predicate : join_node.join_predicates()) {
-        join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-        if (!join_predicate) {
-          continue;
-        }
-        if (join_predicate->predicate_condition != PredicateCondition::Equals) {
-          join_predicate = nullptr;
-          continue;
-        }
-        // check whether both operands are column expressions
-        const auto operand_left = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
-        const auto operand_right = std::dynamic_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
-        if (!operand_left || !operand_right) {
-          join_predicate = nullptr;
-          continue;
-        }
-        break;
-      }
-
-      if (!join_predicate) {
-        return LQPVisitation::VisitInputs;
-      }
-
-      // we only care about semi, inner (both are potential candidates), right outer (left is potential candidate)
-      // and left outer (right is potential candidate) joins
-      switch (join_mode) {
-        case JoinMode::Right: {
-          // want to check only the left hand side here, as this is the one that will be removed in the end
-          const auto subtree_root = join_node.left_input();
-          // predicate may be swapped, so get proper operand
-          auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
-          if (!expression_evaluable_on_lqp(column_candidate, *subtree_root)) {
-            column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
-          }
-
-          const auto candidates = generate_valid_candidates(subtree_root, column_candidate);
-          if (candidates) {
-            for (const auto& candidate : *candidates) {
-              ucc_candidates.insert(candidate);
-            }
-          }
-          break;
-        }
-
-        case JoinMode::Inner: {
-          const auto column_candidates = {join_predicate->left_operand(), join_predicate->right_operand()};
-          for (const auto& column_candidate : column_candidates) {
-            const auto lqp_column_expression = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
-
-            // determine which subtree (left or right) belongs to the ColumnExpression
-            auto subtree_root = join_node.left_input();
-            if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
-              subtree_root = join_node.right_input();
-            }
-
-            // for Join2Semi, this column is already interesting for optimization, add it as a potential candidate
-            const auto stored_table_node =
-                std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
-            ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
-
-            auto candidates = generate_valid_candidates(subtree_root, lqp_column_expression);
-            if (candidates) {
-              for (const auto& candidate : *candidates) {
-                ucc_candidates.insert(candidate);
-              }
-            }
-          }
-          break;
-        }
-
-        case JoinMode::Semi:
-        case JoinMode::Left: {
-          // want to check only the right hand side here, as this is the one that will be removed in the end
-          const auto subtree_root = join_node.right_input();
-          // predicate may be swapped, so get proper operand
-          auto column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->right_operand());
-          if (!expression_evaluable_on_lqp(column_candidate, *subtree_root.get())) {
-            column_candidate = std::static_pointer_cast<LQPColumnExpression>(join_predicate->left_operand());
-          }
-
-          auto candidates = generate_valid_candidates(subtree_root, column_candidate);
-          if (candidates) {
-            for (const auto& candidate : *candidates) {
-              ucc_candidates.insert(candidate);
-            }
-          }
-          break;
-        }
-
-        default: {
-        }
-      }
+      // no need for if statement; only remaining option is a join node
+      _ucc_candidates_from_join_node(node, ucc_candidates);
 
       return LQPVisitation::VisitInputs;
     });
