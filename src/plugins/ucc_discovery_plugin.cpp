@@ -153,68 +153,6 @@ UccDiscoveryPlugin::provided_user_executable_functions() {
   return {{"DiscoverUCCs", [&]() { discover_uccs(); }}};
 }
 
-std::shared_ptr<std::vector<UCCCandidate>> UccDiscoveryPlugin::generate_valid_candidates(
-    std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) const {
-  auto candidates = std::make_shared<std::vector<UCCCandidate>>();
-
-  if (!root_node) {
-    // input node may already be nullptr in case we try to get right input of node with only one input
-    return nullptr;
-  } else {
-    visit_lqp(root_node, [&](auto& node) {
-      if (node->type != LQPNodeType::Predicate) {
-        return LQPVisitation::VisitInputs;
-      }
-
-      // when looking at predicate node, check whether the searched column is filtered in this predicate
-      // -> if so, it is a valid UCC candidate; if not, still continue search
-      const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
-
-      // first, ensure that we look at a binary predicate expression checking for equality (e.g., A==B)
-      const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
-      if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
-        return LQPVisitation::VisitInputs;
-      }
-
-      // get the column expression, should be left, but also check the right operand if the left one is not column
-      auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
-      auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->right_operand());
-      if (!column_expression) {
-        column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
-        value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->left_operand());
-      }
-
-      if (!column_expression || !value_expression) {
-        // predicate needs to look like column = value or value = column; if not, move on
-        return LQPVisitation::VisitInputs;
-      }
-
-      if (column_expression == column_candidate) {
-        // equal condition and join column -> candidate for UCC
-        const auto stored_table_node =
-            std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
-        candidates->push_back(UCCCandidate{stored_table_node->table_name, column_expression->original_column_id});
-        return LQPVisitation::VisitInputs;
-      }
-
-      const auto expression_table =
-          std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
-      const auto candidate_table =
-          std::static_pointer_cast<const StoredTableNode>(column_candidate->original_node.lock());
-
-      if (expression_table == candidate_table) {
-        // both columns same table -> if both are UCC we could still convert join -> both are UCC candidate
-        candidates->push_back(UCCCandidate{expression_table->table_name, column_expression->original_column_id});
-        candidates->push_back(UCCCandidate{candidate_table->table_name, column_candidate->original_column_id});
-      }
-
-      return LQPVisitation::VisitInputs;
-    });
-  }
-
-  return candidates;
-}
-
 void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const {
   const auto& aggregate_node = static_cast<AggregateNode&>(*node);
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
@@ -260,12 +198,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
         column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->right_operand());
       }
 
-      const auto candidates = generate_valid_candidates(subtree_root, column_candidate);
-      if (candidates) {
-        for (const auto& candidate : *candidates) {
-          ucc_candidates.insert(candidate);
-        }
-      }
+      _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
       return;
     }
 
@@ -285,12 +218,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
             std::static_pointer_cast<const StoredTableNode>(lqp_column_expression->original_node.lock());
         ucc_candidates.insert(UCCCandidate{stored_table_node->table_name, lqp_column_expression->original_column_id});
 
-        auto candidates = generate_valid_candidates(subtree_root, lqp_column_expression);
-        if (candidates) {
-          for (const auto& candidate : *candidates) {
-            ucc_candidates.insert(candidate);
-          }
-        }
+        _ucc_candidates_from_removable_join_input(subtree_root, lqp_column_expression, ucc_candidates);
       }
       return;
     }
@@ -305,18 +233,62 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
         column_candidate = std::static_pointer_cast<LQPColumnExpression>(equals_join_predicate->left_operand());
       }
 
-      auto candidates = generate_valid_candidates(subtree_root, column_candidate);
-      if (candidates) {
-        for (const auto& candidate : *candidates) {
-          ucc_candidates.insert(candidate);
-        }
-      }
+      _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
       return;
     }
 
     default: {
       return;
     }
+  }
+}
+
+void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate, UCCCandidates& ucc_candidates) const {
+  if (!root_node) {
+    // input node may already be nullptr in case we try to get right input of node with only one input
+    return;
+  } else {
+    visit_lqp(root_node, [&](auto& node) {
+      if (node->type != LQPNodeType::Predicate) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      // when looking at predicate node, check whether the searched column is filtered in this predicate
+      // -> if so, it is a valid UCC candidate; if not, still continue search
+      const auto predicate_node = std::static_pointer_cast<PredicateNode>(node);
+
+      // first, ensure that we look at a binary predicate expression checking for equality (e.g., A==B)
+      const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node->predicate());
+      if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      // get the column expression, should be left, but also check the right operand if the left one is not column
+      auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
+      auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->right_operand());
+      if (!column_expression) {
+        column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
+        value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->left_operand());
+      }
+
+      if (!column_expression || !value_expression) {
+        // predicate needs to look like column = value or value = column; if not, move on
+        return LQPVisitation::VisitInputs;
+      }
+
+      const auto expression_table =
+          std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
+      const auto candidate_table =
+          std::static_pointer_cast<const StoredTableNode>(column_candidate->original_node.lock());
+
+      if (expression_table == candidate_table) {
+        // both columns same table -> if both are UCC we could still convert join -> both are UCC candidate
+        ucc_candidates.insert(UCCCandidate{expression_table->table_name, column_expression->original_column_id});
+        ucc_candidates.insert(UCCCandidate{candidate_table->table_name, column_candidate->original_column_id});
+      }
+
+      return LQPVisitation::VisitInputs;
+    });
   }
 }
 

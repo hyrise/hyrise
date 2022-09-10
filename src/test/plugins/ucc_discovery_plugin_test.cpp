@@ -55,11 +55,6 @@ class UccDiscoveryPluginTest : public BaseTest {
   }
 
  protected:
-  std::shared_ptr<std::vector<UCCCandidate>> _generate_valid_candidates(
-      std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) {
-    return _uccPlugin.generate_valid_candidates(root_node, column_candidate);
-  }
-
   UCCCandidates _identify_ucc_candidates() {
     return _uccPlugin.identify_ucc_candidates();
   }

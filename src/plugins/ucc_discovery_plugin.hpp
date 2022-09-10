@@ -51,8 +51,6 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   friend class UccDiscoveryPluginTest;
 
   UCCCandidates identify_ucc_candidates() const;
-  std::shared_ptr<std::vector<UCCCandidate>> generate_valid_candidates(
-      std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate) const;
 
   void discover_uccs() const;
 
@@ -76,6 +74,8 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   * contains the join column.
   */
   void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,  UCCCandidates& ucc_candidates) const;
+
+  void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate, UCCCandidates& ucc_candidates) const;
 };
 
 }  // namespace hyrise
