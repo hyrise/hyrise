@@ -1,5 +1,7 @@
 #include "ucc_discovery_plugin.hpp"
 
+#include <boost/container_hash/hash.hpp>
+
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
@@ -16,6 +18,23 @@
 #include "resolve_type.hpp"
 
 namespace hyrise {
+
+UCCCandidate::UCCCandidate(const std::string& table_name, const ColumnID column_id)
+    : table_name(table_name), column_id(column_id) {}
+
+bool UCCCandidate::operator==(const UCCCandidate& other) const {
+  return (column_id == other.column_id) && (table_name == other.table_name);
+}
+
+bool UCCCandidate::operator!=(const UCCCandidate& other) const {
+  return !(other == *this);
+}
+
+size_t UCCCandidate::hash() const {
+  auto hash = boost::hash_value(table_name);
+  boost::hash_combine(hash, column_id);
+  return hash;
+}
 
 std::string UccDiscoveryPlugin::description() const {
   return "Unary Unique Column Combination Discovery Plugin";
@@ -63,12 +82,12 @@ UCCCandidates UccDiscoveryPlugin::_identify_ucc_candidates() const {
 void UccDiscoveryPlugin::_validate_ucc_candidates(const UCCCandidates& ucc_candidates) const {
   for (const auto& candidate : ucc_candidates) {
     auto candidate_time = Timer();
-    const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name());
-    const auto col_id = candidate.column_id();
+    const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name);
+    const auto col_id = candidate.column_id;
 
     std::ostringstream message;
 
-    message << "Checking candidate " << candidate.table_name() << "." << table->column_name(col_id);
+    message << "Checking candidate " << candidate.table_name << "." << table->column_name(col_id);
 
     const auto& soft_key_constraints = table->soft_key_constraints();
 
@@ -339,3 +358,11 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
 EXPORT_PLUGIN(UccDiscoveryPlugin)
 
 }  // namespace hyrise
+
+namespace std {
+
+size_t hash<hyrise::UCCCandidate>::operator()(const hyrise::UCCCandidate& uc) const {
+  return uc.hash();
+}
+
+}  // namespace std

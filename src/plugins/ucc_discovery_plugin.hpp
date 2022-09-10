@@ -9,35 +9,31 @@
 
 namespace hyrise {
 
-/*
- *  This plugin implements unary Unique Column Combination (UCC) discovery based on previously executed LQPs.
- *  Not all columns encountered in these LQPs are automatically considered for the UCC validation process.
- *  Instead, columns are only validated/invalidated as UCCs if their being a UCC could've helped to optimize their LQP.
+/**
+ * UCCCandidate instances represent a column (referencing the table by name and the column by ID).
+ * They are used to first collect all candidates for UCC validation before actually validating them 
+ * in the UccDiscoveryPlugin.
  */
-class UCCCandidate {
- public:
-  UCCCandidate(const std::string& table_name, const ColumnID column_id)
-      : _table_name(table_name), _column_id(column_id) {}
+struct UCCCandidate {
+  UCCCandidate(const std::string& table_name, const ColumnID column_id);
 
-  const std::string& table_name() const {
-    return _table_name;
-  }
+  bool operator==(const UCCCandidate& other) const;
+  bool operator!=(const UCCCandidate& other) const;
+  size_t hash() const;
 
-  const ColumnID column_id() const {
-    return _column_id;
-  }
-
-  friend bool operator==(const UCCCandidate& lhs, const UCCCandidate& rhs) {
-    return (lhs.column_id() == rhs.column_id()) && (lhs.table_name() == rhs.table_name());
-  }
-
- protected:
-  const std::string _table_name;
-  const ColumnID _column_id;
+  const std::string table_name;
+  const ColumnID column_id;
 };
 
 using UCCCandidates = std::unordered_set<UCCCandidate>;
 
+/**
+ *  This plugin implements unary Unique Column Combination (UCC) discovery based on previously executed LQPs.
+ *  Not all columns encountered in these LQPs are automatically considered for the UCC validation process.
+ *  Instead, columns are only validated/invalidated as UCCs if their being a UCC could've helped to optimize their LQP.
+ * 
+ *  UCC discovery on databases without any queries having been run previously is not supported.
+ */
 class UccDiscoveryPlugin : public AbstractPlugin {
  public:
   std::string description() const final;
@@ -115,11 +111,14 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 
 }  // namespace hyrise
 
+namespace std {
+
+/**
+ * Hash function required to manage UCCCandidates in an unordered set for deduplication.
+ */
 template <>
-struct std::hash<hyrise::UCCCandidate> {
-  std::size_t operator()(const hyrise::UCCCandidate& s) const noexcept {
-    std::size_t h1 = std::hash<std::string>{}(s.table_name());
-    std::size_t h2 = std::hash<hyrise::ColumnID>{}(s.column_id());
-    return h1 ^ (h2 << 1);
-  }
+struct hash<hyrise::UCCCandidate> {
+  size_t operator()(const hyrise::UCCCandidate& uc) const;
 };
+
+}  // namespace std
