@@ -5,7 +5,7 @@
 #include <boost/container_hash/hash.hpp>
 #include "resolve_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ValueExpression::ValueExpression(const AllTypeVariant& init_value)
     : AbstractExpression(ExpressionType::Value, {}), value(init_value) {}
@@ -64,4 +64,4 @@ bool ValueExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   return value.type() == typeid(NullValue);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

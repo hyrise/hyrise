@@ -7,7 +7,7 @@
 
 #include "abstract_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * GENERAL SCHEDULING CONCEPT
@@ -120,4 +120,4 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic_bool _active{false};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

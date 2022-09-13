@@ -7,7 +7,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Store relevant information after pipeline execution
 struct ExecutionInformation {
@@ -16,7 +16,7 @@ struct ExecutionInformation {
   // the root operator's type.
   OperatorType root_operator_type;
   std::string pipeline_metrics;
-  ErrorMessage error_message;
+  ErrorMessages error_messages;
   std::optional<std::string> custom_command_complete_message;
 };
 
@@ -38,4 +38,4 @@ class QueryHandler {
   static void _handle_transaction_statement_message(ExecutionInformation& execution_info, SQLPipeline& sql_pipeline);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

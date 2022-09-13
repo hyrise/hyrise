@@ -14,19 +14,19 @@
 #include "types.hpp"
 
 namespace {
-opossum::VariableLengthKey create_key(uint16_t value) {
-  auto result = opossum::VariableLengthKey(sizeof(uint16_t));
+hyrise::VariableLengthKey create_key(uint16_t value) {
+  auto result = hyrise::VariableLengthKey(sizeof(uint16_t));
   result |= value;
   return result;
 }
 
-std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore& keys) {
-  auto result = std::vector<opossum::VariableLengthKey>(keys.size());
+std::vector<hyrise::VariableLengthKey> to_vector(const hyrise::VariableLengthKeyStore& keys) {
+  auto result = std::vector<hyrise::VariableLengthKey>(keys.size());
   std::copy(keys.cbegin(), keys.cend(), result.begin());
   return result;
 }
 
-testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::set<opossum::ChunkOffset>& set) {
+testing::AssertionResult is_contained_in(hyrise::ChunkOffset value, const std::set<hyrise::ChunkOffset>& set) {
   if (set.find(value) == set.end()) {
     return testing::AssertionFailure() << testing::PrintToString(set) << " does not contain " << value;
   } else {
@@ -34,14 +34,14 @@ testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::
   }
 }
 
-void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& expected,
-                             const std::vector<opossum::ChunkOffset>& actual) {
-  std::set<opossum::ChunkOffset> distinct_expected_positions = {};
+void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<hyrise::ChunkOffset>>& expected,
+                             const std::vector<hyrise::ChunkOffset>& actual) {
+  std::set<hyrise::ChunkOffset> distinct_expected_positions = {};
   for (const auto& expectation_for_position : expected) {
     distinct_expected_positions.insert(expectation_for_position.begin(), expectation_for_position.end());
   }
 
-  auto distinct_actual_positions = std::set<opossum::ChunkOffset>(actual.begin(), actual.end());
+  auto distinct_actual_positions = std::set<hyrise::ChunkOffset>(actual.begin(), actual.end());
   EXPECT_EQ(distinct_expected_positions, distinct_actual_positions);
 
   for (size_t entry = 0; entry < expected.size(); ++entry) {
@@ -50,7 +50,7 @@ void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& 
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
@@ -139,4 +139,4 @@ TEST_F(CompositeGroupKeyIndexTest, PositionList) {
   EXPECT_POSITION_LIST_EQ(expected_str_int, *_position_list_str_int);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

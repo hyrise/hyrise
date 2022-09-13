@@ -51,7 +51,7 @@
  * ...and I think that's beautiful.
  */
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractOperator;
 
@@ -247,4 +247,4 @@ std::shared_ptr<IntervalExpression> interval_(const int64_t duration, const Date
 
 }  // namespace expression_functional
 
-}  // namespace opossum
+}  // namespace hyrise

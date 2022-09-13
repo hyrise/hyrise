@@ -15,7 +15,7 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BinaryWriterTest : public BaseTest {
  protected:
@@ -85,9 +85,9 @@ TEST_F(BinaryWriterTest, FixedStringDictionaryNullValue) {
   table->append({"This"});
   table->append({"is"});
   table->append({"a"});
-  table->append({opossum::NULL_VALUE});
+  table->append({NULL_VALUE});
   table->append({"test"});
-  table->append({opossum::NULL_VALUE});
+  table->append({NULL_VALUE});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FixedStringDictionary});
@@ -123,9 +123,9 @@ TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
   table->append({1});
-  table->append({opossum::NULL_VALUE});
+  table->append({NULL_VALUE});
   table->append({2});
-  table->append({opossum::NULL_VALUE});
+  table->append({NULL_VALUE});
   table->append({5});
 
   table->last_chunk()->finalize();
@@ -218,11 +218,11 @@ TEST_F(BinaryWriterTest, AllNullFrameOfReferenceSegment) {
   column_definitions.emplace_back("a", DataType::Int, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3});
-  table->append({opossum::NULL_VALUE});
-  table->append({opossum::NULL_VALUE});
-  table->append({opossum::NULL_VALUE});
-  table->append({opossum::NULL_VALUE});
-  table->append({opossum::NULL_VALUE});
+  table->append({NULL_VALUE});
+  table->append({NULL_VALUE});
+  table->append({NULL_VALUE});
+  table->append({NULL_VALUE});
+  table->append({NULL_VALUE});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{EncodingType::FrameOfReference});
@@ -483,11 +483,11 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesNullValues) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{5});
 
-  table->append({opossum::NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
-  table->append({2, opossum::NULL_VALUE, int64_t{200}, "two", 2.22});
-  table->append({3, 3.3f, opossum::NULL_VALUE, "three", 3.33});
-  table->append({4, 4.4f, int64_t{400}, opossum::NULL_VALUE, 4.44});
-  table->append({5, 5.5f, int64_t{500}, "five", opossum::NULL_VALUE});
+  table->append({NULL_VALUE, 1.1f, int64_t{100}, "one", 1.11});
+  table->append({2, NULL_VALUE, int64_t{200}, "two", 2.22});
+  table->append({3, 3.3f, NULL_VALUE, "three", 3.33});
+  table->append({4, 4.4f, int64_t{400}, NULL_VALUE, 4.44});
+  table->append({5, 5.5f, int64_t{500}, "five", NULL_VALUE});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
@@ -508,8 +508,7 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesAllNullValues) {
   column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{100'000});
-  auto null_values = {opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE, opossum::NULL_VALUE,
-                      opossum::NULL_VALUE};
+  auto null_values = {NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE, NULL_VALUE};
 
   table->append(null_values);
   table->append(null_values);
@@ -548,4 +547,4 @@ TEST_P(BinaryWriterMultiEncodingTest, RunNullValues) {
   EXPECT_TRUE(compare_files(reference_filename, filename));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

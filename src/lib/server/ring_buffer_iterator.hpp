@@ -6,7 +6,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 static constexpr size_t SERVER_BUFFER_SIZE = 4096u;
 
@@ -47,4 +47,4 @@ class RingBufferIterator : public boost::iterator_facade<RingBufferIterator, cha
   size_t _position;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

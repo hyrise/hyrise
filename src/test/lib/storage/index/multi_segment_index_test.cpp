@@ -11,7 +11,7 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename DerivedIndex>
 class MultiSegmentIndexTest : public BaseTest {
@@ -164,9 +164,10 @@ TYPED_TEST(MultiSegmentIndexTest, RangeQueryOpenBegin) {
 }
 
 TYPED_TEST(MultiSegmentIndexTest, TooManyReferenceValues) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
+
   EXPECT_THROW(this->index_int_str->lower_bound({1, "baz", 3.0f}), std::logic_error);
   EXPECT_THROW(this->index_int_str->upper_bound({1, "baz", 3.0f}), std::logic_error);
 }
@@ -212,4 +213,4 @@ TYPED_TEST(MultiSegmentIndexTest, CreateAndRetrieveUsingChunk) {
   EXPECT_TRUE(indexes_int_str[0]->is_index_for({this->dict_segment_int, this->dict_segment_str}));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

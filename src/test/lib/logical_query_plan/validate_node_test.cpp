@@ -5,7 +5,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/validate_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ValidateNodeTest : public BaseTest {
  protected:
@@ -35,4 +35,4 @@ TEST_F(ValidateNodeTest, NodeExpressions) {
   ASSERT_EQ(_validate_node->node_expressions.size(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -9,7 +9,7 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string JoinPredicateOrderingRule::name() const {
   static const auto name = std::string{"JoinPredicateOrderingRule"};
@@ -42,8 +42,9 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
     }
 
     // Sort predicates by ascending join selectivity.
-    std::sort(node->node_expressions.begin(), node->node_expressions.end(),
-              [&](const auto& a, const auto& b) { return predicate_cardinalities[a] < predicate_cardinalities[b]; });
+    std::sort(node->node_expressions.begin(), node->node_expressions.end(), [&](const auto& lhs, const auto& rhs) {
+      return predicate_cardinalities[lhs] < predicate_cardinalities[rhs];
+    });
 
     // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
     //  join predicate. Check that one exists and move it to the front.
@@ -69,4 +70,4 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

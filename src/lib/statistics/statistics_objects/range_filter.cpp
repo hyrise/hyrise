@@ -12,7 +12,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 RangeFilter<T>::RangeFilter(std::vector<std::pair<T, T>> init_ranges)
@@ -49,40 +49,42 @@ std::shared_ptr<AbstractStatisticsObject> RangeFilter<T>::sliced(
       return std::make_shared<MinMaxFilter<T>>(value, value);
     case PredicateCondition::LessThan:
     case PredicateCondition::LessThanEquals: {
-      auto end_it = std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                                     [](const auto& a, const auto& b) { return a.second < b; });
+      auto end_iter =
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value,
+                           [](const auto& range, const auto& search_value) { return range.second < search_value; });
 
       // Copy all the ranges before the value.
-      auto it = ranges.cbegin();
-      for (; it != end_it; it++) {
-        sliced_ranges.emplace_back(*it);
+      auto iter = ranges.cbegin();
+      for (; iter != end_iter; iter++) {
+        sliced_ranges.emplace_back(*iter);
       }
 
-      DebugAssert(it != ranges.cend(), "does_not_contain() should have caught that.");
+      DebugAssert(iter != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is not in a gap, limit the last range's upper bound to value.
-      if (value >= it->first) {
-        sliced_ranges.emplace_back(std::pair<T, T>{it->first, value});
+      if (value >= iter->first) {
+        sliced_ranges.emplace_back(std::pair<T, T>{iter->first, value});
       }
     } break;
     case PredicateCondition::GreaterThan:
     case PredicateCondition::GreaterThanEquals: {
-      auto it = std::lower_bound(ranges.cbegin(), ranges.cend(), value,
-                                 [](const auto& a, const auto& b) { return a.second < b; });
+      auto iter =
+          std::lower_bound(ranges.cbegin(), ranges.cend(), value,
+                           [](const auto& range, const auto& search_value) { return range.second < search_value; });
 
-      DebugAssert(it != ranges.cend(), "does_not_contain() should have caught that.");
+      DebugAssert(iter != ranges.cend(), "does_not_contain() should have caught that.");
 
       // If value is in a gap, use the next range, otherwise limit the next range's upper bound to value.
-      if (value <= it->first) {
-        sliced_ranges.emplace_back(*it);
+      if (value <= iter->first) {
+        sliced_ranges.emplace_back(*iter);
       } else {
-        sliced_ranges.emplace_back(std::pair<T, T>{value, it->second});
+        sliced_ranges.emplace_back(std::pair<T, T>{value, iter->second});
       }
-      it++;
+      iter++;
 
       // Copy all following ranges.
-      for (; it != ranges.cend(); it++) {
-        sliced_ranges.emplace_back(*it);
+      for (; iter != ranges.cend(); iter++) {
+        sliced_ranges.emplace_back(*iter);
       }
     } break;
 
@@ -316,4 +318,4 @@ template class RangeFilter<int64_t>;
 template class RangeFilter<float>;
 template class RangeFilter<double>;
 
-}  // namespace opossum
+}  // namespace hyrise

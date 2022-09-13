@@ -8,11 +8,11 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 using MockCosts = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
 
@@ -34,7 +34,7 @@ class MockCostEstimator : public AbstractCostEstimator {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractCostEstimatorTest : public BaseTest {
  public:
@@ -105,4 +105,4 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
   EXPECT_EQ(cost_estimator.estimate_plan_cost(predicate_c), 77.0f);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

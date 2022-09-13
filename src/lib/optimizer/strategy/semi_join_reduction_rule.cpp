@@ -7,7 +7,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "statistics/abstract_cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::string SemiJoinReductionRule::name() const {
   static const auto name = std::string{"SemiJoinReductionRule"};
@@ -158,4 +158,4 @@ void SemiJoinReductionRule::_apply_to_plan_without_subqueries(const std::shared_
     lqp_insert_node(join_node, side_of_join, semi_join_reduction_node, AllowRightInput::Yes);
   }
 }
-}  // namespace opossum
+}  // namespace hyrise

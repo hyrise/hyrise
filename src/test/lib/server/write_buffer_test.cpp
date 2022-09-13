@@ -5,7 +5,7 @@
 
 #include "server/write_buffer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class WriteBufferTest : public BaseTest {
  protected:
@@ -74,4 +74,4 @@ TEST_F(WriteBufferTest, WriteLargeString) {
   EXPECT_EQ(_mocked_socket->read(), original_content);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

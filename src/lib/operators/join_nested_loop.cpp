@@ -15,7 +15,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void __attribute__((noinline))
 process_match(RowID left_row_id, RowID right_row_id, const JoinNestedLoop::JoinParams& params) {
@@ -70,7 +70,7 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 bool JoinNestedLoop::supports(const JoinConfiguration config) {
   return true;
@@ -336,7 +336,7 @@ void JoinNestedLoop::_join_two_untyped_segments(const AbstractSegment& abstract_
 void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_ptr<const Table>& input_table,
                                          const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
     std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {
@@ -375,4 +375,4 @@ void JoinNestedLoop::_write_output_chunk(Segments& segments, const std::shared_p
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

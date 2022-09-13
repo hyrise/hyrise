@@ -6,7 +6,7 @@
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief base class of all iterators used by iterables
@@ -102,4 +102,4 @@ class AbstractPointAccessSegmentIterator : public AbstractSegmentIterator<Derive
   PosListIteratorType _position_filter_it;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

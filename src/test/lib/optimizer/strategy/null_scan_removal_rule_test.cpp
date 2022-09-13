@@ -7,9 +7,9 @@
 #include "optimizer/strategy/null_scan_removal_rule.hpp"
 #include "strategy_base_test.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class NullScanRemovalRuleTest : public StrategyBaseTest {
  public:
@@ -27,6 +27,7 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
     nullable_table_node_column = lqp_column_(nullable_table_node, ColumnID{0});
     table_node_column = lqp_column_(table_node, ColumnID{0});
   }
+
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<NullScanRemovalRule> rule;
   std::shared_ptr<LQPColumnExpression> mock_node_column, nullable_table_node_column, table_node_column;
@@ -101,4 +102,4 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

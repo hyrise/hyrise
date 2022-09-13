@@ -13,7 +13,7 @@
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
@@ -23,7 +23,7 @@ NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
-    std::exit(EXIT_FAILURE);
+    std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
 }
 
@@ -167,4 +167,4 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -14,10 +14,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/load_table.hpp"
 
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LQPSubqueryExpressionTest : public BaseTest {
  public:
@@ -138,4 +138,4 @@ TEST_F(LQPSubqueryExpressionTest, AsColumnName) {
   EXPECT_TRUE(std::regex_search(in_(5, subquery_c)->as_column_name(), std::regex{"\\(5\\) IN SUBQUERY \\(LQP, 0x[0-9a-f]+, Parameters: \\[a, id=0\\]\\)"}));  // NOLINT
 }
 
-}  // namespace opossum
+}  // namespace hyrise

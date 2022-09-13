@@ -10,7 +10,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
@@ -100,7 +100,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   TableColumnDefinitions output_column_definitions;
 
   // Preparing output table by adding segments from left table
-  for (ColumnID column_id{0}; column_id < left_in_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < left_in_table->column_count(); ++column_id) {
     const auto nullable = (left_may_produce_null || left_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(left_in_table->column_name(column_id),
                                            left_in_table->column_data_type(column_id), nullable);
@@ -108,7 +108,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
 
   // Preparing output table by adding segments from right table
   if (_mode != JoinMode::Semi && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse) {
-    for (ColumnID column_id{0}; column_id < right_in_table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < right_in_table->column_count(); ++column_id) {
       const auto nullable = (right_may_produce_null || right_in_table->column_is_nullable(column_id));
       output_column_definitions.emplace_back(right_in_table->column_name(column_id),
                                              right_in_table->column_data_type(column_id), nullable);
@@ -118,4 +118,4 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

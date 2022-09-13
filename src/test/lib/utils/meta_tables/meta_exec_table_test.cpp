@@ -5,7 +5,7 @@
 
 #include "../plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaExecTest : public BaseTest {};
 
@@ -45,13 +45,16 @@ TEST_F(MetaExecTest, CallUserExecutableFunctions) {
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
 
-  SQLPipelineBuilder{
+  // Test plugin has state and cretes tables with an increasing id.
+  const auto exec_query =
       "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseTestPlugin', "
-      "'OurFreelyChoosableFunctionName')"}
-      .create_pipeline()
-      .get_result_table();
+      "'OurFreelyChoosableFunctionName')";
+  SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
   // The test plugin creates the below table when the called function is executed
-  EXPECT_TRUE(sm.has_table("TableOfTestPlugin"));
+  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
+
+  SQLPipelineBuilder{exec_query}.create_pipeline().get_result_table();
+  EXPECT_TRUE(sm.has_table("TableOfTestPlugin_1"));
 
   SQLPipelineBuilder{
       "INSERT INTO meta_exec (plugin_name, function_name) VALUES ('hyriseSecondTestPlugin', "
@@ -112,4 +115,4 @@ TEST_F(MetaExecTest, CallNotCallableUserExecutableFunctions) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

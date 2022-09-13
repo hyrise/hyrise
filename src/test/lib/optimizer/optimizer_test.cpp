@@ -12,9 +12,9 @@
 #include "optimizer/optimizer.hpp"
 #include "optimizer/strategy/abstract_rule.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OptimizerTest : public BaseTest {
  public:
@@ -93,9 +93,10 @@ TEST_F(OptimizerTest, AssertsInPlanReferences) {
 }
 
 TEST_F(OptimizerTest, VerifiesResults) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
+
   // While the Asserts* tests checked the different features of validate_lqp, this test checks that a rule that breaks
   // an LQP throws an assertion.
   // clang-format off
@@ -111,6 +112,7 @@ TEST_F(OptimizerTest, VerifiesResults) {
    public:
     explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
         : out_of_plan_expression(init_out_of_plan_expression) {}
+
     std::string name() const override {
       return "LQPBreakingRule";
     }
@@ -144,6 +146,7 @@ TEST_F(OptimizerTest, OptimizesSubqueries) {
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(std::unordered_set<std::shared_ptr<AbstractLQPNode>>& init_nodes) : nodes(init_nodes) {}
+
     std::string name() const override {
       return "MockRule";
     }
@@ -226,9 +229,11 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   // to check whether SubqueryExpressions pointing to the same LQP before optimization still point to the same (though
   // deep_copy()ed) LQP afterwards
   size_t counter{0};
+
   class MockRule : public AbstractRule {
    public:
     explicit MockRule(size_t& init_counter) : counter(init_counter) {}
+
     std::string name() const override {
       return "MockRule";
     }
@@ -280,4 +285,4 @@ TEST_F(OptimizerTest, OptimizesSubqueriesExactlyOnce) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

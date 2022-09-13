@@ -6,7 +6,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -47,4 +47,4 @@ class ColumnVsColumnTableScanImpl : public AbstractTableScanImpl {
                                                                  const RightIterator& right_end) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

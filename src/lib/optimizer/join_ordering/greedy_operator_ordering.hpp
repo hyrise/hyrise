@@ -6,7 +6,7 @@
 #include "abstract_join_ordering_algorithm.hpp"
 #include "join_graph_edge.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class AbstractCostEstimator;
@@ -33,4 +33,4 @@ class GreedyOperatorOrdering : public AbstractJoinOrderingAlgorithm {
       const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "utils/column_ids_after_pruning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ColumnIdsAfterPruningTest : public BaseTest {};
 
@@ -28,4 +28,4 @@ TEST_F(ColumnIdsAfterPruningTest, ColumnIDMapping) {
   EXPECT_EQ(actual_column_mapping, expected_column_mapping);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

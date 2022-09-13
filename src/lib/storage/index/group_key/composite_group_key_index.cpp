@@ -17,11 +17,12 @@
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
-  return ((row_count + distinct_count) * sizeof(ChunkOffset) + distinct_count * value_bytes);
+  return (static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset) +
+         static_cast<size_t>(distinct_count * value_bytes);
 }
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(
@@ -154,8 +155,8 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // fill empty space of key with zeros if less values than segments were provided
   auto empty_bits = std::accumulate(
-      _indexed_segments.cbegin() + values.size(), _indexed_segments.cend(), static_cast<uint8_t>(0u),
-      [](auto value, auto segment) {
+      _indexed_segments.cbegin() + static_cast<int64_t>(values.size()), _indexed_segments.cend(), uint8_t{0},
+      [](const auto& value, const auto& segment) {
         return value + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT;
       });
   result <<= empty_bits;
@@ -193,10 +194,10 @@ std::vector<std::shared_ptr<const AbstractSegment>> CompositeGroupKeyIndex::_get
 }
 
 size_t CompositeGroupKeyIndex::_memory_consumption() const {
-  size_t byte_count = _keys.size() * _keys.key_size();
+  auto byte_count = static_cast<size_t>(_keys.size() * _keys.key_size());
   byte_count += _key_offsets.size() * sizeof(ChunkOffset);
   byte_count += _position_list.size() * sizeof(ChunkOffset);
   return byte_count;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

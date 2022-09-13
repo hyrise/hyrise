@@ -5,7 +5,7 @@
 #include "abstract_encoded_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -96,4 +96,4 @@ class RunLengthSegment : public AbstractEncodedSegment {
 
 EXPLICITLY_DECLARE_DATA_TYPES(RunLengthSegment);
 
-}  // namespace opossum
+}  // namespace hyrise

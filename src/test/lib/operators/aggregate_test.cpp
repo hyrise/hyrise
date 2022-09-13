@@ -23,7 +23,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 void test_output(const std::shared_ptr<AbstractOperator> in,
@@ -899,4 +899,4 @@ TYPED_TEST(OperatorsAggregateTest, StringVariations) {
   EXPECT_EQ(values_sorted, result_values_sorted);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

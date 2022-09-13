@@ -21,7 +21,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool JoinHash::supports(const JoinConfiguration config) {
   // JoinHash supports only equi joins and every join mode, except FullOuter.
@@ -196,7 +196,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
         _impl = std::make_unique<JoinHashImpl<BuildColumnDataType, ProbeColumnDataType>>(
             *this, build_input_table, probe_input_table, _mode, adjusted_column_ids,
             _primary_predicate.predicate_condition, output_column_order, *_radix_bits, join_hash_performance_data,
-            std::move(adjusted_secondary_predicates));
+            adjusted_secondary_predicates);
       } else {
         Fail("Cannot join String with non-String column");
       }
@@ -221,8 +221,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
                const std::shared_ptr<const Table>& probe_input_table, const JoinMode mode,
                const ColumnIDPair& column_ids, const PredicateCondition predicate_condition,
                const OutputColumnOrder output_column_order, const size_t radix_bits,
-               JoinHash::PerformanceData& performance_data,
-               std::vector<OperatorJoinPredicate> secondary_predicates = {})
+               JoinHash::PerformanceData& performance_data, std::vector<OperatorJoinPredicate>& secondary_predicates)
       : _join_hash(join_hash),
         _build_input_table(build_input_table),
         _probe_input_table(probe_input_table),
@@ -231,7 +230,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
         _predicate_condition(predicate_condition),
         _performance_data(performance_data),
         _output_column_order(output_column_order),
-        _secondary_predicates(std::move(secondary_predicates)),
+        _secondary_predicates(secondary_predicates),
         _radix_bits(radix_bits) {}
 
  protected:
@@ -244,7 +243,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
   OutputColumnOrder _output_column_order;
 
-  const std::vector<OperatorJoinPredicate> _secondary_predicates;
+  const std::vector<OperatorJoinPredicate>& _secondary_predicates;
 
   std::shared_ptr<Table> _output_table;
 
@@ -494,9 +493,9 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     // simple heuristic: half of the rows of the probe side will match
     const size_t result_rows_per_partition =
         _probe_input_table->row_count() > 0 ? _probe_input_table->row_count() / partition_count / 2 : 0;
-    for (size_t i = 0; i < partition_count; i++) {
-      build_side_pos_lists[i].reserve(result_rows_per_partition);
-      probe_side_pos_lists[i].reserve(result_rows_per_partition);
+    for (auto partition_index = size_t{0}; partition_index < partition_count; ++partition_index) {
+      build_side_pos_lists[partition_index].reserve(result_rows_per_partition);
+      probe_side_pos_lists[partition_index].reserve(result_rows_per_partition);
     }
 
     Timer timer_probing;
@@ -578,4 +577,4 @@ void JoinHash::PerformanceData::output_to_stream(std::ostream& stream, Descripti
   stream << separator << "Build side is " << (left_input_is_build_side ? "left." : "right.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

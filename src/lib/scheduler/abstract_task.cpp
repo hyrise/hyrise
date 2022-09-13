@@ -12,7 +12,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractTask::AbstractTask(SchedulePriority priority, bool stealable) : _priority(priority), _stealable(stealable) {}
 
@@ -44,8 +44,8 @@ std::string AbstractTask::description() const {
   return _description.empty() ? "{Task with id: " + std::to_string(_id.load()) + "}" : _description;
 }
 
-void AbstractTask::set_id(TaskID id) {
-  _id = id;
+void AbstractTask::set_id(TaskID task_id) {
+  _id = task_id;
 }
 
 void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor) {
@@ -242,4 +242,4 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

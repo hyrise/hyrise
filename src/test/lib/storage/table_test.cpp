@@ -11,7 +11,7 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageTableTest : public BaseTest {
  protected:
@@ -180,7 +180,7 @@ TEST_F(StorageTableTest, EmplaceEmptyChunk) {
 }
 
 TEST_F(StorageTableTest, EmplaceEmptyChunkWhenEmptyExists) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -240,9 +240,10 @@ TEST_F(StorageTableTest, EmplaceChunkDoesNotReplaceIfNumberOfChunksGreaterOne) {
 }
 
 TEST_F(StorageTableTest, ChunkSizeZeroThrows) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
+
   TableColumnDefinitions column_definitions{};
   EXPECT_THROW(Table(column_definitions, TableType::Data, ChunkOffset{0}), std::logic_error);
 }
@@ -283,4 +284,4 @@ TEST_F(StorageTableTest, StableChunks) {
   EXPECT_EQ((*(*first_chunk)->get_segment(ColumnID{0}))[ChunkOffset{0}], AllTypeVariant{100});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

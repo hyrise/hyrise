@@ -13,7 +13,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 LZ4Segment<T>::LZ4Segment(pmr_vector<pmr_vector<char>>&& lz4_blocks, std::optional<pmr_vector<bool>>&& null_values,
@@ -74,9 +74,9 @@ template <typename T>
 std::unique_ptr<BaseVectorDecompressor> LZ4Segment<T>::string_offset_decompressor() const {
   if (_string_offsets) {
     return _string_offsets->create_base_decompressor();
-  } else {
-    return nullptr;
   }
+
+  return nullptr;
 }
 
 template <typename T>
@@ -136,10 +136,12 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
 
   const auto decompressed_size = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   auto decompressed_data = std::vector<char>(decompressed_size);
+  using DecompressedDataDifferenceType =
+      typename std::iterator_traits<decltype(decompressed_data)::iterator>::difference_type;
 
   const auto num_blocks = _lz4_blocks.size();
 
-  for (auto block_index = size_t{0u}; block_index < num_blocks; ++block_index) {
+  for (auto block_index = size_t{0}; block_index < num_blocks; ++block_index) {
     // This offset is needed to write directly into the decompressed data vector.
     const auto decompression_offset = block_index * _block_size;
     _decompress_block_to_bytes(block_index, decompressed_data, decompression_offset);
@@ -157,15 +159,17 @@ std::vector<pmr_string> LZ4Segment<pmr_string>::decompress() const {
   auto decompressed_strings = std::vector<pmr_string>();
   for (auto offset_index = size_t{0u}; offset_index < offset_decompressor->size(); ++offset_index) {
     auto start_char_offset = offset_decompressor->get(offset_index);
-    size_t end_char_offset;
+    auto end_char_offset = size_t{0};
     if (offset_index + 1 == offset_decompressor->size()) {
       end_char_offset = decompressed_size;
     } else {
       end_char_offset = offset_decompressor->get(offset_index + 1);
     }
 
-    const auto start_offset_it = decompressed_data.cbegin() + start_char_offset;
-    const auto end_offset_it = decompressed_data.cbegin() + end_char_offset;
+    const auto start_offset_it =
+        decompressed_data.cbegin() + static_cast<DecompressedDataDifferenceType>(start_char_offset);
+    const auto end_offset_it =
+        decompressed_data.cbegin() + static_cast<DecompressedDataDifferenceType>(end_char_offset);
     decompressed_strings.emplace_back(start_offset_it, end_offset_it);
   }
 
@@ -291,12 +295,15 @@ template <>
 std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffset& chunk_offset,
                                                                  const std::optional<size_t> cached_block_index,
                                                                  std::vector<char>& cached_block) const {
+  using CachedBlockDifferenceType =
+      typename std::iterator_traits<std::decay_t<decltype(cached_block)>::iterator>::difference_type;
+
   /**
    * If the input segment only contained empty strings, the original size is 0. The segment can't be decompressed, and
    * instead we can just return as many empty strings as the input contained.
    */
   if (_lz4_blocks.empty()) {
-    return std::pair{pmr_string{""}, 0u};
+    return std::pair{pmr_string{""}, size_t{0}};
   }
 
   /**
@@ -306,7 +313,7 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
    */
   auto offset_decompressor = _string_offsets->create_base_decompressor();
   auto start_offset = offset_decompressor->get(chunk_offset);
-  size_t end_offset;
+  auto end_offset = size_t{0};
   if (chunk_offset + 1 == offset_decompressor->size()) {
     end_offset = (_lz4_blocks.size() - 1) * _block_size + _last_block_size;
   } else {
@@ -333,88 +340,89 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     // Extract the string from the block via the offsets.
     const auto block_start_offset = start_offset % _block_size;
     const auto block_end_offset = end_offset % _block_size;
-    const auto start_offset_it = cached_block.cbegin() + block_start_offset;
-    const auto end_offset_it = cached_block.cbegin() + block_end_offset;
+    const auto start_offset_it = cached_block.cbegin() + static_cast<CachedBlockDifferenceType>(block_start_offset);
+    const auto end_offset_it = cached_block.cbegin() + static_cast<CachedBlockDifferenceType>(block_end_offset);
 
     return std::pair{pmr_string{start_offset_it, end_offset_it}, start_block};
-  } else {
-    /**
-     * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
-     * stream.
-     */
-    std::stringstream result_string;
-
-    // These are the character offsets that need to be read in every block.
-    size_t block_start_offset = start_offset % _block_size;
-    size_t block_end_offset = _block_size;
-
-    /**
-     * This is true if there is a block cached and it is one of the blocks that has to be accessed to decompress the
-     * current element.
-     * If it is true there are two cases:
-     * 1) The first block that has to be accesses is cached. This is trivial and afterwards the data can be overwritten.
-     * 2) The cached block is not the first but a later block. In that case, the cached block is copied. The original
-     * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
-     * is used.
-     */
-    const auto use_caching =
-        cached_block_index && *cached_block_index >= start_block && *cached_block_index <= end_offset;
-
-    /**
-     * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
-     * passed char array and the last decompressed block will be cached afterwards.
-     */
-    auto cached_block_copy = std::vector<char>{};
-    if (use_caching && *cached_block_index != start_block) {
-      cached_block_copy = std::vector<char>{cached_block};
-    }
-
-    /**
-     * Store the index of the last decompressed block. The blocks are decompressed into the cache buffer. If the cached
-     * block is the last block the string, it is copied and used. As a result, the cache contains the last decompressed
-     * block (i.e., the block before the cached block).
-     * In that case, this index equals end_block - 1. Otherwise, it will equal end_block.
-     */
-    auto new_cached_block_index = size_t{0u};
-
-    for (size_t block_index = start_block; block_index <= end_block; ++block_index) {
-      // Only decompress the current block if it's not cached.
-      if (!(use_caching && block_index == *cached_block_index)) {
-        _decompress_block_to_bytes(block_index, cached_block);
-        new_cached_block_index = block_index;
-      }
-
-      // Set the offset for the end of the string.
-      if (block_index == end_block) {
-        block_end_offset = end_offset % _block_size;
-      }
-
-      /**
-       * Extract the string from the current block via the offsets and append it to the result string stream.
-       * If the cached block is not the start block, the data is retrieved from the copy.
-       */
-      pmr_string partial_result;
-      if (use_caching && block_index == *cached_block_index && block_index != start_block) {
-        const auto start_offset_it = cached_block_copy.cbegin() + block_start_offset;
-        const auto end_offset_it = cached_block_copy.cbegin() + block_end_offset;
-        partial_result = pmr_string{start_offset_it, end_offset_it};
-      } else {
-        const auto start_offset_it = cached_block.cbegin() + block_start_offset;
-        const auto end_offset_it = cached_block.cbegin() + block_end_offset;
-        partial_result = pmr_string{start_offset_it, end_offset_it};
-      }
-      result_string << partial_result;
-
-      // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
-      block_start_offset = 0u;
-    }
-    return std::pair{pmr_string{result_string.str()}, new_cached_block_index};
   }
+
+  /**
+   * Multiple blocks need to be decompressed. Iterate over all relevant blocks and append the result to this string
+   * stream.
+   */
+  auto result_stringstream = std::stringstream{};
+
+  // These are the character offsets that need to be read in every block.
+  auto block_start_offset = start_offset % _block_size;
+  auto block_end_offset = _block_size;
+
+  /**
+   * This is true if there is a block cached and it is one of the blocks that has to be accessed to decompress the
+   * current element.
+   * If it is true there are two cases:
+   * 1) The first block that has to be accesses is cached. This is trivial and afterwards the data can be overwritten.
+   * 2) The cached block is not the first but a later block. In that case, the cached block is copied. The original
+   * buffer is overwritten when decompressing the other blocks. When the cached block needs to be accessed, the copy
+   * is used.
+   */
+  const auto use_caching =
+      cached_block_index && *cached_block_index >= start_block && *cached_block_index <= end_offset;
+
+  /**
+   * If the cached block is not the first block, keep a copy so that the blocks can still be decompressed into the
+   * passed char array and the last decompressed block will be cached afterwards.
+   */
+  auto cached_block_copy = std::vector<char>{};
+  if (use_caching && *cached_block_index != start_block) {
+    cached_block_copy = std::vector<char>{cached_block};
+  }
+
+  /**
+   * Store the index of the last decompressed block. The blocks are decompressed into the cache buffer. If the cached
+   * block is the last block the string, it is copied and used. As a result, the cache contains the last decompressed
+   * block (i.e., the block before the cached block).
+   * In that case, this index equals end_block - 1. Otherwise, it will equal end_block.
+   */
+  auto new_cached_block_index = size_t{0};
+
+  for (auto block_index = start_block; block_index <= end_block; ++block_index) {
+    // Only decompress the current block if it's not cached.
+    if (!(use_caching && block_index == *cached_block_index)) {
+      _decompress_block_to_bytes(block_index, cached_block);
+      new_cached_block_index = block_index;
+    }
+
+    // Set the offset for the end of the string.
+    if (block_index == end_block) {
+      block_end_offset = end_offset % _block_size;
+    }
+
+    /**
+     * Extract the string from the current block via the offsets and append it to the result string stream.
+     * If the cached block is not the start block, the data is retrieved from the copy.
+     */
+    auto partial_result = pmr_string{};
+    if (use_caching && block_index == *cached_block_index && block_index != start_block) {
+      const auto start_offset_it =
+          cached_block_copy.cbegin() + static_cast<CachedBlockDifferenceType>(block_start_offset);
+      const auto end_offset_it = cached_block_copy.cbegin() + static_cast<CachedBlockDifferenceType>(block_end_offset);
+      partial_result = pmr_string{start_offset_it, end_offset_it};
+    } else {
+      const auto start_offset_it = cached_block.cbegin() + static_cast<CachedBlockDifferenceType>(block_start_offset);
+      const auto end_offset_it = cached_block.cbegin() + static_cast<CachedBlockDifferenceType>(block_end_offset);
+      partial_result = pmr_string{start_offset_it, end_offset_it};
+    }
+    result_stringstream << partial_result;
+
+    // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
+    block_start_offset = 0;
+  }
+  return std::pair{pmr_string{result_stringstream.str()}, new_cached_block_index};
 }
 
 template <typename T>
 T LZ4Segment<T>::decompress(const ChunkOffset& chunk_offset) const {
-  auto decompressed_block = std::vector<char>(_block_size);
+  auto decompressed_block = std::vector<char>(_block_size, char{});
   return decompress(chunk_offset, std::nullopt, decompressed_block).first;
 }
 
@@ -496,4 +504,4 @@ std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_ty
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(LZ4Segment);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -20,7 +20,7 @@
 #include "utils/load_table.hpp"
 #include "utils/plugin_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MvccDeletePluginTest : public BaseTest {
  public:
@@ -61,14 +61,17 @@ class MvccDeletePluginTest : public BaseTest {
 
     transaction_context->commit();
   }
+
   static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id) {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);
     return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
   }
+
   static bool _try_logical_delete(const std::string& table_name, ChunkID chunk_id,
                                   std::shared_ptr<TransactionContext> transaction_context) {
     return MvccDeletePlugin::_try_logical_delete(table_name, chunk_id, transaction_context);
   }
+
   static void _delete_chunk_physically(const std::string& table_name, ChunkID chunk_id) {
     MvccDeletePlugin::_delete_chunk_physically(Hyrise::get().storage_manager.get_table(table_name), chunk_id);
   }
@@ -213,4 +216,4 @@ TEST_F(MvccDeletePluginTest, PhysicalDelete) {
   EXPECT_TRUE(table->get_chunk(chunk_to_delete_id) == nullptr);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

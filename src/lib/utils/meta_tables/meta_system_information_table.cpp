@@ -12,7 +12,7 @@
 #include "hyrise.hpp"
 #include "meta_system_information_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSystemInformationTable::MetaSystemInformationTable()
     : AbstractMetaTable(TableColumnDefinitions{{"cpu_count", DataType::Int, false},
@@ -74,6 +74,7 @@ size_t MetaSystemInformationTable::_cpu_count() {
 size_t MetaSystemInformationTable::_ram_size() {
 #ifdef __linux__
   struct sysinfo memory_info {};
+
   const auto ret = sysinfo(&memory_info);
   Assert(ret == 0, "Failed to get sysinfo");
 
@@ -120,10 +121,10 @@ std::string MetaSystemInformationTable::_cpu_model() {
   const auto ret = sysctlbyname("machdep.cpu.brand_string", &buffer, &buffer_size, nullptr, 0);
   Assert(ret == 0, "Failed to call sysctl machdep.cpu.brand_string");
 
-  return std::string(&buffer[0]);
+  return std::string{buffer.data()};
 #endif
 
   Fail("Method not implemented for this platform");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

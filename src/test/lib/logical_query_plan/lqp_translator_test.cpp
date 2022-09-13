@@ -58,9 +58,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LQPTranslatorTest : public BaseTest {
  public:
@@ -570,7 +570,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
-  if (!HYRISE_DEBUG) {
+  if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
 
@@ -1149,4 +1149,4 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
   EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

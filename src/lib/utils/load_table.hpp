@@ -7,7 +7,7 @@
 
 #include "storage/chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -23,4 +23,4 @@ std::shared_ptr<Table> create_table_from_header(const std::string& file_name,
                                                 ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffset chunk_size);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -11,11 +11,11 @@
 #include "storage/reference_segment.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-Limit::Limit(const std::shared_ptr<const AbstractOperator>& in,
+Limit::Limit(const std::shared_ptr<const AbstractOperator>& input_operator,
              const std::shared_ptr<AbstractExpression>& row_count_expression)
-    : AbstractReadOnlyOperator(OperatorType::Limit, in), _row_count_expression(row_count_expression) {}
+    : AbstractReadOnlyOperator(OperatorType::Limit, input_operator), _row_count_expression(row_count_expression) {}
 
 const std::string& Limit::name() const {
   static const auto name = std::string{"Limit"};
@@ -123,4 +123,4 @@ void Limit::_on_set_transaction_context(const std::weak_ptr<TransactionContext>&
   expression_set_transaction_context(_row_count_expression, transaction_context);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

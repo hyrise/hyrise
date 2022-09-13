@@ -8,7 +8,7 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t AbstractIndex::estimate_memory_consumption(SegmentIndexType type, ChunkOffset row_count,
                                                   ChunkOffset distinct_count, uint32_t value_bytes) {
@@ -89,4 +89,4 @@ size_t AbstractIndex::memory_consumption() const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

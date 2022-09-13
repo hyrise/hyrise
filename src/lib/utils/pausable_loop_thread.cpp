@@ -6,7 +6,7 @@
 #include <mutex>
 #include <thread>
 
-namespace opossum {
+namespace hyrise {
 
 PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time,
                                        const std::function<void(size_t)>& loop_func)
@@ -14,21 +14,24 @@ PausableLoopThread::PausableLoopThread(std::chrono::milliseconds loop_sleep_time
   _loop_thread = std::thread([&, loop_func] {
     size_t counter = 0;
     while (!_shutdown_flag) {
-      std::unique_lock<std::mutex> lk(_mutex);
+      auto lock = std::unique_lock<std::mutex>{_mutex};
       if (_loop_sleep_time > std::chrono::milliseconds(0)) {
-        _cv.wait_for(lk, _loop_sleep_time, [&] { return static_cast<bool>(_shutdown_flag); });
+        _cv.wait_for(lock, _loop_sleep_time, [&] { return static_cast<bool>(_shutdown_flag); });
       }
+
       if (_shutdown_flag) {
         return;
       }
+
       while (_pause_requested) {
         _is_paused = true;
-        _cv.wait(lk, [&] { return !_pause_requested || _shutdown_flag; });
+        _cv.wait(lock, [&] { return !_pause_requested || _shutdown_flag; });
         if (_shutdown_flag) {
           return;
         }
-        lk.unlock();
+        lock.unlock();
       }
+
       _is_paused = false;
       loop_func(counter++);
     }
@@ -61,4 +64,4 @@ void PausableLoopThread::set_loop_sleep_time(std::chrono::milliseconds loop_slee
   _loop_sleep_time = loop_sleep_time;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

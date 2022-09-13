@@ -19,7 +19,7 @@ extern "C" {
 #include "utils/assert.hpp"
 #include "utils/date_time_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCHBenchmarkItemRunner::TPCHBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config,
                                                  bool use_prepared_statements, float scale_factor,
@@ -366,8 +366,8 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
 
       parameters.emplace_back("'Brand#"s + std::to_string(brand) + "'");
       parameters.emplace_back("'"s + partial_type + "%'");
-      for (auto i = 0; i < 8; ++i) {
-        parameters.emplace_back(std::to_string(sizes_copy[i]));
+      for (auto parameter_index = size_t{0}; parameter_index < 8; ++parameter_index) {
+        parameters.emplace_back(std::to_string(sizes_copy[parameter_index]));
       }
       break;
     }
@@ -440,12 +440,11 @@ std::string TPCHBenchmarkItemRunner::_build_query(const BenchmarkItemID item_id)
       std::shuffle(country_codes_copy.begin(), country_codes_copy.end(), random_engine);
 
       // We need the same country code twice - have a look at the query
-      for (auto i = 0; i < 7; ++i) {
-        parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
+      for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
+        parameters.emplace_back("'"s + std::to_string(country_codes_copy[parameter_index]) + "'");
       }
-
-      for (auto i = 0; i < 7; ++i) {
-        parameters.emplace_back("'"s + std::to_string(country_codes_copy[i]) + "'");
+      for (auto parameter_index = size_t{0}; parameter_index < 7; ++parameter_index) {
+        parameters.emplace_back("'"s + std::to_string(country_codes_copy[parameter_index]) + "'");
       }
       break;
     }
@@ -513,18 +512,18 @@ std::string TPCHBenchmarkItemRunner::_substitute_placeholders(const BenchmarkIte
     std::stringstream sql;
     sql << "EXECUTE TPCH" << (item_id + 1) << " (" << boost::algorithm::join(parameter_values, ", ") << ")";
     return sql.str();
-  } else {
-    // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
-    auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
-
-    for (const auto& parameter_value : parameter_values) {
-      boost::replace_first(query_template, "?", parameter_value);
-    }
-
-    Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder");
-
-    return query_template;
   }
+
+  // Take the SQL query (from tpch_queries.cpp) and replace one placeholder (question mark) after another
+  auto query_template = std::string{tpch_queries.find(item_id + 1)->second};
+
+  for (const auto& parameter_value : parameter_values) {
+    boost::replace_first(query_template, "?", parameter_value);
+  }
+
+  Assert(query_template.find('?') == std::string::npos, "Unreplaced Placeholder");
+
+  return query_template;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -24,7 +24,7 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
@@ -438,8 +438,8 @@ void BenchmarkRunner::write_report_to_file() const {
 
   // Gather information on the table size
   auto table_size = size_t{0};
-  for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
+  for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
+    table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
@@ -515,7 +515,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
 nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
-  auto local_time = *std::localtime(&current_time);
+  auto local_time = *std::localtime(&current_time);  // NOLINT(concurrency-mt-unsafe) - not called in parallel
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
@@ -598,4 +598,4 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

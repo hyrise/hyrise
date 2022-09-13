@@ -3,7 +3,7 @@
 #include "benchmark/benchmark.h"
 #include "micro_benchmark_basic_fixture.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Welcome to the benchmark playground. Here, you can quickly compare two
@@ -42,11 +42,12 @@ class BenchmarkPlaygroundFixture : public MicroBenchmarkBasicFixture {
     // The "TableScan" will scan for one value (2), so it will select 25%.
     _vec.resize(1'000'000);
     std::generate(_vec.begin(), _vec.end(), []() {
-      static ValueT v = 0;
-      v = (v + 1) % 4;
-      return v;
+      static ValueT value = 0;
+      value = (value + 1) % 4;
+      return value;
     });
   }
+
   void TearDown(::benchmark::State& state) override {
     MicroBenchmarkBasicFixture::TearDown(state);
   }
@@ -65,9 +66,9 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_Reference)(benchmark::Stat
     std::vector<size_t> result;
     benchmark::DoNotOptimize(result.data());  // Do not optimize out the vector
     const auto size = _vec.size();
-    for (size_t i = 0; i < size; ++i) {
-      if (_vec[i] == 2) {
-        result.push_back(i);
+    for (auto index = size_t{0}; index < size; ++index) {
+      if (_vec[index] == 2) {
+        result.push_back(index);
         benchmark::ClobberMemory();  // Force that record to be written to memory
       }
     }
@@ -86,13 +87,13 @@ BENCHMARK_F(BenchmarkPlaygroundFixture, BM_Playground_PreAllocate)(benchmark::St
     // pre-allocate result vector
     result.reserve(250'000);
     const auto size = _vec.size();
-    for (size_t i = 0; i < size; ++i) {
-      if (_vec[i] == 2) {
-        result.push_back(i);
+    for (auto index = size_t{0}; index < size; ++index) {
+      if (_vec[index] == 2) {
+        result.push_back(index);
         benchmark::ClobberMemory();  // Force that record to be written to memory
       }
     }
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

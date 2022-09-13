@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPSubqueryExpression::LQPSubqueryExpression(
     const std::shared_ptr<AbstractLQPNode>& init_lqp, const std::vector<ParameterID>& init_parameter_ids,
@@ -88,4 +88,4 @@ size_t LQPSubqueryExpression::_shallow_hash() const {
   return AbstractExpression::_shallow_hash();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

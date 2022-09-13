@@ -23,20 +23,20 @@ namespace {
  * On worker threads, this references the Worker running on this thread, on all other threads, this is empty.
  * Uses a weak_ptr, because otherwise the ref-count of it would not reach zero within the main() scope of the program.
  */
-thread_local std::weak_ptr<opossum::Worker> this_thread_worker;
+thread_local std::weak_ptr<hyrise::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 }  // namespace
 
 // The sleep time was determined experimentally
 static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() {
   return ::this_thread_worker.lock();
 }
 
-Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID id, CpuID cpu_id)
-    : _queue(queue), _id(id), _cpu_id(cpu_id) {
+Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id)
+    : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);
@@ -221,13 +221,13 @@ void Worker::_set_affinity() {
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   CPU_SET(_cpu_id, &cpuset);
-  auto rc = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-  if (rc != 0) {
-    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the DB
-    // unfunctional, but probably slower
-    std::cerr << "Error calling pthread_setaffinity_np: " << rc << std::endl;
+  const auto return_code = pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+  if (return_code != 0) {
+    // This is not an Assert(), though maybe it should be. Not being able to pin the threads doesn't make the database
+    // unfunctional, but probably slower.
+    std::cerr << "Error calling pthread_setaffinity_np (return code: " << return_code << ")." << std::endl;
   }
 #endif
 }
 
-}  // namespace opossum
+}  // namespace hyrise

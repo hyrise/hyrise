@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSettingsTable::MetaSettingsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false},
@@ -40,4 +40,4 @@ void MetaSettingsTable::_on_update(const std::vector<AllTypeVariant>& selected_v
   Hyrise::get().settings_manager.get_setting(name)->set(value);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

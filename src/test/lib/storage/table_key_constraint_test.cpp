@@ -6,7 +6,7 @@
 #include "storage/table.hpp"
 #include "storage/table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableKeyConstraintTest : public BaseTest {
  protected:
@@ -46,18 +46,17 @@ TEST_F(TableKeyConstraintTest, DuplicateColumnIDs) {
 
 TEST_F(TableKeyConstraintTest, AddKeyConstraints) {
   EXPECT_EQ(_table->soft_key_constraints().size(), 0);
+
+  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   _table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
   EXPECT_EQ(_table->soft_key_constraints().size(), 1);
+
+  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{1}, ColumnID{2}}, KeyConstraintType::UNIQUE};
   _table->add_soft_key_constraint({{ColumnID{1}, ColumnID{2}}, KeyConstraintType::UNIQUE});
   EXPECT_EQ(_table->soft_key_constraints().size(), 2);
 
-  const auto& key_constraint_1 = *_table->soft_key_constraints().cbegin();
-  EXPECT_EQ(key_constraint_1.columns().size(), 1);
-  EXPECT_EQ(*key_constraint_1.columns().begin(), ColumnID{0});
-
-  const auto& key_constraint_2 = *(++_table->soft_key_constraints().cbegin());
-  EXPECT_EQ(key_constraint_2.columns().size(), 2);
-  EXPECT_TRUE(key_constraint_2.columns().contains(ColumnID{1}) && key_constraint_2.columns().contains(ColumnID{2}));
+  EXPECT_TRUE(_table->soft_key_constraints().contains(key_constraint_1));
+  EXPECT_TRUE(_table->soft_key_constraints().contains(key_constraint_2));
 }
 
 TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {
@@ -112,4 +111,62 @@ TEST_F(TableKeyConstraintTest, Equals) {
   EXPECT_FALSE(key_constraint_a == key_constraint_c);
 }
 
-}  // namespace opossum
+TEST_F(TableKeyConstraintTest, Hash) {
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_reordered = TableKeyConstraint{{ColumnID{2}, ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto primary_key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_TRUE(key_constraint_a.hash() == key_constraint_a.hash());
+  EXPECT_TRUE(key_constraint_a.hash() == key_constraint_a_reordered.hash());
+  EXPECT_TRUE(key_constraint_a_reordered.hash() == key_constraint_a.hash());
+
+  EXPECT_FALSE(key_constraint_a.hash() == primary_key_constraint_a.hash());
+  EXPECT_FALSE(primary_key_constraint_a.hash() == key_constraint_a.hash());
+
+  EXPECT_FALSE(key_constraint_a.hash() == key_constraint_b.hash());
+  EXPECT_FALSE(key_constraint_b.hash() == key_constraint_a.hash());
+
+  EXPECT_FALSE(key_constraint_c.hash() == key_constraint_a.hash());
+  EXPECT_FALSE(key_constraint_a.hash() == key_constraint_c.hash());
+}
+
+TEST_F(TableKeyConstraintTest, Less) {
+  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_a_reordered = TableKeyConstraint{{ColumnID{2}, ColumnID{0}}, KeyConstraintType::UNIQUE};
+  const auto primary_key_constraint_a = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY};
+
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_c = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+
+  EXPECT_FALSE(key_constraint_a < key_constraint_a);
+  EXPECT_FALSE(key_constraint_a < key_constraint_a_reordered);
+
+  EXPECT_TRUE(primary_key_constraint_a < key_constraint_a);
+
+  EXPECT_TRUE(key_constraint_a < key_constraint_b);
+
+  EXPECT_TRUE(key_constraint_c < key_constraint_a);
+}
+
+TEST_F(TableKeyConstraintTest, OrderIndependence) {
+  const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_2 = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
+
+  auto key_constraints_a = TableKeyConstraints{};
+  auto key_constraints_b = TableKeyConstraints{};
+
+  key_constraints_a.insert(key_constraint_1);
+  key_constraints_a.insert(key_constraint_2);
+
+  key_constraints_b.insert(key_constraint_2);
+  key_constraints_b.insert(key_constraint_1);
+
+  EXPECT_EQ(key_constraints_a, key_constraints_b);
+  EXPECT_EQ(*key_constraints_a.begin(), *key_constraints_b.begin());
+  EXPECT_EQ(*std::next(key_constraints_a.begin()), *std::next(key_constraints_b.begin()));
+}
+
+}  // namespace hyrise

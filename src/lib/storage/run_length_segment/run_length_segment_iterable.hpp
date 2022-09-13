@@ -7,7 +7,7 @@
 
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLengthSegmentIterable<T>> {
@@ -86,6 +86,7 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   }
 
   using EndPositionIterator = typename pmr_vector<ChunkOffset>::const_iterator;
+
   static EndPositionIterator search_end_positions_for_chunk_offset(
       const std::shared_ptr<const pmr_vector<ChunkOffset>>& end_positions, const ChunkOffset old_chunk_offset,
       const ChunkOffset new_chunk_offset, const size_t previous_end_position_index,
@@ -262,4 +263,4 @@ class RunLengthSegmentIterable : public PointAccessibleSegmentIterable<RunLength
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

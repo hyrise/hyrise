@@ -19,7 +19,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsTableScanStringTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
@@ -335,4 +335,4 @@ TEST_P(OperatorsTableScanStringTest, ScanNotLikeUnderscoreWildcardOnDict) {
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

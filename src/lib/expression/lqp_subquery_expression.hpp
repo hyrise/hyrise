@@ -4,7 +4,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -47,4 +47,4 @@ class LQPSubqueryExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*node*/) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

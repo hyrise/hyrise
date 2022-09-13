@@ -10,9 +10,9 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "storage/prepared_plan.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PreparedPlanTest : public BaseTest {
  public:
@@ -70,4 +70,4 @@ TEST_F(PreparedPlanTest, InstantiateHashEqual) {
   EXPECT_EQ(actual_lqp->hash(), expected_lqp->hash());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

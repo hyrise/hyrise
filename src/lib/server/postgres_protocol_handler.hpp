@@ -7,9 +7,9 @@
 #include "read_buffer.hpp"
 #include "write_buffer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using ErrorMessage = std::unordered_map<PostgresMessageType, std::string>;
+using ErrorMessages = std::unordered_map<PostgresMessageType, std::string>;
 
 // This struct stores a prepared statement's name, its portal used and the specified parameters.
 struct PreparedStatementDetails {
@@ -62,7 +62,7 @@ class PostgresProtocolHandler {
   std::string read_execute_packet();
 
   // Send error message to client if there is an error during parsing or execution
-  void send_error_message(const ErrorMessage& error_message);
+  void send_error_message(const ErrorMessages& error_messages);
 
   // Additional (optional) message containing execution times of different components (such as translator or optimizer)
   void send_execution_info(const std::string& execution_information);
@@ -77,4 +77,4 @@ class PostgresProtocolHandler {
   ReadBuffer<SocketType> _read_buffer;
   WriteBuffer<SocketType> _write_buffer;
 };
-}  // namespace opossum
+}  // namespace hyrise

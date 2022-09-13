@@ -10,7 +10,7 @@
 #include "utils/assert.hpp"
 #include "utils/column_ids_after_pruning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -151,10 +151,10 @@ std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
                                                      if (!updated_column_id) {
                                                        // Indexed column was pruned - remove index from statistics
                                                        return true;
-                                                     } else {
-                                                       // Update column id
-                                                       original_column_id = *updated_column_id;
                                                      }
+
+                                                     // Update column id
+                                                     original_column_id = *updated_column_id;
                                                    }
                                                    return false;
                                                  }),
@@ -188,4 +188,4 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
          _pruned_column_ids == stored_table_node._pruned_column_ids;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

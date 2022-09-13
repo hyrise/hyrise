@@ -12,7 +12,7 @@
 #include <boost/type_traits/is_pod.hpp>
 #include <boost/type_traits/is_stateless.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Represents SQL null value in AllTypeVariant
@@ -60,26 +60,27 @@ inline size_t hash_value(const NullValue& /*value*/) {
 #if !defined(BOOST_NO_IOSTREAM)
 
 BOOST_TEMPLATED_STREAM_TEMPLATE(E, T)
+
 inline BOOST_TEMPLATED_STREAM(ostream, E, T) & operator<<(BOOST_TEMPLATED_STREAM(ostream, E, T) & out,
-                                                          const opossum::NullValue&) {
+                                                          const NullValue&) {
   out << "NULL";
   return out;
 }
 
 #endif  // BOOST_NO_IOSTREAM
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace boost {
 // Type traits specializations
 
 template <>
-struct is_pod<opossum::NullValue> : mpl::true_ {};
+struct is_pod<hyrise::NullValue> : mpl::true_ {};
 
 template <>
-struct is_empty<opossum::NullValue> : mpl::true_ {};
+struct is_empty<hyrise::NullValue> : mpl::true_ {};
 
 template <>
-struct is_stateless<opossum::NullValue> : mpl::true_ {};
+struct is_stateless<hyrise::NullValue> : mpl::true_ {};
 
 }  // namespace boost

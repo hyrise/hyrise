@@ -3,7 +3,7 @@
 #include "./mock_setting.hpp"
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SettingsManagerTest : public BaseTest {
  protected:
@@ -74,4 +74,4 @@ TEST_F(SettingsManagerTest, GetNotLoadedSetting) {
   EXPECT_THROW(settings_manager.get_setting("not_existing_setting"), std::exception);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

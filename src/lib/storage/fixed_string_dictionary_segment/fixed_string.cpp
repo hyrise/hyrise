@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FixedString::FixedString(char* mem, size_t string_length)
     : _mem(mem), _maximum_length(string_length), _owns_memory(false) {}
@@ -51,11 +51,11 @@ size_t FixedString::maximum_length() const {
 }
 
 std::string FixedString::string() const {
-  return std::string(_mem, strnlen(_mem, _maximum_length));
+  return {_mem, strnlen(_mem, _maximum_length)};
 }
 
 std::string_view FixedString::string_view() const {
-  return std::string_view(_mem, strnlen(_mem, _maximum_length));
+  return {_mem, strnlen(_mem, _maximum_length)};
 }
 
 bool FixedString::operator<(const FixedString& other) const {
@@ -64,6 +64,7 @@ bool FixedString::operator<(const FixedString& other) const {
   if (result == 0) {
     return size() < other.size();
   }
+
   return result < 0;
 }
 
@@ -104,8 +105,8 @@ void FixedString::swap(FixedString& other) {
   std::swap_ranges(_mem, _mem + _maximum_length, other._mem);
 }
 
-std::ostream& operator<<(std::ostream& os, const FixedString& obj) {
-  return os << obj.string();
+std::ostream& operator<<(std::ostream& stream, const FixedString& obj) {
+  return stream << obj.string();
 }
 
 void swap(FixedString lhs, FixedString rhs) {
@@ -136,4 +137,4 @@ bool operator==(const char* lhs, const FixedString& rhs) {
   return lhs == rhs.string_view();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -15,7 +15,7 @@
  * Exclusion Set        of a vertex: all vertices with a lower index than this vertex
  */
 
-namespace opossum {
+namespace hyrise {
 
 EnumerateCcp::EnumerateCcp(const size_t num_vertices, std::vector<std::pair<size_t, size_t>> edges)
     : _num_vertices(num_vertices), _edges(std::move(edges)) {
@@ -47,14 +47,14 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
    * each vertex (_enumerate_csg_recursive()).
    * For each subgraph, a search for complement subgraphs is started (_enumerate_cmp()).
    */
-  for (size_t reverse_vertex_idx = 0; reverse_vertex_idx < _num_vertices; ++reverse_vertex_idx) {
+  for (auto reverse_vertex_idx = size_t{0}; reverse_vertex_idx < _num_vertices; ++reverse_vertex_idx) {
     const auto forward_vertex_idx = _num_vertices - reverse_vertex_idx - 1;
 
     auto start_vertex_set = JoinGraphVertexSet(_num_vertices);
     start_vertex_set.set(forward_vertex_idx);
     _enumerate_cmp(start_vertex_set);
 
-    std::vector<JoinGraphVertexSet> csgs;
+    auto csgs = std::vector<JoinGraphVertexSet>{};
     _enumerate_csg_recursive(csgs, start_vertex_set, _exclusion_set(forward_vertex_idx));
     for (const auto& csg : csgs) {
       _enumerate_cmp(csg);
@@ -65,15 +65,15 @@ std::vector<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> EnumerateCcp::ope
     // Assert that the algorithm didn't create duplicates and that all created ccps contain only previously enumerated
     // subsets, i.e., that the enumeration order is correct
 
-    std::set<JoinGraphVertexSet> enumerated_subsets;
-    std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>> enumerated_ccps;
+    auto enumerated_subsets = std::set<JoinGraphVertexSet>{};
+    auto enumerated_ccps = std::set<std::pair<JoinGraphVertexSet, JoinGraphVertexSet>>{};
 
     for (auto csg_cmp_pair : _csg_cmp_pairs) {
       // Components must be either single-vertex or must have been enumerated as the vertex set of a previously
       // enumerated CCP
-      Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.count(csg_cmp_pair.first) != 0,
+      Assert(csg_cmp_pair.first.count() == 1 || enumerated_subsets.contains(csg_cmp_pair.first),
              "CSG not yet enumerated");
-      Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.count(csg_cmp_pair.second) != 0,
+      Assert(csg_cmp_pair.second.count() == 1 || enumerated_subsets.contains(csg_cmp_pair.second),
              "CSG not yet enumerated");
 
       enumerated_subsets.emplace(csg_cmp_pair.first | csg_cmp_pair.second);
@@ -126,6 +126,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     reverse_vertex_indices.emplace_back(current_vertex_idx);
   } while ((current_vertex_idx = neighborhood.find_next(current_vertex_idx)) != JoinGraphVertexSet::npos);
 
+  // NOLINTNEXTLINE(modernize-loop-convert)
   for (auto iter = reverse_vertex_indices.rbegin(); iter != reverse_vertex_indices.rend(); ++iter) {
     auto cmp_vertex_set = JoinGraphVertexSet(_num_vertices);
     cmp_vertex_set.set(*iter);
@@ -207,21 +208,22 @@ std::vector<JoinGraphVertexSet> EnumerateCcp::_non_empty_subsets(const JoinGraph
 
   std::vector<JoinGraphVertexSet> subsets;
 
-  const auto s = vertex_set.to_ulong();
+  const auto set_ulong = vertex_set.to_ulong();
 
-  // s1 is the current subset subset [sic]. `s & -s` initializes it to the least significant bit in `s`. E.g., if
-  // s is 011000, this initializes s1 to 001000.
-  auto s1 = s & -s;
+  // subset_ulong is the current subset subset [sic]. `set_ulong & -set_ulong` initializes it to the least significant
+  // bit in `set_ulong`. E.g., if set_ulong is 011000, this initializes subset_ulong to 001000.
+  auto subset_ulong = set_ulong & -set_ulong;
 
-  while (s1 != s) {
-    subsets.emplace_back(_num_vertices, s1);
-    // This assigns to s1 the next subset of s. Somehow, this bit magic is binary incrementing s1, but only within the
-    // bits set in s. So, if s is 01101 and s1 is 00101, s1 will be updated to 01000.
-    s1 = s & (s1 - s);
+  while (subset_ulong != set_ulong) {
+    subsets.emplace_back(_num_vertices, subset_ulong);
+    // This assigns to subset_ulong the next subset of set_ulong. Somehow, this bit magic is binary incrementing
+    // subset_ulong, but only within the bits set in set_ulong. So, if set_ulong is 01101 and subset_ulong is 00101,
+    // subset_ulong will be updated to 01000.
+    subset_ulong = set_ulong & (subset_ulong - set_ulong);
   }
   subsets.emplace_back(vertex_set);
 
   return subsets;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

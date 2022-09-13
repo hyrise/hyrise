@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaLogTest : public BaseTest {
  protected:
@@ -54,4 +54,4 @@ TEST_F(MetaLogTest, TableGeneration) {
   EXPECT_EQ(values[5], AllTypeVariant{pmr_string{"bar"}});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

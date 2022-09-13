@@ -6,7 +6,7 @@
 #include "types.hpp"
 #include "utils/settings/abstract_setting.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * The SettingsManager is the central point for accessing all Setting objects.
@@ -31,4 +31,4 @@ class SettingsManager : public Noncopyable {
   std::map<std::string, std::shared_ptr<AbstractSetting>> _settings;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

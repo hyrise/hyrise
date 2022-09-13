@@ -10,7 +10,7 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/make_bimap.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
     make_bimap<AggregateFunction, std::string>({
@@ -106,4 +106,4 @@ std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compre
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

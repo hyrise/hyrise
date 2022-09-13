@@ -9,7 +9,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Base class of all compressed vectors
@@ -100,6 +100,7 @@ class CompressedVector : public BaseCompressedVector {
   auto cend() const {
     return end();
   }
+
   /**@}*/
 
  public:
@@ -137,4 +138,4 @@ class CompressedVector : public BaseCompressedVector {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

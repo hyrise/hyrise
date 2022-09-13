@@ -4,7 +4,7 @@
 
 #include "abstract_rule.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractCostEstimator;
 
@@ -25,4 +25,4 @@ class JoinOrderingRule : public AbstractRule {
   void _recurse_to_inputs(const std::shared_ptr<AbstractLQPNode>& lqp) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

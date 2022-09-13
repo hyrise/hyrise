@@ -2,7 +2,7 @@
 
 #include "operators/join_hash/join_hash_steps.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * The purpose of these tests it to check the construction of hash maps which are not mapping value
@@ -69,4 +69,4 @@ TYPED_TEST(JoinHashTypesTest, BuildSingleRowIds) {
   test_hash_map<TypeParam, TypeParam>(values);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

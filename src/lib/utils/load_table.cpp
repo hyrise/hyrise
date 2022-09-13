@@ -15,7 +15,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> create_table_from_header(std::ifstream& infile, ChunkOffset chunk_size) {
   std::string line;
@@ -90,4 +90,4 @@ std::shared_ptr<Table> load_table(const std::string& file_name, ChunkOffset chun
   return table;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

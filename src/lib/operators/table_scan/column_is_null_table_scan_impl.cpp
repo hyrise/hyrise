@@ -12,7 +12,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnIsNullTableScanImpl::ColumnIsNullTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                      const ColumnID column_id,
@@ -53,12 +53,12 @@ std::shared_ptr<RowIDPosList> ColumnIsNullTableScanImpl::scan_chunk(const ChunkI
 
 void ColumnIsNullTableScanImpl::_scan_generic_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches) const {
-  segment_with_iterators(segment, [&](auto it, [[maybe_unused]] const auto end) {
+  segment_with_iterators(segment, [&](auto iter, [[maybe_unused]] const auto end) {
     // This may also be called for a ValueSegment if `segment` is a ReferenceSegment pointing to a single ValueSegment.
     const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
     const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
 
-    _scan_with_iterators<false>(functor, it, end, chunk_id, matches);
+    _scan_with_iterators<false>(functor, iter, end, chunk_id, matches);
   });
 }
 
@@ -69,7 +69,8 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegme
   segment_with_iterators(segment, [&](auto begin, auto end) {
     if (is_nulls_first) {
       const auto first_not_null = std::lower_bound(
-          begin, end, bool{}, [](const auto& segment_position, const auto& _) { return segment_position.is_null(); });
+          begin, end, bool{},
+          [](const auto& segment_position, const auto& /*end*/) { return segment_position.is_null(); });
       if (predicate_is_null) {
         end = first_not_null;
       } else {
@@ -78,7 +79,8 @@ void ColumnIsNullTableScanImpl::_scan_generic_sorted_segment(const AbstractSegme
     } else {
       // NULLs last.
       const auto first_null = std::lower_bound(
-          begin, end, bool{}, [](const auto& segment_position, const auto& _) { return !segment_position.is_null(); });
+          begin, end, bool{},
+          [](const auto& segment_position, const auto& /*end*/) { return !segment_position.is_null(); });
       if (predicate_is_null) {
         begin = first_null;
       } else {
@@ -112,7 +114,8 @@ void ColumnIsNullTableScanImpl::_scan_value_segment(const BaseValueSegment& segm
 
   const auto invert = _predicate_condition == PredicateCondition::IsNotNull;
   const auto functor = [&](const auto& value) { return invert ^ value.is_null(); };
-  iterable.with_iterators([&](auto it, auto end) { _scan_with_iterators<false>(functor, it, end, chunk_id, matches); });
+  iterable.with_iterators(
+      [&](auto iter, auto end) { _scan_with_iterators<false>(functor, iter, end, chunk_id, matches); });
 }
 
 bool ColumnIsNullTableScanImpl::_matches_all(const BaseValueSegment& segment) const {
@@ -148,4 +151,4 @@ void ColumnIsNullTableScanImpl::_add_all(const ChunkID chunk_id, RowIDPosList& m
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

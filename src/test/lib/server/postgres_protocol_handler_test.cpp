@@ -5,7 +5,7 @@
 
 #include "server/postgres_protocol_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class PostgresProtocolHandlerTest : public BaseTest {
  protected:
@@ -263,7 +263,7 @@ TEST_F(PostgresProtocolHandlerTest, ReadExecutePacket) {
 
 TEST_F(PostgresProtocolHandlerTest, SendErrorMessage) {
   const std::string error_description = "error";
-  const auto error_message = ErrorMessage{{PostgresMessageType::HumanReadableError, error_description}};
+  const auto error_message = ErrorMessages{{PostgresMessageType::HumanReadableError, error_description}};
   _protocol_handler->send_error_message(error_message);
   const std::string file_content = _mocked_socket->read();
 
@@ -291,4 +291,4 @@ TEST_F(PostgresProtocolHandlerTest, SendExecutionInfo) {
   EXPECT_EQ(NetworkConversionHelper::get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

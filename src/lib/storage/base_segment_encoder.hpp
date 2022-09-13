@@ -15,7 +15,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -107,6 +107,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
     _vector_compression_type = type;
   }
+
   /**@}*/
 
  public:
@@ -143,6 +144,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
     // For now, we allocate without a specific memory source.
     return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
   }
+
   /**@}*/
 
  protected:
@@ -166,4 +168,4 @@ class SegmentEncoder : public BaseSegmentEncoder {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

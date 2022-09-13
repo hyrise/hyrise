@@ -3,7 +3,7 @@
 #include "operators/get_table.hpp"
 #include "server/query_handler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class QueryHandlerTest : public BaseTest {
  protected:
@@ -19,7 +19,7 @@ TEST_F(QueryHandlerTest, ExecutePipeline) {
   const auto [execution_information, transaction_context] =
       QueryHandler::execute_pipeline(query, SendExecutionInfo::Yes, nullptr);
 
-  EXPECT_TRUE(execution_information.error_message.empty());
+  EXPECT_TRUE(execution_information.error_messages.empty());
   EXPECT_EQ(execution_information.result_table->column_count(), 1);
   EXPECT_EQ(execution_information.result_table->row_count(), 1);
   EXPECT_PRED_FORMAT2(testing::IsSubstring, "Execution info:", execution_information.pipeline_metrics);
@@ -78,4 +78,4 @@ TEST_F(QueryHandlerTest, CorrectlyInvalidateStatements) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_prepared_plan(""));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

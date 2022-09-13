@@ -5,12 +5,14 @@
 #include "types.hpp"
 #include "utils/singleton.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
-#define EXPORT_PLUGIN(PluginName) \
-  extern "C" AbstractPlugin* factory() { return new PluginName(); }
+#define EXPORT_PLUGIN(PluginName)        \
+  extern "C" AbstractPlugin* factory() { \
+    return new PluginName();             \
+  }
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;
@@ -34,9 +36,7 @@ class AbstractPlugin {
   // exec_user_function method. If you are writing a plugin and provide user-exectuable functions it
   // is YOUR responsibility to keep these function calls as short and efficient as possible, e.g.,
   // by spinning up a thread inside the plugin to execute the actual functionality.
-  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() const {
-    return {};
-  }
+  virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions();
 };
 
-}  // namespace opossum
+}  // namespace hyrise

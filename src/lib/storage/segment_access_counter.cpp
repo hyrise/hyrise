@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 SegmentAccessCounter::SegmentAccessCounter() {
   DebugAssert(static_cast<size_t>(AccessType::Count) == access_type_string_mapping.size(),
@@ -22,7 +22,8 @@ SegmentAccessCounter& SegmentAccessCounter::operator=(const SegmentAccessCounter
 }
 
 void SegmentAccessCounter::_set_counters(const SegmentAccessCounter& counter) {
-  for (auto counter_index = 0ul, size = _counters.size(); counter_index < size; ++counter_index) {
+  const auto counter_count = _counters.size();
+  for (auto counter_index = size_t{0}; counter_index < counter_count; ++counter_index) {
     _counters[counter_index] = counter._counters[counter_index].load();
   }
 }
@@ -38,7 +39,7 @@ const SegmentAccessCounter::CounterType& SegmentAccessCounter::operator[](const 
 std::string SegmentAccessCounter::to_string() const {
   std::string result = std::to_string(_counters[0]);
   result.reserve(static_cast<size_t>(AccessType::Count) * 19);
-  for (auto access_type = 1u; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
+  for (auto access_type = size_t{1}; access_type < static_cast<size_t>(AccessType::Count); ++access_type) {
     result.append(",");
     result.append(std::to_string(_counters[access_type]));
   }
@@ -64,7 +65,7 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const Abstrac
 
 // Iterates over the first n (currently 100) elements in positions to determine the access pattern
 // (see enum AccessPattern in header).
-// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPatten.
+// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPattern.
 // The alphabet is defined by the internal enum Input.
 // The initial state is AccessPattern::Point. positions is iterated over from the beginning. For two adjacent
 // elements (in positions) the difference is computed and mapped to an element of the enum Input.
@@ -86,12 +87,12 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
   }};
   // clang-format on
 
-  const auto max_items_to_compare = std::min(positions.size(), 100ul);
+  const auto max_items_to_compare = std::min(positions.size(), size_t{100});
 
   auto access_pattern = AccessPattern::Point;
-  for (auto i = 1ul; i < max_items_to_compare; ++i) {
-    const int64_t diff =
-        static_cast<int64_t>(positions[i].chunk_offset) - static_cast<int64_t>(positions[i - 1].chunk_offset);
+  for (auto item_index = size_t{1}; item_index < max_items_to_compare; ++item_index) {
+    const int64_t diff = static_cast<int64_t>(positions[item_index].chunk_offset) -
+                         static_cast<int64_t>(positions[item_index - 1].chunk_offset);
 
     auto input = Input{};
     if (diff == 0) {
@@ -118,7 +119,8 @@ SegmentAccessCounter::AccessPattern SegmentAccessCounter::_access_pattern(const 
 }
 
 bool SegmentAccessCounter::operator==(const SegmentAccessCounter& other) const {
-  for (auto counter_index = 0ul, size = _counters.size(); counter_index < size; ++counter_index) {
+  const auto counter_count = _counters.size();
+  for (auto counter_index = size_t{0}; counter_index < counter_count; ++counter_index) {
     if (_counters[counter_index] != other._counters[counter_index]) {
       return false;
     }
@@ -130,4 +132,4 @@ bool SegmentAccessCounter::operator!=(const SegmentAccessCounter& other) const {
   return !(*this == other);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "sql/sql_pipeline.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionContext;
 
@@ -51,4 +51,4 @@ class BenchmarkSQLExecutor {
   uint64_t _num_visualized_plans{0};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

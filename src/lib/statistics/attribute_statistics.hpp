@@ -9,7 +9,7 @@
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class AbstractHistogram;
@@ -76,4 +76,4 @@ std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& att
 
 EXPLICITLY_DECLARE_DATA_TYPES(AttributeStatistics);
 
-}  // namespace opossum
+}  // namespace hyrise

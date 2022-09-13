@@ -3,7 +3,7 @@
 #include "abstract_expression.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * PredicateExpressions are those using a PredicateCondition.
@@ -22,4 +22,4 @@ class AbstractPredicateExpression : public AbstractExpression {
   size_t _shallow_hash() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

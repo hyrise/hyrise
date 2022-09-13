@@ -15,7 +15,7 @@
 #include "resolve_type.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // The RadixClusterOutput holds the data structures that belong to the output of the clustering stage.
 template <typename T>
@@ -89,6 +89,7 @@ class RadixClusterSort {
       cluster_histogram.resize(cluster_count);
       insert_position.resize(cluster_count);
     }
+
     // Used to count the number of entries for each cluster from a specific chunk
     // Example cluster_histogram[3] = 5
     // -> 5 values from the chunk belong in cluster 3
@@ -105,6 +106,7 @@ class RadixClusterSort {
   struct TableInformation {
     TableInformation(size_t chunk_count, size_t cluster_count)
         : cluster_histogram(cluster_count, 0), chunk_information(chunk_count, ChunkInformation(cluster_count)) {}
+
     // Used to count the number of entries for each cluster from the whole table
     std::vector<size_t> cluster_histogram;
     std::vector<ChunkInformation> chunk_information;
@@ -354,4 +356,4 @@ class RadixClusterSort {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

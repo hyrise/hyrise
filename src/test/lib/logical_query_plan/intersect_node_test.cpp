@@ -6,7 +6,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class IntersectNodeTest : public BaseTest {
  protected:
@@ -31,6 +31,7 @@ class IntersectNodeTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _b;
   std::shared_ptr<LQPColumnExpression> _c;
 };
+
 TEST_F(IntersectNodeTest, Description) {
   EXPECT_EQ(_intersect_node->description(), "[IntersectNode] Mode: Positions");
 }
@@ -69,4 +70,4 @@ TEST_F(IntersectNodeTest, NodeExpressions) {
   ASSERT_EQ(_intersect_node->node_expressions.size(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

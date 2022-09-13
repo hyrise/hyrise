@@ -1,6 +1,6 @@
 #include "immediate_execution_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void ImmediateExecutionScheduler::begin() {}
 
@@ -32,4 +32,4 @@ void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, N
   Assert(task->is_done(), "Task should have been executed by now.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

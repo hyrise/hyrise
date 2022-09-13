@@ -10,23 +10,18 @@
 #include <tuple>
 #include <vector>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 107400                      // TODO(anyone): remove this block once Ubuntu ships boost 1.74
-#include "utils/boost_bimap_core_override.hpp"  // NOLINT
-#endif
-
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
+#include <boost/version.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
 
 /**
- * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids.
- * Because implicit constructors are deleted, you cannot initialize a ChunkID
- * like this
+ * We use STRONG_TYPEDEF to avoid things like adding chunk ids and value ids. Because implicit constructors are
+ * deleted, you cannot initialize a ChunkID like this:
  *   ChunkID x = 3;
  * but need to use
  *   auto x = ChunkID{3};
@@ -41,7 +36,7 @@
 
 STRONG_TYPEDEF(uint32_t, ChunkID);
 STRONG_TYPEDEF(uint16_t, ColumnID);
-STRONG_TYPEDEF(opossum::ColumnID::base_type, ColumnCount);
+STRONG_TYPEDEF(hyrise::ColumnID::base_type, ColumnCount);
 STRONG_TYPEDEF(uint32_t, ValueID);  // Cannot be larger than ChunkOffset
 STRONG_TYPEDEF(uint32_t, NodeID);
 STRONG_TYPEDEF(uint32_t, CpuID);
@@ -61,7 +56,7 @@ STRONG_TYPEDEF(uint32_t, TransactionID);
 // `SELECT * FROM t WHERE a > ?` or a correlated parameter in a subquery.
 STRONG_TYPEDEF(uint16_t, ParameterID);
 
-namespace opossum {
+namespace hyrise {
 
 // Float aliases used in cardinality estimations/statistics
 using Cardinality = float;
@@ -126,9 +121,9 @@ struct RowID {
     return std::tie(chunk_id, chunk_offset) == std::tie(other.chunk_id, other.chunk_offset);
   }
 
-  friend std::ostream& operator<<(std::ostream& o, const RowID& row_id) {
-    o << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
-    return o;
+  friend std::ostream& operator<<(std::ostream& stream, const RowID& row_id) {
+    stream << "RowID(" << row_id.chunk_id << "," << row_id.chunk_offset << ")";
+    return stream;
   }
 };
 
@@ -153,7 +148,7 @@ constexpr NodeID CURRENT_NODE_ID{std::numeric_limits<NodeID::base_type>::max() -
 // Declaring one part of a RowID as invalid would suffice to represent NULL values. However, this way we add an extra
 // safety net which ensures that NULL values are handled correctly. E.g., getting a chunk with INVALID_CHUNK_ID
 // immediately crashes.
-const RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};  // TODO(anyone): Couldn’t use constexpr here
+constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
@@ -287,16 +282,16 @@ std::ostream& operator<<(std::ostream& stream, TableType table_type);
 
 using BoolAsByteType = uint8_t;
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 // The hash method for pmr_string (see above). We explicitly don't use the alias here as this allows us to write
 // `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
 // function.
 template <>
-struct hash<std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>> {
+struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
   size_t operator()(
-      const std::basic_string<char, std::char_traits<char>, opossum::PolymorphicAllocator<char>>& string) const {
+      const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
     return std::hash<std::string_view>{}(string.c_str());
   }
 };

@@ -2,7 +2,7 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Indicates whether the comparison of two tables should happen order sensitive (Yes) or whether it should just be
@@ -48,4 +48,4 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode, IgnoreNullable ignore_nullable);
 
-}  // namespace opossum
+}  // namespace hyrise

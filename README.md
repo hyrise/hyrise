@@ -69,8 +69,8 @@ You can find definitions of most of the terms and abbreviations used in the code
 The [Step by Step Guide](https://github.com/hyrise/hyrise/wiki/Step-by-Step-Guide) is a good starting point to get to know Hyrise.
 
 ## Native Setup
-You can install the dependencies on your own or use the install_dependencies.sh script (**recommended**) which installs all of the therein listed dependencies and submodules.
-The install script was tested under macOS Big Sur (10.16) and Ubuntu 20.10 (apt-get).
+You can install the dependencies on your own or use the `install_dependencies.sh` script (**recommended**) which installs all of the therein listed dependencies and submodules.
+The install script was tested under macOS Monterey (12.4) and Ubuntu 22.04.
 
 See [dependencies](DEPENDENCIES.md) for a detailed list of dependencies to use with `brew install` or `apt-get install`, depending on your platform. As compilers, we generally use the most recent version of clang and gcc (Linux only). Please make sure that the system compiler points to the most recent version or use cmake (see below) accordingly.
 Older versions may work, but are neither tested nor supported.
@@ -145,15 +145,16 @@ When trying to optimize the time spent building the project, it is often helpful
 `scripts/compile_time.sh` helps with that. Get usage instructions by running it without any arguments.
 
 ## Maintainers
-- Jan Kossmann
-- Marcel Weisgut
 - Martin Boissier
 - Stefan Halfpap
+- Daniel Lindner
+- Marcel Weisgut
 
 Contact: firstname.lastname@hpi.de
 
-## Maintainer emeritus
+## Maintainers emeriti
 - Markus Dreseler
+- Jan    Kossmann
 
 ## Contributors
 -   Yannick   Bäumer
@@ -187,7 +188,6 @@ Contact: firstname.lastname@hpi.de
 -   Sven      Lehmann
 -   Till      Lehmann
 -   Tom       Lichtenstein
--   Daniel    Lindner
 -   Alexander Löser
 -   Jan       Mattfeld
 -   Arne      Mayer

@@ -9,7 +9,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<AbstractExpression>>& predicates) {
   // Optimization: The ExpressionReductionRule transforms `x NOT LIKE 'foo%'` into `x < 'foo' OR x >= 'fop'`. For this
@@ -71,7 +71,7 @@ bool predicates_are_mutually_exclusive(const std::vector<std::shared_ptr<Abstrac
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 PredicateSplitUpRule::PredicateSplitUpRule(const bool split_disjunctions) : _split_disjunctions(split_disjunctions) {}
 
@@ -189,4 +189,4 @@ void PredicateSplitUpRule::_split_disjunction(const std::shared_ptr<PredicateNod
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

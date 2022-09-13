@@ -6,7 +6,7 @@
 #include "types.hpp"
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -46,4 +46,4 @@ class MetaTableManager : public Noncopyable {
   std::vector<std::string> _table_names;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ExceptNodeTest : public BaseTest {
  protected:
@@ -70,4 +70,4 @@ TEST_F(ExceptNodeTest, NodeExpressions) {
   EXPECT_EQ(_except_node->node_expressions.size(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

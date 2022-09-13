@@ -7,7 +7,7 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LikeMatcherTest : public BaseTest {
  public:
@@ -97,4 +97,4 @@ TEST_F(LikeMatcherTest, EmptyString) {
   ASSERT_EQ(upper_bound, expected_upper_bound);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -30,7 +30,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // empty base class for AggregateResultContext
 class SegmentVisitorContext {};
@@ -138,7 +138,7 @@ using DistinctAggregateType = int8_t;
 
 class AggregateHash : public AbstractAggregateOperator {
  public:
-  AggregateHash(const std::shared_ptr<AbstractOperator>& in,
+  AggregateHash(const std::shared_ptr<AbstractOperator>& input_operator,
                 const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                 const std::vector<ColumnID>& groupby_column_ids);
 
@@ -199,27 +199,27 @@ class AggregateHash : public AbstractAggregateOperator {
   std::chrono::nanoseconds aggregate_columns_writing_duration{};
 };
 
-}  // namespace opossum
+}  // namespace hyrise
 
 namespace std {
 template <>
-struct hash<opossum::EmptyAggregateKey> {
-  size_t operator()(const opossum::EmptyAggregateKey& key) const {
+struct hash<hyrise::EmptyAggregateKey> {
+  size_t operator()(const hyrise::EmptyAggregateKey& key) const {
     return 0;
   }
 };
 
 template <>
-struct hash<opossum::AggregateKeySmallVector> {
-  size_t operator()(const opossum::AggregateKeySmallVector& key) const {
+struct hash<hyrise::AggregateKeySmallVector> {
+  size_t operator()(const hyrise::AggregateKeySmallVector& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };
 
 template <>
-struct hash<std::array<opossum::AggregateKeyEntry, 2>> {
+struct hash<std::array<hyrise::AggregateKeyEntry, 2>> {
   // gcc9 doesn't support templating by `int N` here.
-  size_t operator()(const std::array<opossum::AggregateKeyEntry, 2>& key) const {
+  size_t operator()(const std::array<hyrise::AggregateKeyEntry, 2>& key) const {
     return boost::hash_range(key.begin(), key.end());
   }
 };

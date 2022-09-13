@@ -6,7 +6,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class AbstractExpression;
@@ -36,4 +36,4 @@ class PreparedPlan final {
 
 std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan);
 
-}  // namespace opossum
+}  // namespace hyrise

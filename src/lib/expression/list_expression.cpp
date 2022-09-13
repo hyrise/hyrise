@@ -5,7 +5,7 @@
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ListExpression::ListExpression(const std::vector<std::shared_ptr<AbstractExpression>>& elements)
     : AbstractExpression(ExpressionType::List, elements) {}
@@ -33,4 +33,4 @@ bool ListExpression::_shallow_equals(const AbstractExpression& expression) const
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "operators/sort.hpp"
 #include "operators/table_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct SortTestParam {
   std::vector<SortColumnDefinition> sort_columns;
@@ -158,6 +158,7 @@ INSTANTIATE_TEST_SUITE_P(Variations, SortTest,
                            SortTestParam{{SortColumnDefinition{ColumnID{0}, SortMode::Ascending}},                                                           true,  true,  Chunk::DEFAULT_SIZE, Sort::ForceMaterialization::Yes, "empty.tbl"}              // NOLINT
                           ),  // NOLINT
                          sort_test_formatter);
+
 // clang-format on
 
 TEST_F(SortTest, JoinProducesReferences) {
@@ -234,4 +235,4 @@ TEST_F(SortTest, InputReferencesDifferentColumns) {
   EXPECT_EQ(sort.get_output()->type(), TableType::Data);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,6 +1,6 @@
 #include "parameter_id_allocator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ParameterID ParameterIDAllocator::allocate() {
   return static_cast<ParameterID>(_parameter_id_counter++);
@@ -18,4 +18,4 @@ const std::unordered_map<ValuePlaceholderID, ParameterID>& ParameterIDAllocator:
   return _value_placeholders;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

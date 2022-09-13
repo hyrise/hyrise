@@ -16,13 +16,13 @@
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
-#include "utils/print_directed_acyclic_graph.hpp"
+#include "utils/print_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -64,7 +64,7 @@ void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::sh
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 AbstractLQPNode::AbstractLQPNode(LQPNodeType node_type,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& init_node_expressions)
@@ -96,9 +96,9 @@ size_t AbstractLQPNode::hash() const {
       boost::hash_combine(hash, node->type);
       boost::hash_combine(hash, node->_on_shallow_hash());
       return LQPVisitation::VisitInputs;
-    } else {
-      return LQPVisitation::DoNotVisitInputs;
     }
+
+    return LQPVisitation::DoNotVisitInputs;
   });
 
   return hash;
@@ -128,7 +128,7 @@ void AbstractLQPNode::set_left_input(const std::shared_ptr<AbstractLQPNode>& lef
 void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& right) {
   DebugAssert(right == nullptr || type == LQPNodeType::Join || type == LQPNodeType::Union ||
                   type == LQPNodeType::Update || type == LQPNodeType::Intersect || type == LQPNodeType::Except ||
-                  type == LQPNodeType::ChangeMetaTable,
+                  type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
               "This node type does not accept a right input");
   set_input(LQPInputSide::Right, right);
 }
@@ -136,7 +136,7 @@ void AbstractLQPNode::set_right_input(const std::shared_ptr<AbstractLQPNode>& ri
 void AbstractLQPNode::set_input(LQPInputSide side, const std::shared_ptr<AbstractLQPNode>& input) {
   DebugAssert(side == LQPInputSide::Left || input == nullptr || type == LQPNodeType::Join ||
                   type == LQPNodeType::Union || type == LQPNodeType::Update || type == LQPNodeType::Intersect ||
-                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable,
+                  type == LQPNodeType::Except || type == LQPNodeType::ChangeMetaTable || type == LQPNodeType::Mock,
               "This node type does not accept a right input");
 
   // We need a reference to _inputs[input_idx], so not calling this->input(side)
@@ -170,11 +170,13 @@ size_t AbstractLQPNode::input_count() const {
 LQPInputSide AbstractLQPNode::get_input_side(const std::shared_ptr<AbstractLQPNode>& output) const {
   if (output->_inputs[0].get() == this) {
     return LQPInputSide::Left;
-  } else if (output->_inputs[1].get() == this) {
-    return LQPInputSide::Right;
-  } else {
-    Fail("Specified output node is not actually an output node of this node.");
   }
+
+  if (output->_inputs[1].get() == this) {
+    return LQPInputSide::Right;
+  }
+
+  Fail("Specified output node is not actually an output node of this node.");
 }
 
 std::vector<LQPInputSide> AbstractLQPNode::get_input_sides() const {
@@ -226,7 +228,8 @@ std::vector<LQPOutputRelation> AbstractLQPNode::output_relations() const {
   const auto outputs = this->outputs();
   const auto input_sides = get_input_sides();
 
-  for (size_t output_idx = 0; output_idx < output_relations.size(); ++output_idx) {
+  const auto output_relation_count = output_relations.size();
+  for (auto output_idx = size_t{0}; output_idx < output_relation_count; ++output_idx) {
     output_relations[output_idx] = LQPOutputRelation{outputs[output_idx], input_sides[output_idx]};
   }
 
@@ -255,8 +258,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AbstractLQPNode::output_express
 }
 
 std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression& expression) const {
-  const auto& output_expressions = this->output_expressions();
-  return find_expression_idx(expression, output_expressions);
+  const auto& expressions_of_output = output_expressions();
+  return find_expression_idx(expression, expressions_of_output);
 }
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
@@ -341,10 +344,10 @@ std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_depend
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->non_trivial_functional_dependencies();
-  } else {
-    // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
-    return {};
   }
+
+  // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
+  return {};
 }
 
 bool AbstractLQPNode::operator==(const AbstractLQPNode& rhs) const {
@@ -359,8 +362,8 @@ bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
-  std::shared_ptr<AbstractLQPNode> copied_left_input;
-  std::shared_ptr<AbstractLQPNode> copied_right_input;
+  auto copied_left_input = std::shared_ptr<AbstractLQPNode>{};
+  auto copied_right_input = std::shared_ptr<AbstractLQPNode>{};
 
   if (left_input()) {
     copied_left_input = left_input()->_deep_copy_impl(node_mapping);
@@ -495,4 +498,4 @@ std::ostream& operator<<(std::ostream& stream, const AbstractLQPNode& node) {
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

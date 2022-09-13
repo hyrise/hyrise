@@ -39,7 +39,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
@@ -67,9 +67,9 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -358,7 +358,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
       return output_table_statistics;
-    } else if (logical_expression->logical_operator == LogicalOperator::And) {
+    }
+
+    if (logical_expression->logical_operator == LogicalOperator::And) {
       // Estimate AND by splitting it up into two consecutive PredicateNodes
 
       const auto first_predicate_node =
@@ -418,15 +420,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   //               That implies estimating a selectivity of 1 for such predicates
   if (!operator_scan_predicates) {
     return input_table_statistics;
-  } else {
-    auto output_table_statistics = input_table_statistics;
-
-    for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-      output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
-    }
-
-    return output_table_statistics;
   }
+
+  auto output_table_statistics = input_table_statistics;
+
+  for (const auto& operator_scan_predicate : *operator_scan_predicates) {
+    output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
+  }
+
+  return output_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
@@ -547,9 +549,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     }
 
     return std::make_shared<TableStatistics>(std::move(column_statistics), clamped_row_count);
-  } else {
-    return input_table_statistics;
   }
+
+  return input_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_predicate(
@@ -1043,4 +1045,4 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

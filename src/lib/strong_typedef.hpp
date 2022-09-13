@@ -19,7 +19,7 @@
  */
 
 #define STRONG_TYPEDEF(T, D)                                                                                      \
-  namespace opossum {                                                                                             \
+  namespace hyrise {                                                                                              \
   struct D : boost::totally_ordered1<D> {                                                                         \
     typedef T base_type;                                                                                          \
     T t;                                                                                                          \
@@ -51,23 +51,23 @@
                                                                                                                   \
   namespace std {                                                                                                 \
   template <>                                                                                                     \
-  struct hash<::opossum::D> : public unary_function<::opossum::D, size_t> {                                       \
-    size_t operator()(const ::opossum::D& x) const {                                                              \
+  struct hash<::hyrise::D> {                                                                                      \
+    size_t operator()(const ::hyrise::D& x) const {                                                               \
       return hash<T>{}(x);                                                                                        \
     }                                                                                                             \
   };                                                                                                              \
   template <>                                                                                                     \
                                                                                                                   \
-  struct numeric_limits<::opossum::D> {                                                                           \
-    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::opossum::D> min() {                               \
-      return ::opossum::D(numeric_limits<T>::min());                                                              \
+  struct numeric_limits<::hyrise::D> {                                                                            \
+    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> min() {                                \
+      return ::hyrise::D(numeric_limits<T>::min());                                                               \
     }                                                                                                             \
-    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::opossum::D> max() {                               \
-      return ::opossum::D(numeric_limits<T>::max());                                                              \
+    static typename std::enable_if_t<std::is_arithmetic_v<T>, ::hyrise::D> max() {                                \
+      return ::hyrise::D(numeric_limits<T>::max());                                                               \
     }                                                                                                             \
   };                                                                                                              \
   } /* NOLINT */                                                                                                  \
-  namespace opossum {                                                                                             \
+  namespace hyrise {                                                                                              \
   inline std::size_t hash_value(const D& d) {                                                                     \
     return std::hash<D>()(d);                                                                                     \
   }                                                                                                               \

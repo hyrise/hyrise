@@ -16,7 +16,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionContextTest : public BaseTest {
  public:
@@ -164,4 +164,4 @@ TEST_F(TransactionContextTest, CommitWithFailedOperator) {
   EXPECT_ANY_THROW(context->commit());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

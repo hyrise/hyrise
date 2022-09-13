@@ -8,7 +8,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Implemented vector compression schemes
@@ -38,4 +38,4 @@ std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uin
                                                             const PolymorphicAllocator<size_t>& alloc,
                                                             const UncompressedVectorInfo& meta_info = {});
 
-}  // namespace opossum
+}  // namespace hyrise

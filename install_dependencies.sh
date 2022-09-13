@@ -1,14 +1,6 @@
 #!/bin/bash
 
-if [[ -z $OPOSSUM_HEADLESS_SETUP ]]; then
-    BOOST_INSTALLED=$(dpkg-query -W --showformat='${Status}\n' libboost1.67-dev 2>/dev/null | grep "install ok installed")
-    if [ "" != "$BOOST_INSTALLED" ]; then
-         read -p 'libboost1.67-dev is installed but 1.70 is required. Ok to remove 1.67-dev? [y|n] ' -n 1 -r < /dev/tty
-        echo
-         if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
-             sudo apt-get remove libboost1.67-dev
-         fi
-    fi
+if [[ -z $HYRISE_HEADLESS_SETUP ]]; then
     read -p 'This script installs the dependencies of Hyrise. It might upgrade already installed packages. Continue? [y|n] ' -n 1 -r < /dev/tty
 else
     REPLY="y"
@@ -57,18 +49,8 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
         if [ -f /etc/lsb-release ] && cat /etc/lsb-release | grep DISTRIB_ID | grep Ubuntu >/dev/null; then
             echo "Installing dependencies (this may take a while)..."
             if sudo apt-get update >/dev/null; then
-                sudo apt-get install --no-install-recommends -y software-properties-common lsb-release
-                if [[ "$(lsb_release -sr)" < "20.04" ]]; then
-                    # Ubuntu versions before 20.04 do not have a compatible boost version. Manually retrieve it
-                    sudo add-apt-repository -y ppa:mhier/libboost-latest
-                    sudo apt-get update
-                    sudo apt-get install --no-install-recommends -y libboost1.70-dev
-                else 
-                    sudo apt-get install --no-install-recommends -y libboost1.71-all-dev
-                fi
-
                 # Packages added here should also be added to the Dockerfile
-                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-9 clang-format-9 clang-tidy-9 cmake curl dos2unix g++-9 gcc-9 gcovr git graphviz libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
+                sudo apt-get install --no-install-recommends -y autoconf bash-completion bc clang-11 clang-14 clang-format-14 clang-tidy-14 cmake curl dos2unix g++-9 gcc-9 g++-11 gcc-11 gcovr git graphviz libboost-all-dev libhwloc-dev libncurses5-dev libnuma-dev libnuma1 libpq-dev libreadline-dev libsqlite3-dev libtbb-dev lld man parallel postgresql-server-dev-all python3 python3-pip valgrind &
 
                 if ! git submodule update --jobs 5 --init --recursive; then
                     echo "Error during git fetching submodules."
@@ -87,8 +69,9 @@ if echo $REPLY | grep -E '^[Yy]$' > /dev/null; then
                     exit 1
                 fi
 
-                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-9 90 --slave /usr/bin/g++ g++ /usr/bin/g++-9
-                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-9 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-9 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-9 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-9 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-9 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-9
+                sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 90 --slave /usr/bin/g++ g++ /usr/bin/g++-11
+                # we use llvm-profdata-11 and llvm-cov-11 due to an unresolved issue with coverage under clang14 (https://github.com/llvm/llvm-project/issues/54907)
+                sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-14 90 --slave /usr/bin/clang++ clang++ /usr/bin/clang++-14 --slave /usr/bin/clang-tidy clang-tidy /usr/bin/clang-tidy-14 --slave /usr/bin/llvm-profdata llvm-profdata /usr/bin/llvm-profdata-11 --slave /usr/bin/llvm-cov llvm-cov /usr/bin/llvm-cov-11 --slave /usr/bin/clang-format clang-format /usr/bin/clang-format-14
             else
                 echo "Error during installation."
                 exit 1

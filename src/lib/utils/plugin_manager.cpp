@@ -8,7 +8,7 @@
 
 #include "plugin_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool PluginManager::_is_duplicate(const std::unique_ptr<AbstractPlugin>& plugin) const {
   const auto& plugin_ref = *plugin;
@@ -46,7 +46,12 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   Assert(!_plugins.contains(plugin_name),
          "Loading plugin failed: A plugin with name " + plugin_name + " already exists.");
 
+  // Lock for dl* functions (see clang-tidy's "concurrency-mt-unsafe")
+  static auto dl_mutex = std::mutex{};
+  auto lock = std::lock_guard<std::mutex>{dl_mutex};
+
   PluginHandle plugin_handle = dlopen(path.c_str(), static_cast<uint8_t>(RTLD_NOW) | static_cast<uint8_t>(RTLD_LOCAL));
+  // NOLINTNEXTLINE(concurrency-mt-unsafe) - dlerror is not thread-safe, but it's guarded by dl_mutex.
   Assert(plugin_handle, std::string{"Loading plugin failed: "} + dlerror());
 
   // abstract_plugin.hpp defines a macro for exporting plugins which makes them instantiable by providing a
@@ -129,4 +134,4 @@ PluginManager::~PluginManager() {
   _clean_up();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

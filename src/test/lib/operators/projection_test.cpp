@@ -17,9 +17,9 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Projection mostly forwards its computations to the ExpressionEvaluator, so this the actual expression evaluation is
@@ -49,12 +49,12 @@ class OperatorsProjectionTest : public BaseTest {
 };
 
 TEST_F(OperatorsProjectionTest, OperatorName) {
-  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_a, a_b));
+  const auto projection = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a, a_b));
   EXPECT_EQ(projection->name(), "Projection");
 }
 
 TEST_F(OperatorsProjectionTest, ExecutedOnAllChunks) {
-  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(add_(a_a, a_b)));
+  const auto projection = std::make_shared<Projection>(table_wrapper_a, expression_vector(add_(a_a, a_b)));
   projection->execute();
   EXPECT_TABLE_EQ_UNORDERED(projection->get_output(),
                             load_table("resources/test_data/tbl/projection/int_float_add.tbl"));
@@ -74,7 +74,7 @@ TEST_F(OperatorsProjectionTest, PassThroughInvalidRowCount) {
 
   transaction_context->commit();
 
-  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_a, a_b));
+  const auto projection = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_a, a_b));
 
   projection->execute();
   const auto result_table = projection->get_output();
@@ -91,7 +91,7 @@ TEST_F(OperatorsProjectionTest, ForwardsDataTable) {
   // The Projection will forward segments from its input if all expressions are segment references.
   // Why would you enforce something like this? E.g., Update relies on it.
 
-  const auto projection = std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a));
+  const auto projection = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_b, a_a));
   projection->execute();
 
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
@@ -107,8 +107,7 @@ TEST_F(OperatorsProjectionTest, ForwardsDataTable) {
 }
 
 TEST_F(OperatorsProjectionTest, ForwardsDataTableAndExpression) {
-  const auto projection =
-      std::make_shared<opossum::Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  const auto projection = std::make_shared<Projection>(table_wrapper_a, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
 
   const auto input_chunk = table_wrapper_a->get_output()->get_chunk(ChunkID{0});
@@ -125,8 +124,7 @@ TEST_F(OperatorsProjectionTest, DoNotForwardEvaluatedColumns) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->never_clear_output();
   table_scan->execute();
-  const auto projection =
-      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
+  const auto projection = std::make_shared<Projection>(table_scan, expression_vector(a_b, a_a, add_(a_b, a_a)));
   projection->execute();
 
   const auto input_chunk = table_scan->get_output()->get_chunk(ChunkID{0});
@@ -149,7 +147,7 @@ TEST_F(OperatorsProjectionTest, ForwardsReferenceTable) {
   const auto table_scan = create_table_scan(table_wrapper_a, ColumnID{0}, PredicateCondition::LessThan, 100'000);
   table_scan->never_clear_output();
   table_scan->execute();
-  const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_b, a_a));
+  const auto projection = std::make_shared<Projection>(table_scan, expression_vector(a_b, a_a));
   projection->execute();
 
   EXPECT_EQ(table_scan->get_output()->get_chunk(ChunkID{0})->get_segment(ColumnID{1}),
@@ -167,7 +165,7 @@ TEST_F(OperatorsProjectionTest, EvaluateForwardableColumns) {
   table_scan->never_clear_output();
   table_scan->execute();
 
-  const auto projection = std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a, 17)));
+  const auto projection = std::make_shared<Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a, 17)));
   projection->never_clear_output();
   projection->execute();
 
@@ -192,8 +190,7 @@ TEST_F(OperatorsProjectionTest, ExpressionUnorderedSetCheck) {
 
   // a_a should not be forwarded as a_a2 references the same input columns and is evaluated.
   const auto a_a2 = PQPColumnExpression::from_table(*table_wrapper_a->get_output(), "a");
-  const auto projection =
-      std::make_shared<opossum::Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
+  const auto projection = std::make_shared<Projection>(table_scan, expression_vector(a_a, a_b, add_(a_a2, 17)));
   projection->never_clear_output();
   projection->execute();
 
@@ -269,4 +266,4 @@ TEST_F(OperatorsProjectionTest, ForwardSortedByFlag) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AliasOperatorTest : public BaseTest {
  public:
@@ -107,4 +107,4 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlagForRepeatedColumnReferences) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

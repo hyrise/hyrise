@@ -12,7 +12,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Compares one column to a literal (i.e., an AllTypeVariant)
@@ -80,9 +80,10 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
         Fail("Unsupported comparison type encountered");
     }
   }
+
   /**@}*/
  private:
   const bool _column_is_nullable;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

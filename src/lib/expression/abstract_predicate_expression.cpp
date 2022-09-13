@@ -6,7 +6,7 @@
 
 #include "expression/evaluation/expression_evaluator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractPredicateExpression::AbstractPredicateExpression(
     const PredicateCondition init_predicate_condition,
@@ -27,4 +27,4 @@ size_t AbstractPredicateExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(predicate_condition));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

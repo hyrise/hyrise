@@ -16,7 +16,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, EraseReferencedSegmentType erase_reference_segment_type>
 class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable<T, erase_reference_segment_type>> {
@@ -202,9 +202,8 @@ class ReferenceSegmentIterable : public SegmentIterable<ReferenceSegmentIterable
 
       if (typed_value) {
         return SegmentPosition<T>{std::move(*typed_value), false, pos_list_offset};
-      } else {
-        return SegmentPosition<T>{T{}, true, pos_list_offset};
       }
+      return SegmentPosition<T>{T{}, true, pos_list_offset};
     }
 
     void _create_accessor(const ChunkID chunk_id) const {
@@ -240,4 +239,4 @@ struct is_reference_segment_iterable<Iterable<T, erase_reference_segment_type>> 
 template <typename T>
 inline constexpr bool is_reference_segment_iterable_v = is_reference_segment_iterable<T>::value;
 
-}  // namespace opossum
+}  // namespace hyrise

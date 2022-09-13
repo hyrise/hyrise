@@ -4,7 +4,7 @@
 
 #include "storage/segment_iterables/abstract_segment_iterators.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace detail {
 
@@ -120,11 +120,13 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
 
   template <typename Iterator>
   explicit AnySegmentIterator(const Iterator& iterator)
-      : _wrapper{std::make_unique<opossum::detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
+      : _wrapper{std::make_unique<detail::AnySegmentIteratorWrapper<T, Iterator>>(iterator)} {}
+
   /**@}*/
 
  public:
   AnySegmentIterator(const AnySegmentIterator& other) : _wrapper{other._wrapper->clone()} {}
+
   AnySegmentIterator& operator=(const AnySegmentIterator& other) {
     if (this == &other) {
       return *this;
@@ -161,7 +163,7 @@ class AnySegmentIterator : public AbstractSegmentIterator<AnySegmentIterator<T>,
   }
 
  private:
-  std::unique_ptr<opossum::detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
+  std::unique_ptr<detail::AnySegmentIteratorWrapperBase<T>> _wrapper;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

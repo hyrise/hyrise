@@ -3,7 +3,7 @@
 
 #include "tpcc_payment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
     : AbstractTPCCProcedure(sql_executor) {
@@ -13,10 +13,11 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   std::uniform_int_distribution<> district_dist{1, 10};
   d_id = district_dist(_random_engine);
 
+  c_w_id = w_id;  // NOLINT(cppcoreguidelines-prefer-member-initializer)
+  c_d_id = d_id;  // NOLINT(cppcoreguidelines-prefer-member-initializer)
+
   // Use home warehouse in 85% of cases, otherwise select a random one
   std::uniform_int_distribution<> home_warehouse_dist{1, 100};
-  c_w_id = w_id;
-  c_d_id = d_id;
   if (num_warehouses > 2 && home_warehouse_dist(_random_engine) > 85) {
     // Choose remote warehouse
     do {
@@ -152,4 +153,4 @@ bool TPCCPayment::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

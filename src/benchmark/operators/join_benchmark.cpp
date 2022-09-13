@@ -24,14 +24,15 @@ constexpr auto TABLE_SIZE_BIG = size_t{10'000'000};
 void clear_cache() {
   std::vector<int> clear = std::vector<int>();
   clear.resize(500 * 1000 * 1000, 42);
-  for (uint i = 0; i < clear.size(); i++) {
-    clear[i] += 1;
+  const auto clear_cache_size = clear.size();
+  for (auto index = size_t{0}; index < clear_cache_size; index++) {
+    clear[index] += 1;
   }
   clear.resize(0);
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
   auto table_generator = std::make_shared<SyntheticTableGenerator>();
@@ -47,7 +48,7 @@ std::shared_ptr<TableWrapper> generate_table(const size_t number_of_rows) {
     const auto chunk = table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
       chunk->create_index<AdaptiveRadixTreeIndex>(std::vector<ColumnID>{column_id});
     }
   }
@@ -73,7 +74,7 @@ void bm_join_impl(benchmark::State& state, std::shared_ptr<TableWrapper> table_w
     join->execute();
   }
 
-  opossum::Hyrise::reset();
+  Hyrise::reset();
 }
 
 template <class C>
@@ -114,4 +115,4 @@ BENCHMARK_TEMPLATE(BM_Join_SmallAndSmall, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_SmallAndBig, JoinSortMerge);
 BENCHMARK_TEMPLATE(BM_Join_MediumAndMedium, JoinSortMerge);
 
-}  // namespace opossum
+}  // namespace hyrise

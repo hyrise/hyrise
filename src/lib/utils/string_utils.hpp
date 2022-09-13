@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 // Removes whitespaces from the front and back. Also reduces multiple whitespaces between words to a single one.
 // Splits the result by whitespace into single words. Intended for usage in the console.
@@ -23,4 +23,4 @@ std::string trim_source_file_path(const std::string& path);
 // a dummy address (e.g., for testing).
 std::string replace_addresses(const std::string& input);
 
-}  // namespace opossum
+}  // namespace hyrise

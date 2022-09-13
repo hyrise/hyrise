@@ -7,7 +7,7 @@
 #include "utils/list_directory.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractBenchmarkItemRunner::AbstractBenchmarkItemRunner(const std::shared_ptr<BenchmarkConfig>& config)
     : _config(config) {}
@@ -78,4 +78,4 @@ const std::vector<int>& AbstractBenchmarkItemRunner::weights() const {
   return empty_vector;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

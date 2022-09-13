@@ -26,7 +26,7 @@
 #include "sql/sql_translator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipelineStatement::SQLPipelineStatement(const std::string& sql, std::shared_ptr<hsql::SQLParserResult> parsed_sql,
                                            const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
@@ -117,7 +117,7 @@ const std::shared_ptr<AbstractLQPNode>& SQLPipelineStatement::get_optimized_logi
   // Handle logical query plan if statement has been cached
   if (lqp_cache) {
     if (const auto cached_plan = lqp_cache->try_get(_sql_string)) {
-      const auto plan = *cached_plan;
+      const auto& plan = *cached_plan;
       DebugAssert(plan, "Optimized logical query plan retrieved from cache is empty.");
       // MVCC-enabled and MVCC-disabled LQPs will evict each other
       if (lqp_is_validated(plan) == (_use_mvcc == UseMvcc::Yes)) {
@@ -380,4 +380,4 @@ bool SQLPipelineStatement::_is_transaction_statement() {
   return get_parsed_sql_statement()->getStatements().front()->isType(hsql::kStmtTransaction);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
