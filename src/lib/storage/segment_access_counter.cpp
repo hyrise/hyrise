@@ -65,7 +65,7 @@ SegmentAccessCounter::AccessType SegmentAccessCounter::access_type(const Abstrac
 
 // Iterates over the first n (currently 100) elements in positions to determine the access pattern
 // (see enum AccessPattern in header).
-// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPatten.
+// The access pattern is computed by building a finite-state machine. The states are given by the enum AccessPattern.
 // The alphabet is defined by the internal enum Input.
 // The initial state is AccessPattern::Point. positions is iterated over from the beginning. For two adjacent
 // elements (in positions) the difference is computed and mapped to an element of the enum Input.
