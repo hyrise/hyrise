@@ -63,12 +63,12 @@ std::shared_ptr<BaseTableIndexIterator> TableIndexVectorIterator::clone() const 
   return std::make_shared<TableIndexVectorIterator>(*this);
 }
 
-size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&,
-                                                const ColumnID) {
+size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& /*unused*/,
+                                                const ColumnID /*unused*/) {
   return 0;
 }
 
-size_t BasePartialHashIndexImpl::remove_entries(const std::vector<ChunkID>&) {
+size_t BasePartialHashIndexImpl::remove_entries(const std::vector<ChunkID>& /*unused*/) {
   return 0;
 }
 
@@ -207,12 +207,12 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return Iterator(std::make_shared<TableIndexVectorIterator>(_null_values.cbegin()));
+  return Iterator{std::make_shared<TableIndexVectorIterator>(_null_values.cbegin())};
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return Iterator(std::make_shared<TableIndexVectorIterator>(_null_values.cend()));
+  return Iterator{std::make_shared<TableIndexVectorIterator>(_null_values.cend())};
 }
 
 template <typename DataType>
