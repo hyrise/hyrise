@@ -63,8 +63,8 @@ std::shared_ptr<BaseTableIndexIterator> TableIndexVectorIterator::clone() const 
   return std::make_shared<TableIndexVectorIterator>(*this);
 }
 
-size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& /*unused*/,
-                                                const ColumnID /*unused*/) {
+size_t BasePartialHashIndexImpl::insert_entries(const std::vector<std::pair<ChunkID,
+    std::shared_ptr<Chunk>>>& /*unused*/, const ColumnID /*unused*/) {
   return 0;
 }
 
