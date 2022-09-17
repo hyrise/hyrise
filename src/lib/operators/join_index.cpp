@@ -243,7 +243,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
            ++index_side_chunk_id) {
         if (*total_indexed_iter == index_side_chunk_id && total_indexed_iter != total_indexed_chunk_ids.end()) {
           ++total_indexed_iter;
-          continue;
         } else {
           _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
