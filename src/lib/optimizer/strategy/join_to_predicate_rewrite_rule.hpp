@@ -5,7 +5,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * A rule that tries to split up joins into local table scans with subquery expressions.
@@ -24,13 +24,12 @@ class JoinToPredicateRewriteRule : public AbstractRule {
 
  protected:
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
-  void gather_rewrite_info(
+  static void _gather_rewrite_info(
       const std::shared_ptr<JoinNode>& join_node,
-      std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables)
-      const;
+      std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables);
 
-  void _perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide& removable_side,
-                        const std::shared_ptr<PredicateNode>& valid_predicate) const;
+  static void _perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide& removable_side,
+                               const std::shared_ptr<PredicateNode>& valid_predicate);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

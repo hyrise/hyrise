@@ -5,7 +5,7 @@
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * A rule that tries to transform joins into semi-joins.
@@ -24,4 +24,4 @@ class JoinToSemiJoinRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

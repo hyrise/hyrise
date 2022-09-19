@@ -11,9 +11,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::string JoinToPredicateRewriteRule::name() const {
   static const auto name = std::string{"JoinToPredicateRewriteRule"};
@@ -29,7 +29,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
-      gather_rewrite_info(join_node, rewritables);
+      _gather_rewrite_info(join_node, rewritables);
     }
     return LQPVisitation::VisitInputs;
   });
@@ -40,10 +40,9 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
   }
 }
 
-void JoinToPredicateRewriteRule::gather_rewrite_info(
+void JoinToPredicateRewriteRule::_gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
-    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables)
-    const {
+    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables) {
   const auto removable_side = join_node->get_unused_input();
   if (!removable_side.has_value()) {
     return;
@@ -88,10 +87,12 @@ void JoinToPredicateRewriteRule::gather_rewrite_info(
   // Since at this point, we already know the join in question is basically a semi-join, we can further transform the
   // join to a single predicate node filtering out this one line testing against values in the join column.
   visit_lqp(removable_subtree, [&removable_subtree, &valid_predicate](auto& current_node) {
-    if (current_node->type == LQPNodeType::Union)
+    if (current_node->type == LQPNodeType::Union) {
       return LQPVisitation::DoNotVisitInputs;
-    else if (current_node->type != LQPNodeType::Predicate)
+    }
+    if (current_node->type != LQPNodeType::Predicate) {
       return LQPVisitation::VisitInputs;
+    }
 
     const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
     const auto candidate_exp = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
@@ -149,7 +150,7 @@ void JoinToPredicateRewriteRule::gather_rewrite_info(
 
 void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode>& join_node,
                                                   const LQPInputSide& removable_side,
-                                                  const std::shared_ptr<PredicateNode>& valid_predicate) const {
+                                                  const std::shared_ptr<PredicateNode>& valid_predicate) {
   const auto param_ids = std::vector<ParameterID>{};
   const auto param_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
@@ -183,4 +184,4 @@ void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode
   lqp_replace_node(join_node, replacement_predicate_node);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

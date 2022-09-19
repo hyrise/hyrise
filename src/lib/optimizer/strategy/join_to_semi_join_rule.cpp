@@ -11,9 +11,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 std::string JoinToSemiJoinRule::name() const {
   static const auto name = std::string{"JoinToSemiJoinRule"};
@@ -82,7 +82,7 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
         join_node->set_left_input(join_node->right_input());
         join_node->set_right_input(temp);
       } else if (join_node->get_unused_input().value() == LQPInputSide::Right &&
-          join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
+                 join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
         join_node->join_mode = JoinMode::Semi;
       }
     }
@@ -91,4 +91,4 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -17,9 +17,9 @@
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
@@ -47,10 +47,10 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
 TEST_F(JoinToPredicateRewriteRuleTest, SimplePredicateSemiJoin) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  auto key_constraints = std::vector<TableKeyConstraint>();
+  auto key_constraints = std::set<TableKeyConstraint>();
 
-  key_constraints.push_back(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.push_back(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
 
   node_b->set_key_constraints(key_constraints);
 
@@ -79,10 +79,10 @@ TEST_F(JoinToPredicateRewriteRuleTest, SimplePredicateSemiJoin) {
 TEST_F(JoinToPredicateRewriteRuleTest, InnerJoinRewrite) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  auto key_constraints = std::vector<TableKeyConstraint>();
+  auto key_constraints = std::set<TableKeyConstraint>();
 
-  key_constraints.push_back(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.push_back(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
 
   node_b->set_key_constraints(key_constraints);
 
@@ -111,10 +111,10 @@ TEST_F(JoinToPredicateRewriteRuleTest, InnerJoinRewrite) {
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  auto key_constraints = std::vector<TableKeyConstraint>();
+  auto key_constraints = std::set<TableKeyConstraint>();
 
-  key_constraints.push_back(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.push_back(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
 
   node_b->set_key_constraints(key_constraints);
 
@@ -164,10 +164,10 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUCCOnPredicateColumn) {
 TEST_F(JoinToPredicateRewriteRuleTest, TestNoUnusedJoinSide) {
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
 
-  auto key_constraints = std::vector<TableKeyConstraint>();
+  auto key_constraints = std::set<TableKeyConstraint>();
 
-  key_constraints.push_back(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.push_back(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
+  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
 
   node_b->set_key_constraints(key_constraints);
 
@@ -191,4 +191,4 @@ TEST_F(JoinToPredicateRewriteRuleTest, TestNoUnusedJoinSide) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
