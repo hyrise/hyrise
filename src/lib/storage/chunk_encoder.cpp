@@ -54,7 +54,7 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {
       pmr_vector<ColumnDataType> values;
       pmr_vector<bool> null_values;
-      auto contains_nulls = bool{false};
+      auto contains_nulls = false;
 
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
       iterable.with_iterators([&](auto it, const auto end) {
