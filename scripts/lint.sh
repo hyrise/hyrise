@@ -95,22 +95,14 @@ if [ ! -z "$output" ]; then
 fi
 
 # ShellCheck linting
-for file in ./*.sh;
-do 
-	if ! shellcheck $file; then
-    exitcode=1
-	fi
-done
-for file in scripts/*.sh;
-do 
-	if ! shellcheck $file; then
-    exitcode=1
-	fi
-done
-for file in scripts/planviz/*.sh;
-do 
-	if ! shellcheck $file; then
-    exitcode=1
+for file in `find . -name "*.sh"`
+do
+	if ! [[ $file == ./third_party/* ]] && ! [[ $file == ./cmake-* ]] && ! [[ $file == ./clang-* ]];
+	then
+		if ! shellcheck $file;
+		then
+    		exitcode=1
+		fi
 	fi
 done
 
