@@ -95,7 +95,19 @@ if [ ! -z "$output" ]; then
 fi
 
 # ShellCheck linting
-for file in **/*.sh;
+for file in ./*.sh;
+do 
+	if ! shellcheck $file; then
+    exitcode=1
+	fi
+done
+for file in scripts/*.sh;
+do 
+	if ! shellcheck $file; then
+    exitcode=1
+	fi
+done
+for file in scripts/planviz/*.sh;
 do 
 	if ! shellcheck $file; then
     exitcode=1
