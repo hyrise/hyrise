@@ -65,7 +65,7 @@ done <<< "$namecheck"
 # Check that all cpp and hpp files in src/ are listed in the corresponding CMakeLists.txt
 for dir in src/*
 do
-	for file in $(find $dir -name *.cpp -o -name *.hpp)
+	for file in $(find $dir -name *.sh)
 	do
 		if grep $(basename $file) $dir/CMakeLists.txt | grep -v '#' > /dev/null
 		then
@@ -93,5 +93,13 @@ if [ ! -z "$output" ]; then
 	echo "$output"
 	exitcode=1
 fi
+
+# ShellCheck linting
+for file in **/*.sh;
+do 
+	if ! shellcheck $file; then
+    exitcode=1
+	fi
+done
 
 exit $exitcode
