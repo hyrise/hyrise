@@ -65,7 +65,7 @@ done <<< "$namecheck"
 # Check that all cpp and hpp files in src/ are listed in the corresponding CMakeLists.txt
 for dir in src/*
 do
-	for file in $(find $dir -name *.sh)
+	for file in $(find $dir -name *.cpp -o -name *.hpp)
 	do
 		if grep $(basename $file) $dir/CMakeLists.txt | grep -v '#' > /dev/null
 		then
@@ -95,7 +95,8 @@ if [ ! -z "$output" ]; then
 fi
 
 # ShellCheck linting
-for file in `find . -name "*.sh"`
+shellcheck install_dependencies.sh
+for file in $(find scripts -name "*.sh")
 do
 	if ! [[ $file == ./third_party/* ]] && ! [[ $file == ./cmake-* ]] && ! [[ $file == ./clang-* ]];
 	then
