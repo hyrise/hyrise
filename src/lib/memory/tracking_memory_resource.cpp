@@ -5,7 +5,7 @@ namespace opossum {
 void* TrackingMemoryResource::do_allocate(std::size_t bytes, std::size_t alignment) {
   auto timestamp = std::chrono::steady_clock::now();
   _memory_timeseries.emplace_back(timestamp, bytes);
-  return std::aligned_alloc(alignment, bytes);  // NOLINT
+  return std::malloc(bytes);  // NOLINT
 }
 
 void TrackingMemoryResource::do_deallocate(void* pointer, std::size_t bytes, std::size_t alignment) {
