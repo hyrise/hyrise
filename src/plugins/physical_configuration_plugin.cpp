@@ -8,6 +8,7 @@
 #include "storage/chunk_encoder.hpp"
 #include "storage/segment_encoding_utils.hpp"
 #include "storage/segment_iterate.hpp"
+#include "utils/timer.hpp"
 
 namespace hyrise {
 
@@ -40,12 +41,14 @@ void PhysicalConfigurationPlugin::apply_physical_configuration() {
   conf["lineitem"]["l_orderkey"].emplace_back(
       ChunkID{10}, SegmentPhysicalConfig{SegmentEncodingSpec{EncodingType::LZ4}, AbstractSegment::Tier::Memory, true});
   const auto config = std::make_shared<PhysicalConfig>(SegmentPhysicalConfig{}, std::move(conf));
+  // const auto config = std::make_shared<PhysicalConfig>(SegmentPhysicalConfig{SegmentEncodingSpec{EncodingType::RunLength}, AbstractSegment::Tier::Memory, false});
   const auto& storage_manager = Hyrise::get().storage_manager;
   const auto& table_names = storage_manager.table_names();
 
   const auto sort_definition = SortColumnDefinition(ColumnID{INVALID_COLUMN_ID});
   const auto ascending = sort_definition.sort_mode == SortMode::Ascending;
 
+  auto timer = Timer{};
   for (const auto& table_name : table_names) {
     Assert(storage_manager.has_table(table_name), "Table '" + table_name + "' was deleted unexpectedly");
     const auto table = storage_manager.get_table(table_name);
@@ -98,10 +101,16 @@ void PhysicalConfigurationPlugin::apply_physical_configuration() {
         }
         segment = ChunkEncoder::encode_segment(segment, segment->data_type(), segment_config.encoding_spec);
 
-        // TODO: tiering!!!
-        // if (config.tier == AbstractSegment::Tier::SSD) {
-        //   do something
-        // }
+        // TODO(me) tiering!!!
+        if (segment_config.tier == AbstractSegment::Tier::SSD) {
+          std::cout << "attempt to move to SSD" << std::endl;
+          // TODO add memory resource (umap)
+          auto allocator = PolymorphicAllocator<void>{};
+          segment = segment->copy_using_allocator(allocator);
+          segment->tier = AbstractSegment::Tier::SSD;
+        } else {
+          segment->tier = AbstractSegment::Tier::Memory;
+        }
 
         chunk->replace_segment(column_id, segment);
 
@@ -115,6 +124,8 @@ void PhysicalConfigurationPlugin::apply_physical_configuration() {
       }
     }
   }
+
+  std::cout << "Applied config in " << timer.lap_formatted() << std::endl;
 
   // set sort orders
   for (const auto& table_name : table_names) {
@@ -158,9 +169,10 @@ void PhysicalConfigurationPlugin::apply_physical_configuration() {
       }
     }
   }
-  const auto print_flags = static_cast<PrintFlags>(static_cast<uint32_t>(PrintFlags::IgnoreCellWidth) |
-                                                   static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries));
-  Print::print(Hyrise::get().meta_table_manager.generate_table("log"), print_flags);
+  std::cout << "Set sort orders in " << timer.lap_formatted() << std::endl;
+  //const auto print_flags = static_cast<PrintFlags>(static_cast<uint32_t>(PrintFlags::IgnoreCellWidth) |
+  //                                                 static_cast<uint32_t>(PrintFlags::IgnoreChunkBoundaries));
+  //Print::print(Hyrise::get().meta_table_manager.generate_table("log"), print_flags);
 }
 
 PhysicalConfigurationPlugin::ConfigPath::ConfigPath(const std::string& init_name) : AbstractSetting(init_name) {}
