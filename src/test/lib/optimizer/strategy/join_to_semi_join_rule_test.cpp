@@ -95,7 +95,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
   // Same as InnerJoinToSemiJoin, but with an additional join predicate that should not change the result.
 
   {
-    TableColumnDefinitions column_definitions;
+    auto column_definitions = TableColumnDefinitions{};
     column_definitions.emplace_back("column0", DataType::Int, false);
     column_definitions.emplace_back("column1", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
@@ -142,7 +142,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
    * the inner join's predicate expressions.
    */
   {
-    TableColumnDefinitions column_definitions;
+    auto column_definitions = TableColumnDefinitions{};
     column_definitions.emplace_back("column0", DataType::Int, false);
     column_definitions.emplace_back("column1", DataType::Int, false);
     auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);

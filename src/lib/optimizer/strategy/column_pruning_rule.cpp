@@ -242,7 +242,7 @@ void recursively_gather_required_expressions(
   }
 }
 
-int annotate_join_unused_inputs(
+void annotate_join_unused_inputs(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
   Assert(node->type == LQPNodeType::Join, "The given node is not a join node as expected.");
@@ -264,15 +264,13 @@ int annotate_join_unused_inputs(
   }
   Assert(left_input_is_used || right_input_is_used, "Did not expect a useless join.");
   if (left_input_is_used && right_input_is_used)
-    return 0;
+    return;
 
   if (!left_input_is_used) {
-    join_node->mark_input_side_as_removable(LQPInputSide::Left);
+    join_node->mark_input_side_as_prunable(LQPInputSide::Left);
   } else {
-    join_node->mark_input_side_as_removable(LQPInputSide::Right);
+    join_node->mark_input_side_as_prunable(LQPInputSide::Right);
   }
-
-  return 1;
 }
 
 void prune_projection_node(

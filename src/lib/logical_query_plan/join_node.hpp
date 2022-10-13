@@ -80,11 +80,11 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   void mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join);
 
   /**
-   * Sets the `removable_input_side` flag of this JoinNode to the given LQPInputSide.
+   * Sets the `prunable_input_side` flag of this JoinNode to the given LQPInputSide.
    * @param input_side which is no longer used in LQP after the join
    * Note: This function is meant to be called by the ColumnPruningRule, which already has the information on used/unused expressions in the LQP.
    */
-  void mark_input_side_as_removable(LQPInputSide input_side);
+  void mark_input_side_as_prunable(LQPInputSide input_side);
 
   JoinMode join_mode;
 
@@ -107,7 +107,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * 
    * nullopt if both sides are used further up in the LQP
    */
-  std::optional<LQPInputSide> _removable_input_side = std::nullopt;
+  std::optional<LQPInputSide> _prunable_input_side = std::nullopt;
 
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param

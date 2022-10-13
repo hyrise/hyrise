@@ -34,9 +34,8 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     return LQPVisitation::VisitInputs;
   });
 
-  const auto rewritables_size = rewritables.size();
-  for (auto index = size_t{0}; index < rewritables_size; ++index) {
-    _perform_rewrite(std::get<0>(rewritables[index]), std::get<1>(rewritables[index]), std::get<2>(rewritables[index]));
+  for (const auto &rewrite_candidate: rewritables) {
+    _perform_rewrite(std::get<0>(rewrite_candidate), std::get<1>(rewrite_candidate), std::get<2>(rewrite_candidate));
   }
 }
 
@@ -44,12 +43,12 @@ void JoinToPredicateRewriteRule::_gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,
     std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables) {
   const auto removable_side = join_node->get_unused_input();
-  if (!removable_side.has_value()) {
+  if (!removable_side) {
     return;
   }
 
-  std::shared_ptr<AbstractLQPNode> removable_subtree = nullptr;
-  std::shared_ptr<PredicateNode> valid_predicate = nullptr;
+  auto removable_subtree = std::shared_ptr<AbstractLQPNode>{};
+  auto valid_predicate = std::shared_ptr<PredicateNode>{};
 
   removable_subtree = join_node->input(*removable_side);
 
@@ -63,7 +62,7 @@ void JoinToPredicateRewriteRule::_gather_rewrite_info(
   const auto& join_predicates = join_node->join_predicates();
   const auto& join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates.front());
 
-  Assert(join_predicate, "A Join must have at least one BinaryPredicateExpression.");
+  Assert(join_predicate, "A join must have at least one BinaryPredicateExpression.");
 
   std::shared_ptr<AbstractExpression> exchangable_column_expr = nullptr;
 
@@ -143,17 +142,13 @@ void JoinToPredicateRewriteRule::_gather_rewrite_info(
   });
 
   if (valid_predicate) {
-    auto entry = std::make_tuple(join_node, removable_side.value(), valid_predicate);
-    rewritables.emplace_back(entry);
+    rewritables.emplace_back(join_node, removable_side.value(), valid_predicate);
   }
 }
 
 void JoinToPredicateRewriteRule::_perform_rewrite(const std::shared_ptr<JoinNode>& join_node,
                                                   const LQPInputSide& removable_side,
                                                   const std::shared_ptr<PredicateNode>& valid_predicate) {
-  const auto param_ids = std::vector<ParameterID>{};
-  const auto param_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-
   if (removable_side == LQPInputSide::Left) {
     join_node->set_left_input(join_node->right_input());
   }
