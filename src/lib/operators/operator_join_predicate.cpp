@@ -70,7 +70,7 @@ OperatorJoinPredicate::OperatorJoinPredicate(const ColumnIDPair& init_column_ids
 void OperatorJoinPredicate::flip() {
   std::swap(column_ids.first, column_ids.second);
   predicate_condition = flip_predicate_condition(predicate_condition);
-  flipped = true;
+  flipped = !flipped;
 }
 
 bool OperatorJoinPredicate::is_flipped() const {
