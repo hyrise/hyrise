@@ -32,8 +32,7 @@ void AttributeStatistics<T>::set_statistics_object(const std::shared_ptr<Abstrac
                  std::dynamic_pointer_cast<DistinctValueCount>(statistics_object)) {
     distinct_value_count = distinct_value_count_object;
   } else {
-    if constexpr (std::is_arithmetic_v<
-                      T>) {  // NOLINT clang-tidy is crazy and sees a "potentially unintended semicolon" here...
+    if constexpr (std::is_arithmetic_v<T>) {
       if (const auto range_object = std::dynamic_pointer_cast<RangeFilter<T>>(statistics_object)) {
         range_filter = range_object;
         return;
@@ -60,7 +59,6 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::scaled(const Se
     statistics->set_statistics_object(min_max_filter->scaled(selectivity));
   }
 
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       statistics->set_statistics_object(range_filter->scaled(selectivity));
@@ -92,7 +90,6 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     statistics->set_statistics_object(min_max_filter->sliced(predicate_condition, variant_value, variant_value2));
   }
 
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       statistics->set_statistics_object(range_filter->sliced(predicate_condition, variant_value, variant_value2));
@@ -129,7 +126,6 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
     Fail("Pruning not implemented for min/max filters");
   }
 
-  // NOLINTNEXTLINE clang-tidy is crazy and sees a "potentially unintended semicolon" here...
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
       Fail("Pruning not implemented for range filters");

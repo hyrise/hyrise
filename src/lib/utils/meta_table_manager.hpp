@@ -40,10 +40,6 @@ class MetaTableManager : public Noncopyable {
   MetaTableManager();
 
  private:
-  static std::string _trim_table_name(const std::string& table_name);
-
-  static std::vector<std::vector<AllTypeVariant>> _materialize_values(const std::shared_ptr<const Table>& values);
-
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;
   std::vector<std::string> _table_names;
 };

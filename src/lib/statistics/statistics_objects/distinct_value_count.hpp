@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-// A single integer value as an AbstractStatisticsObject, to keep architectures consistent....
+// For consistency with other statistics, also single values are wrapped by an AbstractStatisticsObject.
 class DistinctValueCount : public AbstractStatisticsObject {
  public:
   explicit DistinctValueCount(const size_t init_count);
@@ -15,7 +15,7 @@ class DistinctValueCount : public AbstractStatisticsObject {
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
-  size_t count;
+  size_t count{0};
 };
 
 }  // namespace hyrise
