@@ -131,7 +131,10 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       if (position.is_null()) {
         _null_values.push_back(row_id);
       } else {
-        _map[position.value()].push_back(row_id);
+        // _map[position.value()].push_back(row_id);
+        typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
+        _map.insert(hash_map_accessor, position.value());
+        hash_map_accessor->second = {row_id};
       }
     });
   }
@@ -160,12 +163,15 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
   // Iterate over all values stored in the index.
   auto map_iter = _map.begin();
   while (map_iter != _map.end()) {
-    auto& row_ids = _map.at(map_iter->first);
+    typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
+    _map.find(hash_map_accessor, map_iter->first);
+    auto& row_ids = hash_map_accessor->second;
 
     // Remove every RowID entry of the value that references one of the chunks.
     row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_unindex), row_ids.end());
 
-    map_iter = row_ids.empty() ? _map.erase(map_iter) : ++map_iter;
+    if (row_ids.empty()) { _map.erase(hash_map_accessor); }
+    ++map_iter;
   }
 
   auto& nulls = _null_values;
@@ -178,14 +184,17 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
     const AllTypeVariant& value) const {
-  const auto begin = _map.find(boost::get<DataType>(value));
-  if (begin == _map.end()) {
-    const auto end_iter = cend();
-    return std::make_pair(end_iter, end_iter);
-  }
-  auto end = begin;
-  return std::make_pair(Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(begin)),
-                        Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(++end)));
+  auto range = _map.equal_range(boost::get<DataType>(value));
+  return std::make_pair(Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(range.first)),
+                        Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(range.second)));
+  // const auto begin = _map.find(boost::get<DataType>(value));
+  // if (begin == _map.end()) {
+  //   const auto end_iter = cend();
+  //   return std::make_pair(end_iter, end_iter);
+  // }
+  // auto end = begin;
+  // return std::make_pair(Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(begin)),
+  //                       Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(++end)));
 }
 
 template <typename DataType>

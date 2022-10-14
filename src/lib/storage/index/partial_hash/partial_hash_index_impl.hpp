@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <tsl/sparse_map.h> // NOLINT
+#include <tbb/concurrent_hash_map.h>
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
@@ -24,7 +25,7 @@ class PartialHashIndexTest;
 template <typename DataType>
 class TableIndexFlattenedSparseMapIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
+  using MapIteratorType = typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::const_iterator;
 
   explicit TableIndexFlattenedSparseMapIterator(MapIteratorType itr);
 
@@ -132,7 +133,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
-  tsl::sparse_map<DataType, std::vector<RowID>> _map;
+  tbb::concurrent_hash_map<DataType, std::vector<RowID>> _map;
   std::vector<RowID> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };
