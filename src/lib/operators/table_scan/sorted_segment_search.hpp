@@ -263,8 +263,8 @@ class SortedSegmentSearch {
 
   /*
    * NotEquals may result in two matching ranges (one below and one above the search_value) and needs special handling.
-   * The function contains five early outs. These are all only for performance reasons and, if removed, would not
-   * change the functionality.
+   * The function contains six early outs. These are all only for performance reasons and, if removed, would not change
+   * the functionality.
    *
    * Note: All comments within this method are written from the point of ranges in ascending sort order.
    */
@@ -347,14 +347,16 @@ class SortedSegmentSearch {
      */
     if (position_filter || _predicate_condition == PredicateCondition::NotEquals) {
       for (; begin != end; ++begin) {
-        matches[output_idx++] = RowID{chunk_id, begin->chunk_offset()};
+        matches[output_idx] = RowID{chunk_id, begin->chunk_offset()};
+        ++output_idx;
       }
     } else {
       const auto first_offset = begin->chunk_offset();
       const auto distance = std::distance(begin, end);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < distance; ++chunk_offset) {
-        matches[output_idx++] = RowID{chunk_id, ChunkOffset{first_offset + chunk_offset}};
+        matches[output_idx] = RowID{chunk_id, ChunkOffset{first_offset + chunk_offset}};
+        ++output_idx;
       }
     }
   }
