@@ -93,40 +93,46 @@ TEST_F(PartialHashIndexTest, MapInitialization) {
   index_map->find(hash_map_accessor, "hotel");
   EXPECT_EQ(hash_map_accessor->second.size(), 1);
   EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{0}}));
-  hash_map_accessor.release();
 
-  typename tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>::accessor hash_map_accessor_1;
-  index_map->find(hash_map_accessor_1, "delta");
-  EXPECT_EQ(hash_map_accessor_1->second.size(), 3);
-  // EXPECT_EQ(index_map->at("delta")[0], (RowID{ChunkID{0}, ChunkOffset{1}}));
-  // EXPECT_EQ(index_map->at("delta")[1], (RowID{ChunkID{0}, ChunkOffset{3}}));
-  // EXPECT_EQ(index_map->at("delta")[2], (RowID{ChunkID{1}, ChunkOffset{1}}));
+  index_map->find(hash_map_accessor, "delta");
+  EXPECT_EQ(hash_map_accessor->second.size(), 3);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{1}}));
+  EXPECT_EQ(hash_map_accessor->second[1], (RowID{ChunkID{0}, ChunkOffset{3}}));
+  EXPECT_EQ(hash_map_accessor->second[2], (RowID{ChunkID{1}, ChunkOffset{1}}));
 
-  // EXPECT_EQ(index_map->at("apple").size(), 1);
-  // EXPECT_EQ(index_map->at("apple")[0], (RowID{ChunkID{0}, ChunkOffset{4}}));
+  index_map->find(hash_map_accessor, "apple");
+  EXPECT_EQ(hash_map_accessor->second.size(), 1);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{4}}));
 
-  // EXPECT_EQ(index_map->at("charlie").size(), 2);
-  // EXPECT_EQ(index_map->at("charlie")[0], (RowID{ChunkID{0}, ChunkOffset{5}}));
-  // EXPECT_EQ(index_map->at("charlie")[1], (RowID{ChunkID{0}, ChunkOffset{6}}));
+  index_map->find(hash_map_accessor, "charlie");
+  EXPECT_EQ(hash_map_accessor->second.size(), 2);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{5}}));
+  EXPECT_EQ(hash_map_accessor->second[1], (RowID{ChunkID{0}, ChunkOffset{6}}));
 
-  // EXPECT_EQ(index_map->at("inbox").size(), 2);
-  // EXPECT_EQ(index_map->at("inbox")[0], (RowID{ChunkID{0}, ChunkOffset{7}}));
-  // EXPECT_EQ(index_map->at("inbox")[1], (RowID{ChunkID{1}, ChunkOffset{7}}));
+  index_map->find(hash_map_accessor, "inbox");
+  EXPECT_EQ(hash_map_accessor->second.size(), 2);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{7}}));
+  EXPECT_EQ(hash_map_accessor->second[1], (RowID{ChunkID{1}, ChunkOffset{7}}));
 
-  // EXPECT_EQ(index_map->at("hello").size(), 1);
-  // EXPECT_EQ(index_map->at("hello")[0], (RowID{ChunkID{1}, ChunkOffset{0}}));
+  index_map->find(hash_map_accessor, "hello");
+  EXPECT_EQ(hash_map_accessor->second.size(), 1);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{0}}));
 
-  // EXPECT_EQ(index_map->at("funny").size(), 1);
-  // EXPECT_EQ(index_map->at("funny")[0], (RowID{ChunkID{1}, ChunkOffset{2}}));
+  index_map->find(hash_map_accessor, "funny");
+  EXPECT_EQ(hash_map_accessor->second.size(), 1);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{2}}));
 
-  // EXPECT_EQ(index_map->at("names").size(), 1);
-  // EXPECT_EQ(index_map->at("names")[0], (RowID{ChunkID{1}, ChunkOffset{3}}));
+  index_map->find(hash_map_accessor, "names");
+  EXPECT_EQ(hash_map_accessor->second.size(), 1);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{3}}));
 
-  // EXPECT_EQ(index_map->at("paper").size(), 1);
-  // EXPECT_EQ(index_map->at("paper")[0], (RowID{ChunkID{1}, ChunkOffset{5}}));
+  index_map->find(hash_map_accessor, "paper");
+  EXPECT_EQ(hash_map_accessor->second.size(), 1);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{5}}));
 
-  // EXPECT_EQ(index_map->at("clock").size(), 1);
-  // EXPECT_EQ(index_map->at("clock")[0], (RowID{ChunkID{1}, ChunkOffset{6}}));
+  index_map->find(hash_map_accessor, "clock");
+  EXPECT_EQ(hash_map_accessor->second.size(), 1);
+  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{6}}));
 }
 
 TEST_F(PartialHashIndexTest, Iterators) {

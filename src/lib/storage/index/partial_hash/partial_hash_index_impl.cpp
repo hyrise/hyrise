@@ -134,7 +134,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
         // _map[position.value()].push_back(row_id);
         typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
         _map.insert(hash_map_accessor, position.value());
-        hash_map_accessor->second = {row_id};
+        hash_map_accessor->second.push_back(row_id);
       }
     });
   }
@@ -148,8 +148,9 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 
   auto indexed_chunks_to_unindex = std::unordered_set<ChunkID>{};
   for (const auto& chunk_id : chunks_to_unindex) {
-    if (!_indexed_chunk_ids.contains(chunk_id))
+    if (!_indexed_chunk_ids.contains(chunk_id)) {
       continue;
+    }
 
     indexed_chunks_to_unindex.insert(chunk_id);
     _indexed_chunk_ids.erase(chunk_id);
@@ -162,6 +163,8 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 
   // Iterate over all values stored in the index.
   auto map_iter = _map.begin();
+  auto keys_to_delete = std::unordered_set<DataType>{};
+
   while (map_iter != _map.end()) {
     typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
     _map.find(hash_map_accessor, map_iter->first);
@@ -170,13 +173,19 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
     // Remove every RowID entry of the value that references one of the chunks.
     row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_unindex), row_ids.end());
 
-    if (row_ids.empty()) { _map.erase(hash_map_accessor); }
+    if (row_ids.empty()) {
+      keys_to_delete.insert(hash_map_accessor->first);
+    }
     ++map_iter;
   }
 
   auto& nulls = _null_values;
-
   nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
+
+  for (const auto& key_to_delete: keys_to_delete) {
+    _map.erase(key_to_delete);
+  }
+
 
   return size_before - _indexed_chunk_ids.size();
 }
