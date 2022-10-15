@@ -358,7 +358,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -398,7 +398,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -439,7 +439,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -478,7 +478,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -509,7 +509,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 0 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
