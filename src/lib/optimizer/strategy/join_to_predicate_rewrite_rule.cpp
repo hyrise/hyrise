@@ -34,7 +34,7 @@ void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     return LQPVisitation::VisitInputs;
   });
 
-  for (const auto &rewrite_candidate : rewritables) {
+  for (const auto& rewrite_candidate : rewritables) {
     _perform_rewrite(std::get<0>(rewrite_candidate), std::get<1>(rewrite_candidate), std::get<2>(rewrite_candidate));
   }
 }
