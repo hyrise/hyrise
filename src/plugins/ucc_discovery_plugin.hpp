@@ -5,34 +5,34 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 #include "utils/abstract_plugin.hpp"
-#include "utils/pausable_loop_thread.hpp"
 
 namespace hyrise {
 
 /**
- * UCCCandidate instances represent a column (referencing the table by name and the column by ID).
- * They are used to first collect all candidates for UCC validation before actually validating them 
- * in the UccDiscoveryPlugin.
+ * UccCandidate instances represent a column (referencing the table by name and the column by ID). They are used to
+ * first collect all candidates for UCC validation before actually validating them in the UccDiscoveryPlugin.
  */
-struct UCCCandidate {
-  UCCCandidate(const std::string& init_table_name, const ColumnID init_column_id);
+struct UccCandidate {
+  UccCandidate(const std::string& init_table_name, const ColumnID init_column_id);
 
-  bool operator==(const UCCCandidate& other) const;
-  bool operator!=(const UCCCandidate& other) const;
+  bool operator==(const UccCandidate& other) const;
+  bool operator!=(const UccCandidate& other) const;
   size_t hash() const;
 
   const std::string table_name;
   const ColumnID column_id;
+
+ private:
+  // Disable default constructor with uninitialized members.
+  UccCandidate() = default;
 };
 
-using UCCCandidates = std::unordered_set<UCCCandidate>;
+using UccCandidates = std::unordered_set<UccCandidate>;
 
 /**
- *  This plugin implements unary Unique Column Combination (UCC) discovery based on previously executed LQPs.
- *  Not all columns encountered in these LQPs are automatically considered for the UCC validation process.
- *  Instead, columns are only validated/invalidated as UCCs if their being a UCC could've helped to optimize their LQP.
- * 
- *  UCC discovery on databases without any queries having been run previously is not supported.
+ *  This plugin implements unary Unique Column Combination (UCC) discovery based on previously executed LQPs. Not all
+ *  columns encountered in these LQPs are automatically considered for the UCC validation process. Instead, columns are
+ *  only validated/invalidated as UCCs if their being a UCC could've helped to optimize their LQP.
  */
 class UccDiscoveryPlugin : public AbstractPlugin {
  public:
@@ -48,43 +48,41 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   friend class UccDiscoveryPluginTest;
 
   /**
-   * Takes a snapshot of the current LQP Cache. Iterates through the LQPs and tries to extract sensible columns as
-   * candidates for UCC validation from each of them.
-   * Columns are added as candidates if their being a UCC has the potential to help optimize their respective LQP.
+   * Takes a snapshot of the current LQP Cache. Iterates through the LQPs and tries to extract sensible columns as can-
+   * didates for UCC validation from each of them. Columns are added as candidates if their being a UCC has the poten-
+   * tial to help optimize their respective LQP.
    * 
    * Returns an unordered set of these candidates to be used in the UCC validation function.
    */
-  UCCCandidates _identify_ucc_candidates() const;
+  UccCandidates _identify_ucc_candidates() const;
 
   /**
-   * Iterates over the provided set of columns identified as candidates for a uniqueness validation.
-   * Validates for those that are not already known to be unique whether they are.
+   * Iterates over the provided set of columns identified as candidates for a uniqueness validation. Validates those
+   * that are not already known to be unique.
    */
-  void _validate_ucc_candidates(const UCCCandidates& ucc_candidates) const;
-
-  std::unique_ptr<PausableLoopThread> _loop_thread_start;
+  void _validate_ucc_candidates(const UccCandidates& ucc_candidates) const;
 
  private:
   /**
-   * Checks whether individual DictionarySegments contain duplicates. This is an efficient operation as the check
-   * is simply comparing the length of the dictionary to that of the attribute vector.
-   * This function can therefore be used for an early-out before the more expensive cross-segment uniqueness check.
+   * Checks whether individual DictionarySegments contain duplicates. This is an efficient operation as the check is
+   * simply comparing the length of the dictionary to that of the attribute vector. This function can therefore be used
+   * for an early-out before the more expensive cross-segment uniqueness check.
    */
   template <typename ColumnDataType>
-  bool _uniqueness_holds_in_dictionary_segments(std::shared_ptr<Table> table, ColumnID col_id) const;
+  bool _dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id) const;
 
   /**
-   * Checks whether the given table contains only unique values by inserting all values into an unordered set.
-   * If for any table segment the size of the set increases by less than the number of values in that segment,
-   * we know that there must be a duplicate and return false. Otherwise, returns true.
+   * Checks whether the given table contains only unique values by inserting all values into an unordered set. If for
+   * any table segment the size of the set increases by less than the number of values in that segment, we know that
+   * there must be a duplicate and return false. Otherwise, returns true.
    */
   template <typename ColumnDataType>
-  bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID col_id) const;
+  bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) const;
 
   /**
    * Extracts columns as candidates for ucc validation from the aggregate node, that are used in groupby operations.
    */
-  void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const;
+  void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates) const;
 
   /**
    * Extracts columns as ucc validation candidates from a join node. 
@@ -97,7 +95,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * and a column used in a PredicateNode may be added as a UCC candidate if the Predicate filters the same table that
    * contains the join column.
    */
-  void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UCCCandidates& ucc_candidates) const;
+  void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates) const;
 
   /**
    * Iterates through the LQP underneath the given root node.
@@ -106,7 +104,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    */
   void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
                                                  std::shared_ptr<LQPColumnExpression> column_candidate,
-                                                 UCCCandidates& ucc_candidates) const;
+                                                 UccCandidates& ucc_candidates) const;
 };
 
 }  // namespace hyrise
@@ -114,11 +112,11 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 namespace std {
 
 /**
- * Hash function required to manage UCCCandidates in an unordered set for deduplication.
+ * Hash function required to manage UccCandidates in an unordered set for deduplication.
  */
 template <>
-struct hash<hyrise::UCCCandidate> {
-  size_t operator()(const hyrise::UCCCandidate& uc) const;
+struct hash<hyrise::UccCandidate> {
+  size_t operator()(const hyrise::UccCandidate& ucc_candidate) const;
 };
 
 }  // namespace std
