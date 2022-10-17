@@ -96,10 +96,6 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
     }
   }
 
-  if (distinct_value_count) {
-    statistics->set_statistics_object(distinct_value_count->sliced(predicate_condition, variant_value, variant_value2));
-  }
-
   return statistics;
 }
 
@@ -123,17 +119,17 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::pruned(
   // statistics such as the filters below.
 
   if (min_max_filter) {
-    Fail("Pruning not implemented for min/max filters");
+    Fail("Pruning is not implemented for min/max filters");
   }
 
   if constexpr (std::is_arithmetic_v<T>) {
     if (range_filter) {
-      Fail("Pruning not implemented for range filters");
+      Fail("Pruning is not implemented for range filters");
     }
   }
 
   if (distinct_value_count) {
-    Fail("Pruning not implemented for distinct value count");
+    Fail("Pruning is not implemented for distinct value count");
   }
 
   return statistics;

@@ -8,7 +8,8 @@ DistinctValueCount::DistinctValueCount(const size_t init_count)
 std::shared_ptr<AbstractStatisticsObject> DistinctValueCount::sliced(
     const PredicateCondition /* predicate_condition */, const AllTypeVariant& /* variant_value */,
     const std::optional<AllTypeVariant>& /* variant_value2 */) const {
-  return std::make_shared<DistinctValueCount>(count);
+  // We do not know how the count changes given any predicate.
+  Fail("Slicing is not implemented for distinct value count");
 }
 
 std::shared_ptr<AbstractStatisticsObject> DistinctValueCount::scaled(const Selectivity /* selectivity */) const {

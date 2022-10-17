@@ -52,6 +52,7 @@ TEST_F(AttributeStatisticsTest, Scaled) {
   EXPECT_NE(scaled_attribute_statistics->min_max_filter, nullptr);
   EXPECT_NE(scaled_attribute_statistics->range_filter, nullptr);
   EXPECT_NE(scaled_attribute_statistics->null_value_ratio, nullptr);
+  EXPECT_NE(scaled_attribute_statistics->distinct_value_count, nullptr);
 
   EXPECT_FLOAT_EQ(scaled_attribute_statistics->histogram->total_count(), 20);
 
@@ -81,6 +82,7 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   EXPECT_NE(sliced_attribute_statistics->min_max_filter, nullptr);
   EXPECT_NE(sliced_attribute_statistics->range_filter, nullptr);
   EXPECT_NE(sliced_attribute_statistics->null_value_ratio, nullptr);
+  EXPECT_EQ(sliced_attribute_statistics->distinct_value_count, nullptr);
 
   EXPECT_FLOAT_EQ(sliced_attribute_statistics->histogram->total_count(), 20);
 
@@ -90,8 +92,7 @@ TEST_F(AttributeStatisticsTest, Sliced) {
   EXPECT_EQ(sliced_attribute_statistics->range_filter->ranges.at(0).first, 51);
   EXPECT_EQ(sliced_attribute_statistics->range_filter->ranges.at(0).second, 100);
 
-  EXPECT_FLOAT_EQ(sliced_attribute_statistics->null_value_ratio->ratio, 0.2f);
-  EXPECT_EQ(sliced_attribute_statistics->distinct_value_count->count, 123);
+  EXPECT_FLOAT_EQ(sliced_attribute_statistics->null_value_ratio->ratio, 0.0f);
 }
 
 TEST_F(AttributeStatisticsTest, OutputToStream) {
