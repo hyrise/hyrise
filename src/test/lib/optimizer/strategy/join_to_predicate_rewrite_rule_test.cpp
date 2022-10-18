@@ -1,5 +1,7 @@
 #include "strategy_base_test.hpp"
 
+#include <magic_enum.hpp>
+
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
@@ -17,9 +19,9 @@
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace hyrise::expression_functional;  // NOLINT
 
 class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
  public:
@@ -44,244 +46,152 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
   std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
 };
 
-TEST_F(JoinToPredicateRewriteRuleTest, SimplePredicateSemiJoin) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+class JoinToPredicateRewriteRuleJoinModeTest : public JoinToPredicateRewriteRuleTest,
+                                               public ::testing::WithParamInterface<JoinMode> {};
 
-  auto key_constraints = std::set<TableKeyConstraint>();
+auto join_mode_formatter = [](const ::testing::TestParamInfo<JoinMode> info) {
+  return std::string{magic_enum::enum_name(info.param)};
+};
 
-  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
+INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToPredicateRewriteRuleJoinModeTest,
+                         ::testing::Values(JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter,
+                                           JoinMode::Cross, JoinMode::Semi, JoinMode::AntiNullAsTrue,
+                                           JoinMode::AntiNullAsFalse),
+                         join_mode_formatter);
 
+TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
+  // The rule should only rewrite inner and semi joins.
+  auto key_constraints = TableKeyConstraints{};
+  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
+  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
 
+  const auto join_node =
+      GetParam() == JoinMode::Cross ? JoinNode::make(GetParam()) : JoinNode::make(GetParam(), equals_(a, u));
+  join_node->set_left_input(node_a);
+  join_node->set_right_input(PredicateNode::make(equals_(v, 0), node_b));
   // clang-format off
-  lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Semi, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
+    join_node);
 
   const auto subquery = ProjectionNode::make(expression_vector(u),
     PredicateNode::make(equals_(v, 0), node_b));
 
-  const auto expected_lqp =
+  auto expected_lqp =
   ProjectionNode::make(expression_vector(b),
     PredicateNode::make(equals_(a, lqp_subquery_(subquery)),
       node_a));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(JoinToPredicateRewriteRuleTest, InnerJoinRewrite) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  auto key_constraints = std::set<TableKeyConstraint>();
-
-  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
-
-  node_b->set_key_constraints(key_constraints);
-
-  // clang-format off
-  lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Inner, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp->deep_copy());
   const auto actual_lqp = apply_rule(rule, annotated_lqp);
+  expected_lqp = std::static_pointer_cast<ProjectionNode>(
+      apply_rule(std::make_shared<ColumnPruningRule>(), expected_lqp->deep_copy()));
 
-  const auto subquery = ProjectionNode::make(expression_vector(u),
-    PredicateNode::make(equals_(v, 0), node_b));
-
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(b),
-    PredicateNode::make(equals_(a, lqp_subquery_(subquery)),
-      node_a));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  if (GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) {
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  } else {
+    EXPECT_LQP_EQ(actual_lqp, annotated_lqp->deep_copy());
+  }
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  auto key_constraints = std::set<TableKeyConstraint>();
-
-  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
-
+  // Do not rewrite if there is no predicate on the column with UCC.
+  auto key_constraints = TableKeyConstraints{};
+  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
+  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Semi, equals_(a, u),
-      node_a, node_b));
-
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-
-  const auto expected_lqp = ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Semi, equals_(a, u),
+    JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a, node_b));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(JoinToPredicateRewriteRuleTest, MissingUCCOnPredicateColumn) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  // clang-format off
-  lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Semi, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-
   const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
   const auto actual_lqp = apply_rule(rule, annotated_lqp);
+  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+}
 
-  const auto subquery = ProjectionNode::make(expression_vector(u),
-    PredicateNode::make(equals_(v, 0), node_b));
+TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
+  // Do not rewrite if there is no UCC on the predicate column.
+  auto key_constraints = TableKeyConstraints{};
+  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
+  node_b->set_key_constraints(key_constraints);
 
-  const auto expected_lqp =
+  // clang-format off
+  const auto lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Semi, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto actual_lqp = apply_rule(rule, annotated_lqp);
+  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
 }
 
-TEST_F(JoinToPredicateRewriteRuleTest, TestNoUnusedJoinSide) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  auto key_constraints = std::set<TableKeyConstraint>();
-
-  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
-
+TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
+  // Do not rewrite if there is no UCC on the join column.
+  auto key_constraints = TableKeyConstraints{};
+  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  lqp =
-  ProjectionNode::make(expression_vector(b, u),
+  const auto lqp =
+  ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
+  // clang-format on
 
   const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
   const auto actual_lqp = apply_rule(rule, annotated_lqp);
+  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+}
 
-  const auto expected_lqp =
+TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
+  // Do not rewrite if columns from b are required upwards in LQP.
+  auto key_constraints = TableKeyConstraints{};
+  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
+  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
+  node_b->set_key_constraints(key_constraints);
+
+  // clang-format off
+  const auto lqp =
   ProjectionNode::make(expression_vector(b, u),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0), node_b)));
   // clang-format on
 
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+  const auto actual_lqp = apply_rule(rule, annotated_lqp);
+  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  auto key_constraints = std::set<TableKeyConstraint>();
-
+  // Do not rewrite if ther is a union on table b.
+  auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
   key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
-
   node_b->set_key_constraints(key_constraints);
 
   // clang-format off
-  lqp =
+  const auto lqp =
   ProjectionNode::make(expression_vector(b),
     JoinNode::make(JoinMode::Inner, equals_(a, u),
       node_a,
       PredicateNode::make(equals_(v, 0),
-      UnionNode::make(SetOperationMode::All, node_b, node_b))));
+      UnionNode::make(SetOperationMode::Positions, node_b, node_b))));
+  // clang-format on
 
   const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
   const auto actual_lqp = apply_rule(rule, annotated_lqp);
-
-  // The union in table b should destroy the uniqueness condition, so no join rewrite should be performed.
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Inner, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0),
-      UnionNode::make(SetOperationMode::All, node_b, node_b))));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(JoinToPredicateRewriteRuleTest, AntiNullAsFalseJoin) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  auto key_constraints = std::set<TableKeyConstraint>();
-
-  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
-
-  node_b->set_key_constraints(key_constraints);
-
-  // clang-format off
-  lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::AntiNullAsFalse, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-}
-
-TEST_F(JoinToPredicateRewriteRuleTest, AntiNullAsTrueJoin) {
-  auto lqp = std::shared_ptr<AbstractLQPNode>{};
-
-  auto key_constraints = std::set<TableKeyConstraint>();
-
-  key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
-  key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
-
-  node_b->set_key_constraints(key_constraints);
-
-  // clang-format off
-  lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-
-  const auto expected_lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::AntiNullAsTrue, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-  // clang-format on
-
-  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
 }
 
 }  // namespace hyrise

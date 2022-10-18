@@ -61,7 +61,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * @returns std::optional<LQPInputSide> to the input side that is no longer used further up in LQP.
    *          If no side is unused, nullopt is returned.
    */
-  std::optional<LQPInputSide> get_unused_input() const;
+  std::optional<LQPInputSide> prunable_input_side() const;
 
   /**
    * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns

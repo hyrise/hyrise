@@ -256,7 +256,7 @@ bool JoinNode::is_semi_reduction() const {
   return _is_semi_reduction;
 }
 
-std::optional<LQPInputSide> JoinNode::get_unused_input() const {
+std::optional<LQPInputSide> JoinNode::prunable_input_side() const {
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsFalse || join_mode == JoinMode::AntiNullAsTrue) {
     return LQPInputSide::Right;
   }

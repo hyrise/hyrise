@@ -3,7 +3,7 @@
 #include <unordered_map>
 
 #include "expression/abstract_expression.hpp"
-#include "expression/expression_functional.hpp"
+#include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -21,8 +21,7 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void gather_expressions_not_computed_by_expression_evaluator(
     const std::shared_ptr<AbstractExpression>& expression,
@@ -242,14 +241,12 @@ void recursively_gather_required_expressions(
   }
 }
 
-void annotate_join_unused_inputs(
+void annotate_join_prunable_inputs(
     const std::shared_ptr<AbstractLQPNode>& node,
     const std::unordered_map<std::shared_ptr<AbstractLQPNode>, ExpressionUnorderedSet>& required_expressions_by_node) {
-  Assert(node->type == LQPNodeType::Join, "The given node is not a join node as expected.");
-  // Identify whether the left or right side of the given join node are not needed anywhere further up in the LQP
-  // If one of the sides is not used, add this information to the join node
-  auto join_node = std::static_pointer_cast<JoinNode>(node);
-
+  Assert(node->type == LQPNodeType::Join, "Expected join node.");
+  // Identify whether the left or right side of the given join node are not needed anywhere further up in the LQP.
+  // If one of the sides is not used, add this information to the join node.
   auto left_input_is_used = false;
   auto right_input_is_used = false;
   for (const auto& output : node->outputs()) {
@@ -266,10 +263,11 @@ void annotate_join_unused_inputs(
   if (left_input_is_used && right_input_is_used)
     return;
 
+  auto& join_node = static_cast<JoinNode&>(*node);
   if (!left_input_is_used) {
-    join_node->mark_input_side_as_prunable(LQPInputSide::Left);
+    join_node.mark_input_side_as_prunable(LQPInputSide::Left);
   } else {
-    join_node->mark_input_side_as_prunable(LQPInputSide::Right);
+    join_node.mark_input_side_as_prunable(LQPInputSide::Right);
   }
 }
 
@@ -360,7 +358,7 @@ void ColumnPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<
       } break;
 
       case LQPNodeType::Join: {
-        annotate_join_unused_inputs(node, required_expressions_by_node);
+        annotate_join_prunable_inputs(node, required_expressions_by_node);
       } break;
 
       case LQPNodeType::Projection: {
