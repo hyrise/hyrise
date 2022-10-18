@@ -37,21 +37,13 @@ class UccDiscoveryPluginTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_table_name_A, _table_A);
     Hyrise::get().storage_manager.add_table(_table_name_B, _table_B);
 
-    const auto table_node_A = StoredTableNode::make(_table_name_A);
-    const auto table_node_B = StoredTableNode::make(_table_name_B);
+    _table_node_A = StoredTableNode::make(_table_name_A);
+    _table_node_B = StoredTableNode::make(_table_name_B);
 
-    _join_col_A = table_node_A->get_column("A_a");
-    _join_col_B = table_node_B->get_column("B_a");
-    _predicate_col_A = table_node_A->get_column("c");
-    _predicate_col_B = table_node_B->get_column("d");
-
-    // clang-format off
-    _lqp =
-    JoinNode::make(
-      JoinMode::Inner, equals_(_join_col_A, _join_col_B),
-        PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A),
-        PredicateNode::make(equals_(_predicate_col_B, "not"), table_node_B));
-    // clang-format on
+    _join_columnA = _table_node_A->get_column("A_a");
+    _join_columnB = _table_node_B->get_column("B_a");
+    _predicate_column_A = _table_node_A->get_column("c");
+    _predicate_column_B = _table_node_B->get_column("d");
 
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
@@ -59,15 +51,15 @@ class UccDiscoveryPluginTest : public BaseTest {
 
  protected:
   UccCandidates _identify_ucc_candidates() {
-    return _uccPlugin._identify_ucc_candidates();
+    return UccDiscoveryPlugin::_identify_ucc_candidates();
   }
 
   void _discover_uccs() {
-    _uccPlugin._validate_ucc_candidates(_uccPlugin._identify_ucc_candidates());
+    UccDiscoveryPlugin::_validate_ucc_candidates(UccDiscoveryPlugin::_identify_ucc_candidates());
   }
 
   void _validate_ucc_candidates(const UccCandidates& candidates) {
-    _uccPlugin._validate_ucc_candidates(candidates);
+    UccDiscoveryPlugin::_validate_ucc_candidates(candidates);
   }
 
   void _encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
@@ -83,44 +75,73 @@ class UccDiscoveryPluginTest : public BaseTest {
 
   const std::string _table_name_A{"uniquenessTestTableA"};
   const std::string _table_name_B{"uniquenessTestTableB"};
-  static constexpr auto _chunk_size = ChunkOffset{2};
-  const UccDiscoveryPlugin _uccPlugin{};
-  std::shared_ptr<JoinNode> _lqp{};
-  std::shared_ptr<AggregateNode> _agg_lqp{};
+  const ChunkOffset _chunk_size{2};
 
   std::shared_ptr<Table> _table_A{};
   std::shared_ptr<Table> _table_B{};
-  std::shared_ptr<LQPColumnExpression> _join_col_A{};
-  std::shared_ptr<LQPColumnExpression> _join_col_B{};
-  std::shared_ptr<LQPColumnExpression> _predicate_col_A{};
-  std::shared_ptr<LQPColumnExpression> _predicate_col_B{};
+  std::shared_ptr<StoredTableNode> _table_node_A{};
+  std::shared_ptr<StoredTableNode> _table_node_B{};
+  std::shared_ptr<LQPColumnExpression> _join_columnA{};
+  std::shared_ptr<LQPColumnExpression> _join_columnB{};
+  std::shared_ptr<LQPColumnExpression> _predicate_column_A{};
+  std::shared_ptr<LQPColumnExpression> _predicate_column_B{};
 };
 
 class UccDiscoveryPluginMultiEncodingTest : public UccDiscoveryPluginTest,
                                             public ::testing::WithParamInterface<SegmentEncodingSpec> {};
 
 TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
-  auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
-  pm.unload_plugin("hyriseUccDiscoveryPlugin");
+  auto& plugin_manager = Hyrise::get().plugin_manager;
+  plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin");
 }
 
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
-  Hyrise::get().default_lqp_cache->set("TestLQP", _lqp);
+  for (const auto join_mode : {JoinMode::Inner, JoinMode::Semi}) {
+    // clang-format off
+    const auto lqp =
+    JoinNode::make(join_mode, equals_(_join_columnA, _join_columnB),
+      PredicateNode::make(equals_(_predicate_column_A, "unique"), _table_node_A),
+      PredicateNode::make(equals_(_predicate_column_B, "not"), _table_node_B));
+    // clang-format on
 
-  const auto ucc_candidates = _identify_ucc_candidates();
+    Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-  EXPECT_EQ(ucc_candidates.size(), 4);
+    const auto& ucc_candidates = _identify_ucc_candidates();
 
-  const auto join_col_A_candidate = UccCandidate{_table_name_A, _join_col_A->original_column_id};
-  const auto predicate_col_A_candidate = UccCandidate{_table_name_A, _predicate_col_A->original_column_id};
-  const auto join_col_B_candidate = UccCandidate{_table_name_B, _join_col_B->original_column_id};
-  const auto predicate_col_B_candidate = UccCandidate{_table_name_B, _predicate_col_B->original_column_id};
+    // For semi joins, the plugin should only look at the right join input.
+    const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 2;
+    EXPECT_EQ(ucc_candidates.size(), expected_candidate_count) << "for JoinMode::" << join_mode;
 
-  EXPECT_TRUE(ucc_candidates.contains(join_col_A_candidate));
-  EXPECT_TRUE(ucc_candidates.contains(predicate_col_A_candidate));
-  EXPECT_TRUE(ucc_candidates.contains(join_col_B_candidate));
-  EXPECT_TRUE(ucc_candidates.contains(predicate_col_B_candidate));
+    const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
+    const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
+    const auto join_column_B_candidate = UccCandidate{_table_name_B, _join_columnB->original_column_id};
+    const auto predicate_column_B_candidate = UccCandidate{_table_name_B, _predicate_column_B->original_column_id};
+
+    EXPECT_TRUE(ucc_candidates.contains(join_column_B_candidate)) << "for JoinMode::" << join_mode;
+    EXPECT_TRUE(ucc_candidates.contains(predicate_column_B_candidate)) << "for JoinMode::" << join_mode;
+
+    if (join_mode != JoinMode::Semi) {
+      EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate)) << "for JoinMode::" << join_mode;
+      EXPECT_TRUE(ucc_candidates.contains(predicate_column_A_candidate)) << "for JoinMode::" << join_mode;
+    }
+  }
+}
+
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
+  const auto join_modes = {JoinMode::Left,           JoinMode::Right,           JoinMode::FullOuter,
+                           JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse, JoinMode::Cross};
+  for (const auto join_mode : join_modes) {
+    const auto lqp = join_mode == JoinMode::Cross ? JoinNode::make(JoinMode::Cross)
+                                                  : JoinNode::make(join_mode, equals_(_join_columnA, _join_columnB));
+    lqp->set_left_input(PredicateNode::make(equals_(_predicate_column_A, "unique"), _table_node_A));
+    lqp->set_right_input(PredicateNode::make(equals_(_predicate_column_B, "not"), _table_node_B));
+
+    Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
+
+    const auto& ucc_candidates = _identify_ucc_candidates();
+    EXPECT_TRUE(ucc_candidates.empty()) << "for JoinMode::" << join_mode;
+  }
 }
 
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
@@ -128,43 +149,41 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
 
   // clang-format off
   const auto lqp =
-  AggregateNode::make(expression_vector(_join_col_A), expression_vector(),
-    PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A));
+  AggregateNode::make(expression_vector(_join_columnA), expression_vector(),
+    PredicateNode::make(equals_(_predicate_column_A, "unique"), table_node_A));
   // clang-format on
 
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
   auto ucc_candidates = _identify_ucc_candidates();
 
-  const auto join_col_A_candidate = UccCandidate{_table_name_A, _join_col_A->original_column_id};
-  const auto predicate_col_A_candidate = UccCandidate{_table_name_A, _predicate_col_A->original_column_id};
+  const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
+  const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
 
   EXPECT_EQ(ucc_candidates.size(), 1);
-  EXPECT_TRUE(ucc_candidates.contains(join_col_A_candidate));
-  EXPECT_TRUE(!ucc_candidates.contains(predicate_col_A_candidate));
+  EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate));
+  EXPECT_TRUE(!ucc_candidates.contains(predicate_column_A_candidate));
 }
 
-TEST_F(UccDiscoveryPluginTest, NoCandidatesGenerated) {
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
   const auto table_node_B = StoredTableNode::make(_table_name_B);
 
   // clang-format off
   const auto lqp =
   UnionNode::make(SetOperationMode::All,
-    PredicateNode::make(equals_(_predicate_col_A, "unique"), table_node_A),
-    PredicateNode::make(equals_(_predicate_col_B, "not"), table_node_B));
+    PredicateNode::make(equals_(_predicate_column_A, "unique"), table_node_A),
+    PredicateNode::make(equals_(_predicate_column_B, "not"), table_node_B));
   // clang-format on
 
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
   auto ucc_candidates = _identify_ucc_candidates();
 
-  EXPECT_EQ(ucc_candidates.size(), 0);
+  EXPECT_TRUE(ucc_candidates.empty());
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
-  Hyrise::get().default_lqp_cache->set("TestLQP", _lqp);
-
   _encode_table(_table_A, GetParam());
   _encode_table(_table_B, GetParam());
 
@@ -193,7 +212,13 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
 }
 
 TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
-  Hyrise::get().default_lqp_cache->set("TestLQP", _lqp);
+  // clang-format off
+  const auto lqp =
+  JoinNode::make(JoinMode::Inner, equals_(_join_columnA, _join_columnB),
+    PredicateNode::make(equals_(_predicate_column_A, "unique"), _table_node_A),
+    PredicateNode::make(equals_(_predicate_column_B, "not"), _table_node_B));
+  // clang-format on
+  Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
   _encode_table(_table_A, GetParam());
   _encode_table(_table_B, GetParam());
@@ -208,11 +233,11 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   EXPECT_EQ(constraints_A.size(), 2);
   EXPECT_EQ(constraints_B.size(), 1);
 
-  EXPECT_TRUE(constraints_A.contains({{_join_col_A->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_TRUE(constraints_A.contains({{_predicate_col_A->original_column_id}, KeyConstraintType::UNIQUE}));
+  EXPECT_TRUE(constraints_A.contains({{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE}));
+  EXPECT_TRUE(constraints_A.contains({{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE}));
 
-  EXPECT_TRUE(constraints_B.contains({{_join_col_B->original_column_id}, KeyConstraintType::UNIQUE}));
-  EXPECT_FALSE(constraints_B.contains({{_predicate_col_B->original_column_id}, KeyConstraintType::UNIQUE}));
+  EXPECT_TRUE(constraints_B.contains({{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE}));
+  EXPECT_FALSE(constraints_B.contains({{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE}));
 
   // Ensure we clear the plan caches.
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);

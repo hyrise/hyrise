@@ -54,13 +54,13 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * 
    * Returns an unordered set of these candidates to be used in the UCC validation function.
    */
-  UccCandidates _identify_ucc_candidates() const;
+  static UccCandidates _identify_ucc_candidates();
 
   /**
    * Iterates over the provided set of columns identified as candidates for a uniqueness validation. Validates those
    * that are not already known to be unique.
    */
-  void _validate_ucc_candidates(const UccCandidates& ucc_candidates) const;
+  static void _validate_ucc_candidates(const UccCandidates& ucc_candidates);
 
  private:
   /**
@@ -69,7 +69,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * for an early-out before the more expensive cross-segment uniqueness check.
    */
   template <typename ColumnDataType>
-  bool _dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id) const;
+  static bool _dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id);
 
   /**
    * Checks whether the given table contains only unique values by inserting all values into an unordered set. If for
@@ -77,12 +77,12 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * there must be a duplicate and return false. Otherwise, returns true.
    */
   template <typename ColumnDataType>
-  bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) const;
+  static bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id);
 
   /**
    * Extracts columns as candidates for ucc validation from the aggregate node, that are used in groupby operations.
    */
-  void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates) const;
+  static void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
 
   /**
    * Extracts columns as ucc validation candidates from a join node. 
@@ -95,16 +95,16 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    * and a column used in a PredicateNode may be added as a UCC candidate if the Predicate filters the same table that
    * contains the join column.
    */
-  void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates) const;
+  static void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
 
   /**
    * Iterates through the LQP underneath the given root node.
    * If a PredicateNode is encountered, checks whether it is a binary predicate checking for column = value.
    * If the predicate column is from the same table as the passed column_candidate, adds both as ucc_candidates
    */
-  void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
-                                                 std::shared_ptr<LQPColumnExpression> column_candidate,
-                                                 UccCandidates& ucc_candidates) const;
+  static void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
+                                                        std::shared_ptr<LQPColumnExpression> column_candidate,
+                                                        UccCandidates& ucc_candidates);
 };
 
 }  // namespace hyrise

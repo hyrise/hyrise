@@ -50,7 +50,7 @@ UccDiscoveryPlugin::provided_user_executable_functions() {
   return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
 }
 
-UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() const {
+UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
   const auto lqp_cache = Hyrise::get().default_lqp_cache;
   if (!lqp_cache) {
     return {};
@@ -85,7 +85,7 @@ UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() const {
   return ucc_candidates;
 }
 
-void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candidates) const {
+void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candidates) {
   for (const auto& candidate : ucc_candidates) {
     auto candidate_timer = Timer();
     const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name);
@@ -137,8 +137,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr<Table> table,
-                                                                 ColumnID column_id) const {
+bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
   // tes that at least one duplicate value or a NULL value is contained.
@@ -170,7 +169,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) const {
+bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // distinct_values collects the segment values from all chunks.
   auto distinct_values = std::unordered_set<ColumnDataType>{};
@@ -224,7 +223,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
 }
 
 void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
-                                                             UccCandidates& ucc_candidates) const {
+                                                             UccCandidates& ucc_candidates) {
   const auto& aggregate_node = static_cast<AggregateNode&>(*node);
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
       aggregate_node.node_expressions.cbegin(),
@@ -242,7 +241,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<Abs
 }
 
 void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
-                                                        UccCandidates& ucc_candidates) const {
+                                                        UccCandidates& ucc_candidates) {
   const auto& join_node = static_cast<JoinNode&>(*node);
   // Fetch the join predicate to extract the UCC candidates from. Right now, limited to only equals predicates.
   const auto& join_predicates = join_node.join_predicates();
@@ -265,17 +264,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
     return column_candidate;
   };
 
-  // We only care about semi, inner (both are potential candidates), right outer (left is potential candidate) and left
-  // outer (right is potential candidate) joins, as those may be rewritten by optimizer rules right now.
+  // We only care about semi (right input is candidate) and inner (both are potential candidates).
   switch (join_node.join_mode) {
-    case JoinMode::Right: {
-      // We want to check only the left-hand side here, as this is the one that will be removed in the end.
-      const auto& subtree_root = join_node.left_input();
-      const auto column_candidate = column_expression_for_join_input(subtree_root);
-      _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
-      return;
-    }
-
     case JoinMode::Inner: {
       for (const auto& column_candidate : binary_join_predicate->arguments) {
         const auto lqp_column_expression = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
@@ -296,8 +286,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
       return;
     }
 
-    case JoinMode::Semi:
-    case JoinMode::Left: {
+    case JoinMode::Semi: {
       // We want to check only the right hand side here, as this is the one that will be removed in the end.
       const auto subtree_root = join_node.right_input();
       const auto column_candidate = column_expression_for_join_input(subtree_root);
@@ -305,6 +294,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
       return;
     }
 
+    case JoinMode::Left:
+    case JoinMode::Right:
     case JoinMode::FullOuter:
     case JoinMode::Cross:
     case JoinMode::AntiNullAsTrue:
@@ -315,7 +306,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
 
 void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
     std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate,
-    UccCandidates& ucc_candidates) const {
+    UccCandidates& ucc_candidates) {
   // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
   // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
   if (!root_node || !column_candidate) {
