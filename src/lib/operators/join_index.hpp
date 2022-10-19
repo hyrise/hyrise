@@ -49,6 +49,9 @@ class JoinIndex : public AbstractJoinOperator {
   struct PerformanceData : public OperatorPerformanceData<OperatorSteps> {
     void output_to_stream(std::ostream& stream, DescriptionMode description_mode) const override;
 
+    // Per default, the right input is the index side and the left side is the probe side.
+    bool right_input_is_index_side{true};
+
     size_t chunks_scanned_with_index{0};
     size_t chunks_scanned_without_index{0};
   };
