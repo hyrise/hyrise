@@ -174,7 +174,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, Union) {
-  // Do not rewrite if ther is a union on table b.
+  // Do not rewrite if there is a union on table b.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(TableKeyConstraint({u->original_column_id}, KeyConstraintType::UNIQUE));
   key_constraints.emplace(TableKeyConstraint({v->original_column_id}, KeyConstraintType::UNIQUE));
