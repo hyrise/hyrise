@@ -82,7 +82,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * Sets the `prunable_input_side` flag of this JoinNode to the given LQPInputSide.
    * @param input_side which is no longer used in LQP after the join
-   * Note: This function is meant to be called by the ColumnPruningRule, which already has the information on used/unused expressions in the LQP.
+   * Note: This function is meant to be called by the ColumnPruningRule, which already has the information on used/
+   * unused expressions in the LQP.
    */
   void mark_input_side_as_prunable(LQPInputSide input_side);
 
