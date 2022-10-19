@@ -143,7 +143,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
   auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
-  join_index_performance_data.right_input_is_index_side = _index_side == IndexSide::Right;
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 

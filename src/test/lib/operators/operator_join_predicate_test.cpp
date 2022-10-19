@@ -49,21 +49,4 @@ TEST_F(OperatorJoinPredicateTest, FromExpressionImpossible) {
   ASSERT_FALSE(predicate_b);
 }
 
-TEST_F(OperatorJoinPredicateTest, Flip) {
-  auto predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::LessThanEquals};
-  EXPECT_FALSE(predicate.is_flipped());
-
-  predicate.flip();
-  EXPECT_TRUE(predicate.is_flipped());
-  EXPECT_EQ(predicate.column_ids.first, ColumnID{1});
-  EXPECT_EQ(predicate.column_ids.second, ColumnID{0});
-  EXPECT_EQ(predicate.predicate_condition, PredicateCondition::GreaterThanEquals);
-
-  predicate.flip();
-  EXPECT_FALSE(predicate.is_flipped());
-  EXPECT_EQ(predicate.column_ids.first, ColumnID{0});
-  EXPECT_EQ(predicate.column_ids.second, ColumnID{1});
-  EXPECT_EQ(predicate.predicate_condition, PredicateCondition::LessThanEquals);
-}
-
 }  // namespace hyrise
