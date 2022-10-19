@@ -235,21 +235,4 @@ TEST_F(ChunkEncoderTest, ReencodingTable) {
   }
 }
 
-TEST_F(ChunkEncoderTest, ReencodeNotNullableSegment) {
-  auto value_segment = std::make_shared<ValueSegment<int>>();
-  value_segment->append(4);
-  value_segment->append(6);
-  value_segment->append(3);
-  value_segment->append(4);
-
-  auto dict_segment = ChunkEncoder::encode_segment(
-    value_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Dictionary});
-  auto reencoded_segment = ChunkEncoder::encode_segment(
-    dict_segment, DataType::Int, SegmentEncodingSpec{EncodingType::Unencoded});
-  const auto casted_reencoded_segment = std::dynamic_pointer_cast<const ValueSegment<int>>(reencoded_segment);
-
-  EXPECT_FALSE(casted_reencoded_segment->is_nullable());
-}
-
-
 }  // namespace hyrise
