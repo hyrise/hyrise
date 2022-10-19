@@ -2,6 +2,7 @@
 #include "lib/utils/meta_tables/meta_mock_table.hpp"
 
 #include "operators/table_wrapper.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
@@ -114,6 +115,8 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
 
 TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
+
   const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
 
@@ -124,9 +127,16 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
 
 TEST_P(MultiMetaTablesTest, IsDynamic) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
+
+  {
+    const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
+    const auto meta_table = generate_meta_table(GetParam());
+    EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+  }
+
   SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
   SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
-
   if (GetParam()->name() == "chunk_sort_orders") {
     Hyrise::get()
         .storage_manager.get_table("int_int")
@@ -134,10 +144,11 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
         ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
 
-  const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
-  const auto meta_table = generate_meta_table(GetParam());
-
-  EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+  {
+    const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
+    const auto meta_table = generate_meta_table(GetParam());
+    EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+  }
 }
 
 TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {

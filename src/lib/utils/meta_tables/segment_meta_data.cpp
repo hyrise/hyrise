@@ -40,49 +40,36 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
           }
         }
 
-        const auto& access_counter = segment->access_counter;
+        auto distinct_value_count = NULL_VALUE;
+        const auto& pruning_statistics = chunk->pruning_statistics();
+        if (pruning_statistics) {
+          Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics");
+          resolve_data_type(data_type, [&](auto type) {
+            using ColumnDataType = typename decltype(type)::type;
 
-        if (mode == MemoryUsageCalculationMode::Full) {
-          auto distinct_value_count = std::optional<int64_t>{};
-          const auto& pruning_statistics = chunk->pruning_statistics();
-          if (pruning_statistics) {
-            Assert(pruning_statistics->size() > column_id, "Malformed pruning statistics");
-
-            resolve_data_type(data_type, [&](auto type) {
-              using ColumnDataType = typename decltype(type)::type;
-
-              if (const auto attribute_statistics = std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>(
-                      (*pruning_statistics)[column_id])) {
-                const auto& distinct_value_count_object = attribute_statistics->distinct_value_count;
-                if (distinct_value_count_object) {
-                  distinct_value_count = static_cast<int64_t>(distinct_value_count_object->count);
-                }
+            if (const auto attribute_statistics =
+                    std::dynamic_pointer_cast<AttributeStatistics<ColumnDataType>>((*pruning_statistics)[column_id])) {
+              const auto& distinct_value_count_object = attribute_statistics->distinct_value_count;
+              if (distinct_value_count_object) {
+                distinct_value_count = static_cast<int64_t>(distinct_value_count_object->count);
               }
-            });
-          }
-
-          if (!distinct_value_count) {
-            distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
-          }
-
-          meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type_str, *distinct_value_count, encoding,
-                              vector_compression, static_cast<int64_t>(estimated_size),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
-        } else {
-          meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type_str, encoding, vector_compression,
-                              static_cast<int64_t>(estimated_size),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
-                              static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
+            }
+          });
         }
+
+        if (mode == MemoryUsageCalculationMode::Full && variant_is_null(distinct_value_count)) {
+          distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
+        }
+
+        const auto& access_counter = segment->access_counter;
+        meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
+                            pmr_string{table->column_name(column_id)}, data_type_str, distinct_value_count, encoding,
+                            vector_compression, static_cast<int64_t>(estimated_size),
+                            static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
+                            static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
+                            static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Monotonic]),
+                            static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
+                            static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
       }
     }
   }

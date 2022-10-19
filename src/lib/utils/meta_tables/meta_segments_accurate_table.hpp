@@ -5,10 +5,10 @@
 namespace hyrise {
 
 /**
- * This is a class for showing information of all stored segments via a meta table.
- * Here, we provide the distinct value count per segment.
- * It is which is expensive to get, as we need to interate over the values of all stored segments.
- * For faster results without that information use MetaSegmentsTable.
+ * This is a class for showing information of all stored segments via a meta table. Here, we provide
+ * - the distinct value count per segment, which is computed if it is not cached, and
+ * - memory usage derived by iterating over all values.
+ * For faster results where this information is less accurate use MetaSegmentsAccurateTable.
  */
 class MetaSegmentsAccurateTable : public AbstractMetaTable {
  public:

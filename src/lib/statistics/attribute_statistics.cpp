@@ -95,7 +95,7 @@ std::shared_ptr<BaseAttributeStatistics> AttributeStatistics<T>::sliced(
       statistics->set_statistics_object(range_filter->sliced(predicate_condition, variant_value, variant_value2));
     }
 
-  // We do not slice the distinct value count, since we do not know how it changes.
+    // We do not slice the distinct value count, since we do not know how it changes.
   }
 
   return statistics;
