@@ -4,7 +4,7 @@
 #include <vector>
 
 #include <tsl/sparse_map.h> // NOLINT
-#include <tbb/concurrent_hash_map.h>
+#include <tbb/concurrent_hash_map.h> // NOLINT
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"

@@ -182,7 +182,7 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
   auto& nulls = _null_values;
   nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
 
-  for (const auto& key_to_delete: keys_to_delete) {
+  for (const auto& key_to_delete : keys_to_delete) {
     _map.erase(key_to_delete);
   }
 
