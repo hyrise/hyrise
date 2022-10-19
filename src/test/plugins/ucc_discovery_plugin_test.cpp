@@ -96,6 +96,13 @@ TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
   plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin");
 }
 
+TEST_F(UccDiscoveryPluginTest, UserCallableFunction) {
+  auto& plugin_manager = Hyrise::get().plugin_manager;
+  plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs"));
+  plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin");
+}
+
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
   for (const auto join_mode : {JoinMode::Inner, JoinMode::Semi}) {
     // clang-format off

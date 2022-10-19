@@ -80,12 +80,12 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   static bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id);
 
   /**
-   * Extracts columns as candidates for ucc validation from the aggregate node, that are used in groupby operations.
+   * Extracts columns as candidates for UCC validation from the aggregate node, that are used in groupby operations.
    */
   static void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
 
   /**
-   * Extracts columns as ucc validation candidates from a join node. 
+   * Extracts columns as UCC validation candidates from a join node.
    * Some criteria have to be fulfilled for this to be done:
    *   - The Node may only have one predicate.
    *   - This predicate must have the equals condition. This may be extended in the future to support other conditions.
