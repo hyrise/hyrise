@@ -209,7 +209,6 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
   // For every partition, create a reference segment.
   auto partition_id = size_t{0};
-  auto output_chunk_id = size_t{0};
   while (partition_id < pos_lists_left_size) {
     // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
@@ -273,7 +272,6 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
     output_chunks.emplace_back(output_chunk);
     ++partition_id;
-    ++output_chunk_id;
   }
   return output_chunks;
 }
