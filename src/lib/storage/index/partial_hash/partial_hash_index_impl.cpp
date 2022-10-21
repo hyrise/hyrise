@@ -196,14 +196,6 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
   auto range = _map.equal_range(boost::get<DataType>(value));
   return std::make_pair(Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(range.first)),
                         Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(range.second)));
-  // const auto begin = _map.find(boost::get<DataType>(value));
-  // if (begin == _map.end()) {
-  //   const auto end_iter = cend();
-  //   return std::make_pair(end_iter, end_iter);
-  // }
-  // auto end = begin;
-  // return std::make_pair(Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(begin)),
-  //                       Iterator(std::make_shared<TableIndexFlattenedSparseMapIterator<DataType>>(++end)));
 }
 
 template <typename DataType>
