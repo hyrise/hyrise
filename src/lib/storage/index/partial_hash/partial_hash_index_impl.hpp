@@ -1,9 +1,9 @@
 #pragma once
 
+#include <tbb/concurrent_hash_map.h>
+
 #include <utility>
 #include <vector>
-
-#include <tbb/concurrent_hash_map.h> // NOLINT
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
