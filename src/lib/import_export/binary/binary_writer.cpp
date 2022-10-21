@@ -181,14 +181,15 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
     using SegmentDataType = typename decltype(type)::type;
     auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};
 
-    if (reference_segment.data_type() == DataType::String) {
-      std::stringstream values;
-      pmr_vector<size_t> string_lengths(reference_segment.size());
+    if constexpr (std::is_same_v<SegmentDataType, pmr_string>) {
+      auto values = std::stringstream{};
+      auto string_lengths = pmr_vector<size_t>(reference_segment.size());
 
       // We export the values materialized
-      iterable.for_each([&](const auto& value) {
-        string_lengths.push_back(_size(value.value()));
-        values << value.value();
+      iterable.for_each([&](const auto& position) {
+        const auto& value = position.value();
+        string_lengths.push_back(value.length());
+        values << value;
       });
 
       export_values(ofstream, string_lengths);
@@ -197,7 +198,7 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
     } else {
       // Unfortunately, we have to iterate over all values of the reference segment
       // to materialize its contents. Then we can write them to the file
-      iterable.for_each([&](const auto& value) { export_value(ofstream, value.value()); });
+      iterable.for_each([&](const auto& position) { export_value(ofstream, position.value()); });
     }
   });
 }
@@ -374,16 +375,6 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
     default:
       Fail("Any other type should have been caught before.");
   }
-}
-
-template <typename T>
-size_t BinaryWriter::_size(const T& object) {
-  return sizeof(object);
-}
-
-template <>
-size_t BinaryWriter::_size(const pmr_string& object) {
-  return object.length();
 }
 
 }  // namespace hyrise
