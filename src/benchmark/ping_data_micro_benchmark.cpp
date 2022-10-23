@@ -27,8 +27,8 @@ using namespace opossum;
 
 // input and output settings 
 ///////////////////////////////
-constexpr auto SEGMENT_META_DATA_FILE = "../../out/400mio/segment_meta_data.csv";
-constexpr auto INDEX_META_DATA_FILE = "../../out/400mio/index_meta_data.csv";
+constexpr auto SEGMENT_META_DATA_FILE = "../../out/memory_consumption.csv";
+constexpr auto INDEX_META_DATA_FILE = "../../out/memory_consumption_index.csv";
 constexpr auto TBL_FILE = "../../data/400mio_pings_no_id_int.tbl";
 
 // table and compression settings
@@ -42,30 +42,6 @@ const auto ORDER_COLUMNS = std::vector{"captain_id", "latitude", "longitude", "t
 // Dictionary Encoding should always have the id 0
 const auto CHUNK_ENCODINGS = std::vector{SegmentEncodingSpec{EncodingType::Dictionary}, SegmentEncodingSpec{EncodingType::Unencoded}, SegmentEncodingSpec{EncodingType::LZ4}, SegmentEncodingSpec{EncodingType::RunLength}, SegmentEncodingSpec{EncodingType::FrameOfReference, VectorCompressionType::SimdBp128}};
 const auto CREATE_INDEX = true; 
-
-// 10 mio pings table
-
-// quantile benchmark values (int table)
-// timestamp values --> unix timestamp
-// [0.0001, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
-///////////////////////////////
-//const auto BM_VAL_CAPTAIN_ID = std::vector{11, 507, 1021, 1909, 4593, 8817, 17926, 37285, 57997, 121885, 207423, 391081, 538892, 670817, 811067, 1157846, 1280358};
-//const auto BM_VAL_CAPTAIN_STATUS = std::vector{1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2};
-//const auto BM_VAL_LATITUDE = std::vector{243921506, 249199220, 250004849, 250302032, 250451594, 250558091, 250683994, 250767202, 250834293, 251013562, 251229783, 251682671, 251944398, 252085778, 252179506, 252447268, 525276124};
-//const auto BM_VAL_LONGITUDE = std::vector{543605120, 550208361, 551151508, 551340698, 551411140, 551464705, 551527705, 551661225, 551769067, 552056083, 552420155, 552663696, 552803335, 552904369, 553155586, 553625274, 2100403189};
-//const auto BM_VAL_TIMESTAMP = std::vector{1541026998, 1541032124, 1541034919, 1541040924, 1541049411, 1541056831, 1541065715, 1541076481, 1541089685, 1541117270, 1541138605, 1541154132, 1541171747, 1541180035, 1541190288, 1541219269, 1541236836};
-
-//const auto BM_SCAN_VALUES = BM_VAL_CAPTAIN_ID.size();
-
-// quantile between benchmark values (int table)
-// timestamp values --> unix timestamp
-// [0.0001, 0.01, 0.02, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1.0]
-///////////////////////////////
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_CAPTAIN_ID {{207423, 208069}, {203688, 212469}, {198608, 217921}, {176038, 235600}, {159431, 259789}, {142036, 313442}, {121885, 391081}, {99640, 413556}, {80675, 444767}, {57997, 538892}, {37285, 670817}, {17926, 811067}, {8817, 931727}, {6250, 1103790}, {4593, 1157846}, {1909, 1209832}, {8, 1280358}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_CAPTAIN_STATUS {{1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 1}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}, {1, 2}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_LATITUDE {{251229635, 251229817}, {251205580, 251244877}, {251186382, 251258863}, {251156067, 251327418}, {251118305, 251435758}, {251076483, 251562689}, {251013562, 251682671}, {250957584, 251801594}, {250915520, 251867848}, {250834293, 251944398}, {250767202, 252085778}, {250683994, 252179506}, {250558091, 252303117}, {250495668, 252364041}, {250451594, 252447268}, {250302032, 252608756}, {-31439997, 525276124}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_LONGITUDE {{552419834, 552420525}, {552401293, 552446079}, {552375420, 552467950}, {552297534, 552509809}, {552205344, 552567678}, {552121165, 552621719}, {552056083, 552663696}, {551998586, 552712421}, {551937507, 552746462}, {551769067, 552803335}, {551661225, 552904369}, {551527705, 553155586}, {551464705, 553433091}, {551435500, 553528324}, {551411140, 553625274}, {551340698, 553989117}, {-1347527969, 2100403189}};
-//const std::vector<std::vector<int>> BM_BETWEEN_VAL_TIMESTAMP {{1541138598, 1541138612}, {1541137889, 1541139310}, {1541137112, 1541139993}, {1541134602, 1541141812}, {1541130169, 1541146881}, {1541125209, 1541150508}, {1541117270, 1541154132}, {1541106624, 1541158501}, {1541100595, 1541162844}, {1541089685, 1541171747}, {1541076481, 1541180035}, {1541065715, 1541190288}, {1541056831, 1541209600}, {1541053133, 1541215064}, {1541049411, 1541219269}, {1541040924, 1541227207}, {1541026811, 1541236836}};
 
 // 400 mio pings table
 
@@ -265,7 +241,7 @@ static void BM_Ping_Print_Sorted_Tables(benchmark::State& state) {
 }
 BENCHMARK(BM_Ping_Print_Sorted_Tables);
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_PingData_OrderingLessThanEqualsPerformance)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length.");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length.");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length.");
@@ -352,7 +328,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqual
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_PingData_IndexScan)(benchmark::State& state) {
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_CAPTAIN_STATUS.size(), "Sample search values for columns should have the same length. 1");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_LATITUDE.size(), "Sample search values for columns should have the same length. 2");
   Assert(BM_VAL_CAPTAIN_ID.size() == BM_VAL_TIMESTAMP.size(), "Sample search values for columns should have the same length. 3");
@@ -399,7 +375,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)(benchmark:
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenPerformance)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_PingData_BetweenPerformance)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto order_by_column = ORDER_COLUMNS[state.range(0)];
@@ -437,7 +413,7 @@ BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenPerformance)(b
   }
 }
 
-BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenIndexScan)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(PingDataMicroBenchmarkFixture, BM_PingData_BetweenIndexScan)(benchmark::State& state) {
   auto& storage_manager = Hyrise::get().storage_manager;
 
   const auto order_by_column = ORDER_COLUMNS[state.range(0)];
@@ -509,9 +485,9 @@ static void CustomArguments(benchmark::internal::Benchmark* b) {
     }
   }
 }
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_IndexScan)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenPerformance)->Apply(CustomArguments);
-BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_Keven_BetweenIndexScan)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_PingData_OrderingLessThanEqualsPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_PingData_IndexScan)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_PingData_BetweenPerformance)->Apply(CustomArguments);
+BENCHMARK_REGISTER_F(PingDataMicroBenchmarkFixture, BM_PingData_BetweenIndexScan)->Apply(CustomArguments);
 
 }  // namespace opossum
