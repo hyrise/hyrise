@@ -144,9 +144,12 @@ TEST_F(PartialHashIndexTest, Iterators) {
   ++begin_copy;
   // EXPECT_NE(begin_copy, begin);
 
-  // EXPECT_EQ(std::distance(begin, end), 14);                                  // Test size of index iterator.
-  // EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 2);     // Test size of NULL values index iterator.
-  // EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);  // Test for not-existing value in iterator.
+  // EXPECT_EQ(std::distance(begin, end), 14);                                  
+  // Test size of index iterator.
+  // EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 2);     
+  // Test size of NULL values index iterator.
+  // EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end); 
+  // Test for not-existing value in iterator.
 }
 
 TEST_F(PartialHashIndexTest, NullValues) {
