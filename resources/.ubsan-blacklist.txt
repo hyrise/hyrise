@@ -10,3 +10,6 @@ src:*bytell_hash_map.hpp
 
 # Either a false positive in LZ4 or at least something that we cannot fix ourselves, see https://github.com/lz4/lz4/issues/847
 fun:LZ4_setStreamDecode
+
+# ToDo (Tobias)
+src:*concurrent_hash_map.h
