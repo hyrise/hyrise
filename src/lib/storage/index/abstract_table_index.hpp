@@ -10,9 +10,7 @@
 
 namespace hyrise {
 
-enum class TableIndexType {
-  PartialHash
-};
+enum class TableIndexType { PartialHash };
 
 /**
  * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the
@@ -28,7 +26,7 @@ class BaseTableIndexIterator {
   using pointer = const RowID*;
   using reference = const RowID&;
 
-  BaseTableIndexIterator(const BaseTableIndexIterator& itr) = default;
+  BaseTableIndexIterator(const BaseTableIndexIterator& it) = default;
   BaseTableIndexIterator() = default;
   virtual ~BaseTableIndexIterator() = default;
   virtual reference operator*() const;
@@ -67,10 +65,9 @@ class IteratorWrapper {
 };
 
 /**
- * This is a superclass for all table indexes.
- * It allows indexing segments of multiple chunks of a table column.
- * It is assumed that all table index types support equality lookup queries (equals and not-equals queries).
- * The IteratorWrapper type is used as the return type for all lookup types.
+ * This is a superclass for all table indexes. It allows indexing segments of multiple chunks of a table column. It is
+ * assumed that all table index types support equality lookup queries (equals and not-equals queries). The
+ * IteratorWrapper type is used as the return type for all lookup types.
  */
 class AbstractTableIndex : private Noncopyable {
  public:

@@ -11,11 +11,10 @@ namespace hyrise {
 class PartialHashIndexTest;
 
 /**
- * Represents a table index using the tsl::sparse_map hash map where all hashed values are mapped to the RowIDs of their
- * occurrences in the original Chunks. This allows for faster lookup time while index build times are generally
- * increased compared to chunk-based indexes.
- * It can be constructed for a set of chunks of a table column and can later be modified by adding additional chunks
- * or removing already indexed chunks.
+ * Represents a table index using a hash map where all hashed values are mapped to the RowIDs of their occurrences in
+ * the original Chunks. This allows for faster lookup time while index build times are generally increased compared
+ * to chunk-based indexes. It can be constructed for a set of chunks of a table column and can later be modified by
+ * adding additional chunks or removing already indexed chunks.
  */
 class PartialHashIndex : public AbstractTableIndex {
   friend PartialHashIndexTest;

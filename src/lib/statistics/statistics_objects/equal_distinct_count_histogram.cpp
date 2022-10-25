@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include <tsl/robin_map.h>  // NOLINT
 #include <boost/sort/sort.hpp>
-#include <tsl/robin_map.h> // NOLINT
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"

@@ -312,14 +312,8 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false" << std::endl;
   }
 
-  /**
-   * Create table indexes if requested by the user.
-   */
-  if (_benchmark_config->table_indexes) {
-    _create_table_indexes(table_info_by_name);
-  } else {
-    std::cout << "- No table indexes created as --table_indexes was not specified or set to false" << std::endl;
-  }
+  // Create table indexes if specified.
+  _create_table_indexes(table_info_by_name);
 
   // Set scheduler back to previously used scheduler.
   Hyrise::get().topology.use_default_topology(_benchmark_config->cores);

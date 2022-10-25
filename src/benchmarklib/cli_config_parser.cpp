@@ -93,15 +93,6 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)" << std::endl;
   }
 
-  const auto table_indexes = parse_result["table_indexes"].as<bool>();
-  if (table_indexes) {
-    std::cout << "- Creating table indexes (index per table column; columns defined by benchmark)" << std::endl;
-  }
-
-  if (chunk_indexes && table_indexes) {
-    std::cout << "WARNING: Creating chunk and table indexes simultaneously." << std::endl;
-  }
-
   // Get all other variables
   const auto chunk_size = parse_result["chunk_size"].as<ChunkOffset>();
   std::cout << "- Chunk size is " << chunk_size << std::endl;
@@ -150,7 +141,6 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          chunk_size,
                          *encoding_config,
                          chunk_indexes,
-                         table_indexes,
                          max_runs,
                          timeout_duration,
                          warmup_duration,

@@ -358,12 +358,8 @@ void Table::create_table_index(const ColumnID column_id, const std::vector<Chunk
                                const TableIndexType type, const std::string& name) {
   Assert(column_id < _column_definitions.size(),
          "Cannot create index: passed column id is larger than the highest table's column id.");
-
-  switch (type) {
-    case TableIndexType::PartialHash:
-      create_partial_hash_index(column_id, chunk_ids, type, name);
-      break;
-  }
+  Assert(type == TableIndexType::PartialHash, "Currently, only table indexes of type PartialHash can be created.");
+  create_partial_hash_index(column_id, chunk_ids, type);
 }
 
 template <typename Index>
@@ -497,7 +493,7 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
 }
 
 void Table::create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
-                                      const TableIndexType& type, const std::string& name) {
+                                      const TableIndexType& type) {
   std::shared_ptr<AbstractTableIndex> table_index = nullptr;
   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
 
@@ -520,7 +516,7 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
 
   _table_indexes.emplace_back(table_index);
 
-  auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index, name, type};
+  auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index, type};
   _table_indexes_statistics.emplace_back(table_indexes_statistics);
 }
 

@@ -217,6 +217,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     if (!table_indexes.empty() && (_adjusted_primary_predicate.predicate_condition == PredicateCondition::Equals ||
                                    _adjusted_primary_predicate.predicate_condition == PredicateCondition::NotEquals)) {
       const auto chunk_count_index_input_table = _index_input_table->chunk_count();
+      // We need an order-preserving container here to check whether a chunk of the probe table is not indexed. For
+      // this, we assume (1) the probe table's chunk ids and (2) all indexed chunk ids to be sorted. Starting with
+      // the first elements of these sequences, we successively iterate through the elements and compare the current
+      // values.
       auto total_indexed_chunk_ids = std::set<ChunkID>{};
 
       // We do not take multiple table indexes created for the same column into account. For now, we only use the first
@@ -226,7 +230,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         PerformanceWarning("There are multiple table indexes available, but only the first one is used.");
       }
 
-      const auto& table_index = table_indexes[0];
+      const auto& table_index = table_indexes.front();
       const auto& indexed_chunk_ids = table_index->get_indexed_chunk_ids();
       total_indexed_chunk_ids.insert(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
 
@@ -537,9 +541,9 @@ void JoinIndex::_append_matches_chunk_index(const AbstractChunkIndex::Iterator& 
                                             const AbstractChunkIndex::Iterator& range_end,
                                             const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
                                             const ChunkID index_chunk_id) {
-  const auto num_index_matches = std::distance(range_begin, range_end);
+  const auto index_matches_count = std::distance(range_begin, range_end);
 
-  if (num_index_matches == 0) {
+  if (index_matches_count == 0) {
     return;
   }
 
@@ -554,7 +558,7 @@ void JoinIndex::_append_matches_chunk_index(const AbstractChunkIndex::Iterator& 
 
   if (!is_semi_or_anti_join) {
     // We replicate the probe side value for each index side value.
-    std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
+    std::fill_n(std::back_inserter(*_probe_pos_list), index_matches_count, RowID{probe_chunk_id, probe_chunk_offset});
 
     std::transform(range_begin, range_end, std::back_inserter(*_index_pos_list),
                    [index_chunk_id](ChunkOffset index_chunk_offset) {
@@ -574,9 +578,9 @@ void JoinIndex::_append_matches_chunk_index(const AbstractChunkIndex::Iterator& 
 void JoinIndex::_append_matches_table_index(const AbstractTableIndex::Iterator& range_begin,
                                             const AbstractTableIndex::Iterator& range_end,
                                             const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id) {
-  const auto num_index_matches = std::distance(range_begin, range_end);
+  const auto index_matches_count = std::distance(range_begin, range_end);
 
-  if (num_index_matches == 0) {
+  if (index_matches_count == 0) {
     return;
   }
 
@@ -591,7 +595,7 @@ void JoinIndex::_append_matches_table_index(const AbstractTableIndex::Iterator& 
 
   if (!is_semi_or_anti_join) {
     // We replicate the probe side value for each index side value.
-    std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
+    std::fill_n(std::back_inserter(*_probe_pos_list), index_matches_count, RowID{probe_chunk_id, probe_chunk_offset});
 
     std::copy(range_begin, range_end, std::back_inserter(*_index_pos_list));
   }

@@ -11,7 +11,6 @@ namespace hyrise {
 struct TableIndexStatistics {
   std::vector<ColumnID> column_ids;
   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunk_ids;
-  std::string name;
   TableIndexType type;
 };
 

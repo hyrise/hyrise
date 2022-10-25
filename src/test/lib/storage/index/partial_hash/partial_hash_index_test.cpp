@@ -144,8 +144,8 @@ TEST_F(PartialHashIndexTest, Iterators) {
   ++begin_copy;
   EXPECT_NE(begin_copy, begin);
 
-  EXPECT_EQ(std::distance(begin, end), 14);  // Test size of index iterator.
-  EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 2);  // Test size of NULL values index iterator.
+  EXPECT_EQ(std::distance(begin, end), 14);                                  // Test size of index iterator.
+  EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 2);     // Test size of NULL values index iterator.
   EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);  // Test for not-existing value in iterator.
 }
 
@@ -316,12 +316,12 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
   Tested functions:
     size_t memory_usage() const;
 
-  |    Characteristic               | Block 1 | Block 2 |
-  |---------------------------------|---------|---------|
-  |[A] index is empty               |    true |   false |
-  |[B] index has NULL positions     |    true |   false |
-  |[C] index has non-NULL positions |    true |   false |
-  |[D] index has at least one chunk |    true |   false |
+  |    Characteristic                                | Block 1 | Block 2 |
+  |--------------------------------------------------|---------|---------|
+  |[A] index is empty, i.e., it has no index entries |    true |   false |
+  |[B] index has NULL positions                      |    true |   false |
+  |[C] index has non-NULL positions                  |    true |   false |
+  |[D] index was created for at least one chunk      |    true |   false |
 
   Base Choice:
     A2, B1, C1, D1
@@ -333,7 +333,7 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
     D2 => A1, A1 => B2 && C2, therefore there are no more options.
 */
 
-// A2, B2, C1
+// A2, B2, C1, D1
 TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
@@ -373,7 +373,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   EXPECT_EQ(index->memory_usage(), expected_memory_usage);
 }
 
-// A2, B1, C2
+// A2, B1, C2, D1
 TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   const auto& dict_segment_string_nulls =
       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
@@ -413,7 +413,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   EXPECT_EQ(index->memory_usage(), expected_memory_usage);
 }
 
-// A2, B1, C1
+// A2, B1, C1, D1
 TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
@@ -454,7 +454,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   EXPECT_EQ(index->memory_usage(), expected_memory_usage);
 }
 
-// A1, B2, C2
+// A1, B2, C2, D1
 TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
@@ -493,7 +493,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   EXPECT_EQ(index->memory_usage(), expected_memory_usage);
 }
 
-// A1, B2, C2
+// A1, B2, C2, D2
 TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   index = std::make_shared<PartialHashIndex>(DataType::String, ColumnID{0});
 

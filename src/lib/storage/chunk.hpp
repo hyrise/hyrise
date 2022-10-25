@@ -102,9 +102,7 @@ class Chunk : private Noncopyable {
     if constexpr (HYRISE_DEBUG) {
       for (auto segment : segments_to_index) {
         const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
-        if (segment_it == _segments.cend()) {
-          Fail("All segments must be part of the chunk.");
-        }
+        Assert(segment_it != _segments.cend(), "All segments must be part of the chunk.");
       }
     }
 

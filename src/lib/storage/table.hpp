@@ -239,7 +239,7 @@ class Table : private Noncopyable {
    * table's index statistics. Table indexes can only be created on a set of immutable chunks.
    */
   void create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
-                                 const TableIndexType& type, const std::string& name = "");
+                                 const TableIndexType& type);
 
   const TableColumnDefinitions _column_definitions;
   const TableType _type;

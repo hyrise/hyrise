@@ -9,9 +9,8 @@ namespace hyrise {
 std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t original_table_column_count,
                                                               const std::vector<ColumnID>& pruned_column_ids);
 
-
 // For a given ColumnID column_id and a sequence of pruned ColumnIDs, this function calculates the original ColumnID
 // (before pruning) for column_id.
-ColumnID column_id_before_pruning(ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids);
+ColumnID column_id_before_pruning(const ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids);
 
 }  // namespace hyrise

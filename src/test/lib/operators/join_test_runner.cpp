@@ -204,8 +204,8 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         PredicateCondition::LessThan,    PredicateCondition::LessThanEquals,
     };
     const auto join_modes = std::vector{JoinMode::Inner,         JoinMode::Left, JoinMode::Right,
-                                            JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
-                                            JoinMode::AntiNullAsTrue};
+                                        JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
+                                        JoinMode::AntiNullAsTrue};
     const auto table_sizes = std::vector{10u, 15u, 0u};
     const auto chunk_sizes = std::vector{ChunkOffset{10}, ChunkOffset{3}, ChunkOffset{1}};
     const auto secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
@@ -264,8 +264,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
 
       indexed_join_column_id = ColumnID{static_cast<ColumnID::base_type>(2 * data_type_column_id + nullable_offset)};
 
-      const auto search_iter =
-          std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
+      const auto search_iter = std::find(pruned_column_ids.cbegin(), pruned_column_ids.cend(), indexed_join_column_id);
       return search_iter != pruned_column_ids.cend();
     };
 
@@ -868,7 +867,8 @@ TEST_P(JoinTestRunner, TestJoin) {
     FAIL();
   }
 
-  if (configuration.index_side) {  // Configuration is a specialized JoinIndex configuration.
+  // Configuration is a specialized JoinIndex configuration.
+  if (configuration.index_side) {
     auto& indexed_input =
         configuration.index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
 

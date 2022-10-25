@@ -244,7 +244,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
     if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), indexed_column_id) !=
-      _pruned_column_ids.cend()) {
+        _pruned_column_ids.cend()) {
       return true;
     }
 
@@ -259,7 +259,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
     // Check if the indexed chunks have been pruned.
     return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(),
-            [&](const auto chunk_id) { return pruned_chunk_ids.contains(chunk_id); });
+                       [&](const auto chunk_id) { return pruned_chunk_ids.contains(chunk_id); });
   };
 
   auto table_indexes = stored_table->get_table_indexes();

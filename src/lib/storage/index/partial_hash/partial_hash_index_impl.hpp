@@ -1,9 +1,9 @@
 #pragma once
 
-#include <tbb/concurrent_hash_map.h>
-
 #include <utility>
 #include <vector>
+
+#include <tbb/concurrent_hash_map.h>  // NOLINT linter identifies this file as a C system header.
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
@@ -16,21 +16,21 @@ class AbstractSegment;
 class PartialHashIndexTest;
 
 /**
- * Forward iterator that iterates over a tsl::robin_map which maps a DataType to a vector of RowIDs. The iteration
- * process is as if the map would have been flattened and then been iterated.
+ * Forward iterator that iterates over a tbb::concurrent_hash_map that maps a DataType to a vector of RowIDs. The
+ * iteration process is as if the map would have been flattened and then been iterated.
  *
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexFlattenedSparseMapIterator : public BaseTableIndexIterator {
+class TableIndexTbbHashMapIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexFlattenedSparseMapIterator(MapIteratorType itr);
+  explicit TableIndexTbbHashMapIterator(MapIteratorType itr);
 
   reference operator*() const override;
 
-  TableIndexFlattenedSparseMapIterator& operator++() override;
+  TableIndexTbbHashMapIterator& operator++() override;
 
   bool operator==(const BaseTableIndexIterator& other) const override;
 
