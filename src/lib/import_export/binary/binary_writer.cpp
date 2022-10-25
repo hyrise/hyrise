@@ -6,15 +6,14 @@
 #include <string>
 #include <vector>
 
+#include "constant_mappings.hpp"
+#include "resolve_type.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
-#include "constant_mappings.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace {
@@ -176,13 +175,12 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
 
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
-    auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};
 
     auto values = pmr_vector<SegmentDataType>(reference_segment.size());
     auto null_values = pmr_vector<bool>(reference_segment.size());
     auto current_position = size_t{0};
 
-    iterable.for_each([&](const auto& position) {
+    segment_iterate<SegmentDataType>(reference_segment, [&](const auto& position) {
       if (position.is_null()) {
         null_values[current_position] = true;
       } else {
