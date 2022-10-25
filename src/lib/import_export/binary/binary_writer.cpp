@@ -174,32 +174,29 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
   // We materialize reference segments and save them as value segments
   export_value(ofstream, EncodingType::Unencoded);
 
-  if (reference_segment.size() == 0) {
-    return;
-  }
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
     auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};
 
-    if constexpr (std::is_same_v<SegmentDataType, pmr_string>) {
-      auto values = std::stringstream{};
-      auto string_lengths = pmr_vector<size_t>(reference_segment.size());
+    auto values = pmr_vector<SegmentDataType>(reference_segment.size());
+    auto null_values = pmr_vector<bool>(reference_segment.size());
+    auto current_position = size_t{0};
 
-      // We export the values materialized
-      iterable.for_each([&](const auto& position) {
-        const auto& value = position.value();
-        string_lengths.push_back(value.length());
-        values << value;
-      });
+    iterable.for_each([&](const auto& position) {
+      if (position.is_null()) {
+        null_values[current_position] = true;
+      } else {
+        values[current_position] = position.value();
+      }
+      ++current_position;
+    });
 
-      export_values(ofstream, string_lengths);
-      ofstream << values.rdbuf();
-
-    } else {
-      // Unfortunately, we have to iterate over all values of the reference segment
-      // to materialize its contents. Then we can write them to the file
-      iterable.for_each([&](const auto& position) { export_value(ofstream, position.value()); });
+    if (column_is_nullable) {
+      export_value(ofstream, true);
+      export_values(ofstream, null_values);
     }
+
+    export_values(ofstream, values);
   });
 }
 

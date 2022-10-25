@@ -11,7 +11,6 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 

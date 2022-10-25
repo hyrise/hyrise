@@ -8,12 +8,10 @@
 #include "base_test.hpp"
 
 #include "import_export/binary/binary_writer.hpp"
-#include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
-#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -21,10 +19,12 @@ class BinaryWriterTest : public BaseTest {
  protected:
   void TearDown() override {
     std::remove(filename.c_str());
+    std::remove(another_filename.c_str());
   }
 
   std::shared_ptr<Table> table;
   const std::string filename = test_data_path + "export_test.bin";
+  const std::string another_filename = test_data_path + "export_test_2.bin";
   const std::string reference_filepath = "resources/test_data/bin/";
 };
 
@@ -142,33 +142,41 @@ TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
 // It assumes that the TableScan produces one output segment per input segment.
 TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("a", DataType::String, false);
+  column_definitions.emplace_back("a", DataType::String, true);
   column_definitions.emplace_back("b", DataType::Int, false);
   column_definitions.emplace_back("c", DataType::Long, false);
   column_definitions.emplace_back("d", DataType::Float, false);
-  column_definitions.emplace_back("e", DataType::Double, false);
+  column_definitions.emplace_back("e", DataType::Double, true);
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
-  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
-  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
-  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
-  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  table->append({"AAAAA", 1, int64_t{100}, 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, int64_t{200}, 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
+  table->append({NULL_VALUE, 4, int64_t{400}, 4.4f, NULL_VALUE});
 
-  auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  const auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
-
-  auto scan = create_table_scan(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
+  const auto scan = create_table_scan(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
   scan->execute();
 
   BinaryWriter::write(*(scan->get_output()), filename);
-
   EXPECT_TRUE(file_exists(filename));
-
-  // Because reference tables are materialized and stored as if they were value segments, the binary dump will
-  // contain the default chunk size.
   EXPECT_TRUE(compare_files(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
+
+  // The file should be equal to the dump of a ValueSegment. Thus, we also dump the original table containing
+  // ValueSegments and compare the files. We have to create a new table since reference tables are exported with the de-
+  // fault target chunk size. However, the chunks have the same size as the exported reference segments.
+  auto chunks = std::vector<std::shared_ptr<Chunk>>{};
+  for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
+    chunks.emplace_back(table->get_chunk(chunk_id));
+  }
+  const auto unencoded_table = std::make_shared<Table>(column_definitions, TableType::Data, std::move(chunks));
+
+  BinaryWriter::write(*unencoded_table, another_filename);
+  EXPECT_TRUE(file_exists(another_filename));
+  EXPECT_TRUE(compare_files(another_filename, filename));
 }
 
 TEST_F(BinaryWriterTest, SingleChunkFrameOfReferenceSegment) {
@@ -246,10 +254,10 @@ TEST_F(BinaryWriterTest, LZ4MultipleBlocks) {
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{20'000});
 
   for (int index = 0; index < 5000; ++index) {
-    table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
-    table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
-    table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
-    table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+    table->append({"AAAAA", 1, int64_t{100}, 1.1f, 11.1});
+    table->append({"BBBBBBBBBB", 2, int64_t{200}, 2.2f, 22.2});
+    table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
+    table->append({"DDDDDDDDDDDDDDDDDDDD", 4, int64_t{400}, 4.4f, 44.4});
   }
 
   table->last_chunk()->finalize();
@@ -388,10 +396,10 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentSorted) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
-  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
-  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
-  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
-  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  table->append({"AAAAA", 1, int64_t{100}, 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, int64_t{200}, 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, int64_t{400}, 4.4f, 44.4});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
@@ -413,10 +421,10 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesSegmentUnsorted) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
-  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
-  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
-  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
-  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, int64_t{400}, 4.4f, 44.4});
+  table->append({"AAAAA", 1, int64_t{100}, 1.1f, 11.1});
+  table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
+  table->append({"BBBBBBBBBB", 2, int64_t{200}, 2.2f, 22.2});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table, SegmentEncodingSpec{GetParam()});
@@ -438,10 +446,10 @@ TEST_P(BinaryWriterMultiEncodingTest, AllTypesMixColumn) {
 
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
 
-  table->append({"AAAAA", 1, static_cast<int64_t>(100), 1.1f, 11.1});
-  table->append({"BBBBBBBBBB", 2, static_cast<int64_t>(200), 2.2f, 22.2});
-  table->append({"CCCCCCCCCCCCCCC", 3, static_cast<int64_t>(300), 3.3f, 33.3});
-  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, static_cast<int64_t>(400), 4.4f, 44.4});
+  table->append({"AAAAA", 1, int64_t{100}, 1.1f, 11.1});
+  table->append({"BBBBBBBBBB", 2, int64_t{200}, 2.2f, 22.2});
+  table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
+  table->append({"DDDDDDDDDDDDDDDDDDDD", 4, int64_t{400}, 4.4f, 44.4});
 
   ChunkEncoder::encode_chunks(table, {ChunkID{0}}, SegmentEncodingSpec{GetParam()});
   BinaryWriter::write(*table, filename);
