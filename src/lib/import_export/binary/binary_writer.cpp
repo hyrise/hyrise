@@ -171,7 +171,7 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool col
 
 void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
                                   std::ofstream& ofstream) {
-  // We materialize reference segments and save them as value segments
+  // We materialize reference segments and save them as value segments.
   export_value(ofstream, EncodingType::Unencoded);
 
   resolve_data_type(reference_segment.data_type(), [&](auto type) {

@@ -137,9 +137,8 @@ TEST_F(BinaryWriterTest, NullValuesFrameOfReferenceSegment) {
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 }
 
-// A table with reference segments is materialized while exporting. The content of the export file should not be
-// different from a exported table with ValueSegments and the same content.
-// It assumes that the TableScan produces one output segment per input segment.
+// A table with reference segments is materialized while exporting. The content of the export file should not be differ-
+// ent from an exported table with ValueSegments and the same content.
 TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::String, true);
@@ -155,6 +154,9 @@ TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   table->append({"CCCCCCCCCCCCCCC", 3, int64_t{300}, 3.3f, 33.3});
   table->append({NULL_VALUE, 4, int64_t{400}, 4.4f, NULL_VALUE});
 
+  // To create reference segments, we perform a scan that emits all tuples. We cannot use
+  // to_simple_reference_table(table) because it merges all input chunks into one output chunk. We assume that the
+  // TableScan operator produces one output segment per input segment.
   const auto table_wrapper = std::make_shared<TableWrapper>(table);
   table_wrapper->execute();
   const auto scan = create_table_scan(table_wrapper, ColumnID{1}, PredicateCondition::NotEquals, 5);
@@ -165,9 +167,9 @@ TEST_F(BinaryWriterTest, AllTypesReferenceSegment) {
   EXPECT_TRUE(compare_files(
       reference_filepath + ::testing::UnitTest::GetInstance()->current_test_info()->name() + ".bin", filename));
 
-  // The file should be equal to the dump of a ValueSegment. Thus, we also dump the original table containing
-  // ValueSegments and compare the files. We have to create a new table since reference tables are exported with the de-
-  // fault target chunk size. However, the chunks have the same size as the exported reference segments.
+  // The file should be equal to the dump of a table with ValueSegments. Thus, we also dump an unencoded table and com-
+  // pare the files. We have to create a new table since reference tables are exported with the default target chunk
+  // size. However, the chunks have the same size as the exported reference segments.
   auto chunks = std::vector<std::shared_ptr<Chunk>>{};
   for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
     chunks.emplace_back(table->get_chunk(chunk_id));
