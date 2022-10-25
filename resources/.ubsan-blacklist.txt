@@ -8,8 +8,12 @@
 # ska::bytell_hash_map<int, int> h; h.emplace(11, 11); std::cout << h[11] << std::endl;
 src:*bytell_hash_map.hpp
 
-# Either a false positive in LZ4 or at least something that we cannot fix ourselves, see https://github.com/lz4/lz4/issues/847
+# Either a false positive in LZ4 or at least something that we cannot fix ourselves, see
+# https://github.com/lz4/lz4/issues/847
 fun:LZ4_setStreamDecode
 
-# ToDo (Tobias)
+# tbb::concurrent_hash_map casts an invalid pointer causing ubsan to fail. Since the problematic cast is directly
+# followed by a method that checks if an error flag is set/the pointer is valid, this should not be a problem.
+# https://github.com/oneapi-src/oneTBB/issues/908
+
 src:*concurrent_hash_map.h

@@ -233,7 +233,7 @@ size_t PartialHashIndexImpl<DataType>::memory_usage() const {
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
-  // Tessil's sparse_map uses std::hash as hash function, so the hash size equals the size of a size_t.
+  // TBB's concurrent_hash_map uses tbb_hasher as hash function, so the hash size equals the size of a size_t.
   bytes += sizeof(size_t) * _map.size();
 
   bytes += sizeof(std::vector<RowID>) * _map.size();
