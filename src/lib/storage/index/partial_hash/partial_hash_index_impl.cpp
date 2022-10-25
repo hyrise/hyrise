@@ -130,12 +130,11 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       const auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
-        _null_values.push_back(row_id);
+        _null_values.emplace_back(row_id);
       } else {
-        // _map[position.value()].push_back(row_id);
         typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
         _map.insert(hash_map_accessor, position.value());
-        hash_map_accessor->second.push_back(row_id);
+        hash_map_accessor->second.emplace_back(row_id);
       }
     });
   }
