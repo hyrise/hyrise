@@ -31,7 +31,7 @@ ColumnID column_id_before_pruning(const ColumnID column_id, const std::vector<Co
 
   auto original_column_id = column_id;
   for (const auto& pruned_column_id : pruned_column_ids) {
-    if (pruned_column_id > column_id) {
+    if (pruned_column_id > original_column_id) {
       return original_column_id;
     }
     ++original_column_id;
