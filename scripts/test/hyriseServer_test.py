@@ -32,6 +32,13 @@ def main():
     client.expect_exact("5")
     client.expect_exact("(1 row)")
 
+    client.sendline("COPY loaded_table_from_tbl FROM '../../resources/test_data/tbl/int.tbl';")
+    client.expect_exact("SELECT 0")
+    client.sendline("SELECT COUNT(*) AS \"row_count\" FROM loaded_table_from_tbl;")
+    client.expect_exact("row_count")
+    client.expect_exact("3")
+    client.expect_exact("(1 row)")
+
     # Not using close_benchmark() here, as a server is started and a timeout of None would wait forever.
     client.close()
     server.close()
