@@ -132,9 +132,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       if (position.is_null()) {
         _null_values.emplace_back(row_id);
       } else {
-        typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
-        _map.insert(hash_map_accessor, position.value());
-        hash_map_accessor->second.emplace_back(row_id);
+        _map[position.value()].push_back(row_id);
       }
     });
   }
@@ -144,49 +142,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks_to_unindex) {
-  const auto size_before = _indexed_chunk_ids.size();
-
-  auto indexed_chunks_to_unindex = std::unordered_set<ChunkID>{};
-  for (const auto& chunk_id : chunks_to_unindex) {
-    if (!_indexed_chunk_ids.contains(chunk_id)) {
-      continue;
-    }
-
-    indexed_chunks_to_unindex.insert(chunk_id);
-    _indexed_chunk_ids.erase(chunk_id);
-  }
-
-  // Checks whether a given RowID's ChunkID is in the set of ChunkIDs to be unindexed.
-  auto is_to_unindex = [&indexed_chunks_to_unindex](const RowID& row_id) {
-    return indexed_chunks_to_unindex.contains(row_id.chunk_id);
-  };
-
-  // Iterate over all values stored in the index.
-  auto map_iter = _map.begin();
-  auto keys_to_delete = std::unordered_set<DataType>{};
-
-  while (map_iter != _map.end()) {
-    typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::accessor hash_map_accessor;
-    _map.find(hash_map_accessor, map_iter->first);
-    auto& row_ids = hash_map_accessor->second;
-
-    // Remove every RowID entry of the value that references one of the chunks.
-    row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_unindex), row_ids.end());
-
-    if (row_ids.empty()) {
-      keys_to_delete.insert(hash_map_accessor->first);
-    }
-    ++map_iter;
-  }
-
-  auto& nulls = _null_values;
-  nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
-
-  for (const auto& key_to_delete : keys_to_delete) {
-    _map.erase(key_to_delete);
-  }
-
-  return size_before - _indexed_chunk_ids.size();
+  Fail("Current PartialHashIndex implementation does not support erases.");
 }
 
 template <typename DataType>
@@ -232,7 +188,7 @@ size_t PartialHashIndexImpl<DataType>::memory_usage() const {
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
-  // TBB's concurrent_hash_map uses tbb_hasher as hash function, so the hash size equals the size of a size_t.
+  // TBB's concurrent_unordered_map uses tbb_hasher as hash function, so the hash size equals the size of a size_t.
   bytes += sizeof(size_t) * _map.size();
 
   bytes += sizeof(std::vector<RowID>) * _map.size();

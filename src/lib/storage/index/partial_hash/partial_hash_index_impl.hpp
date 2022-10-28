@@ -3,7 +3,8 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/concurrent_hash_map.h>  // NOLINT linter identifies this file as a C system header.
+#include <tbb/concurrent_unordered_map.h>  // NOLINT linter identifies this file as a C system header.
+#include <tbb/concurrent_unordered_map.h>  // NOLINT linter identifies this file as a C system header.
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
@@ -16,7 +17,7 @@ class AbstractSegment;
 class PartialHashIndexTest;
 
 /**
- * Forward iterator that iterates over a tbb::concurrent_hash_map that maps a DataType to a vector of RowIDs. The
+ * Forward iterator that iterates over a tbb::concurrent_unordered_map that maps a DataType to a vector of RowIDs. The
  * iteration process is as if the map would have been flattened and then been iterated.
  *
  * @tparam DataType The key type of the underlying map.
@@ -24,7 +25,7 @@ class PartialHashIndexTest;
 template <typename DataType>
 class TableIndexTbbHashMapIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename tbb::concurrent_hash_map<DataType, std::vector<RowID>>::const_iterator;
+  using MapIteratorType = typename tbb::concurrent_unordered_map<DataType, std::vector<RowID>>::const_iterator;
 
   explicit TableIndexTbbHashMapIterator(MapIteratorType itr);
 
@@ -132,7 +133,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
-  tbb::concurrent_hash_map<DataType, std::vector<RowID>> _map;
+  tbb::concurrent_unordered_map<DataType, std::vector<RowID>> _map;
   std::vector<RowID> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };

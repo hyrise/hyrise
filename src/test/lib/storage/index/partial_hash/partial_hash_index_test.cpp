@@ -51,7 +51,7 @@ class PartialHashIndexTest : public BaseTest {
    * private scope. Since the variable is set in setup() references are not possible.
    */
 
-  tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
+  tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 };
 
 TEST_F(PartialHashIndexTest, Type) {
@@ -89,50 +89,39 @@ TEST_F(PartialHashIndexTest, EmptyInitialization) {
 TEST_F(PartialHashIndexTest, MapInitialization) {
   EXPECT_EQ(index_map->size(), 10);
 
-  typename tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>::accessor hash_map_accessor;
-  index_map->find(hash_map_accessor, "hotel");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{0}}));
+  EXPECT_EQ(index_map->at("hotel").size(), 1);
+  EXPECT_EQ(index_map->at("hotel")[0], (RowID{ChunkID{0}, ChunkOffset{0}}));
 
-  index_map->find(hash_map_accessor, "delta");
-  EXPECT_EQ(hash_map_accessor->second.size(), 3);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{1}}));
-  EXPECT_EQ(hash_map_accessor->second[1], (RowID{ChunkID{0}, ChunkOffset{3}}));
-  EXPECT_EQ(hash_map_accessor->second[2], (RowID{ChunkID{1}, ChunkOffset{1}}));
+  EXPECT_EQ(index_map->at("delta").size(), 3);
+  EXPECT_EQ(index_map->at("delta")[0], (RowID{ChunkID{0}, ChunkOffset{1}}));
+  EXPECT_EQ(index_map->at("delta")[1], (RowID{ChunkID{0}, ChunkOffset{3}}));
+  EXPECT_EQ(index_map->at("delta")[2], (RowID{ChunkID{1}, ChunkOffset{1}}));
 
-  index_map->find(hash_map_accessor, "apple");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{4}}));
+  EXPECT_EQ(index_map->at("apple").size(), 1);
+  EXPECT_EQ(index_map->at("apple")[0], (RowID{ChunkID{0}, ChunkOffset{4}}));
 
-  index_map->find(hash_map_accessor, "charlie");
-  EXPECT_EQ(hash_map_accessor->second.size(), 2);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{5}}));
-  EXPECT_EQ(hash_map_accessor->second[1], (RowID{ChunkID{0}, ChunkOffset{6}}));
+  EXPECT_EQ(index_map->at("charlie").size(), 2);
+  EXPECT_EQ(index_map->at("charlie")[0], (RowID{ChunkID{0}, ChunkOffset{5}}));
+  EXPECT_EQ(index_map->at("charlie")[1], (RowID{ChunkID{0}, ChunkOffset{6}}));
 
-  index_map->find(hash_map_accessor, "inbox");
-  EXPECT_EQ(hash_map_accessor->second.size(), 2);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{0}, ChunkOffset{7}}));
-  EXPECT_EQ(hash_map_accessor->second[1], (RowID{ChunkID{1}, ChunkOffset{7}}));
+  EXPECT_EQ(index_map->at("inbox").size(), 2);
+  EXPECT_EQ(index_map->at("inbox")[0], (RowID{ChunkID{0}, ChunkOffset{7}}));
+  EXPECT_EQ(index_map->at("inbox")[1], (RowID{ChunkID{1}, ChunkOffset{7}}));
 
-  index_map->find(hash_map_accessor, "hello");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{0}}));
+  EXPECT_EQ(index_map->at("hello").size(), 1);
+  EXPECT_EQ(index_map->at("hello")[0], (RowID{ChunkID{1}, ChunkOffset{0}}));
 
-  index_map->find(hash_map_accessor, "funny");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{2}}));
+  EXPECT_EQ(index_map->at("funny").size(), 1);
+  EXPECT_EQ(index_map->at("funny")[0], (RowID{ChunkID{1}, ChunkOffset{2}}));
 
-  index_map->find(hash_map_accessor, "names");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{3}}));
+  EXPECT_EQ(index_map->at("names").size(), 1);
+  EXPECT_EQ(index_map->at("names")[0], (RowID{ChunkID{1}, ChunkOffset{3}}));
 
-  index_map->find(hash_map_accessor, "paper");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{5}}));
+  EXPECT_EQ(index_map->at("paper").size(), 1);
+  EXPECT_EQ(index_map->at("paper")[0], (RowID{ChunkID{1}, ChunkOffset{5}}));
 
-  index_map->find(hash_map_accessor, "clock");
-  EXPECT_EQ(hash_map_accessor->second.size(), 1);
-  EXPECT_EQ(hash_map_accessor->second[0], (RowID{ChunkID{1}, ChunkOffset{6}}));
+  EXPECT_EQ(index_map->at("clock").size(), 1);
+  EXPECT_EQ(index_map->at("clock")[0], (RowID{ChunkID{1}, ChunkOffset{6}}));
 }
 
 TEST_F(PartialHashIndexTest, Iterators) {
@@ -201,22 +190,13 @@ TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
 }
 
 TEST_F(PartialHashIndexTest, Remove) {
-  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
-
-  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{1}}));
-  EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 7);
-  EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 1);
-  EXPECT_EQ(index->range_equals("hotel").first, index->cend());
-
-  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
+  EXPECT_THROW(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), std::logic_error);
 }
 
 TEST_F(PartialHashIndexTest, RemoveFromEmpty) {
   auto empty_index = PartialHashIndex(DataType::Int, ColumnID{0});
 
-  EXPECT_EQ(empty_index.remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
-  EXPECT_EQ(empty_index.get_indexed_chunk_ids().size(), 0);
-  EXPECT_EQ(empty_index.cbegin(), empty_index.cend());
+  EXPECT_THROW(empty_index.remove_entries(std::vector<ChunkID>{ChunkID{0}}), std::logic_error);
 }
 
 TEST_F(PartialHashIndexTest, Values) {
@@ -361,7 +341,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -401,7 +381,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -442,7 +422,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -481,7 +461,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
@@ -512,7 +492,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 0 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_hash_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
