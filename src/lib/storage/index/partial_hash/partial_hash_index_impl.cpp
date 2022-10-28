@@ -4,16 +4,16 @@
 namespace hyrise {
 
 template <typename DataType>
-TableIndexTbbHashMapIterator<DataType>::TableIndexTbbHashMapIterator(MapIteratorType it)
+TableIndexTbbUnorderedMapIterator<DataType>::TableIndexTbbUnorderedMapIterator(MapIteratorType it)
     : _map_iterator(it), _vector_index(0) {}
 
 template <typename DataType>
-const RowID& TableIndexTbbHashMapIterator<DataType>::operator*() const {
+const RowID& TableIndexTbbUnorderedMapIterator<DataType>::operator*() const {
   return _map_iterator->second[_vector_index];
 }
 
 template <typename DataType>
-TableIndexTbbHashMapIterator<DataType>& TableIndexTbbHashMapIterator<DataType>::operator++() {
+TableIndexTbbUnorderedMapIterator<DataType>& TableIndexTbbUnorderedMapIterator<DataType>::operator++() {
   if (++_vector_index >= _map_iterator->second.size()) {
     _map_iterator++;
     _vector_index = 0;
@@ -22,20 +22,20 @@ TableIndexTbbHashMapIterator<DataType>& TableIndexTbbHashMapIterator<DataType>::
 }
 
 template <typename DataType>
-bool TableIndexTbbHashMapIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
-  auto obj = dynamic_cast<const TableIndexTbbHashMapIterator*>(&other);
+bool TableIndexTbbUnorderedMapIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
+  auto obj = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
   return obj && _map_iterator == obj->_map_iterator && _vector_index == obj->_vector_index;
 }
 
 template <typename DataType>
-bool TableIndexTbbHashMapIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
-  auto obj = dynamic_cast<const TableIndexTbbHashMapIterator*>(&other);
+bool TableIndexTbbUnorderedMapIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
+  auto obj = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
   return !obj || _map_iterator != obj->_map_iterator || _vector_index != obj->_vector_index;
 }
 
 template <typename DataType>
-std::shared_ptr<BaseTableIndexIterator> TableIndexTbbHashMapIterator<DataType>::clone() const {
-  return std::make_shared<TableIndexTbbHashMapIterator<DataType>>(*this);
+std::shared_ptr<BaseTableIndexIterator> TableIndexTbbUnorderedMapIterator<DataType>::clone() const {
+  return std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(*this);
 }
 
 TableIndexVectorIterator::TableIndexVectorIterator(MapIteratorType it) : _map_iterator(it) {}
@@ -149,8 +149,8 @@ template <typename DataType>
 typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
     const AllTypeVariant& value) const {
   auto range = _map.equal_range(boost::get<DataType>(value));
-  return std::make_pair(Iterator(std::make_shared<TableIndexTbbHashMapIterator<DataType>>(range.first)),
-                        Iterator(std::make_shared<TableIndexTbbHashMapIterator<DataType>>(range.second)));
+  return std::make_pair(Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(range.first)),
+                        Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(range.second)));
 }
 
 template <typename DataType>
@@ -162,12 +162,12 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return Iterator(std::make_shared<TableIndexTbbHashMapIterator<DataType>>(_map.cbegin()));
+  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return Iterator(std::make_shared<TableIndexTbbHashMapIterator<DataType>>(_map.cend()));
+  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cend()));
 }
 
 template <typename DataType>

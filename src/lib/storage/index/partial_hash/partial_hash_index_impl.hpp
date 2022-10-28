@@ -23,15 +23,15 @@ class PartialHashIndexTest;
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexTbbHashMapIterator : public BaseTableIndexIterator {
+class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename tbb::concurrent_unordered_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexTbbHashMapIterator(MapIteratorType itr);
+  explicit TableIndexTbbUnorderedMapIterator(MapIteratorType itr);
 
   reference operator*() const override;
 
-  TableIndexTbbHashMapIterator& operator++() override;
+  TableIndexTbbUnorderedMapIterator& operator++() override;
 
   bool operator==(const BaseTableIndexIterator& other) const override;
 
