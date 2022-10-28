@@ -9,6 +9,13 @@ from hyriseBenchmarkCore import initialize
 
 def main():
     build_dir = initialize()
+    
+    if not os.path.isdir("resources/test_data/tbl"):
+        print(
+            "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise"
+            "repository?"
+        )
+        sys.exit(1)
 
     server = pexpect.spawn(f"{build_dir}/hyriseServer --benchmark_data=tpc-h:0.01 -p 0", timeout=10)
 
@@ -32,7 +39,7 @@ def main():
     client.expect_exact("5")
     client.expect_exact("(1 row)")
 
-    client.sendline("COPY loaded_table_from_tbl FROM '../../resources/test_data/tbl/int.tbl';")
+    client.sendline("COPY loaded_table_from_tbl FROM 'resources/test_data/tbl/int.tbl';")
     client.expect_exact("SELECT 0")
     client.sendline("SELECT COUNT(*) AS \"row_count\" FROM loaded_table_from_tbl;")
     client.expect_exact("row_count")
