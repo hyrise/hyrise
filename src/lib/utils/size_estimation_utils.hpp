@@ -17,7 +17,8 @@ size_t
 string_heap_size(const T& string) {
   // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so
   // we use a really short one here.
-  const auto sso_string_capacity = T{"."}.capacity();
+  const auto small_string = T{"."};
+  const auto sso_string_capacity = small_string.capacity();
 
   if (string.capacity() > sso_string_capacity) {
     // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
