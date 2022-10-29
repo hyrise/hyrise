@@ -3,13 +3,14 @@
 import os
 import pexpect
 import re
+Import sys
 
 from hyriseBenchmarkCore import initialize
 
 
 def main():
     build_dir = initialize()
-    
+
     if not os.path.isdir("resources/test_data/tbl"):
         print(
             "Cannot find resources/test_data/tbl. Are you running the test suite from the main folder of the Hyrise"
