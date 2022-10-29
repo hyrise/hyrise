@@ -3,7 +3,7 @@
 import os
 import pexpect
 import re
-Import sys
+import sys
 
 from hyriseBenchmarkCore import initialize
 
