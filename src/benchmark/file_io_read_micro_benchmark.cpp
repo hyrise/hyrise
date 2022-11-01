@@ -6,21 +6,20 @@
 namespace hyrise {
 
 // Defining the base fixture class
-    class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
-    public:
-        void SetUp(::benchmark::State& /*state*/) override {
-          std::cout << "hello" << std::endl;
-        }
+class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
+ public:
+  void SetUp(::benchmark::State& /*state*/) override {
+    std::cout << "hello" << std::endl;
+  }
 
-        // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
-        void TearDown(::benchmark::State& /*state*/) override {}
+  // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
+  void TearDown(::benchmark::State& /*state*/) override {}
+};
 
-    };
+BENCHMARK_F(FileIOMicroReadBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
+  for (auto _ : state) {
+    usleep(100000);
+  }
+}
 
-    BENCHMARK_F(FileIOMicroReadBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
-        for (auto _ : state) {
-            usleep(100000);
-        }
-    }
-
-}// namespace hyrise
+}  // namespace hyrise
