@@ -23,14 +23,16 @@ TableIndexTbbUnorderedMapIterator<DataType>& TableIndexTbbUnorderedMapIterator<D
 
 template <typename DataType>
 bool TableIndexTbbUnorderedMapIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
-  auto obj = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
-  return obj && _map_iterator == obj->_map_iterator && _vector_index == obj->_vector_index;
+  auto other_iterator = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
+  return other_iterator && _map_iterator == other_iterator->_map_iterator &&
+         _vector_index == other_iterator->_vector_index;
 }
 
 template <typename DataType>
 bool TableIndexTbbUnorderedMapIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
-  auto obj = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
-  return !obj || _map_iterator != obj->_map_iterator || _vector_index != obj->_vector_index;
+  auto other_iterator = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
+  return !other_iterator || _map_iterator != other_iterator->_map_iterator ||
+         _vector_index != other_iterator->_vector_index;
 }
 
 template <typename DataType>
@@ -50,13 +52,13 @@ TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
 }
 
 bool TableIndexVectorIterator::operator==(const BaseTableIndexIterator& other) const {
-  const auto* const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
-  return obj && _map_iterator == obj->_map_iterator;
+  const auto* const other_iterator = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  return other_iterator && _map_iterator == other_iterator->_map_iterator;
 }
 
 bool TableIndexVectorIterator::operator!=(const BaseTableIndexIterator& other) const {
-  const auto* const obj = dynamic_cast<const TableIndexVectorIterator*>(&other);
-  return !obj || _map_iterator != obj->_map_iterator;
+  const auto* const other_iterator = dynamic_cast<const TableIndexVectorIterator*>(&other);
+  return !other_iterator || _map_iterator != other_iterator->_map_iterator;
 }
 
 std::shared_ptr<BaseTableIndexIterator> TableIndexVectorIterator::clone() const {
@@ -112,10 +114,10 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
-  const size_t size_before = _indexed_chunk_ids.size();
+  const auto previous_chunk_count = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
-    // We do not allow multiple indexing of one chunk.
     if (_indexed_chunk_ids.contains(chunk.first)) {
+      // Index already contains entries for the given chunk.
       continue;
     }
 
@@ -128,12 +130,12 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       if (position.is_null()) {
         _null_values.emplace_back(row_id);
       } else {
-        _map[position.value()].push_back(row_id);
+        _map[position.value()].emplace_back(row_id);
       }
     });
   }
 
-  return _indexed_chunk_ids.size() - size_before;
+  return _indexed_chunk_ids.size() - previous_chunk_count;
 }
 
 template <typename DataType>
@@ -177,7 +179,7 @@ typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>
 }
 
 template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::memory_usage() const {
+size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   auto bytes = size_t{0u};
 
   bytes += sizeof(_indexed_chunk_ids);  // NOLINT - Linter complains size() should be used, which would be wrong.

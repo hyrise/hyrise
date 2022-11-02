@@ -135,9 +135,9 @@ class AbstractTableIndex : private Noncopyable {
   TableIndexType type() const;
 
   /**
-   * Returns the memory usage of this Index in bytes.
+   * Returns the estimated memory usage of this Index in bytes.
    */
-  size_t memory_usage() const;
+  size_t estimate_memory_usage() const;
 
   /**
    * Checks whether the given column id is covered by the index.
@@ -170,7 +170,7 @@ class AbstractTableIndex : private Noncopyable {
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
   virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual ColumnID _get_indexed_column_id() const = 0;
-  virtual size_t _memory_usage() const = 0;
+  virtual size_t _estimate_memory_usage() const = 0;
 
  private:
   const TableIndexType _type;

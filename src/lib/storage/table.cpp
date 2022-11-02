@@ -357,7 +357,7 @@ std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
 void Table::create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
                                const TableIndexType type, const std::string& name) {
   Assert(column_id < _column_definitions.size(),
-         "Cannot create index: passed column id is larger than the highest table's column id.");
+         "Cannot create index: passed column id is larger than the largest table's column id.");
   Assert(type == TableIndexType::PartialHash, "Currently, only table indexes of type PartialHash can be created.");
   create_partial_hash_index(column_id, chunk_ids, type);
 }

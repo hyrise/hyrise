@@ -83,10 +83,10 @@ TableIndexType AbstractTableIndex::type() const {
   return _type;
 }
 
-size_t AbstractTableIndex::memory_usage() const {
+size_t AbstractTableIndex::estimate_memory_usage() const {
   auto bytes = size_t{0u};
   bytes += sizeof(_type);
-  bytes += _memory_usage();
+  bytes += _estimate_memory_usage();
   return bytes;
 }
 

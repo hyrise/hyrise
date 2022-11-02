@@ -89,7 +89,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual Iterator cend() const;
   virtual Iterator null_cbegin() const;
   virtual Iterator null_cend() const;
-  virtual size_t memory_usage() const = 0;
+  virtual size_t estimate_memory_usage() const = 0;
 
   virtual IteratorPair range_equals(const AllTypeVariant& value) const;
 
@@ -129,7 +129,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   Iterator cend() const override;
   Iterator null_cbegin() const override;
   Iterator null_cend() const override;
-  size_t memory_usage() const override;
+  size_t estimate_memory_usage() const override;
 
   IteratorPair range_equals(const AllTypeVariant& value) const override;
   std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override;

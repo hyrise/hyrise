@@ -197,32 +197,32 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
   auto segment2 = std::make_shared<ValueSegment<pmr_string>>(std::move(values2), std::move(null_values2));
   table->append_chunk(Segments{segment2});
 
-  chunks_to_add.emplace_back(
-    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))});
+  chunks_to_add.emplace_back(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{
+      std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))});
 
   pmr_vector<pmr_string> values3 = {"1", "2", "3", "4", "nullptr", "6", "7", "8"};
   pmr_vector<bool> null_values3 = {false, false, false, false, true, false, false, false};
   auto segment3 = std::make_shared<ValueSegment<pmr_string>>(std::move(values3), std::move(null_values3));
   table->append_chunk(Segments{segment3});
 
-  chunks_to_add.emplace_back(
-    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{3}, table->get_chunk(ChunkID{3}))});
-      
+  chunks_to_add.emplace_back(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{
+      std::make_pair(ChunkID{3}, table->get_chunk(ChunkID{3}))});
+
   pmr_vector<pmr_string> values4 = {"old1", "old2", "old3", "old4", "oldlptr", "old6", "old7", "old8"};
   pmr_vector<bool> null_values4 = {false, false, false, false, false, false, false, false};
   auto segment4 = std::make_shared<ValueSegment<pmr_string>>(std::move(values4), std::move(null_values4));
   table->append_chunk(Segments{segment4});
 
-  chunks_to_add.emplace_back(
-    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{4}, table->get_chunk(ChunkID{4}))});
+  chunks_to_add.emplace_back(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{
+      std::make_pair(ChunkID{4}, table->get_chunk(ChunkID{4}))});
 
   pmr_vector<pmr_string> values5 = {"nullptr", "new2", "new3", "new4", "nullptr", "new6", "new7", "nullptr"};
   pmr_vector<bool> null_values5 = {true, false, false, false, true, false, false, true};
   auto segment5 = std::make_shared<ValueSegment<pmr_string>>(std::move(values5), std::move(null_values5));
   table->append_chunk(Segments{segment5});
 
-  chunks_to_add.emplace_back(
-    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{5}, table->get_chunk(ChunkID{5}))});
+  chunks_to_add.emplace_back(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{
+      std::make_pair(ChunkID{5}, table->get_chunk(ChunkID{5}))});
 
   auto insert_entries_to_index = [&](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunk_to_add) {
     index->insert_entries(chunk_to_add);
@@ -239,7 +239,8 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
     thread.join();
   }
 
-  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, ChunkID{5}}));
+  EXPECT_EQ(index->get_indexed_chunk_ids(),
+            (std::unordered_set<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, ChunkID{5}}));
   EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 41);
   EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 7);
   EXPECT_EQ(*index->range_equals("new1").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
@@ -343,7 +344,7 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
     MemoryUsageEmpty
     MemoryUsageNoChunk
   Tested functions:
-    size_t memory_usage() const;
+    size_t estimate_memory_usage() const;
 
   |    Characteristic                                | Block 1 | Block 2 |
   |--------------------------------------------------|---------|---------|
@@ -399,7 +400,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
 
-  EXPECT_EQ(index->memory_usage(), expected_memory_usage);
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
 }
 
 // A2, B1, C2, D1
@@ -439,7 +440,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // + number of NULL values * RowID
   expected_memory_usage += 2 * sizeof(RowID);
 
-  EXPECT_EQ(index->memory_usage(), expected_memory_usage);
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
 }
 
 // A2, B1, C1, D1
@@ -480,7 +481,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // + number of NULL values * RowID
   expected_memory_usage += 5 * sizeof(RowID);
 
-  EXPECT_EQ(index->memory_usage(), expected_memory_usage);
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
 }
 
 // A1, B2, C2, D1
@@ -519,7 +520,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
 
-  EXPECT_EQ(index->memory_usage(), expected_memory_usage);
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
 }
 
 // A1, B2, C2, D2
@@ -550,7 +551,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
 
-  EXPECT_EQ(index->memory_usage(), expected_memory_usage);
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
 }
 
 }  // namespace hyrise

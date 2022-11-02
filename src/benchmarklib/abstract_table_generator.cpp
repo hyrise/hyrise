@@ -312,8 +312,14 @@ void AbstractTableGenerator::generate_and_store() {
     std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false" << std::endl;
   }
 
-  // Create table indexes if specified.
-  _create_table_indexes(table_info_by_name);
+  /**
+   * Create table indexes if requested by the user.
+   */
+  if (_benchmark_config->table_indexes) {
+    _create_table_indexes(table_info_by_name);
+  } else {
+    std::cout << "- No table indexes created as --table_indexes was not specified or set to false" << std::endl;
+  }
 
   // Set scheduler back to previously used scheduler.
   Hyrise::get().topology.use_default_topology(_benchmark_config->cores);
@@ -334,6 +340,7 @@ void AbstractTableGenerator::_create_chunk_indexes(
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
+    return;
   }
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
@@ -372,6 +379,7 @@ void AbstractTableGenerator::_create_table_indexes(
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
+    return;
   }
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
@@ -382,8 +390,8 @@ void AbstractTableGenerator::_create_table_indexes(
       Assert(index_columns.size() == 1, "Multi-column indexes are currently not supported.");
 
       for (const auto& index_column : index_columns) {
-        std::cout << "-  Creating table index on " << table_name << " [" << index_column << " with " << chunk_ids.size()
-                  << " indexed chunks]" << std::flush;
+        std::cout << "-  Creating an index on table " << table_name << " (" << index_column << ") covering "
+                  << chunk_ids.size() << " chunks]" << std::flush;
 
         Timer per_table_index_timer;
         table->create_table_index(table->column_id_by_name(index_column), chunk_ids, TableIndexType::PartialHash);

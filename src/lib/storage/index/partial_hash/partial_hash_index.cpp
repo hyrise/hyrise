@@ -55,11 +55,11 @@ PartialHashIndex::Iterator PartialHashIndex::_null_cend() const {
   return _impl->null_cend();
 }
 
-size_t PartialHashIndex::_memory_usage() const {
+size_t PartialHashIndex::_estimate_memory_usage() const {
   auto bytes = size_t{0u};
   bytes += sizeof(_column_id);
   bytes += sizeof(_impl);
-  bytes += _impl->memory_usage();
+  bytes += _impl->estimate_memory_usage();
   return bytes;
 }
 
