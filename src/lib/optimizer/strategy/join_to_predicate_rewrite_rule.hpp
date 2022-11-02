@@ -11,10 +11,11 @@ namespace hyrise {
  * - the join is an inner or a semi join,
  * - one side of the join is not used thereafter,
  * - the join attribute on the unused side is a UCC,
- * - there is an equals predicate comparing to a constant on an attribute of the unused side, and
+ * - there is an equality predicate comparing an attribute of the unused side with a constant, and
  * - the predicate attribute is a UCC.
  *
- * There is a dependency to the ColumnPruningRule which discovers and marks unused sides of join nodes.
+ * There is a dependency to the ColumnPruningRule which discovers and marks unused sides of join nodes. Thus, the
+ * ColumnPruningRule must be executed in advance.
  */
 class JoinToPredicateRewriteRule : public AbstractRule {
  public:

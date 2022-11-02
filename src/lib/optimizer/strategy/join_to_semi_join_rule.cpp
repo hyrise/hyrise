@@ -25,7 +25,7 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
     // line more than once.
 
     if (node->type == LQPNodeType::Join) {
-      auto join_node = std::dynamic_pointer_cast<JoinNode>(node);
+      const auto join_node = std::static_pointer_cast<JoinNode>(node);
 
       // We don't rewrite semi- and anti-joins.
       if (join_node->join_mode != JoinMode::Inner) {
@@ -67,18 +67,18 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
         return LQPVisitation::VisitInputs;
       }
 
-      if (!join_node->prunable_input_side().has_value()) {
+      if (!join_node->prunable_input_side()) {
         return LQPVisitation::VisitInputs;
       }
 
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
-      if (join_node->prunable_input_side().value() == LQPInputSide::Left &&
+      if (*join_node->prunable_input_side() == LQPInputSide::Left &&
           join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
         join_node->join_mode = JoinMode::Semi;
         const auto temp = join_node->left_input();
         join_node->set_left_input(join_node->right_input());
         join_node->set_right_input(temp);
-      } else if (join_node->prunable_input_side().value() == LQPInputSide::Right &&
+      } else if (*join_node->prunable_input_side() == LQPInputSide::Right &&
                  join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
         join_node->join_mode = JoinMode::Semi;
       }

@@ -11,7 +11,8 @@ namespace hyrise {
  * - one side of the join is not used thereafter and
  * - the join attribute on the unused side is a UCC.
  *
- * There is a dependency to the ColumnPruningRule which discovers and marks unused sides of join nodes.
+ * There is a dependency to the ColumnPruningRule which discovers and marks unused sides of join nodes. Thus, the
+ * ColumnPruningRule must be executed in advance.
  */
 class JoinToSemiJoinRule : public AbstractRule {
  public:

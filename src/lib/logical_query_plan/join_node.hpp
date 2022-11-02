@@ -58,7 +58,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_semi_reduction() const;
 
   /**
-   * @returns std::optional<LQPInputSide> to the input side that is no longer used further up in LQP.
+   * @returns std::optional<LQPInputSide> to the input side that is no longer used further up in the LQP.
    *          If no side is unused, nullopt is returned.
    */
   std::optional<LQPInputSide> prunable_input_side() const;
@@ -81,9 +81,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   /**
    * Sets the `prunable_input_side` flag of this JoinNode to the given LQPInputSide.
-   * @param input_side which is no longer used in LQP after the join
+   * @param input_side which is no longer used in the LQP after the join.
    * Note: This function is meant to be called by the ColumnPruningRule, which already has the information on used/
-   * unused expressions in the LQP.
+   *       unused expressions in the LQP.
    */
   void mark_input_side_as_prunable(LQPInputSide input_side);
 
@@ -100,7 +100,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   /**
    * The following flag is set by the ColumnPruningRule. It indicates whether and which input side
    * of a join is no longer needed in the LQP tree above the join and could therefore be removed
-   * during optimization by other rules such as the JoinToSemiJoinRule and the JoinToPredicateRewriteRule.
+   * during optimization by other rules, such as the JoinToSemiJoinRule and the JoinToPredicateRewriteRule.
    * 
    * Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
    * In this target query, the table nation is purely used for filtering out tuples from the customer table. All
