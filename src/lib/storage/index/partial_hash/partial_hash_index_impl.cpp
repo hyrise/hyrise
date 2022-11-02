@@ -68,10 +68,6 @@ size_t BasePartialHashIndexImpl::insert_entries(
   return 0;
 }
 
-size_t BasePartialHashIndexImpl::remove_entries(const std::vector<ChunkID>& /*chunk_ids*/) {
-  return 0;
-}
-
 BasePartialHashIndexImpl::Iterator BasePartialHashIndexImpl::cbegin() const {
   return Iterator(std::make_shared<BaseTableIndexIterator>());
 }
@@ -138,11 +134,6 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
   }
 
   return _indexed_chunk_ids.size() - size_before;
-}
-
-template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks_to_unindex) {
-  Fail("Current PartialHashIndex implementation does not support erases.");
 }
 
 template <typename DataType>

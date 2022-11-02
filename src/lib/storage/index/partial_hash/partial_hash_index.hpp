@@ -31,13 +31,6 @@ class PartialHashIndex : public AbstractTableIndex {
    */
   size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&);
 
-  /**
-   * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
-   *
-   * @return The number of removed chunks.
-   */
-  size_t remove_entries(const std::vector<ChunkID>&);
-
  protected:
   Iterator _cbegin() const final;
   Iterator _cend() const final;

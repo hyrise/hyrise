@@ -205,16 +205,6 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
   (void)read_entries_from_index;
 }
 
-TEST_F(PartialHashIndexTest, Remove) {
-  EXPECT_THROW(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), std::logic_error);
-}
-
-TEST_F(PartialHashIndexTest, RemoveFromEmpty) {
-  auto empty_index = PartialHashIndex(DataType::Int, ColumnID{0});
-
-  EXPECT_THROW(empty_index.remove_entries(std::vector<ChunkID>{ChunkID{0}}), std::logic_error);
-}
-
 TEST_F(PartialHashIndexTest, Values) {
   auto begin = index->cbegin();
   auto end = index->cend();
