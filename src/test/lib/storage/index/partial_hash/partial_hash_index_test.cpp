@@ -189,6 +189,22 @@ TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
   EXPECT_EQ(*empty_index.range_equals("hotel").first, (RowID{ChunkID{0}, ChunkOffset{0}}));
 }
 
+TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
+  auto index = PartialHashIndex(DataType::String, ColumnID{0});
+
+  auto insert_entries_to_index = [&index](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) {
+    (void)index;
+  };
+
+  auto read_entries_from_index = [&index](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) {
+    for (auto index_iterator = index.cbegin(); index_iterator != index.cend(); ++index_iterator) {
+      (void)index_iterator;
+    }
+  };
+  (void)insert_entries_to_index;
+  (void)read_entries_from_index;
+}
+
 TEST_F(PartialHashIndexTest, Remove) {
   EXPECT_THROW(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), std::logic_error);
 }

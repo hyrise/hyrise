@@ -4,7 +4,6 @@
 #include <vector>
 
 #include <tbb/concurrent_unordered_map.h>  // NOLINT linter identifies this file as a C system header.
-#include <tbb/concurrent_unordered_map.h>  // NOLINT linter identifies this file as a C system header.
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
