@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/segment_iterate.hpp"
