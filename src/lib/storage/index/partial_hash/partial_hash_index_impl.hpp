@@ -103,7 +103,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
  * Chunks can be added via `insert_entries()`.
  *
  * For now, we do not support removing entries for a given chunk id. Thus, if previously inserted index entries for a
- * given chunk are to be removed, the index has to be re-created for the required set of chunks. This is a current
+ * given chunk are to be removed, the index has to be re-created for the desired set of chunks. This is a current
  * simplification and limitation to enable concurrent access using the `tbb::concurrent_unordered_map`, which supports
  * concurrent insertion, lookup, and traversal, but does not support concurrent erasure. If one wants to use a different
  * hash map, as well as shared and unique locks for enabling thread-safe operations, one has to make sure that the hash
