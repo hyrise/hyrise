@@ -148,9 +148,14 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
     const AllTypeVariant& value) const {
-  auto range = _map.equal_range(boost::get<DataType>(value));
-  return std::make_pair(Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(range.first)),
-                        Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(range.second)));
+  const auto begin = _map.find(boost::get<DataType>(value));
+  if (begin == _map.end()) {
+    const auto end_iter = cend();
+    return std::make_pair(end_iter, end_iter);
+  }
+  auto end = begin;
+  return std::make_pair(Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(begin)),
+                        Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(++end)));
 }
 
 template <typename DataType>
