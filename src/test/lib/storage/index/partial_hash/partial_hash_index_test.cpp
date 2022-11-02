@@ -190,19 +190,55 @@ TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
 }
 
 TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
-  auto index = PartialHashIndex(DataType::String, ColumnID{0});
+  auto chunks_to_add = std::vector<std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>>{};
 
-  auto insert_entries_to_index = [&index](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) {
-    (void)index;
+  pmr_vector<pmr_string> values2 = {"new1", "new2", "new3", "new4", "nullptr", "new6", "new7", "new8"};
+  pmr_vector<bool> null_values2 = {false, false, false, false, true, false, false, false};
+  auto segment2 = std::make_shared<ValueSegment<pmr_string>>(std::move(values2), std::move(null_values2));
+  table->append_chunk(Segments{segment2});
+
+  chunks_to_add.emplace_back(
+    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))});
+
+  pmr_vector<pmr_string> values3 = {"1", "2", "3", "4", "nullptr", "6", "7", "8"};
+  pmr_vector<bool> null_values3 = {false, false, false, false, true, false, false, false};
+  auto segment3 = std::make_shared<ValueSegment<pmr_string>>(std::move(values3), std::move(null_values3));
+  table->append_chunk(Segments{segment3});
+
+  chunks_to_add.emplace_back(
+    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{3}, table->get_chunk(ChunkID{3}))});
+      
+  pmr_vector<pmr_string> values4 = {"old1", "old2", "old3", "old4", "oldlptr", "old6", "old7", "old8"};
+  pmr_vector<bool> null_values4 = {false, false, false, false, false, false, false, false};
+  auto segment4 = std::make_shared<ValueSegment<pmr_string>>(std::move(values4), std::move(null_values4));
+  table->append_chunk(Segments{segment4});
+
+  chunks_to_add.emplace_back(
+    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{4}, table->get_chunk(ChunkID{4}))});
+
+  pmr_vector<pmr_string> values5 = {"nullptr", "new2", "new3", "new4", "nullptr", "new6", "new7", "nullptr"};
+  pmr_vector<bool> null_values5 = {true, false, false, false, true, false, false, true};
+  auto segment5 = std::make_shared<ValueSegment<pmr_string>>(std::move(values5), std::move(null_values5));
+  table->append_chunk(Segments{segment5});
+
+  chunks_to_add.emplace_back(
+    std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{5}, table->get_chunk(ChunkID{5}))});
+
+  auto insert_entries_to_index = [&](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunk_to_add) {
+    EXPECT_EQ(index->insert_entries(chunk_to_add), 1);
   };
 
-  auto read_entries_from_index = [&index](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) {
-    for (auto index_iterator = index.cbegin(); index_iterator != index.cend(); ++index_iterator) {
-      (void)index_iterator;
-    }
-  };
-  (void)insert_entries_to_index;
-  (void)read_entries_from_index;
+  constexpr auto N_THREADS = size_t{4};
+  auto threads = std::vector<std::thread>(N_THREADS);
+
+  for (auto thread_number = size_t{0}; thread_number < N_THREADS; ++thread_number) {
+    std::cout << N_THREADS << "++" << thread_number << "::" << chunks_to_add[thread_number].size() << std::endl;
+    threads[thread_number] = std::thread(insert_entries_to_index, chunks_to_add[thread_number]);
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
 }
 
 TEST_F(PartialHashIndexTest, Remove) {
