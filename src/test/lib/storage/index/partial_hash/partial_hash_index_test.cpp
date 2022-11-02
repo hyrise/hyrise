@@ -225,20 +225,24 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
     std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{5}, table->get_chunk(ChunkID{5}))});
 
   auto insert_entries_to_index = [&](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunk_to_add) {
-    EXPECT_EQ(index->insert_entries(chunk_to_add), 1);
+    index->insert_entries(chunk_to_add);
   };
 
-  constexpr auto N_THREADS = size_t{4};
+  constexpr auto N_THREADS = uint8_t{4};
   auto threads = std::vector<std::thread>(N_THREADS);
 
-  for (auto thread_number = size_t{0}; thread_number < N_THREADS; ++thread_number) {
-    std::cout << N_THREADS << "++" << thread_number << "::" << chunks_to_add[thread_number].size() << std::endl;
+  for (auto thread_number = uint8_t{0}; thread_number < N_THREADS; ++thread_number) {
     threads[thread_number] = std::thread(insert_entries_to_index, chunks_to_add[thread_number]);
   }
 
   for (auto& thread : threads) {
     thread.join();
   }
+
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, ChunkID{5}}));
+  EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 41);
+  EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 7);
+  EXPECT_EQ(*index->range_equals("new1").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
 }
 
 TEST_F(PartialHashIndexTest, Remove) {
