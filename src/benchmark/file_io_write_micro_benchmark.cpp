@@ -6,7 +6,6 @@
 #include <sys/mman.h>
 #include <unistd.h>
 #include <algorithm>
-#include <fstream>
 
 
 namespace hyrise {
@@ -37,13 +36,6 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::vector<int32_t> data_to_write;
 };
 
-void clear_cache() {
-    //TODO: better documentation of which caches we are clearing
-    sync();
-    std::ofstream ofs("/proc/sys/vm/drop_caches");
-    ofs << "3" << std::endl;
-}
-
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark::State& state) {// open file
   int32_t fd;
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
@@ -53,7 +45,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark
 
   for (auto _ : state) {
     state.PauseTiming();
-    clear_cache();
+    micro_benchmark_clear_disk_cache();
     state.ResumeTiming();
 
     if (write(fd, std::data(data_to_write), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
@@ -71,7 +63,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 
 	for (auto _ : state) {
 		state.PauseTiming();
-		clear_cache();
+		micro_benchmark_clear_disk_cache();
 		state.ResumeTiming();
 
 		if (pwrite(fd, std::data(data_to_write), NUMBER_OF_BYTES, 0) != NUMBER_OF_BYTES) {
@@ -89,7 +81,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)(benchmark::Sta
 
 	for (auto _ : state) {
 		state.PauseTiming();
-		clear_cache();
+		micro_benchmark_clear_disk_cache();
 		state.ResumeTiming();
 
     // Getting the mapping to memory.

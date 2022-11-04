@@ -5,7 +5,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
-#include <fstream>
 
 namespace hyrise {
 
@@ -42,14 +41,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  protected:
 };
 
-void clear_cache() {
-    //TODO: better documentation of which caches we are clearing
-    sync();
-    std::ofstream ofs("/proc/sys/vm/drop_caches");
-    ofs << "3" << std::endl;
-}
-
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark::State& state) {// open file
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::State& state) {// open file
   int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
@@ -58,7 +50,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark:
 
   for (auto _ : state) {
     state.PauseTiming();
-    clear_cache();
+    micro_benchmark_clear_disk_cache();
     state.ResumeTiming();
 
     std::vector<int32_t> read_data;
@@ -71,7 +63,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark:
   }
 }
 
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PWRITE_ATOMIC)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::State& state) {
   int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
@@ -80,7 +72,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PWRITE_ATOMIC)(benchmark::St
 
   for (auto _ : state) {
     state.PauseTiming();
-    clear_cache();
+    micro_benchmark_clear_disk_cache();
     state.ResumeTiming();
 
     std::vector<int32_t> read_data;
@@ -93,7 +85,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PWRITE_ATOMIC)(benchmark::St
 }
 
 //arguments are file size in MB
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
