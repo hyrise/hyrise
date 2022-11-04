@@ -5,6 +5,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
+#include <fstream>
 
 namespace hyrise {
 
@@ -32,12 +33,23 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::vector<int32_t> data_to_write;
 };
 
+void clear_cache() {
+    //TODO: better documentation of which caches we are clearing
+    sync();
+    std::ofstream ofs("/proc/sys/vm/drop_caches");
+    ofs << "3" << std::endl;
+}
+
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark::State& state) {// open file
   int32_t fd;
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
 		std::cout << "open error " << errno << std::endl;
   }
   for (auto _ : state) {
+    state.PauseTiming();
+    clear_cache();
+    state.ResumeTiming();
+
     if (write(fd, std::data(data_to_write), state.range(0)) != state.range(0)) {
 			std::cout << "write error " << errno << std::endl;
 		}
@@ -50,6 +62,10 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 		std::cout << "open error " << errno << std::endl;
 	}
 	for (auto _ : state) {
+		state.PauseTiming();
+		clear_cache();
+		state.ResumeTiming();
+
 		if (pwrite(fd, std::data(data_to_write), state.range(0), 0) != state.range(0)) {
 			std::cout << "write error " << errno << std::endl;
 		}
