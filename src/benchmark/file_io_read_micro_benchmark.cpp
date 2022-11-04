@@ -64,10 +64,10 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark:
     std::vector<int32_t> read_data;
     read_data.reserve(NUMBER_OF_BYTES / 4);
 
+    lseek(fd, 0, SEEK_SET);
     if (read(fd, std::data(read_data), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
       Fail("read error: " + strerror(errno));
     }
-    std::cout << "read successful" << std::endl;
   }
 }
 
