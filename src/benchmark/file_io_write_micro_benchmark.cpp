@@ -13,23 +13,23 @@ namespace hyrise {
 const int GB = 1000000000;
 const int MB = 1000000;
 
-// Defining the base fixture class
 class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
+		//TODO: Make setup/teardown global per file size to improve benchmark speed
     ssize_t BUFFER_SIZE = state.range(0);
 		// each int32_t contains four bytes
     int32_t vector_element_count = BUFFER_SIZE / 4;
     data_to_write = std::vector<int32_t>(vector_element_count, 42);
+
     if (creat("file.txt", O_WRONLY) < 1) {
       std::cout << "create error" << std::endl;
     }
     chmod("file.txt", S_IRWXU);  // enables owner to rwx file
   }
 
-  // Required to avoid resetting of StorageManager in MicroBenchmarkBasicFixture::TearDown()
   void TearDown(::benchmark::State& /*state*/) override {
-    // TODO Error handling
+    //TODO: Error handling
     std::remove("file.txt");
   }
 
@@ -76,7 +76,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 	}
 }
 
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(100*MB)->Arg(1*GB);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(100*MB)->Arg(1*GB);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10*MB)->Arg(100*MB)->Arg(1*GB);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10*MB)->Arg(100*MB)->Arg(1*GB);
 
 }  // namespace hyrise
