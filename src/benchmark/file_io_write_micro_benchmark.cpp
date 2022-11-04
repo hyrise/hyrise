@@ -10,16 +10,15 @@
 
 namespace hyrise {
 
-const int GB = 1000000000;
-const int MB = 1000000;
+const int32_t MB = 1000000;
 
 class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
 		//TODO: Make setup/teardown global per file size to improve benchmark speed
-    ssize_t BUFFER_SIZE = state.range(0);
+    ssize_t BUFFER_SIZE_MB = state.range(0);
 		// each int32_t contains four bytes
-    int32_t vector_element_count = BUFFER_SIZE / 4;
+    int32_t vector_element_count = (BUFFER_SIZE_MB * MB) / 4;
     data_to_write = std::vector<int32_t>(vector_element_count, 42);
 
     if (creat("file.txt", O_WRONLY) < 1) {
@@ -49,12 +48,14 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
 		std::cout << "open error " << errno << std::endl;
   }
+	const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
   for (auto _ : state) {
     state.PauseTiming();
     clear_cache();
     state.ResumeTiming();
 
-    if (write(fd, std::data(data_to_write), state.range(0)) != state.range(0)) {
+    if (write(fd, std::data(data_to_write), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
 			std::cout << "write error " << errno << std::endl;
 		}
   }
@@ -65,18 +66,21 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 	if ((fd = open("file.txt", O_WRONLY)) < 0) {
 		std::cout << "open error " << errno << std::endl;
 	}
+	const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
 	for (auto _ : state) {
 		state.PauseTiming();
 		clear_cache();
 		state.ResumeTiming();
 
-		if (pwrite(fd, std::data(data_to_write), state.range(0), 0) != state.range(0)) {
+		if (pwrite(fd, std::data(data_to_write), NUMBER_OF_BYTES, 0) != NUMBER_OF_BYTES) {
 			std::cout << "write error " << errno << std::endl;
 		}
 	}
 }
 
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10*MB)->Arg(100*MB)->Arg(1*GB);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10*MB)->Arg(100*MB)->Arg(1*GB);
+//arguments are file size in MB
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
