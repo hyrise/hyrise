@@ -7,7 +7,11 @@
 #include <algorithm>
 #include <fstream>
 
+
 namespace hyrise {
+
+const int GB = 1000000000;
+const int MB = 1000000;
 
 // Defining the base fixture class
 class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
@@ -72,7 +76,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 	}
 }
 
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10000000)->Arg(100000000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10000000)->Arg(100000000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(100*MB)->Arg(1*GB);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(100*MB)->Arg(1*GB);
 
 }  // namespace hyrise
