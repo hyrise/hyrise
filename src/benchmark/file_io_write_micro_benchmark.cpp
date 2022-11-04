@@ -3,6 +3,7 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/mman.h>
 #include <unistd.h>
 #include <algorithm>
 #include <fstream>
@@ -79,8 +80,42 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 	}
 }
 
+BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)(benchmark::State& state) {
+  int32_t fd;
+	if ((fd = open("file.txt", O_WRONLY)) < 0) {
+		std::cout << "open error " << errno << std::endl;
+	}
+	const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+	for (auto _ : state) {
+		state.PauseTiming();
+		clear_cache();
+		state.ResumeTiming();
+
+    // Getting the mapping to memory.
+    auto map = mmap(NULL, NUMBER_OF_BYTES, PROT_WRITE, MAP_PRIVATE | MAP_ANON, fd, 0);
+    if (map == MAP_FAILED) {
+      std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
+      continue;
+    }
+    
+    // Due to mmap, only writing in memory is required.
+    memset(map, 0, NUMBER_OF_BYTES);
+    // After writing, sync changes to filesystem.
+		if (msync(map, NUMBER_OF_BYTES, MS_SYNC) == -1) {
+			std::cout << "Write error " << errno << std::endl;
+		}
+
+    // Remove memory mapping after job is done.
+    if (munmap(map, NUMBER_OF_BYTES) != 0) {
+      std::cout << "Unmapping failed." << std::endl;
+    }
+	}
+}
+
 //arguments are file size in MB
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
