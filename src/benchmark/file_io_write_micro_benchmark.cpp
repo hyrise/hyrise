@@ -72,12 +72,18 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 	}
 }
 
-BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)(benchmark::State& state) {
-  int32_t fd;
-	if ((fd = open("file.txt", O_WRONLY)) < 0) {
+BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_MAP_ANON)(benchmark::State& state) {
+	const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+	int32_t fd;
+	if ((fd = open("file.txt", O_RDWR | O_CREAT | O_TRUNC)) < 0) {
 		std::cout << "open error " << errno << std::endl;
 	}
-	const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+	// set output file size
+	if (ftruncate(fd, NUMBER_OF_BYTES) < 0)	{
+		std::cout << "ftruncate error " << errno << std::endl;
+	}
 
 	for (auto _ : state) {
 		state.PauseTiming();
@@ -85,14 +91,17 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)(benchmark::Sta
 		state.ResumeTiming();
 
     // Getting the mapping to memory.
-    auto map = mmap(NULL, NUMBER_OF_BYTES, PROT_WRITE, MAP_PRIVATE | MAP_ANON, fd, 0);
+    off_t OFFSET = 0;
+		//TODO: Investigate impact of MAP_* flags on performance
+    auto map = mmap(NULL, NUMBER_OF_BYTES, PROT_WRITE, MAP_PRIVATE | MAP_ANON, fd, OFFSET);
     if (map == MAP_FAILED) {
       std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
       continue;
     }
     
     // Due to mmap, only writing in memory is required.
-    memset(map, 0, NUMBER_OF_BYTES);
+		//TODO: check if we should use our data_to_write vector here
+    memset(map, 42, NUMBER_OF_BYTES);
     // After writing, sync changes to filesystem.
 		if (msync(map, NUMBER_OF_BYTES, MS_SYNC) == -1) {
 			std::cout << "Write error " << errno << std::endl;
@@ -108,6 +117,6 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)(benchmark::Sta
 //arguments are file size in MB
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_MAP_ANON)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
