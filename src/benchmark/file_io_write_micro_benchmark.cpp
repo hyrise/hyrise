@@ -72,7 +72,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
 	}
 }
 
-BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_MAP_ANON)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)(benchmark::State& state) {
 	const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
 	int32_t fd;
@@ -93,7 +93,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_MAP
     // Getting the mapping to memory.
     off_t OFFSET = 0;
 		//TODO: Investigate impact of MAP_* flags on performance
-    auto map = mmap(NULL, NUMBER_OF_BYTES, PROT_WRITE, MAP_PRIVATE | MAP_ANON, fd, OFFSET);
+    auto map = mmap(NULL, NUMBER_OF_BYTES, PROT_WRITE, MAP_PRIVATE, fd, OFFSET);
     if (map == MAP_FAILED) {
       std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
       continue;
@@ -117,6 +117,6 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_MAP
 //arguments are file size in MB
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_MAP_ANON)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
