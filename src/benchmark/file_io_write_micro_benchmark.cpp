@@ -106,8 +106,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)(be
     }
     
     // Due to mmap, only writing in memory is required.
-		//TODO: check if we should use our data_to_write vector here
-    memset(map, 42, NUMBER_OF_BYTES);
+    memset(map, *(std::data(data_to_write)), NUMBER_OF_BYTES);
     // After writing, sync changes to filesystem.
 		if (msync(map, NUMBER_OF_BYTES, MS_SYNC) == -1) {
 			std::cout << "Write error " << errno << std::endl;
@@ -154,8 +153,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)(ben
     }
     
     // Due to mmap, only writing in memory is required.
-		//TODO: check if we should use our data_to_write vector here
-    memset(map, 42, NUMBER_OF_BYTES);
+    memset(map, *(std::data(data_to_write)), NUMBER_OF_BYTES);
     // After writing, sync changes to filesystem.
 		if (msync(map, NUMBER_OF_BYTES, MS_SYNC) == -1) {
 			std::cout << "Write error " << errno << std::endl;
