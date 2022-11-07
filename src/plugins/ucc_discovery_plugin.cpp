@@ -171,7 +171,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr
 template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
-  // distinct_values collects the segment values from all chunks.
+  // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = std::unordered_set<ColumnDataType>{};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
@@ -248,13 +248,13 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
   if (join_predicates.size() != 1) {
     return;
   }
-  const auto binary_join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates[0]);
+  const auto binary_join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates.front());
   if (!binary_join_predicate || binary_join_predicate->predicate_condition != PredicateCondition::Equals) {
     return;
   }
 
   const auto column_expression_for_join_input = [&](const auto& input_node) {
-    // The join redicate may be swapped, so get proper operand.
+    // The join predicate may be swapped, so get the proper operand.
     auto column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->left_operand());
     if (!column_candidate || !expression_evaluable_on_lqp(column_candidate, *input_node)) {
       column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
@@ -328,7 +328,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
     }
 
     // When we find a predicate node, we check whether the searched column is filtered in this predicate. If so, it is a
-    // valid UCC candidate; if not, still continue search.
+    // valid UCC candidate; if not, continue searching.
     const auto& predicate_node = static_cast<const PredicateNode&>(*node);
 
     // Ensure that we look at a binary predicate expression checking for equality (e.g., a = 'x').

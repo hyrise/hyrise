@@ -24,15 +24,15 @@ struct UccCandidate {
 
  private:
   // Disable default constructor with uninitialized members.
-  UccCandidate() = default;
+  UccCandidate() = delete;
 };
 
 using UccCandidates = std::unordered_set<UccCandidate>;
 
 /**
  *  This plugin implements unary Unique Column Combination (UCC) discovery based on previously executed LQPs. Not all
- *  columns encountered in these LQPs are automatically considered for the UCC validation process. Instead, columns are
- *  only validated/invalidated as UCCs if their being a UCC could've helped to optimize their LQP.
+ *  columns encountered in these LQPs are automatically considered for the UCC validation process. Instead, a column is
+ *  only validated/invalidated as UCCs if being a UCC could have helped to optimize their LQP.
  */
 class UccDiscoveryPlugin : public AbstractPlugin {
  public:
@@ -49,8 +49,8 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 
   /**
    * Takes a snapshot of the current LQP Cache. Iterates through the LQPs and tries to extract sensible columns as can-
-   * didates for UCC validation from each of them. Columns are added as candidates if their being a UCC has the poten-
-   * tial to help optimize their respective LQP.
+   * didates for UCC validation from each of them. A column is added as candidates if being a UCC has the potential to
+   * help optimize their respective LQP.
    * 
    * Returns an unordered set of these candidates to be used in the UCC validation function.
    */
@@ -80,7 +80,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   static bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id);
 
   /**
-   * Extracts columns as candidates for UCC validation from the aggregate node, that are used in groupby operations.
+   * Extracts columns as candidates for UCC validation from a given aggregate node that is used in a groupby operation.
    */
   static void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
 
@@ -91,7 +91,7 @@ class UccDiscoveryPlugin : public AbstractPlugin {
    *   - This predicate must have the equals condition. This may be extended in the future to support other conditions.
    *   - The join must be either a semi or an inner join.
    * In addition to the column corresponding to the removable side of the join, the removable input side LQP is iterated
-   * and a column used in a PredicateNode may be added as a UCC candidate if the Predicate filters the same table that
+   * and a column used in a PredicateNode may be added as a UCC candidate if the predicate filters the same table that
    * contains the join column.
    */
   static void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
