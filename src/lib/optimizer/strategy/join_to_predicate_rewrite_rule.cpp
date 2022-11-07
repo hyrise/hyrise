@@ -95,8 +95,11 @@ void gather_rewrite_info(
       return LQPVisitation::VisitInputs;
     }
 
-    // Check whether the column referenced is unique.
-    if (!removable_subtree->has_matching_unique_constraint({candidate_column_expression})) {
+    // Check whether the column referenced is available for the subtree root node and unique. Checking whether the
+    // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
+    // root and the current node, invalidating the uniqueness constraint.
+    if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree) ||
+        !removable_subtree->has_matching_unique_constraint({candidate_column_expression})) {
       return LQPVisitation::VisitInputs;
     }
 
