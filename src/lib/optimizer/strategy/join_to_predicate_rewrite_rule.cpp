@@ -55,7 +55,7 @@ void gather_rewrite_info(
   }
 
   // Now, we look for a predicate that can potentially be used in a subquery to replace the join. If we find an equals
-  // predicate that filters on a UCC, a maximum of one tupleremains in the result relation. Since at this point, we al-
+  // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
   // ready know the candidate join is basically a semi join, we can further transform the join to a single predicate
   // node filtering the join column for the value of the remaining tuple's join attribute.
   visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate](auto& current_node) {
