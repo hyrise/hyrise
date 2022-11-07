@@ -84,8 +84,48 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::Sta
   }
 }
 
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::State& state) {// open file
+  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+  std::vector<uint64_t> contents(NUMBER_OF_BYTES / sizeof(uint64_t));
+  for(auto index = size_t{0}; index<contents.size();index++){
+    contents[index] = std::rand() % UINT16_MAX;
+  }
+
+  auto control_sum = uint64_t{0};
+  for(auto index = size_t{0}; index<contents.size();index++){
+    control_sum += contents[index];
+  }
+
+  for (auto _ : state) {
+ //   auto sum = uint64_t{0};
+    uint64_t summand;
+
+/*    for (auto iterator = contents.cbegin(); iterator < contents.end(); ++iterator) {
+      summand = *iterator;
+      state.PauseTiming();
+      sum += summand;
+      state.ResumeTiming();
+    }*/
+    const auto last = contents.end();
+    // auto sum = uint64_t{0};
+    for (auto first = contents.cbegin(); first != last; ++first) {
+      summand = *first;
+      (void) summand;
+      state.PauseTiming();
+      // sum = std::move(sum) + summand;
+      state.ResumeTiming();
+
+    }
+    state.PauseTiming();
+   // Assert(control_sum == sum, "Sanity check failed: Not the same result");
+    state.ResumeTiming();
+  }
+}
+
 //arguments are file size in MB
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+// BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+// BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
