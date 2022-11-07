@@ -166,10 +166,31 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)(ben
 	}
 }
 
+BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, IN_MEMORY_WRITE)(benchmark::State& state) {// open file
+  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+  std::vector<uint64_t> contents(NUMBER_OF_BYTES / sizeof(uint64_t));
+  for(auto index = size_t{0}; index<contents.size();index++){
+    contents[index] = std::rand() % UINT16_MAX;
+  }
+  std::vector<uint64_t> copy_of_contents;
+
+  for (auto _ : state) {
+    // std::memcpy(&copy_of_contents, &contents, NUMBER_OF_BYTES);
+    copy_of_contents = contents;
+    state.PauseTiming();
+    Assert(std::equal(copy_of_contents.begin(), copy_of_contents.end(), contents.begin()), "Sanity check failed: Not the same result");
+    Assert(&copy_of_contents != &contents, "Sanity check failed: Same reference");
+    state.ResumeTiming();
+  }
+}
+
 //arguments are file size in MB
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)->Arg(10)->Arg(100)->Arg(1000);
+//BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+//BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+//BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)->Arg(10)->Arg(100)->Arg(1000);
+//BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, IN_MEMORY_WRITE)->Arg(10)->Arg(100)->Arg(1000);
+
 
 }  // namespace hyrise
