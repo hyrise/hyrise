@@ -94,6 +94,10 @@ TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
   EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseMvccDeletePlugin"));
 }
 
+TEST_F(MvccDeletePluginTest, Description) {
+  EXPECT_EQ(MvccDeletePlugin{}.description(), "Physical MVCC delete plugin");
+}
+
 /**
  * This test checks the logical delete. All values in the table are incremented to
  * generate three invalidated rows and create a second chunk. Before the logical delete
