@@ -243,12 +243,12 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<Abs
 void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
                                                         UccCandidates& ucc_candidates) {
   const auto& join_node = static_cast<JoinNode&>(*node);
-  // Fetch the join predicate to extract the UCC candidates from. Right now, limited to only equals predicates.
+  // Fetch the join predicate to extract the UCC candidates from. Right now, limited to single-predicate equi joins.
   const auto& join_predicates = join_node.join_predicates();
-  const auto binary_join_predicate = (join_predicates.size() == 1)
-                                         ? std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates[0])
-                                         : std::shared_ptr<BinaryPredicateExpression>{};
-
+  if (join_predicates.size() != 1) {
+    return;
+  }
+  const auto binary_join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates[0]);
   if (!binary_join_predicate || binary_join_predicate->predicate_condition != PredicateCondition::Equals) {
     return;
   }
@@ -259,16 +259,22 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
     if (!column_candidate || !expression_evaluable_on_lqp(column_candidate, *input_node)) {
       column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
     }
+    // We do not have to find an LQPColumnExpression in the join predicates at all, e.g., when joining on substrings:
+    // SELECT * FROM orders, lineitem WHERE EXTRACT(YEAR FROM o_orderdate) = EXTRACT(YEAR FROM l_shipdate).
+    // Thus, column_candidate might be a nullptr.
     Assert(!column_candidate || expression_evaluable_on_lqp(column_candidate, *input_node),
            "Join predicate should belong to an input");
     return column_candidate;
   };
 
-  // We only care about semi (right input is candidate) and inner (both are potential candidates).
+  // We only care about semi (right input is candidate) and inner (both are potential candidates) joins.
   switch (join_node.join_mode) {
     case JoinMode::Inner: {
       for (const auto& column_candidate : binary_join_predicate->arguments) {
-        const auto lqp_column_expression = std::static_pointer_cast<LQPColumnExpression>(column_candidate);
+        const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
+        if (!lqp_column_expression) {
+          continue;
+        }
 
         // Determine which subtree (left or right) belongs to the ColumnExpression.
         auto subtree_root = join_node.left_input();
@@ -277,8 +283,11 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
         }
 
         // For JoinToSemiJoinRule, the join column is already interesting for optimization.
-        const auto& stored_table_node =
-            static_cast<const StoredTableNode&>(*lqp_column_expression->original_node.lock());
+        const auto& original_node = lqp_column_expression->original_node.lock();
+        if (original_node->type != LQPNodeType::StoredTable) {
+          continue;
+        }
+        const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
         ucc_candidates.insert(UccCandidate{stored_table_node.table_name, lqp_column_expression->original_column_id});
 
         _ucc_candidates_from_removable_join_input(subtree_root, lqp_column_expression, ucc_candidates);

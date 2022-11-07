@@ -85,12 +85,11 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   static void _ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
 
   /**
-   * Extracts columns as UCC validation candidates from a join node.
-   * Some criteria have to be fulfilled for this to be done:
+   * Extracts columns as UCC validation candidates from a join node. Some criteria have to be fulfilled for this to be
+   * done:
    *   - The Node may only have one predicate.
    *   - This predicate must have the equals condition. This may be extended in the future to support other conditions.
-   *   - The join must be either a left/right outer, semi or inner join. These cause one of the input sides to no longer
-   *     be needed after the join has been completed and therefore allow for optimization by replacement.
+   *   - The join must be either a semi or an inner join.
    * In addition to the column corresponding to the removable side of the join, the removable input side LQP is iterated
    * and a column used in a PredicateNode may be added as a UCC candidate if the Predicate filters the same table that
    * contains the join column.
@@ -98,9 +97,9 @@ class UccDiscoveryPlugin : public AbstractPlugin {
   static void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node, UccCandidates& ucc_candidates);
 
   /**
-   * Iterates through the LQP underneath the given root node.
-   * If a PredicateNode is encountered, checks whether it is a binary predicate checking for column = value.
-   * If the predicate column is from the same table as the passed column_candidate, adds both as ucc_candidates
+   * Iterates through the LQP underneath the given root node. If a PredicateNode is encountered, checks whether it has a
+   * binary predicate checking for `column` = `value`. If the predicate column is from the same table as the passed
+   * column_candidate, adds both as UCC candidates.
    */
   static void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
                                                         std::shared_ptr<LQPColumnExpression> column_candidate,

@@ -92,15 +92,23 @@ class UccDiscoveryPluginMultiEncodingTest : public UccDiscoveryPluginTest,
 
 TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
-  plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
-  plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin");
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
+}
+
+TEST_F(UccDiscoveryPluginTest, DescriptionAndProvidedFunction) {
+  auto plugin = UccDiscoveryPlugin{};
+  EXPECT_EQ(plugin.description(), "Unary Unique Column Combination Discovery Plugin");
+  const auto& provided_functions = plugin.provided_user_executable_functions();
+  ASSERT_EQ(provided_functions.size(), 1);
+  EXPECT_EQ(provided_functions[0].first, "DiscoverUCCs");
 }
 
 TEST_F(UccDiscoveryPluginTest, UserCallableFunction) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
-  plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin"));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
   EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs"));
-  plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin");
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
 }
 
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
@@ -143,6 +151,23 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
                                                   : JoinNode::make(join_mode, equals_(_join_columnA, _join_columnB));
     lqp->set_left_input(PredicateNode::make(equals_(_predicate_column_A, "unique"), _table_node_A));
     lqp->set_right_input(PredicateNode::make(equals_(_predicate_column_B, "not"), _table_node_B));
+
+    Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
+
+    const auto& ucc_candidates = _identify_ucc_candidates();
+    EXPECT_TRUE(ucc_candidates.empty()) << "for JoinMode::" << join_mode;
+  }
+}
+
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
+  const auto join_modes = {JoinMode::Inner, JoinMode::Semi};
+  for (const auto join_mode : join_modes) {
+    // clang-format off
+    const auto lqp =
+    JoinNode::make(join_mode, equals_(add_(_join_columnA, 1), add_(_join_columnB, 1)),
+      PredicateNode::make(equals_(_predicate_column_A, "unique"), _table_node_A),
+      PredicateNode::make(equals_(_predicate_column_B, "not"), _table_node_B));
+    // clang-format on
 
     Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
