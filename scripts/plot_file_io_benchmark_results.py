@@ -22,16 +22,12 @@ with open(sys.argv[1]) as csv_file:
     df[['fixture', 'type', 'filesize_mb']] = df['name'].str.split('/', 2, expand=True)
     df['filesize_mb'] = pd.to_numeric(df['filesize_mb'])
     df['real_time_sec'] = df['real_time'] / 1000000000
-    df['mb_per_sec'] = df['filesize_mb'] / df['real_time_sec']
+    df['mb_per_sec'] =  df['filesize_mb'] / df['real_time_sec']
 
-benchmark_results = sns.lineplot(data=df,
+benchmark_results = sns.barplot(data=df,
                                  x='filesize_mb',
                                  y='mb_per_sec',
-                                 hue='type',
-                                 marker='o')
-
-# make file size axis logarithmic
-benchmark_results.set(xscale='log', xticks=df['filesize_mb'], xticklabels=df['filesize_mb'])
+                                 hue='type')
 
 benchmark_results.set(xlabel ='Filesize in MB', ylabel = 'MB/s', title ='Different I/O method speed dependent on filesize')
 
