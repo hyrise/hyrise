@@ -683,7 +683,7 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneExportInputs) {
 
   // clang-format off
   const auto lqp =
-  ExportNode::make("dummy", "dummy.csv", FileType::Auto,
+  ExportNode::make("dummy.csv", FileType::Auto,
     PredicateNode::make(greater_than_(a, 5),
       node_a));
   // clang-format on
