@@ -26,20 +26,20 @@ TEST_F(ExpressionResultTest, AsView) {
 }
 
 TEST_F(ExpressionResultTest, DataAccess) {
-  EXPECT_EQ(ExpressionResult<int32_t>({5}, {}).is_null(0), false);
-  EXPECT_EQ(ExpressionResult<int32_t>({5}, {}).is_null(10), false);
+  EXPECT_FALSE(ExpressionResult<int32_t>({5}, {}).is_null(0));
+  EXPECT_FALSE(ExpressionResult<int32_t>({5}, {}).is_null(10));
   EXPECT_EQ(ExpressionResult<int32_t>({5}, {}).value(0), 5);
   EXPECT_EQ(ExpressionResult<int32_t>({5}, {}).value(10), 5);
-  EXPECT_EQ(ExpressionResult<int32_t>({5}, {false}).is_null(0), false);
-  EXPECT_EQ(ExpressionResult<int32_t>({5}, {false}).is_null(10), false);
+  EXPECT_FALSE(ExpressionResult<int32_t>({5}, {false}).is_null(0));
+  EXPECT_FALSE(ExpressionResult<int32_t>({5}, {false}).is_null(10));
   EXPECT_EQ(ExpressionResult<int32_t>({5}, {false}).value(0), 5);
   EXPECT_EQ(ExpressionResult<int32_t>({5}, {false}).value(10), 5);
-  EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {}).is_null(0), false);
-  EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {}).is_null(1), false);
+  EXPECT_FALSE(ExpressionResult<int32_t>({3, 5}, {}).is_null(0));
+  EXPECT_FALSE(ExpressionResult<int32_t>({3, 5}, {}).is_null(1));
   EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {}).value(0), 3);
   EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {}).value(1), 5);
-  EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {true, false}).is_null(0), true);
-  EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {true, false}).is_null(1), false);
+  EXPECT_TRUE(ExpressionResult<int32_t>({3, 5}, {true, false}).is_null(0));
+  EXPECT_FALSE(ExpressionResult<int32_t>({3, 5}, {true, false}).is_null(1));
   EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {true, false}).value(0), 3);
   EXPECT_EQ(ExpressionResult<int32_t>({3, 5}, {true, false}).value(1), 5);
 }
