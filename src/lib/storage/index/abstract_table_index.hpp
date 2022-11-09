@@ -5,7 +5,7 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/concurrent_unordered_set.h>
+#include <tbb/concurrent_unordered_set.h>  // NOLINT linter identifies this file as a C header.
 
 #include "all_type_variant.hpp"
 #include "types.hpp"

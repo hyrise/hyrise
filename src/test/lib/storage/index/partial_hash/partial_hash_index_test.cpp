@@ -260,48 +260,6 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
   EXPECT_EQ(*index->range_equals("new1").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
 }
 
-// TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
-
-//   auto insert_entries_to_index = [&](const uint8_t thread_number) {
-//     pmr_vector<pmr_string> values;
-
-//     for (auto vector_index = size_t{1}; vector_index <= 8; ++vector_index) {
-//       const auto string_to_emplace = "new" + std::to_string(vector_index) + "_from_thread" + std::to_string(thread_number);
-
-//       if (vector_index == 5) {
-//         values.emplace_back("nullptr");
-//       } else {
-//       values.emplace_back(string_to_emplace);
-//       }
-//     }
-
-//     pmr_vector<bool> null_values = {false, false, false, false, true, false, false, false};
-//     auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(values), std::move(null_values));
-//     table->append_chunk(Segments{segment});
-
-//     auto chunks_to_add =
-//         std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{thread_number + 2}, table->get_chunk(ChunkID{thread_number + 2}))};
-
-//     index->insert_entries(chunks_to_add);
-//   };
-
-//   constexpr auto N_THREADS = uint8_t{4};
-//   auto threads = std::vector<std::thread>(N_THREADS);
-
-//   for (auto thread_number = uint8_t{0}; thread_number < N_THREADS; ++thread_number) {
-//     threads[thread_number] = std::thread(insert_entries_to_index, thread_number);
-//   }
-
-//   for (auto& thread : threads) {
-//     thread.join();
-//   }
-
-//   EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, ChunkID{5}}));
-//   EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 42);
-//   EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 6);
-//   // EXPECT_EQ(*index->range_equals("new1_from_thread0").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
-// }
-
 TEST_F(PartialHashIndexTest, Values) {
   auto begin = index->cbegin();
   auto end = index->cend();
