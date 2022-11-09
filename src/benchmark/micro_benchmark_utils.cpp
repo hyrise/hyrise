@@ -18,7 +18,7 @@ void micro_benchmark_clear_cache() {
 }
 
 void micro_benchmark_clear_disk_cache() {
-  //TODO: better documentation of which caches we are clearing
+  // TODO(phoenix): better documentation of which caches we are clearing
   sync();
   std::ofstream ofs("/proc/sys/vm/drop_caches");
   ofs << "3" << std::endl;
