@@ -296,14 +296,7 @@ TEST_F(PartialHashIndexTest, ParallelWritesStressTest) {
     thread.join();
   }
 
-  EXPECT_EQ(index->get_indexed_chunk_ids().size(), 3);
-  EXPECT_TRUE(index->get_indexed_chunk_ids().contains(ChunkID{0}));
-  EXPECT_TRUE(index->get_indexed_chunk_ids().contains(ChunkID{1}));
-  EXPECT_TRUE(index->get_indexed_chunk_ids().contains(ChunkID{2}));
-
-  // EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 41);
-  // EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 7);
-  // EXPECT_EQ(*index->range_equals("new1").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
+  EXPECT_EQ(index_map->operator[]("new1").size(), 1);
 }
 
 TEST_F(PartialHashIndexTest, Values) {
