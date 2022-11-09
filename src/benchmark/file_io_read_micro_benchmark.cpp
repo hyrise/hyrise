@@ -41,7 +41,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  protected:
 };
 
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::State& state) {// open file
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::State& state) {  // open file
   int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
