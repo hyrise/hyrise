@@ -236,11 +236,22 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
     index->insert_entries(chunk_to_add);
   };
 
-  constexpr auto N_THREADS = uint8_t{4};
+  auto read_from_index = [&]() {
+    for (auto iterator = index->cbegin(); iterator != index->cend(); ++iterator) {
+      auto data = *iterator;
+      (void)data;
+    }
+  };
+
+  constexpr auto N_THREADS = uint8_t{8};
   auto threads = std::vector<std::thread>(N_THREADS);
 
   for (auto thread_number = uint8_t{0}; thread_number < N_THREADS; ++thread_number) {
-    threads[thread_number] = std::thread(insert_entries_to_index, chunks_to_add[thread_number]);
+    if (thread_number % 2 == 1) {
+      threads[thread_number] = std::thread(insert_entries_to_index, chunks_to_add[(thread_number - 1) / 2]);
+    } else {
+      threads[thread_number] = std::thread(read_from_index);
+    }
   }
 
   for (auto& thread : threads) {
