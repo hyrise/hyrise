@@ -101,7 +101,7 @@ TEST_F(UccDiscoveryPluginTest, DescriptionAndProvidedFunction) {
   EXPECT_EQ(plugin.description(), "Unary Unique Column Combination Discovery Plugin");
   const auto& provided_functions = plugin.provided_user_executable_functions();
   ASSERT_EQ(provided_functions.size(), 1);
-  EXPECT_EQ(provided_functions[0].first, "DiscoverUCCs");
+  EXPECT_EQ(provided_functions.front().first, "DiscoverUCCs");
 }
 
 TEST_F(UccDiscoveryPluginTest, UserCallableFunction) {
