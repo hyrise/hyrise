@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include <tbb/concurrent_unordered_set.h>
+
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
@@ -151,7 +153,7 @@ class AbstractTableIndex : private Noncopyable {
    *
    * @return An ordered set of the chunk ids.
    */
-  std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
+  tbb::concurrent_unordered_set<ChunkID> get_indexed_chunk_ids() const;
 
   /**
    * Returns the ColumnID covered by the index.
@@ -168,7 +170,7 @@ class AbstractTableIndex : private Noncopyable {
   virtual IteratorPair _range_equals(const AllTypeVariant& value) const = 0;
   virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
-  virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
+  virtual tbb::concurrent_unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual ColumnID _get_indexed_column_id() const = 0;
   virtual size_t _estimate_memory_usage() const = 0;
 

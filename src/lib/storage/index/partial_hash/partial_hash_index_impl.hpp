@@ -4,6 +4,7 @@
 #include <vector>
 
 #include <tbb/concurrent_unordered_map.h>  // NOLINT linter identifies this file as a C system header.
+#include <tbb/concurrent_vector.h>
 
 #include "all_type_variant.hpp"
 #include "storage/chunk.hpp"
@@ -48,7 +49,7 @@ class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
  */
 class TableIndexVectorIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename std::vector<RowID>::const_iterator;
+  using MapIteratorType = typename tbb::concurrent_vector<RowID>::const_iterator;
 
   explicit TableIndexVectorIterator(MapIteratorType itr);
 
@@ -96,7 +97,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
 
   virtual bool is_index_for(const ColumnID column_id) const;
-  virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
+  virtual tbb::concurrent_unordered_set<ChunkID> get_indexed_chunk_ids() const;
 };
 
 /* Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
@@ -134,12 +135,12 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   IteratorPair range_equals(const AllTypeVariant& value) const override;
   std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override;
 
-  std::unordered_set<ChunkID> get_indexed_chunk_ids() const override;
+  tbb::concurrent_unordered_set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
   tbb::concurrent_unordered_map<DataType, std::vector<RowID>> _map;
-  std::vector<RowID> _null_values;
-  std::unordered_set<ChunkID> _indexed_chunk_ids = {};
+  tbb::concurrent_vector<RowID> _null_values;
+  tbb::concurrent_unordered_set<ChunkID> _indexed_chunk_ids = {};
 };
 
 }  // namespace hyrise

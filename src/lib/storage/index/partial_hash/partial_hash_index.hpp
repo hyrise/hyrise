@@ -46,7 +46,7 @@ class PartialHashIndex : public AbstractTableIndex {
   std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const final;
 
   bool _is_index_for(const ColumnID column_id) const final;
-  std::unordered_set<ChunkID> _get_indexed_chunk_ids() const final;
+  tbb::concurrent_unordered_set<ChunkID> _get_indexed_chunk_ids() const final;
   ColumnID _get_indexed_column_id() const final;
 
  private:

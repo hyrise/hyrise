@@ -100,8 +100,8 @@ bool BasePartialHashIndexImpl::is_index_for(const ColumnID column_id) const {
   return false;
 }
 
-std::unordered_set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const {
-  return std::unordered_set<ChunkID>{};
+tbb::concurrent_unordered_set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const {
+  return tbb::concurrent_unordered_set<ChunkID>{};
 }
 
 template <typename DataType>
@@ -189,7 +189,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   // TBB's concurrent_unordered_map uses tbb_hasher as hash function, so the hash size equals the size of a size_t.
   bytes += sizeof(size_t) * _map.size();
 
-  bytes += sizeof(std::vector<RowID>) * _map.size();
+  bytes += sizeof(tbb::concurrent_vector<RowID>) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
   bytes += sizeof(_null_values);  // NOLINT
@@ -199,7 +199,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
 }
 
 template <typename DataType>
-std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
+tbb::concurrent_unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
   return _indexed_chunk_ids;
 }
 
