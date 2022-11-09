@@ -25,7 +25,7 @@ class PartialHashIndexTest;
 template <typename DataType>
 class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename tbb::concurrent_unordered_map<DataType, std::vector<RowID>>::const_iterator;
+  using MapIteratorType = typename tbb::concurrent_unordered_map<DataType, tbb::concurrent_vector<RowID>>::const_iterator;
 
   explicit TableIndexTbbUnorderedMapIterator(MapIteratorType itr);
 
@@ -138,7 +138,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   tbb::concurrent_unordered_set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
-  tbb::concurrent_unordered_map<DataType, std::vector<RowID>> _map;
+  tbb::concurrent_unordered_map<DataType, tbb::concurrent_vector<RowID>> _map;
   tbb::concurrent_vector<RowID> _null_values;
   tbb::concurrent_unordered_set<ChunkID> _indexed_chunk_ids = {};
 };

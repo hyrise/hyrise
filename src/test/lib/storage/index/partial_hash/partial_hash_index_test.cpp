@@ -51,7 +51,7 @@ class PartialHashIndexTest : public BaseTest {
    * private scope. Since the variable is set in setup() references are not possible.
    */
 
-  tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
+  tbb::concurrent_unordered_map<pmr_string, tbb::concurrent_vector<RowID>>* index_map = nullptr;
 };
 
 TEST_F(PartialHashIndexTest, Type) {
