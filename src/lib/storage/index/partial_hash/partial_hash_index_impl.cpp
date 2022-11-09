@@ -1,6 +1,8 @@
 #include "partial_hash_index_impl.hpp"
 #include "storage/segment_iterate.hpp"
 
+#include <mutex>
+
 namespace hyrise {
 
 template <typename DataType>
@@ -111,17 +113,27 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
   insert_entries(chunks_to_index, column_id);
 }
 
+std::mutex insert_entries_mutex;
+
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
   const auto previous_chunk_count = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
-    if (_indexed_chunk_ids.contains(chunk.first)) {
+
+    // Prevents multiple threads from indexing the same chunk concurrently.
+    {
+      std::lock_guard<std::mutex> lock{insert_entries_mutex};
+      
+      if (_indexed_chunk_ids.contains(chunk.first)) {
       // Index already contains entries for the given chunk.
       continue;
+      }
+
+      _indexed_chunk_ids.insert(chunk.first);
     }
 
-    _indexed_chunk_ids.insert(chunk.first);
+
     // Iterate over the segment to index and populate the index.
     const auto& indexed_segment = chunk.second->get_segment(column_id);
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
