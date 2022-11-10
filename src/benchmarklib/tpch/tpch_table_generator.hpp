@@ -41,6 +41,7 @@ class TPCHTableGenerator : virtual public AbstractTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
+  IndexesByTable _indexes_by_table() const override;
   SortOrderByTable _sort_order_by_table() const override;
   void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const override;
 
