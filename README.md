@@ -159,6 +159,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 -   Yannick   Bäumer
 -   Lawrence  Benson
+-   Lukas     Budach
 -   Timo      Djürken
 -   Alexander Dubrawski
 -   Fabian    Dumke
@@ -185,6 +186,7 @@ Contact: firstname.lastname@hpi.de
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
+-   Henok     Lachmann
 -   Sven      Lehmann
 -   Till      Lehmann
 -   Tom       Lichtenstein
