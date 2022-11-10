@@ -113,20 +113,23 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
   insert_entries(chunks_to_index, column_id);
 }
 
-std::mutex insert_entries_mutex;
-
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
   const auto previous_chunk_count = _indexed_chunk_ids.size();
   for (const auto& chunk : chunks_to_index) {
 
+    if (_indexed_chunk_ids.contains(chunk.first)) {
+      // Index already contains entries for the given chunk.
+      continue;
+    }
+
     // Prevents multiple threads from indexing the same chunk concurrently.
     {
       std::lock_guard<std::mutex> lock{insert_entries_mutex};
       
       if (_indexed_chunk_ids.contains(chunk.first)) {
-      // Index already contains entries for the given chunk.
+      // Another thread could have added the same chunk in the meantime.
       continue;
       }
 

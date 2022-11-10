@@ -141,6 +141,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   tbb::concurrent_unordered_map<DataType, tbb::concurrent_vector<RowID>> _map;
   tbb::concurrent_vector<RowID> _null_values;
   tbb::concurrent_unordered_set<ChunkID> _indexed_chunk_ids = {};
+  std::mutex insert_entries_mutex;
 };
 
 }  // namespace hyrise
