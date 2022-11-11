@@ -63,7 +63,7 @@ class BenchmarkRunner : public Noncopyable {
   // Run benchmark in BenchmarkMode::Ordered mode
   void _benchmark_ordered();
 
-  // Execute warmup run of a benchmark item
+  // Execute warmup run(s) of a benchmark item. The item's SQL query will be cached.
   void _warmup(const BenchmarkItemID item_id);
 
   // Schedules a run of the specified for execution. After execution, the result is updated. If the scheduler is
