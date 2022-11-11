@@ -1,8 +1,11 @@
 #include "micro_benchmark_utils.hpp"
 
 #include <stddef.h>
-#include <fstream>
 #include <unistd.h>
+#include <fstream>
+
+#include <algorithm>
+#include <random>
 
 namespace hyrise {
 
@@ -15,10 +18,22 @@ void micro_benchmark_clear_cache() {
 }
 
 void micro_benchmark_clear_disk_cache() {
-	//TODO: better documentation of which caches we are clearing
-	sync();
-	std::ofstream ofs("/proc/sys/vm/drop_caches");
-	ofs << "3" << std::endl;
+  // TODO(phoenix): better documentation of which caches we are clearing
+  sync();
+  std::ofstream ofs("/proc/sys/vm/drop_caches");
+  ofs << "3" << std::endl;
+}
+
+/**
+ * Generates random indexes between 0 and number.
+*/
+std::vector<int> generate_random_indexes(int number) {
+  std::vector<int> sequence(number);
+  std::iota(std::begin(sequence), std::end(sequence), 0);
+  auto rng = std::default_random_engine{};
+  std::shuffle(std::begin(sequence), std::end(sequence), rng);
+
+  return sequence;
 }
 
 }  // namespace hyrise
