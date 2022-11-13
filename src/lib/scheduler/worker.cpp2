@@ -87,7 +87,7 @@ void Worker::_work() {
     }
 
     // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html
-    if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{4096}) {
+    if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{NARF_LOOP_TIME}) {
       break;
     }
 
