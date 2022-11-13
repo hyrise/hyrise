@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class ValueSegment;
@@ -75,7 +75,7 @@ auto create_iterable_from_segment(const ReferenceSegment& segment);
 
 /**@}*/
 
-}  // namespace opossum
+}  // namespace hyrise
 
 // Include these only now to break up include dependencies
 #include "create_iterable_from_reference_segment.ipp"

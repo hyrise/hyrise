@@ -16,7 +16,7 @@
 // In this domain input modeling is explicitly used.
 // https://github.com/hyrise/hyrise/wiki/Input-Domain-Modeling
 
-namespace opossum {
+namespace hyrise {
 
 class GroupKeyIndexTest : public BaseTest {
  protected:
@@ -60,7 +60,8 @@ class GroupKeyIndexTest : public BaseTest {
 };
 
 TEST_F(GroupKeyIndexTest, IndexOffsets) {
-  auto expected_offsets = std::vector<ChunkOffset>{0, 1, 3, 5, 6, 7, 8};
+  auto expected_offsets = std::vector{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{3}, ChunkOffset{5},
+                                      ChunkOffset{6}, ChunkOffset{7}, ChunkOffset{8}};
   EXPECT_EQ(expected_offsets, *value_start_offsets);
 }
 
@@ -155,10 +156,19 @@ TEST_F(GroupKeyIndexTest, IndexPostings) {
   EXPECT_TRUE(distinct_values.size() == positions->size());
 
   // check if the correct positions are present for each value-id
-  auto expected_positions =
-      std::vector<std::unordered_set<ChunkOffset>>{{7}, {8, 9}, {8, 9}, {2, 4}, {2, 4}, {3}, {1}, {10}};
+  auto expected_positions = std::vector<std::unordered_set<ChunkOffset>>{{ChunkOffset{7}},
+                                                                         {ChunkOffset{8}, ChunkOffset{9}},
+                                                                         {ChunkOffset{8}, ChunkOffset{9}},
+                                                                         {ChunkOffset{2}, ChunkOffset{4}},
+                                                                         {ChunkOffset{2}, ChunkOffset{4}},
+                                                                         {ChunkOffset{3}},
+                                                                         {ChunkOffset{1}},
+                                                                         {ChunkOffset{10}}};
   auto expected_null_positions =
-      std::vector<std::unordered_set<ChunkOffset>>{{0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}, {0, 5, 6, 11}};
+      std::vector<std::unordered_set<ChunkOffset>>{{ChunkOffset{0}, ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{11}},
+                                                   {ChunkOffset{0}, ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{11}},
+                                                   {ChunkOffset{0}, ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{11}},
+                                                   {ChunkOffset{0}, ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{11}}};
 
   for (size_t i = 0; i < positions->size(); ++i) {
     EXPECT_EQ(1u, expected_positions[i].count(positions->at(i)));
@@ -184,4 +194,4 @@ TEST_F(GroupKeyIndexTest, IteratorBeginEnd) {
   EXPECT_THROW(index->upper_bound({NULL_VALUE}), std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

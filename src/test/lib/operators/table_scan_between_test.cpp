@@ -10,7 +10,7 @@
 #include "storage/table.hpp"
 #include "typed_operator_base_test.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableScanBetweenTest : public TypedOperatorBaseTest {
  protected:
@@ -40,7 +40,7 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
 
     auto column_definitions = TableColumnDefinitions{{"a", data_type, nullable}, {"b", DataType::Int, nullable}};
 
-    const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, 6);
+    const auto data_table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{6});
 
     // `nullable=nullable` is a dirty hack to work around C++ defect 2313.
     resolve_data_type(data_type, [&, nullable = nullable, sort_mode = sort_mode](const auto type) {
@@ -233,4 +233,4 @@ TEST_P(TableScanBetweenTest, Exclusive) {
 INSTANTIATE_TEST_SUITE_P(TableScanBetweenTestInstances, TableScanBetweenTest, testing::ValuesIn(create_test_params()),
                          TypedOperatorBaseTest::format);
 
-}  // namespace opossum
+}  // namespace hyrise

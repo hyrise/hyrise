@@ -58,9 +58,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LQPTranslatorTest : public BaseTest {
  public:
@@ -77,7 +77,7 @@ class LQPTranslatorTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_int_float5", table_int_float5);
     Hyrise::get().storage_manager.add_table("table_alias_name", table_alias_name);
     Hyrise::get().storage_manager.add_table("int_float_chunked",
-                                            load_table("resources/test_data/tbl/int_float.tbl", 1));
+                                            load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{1}));
     ChunkEncoder::encode_all_chunks(Hyrise::get().storage_manager.get_table("int_float_chunked"));
 
     int_float_node = StoredTableNode::make("table_int_float");
@@ -570,7 +570,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 }
 
 TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   /**
    * Build LQP and translate to PQP
@@ -1147,4 +1149,4 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
   EXPECT_EQ(change_meta_table->right_input()->type(), OperatorType::TableWrapper);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

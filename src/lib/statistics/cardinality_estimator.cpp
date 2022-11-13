@@ -39,7 +39,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Magic constants used in places where a better estimation would be implementable (either with
 // statistics objects not yet implemented or new algorithms) - but doing so just wasn't warranted yet.
@@ -67,9 +67,9 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -246,13 +246,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_alias_node(
     const AliasNode& alias_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // For AliasNodes, just reorder/remove AttributeStatistics from the input
 
-  auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{alias_node.output_expressions().size()};
+  const auto& output_expressions = alias_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = alias_node.left_input()->output_expressions();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < alias_node.output_expressions().size(); ++expression_idx) {
-    const auto& expression = *alias_node.output_expressions()[expression_idx];
-    const auto input_column_id = alias_node.left_input()->get_column_id(expression);
-    column_statistics[expression_idx] = input_table_statistics->column_statistics[input_column_id];
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
+    Assert(input_column_id, "Could not resolve " + expression.as_column_name());
+    column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
   }
 
   return std::make_shared<TableStatistics>(std::move(column_statistics), input_table_statistics->row_count);
@@ -265,12 +268,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_projection_node(
   // TODO(anybody) For columns newly created by a Projection no meaningful statistics can be generated yet, hence an
   //               empty AttributeStatistics object is created.
 
-  auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{projection_node.output_expressions().size()};
+  const auto& output_expressions = projection_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = projection_node.left_input()->output_expressions();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < projection_node.output_expressions().size(); ++expression_idx) {
-    const auto& expression = *projection_node.output_expressions()[expression_idx];
-    const auto input_column_id = projection_node.left_input()->find_column_id(expression);
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
@@ -289,12 +294,14 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
   // For AggregateNodes, statistics from group-by columns are forwarded and for the aggregate columns
   // dummy statistics are created for now.
 
-  auto column_statistics =
-      std::vector<std::shared_ptr<BaseAttributeStatistics>>{aggregate_node.output_expressions().size()};
+  const auto& output_expressions = aggregate_node.output_expressions();
+  const auto output_expression_count = output_expressions.size();
+  const auto& input_expressions = aggregate_node.left_input()->output_expressions();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>{output_expression_count};
 
-  for (size_t expression_idx{0}; expression_idx < aggregate_node.output_expressions().size(); ++expression_idx) {
-    const auto& expression = *aggregate_node.output_expressions()[expression_idx];
-    const auto input_column_id = aggregate_node.left_input()->find_column_id(expression);
+  for (auto expression_idx = ColumnID{0}; expression_idx < output_expression_count; ++expression_idx) {
+    const auto& expression = *output_expressions[expression_idx];
+    const auto input_column_id = find_expression_idx(expression, input_expressions);
     if (input_column_id) {
       column_statistics[expression_idx] = input_table_statistics->column_statistics[*input_column_id];
     } else {
@@ -351,7 +358,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       auto output_table_statistics = std::make_shared<TableStatistics>(std::move(output_column_statistics), row_count);
 
       return output_table_statistics;
-    } else if (logical_expression->logical_operator == LogicalOperator::And) {
+    }
+
+    if (logical_expression->logical_operator == LogicalOperator::And) {
       // Estimate AND by splitting it up into two consecutive PredicateNodes
 
       const auto first_predicate_node =
@@ -411,15 +420,15 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   //               That implies estimating a selectivity of 1 for such predicates
   if (!operator_scan_predicates) {
     return input_table_statistics;
-  } else {
-    auto output_table_statistics = input_table_statistics;
-
-    for (const auto& operator_scan_predicate : *operator_scan_predicates) {
-      output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
-    }
-
-    return output_table_statistics;
   }
+
+  auto output_table_statistics = input_table_statistics;
+
+  for (const auto& operator_scan_predicate : *operator_scan_predicates) {
+    output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
+  }
+
+  return output_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
@@ -540,9 +549,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_limit_node(
     }
 
     return std::make_shared<TableStatistics>(std::move(column_statistics), clamped_row_count);
-  } else {
-    return input_table_statistics;
   }
+
+  return input_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_predicate(
@@ -836,12 +845,16 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_inner_equi_join(
     column_statistics[left_column_count + right_column_id] = join_columns_output_statistics;
 
     for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
-      if (column_statistics[column_id]) continue;
+      if (column_statistics[column_id]) {
+        continue;
+      }
 
       column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
     }
     for (auto column_id = ColumnID{0}; column_id < right_input_table_statistics.column_statistics.size(); ++column_id) {
-      if (column_statistics[left_column_count + column_id]) continue;
+      if (column_statistics[left_column_count + column_id]) {
+        continue;
+      }
 
       column_statistics[left_column_count + column_id] =
           right_input_table_statistics.column_statistics[column_id]->scaled(right_selectivity);
@@ -926,7 +939,9 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_semi_join(
     column_statistics[left_column_id] = join_columns_output_statistics;
 
     for (auto column_id = ColumnID{0}; column_id < left_column_count; ++column_id) {
-      if (column_statistics[column_id]) continue;
+      if (column_statistics[column_id]) {
+        continue;
+      }
 
       column_statistics[column_id] = left_input_table_statistics.column_statistics[column_id]->scaled(left_selectivity);
     }
@@ -1030,4 +1045,4 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::prune_column_statistics(
   return std::make_shared<TableStatistics>(std::move(output_column_statistics), table_statistics->row_count);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

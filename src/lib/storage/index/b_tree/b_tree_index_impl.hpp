@@ -6,7 +6,7 @@
 #include "storage/abstract_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BTreeIndexTest;
 
@@ -44,22 +44,22 @@ class BTreeIndexImpl : public BaseBTreeIndexImpl {
   Iterator lower_bound(DataType value) const;
   Iterator upper_bound(DataType value) const;
 
-  Iterator lower_bound(const std::vector<AllTypeVariant>&) const override;
-  Iterator upper_bound(const std::vector<AllTypeVariant>&) const override;
+  Iterator lower_bound(const std::vector<AllTypeVariant>& values) const override;
+  Iterator upper_bound(const std::vector<AllTypeVariant>& values) const override;
   Iterator cbegin() const override;
   Iterator cend() const override;
 
  protected:
   void _bulk_insert(const std::shared_ptr<const AbstractSegment>&, std::vector<ChunkOffset>& _null_positions);
-  void _add_to_heap_memory_usage(const DataType&);
+  void _add_to_heap_memory_usage(const DataType& /*value*/);
 
   btree::btree_map<DataType, size_t> _btree;
   size_t _heap_bytes_used;
 };
 
 template <>
-void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string&);
+void BTreeIndexImpl<pmr_string>::_add_to_heap_memory_usage(const pmr_string& value);
 
 EXPLICITLY_DECLARE_DATA_TYPES(BTreeIndexImpl);
 
-}  // namespace opossum
+}  // namespace hyrise

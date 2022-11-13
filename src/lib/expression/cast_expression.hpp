@@ -4,7 +4,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * SQL's CAST
@@ -30,4 +30,4 @@ class CastExpression : public AbstractExpression {
   const DataType _data_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "lqp_subquery_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ExistsExpression::ExistsExpression(const std::shared_ptr<AbstractExpression>& subquery,
                                    const ExistsExpressionType init_exists_expression_type)
@@ -32,7 +32,9 @@ std::shared_ptr<AbstractExpression> ExistsExpression::_on_deep_copy(
   return std::make_shared<ExistsExpression>(subquery()->deep_copy(copied_ops), exists_expression_type);
 }
 
-DataType ExistsExpression::data_type() const { return ExpressionEvaluator::DataTypeBool; }
+DataType ExistsExpression::data_type() const {
+  return ExpressionEvaluator::DataTypeBool;
+}
 
 bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ExistsExpression*>(&expression),
@@ -41,8 +43,12 @@ bool ExistsExpression::_shallow_equals(const AbstractExpression& expression) con
   return exists_expression_type == other_exists_expression.exists_expression_type;
 }
 
-size_t ExistsExpression::_shallow_hash() const { return exists_expression_type == ExistsExpressionType::Exists; }
+size_t ExistsExpression::_shallow_hash() const {
+  return exists_expression_type == ExistsExpressionType::Exists;
+}
 
-bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const { return false; }
+bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+  return false;
+}
 
-}  // namespace opossum
+}  // namespace hyrise

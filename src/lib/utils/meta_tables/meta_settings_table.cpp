@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSettingsTable::MetaSettingsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false},
@@ -15,7 +15,9 @@ const std::string& MetaSettingsTable::name() const {
   return name;
 }
 
-bool MetaSettingsTable::can_update() const { return true; }
+bool MetaSettingsTable::can_update() const {
+  return true;
+}
 
 std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -38,4 +40,4 @@ void MetaSettingsTable::_on_update(const std::vector<AllTypeVariant>& selected_v
   Hyrise::get().settings_manager.get_setting(name)->set(value);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -26,11 +26,12 @@ option(ENABLE_COVERAGE "Set to ON to build Hyrise with enabled coverage checking
 if (${ENABLE_COVERAGE})
     add_compile_options(-O0 -fno-inline)
 
-    if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+    if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
         add_compile_options(-fprofile-arcs -ftest-coverage)
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} --coverage")
     elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         add_compile_options(-fprofile-instr-generate -fcoverage-mapping)
+        add_link_options(-fprofile-instr-generate -fcoverage-mapping)
         set(CMAKE_EXE_LINKER_FLAGS  "${CMAKE_EXE_LINKER_FLAGS} -fprofile-instr-generate -fcoverage-mapping")
     else()
         message(FATAL_ERROR "Don't know how to run coverage on your compiler (${CMAKE_CXX_COMPILER_ID}).")
@@ -58,6 +59,13 @@ if (NOT "${HYRISE_RELAXED_BUILD}")
 
 else()
     message(WARNING "Hyrise will be built with most compiler warnings deactivated. This is fine if you want to test Hyrise but will become an issue when you want to contribute code.")
+endif()
+
+if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 13 AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS_EQUAL 13.99)
+        message(WARNING "Disabling 'reserved-identifier' warning for clang 13 (version is ${CMAKE_CXX_COMPILER_VERSION}).")
+        add_compile_options(-Wno-reserved-identifier)
+    endif()
 endif()
 
 include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)

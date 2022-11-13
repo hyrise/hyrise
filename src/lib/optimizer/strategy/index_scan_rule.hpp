@@ -8,7 +8,7 @@
 #include "storage/index/index_statistics.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class PredicateNode;
@@ -36,4 +36,4 @@ class IndexScanRule : public AbstractRule {
   static bool _is_single_segment_index(const IndexStatistics& index_statistics);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

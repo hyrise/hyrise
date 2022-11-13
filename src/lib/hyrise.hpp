@@ -13,7 +13,7 @@
 #include "utils/settings_manager.hpp"
 #include "utils/singleton.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractScheduler;
 class BenchmarkRunner;
@@ -66,4 +66,4 @@ class Hyrise : public Singleton<Hyrise> {
   std::shared_ptr<AbstractScheduler> _scheduler;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

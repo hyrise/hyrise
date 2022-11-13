@@ -5,7 +5,7 @@
 #include "abstract_rule.hpp"
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -26,4 +26,4 @@ class ColumnPruningRule : public AbstractRule {
   void _apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

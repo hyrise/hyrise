@@ -6,7 +6,7 @@
 #include "all_type_variant.hpp"
 #include "null_value.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class NullValueTest : public BaseTest {};
 
@@ -24,4 +24,4 @@ TEST_F(NullValueTest, Comparators) {
   EXPECT_FALSE(-NullValue{} == NullValue{});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

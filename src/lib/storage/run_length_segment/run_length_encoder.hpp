@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
  public:
@@ -33,7 +33,7 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
       // Init is_current_null such that it does not equal the first entry
       auto current_value = T{};
       auto is_current_null = !it->is_null();
-      auto current_index = 0u;
+      auto current_index = ChunkOffset{0};
 
       for (; it != end; ++it) {
         auto segment_value = *it;
@@ -65,4 +65,4 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

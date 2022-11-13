@@ -2,9 +2,11 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-std::vector<std::shared_ptr<AbstractExpression>> AbstractNonQueryNode::output_expressions() const { return {}; }
+std::vector<std::shared_ptr<AbstractExpression>> AbstractNonQueryNode::output_expressions() const {
+  return {};
+}
 
 bool AbstractNonQueryNode::is_column_nullable(const ColumnID column_id) const {
   // The majority of non-query nodes output no column (CreateTable, DropTable, ...)
@@ -20,4 +22,4 @@ std::vector<FunctionalDependency> AbstractNonQueryNode::non_trivial_functional_d
   Fail("Node does not support functional dependencies.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

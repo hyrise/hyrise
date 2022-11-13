@@ -9,9 +9,9 @@
 #include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class ProjectionNodeTest : public BaseTest {
  protected:
@@ -55,7 +55,9 @@ TEST_F(ProjectionNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_projection_node->hash(), different_projection_node_b->hash());
 }
 
-TEST_F(ProjectionNodeTest, Copy) { EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node); }
+TEST_F(ProjectionNodeTest, Copy) {
+  EXPECT_EQ(*_projection_node->deep_copy(), *_projection_node);
+}
 
 TEST_F(ProjectionNodeTest, NodeExpressions) {
   ASSERT_EQ(_projection_node->node_expressions.size(), 5u);
@@ -165,4 +167,4 @@ TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
   EXPECT_EQ(projection_node_4->functional_dependencies().at(0), expected_fd);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

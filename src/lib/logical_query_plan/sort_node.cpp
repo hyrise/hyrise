@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SortNode::SortNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                    const std::vector<SortMode>& init_sort_modes)
@@ -24,11 +24,14 @@ std::string SortNode::description(const DescriptionMode mode) const {
 
   stream << "[Sort] ";
 
-  for (auto expression_idx = size_t{0}; expression_idx < node_expressions.size(); ++expression_idx) {
+  const auto node_expression_count = node_expressions.size();
+  for (auto expression_idx = ColumnID{0}; expression_idx < node_expression_count; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode) << " ";
     stream << "(" << sort_modes[expression_idx] << ")";
 
-    if (expression_idx + 1 < node_expressions.size()) stream << ", ";
+    if (expression_idx + 1u < node_expression_count) {
+      stream << ", ";
+    }
   }
   return stream.str();
 }
@@ -38,7 +41,7 @@ std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const {
 }
 
 size_t SortNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   for (const auto& sort_mode : sort_modes) {
     boost::hash_combine(hash, sort_mode);
   }
@@ -57,4 +60,4 @@ bool SortNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMappi
          sort_modes == sort_node.sort_modes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

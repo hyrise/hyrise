@@ -5,7 +5,7 @@
 #include "statistics/cardinality_estimation_cache.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class TableStatistics;
@@ -57,10 +57,10 @@ class AbstractCostEstimator {
    *    - No node in the subplan has already been costed and is marked as @param visited. This avoids incorporating
    *      the cost of nodes multiple times in the presence of diamond shapes in the plan.
    *
-   * If the Cost for a subplan can be retrieved, all its nodes are marked as @param visisted.
+   * If the Cost for a subplan can be retrieved, all its nodes are marked as @param visited.
    */
   std::optional<Cost> _get_subplan_cost_from_cache(const std::shared_ptr<AbstractLQPNode>& lqp,
                                                    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited) const;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

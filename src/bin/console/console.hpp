@@ -13,7 +13,7 @@
 #include "storage/table.hpp"
 #include "utils/singleton.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionContext;
 
@@ -102,13 +102,13 @@ class Console : public Singleton<Console> {
   static int _eval_command(const CommandFunction& func, const std::string& command);
 
   /*
-   * Evaluates given SQL statement using opossum::SqlQueryTranslator.
+   * Evaluates given SQL statement using hyrise::SqlQueryTranslator.
    */
   int _eval_sql(const std::string& sql);
 
   // Command functions, registered to be called from the Console
-  int _exit(const std::string& args);
-  int _help(const std::string& args);
+  int _exit(const std::string& /*args*/);
+  int _help(const std::string& /*args*/);
   int _generate_tpcc(const std::string& args);
   int _generate_tpch(const std::string& args);
   int _generate_tpcds(const std::string& args);
@@ -120,7 +120,7 @@ class Console : public Singleton<Console> {
   int _change_runtime_setting(const std::string& input);
 
   int _print_transaction_info(const std::string& input);
-  int _print_current_working_directory(const std::string& args);
+  int _print_current_working_directory(const std::string& /*args*/);
 
   int _load_plugin(const std::string& args);
   int _unload_plugin(const std::string& input);
@@ -156,4 +156,4 @@ class Console : public Singleton<Console> {
   std::shared_ptr<SQLLogicalPlanCache> _lqp_cache;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

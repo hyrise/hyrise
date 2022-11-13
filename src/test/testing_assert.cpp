@@ -12,7 +12,7 @@
 #include "storage/table.hpp"
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInputSide input_side,
                    const std::shared_ptr<const AbstractLQPNode>& input) {
@@ -21,6 +21,7 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInpu
     if (!output2) {
       return false;
     }
+
     if (output == output2 && output2->input(input_side) == input) {
       return true;
     }
@@ -29,4 +30,4 @@ bool check_lqp_tie(const std::shared_ptr<const AbstractLQPNode>& output, LQPInpu
   return false;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

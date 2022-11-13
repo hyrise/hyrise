@@ -4,7 +4,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Get the number of bytes that are allocated on the heap for the given string.
@@ -47,7 +47,9 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   const auto base_size = sizeof(V);
 
   // Early out
-  if (string_vector.empty()) return base_size + (string_vector.capacity() * sizeof(StringType));
+  if (string_vector.empty()) {
+    return base_size + (string_vector.capacity() * sizeof(StringType));
+  }
 
   constexpr auto sampling_factor = 0.005f;
   constexpr auto min_rows = size_t{10};
@@ -94,4 +96,4 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
                          static_cast<float>((string_vector.capacity() - string_vector.size()) * sizeof(StringType)));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,6 +6,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/logical_plan_root_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/sort_node.hpp"
@@ -16,9 +17,9 @@
 #include "optimizer/strategy/predicate_placement_rule.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PredicatePlacementRuleTest : public StrategyBaseTest {
  protected:
@@ -77,7 +78,7 @@ class PredicatePlacementRuleTest : public StrategyBaseTest {
   std::shared_ptr<PredicatePlacementRule> _rule;
   std::shared_ptr<StoredTableNode> _stored_table_a, _stored_table_b, _stored_table_c, _stored_table_d, _stored_table_e;
   std::shared_ptr<LQPColumnExpression> _a_a, _a_b, _b_a, _b_b, _c_a, _c_b, _d_a, _d_b, _e_a;
-  std::shared_ptr<opossum::LQPSubqueryExpression> _subquery_c, _subquery;
+  std::shared_ptr<hyrise::LQPSubqueryExpression> _subquery_c, _subquery;
 };
 
 TEST_F(PredicatePlacementRuleTest, SimpleLiteralJoinPushdownTest) {
@@ -153,6 +154,211 @@ TEST_F(PredicatePlacementRuleTest, SimpleSortPushdownTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
+TEST_F(PredicatePlacementRuleTest, SimpleDiamondPushdownTest) {
+  // We expect predicates to get pushed below UnionNode-based diamonds if they continue to be evaluable.
+  // clang-format off
+  const auto input_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_b, 10),    // <-- Predicate before pushdown
+    UnionNode::make(SetOperationMode::Positions,
+      PredicateNode::make(like_(_a_a, "%man%"),
+        input_common_node),
+      PredicateNode::make(like_(_a_a, "%Man%"),
+        input_common_node)));
+
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate after pushdown
+      _stored_table_a));
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(like_(_a_a, "%man%"),
+      expected_common_node),
+    PredicateNode::make(like_(_a_a, "%Man%"),
+      expected_common_node));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, BlockSimpleDiamondPushdownTest) {
+  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's origin node is used by another LQP node,
+  // which is not part of the diamond. As a result, the predicate pushdown must be blocked because it would incorrectly
+  // filter the other LQP node not part of the diamond.
+  // clang-format off
+  const auto input_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate, which should NOT get pushed through the diamond
+    UnionNode::make(SetOperationMode::Positions,
+      PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate before pushdown
+        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+          input_common_node)),
+      PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate before pushdown
+        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+          input_common_node))));
+
+  // Increase the output count of input_common_node
+  ASSERT_EQ(input_common_node->outputs().size(), 2);
+  const auto non_diamond_lqp_node = ProjectionNode::make(expression_vector(_a_a), input_common_node);
+  ASSERT_EQ(input_common_node->outputs().size(), 3);
+
+  // Predicates are not pushed through the diamond. However, predicates inside the diamond are pushed towards the
+  // diamond's origin.
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto expected_lqp =
+  PredicateNode::make(equals_(_a_b, 10),
+    UnionNode::make(SetOperationMode::Positions,
+      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_a_a, "%man%"),  // <-- Predicate after pushdown
+          expected_common_node)),
+      ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+        PredicateNode::make(like_(_a_a, "%Man%"),  // <-- Predicate after pushdown
+          expected_common_node))));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, PartialDiamondPushdownTest) {
+  // Derived from SimpleDiamondPushdownTest. In this test, the diamond's origin node is an AggregateNode which
+  // blocks one predicate from getting pushed below the diamond.
+  // clang-format off
+  const auto input_common_node =
+  AggregateNode::make(expression_vector(_a_a), expression_vector(min_(_a_b)),
+    _stored_table_a);
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_a, 10),                 // <-- 1st Predicate before pushdown
+    PredicateNode::make(greater_than_(min_(_a_b), 100),  // <-- 2nd Predicate before pushdown
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(like_(_a_a, "%man%"),
+          input_common_node),
+        PredicateNode::make(like_(_a_a, "%Man%"),
+          input_common_node))));
+
+  const auto expected_common_node =
+  PredicateNode::make(greater_than_(min_(_a_b), 100),   // <-- 2nd Predicate after pushdown
+    AggregateNode::make(expression_vector(_a_a), expression_vector(min_(_a_b)),
+      PredicateNode::make(equals_(_a_a, 10),            // <-- 1st Predicate after pushdown
+        _stored_table_a)));
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(like_(_a_a, "%man%"),
+      expected_common_node),
+    PredicateNode::make(like_(_a_a, "%Man%"),
+      expected_common_node));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, ConsecutiveDiamondPushdownTest) {
+  // In this test, two predicates sit on top of two consecutive Union diamonds. While both predicates can be pushed
+  // below the first diamond, only one predicate can also be pushed below the second diamond.
+  // clang-format off
+  const auto input_common_node =
+  UnionNode::make(SetOperationMode::All,
+    PredicateNode::make(like_(_c_a, "%woman%"),
+      AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+        _stored_table_c)),
+    PredicateNode::make(like_(_c_a, "%Woman%"),
+      AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+        _stored_table_c)));
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_c_a, 10),                                  // <-- 1st Predicate before pushdown
+    PredicateNode::make(greater_than_(sum_(_c_b), 1000),                  // <-- 2nd Predicate before pushdown
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(like_(_c_a, "%man%"),
+          input_common_node),
+        PredicateNode::make(like_(_c_a, "%Man%"),
+          input_common_node))));
+
+  // We apply the rule before defining the expected LQP. Otherwise, we would modify the outputs of _stored_table_c, and
+  // thus affect the rule's outcome.
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  const auto expected_common_node2 =
+  PredicateNode::make(equals_(_c_a, 10),                                // <-- 1st Predicate after pushdown
+    _stored_table_c);
+
+  const auto expected_common_node1 =
+  PredicateNode::make(greater_than_(sum_(_c_b), 1000),                  // <-- 2nd Predicate after pushdown
+    UnionNode::make(SetOperationMode::All,
+      AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+        PredicateNode::make(like_(_c_a, "%woman%"),
+          expected_common_node2)),
+      AggregateNode::make(expression_vector(_c_a), expression_vector(sum_(_c_b)),
+        PredicateNode::make(like_(_c_a, "%Woman%"),
+          expected_common_node2))));
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    PredicateNode::make(like_(_c_a, "%man%"),
+      expected_common_node1),
+    PredicateNode::make(like_(_c_a, "%Man%"),
+      expected_common_node1));
+  // clang-format on
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, BigDiamondPushdown) {
+  // We expect predicates to get pushed below UnionNode-based diamonds if they continue to be evaluable.
+  // clang-format off
+  const auto input_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    _stored_table_a);
+
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate before pushdown
+    UnionNode::make(SetOperationMode::Positions,
+      UnionNode::make(SetOperationMode::Positions,
+        PredicateNode::make(like_(_a_a, "%man"),
+          input_common_node),
+        PredicateNode::make(like_(_a_a, "%child"),
+          input_common_node)),
+      PredicateNode::make(like_(_a_a, "%woman"),
+          input_common_node)));
+
+  const auto expected_common_node =
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    PredicateNode::make(equals_(_a_b, 10),  // <-- Predicate after pushdown
+      _stored_table_a));
+
+  const auto expected_lqp =
+  UnionNode::make(SetOperationMode::Positions,
+    UnionNode::make(SetOperationMode::Positions,
+      PredicateNode::make(like_(_a_a, "%man"),
+        expected_common_node),
+      PredicateNode::make(like_(_a_a, "%child"),
+        expected_common_node)),
+    PredicateNode::make(like_(_a_a, "%woman"),
+        expected_common_node));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
 TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
   // If the predicate cannot be pushed down and is effectively re-inserted at the same position, make sure that
   // its outputs are correctly restored.
@@ -185,12 +391,31 @@ TEST_F(PredicatePlacementRuleTest, DiamondPushdownInputRecoveryTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
-  // We should stop pushing down predicates once we reached a node with multiple outputs
+TEST_F(PredicatePlacementRuleTest, StopPushdownAtUnion) {
+  // Stop pushdown at UnionNodes, if they do not form diamonds.
+  // clang-format off
+  const auto input_lqp =
+  PredicateNode::make(equals_(_a_b, 10),
+    UnionNode::make(SetOperationMode::All,
+      PredicateNode::make(less_than_(_a_a, 0),
+        _stored_table_a),
+      PredicateNode::make(greater_than_(_b_a, 10),
+        _stored_table_b)));
+  // clang-format on
+
+  const auto expected_lqp = input_lqp->deep_copy();
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondOriginNode) {
+  // We must stop pushing down predicates when reaching a node with multiple outputs.
   // clang-format off
   const auto input_common_node =
-  PredicateNode::make(greater_than_(_a_a, 1),
     ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+      PredicateNode::make(greater_than_(_a_a, 1),
       _stored_table_a));
 
   const auto input_lqp =
@@ -204,9 +429,11 @@ TEST_F(PredicatePlacementRuleTest, StopPushdownAtDiamondTest) {
        ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(5.2, DataType::Float)),
         input_common_node))));
 
+  // We expect the diamond predicates to get pushed below the Projections. However, since the diamond's origin node
+  // has multiple outputs, predicates are not expected to get pushed down any further.
   const auto expected_common_node =
-  PredicateNode::make(greater_than_(_a_a, 1),
-    ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+  ProjectionNode::make(expression_vector(_a_a, _a_b, cast_(11, DataType::Float)),
+    PredicateNode::make(greater_than_(_a_a, 1),
       _stored_table_a));
 
   const auto expected_lqp =
@@ -356,6 +583,50 @@ TEST_F(PredicatePlacementRuleTest, SemiPushDown) {
   auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+}
+
+TEST_F(PredicatePlacementRuleTest, HandleBarrierPredicatePushdown) {
+  // In this test, the PredicatePlacementRule cannot push down the top two predicates because of a predicate having
+  // multiple outputs (the barrier node). The purpose of this test is to check whether a barrier node becomes
+  // pushed down by the rule, if it is a predicate eligible for pushdown.
+
+  // clang-format off
+  const auto barrier_predicate_node =
+  PredicateNode::make(greater_than_(_b_b, 123),                 // <-- 1st Predicate before pushdown (pushdown barrier due to output_count() == 2) // NOLINT
+    JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),         // <-- 2nd Predicate before pushdown
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        _stored_table_b,
+        _stored_table_c),
+      _stored_table_a));
+
+  auto input_lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      barrier_predicate_node));
+
+  // Increase the predicate's output count so that it becomes an actual barrier in the _push_down_traversal subroutine.
+  const auto temporary_node = LogicalPlanRootNode::make(barrier_predicate_node);
+  ASSERT_EQ(barrier_predicate_node->output_count(), 2);
+
+  const auto expected_lqp =
+  PredicateNode::make(greater_than_(_c_a, 150),
+    PredicateNode::make(greater_than_(_c_a, 100),
+      JoinNode::make(JoinMode::Inner, equals_(_b_a, _c_a),
+        PredicateNode::make(greater_than_(_b_b, 123),           // <-- 1st Predicate after pushdown
+          JoinNode::make(JoinMode::Semi, equals_(_a_a, _b_a),   // <-- 2nd Predicate after pushdown
+            _stored_table_b,
+            _stored_table_a)),
+        _stored_table_c)));
+  // clang-format on
+
+  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  EXPECT_EQ(barrier_predicate_node->output_count(), 1);
+  // After the pushdown, the inner join should have the two outputs that barrier_predicate_node previously had.
+  const auto& inner_join = std::dynamic_pointer_cast<JoinNode>(actual_lqp->left_input()->left_input());
+  EXPECT_EQ(inner_join->output_count(), 2);
+  EXPECT_EQ(temporary_node->left_input(), inner_join);
 }
 
 TEST_F(PredicatePlacementRuleTest, PushDownPredicateThroughAggregate) {
@@ -651,4 +922,4 @@ TEST_F(PredicatePlacementRuleTest, DoNotCreatePreJoinPredicateIfUnrelated) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

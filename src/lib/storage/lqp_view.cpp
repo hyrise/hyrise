@@ -3,7 +3,7 @@
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPView::LQPView(const std::shared_ptr<AbstractLQPNode>& init_lqp,
                  std::unordered_map<ColumnID, std::string> init_column_names = {})
@@ -17,4 +17,4 @@ bool LQPView::deep_equals(const LQPView& other) const {
   return *lqp == *other.lqp && column_names == other.column_names;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

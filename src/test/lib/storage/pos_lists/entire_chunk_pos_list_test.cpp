@@ -5,7 +5,7 @@
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EntireChunkPosListTest : public BaseTest {
  public:
@@ -29,10 +29,10 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // after the PosList was created. These later added rows should not be contained in the PosList
 
   auto table_name = "test_table";
-  auto table = load_table("resources/test_data/tbl/float_int.tbl", 10, FinalizeLastChunk::No);
+  auto table = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10}, FinalizeLastChunk::No);
   EXPECT_EQ(table->chunk_count(), 1);
   auto table_to_add_name = "test_table_to_add";
-  auto table_to_add = load_table("resources/test_data/tbl/float_int.tbl", 10);
+  auto table_to_add = load_table("resources/test_data/tbl/float_int.tbl", ChunkOffset{10});
   // Insert Operator works with the Storage Manager, so the test table must also be known to the StorageManager
   Hyrise::get().storage_manager.add_table(table_name, table);
   Hyrise::get().storage_manager.add_table(table_to_add_name, table_to_add);
@@ -61,4 +61,4 @@ TEST_F(EntireChunkPosListTest, AddAfterMatchedAllTest) {
   // TODO(XPERIANER): Maybe add a better check than just size, cause the returned iterators should also handle
   // this case, which we right now don't check.
 }
-}  // namespace opossum
+}  // namespace hyrise

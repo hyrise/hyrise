@@ -7,7 +7,7 @@
 #include "bitpacking_vector_type.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterator> {
  public:
@@ -18,7 +18,9 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   BitPackingIterator(BitPackingIterator&& other) = default;
 
   BitPackingIterator& operator=(const BitPackingIterator& other) {
-    if (this == &other) return *this;
+    if (this == &other) {
+      return *this;
+    }
 
     DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator");
     _absolute_index = other._absolute_index;
@@ -26,7 +28,9 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   }
 
   BitPackingIterator& operator=(BitPackingIterator&& other) {
-    if (this == &other) return *this;
+    if (this == &other) {
+      return *this;
+    }
 
     DebugAssert(&_data == &other._data, "Cannot reassign BitPackingIterator");
     _absolute_index = other._absolute_index;
@@ -38,20 +42,33 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-  void increment() { ++_absolute_index; }
-  void decrement() { --_absolute_index; }
+  void increment() {
+    ++_absolute_index;
+  }
 
-  void advance(std::ptrdiff_t n) { _absolute_index += n; }
+  void decrement() {
+    --_absolute_index;
+  }
 
-  bool equal(const BitPackingIterator& other) const { return _absolute_index == other._absolute_index; }
+  void advance(std::ptrdiff_t n) {
+    _absolute_index += n;
+  }
 
-  std::ptrdiff_t distance_to(const BitPackingIterator& other) const { return other._absolute_index - _absolute_index; }
+  bool equal(const BitPackingIterator& other) const {
+    return _absolute_index == other._absolute_index;
+  }
 
-  uint32_t dereference() const { return _data[_absolute_index]; }
+  std::ptrdiff_t distance_to(const BitPackingIterator& other) const {
+    return other._absolute_index - _absolute_index;
+  }
+
+  uint32_t dereference() const {
+    return _data[_absolute_index];
+  }
 
  private:
   const pmr_compact_vector& _data;
   size_t _absolute_index = 0u;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

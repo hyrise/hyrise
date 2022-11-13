@@ -31,13 +31,13 @@
 #include "utils/load_table.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using SQLiteTestRunnerParam = std::tuple<std::pair<size_t /* line */, std::string /* sql */>, EncodingType>;
 
 class SQLiteTestRunner : public BaseTestWithParam<SQLiteTestRunnerParam> {
  public:
-  static constexpr ChunkOffset CHUNK_SIZE = 10;
+  static constexpr auto CHUNK_SIZE = ChunkOffset{10};
 
   // Structure to cache initially loaded tables and store their file paths
   // to reload the the table from the given tbl file whenever required.
@@ -76,4 +76,4 @@ inline auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLi
          encoding_type_to_string.left.at(encoding_type);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

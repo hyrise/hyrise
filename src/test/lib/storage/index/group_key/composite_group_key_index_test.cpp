@@ -14,19 +14,19 @@
 #include "types.hpp"
 
 namespace {
-opossum::VariableLengthKey create_key(uint16_t value) {
-  auto result = opossum::VariableLengthKey(sizeof(uint16_t));
+hyrise::VariableLengthKey create_key(uint16_t value) {
+  auto result = hyrise::VariableLengthKey(sizeof(uint16_t));
   result |= value;
   return result;
 }
 
-std::vector<opossum::VariableLengthKey> to_vector(const opossum::VariableLengthKeyStore& keys) {
-  auto result = std::vector<opossum::VariableLengthKey>(keys.size());
+std::vector<hyrise::VariableLengthKey> to_vector(const hyrise::VariableLengthKeyStore& keys) {
+  auto result = std::vector<hyrise::VariableLengthKey>(keys.size());
   std::copy(keys.cbegin(), keys.cend(), result.begin());
   return result;
 }
 
-testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::set<opossum::ChunkOffset>& set) {
+testing::AssertionResult is_contained_in(hyrise::ChunkOffset value, const std::set<hyrise::ChunkOffset>& set) {
   if (set.find(value) == set.end()) {
     return testing::AssertionFailure() << testing::PrintToString(set) << " does not contain " << value;
   } else {
@@ -34,14 +34,14 @@ testing::AssertionResult is_contained_in(opossum::ChunkOffset value, const std::
   }
 }
 
-void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& expected,
-                             const std::vector<opossum::ChunkOffset>& actual) {
-  std::set<opossum::ChunkOffset> distinct_expected_positions = {};
+void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<hyrise::ChunkOffset>>& expected,
+                             const std::vector<hyrise::ChunkOffset>& actual) {
+  std::set<hyrise::ChunkOffset> distinct_expected_positions = {};
   for (const auto& expectation_for_position : expected) {
     distinct_expected_positions.insert(expectation_for_position.begin(), expectation_for_position.end());
   }
 
-  auto distinct_actual_positions = std::set<opossum::ChunkOffset>(actual.begin(), actual.end());
+  auto distinct_actual_positions = std::set<hyrise::ChunkOffset>(actual.begin(), actual.end());
   EXPECT_EQ(distinct_expected_positions, distinct_actual_positions);
 
   for (size_t entry = 0; entry < expected.size(); ++entry) {
@@ -50,7 +50,7 @@ void EXPECT_POSITION_LIST_EQ(const std::vector<std::set<opossum::ChunkOffset>>& 
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class CompositeGroupKeyIndexTest : public BaseTest {
  protected:
@@ -108,19 +108,35 @@ TEST_F(CompositeGroupKeyIndexTest, ConcatenatedKeys) {
 }
 
 TEST_F(CompositeGroupKeyIndexTest, Offsets) {
-  auto expected_int_str = std::vector<ChunkOffset>{0, 1, 2, 4, 5, 6, 7};
-  auto expected_str_int = std::vector<ChunkOffset>{0, 1, 2, 3, 5, 6, 7};
+  auto expected_int_str = std::vector{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{4},
+                                      ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{7}};
+  auto expected_str_int = std::vector{ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3},
+                                      ChunkOffset{5}, ChunkOffset{6}, ChunkOffset{7}};
 
   EXPECT_EQ(expected_int_str, *_offsets_int_str);
   EXPECT_EQ(expected_str_int, *_offsets_str_int);
 }
 
 TEST_F(CompositeGroupKeyIndexTest, PositionList) {
-  auto expected_int_str = std::vector<std::set<ChunkOffset>>{{4}, {2}, {1, 3}, {1, 3}, {6}, {0}, {5}, {7}};
-  auto expected_str_int = std::vector<std::set<ChunkOffset>>{{4}, {6}, {5}, {1, 3}, {1, 3}, {2}, {0}, {7}};
+  auto expected_int_str = std::vector<std::set<ChunkOffset>>{{ChunkOffset{4}},
+                                                             {ChunkOffset{2}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{6}},
+                                                             {ChunkOffset{0}},
+                                                             {ChunkOffset{5}},
+                                                             {ChunkOffset{7}}};
+  auto expected_str_int = std::vector<std::set<ChunkOffset>>{{ChunkOffset{4}},
+                                                             {ChunkOffset{6}},
+                                                             {ChunkOffset{5}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{1}, ChunkOffset{3}},
+                                                             {ChunkOffset{2}},
+                                                             {ChunkOffset{0}},
+                                                             {ChunkOffset{7}}};
 
   EXPECT_POSITION_LIST_EQ(expected_int_str, *_position_list_int_str);
   EXPECT_POSITION_LIST_EQ(expected_str_int, *_position_list_str_int);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -2,7 +2,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaChunkSortOrdersTable::MetaChunkSortOrdersTable()
     : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
@@ -25,7 +25,10 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
     for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto& chunk = table->get_chunk(chunk_id);
-      if (!chunk) continue;  // Skip physically deleted chunks
+      // Skip physically deleted chunks.
+      if (!chunk) {
+        continue;
+      }
 
       const auto& sorted_by = chunk->individually_sorted_by();
       if (!sorted_by.empty()) {
@@ -42,4 +45,4 @@ std::shared_ptr<Table> MetaChunkSortOrdersTable::_on_generate() const {
   return output_table;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

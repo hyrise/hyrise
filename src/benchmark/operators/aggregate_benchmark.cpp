@@ -10,9 +10,9 @@
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& state) {
   _clear_cache();
@@ -59,6 +59,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedNoGroupBy)(benchma
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
+  table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
@@ -98,6 +99,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedOneGroupBy)(benchm
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
+  table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
@@ -137,6 +139,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
   sort->execute();
 
   auto table_wrapper_sorted = std::make_shared<TableWrapper>(sort->get_output());
+  table_wrapper_sorted->never_clear_output();
   table_wrapper_sorted->execute();
 
   auto warm_up = std::make_shared<AggregateSort>(_table_wrapper_a, aggregates, groupby);
@@ -147,4 +150,4 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateSortSortedMultipleGroupBy)(b
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

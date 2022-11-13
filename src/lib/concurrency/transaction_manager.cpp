@@ -5,7 +5,7 @@
 #include "transaction_context.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TransactionManager::TransactionManager()
     : _next_transaction_id{INITIAL_TRANSACTION_ID},
@@ -25,11 +25,13 @@ TransactionManager& TransactionManager::operator=(TransactionManager&& transacti
   return *this;
 }
 
-CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
+CommitID TransactionManager::last_commit_id() const {
+  return _last_commit_id;
+}
 
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(const AutoCommit auto_commit) {
-  const TransactionID snapshot_commit_id = _last_commit_id;
-  return std::make_shared<TransactionContext>(_next_transaction_id++, snapshot_commit_id, auto_commit);
+  const CommitID snapshot_commit_id = _last_commit_id;
+  return std::make_shared<TransactionContext>(TransactionID{_next_transaction_id++}, snapshot_commit_id, auto_commit);
 }
 
 void TransactionManager::_register_transaction(const CommitID snapshot_commit_id) {
@@ -86,11 +88,13 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
       current_context = std::atomic_load(&_last_commit_context);
     }
 
-    next_context = std::make_shared<CommitContext>(current_context->commit_id() + 1u);
+    next_context = std::make_shared<CommitContext>(CommitID{current_context->commit_id() + 1});
 
     success = current_context->try_set_next(next_context);
 
-    if (!success) continue;
+    if (!success) {
+      continue;
+    }
 
     /**
      * Only one thread at a time can ever reach this code since only one thread
@@ -108,16 +112,20 @@ void TransactionManager::_try_increment_last_commit_id(const std::shared_ptr<Com
   auto current_context = context;
 
   while (current_context->is_pending()) {
-    auto expected_last_commit_id = current_context->commit_id() - 1;
+    auto expected_last_commit_id = CommitID{current_context->commit_id() - 1};
 
-    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) return;
+    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) {
+      return;
+    }
 
     current_context->fire_callback();
 
-    if (!current_context->has_next()) return;
+    if (!current_context->has_next()) {
+      return;
+    }
 
     current_context = current_context->next();
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

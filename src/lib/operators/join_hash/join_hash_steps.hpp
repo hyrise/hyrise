@@ -23,7 +23,7 @@
   (e.g., build() and probe()). These free functions are put into this header file to separate
   them from the process flow of the join hash and to make the better testable.
 */
-namespace opossum {
+namespace hyrise {
 
 // For most join types, we are interested in retrieving the positions (i.e., the RowIDs) on the left and the right side.
 // For semi and anti joins, we only care whether a value exists or not, so there is no point in tracking the position
@@ -122,9 +122,9 @@ class PosHashTable {
     // If casted_value is already present in the hash table, this returns an iterator to the existing value. If not, it
     // inserts a mapping from casted_value to the index into _values, which is defined by the previously inserted
     // number of values.
-    const auto it = _offset_hash_table.emplace(casted_value, _offset_hash_table.size());
+    const auto iter = _offset_hash_table.emplace(casted_value, _offset_hash_table.size());
     if (_mode == JoinHashBuildMode::AllPositions) {
-      auto& pos_list = _small_pos_lists[it.first->second];
+      auto& pos_list = _small_pos_lists[iter.first->second];
       pos_list.emplace_back(row_id);
 
       DebugAssert(_offset_hash_table.size() < _small_pos_lists.size(),
@@ -136,14 +136,15 @@ class PosHashTable {
   // Rewrite the SmallPosLists into one giant UnifiedPosList (see above).
   void finalize() {
     _offset_hash_table.shrink_to_fit();
+    const auto hash_table_size = _offset_hash_table.size();
 
     if (_mode == JoinHashBuildMode::AllPositions) {
       _unified_pos_list = UnifiedPosList{};
       // Resize so that we can store the start offset of each range as well as the final end offset.
-      _unified_pos_list->offsets.resize(_offset_hash_table.size() + 1);
+      _unified_pos_list->offsets.resize(hash_table_size + 1);
 
       auto total_size = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
         _unified_pos_list->offsets[hash_table_idx] = total_size;
         total_size += _small_pos_lists[hash_table_idx].size();
       }
@@ -151,7 +152,7 @@ class PosHashTable {
 
       _unified_pos_list->pos_list.resize(total_size);
       auto offset = size_t{0};
-      for (auto hash_table_idx = size_t{0}; hash_table_idx < _offset_hash_table.size(); ++hash_table_idx) {
+      for (auto hash_table_idx = size_t{0}; hash_table_idx < hash_table_size; ++hash_table_idx) {
         std::copy(_small_pos_lists[hash_table_idx].begin(), _small_pos_lists[hash_table_idx].end(),
                   _unified_pos_list->pos_list.begin() + offset);
         offset += _small_pos_lists[hash_table_idx].size();
@@ -192,7 +193,9 @@ class PosHashTable {
   }
 
   // Return the number of distinct values (i.e., the size of the hash table).
-  size_t distinct_value_count() const { return _offset_hash_table.size(); }
+  size_t distinct_value_count() const {
+    return _offset_hash_table.size();
+  }
 
   // Return the number of positions stored in the hash table. For semi/anti joins, no positions are stored in the hash
   // table. For other join types, we return the size of the unified position list that is created in finalize().
@@ -291,7 +294,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
   jobs.reserve(chunk_count);
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = in_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in) {
+      continue;
+    }
 
     const auto num_rows = chunk_in->size();
 
@@ -305,7 +310,9 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       }
 
       // Skip chunks that were physically deleted
-      if (!chunk_in) return;
+      if (!chunk_in) {
+        return;
+      }
 
       auto& elements = radix_container[chunk_id].elements;
       auto& null_values = radix_container[chunk_id].null_values;
@@ -324,21 +331,21 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
       auto reference_chunk_offset = ChunkOffset{0};
 
       const auto segment = chunk_in->get_segment(column_id);
-      segment_with_iterators<T>(*segment, [&](auto it, auto end) {
-        using IterableType = typename decltype(it)::IterableType;
+      segment_with_iterators<T>(*segment, [&](auto iter, auto end) {
+        using IterableType = typename decltype(iter)::IterableType;
 
         if (dynamic_cast<ValueSegment<T>*>(&*segment)) {
           // The last chunk might have changed its size since we allocated elements. This would be due to concurrent
           // inserts into that chunk. In any case, those inserts will not be visible to our current transaction, so we
           // can ignore them.
-          const auto inserted_rows = (end - it) - num_rows;
+          const auto inserted_rows = (end - iter) - num_rows;
           end -= inserted_rows;
         } else {
-          Assert(end - it == num_rows, "Non-ValueSegment changed size while being accessed");
+          Assert(end - iter == num_rows, "Non-ValueSegment changed size while being accessed");
         }
 
-        while (it != end) {
-          const auto& value = *it;
+        while (iter != end) {
+          const auto& value = *iter;
 
           if (!value.is_null() || keep_null_values) {
             // TODO(anyone): static_cast is almost always safe, since HashType is big enough. Only for double-vs-long
@@ -388,7 +395,7 @@ RadixContainer<T> materialize_input(const std::shared_ptr<const Table>& in_table
             ++reference_chunk_offset;
           }
 
-          ++it;
+          ++iter;
         }
       });
 
@@ -426,7 +433,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
                                                            const BloomFilter& input_bloom_filter) {
   Assert(input_bloom_filter.size() == BLOOM_FILTER_SIZE, "invalid input_bloom_filter");
 
-  if (radix_container.empty()) return {};
+  if (radix_container.empty()) {
+    return {};
+  }
 
   /*
   NUMA notes:
@@ -494,7 +503,9 @@ std::vector<std::optional<PosHashTable<HashedType>>> build(const RadixContainer<
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 
   // If radix partitioning is used, finalize is called above.
-  if (radix_bits == 0) hash_tables[0]->finalize();
+  if (radix_bits == 0) {
+    hash_tables[0]->finalize();
+  }
 
   return hash_tables;
 }
@@ -503,7 +514,9 @@ template <typename T, typename HashedType, bool keep_null_values>
 RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
                                      std::vector<std::vector<size_t>>& histograms, const size_t radix_bits,
                                      const BloomFilter& input_bloom_filter = ALL_TRUE_BLOOM_FILTER) {
-  if (radix_container.empty()) return radix_container;
+  if (radix_container.empty()) {
+    return radix_container;
+  }
 
   if constexpr (keep_null_values) {
     Assert(radix_container[0].elements.size() == radix_container[0].null_values.size(),
@@ -597,8 +610,8 @@ RadixContainer<T> partition_by_radix(const RadixContainer<T>& radix_container,
   if constexpr (keep_null_values) {
     for (auto output_partition_idx = size_t{0}; output_partition_idx < output_partition_count; ++output_partition_idx) {
       jobs.emplace_back(std::make_shared<JobTask>([&, output_partition_idx]() {
-        for (auto element_idx = size_t{0}; element_idx < output[output_partition_idx].null_values.size();
-             ++element_idx) {
+        const auto null_value_count = output[output_partition_idx].null_values.size();
+        for (auto element_idx = size_t{0}; element_idx < null_value_count; ++element_idx) {
           output[output_partition_idx].null_values[element_idx] =
               null_values_as_char[output_partition_idx][element_idx];
         }
@@ -781,9 +794,11 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
                      std::vector<RowIDPosList>& pos_lists, const Table& build_table, const Table& probe_table,
                      const std::vector<OperatorJoinPredicate>& secondary_join_predicates) {
   std::vector<std::shared_ptr<AbstractTask>> jobs;
-  jobs.reserve(probe_radix_container.size());
 
-  for (size_t partition_idx = 0; partition_idx < probe_radix_container.size(); ++partition_idx) {
+  const auto probe_radix_container_count = probe_radix_container.size();
+  jobs.reserve(probe_radix_container_count);
+
+  for (auto partition_idx = size_t{0}; partition_idx < probe_radix_container_count; ++partition_idx) {
     // Skip empty partitions to avoid empty output chunks
     if (probe_radix_container[partition_idx].elements.empty()) {
       continue;
@@ -893,4 +908,4 @@ void probe_semi_anti(const RadixContainer<ProbeColumnType>& probe_radix_containe
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,7 +8,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, typename Dictionary>
 class DictionarySegmentIterable : public PointAccessibleSegmentIterable<DictionarySegmentIterable<T, Dictionary>> {
@@ -59,7 +59,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
     });
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   template <typename CompressedVectorIterator, typename DictionaryIteratorType>
@@ -94,15 +96,21 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       _chunk_offset += n;
     }
 
-    bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
+    bool equal(const Iterator& other) const {
+      return _attribute_it == other._attribute_it;
+    }
 
-    std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
+    std::ptrdiff_t distance_to(const Iterator& other) const {
+      return other._attribute_it - _attribute_it;
+    }
 
     SegmentPosition<T> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, _chunk_offset};
+      if (is_null) {
+        return SegmentPosition<T>{T{}, true, _chunk_offset};
+      }
 
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, _chunk_offset};
     }
@@ -141,7 +149,9 @@ class DictionarySegmentIterable : public PointAccessibleSegmentIterable<Dictiona
       const auto value_id = _attribute_decompressor.get(chunk_offsets.offset_in_referenced_chunk);
       const auto is_null = (value_id == _null_value_id);
 
-      if (is_null) return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+      if (is_null) {
+        return SegmentPosition<T>{T{}, true, chunk_offsets.offset_in_poslist};
+      }
 
       return SegmentPosition<T>{T{*(_dictionary_begin_it + value_id)}, false, chunk_offsets.offset_in_poslist};
     }
@@ -170,4 +180,4 @@ struct is_dictionary_segment_iterable<Iterable<T, Dictionary>> {
 template <typename T>
 inline constexpr bool is_dictionary_segment_iterable_v = is_dictionary_segment_iterable<T>::value;
 
-}  // namespace opossum
+}  // namespace hyrise

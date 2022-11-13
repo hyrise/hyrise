@@ -8,7 +8,7 @@
 #include "types.hpp"
 #include "vector_compression/base_compressed_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 
@@ -40,7 +40,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const final;
 
-  size_t memory_usage(const MemoryUsageCalculationMode = MemoryUsageCalculationMode::Full) const final;
+  size_t memory_usage(const MemoryUsageCalculationMode /*mode*/ = MemoryUsageCalculationMode::Full) const final;
   /**@}*/
 
   /**
@@ -77,4 +77,4 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
 extern template class FixedStringDictionarySegment<pmr_string>;
 
-}  // namespace opossum
+}  // namespace hyrise

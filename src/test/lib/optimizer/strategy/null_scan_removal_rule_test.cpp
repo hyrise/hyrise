@@ -7,9 +7,9 @@
 #include "optimizer/strategy/null_scan_removal_rule.hpp"
 #include "strategy_base_test.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class NullScanRemovalRuleTest : public StrategyBaseTest {
  public:
@@ -19,13 +19,15 @@ class NullScanRemovalRuleTest : public StrategyBaseTest {
     mock_node_column = mock_node->get_column("a");
 
     Hyrise::get().storage_manager.add_table("nullable_table",
-                                            load_table("resources/test_data/tbl/int_float_null_1.tbl", 2));
-    Hyrise::get().storage_manager.add_table("table", load_table("resources/test_data/tbl/int_float4_or_1.tbl", 2));
+                                            load_table("resources/test_data/tbl/int_float_null_1.tbl", ChunkOffset{2}));
+    Hyrise::get().storage_manager.add_table("table",
+                                            load_table("resources/test_data/tbl/int_float4_or_1.tbl", ChunkOffset{2}));
     nullable_table_node = StoredTableNode::make("nullable_table");
     table_node = StoredTableNode::make("table");
     nullable_table_node_column = lqp_column_(nullable_table_node, ColumnID{0});
     table_node_column = lqp_column_(table_node, ColumnID{0});
   }
+
   std::shared_ptr<MockNode> mock_node;
   std::shared_ptr<NullScanRemovalRule> rule;
   std::shared_ptr<LQPColumnExpression> mock_node_column, nullable_table_node_column, table_node_column;
@@ -100,4 +102,4 @@ TEST_F(NullScanRemovalRuleTest, TableColumnDefinitionIsNotNullable) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

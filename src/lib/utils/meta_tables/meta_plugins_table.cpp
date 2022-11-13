@@ -4,7 +4,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaPluginsTable::MetaPluginsTable() : AbstractMetaTable(TableColumnDefinitions{{"name", DataType::String, false}}) {}
 
@@ -13,9 +13,13 @@ const std::string& MetaPluginsTable::name() const {
   return name;
 }
 
-bool MetaPluginsTable::can_insert() const { return true; }
+bool MetaPluginsTable::can_insert() const {
+  return true;
+}
 
-bool MetaPluginsTable::can_delete() const { return true; }
+bool MetaPluginsTable::can_delete() const {
+  return true;
+}
 
 std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -37,4 +41,4 @@ void MetaPluginsTable::_on_remove(const std::vector<AllTypeVariant>& values) {
   Hyrise::get().plugin_manager.unload_plugin(plugin_name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

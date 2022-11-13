@@ -6,12 +6,13 @@
 #include "operators/table_wrapper.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AliasOperatorTest : public BaseTest {
  public:
   void SetUp() override {
-    table_wrapper = std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_float.tbl", 1));
+    table_wrapper =
+        std::make_shared<TableWrapper>(load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
     table_wrapper->never_clear_output();
     table_wrapper->execute();
 
@@ -106,4 +107,4 @@ TEST_F(AliasOperatorTest, ForwardSortedByFlagForRepeatedColumnReferences) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

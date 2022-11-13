@@ -11,9 +11,8 @@
 #include "sql_plan_cache.hpp"
 #include "utils/assert.hpp"
 #include "utils/format_duration.hpp"
-#include "utils/tracing/probes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<TransactionContext>& transaction_context,
                          const UseMvcc use_mvcc, const std::shared_ptr<Optimizer>& optimizer,
@@ -38,7 +37,6 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
 
   const auto done = std::chrono::steady_clock::now();
   _metrics.parse_time_nanos = done - start;
-  DTRACE_PROBE2(HYRISE, SQL_PARSING, sql.c_str(), _metrics.parse_time_nanos.count());
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(sql, parse_result));
   DebugAssert(parse_result.size() > 0, "Cannot create empty SQLPipeline.");
@@ -92,7 +90,9 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
   _requires_execution = seen_altering_statement && statement_count() > 1;
 }
 
-const std::string& SQLPipeline::get_sql() const { return _sql; }
+const std::string& SQLPipeline::get_sql() const {
+  return _sql;
+}
 
 const std::vector<std::string>& SQLPipeline::get_sql_per_statement() {
   if (!_sql_strings.empty()) {
@@ -291,15 +291,21 @@ std::pair<SQLPipelineStatus, std::vector<std::shared_ptr<const Table>>> SQLPipel
   return get_result_tables();
 }
 
-std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const { return _transaction_context; }
+std::shared_ptr<TransactionContext> SQLPipeline::transaction_context() const {
+  return _transaction_context;
+}
 
 std::shared_ptr<SQLPipelineStatement> SQLPipeline::failed_pipeline_statement() const {
   return _failed_pipeline_statement;
 }
 
-size_t SQLPipeline::statement_count() const { return _sql_pipeline_statements.size(); }
+size_t SQLPipeline::statement_count() const {
+  return _sql_pipeline_statements.size();
+}
 
-bool SQLPipeline::requires_execution() const { return _requires_execution; }
+bool SQLPipeline::requires_execution() const {
+  return _requires_execution;
+}
 
 SQLPipelineMetrics& SQLPipeline::metrics() {
   if (_metrics.statement_metrics.empty()) {
@@ -351,4 +357,4 @@ std::ostream& operator<<(std::ostream& stream, const SQLPipelineMetrics& metrics
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

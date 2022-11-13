@@ -11,7 +11,7 @@
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type is used to represent any type of Join, including cross products.
@@ -52,9 +52,37 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
+  /**
+   * @returns true if this JoinNode was added added by the SemiJoinReductionRule for increased performance.
+   */
+  bool is_semi_reduction() const;
+
+  /**
+   * @pre     The SemiJoinReductionRule must have added this JoinNode to the LQP, so that ::is_semi_reduction returns
+   *          true.
+   * @returns a shared pointer to the JoinNode for which the semi join reduction was added as a pre-filter.
+   *          If the internal weak pointer to the reduced join is not set or expired, the LQP will be traversed upwards
+   *          until the reduced join has been found, otherwise the function fails.
+   */
+  std::shared_ptr<JoinNode> get_or_find_reduced_join_node() const;
+
+  /**
+   * Sets the `is_semi_reduction` property of this JoinNode to true, and stores a weak pointer to the
+   * @param reduced_join which gets pre-filtered by this semi join reduction.
+   * Note: This function is meant to be called by the SemiJoinReductionRule, which adds semi join reductions to LQPs.
+   */
+  void mark_as_semi_reduction(const std::shared_ptr<JoinNode>& reduced_join);
+
   JoinMode join_mode;
 
  protected:
+  /**
+   * The following data members are only relevant for semi joins added by the SemiJoinReductionRule. For details,
+   * read the documentation of ::mark_as_semi_reduction and ::get_or_find_reduced_join_node.
+   */
+  bool _is_semi_reduction = false;
+  mutable std::weak_ptr<JoinNode> _reduced_join_node;
+
   /**
    * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
    *         right_unique_constraints that remains valid despite the join operation.
@@ -75,4 +103,4 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

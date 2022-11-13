@@ -16,9 +16,9 @@
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "statistics/table_statistics.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class BetweenCompositionTest : public StrategyBaseTest {
  protected:
@@ -446,4 +446,4 @@ TEST_F(BetweenCompositionTest, HandleMultipleEqualExpressions) {
   EXPECT_LQP_EQ(result_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -9,7 +9,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SegmentAccessorTest : public BaseTest {
  protected:
@@ -133,4 +133,4 @@ TEST_F(SegmentAccessorTest, TestSegmentAccessCounterIncrementing) {
   EXPECT_EQ(access_counter[SegmentAccessCounter::AccessType::Random], 3ul);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -3,7 +3,7 @@
 #include "all_type_variant.hpp"
 #include "table_builder.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 const auto table_builder_test_types = boost::hana::tuple<int32_t, std::optional<float>, pmr_string>();
@@ -13,7 +13,7 @@ const auto table_builder_test_names = boost::hana::make_tuple("a", "b", "c");
 class TableBuilderTest : public BaseTest {};
 
 TEST_F(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
-  auto table_builder = TableBuilder(4, table_builder_test_types, table_builder_test_names);
+  auto table_builder = TableBuilder(ChunkOffset{4}, table_builder_test_types, table_builder_test_names);
   const auto table = table_builder.finish_table();
 
   const auto expected_table = std::make_shared<Table>(
@@ -25,7 +25,7 @@ TEST_F(TableBuilderTest, CreateColumnsWithCorrectNamesAndTypesAndNullables) {
 }
 
 TEST_F(TableBuilderTest, AppendsRows) {
-  auto table_builder = TableBuilder(4, table_builder_test_types, table_builder_test_names);
+  auto table_builder = TableBuilder(ChunkOffset{4}, table_builder_test_types, table_builder_test_names);
   table_builder.append_row(42, 42.0f, "42");
   table_builder.append_row(43, std::optional<float>{}, "43");
   const auto table = table_builder.finish_table();
@@ -39,4 +39,4 @@ TEST_F(TableBuilderTest, AppendsRows) {
   EXPECT_TABLE_EQ_UNORDERED(table, expected_table);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

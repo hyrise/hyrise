@@ -14,9 +14,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 namespace {
 
@@ -24,8 +24,8 @@ const auto ROWS = 1'000'000;
 const auto CHUNK_SIZE = Chunk::DEFAULT_SIZE;
 const auto STRING_SIZE = 512;
 
-opossum::TableColumnDefinitions create_column_definitions(const opossum::DataType data_type) {
-  auto table_column_definitions = opossum::TableColumnDefinitions();
+TableColumnDefinitions create_column_definitions(const DataType data_type) {
+  auto table_column_definitions = TableColumnDefinitions();
   table_column_definitions.emplace_back("a", data_type, true);
   return table_column_definitions;
 }
@@ -110,6 +110,7 @@ std::shared_ptr<TableWrapper> create_table(const DataType data_type, const int t
   }
 
   table_wrapper = std::make_shared<TableWrapper>(std::move(table));
+  table_wrapper->never_clear_output();
   table_wrapper->execute();
   return table_wrapper;
 }
@@ -126,6 +127,7 @@ void BM_TableScanSorted(
   // At this point the search value is selected in a way that our results correspond to the chosen selectivity.
 
   const auto table_wrapper = table_creator(encoding_type, mode);
+  table_wrapper->never_clear_output();
 
   const auto table_column_definitions = table_wrapper->get_output()->column_definitions();
 
@@ -182,6 +184,7 @@ void BM_TableScanSorted(
   std::shared_ptr<AbstractOperator> input;
   if (is_reference_scan) {
     input = std::make_shared<TableScan>(table_wrapper, reference_scan_predicate);
+    input->never_clear_output();
     input->execute();
     auto warm_up = std::make_shared<TableScan>(input, predicate);
     warm_up->execute();
@@ -257,10 +260,13 @@ void registerTableScanSortedBenchmarks() {
 // constructor.
 class StartUp {
  public:
-  StartUp() { registerTableScanSortedBenchmarks(); }
+  StartUp() {
+    registerTableScanSortedBenchmarks();
+  }
 };
+
 StartUp startup;
 
 }  // namespace
 
-}  // namespace opossum
+}  // namespace hyrise

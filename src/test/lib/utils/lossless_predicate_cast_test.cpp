@@ -2,7 +2,7 @@
 
 #include "utils/lossless_predicate_cast.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LosslessPredicateCastTest : public BaseTest {};
 
@@ -18,7 +18,7 @@ TEST_F(LosslessPredicateCastTest, NextFloatTowards) {
   // Edge cases:
   EXPECT_EQ(next_float_towards(3.1, 3.1), std::nullopt);
 
-  // // Maximum double that can losslessly represented as a float and the next higher double
+  // Maximum double that can losslessly represented as a float and the next higher double
   EXPECT_EQ(*next_float_towards(340282346638528859811704183484516925440.0, 0),
             340282326356119256160033759537265639424.0f);
   EXPECT_EQ(
@@ -86,4 +86,4 @@ TEST_F(LosslessPredicateCastTest, FloatTypeWithAdjustedValues) {
             FloatResult(PredicateCondition::GreaterThanEquals, 3.1000001430511474609375f));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,11 +12,11 @@
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * This operator writes a table into a file.
- * Supportes file types are .csv and Opossum .bin files.
+ * Supportes file types are .csv and Hyrise .bin files.
  * For .csv files, a CSV config is added, which is located in the <filename>.json file.
  * Documentation of the file formats can be found in BinaryWriter and CsvWriter header files.
  */
@@ -27,7 +27,7 @@ class Export : public AbstractReadOnlyOperator {
    * @param filename       Path to the output file.
    * @param file_type      Optional. Type indicating the file format. If not present, it is guessed by the filename.
    */
-  explicit Export(const std::shared_ptr<const AbstractOperator>& in, const std::string& filename,
+  explicit Export(const std::shared_ptr<const AbstractOperator>& input_operator, const std::string& filename,
                   const FileType& file_type = FileType::Auto);
 
   const std::string& name() const final;
@@ -51,4 +51,4 @@ class Export : public AbstractReadOnlyOperator {
   FileType _file_type;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -8,9 +8,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class UpdateNodeTest : public BaseTest {
  protected:
@@ -23,9 +23,13 @@ class UpdateNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node;
 };
 
-TEST_F(UpdateNodeTest, Description) { EXPECT_EQ(_update_node->description(), "[Update] Table: 'table_a'"); }
+TEST_F(UpdateNodeTest, Description) {
+  EXPECT_EQ(_update_node->description(), "[Update] Table: 'table_a'");
+}
 
-TEST_F(UpdateNodeTest, TableName) { EXPECT_EQ(_update_node->table_name, "table_a"); }
+TEST_F(UpdateNodeTest, TableName) {
+  EXPECT_EQ(_update_node->table_name, "table_a");
+}
 
 TEST_F(UpdateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_update_node, *_update_node);
@@ -51,10 +55,16 @@ TEST_F(UpdateNodeTest, HashingAndEqualityCheck) {
   EXPECT_NE(_update_node->hash(), other_update_node_e->hash());
 }
 
-TEST_F(UpdateNodeTest, Copy) { EXPECT_EQ(*_update_node->deep_copy(), *_update_node); }
+TEST_F(UpdateNodeTest, Copy) {
+  EXPECT_EQ(*_update_node->deep_copy(), *_update_node);
+}
 
-TEST_F(UpdateNodeTest, NodeExpressions) { ASSERT_TRUE(_update_node->node_expressions.empty()); }
+TEST_F(UpdateNodeTest, NodeExpressions) {
+  ASSERT_TRUE(_update_node->node_expressions.empty());
+}
 
-TEST_F(UpdateNodeTest, ColumnExpressions) { EXPECT_TRUE(_update_node->output_expressions().empty()); }
+TEST_F(UpdateNodeTest, ColumnExpressions) {
+  EXPECT_TRUE(_update_node->output_expressions().empty());
+}
 
-}  // namespace opossum
+}  // namespace hyrise

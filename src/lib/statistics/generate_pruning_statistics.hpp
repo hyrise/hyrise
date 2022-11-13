@@ -3,7 +3,7 @@
 #include <memory>
 #include <unordered_set>
 
-namespace opossum {
+namespace hyrise {
 
 class Chunk;
 class Table;
@@ -18,4 +18,4 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk);
  */
 void generate_chunk_pruning_statistics(const std::shared_ptr<Table>& table);
 
-}  // namespace opossum
+}  // namespace hyrise

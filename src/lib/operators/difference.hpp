@@ -9,7 +9,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Note: Difference does not support null values at the moment
@@ -32,4 +32,4 @@ class Difference : public AbstractReadOnlyOperator {
  private:
   static void _append_string_representation(std::ostream& row_string_buffer, const AllTypeVariant& value);
 };
-}  // namespace opossum
+}  // namespace hyrise

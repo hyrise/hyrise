@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 AbstractReadWriteOperator::AbstractReadWriteOperator(const OperatorType type,
                                                      const std::shared_ptr<const AbstractOperator>& left,
@@ -29,7 +29,9 @@ void AbstractReadWriteOperator::execute() {
     throw;
   }
 
-  if (_rw_state == ReadWriteOperatorState::Conflicted) return;
+  if (_rw_state == ReadWriteOperatorState::Conflicted) {
+    return;
+  }
 
   _rw_state = ReadWriteOperatorState::Executed;
 }
@@ -55,7 +57,9 @@ bool AbstractReadWriteOperator::execute_failed() const {
   return _rw_state == ReadWriteOperatorState::Conflicted || _rw_state == ReadWriteOperatorState::RolledBack;
 }
 
-ReadWriteOperatorState AbstractReadWriteOperator::state() const { return _rw_state; }
+ReadWriteOperatorState AbstractReadWriteOperator::state() const {
+  return _rw_state;
+}
 
 void AbstractReadWriteOperator::_mark_as_failed() {
   Assert(_rw_state == ReadWriteOperatorState::Pending, "Operator can only be marked as failed if pending.");
@@ -84,4 +88,4 @@ std::ostream& operator<<(std::ostream& stream, const ReadWriteOperatorState& pha
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

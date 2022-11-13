@@ -5,11 +5,12 @@
 
 #include "storage/fixed_string_dictionary_segment/fixed_string.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FixedStringTest : public BaseTest {
  public:
   void SetUp() override {}
+
   std::vector<char> char_vector1 = {'f', 'o', 'o'};
   std::vector<char> char_vector2 = {'b', 'a', 'r', 'b', 'a', 'z'};
   FixedString fixed_string1 = FixedString(&char_vector1[0], 3u);
@@ -118,4 +119,4 @@ TEST_F(FixedStringTest, OutputToStream) {
   EXPECT_EQ(sstream.str().find("foo"), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

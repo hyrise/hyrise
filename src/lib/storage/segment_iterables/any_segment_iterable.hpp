@@ -6,7 +6,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/segment_iterables/any_segment_iterator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename ValueType>
 class AnySegmentIterable;
@@ -92,7 +92,9 @@ class AnySegmentIterableWrapper : public BaseAnySegmentIterableWrapper<ValueType
     }
   }
 
-  size_t size() const override { return iterable._on_size(); }
+  size_t size() const override {
+    return iterable._on_size();
+  }
 
   UnerasedIterable iterable;
 };
@@ -135,7 +137,9 @@ class AnySegmentIterable : public PointAccessibleSegmentIterable<AnySegmentItera
     _iterable_wrapper->with_iterators(position_filter, functor_wrapper);
   }
 
-  size_t _on_size() const { return _iterable_wrapper->size(); }
+  size_t _on_size() const {
+    return _iterable_wrapper->size();
+  }
 
  private:
   std::shared_ptr<BaseAnySegmentIterableWrapper<ValueType>> _iterable_wrapper;
@@ -175,7 +179,7 @@ class CreateAnySegmentIterable {
 
 template <typename T>
 AnySegmentIterable<T> create_any_segment_iterable(const AbstractSegment& abstract_segment) {
-  return opossum::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
+  return hyrise::detail::CreateAnySegmentIterable<T>::create(abstract_segment);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

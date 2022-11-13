@@ -23,9 +23,9 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class LQPFindSubplanMismatchTest : public BaseTest {
  protected:
@@ -50,7 +50,8 @@ class LQPFindSubplanMismatchTest : public BaseTest {
   };
 
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a", load_table("resources/test_data/tbl/int_int.tbl", 2));
+    Hyrise::get().storage_manager.add_table("table_a",
+                                            load_table("resources/test_data/tbl/int_int.tbl", ChunkOffset{2}));
 
     _init_query_nodes(_query_nodes_lhs);
     _init_query_nodes(_query_nodes_rhs);
@@ -152,4 +153,4 @@ TEST_F(LQPFindSubplanMismatchTest, TypeMismatch) {
   ASSERT_TRUE(mismatch);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

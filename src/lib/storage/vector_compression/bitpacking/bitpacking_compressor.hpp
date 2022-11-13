@@ -3,7 +3,7 @@
 #include "bitpacking_vector.hpp"
 #include "storage/vector_compression/base_vector_compressor.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BitPackingCompressor : public BaseVectorCompressor {
  public:
@@ -14,4 +14,4 @@ class BitPackingCompressor : public BaseVectorCompressor {
   std::unique_ptr<BaseVectorCompressor> create_new() const final;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,6 +1,6 @@
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Hyrise::Hyrise() {
   // The default_memory_resource must be initialized before Hyrise's members so that
@@ -28,7 +28,9 @@ void Hyrise::reset() {
   get() = Hyrise{};
 }
 
-const std::shared_ptr<AbstractScheduler>& Hyrise::scheduler() const { return _scheduler; }
+const std::shared_ptr<AbstractScheduler>& Hyrise::scheduler() const {
+  return _scheduler;
+}
 
 bool Hyrise::is_multi_threaded() const {
   return std::dynamic_pointer_cast<ImmediateExecutionScheduler>(_scheduler) == nullptr;
@@ -40,4 +42,4 @@ void Hyrise::set_scheduler(const std::shared_ptr<AbstractScheduler>& new_schedul
   _scheduler->begin();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

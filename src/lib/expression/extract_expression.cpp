@@ -2,7 +2,7 @@
 
 #include <sstream>
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const DatetimeComponent datetime_component) {
   switch (datetime_component) {
@@ -44,11 +44,13 @@ std::string ExtractExpression::description(const DescriptionMode mode) const {
 }
 
 DataType ExtractExpression::data_type() const {
-  // Dates are Strings, DateComponents COULD be Ints, but lets leave it at String for now
-  return DataType::String;
+  // Timestamps can contain fractional seconds, so the result must be a floating-point number for seconds.
+  return datetime_component == DatetimeComponent::Second ? DataType::Double : DataType::Int;
 }
 
-std::shared_ptr<AbstractExpression> ExtractExpression::from() const { return arguments[0]; }
+std::shared_ptr<AbstractExpression> ExtractExpression::from() const {
+  return arguments[0];
+}
 
 bool ExtractExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const ExtractExpression*>(&expression),
@@ -64,4 +66,4 @@ size_t ExtractExpression::_shallow_hash() const {
   return std::hash<DatetimeUnderlyingType>{}(static_cast<DatetimeUnderlyingType>(datetime_component));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

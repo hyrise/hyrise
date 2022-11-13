@@ -5,7 +5,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition init_predicate_condition,
                                                      const std::shared_ptr<AbstractExpression>& left_operand,
@@ -23,9 +23,13 @@ BinaryPredicateExpression::BinaryPredicateExpression(const PredicateCondition in
   }
 }
 
-const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_operand() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::left_operand() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_operand() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& BinaryPredicateExpression::right_operand() const {
+  return arguments[1];
+}
 
 std::shared_ptr<AbstractExpression> BinaryPredicateExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
@@ -47,4 +51,4 @@ ExpressionPrecedence BinaryPredicateExpression::_precedence() const {
   return ExpressionPrecedence::BinaryTernaryPredicate;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

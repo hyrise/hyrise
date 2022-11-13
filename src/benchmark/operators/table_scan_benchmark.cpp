@@ -8,9 +8,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,
@@ -61,6 +61,7 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& sta
   const auto lineitem_table = load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl");
 
   const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_wrapper->never_clear_output();
   lineitem_wrapper->execute();
 
   const auto column_names_and_patterns = std::vector<std::pair<std::string, pmr_string>>({
@@ -83,4 +84,4 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& sta
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

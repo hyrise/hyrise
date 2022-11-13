@@ -10,7 +10,7 @@
 #include "storage/segment_encoding_utils.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageChunkTest : public BaseTest {
  protected:
@@ -78,10 +78,10 @@ TEST_F(StorageChunkTest, FinalizingAFinalizedChunkThrows) {
 }
 
 TEST_F(StorageChunkTest, FinalizeSetsMaxBeginCid) {
-  auto mvcc_data = std::make_shared<MvccData>(3, 0);
-  mvcc_data->set_begin_cid(0, 1);
-  mvcc_data->set_begin_cid(1, 2);
-  mvcc_data->set_begin_cid(2, 3);
+  auto mvcc_data = std::make_shared<MvccData>(3, CommitID{0});
+  mvcc_data->set_begin_cid(ChunkOffset{0}, CommitID{1});
+  mvcc_data->set_begin_cid(ChunkOffset{1}, CommitID{2});
+  mvcc_data->set_begin_cid(ChunkOffset{2}, CommitID{3});
 
   chunk = std::make_shared<Chunk>(Segments({vs_int, vs_str}), mvcc_data);
   chunk->finalize();
@@ -239,7 +239,9 @@ TEST_F(StorageChunkTest, SetSortedInformationVector) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1, 1},
                                                                pmr_vector<bool>{true, true, false, false});
@@ -253,7 +255,9 @@ TEST_F(StorageChunkTest, SetSortedInformationAscendingWithNulls) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{0, 2, 1, 1},
                                                                pmr_vector<bool>{true, false, false, false});
@@ -269,7 +273,9 @@ TEST_F(StorageChunkTest, SetSortedInformationDescendingWithNulls) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto value_segment =
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, true, false});
@@ -285,7 +291,9 @@ TEST_F(StorageChunkTest, SetSortedInformationUnsortedNULLs) {
 }
 
 TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto value_segment =
       std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{1, 1, 1}, pmr_vector<bool>{false, false, true});
@@ -300,4 +308,4 @@ TEST_F(StorageChunkTest, SetSortedInformationNULLsLast) {
                std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

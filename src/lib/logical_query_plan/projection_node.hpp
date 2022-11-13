@@ -5,7 +5,7 @@
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public AbstractLQPNode {
  public:
@@ -29,4 +29,4 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

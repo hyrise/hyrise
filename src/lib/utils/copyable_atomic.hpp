@@ -4,7 +4,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Copyable atomic wrapper
@@ -28,24 +28,36 @@ class copyable_atomic {
  public:
   copyable_atomic() noexcept = default;
 
-  copyable_atomic(const copyable_atomic<T>& other) { _atomic.store(other._atomic.load()); }
+  copyable_atomic(const copyable_atomic<T>& other) {
+    _atomic.store(other._atomic.load());
+  }
 
   explicit constexpr copyable_atomic(T desired) noexcept : _atomic{desired} {}
 
-  T operator=(T desired) noexcept { return _atomic.operator=(desired); }
+  T operator=(T desired) noexcept {
+    return _atomic.operator=(desired);
+  }
 
   copyable_atomic& operator=(const copyable_atomic<T>& other) {
     _atomic.store(other._atomic.load());
     return *this;
   }
 
-  bool is_lock_free() const { return _atomic.is_lock_free(); }
+  bool is_lock_free() const {
+    return _atomic.is_lock_free();
+  }
 
-  operator T() const noexcept { return _atomic.load(); }
+  operator T() const noexcept {
+    return _atomic.load();
+  }
 
-  void store(T desired, std::memory_order order = std::memory_order_seq_cst) { _atomic.store(desired, order); }
+  void store(T desired, std::memory_order order = std::memory_order_seq_cst) {
+    _atomic.store(desired, order);
+  }
 
-  decltype(auto) load(std::memory_order order = std::memory_order_seq_cst) const { return _atomic.load(order); }
+  decltype(auto) load(std::memory_order order = std::memory_order_seq_cst) const {
+    return _atomic.load(order);
+  }
 
   template <typename... Args>
   decltype(auto) operator++(Args&&... args) {
@@ -76,4 +88,4 @@ class copyable_atomic {
   std::atomic<T> _atomic;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

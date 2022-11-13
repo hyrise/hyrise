@@ -1,6 +1,6 @@
 #include "benchmark_config.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const ChunkOffset init_chunk_size,
                                  const EncodingConfig& init_encoding_config, const bool init_indexes,
@@ -28,6 +28,8 @@ BenchmarkConfig::BenchmarkConfig(const BenchmarkMode init_benchmark_mode, const 
       cache_binary_tables(init_cache_binary_tables),
       metrics(init_metrics) {}
 
-BenchmarkConfig BenchmarkConfig::get_default_config() { return BenchmarkConfig(); }
+BenchmarkConfig BenchmarkConfig::get_default_config() {
+  return BenchmarkConfig{};
+}
 
-}  // namespace opossum
+}  // namespace hyrise

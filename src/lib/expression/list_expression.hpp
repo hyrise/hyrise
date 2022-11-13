@@ -4,7 +4,7 @@
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * SQL's list used as the right operand of IN
@@ -23,7 +23,6 @@ class ListExpression : public AbstractExpression {
 
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
-  size_t _shallow_hash() const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

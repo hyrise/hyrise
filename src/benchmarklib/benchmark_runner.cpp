@@ -24,7 +24,7 @@
 #include "utils/timer.hpp"
 #include "version.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
                                  std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
@@ -84,7 +84,9 @@ void BenchmarkRunner::run() {
 
   auto track_system_utilization = std::atomic_bool{_config.metrics};
   auto system_utilization_tracker = std::thread{[&] {
-    if (!track_system_utilization) return;
+    if (!track_system_utilization) {
+      return;
+    }
 
     // Start tracking the system utilization
     SQLPipelineBuilder{
@@ -158,7 +160,9 @@ void BenchmarkRunner::run() {
 
     for (const auto& item_id : items) {
       const auto& result = _results[item_id];
-      if (result.successful_runs.empty()) continue;
+      if (result.successful_runs.empty()) {
+        continue;
+      }
       Assert(result.verification_passed.load(), "Verification result should have been set");
       any_verification_failed |= !(*result.verification_passed.load());
     }
@@ -259,7 +263,9 @@ void BenchmarkRunner::_benchmark_ordered() {
     _state.set_done();
 
     // Wait for the rest of the tasks that didn't make it in time - they will not count toward the results
-    if (_currently_running_clients > 0) std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    if (_currently_running_clients > 0) {
+      std::cout << "  -> Waiting for clients that are still running" << std::endl;
+    }
     Hyrise::get().scheduler()->wait_for_all_tasks();
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
 
@@ -311,7 +317,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
         result.verification_passed = result.verification_passed.load().value_or(true) && !any_run_verification_failed;
 
         if (!_state.is_done()) {  // To prevent items from adding their result after the time is up
-          if (!_config.metrics) metrics.clear();
+          if (!_config.metrics) {
+            metrics.clear();
+          }
           const auto item_result =
               BenchmarkItemRunResult{run_start - _benchmark_start, run_end - run_start, std::move(metrics)};
           if (success) {
@@ -327,7 +335,9 @@ void BenchmarkRunner::_schedule_item_run(const BenchmarkItemID item_id) {
 }
 
 void BenchmarkRunner::_warmup(const BenchmarkItemID item_id) {
-  if (_config.warmup_duration == Duration{0}) return;
+  if (_config.warmup_duration == Duration{0}) {
+    return;
+  }
 
   const auto& name = _benchmark_item_runner->item_name(item_id);
   std::cout << "- Warming up for " << name << std::endl;
@@ -428,8 +438,8 @@ void BenchmarkRunner::write_report_to_file() const {
 
   // Gather information on the table size
   auto table_size = size_t{0};
-  for (const auto& table_pair : Hyrise::get().storage_manager.tables()) {
-    table_size += table_pair.second->memory_usage(MemoryUsageCalculationMode::Full);
+  for (const auto& [_, table] : Hyrise::get().storage_manager.tables()) {
+    table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
   nlohmann::json summary{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
@@ -505,7 +515,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
 nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // Generate YY-MM-DD hh:mm::ss
   auto current_time = std::time(nullptr);
-  auto local_time = *std::localtime(&current_time);
+  auto local_time = *std::localtime(&current_time);  // NOLINT(concurrency-mt-unsafe) - not called in parallel
   std::stringstream timestamp_stream;
   timestamp_stream << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
 
@@ -521,7 +531,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
   // clang-format on
 
   return nlohmann::json{{"date", timestamp_stream.str()},
-                        {"chunk_size", config.chunk_size},
+                        {"chunk_size", static_cast<ChunkOffset::base_type>(config.chunk_size)},
                         {"compiler", compiler.str()},
                         {"build_type", HYRISE_DEBUG ? "debug" : "release"},
                         {"encoding", config.encoding_config.to_json()},
@@ -569,7 +579,9 @@ nlohmann::json BenchmarkRunner::_sql_to_json(const std::string& sql) {
 }
 
 void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& moment) {
-  if (!_config.metrics) return;
+  if (!_config.metrics) {
+    return;
+  }
 
   auto moment_or_timestamp = moment;
   if (moment_or_timestamp.empty()) {
@@ -586,4 +598,4 @@ void BenchmarkRunner::_snapshot_segment_access_counters(const std::string& momen
   SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

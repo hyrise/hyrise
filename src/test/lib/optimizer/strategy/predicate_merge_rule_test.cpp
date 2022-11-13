@@ -8,9 +8,9 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/strategy/predicate_merge_rule.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PredicateMergeRuleTest : public StrategyBaseTest {
  public:
@@ -392,4 +392,4 @@ TEST_F(PredicateMergeRuleTest, NoRewriteDifferentSetOperationMode) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

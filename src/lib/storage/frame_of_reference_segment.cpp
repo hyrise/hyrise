@@ -5,7 +5,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, typename U>
 FrameOfReferenceSegment<T, U>::FrameOfReferenceSegment(pmr_vector<T> block_minima,
@@ -67,7 +67,7 @@ std::shared_ptr<AbstractSegment> FrameOfReferenceSegment<T, U>::copy_using_alloc
 }
 
 template <typename T, typename U>
-size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode) const {
+size_t FrameOfReferenceSegment<T, U>::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // MemoryUsageCalculationMode ignored since full calculation is efficient.
   size_t segment_size =
       sizeof(*this) + sizeof(T) * _block_minima.capacity() + _offset_values->data_size() + sizeof(_null_values);
@@ -93,4 +93,4 @@ template class FrameOfReferenceSegment<int32_t>;
 // int64_t disabled for now, as vector compression cannot handle 64 bit values - also in reference_segment_iterable.hpp
 // template class FrameOfReferenceSegment<int64_t>;
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "storage/table.hpp"
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is an abstract class for all meta table objects.
@@ -68,4 +68,4 @@ class AbstractMetaTable : public Noncopyable {
   const TableColumnDefinitions _column_definitions;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

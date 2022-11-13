@@ -7,7 +7,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DropView::DropView(const std::string& init_view_name, const bool init_if_exists)
     : AbstractReadOnlyOperator(OperatorType::DropView), view_name(init_view_name), if_exists(init_if_exists) {}
@@ -35,4 +35,4 @@ std::shared_ptr<const Table> DropView::_on_execute() {
   return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
 }
 
-}  // namespace opossum
+}  // namespace hyrise

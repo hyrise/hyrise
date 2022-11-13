@@ -10,13 +10,15 @@
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 AbstractExpression::AbstractExpression(const ExpressionType init_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
     : type(init_type), arguments(init_arguments) {}
 
-bool AbstractExpression::requires_computation() const { return true; }
+bool AbstractExpression::requires_computation() const {
+  return true;
+}
 
 std::shared_ptr<AbstractExpression> AbstractExpression::deep_copy() const {
   std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
@@ -38,16 +40,28 @@ bool AbstractExpression::is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
 }
 
 bool AbstractExpression::operator==(const AbstractExpression& other) const {
-  if (this == &other) return true;
+  if (this == &other) {
+    return true;
+  }
 
-  if (type != other.type) return false;
-  if (!_shallow_equals(other)) return false;
-  if (!expressions_equal(arguments, other.arguments)) return false;
+  if (type != other.type) {
+    return false;
+  }
+
+  if (!_shallow_equals(other)) {
+    return false;
+  }
+
+  if (!expressions_equal(arguments, other.arguments)) {
+    return false;
+  }
 
   return true;
 }
 
-bool AbstractExpression::operator!=(const AbstractExpression& other) const { return !operator==(other); }
+bool AbstractExpression::operator!=(const AbstractExpression& other) const {
+  return !operator==(other);
+}
 
 size_t AbstractExpression::hash() const {
   auto hash = boost::hash_value(type);
@@ -61,16 +75,22 @@ size_t AbstractExpression::hash() const {
   return hash;
 }
 
-std::string AbstractExpression::as_column_name() const { return description(DescriptionMode::ColumnName); }
+std::string AbstractExpression::as_column_name() const {
+  return description(DescriptionMode::ColumnName);
+}
 
-size_t AbstractExpression::_shallow_hash() const { return 0; }
+size_t AbstractExpression::_shallow_hash() const {
+  return 0;
+}
 
 bool AbstractExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
   return std::any_of(arguments.begin(), arguments.end(),
                      [&](const auto& expression) { return expression->is_nullable_on_lqp(lqp); });
 }
 
-ExpressionPrecedence AbstractExpression::_precedence() const { return ExpressionPrecedence::Highest; }
+ExpressionPrecedence AbstractExpression::_precedence() const {
+  return ExpressionPrecedence::Highest;
+}
 
 std::string AbstractExpression::_enclose_argument(const AbstractExpression& argument,
                                                   const DescriptionMode mode) const {
@@ -80,9 +100,9 @@ std::string AbstractExpression::_enclose_argument(const AbstractExpression& argu
   if (static_cast<std::underlying_type_t<ExpressionPrecedence>>(argument._precedence()) >=
       static_cast<std::underlying_type_t<ExpressionPrecedence>>(_precedence())) {
     return "("s + argument.description(mode) + ")";
-  } else {
-    return argument.description(mode);
   }
+
+  return argument.description(mode);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

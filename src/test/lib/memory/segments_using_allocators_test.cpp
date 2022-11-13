@@ -7,7 +7,7 @@
 #include "storage/segment_iterate.hpp"
 #include "storage/value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // A simple polymorphic memory resource that tracks how much memory was allocated
 class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resource {
@@ -24,7 +24,9 @@ class SimpleTrackingMemoryResource : public boost::container::pmr::memory_resour
     std::free(p);  // NOLINT
   }
 
-  bool do_is_equal(const memory_resource& other) const noexcept override { Fail("Not implemented"); }
+  bool do_is_equal(const memory_resource& other) const noexcept override {
+    Fail("Not implemented");
+  }
 };
 
 class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType, SegmentEncodingSpec, bool>> {
@@ -46,18 +48,28 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
         }
       };
 
-      original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, 300);
-      empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, 0);
+      original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{300});
+      empty_original_segment = std::make_shared<ValueSegment<ColumnDataType>>(contains_null_values, ChunkOffset{0});
       // original_segment contains the numbers from 0 to 99, then 100x100, then the numbers from 200 to 299.
       // This way, we can check if, e.g., run-length encoding properly handles the duplicate values
-      for (auto i = 0; i <= 99; ++i) original_segment->append(convert_value(i));
-      if (contains_null_values) {
-        for (auto i = 0; i < 80; ++i) original_segment->append(convert_value(100));
-        for (auto i = 0; i < 20; ++i) original_segment->append(opossum::NULL_VALUE);
-      } else {
-        for (auto i = 0; i < 100; ++i) original_segment->append(convert_value(100));
+      for (auto value = int32_t{0}; value <= 99; ++value) {
+        original_segment->append(convert_value(value));
       }
-      for (auto i = 200; i <= 299; ++i) original_segment->append(convert_value(i));
+      if (contains_null_values) {
+        for (auto value = int32_t{0}; value < 80; ++value) {
+          original_segment->append(convert_value(100));
+        }
+        for (auto value = int32_t{0}; value < 20; ++value) {
+          original_segment->append(NULL_VALUE);
+        }
+      } else {
+        for (auto value = int32_t{0}; value < 100; ++value) {
+          original_segment->append(convert_value(100));
+        }
+      }
+      for (auto value = int32_t{200}; value <= 299; ++value) {
+        original_segment->append(convert_value(value));
+      }
     });
   }
 
@@ -150,4 +162,4 @@ INSTANTIATE_TEST_SUITE_P(String, SegmentsUsingAllocatorsTest,
                                             ::testing::Bool()),
                          segments_using_allocator_test_formatter);
 
-}  // namespace opossum
+}  // namespace hyrise

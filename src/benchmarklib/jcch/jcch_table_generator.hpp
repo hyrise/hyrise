@@ -4,7 +4,7 @@
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Generates the JCC-H data by calling JCC-H's dbgen binary. See jcch_benchmark.cpp for details.
 // This uses multiple inheritance from TPCHTableGenerator (for the sort order, indexes, and constraints) and from
@@ -19,7 +19,7 @@ class JCCHTableGenerator : virtual public AbstractTableGenerator,
   // Convenience constructor for creating a JCCHTableGenerator without a benchmarking context
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                               ClusteringConfiguration clustering_configuration,
-                              uint32_t chunk_size = Chunk::DEFAULT_SIZE);
+                              ChunkOffset chunk_size = Chunk::DEFAULT_SIZE);
 
   // Constructor for creating a JCCHTableGenerator in a benchmark
   explicit JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
@@ -36,4 +36,4 @@ class JCCHTableGenerator : virtual public AbstractTableGenerator,
   std::string _dbgen_path;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

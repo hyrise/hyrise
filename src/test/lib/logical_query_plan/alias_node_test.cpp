@@ -7,7 +7,7 @@
 #include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AliasNodeTest : public BaseTest {
  public:
@@ -90,4 +90,4 @@ TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

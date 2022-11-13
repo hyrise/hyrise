@@ -1,14 +1,18 @@
 #include "row_id_pos_list.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-void RowIDPosList::guarantee_single_chunk() { _references_single_chunk = true; }
+void RowIDPosList::guarantee_single_chunk() {
+  _references_single_chunk = true;
+}
 
 bool RowIDPosList::references_single_chunk() const {
   if (_references_single_chunk) {
     DebugAssert(
         [&]() {
-          if (size() == 0) return true;
+          if (size() == 0) {
+            return true;
+          }
           const auto& common_chunk_id = (*this)[0].chunk_id;
           return std::all_of(cbegin(), cend(), [&](const auto& row_id) {
             return row_id.chunk_id == common_chunk_id && row_id.chunk_offset != INVALID_CHUNK_OFFSET;
@@ -32,4 +36,4 @@ size_t RowIDPosList::memory_usage(const MemoryUsageCalculationMode mode) const {
   return size() * sizeof(Vector::value_type);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

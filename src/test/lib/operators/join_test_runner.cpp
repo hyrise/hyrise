@@ -25,7 +25,7 @@ using namespace std::string_literals;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 using ChunkRange = std::pair<ChunkID, ChunkID>;
 
@@ -67,6 +67,7 @@ struct InputTableConfiguration {
 bool operator<(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() < r.to_tuple();
 }
+
 bool operator==(const InputTableConfiguration& l, const InputTableConfiguration& r) {
   return l.to_tuple() == r.to_tuple();
 }
@@ -108,8 +109,13 @@ struct JoinTestConfiguration {
   }
 };
 
-bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() < r.to_tuple(); }
-bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) { return l.to_tuple() == r.to_tuple(); }
+bool operator<(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() < r.to_tuple();
+}
+
+bool operator==(const JoinTestConfiguration& l, const JoinTestConfiguration& r) {
+  return l.to_tuple() == r.to_tuple();
+}
 
 // Virtual interface to create a join operator
 class BaseJoinOperatorFactory {
@@ -141,6 +147,7 @@ class JoinOperatorFactory : public BaseJoinOperatorFactory {
     }
   }
 };
+
 // Order of columns in the input tables
 const std::unordered_map<DataType, size_t> data_type_order = {
     {DataType::Int, 0u}, {DataType::Float, 1u}, {DataType::Double, 2u}, {DataType::Long, 3u}, {DataType::String, 4u},
@@ -148,7 +155,7 @@ const std::unordered_map<DataType, size_t> data_type_order = {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
  public:
@@ -175,7 +182,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
                                             JoinMode::FullOuter,     JoinMode::Semi, JoinMode::AntiNullAsFalse,
                                             JoinMode::AntiNullAsTrue};
     const auto all_table_sizes = std::vector{10u, 15u, 0u};
-    const auto all_chunk_sizes = std::vector{10u, 3u, 1u};
+    const auto all_chunk_sizes = std::vector{ChunkOffset{10}, ChunkOffset{3}, ChunkOffset{1}};
     const auto all_secondary_predicate_sets = std::vector<std::vector<OperatorJoinPredicate>>{
         {},
         {{{ColumnID{0}, ColumnID{0}}, PredicateCondition::LessThan}},
@@ -479,7 +486,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (const auto join_mode : {JoinMode::Inner, JoinMode::Right, JoinMode::Semi}) {
           for (const auto left_table_size : all_table_sizes) {
             for (const auto right_table_size : all_table_sizes) {
-              for (const auto chunk_size : all_chunk_sizes) {
+              for (const auto& chunk_size : all_chunk_sizes) {
                 for (const auto predicate_condition : {PredicateCondition::Equals, PredicateCondition::NotEquals}) {
                   auto join_test_configuration = default_configuration;
                   join_test_configuration.join_mode = join_mode;
@@ -594,7 +601,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        */
 
       for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
-        for (ColumnID column_id{0}; column_id < data_table->column_count(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
           if (encoding_type == EncodingType::Dictionary) {
             data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
           } else {
@@ -616,7 +623,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
   static inline std::map<InputTableConfiguration, std::shared_ptr<Table>> input_tables;
   // Cache reference table to avoid redundant computation of the same
   static inline std::map<JoinTestConfiguration, std::shared_ptr<const Table>> expected_output_tables;
-};  // namespace opossum
+};  // namespace hyrise
 
 TEST_P(JoinTestRunner, TestJoin) {
   const auto configuration = GetParam();
@@ -656,8 +663,6 @@ TEST_P(JoinTestRunner, TestJoin) {
   cached_output_configuration.join_operator_factory = {};
   cached_output_configuration.radix_bits = {};
   cached_output_configuration.index_side = {};
-
-  auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
 
   const auto join_verification =
       std::make_shared<JoinVerification>(input_operator_left, input_operator_right, configuration.join_mode,
@@ -715,6 +720,8 @@ TEST_P(JoinTestRunner, TestJoin) {
   };
 
   try {
+    auto expected_output_table_iter = expected_output_tables.find(cached_output_configuration);
+
     // Cache reference table to avoid redundant computation of the same
     if (expected_output_table_iter == expected_output_tables.end()) {
       join_verification->execute();
@@ -774,4 +781,4 @@ INSTANTIATE_TEST_SUITE_P(JoinSortMerge, JoinTestRunner,
 INSTANTIATE_TEST_SUITE_P(JoinIndex, JoinTestRunner,
                          testing::ValuesIn(JoinTestRunner::create_configurations<JoinIndex>()));
 
-}  // namespace opossum
+}  // namespace hyrise

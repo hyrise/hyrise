@@ -4,7 +4,7 @@
 #include <optional>
 #include <unordered_map>
 
-namespace opossum {
+namespace hyrise {
 
 inline constexpr size_t DEFAULT_CACHE_CAPACITY = 1024;
 
@@ -39,7 +39,9 @@ class AbstractCache {
   virtual void resize(size_t capacity) = 0;
 
   // Return the capacity of the cache.
-  size_t capacity() const { return _capacity; }
+  size_t capacity() const {
+    return _capacity;
+  }
 
   struct SnapshotEntry {
     Value value;
@@ -56,4 +58,4 @@ class AbstractCache {
   std::atomic_size_t _capacity;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

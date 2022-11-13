@@ -8,7 +8,7 @@
 #include "storage/chunk.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BenchmarkConfig;
 
@@ -84,4 +84,4 @@ class AbstractTableGenerator {
       const std::string& cache_directory);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

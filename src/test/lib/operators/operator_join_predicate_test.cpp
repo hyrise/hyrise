@@ -5,9 +5,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/operator_join_predicate.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorJoinPredicateTest : public BaseTest {
  public:
@@ -49,4 +49,21 @@ TEST_F(OperatorJoinPredicateTest, FromExpressionImpossible) {
   ASSERT_FALSE(predicate_b);
 }
 
-}  // namespace opossum
+TEST_F(OperatorJoinPredicateTest, Flip) {
+  auto predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{1}}, PredicateCondition::LessThanEquals};
+  EXPECT_FALSE(predicate.is_flipped());
+
+  predicate.flip();
+  EXPECT_TRUE(predicate.is_flipped());
+  EXPECT_EQ(predicate.column_ids.first, ColumnID{1});
+  EXPECT_EQ(predicate.column_ids.second, ColumnID{0});
+  EXPECT_EQ(predicate.predicate_condition, PredicateCondition::GreaterThanEquals);
+
+  predicate.flip();
+  EXPECT_FALSE(predicate.is_flipped());
+  EXPECT_EQ(predicate.column_ids.first, ColumnID{0});
+  EXPECT_EQ(predicate.column_ids.second, ColumnID{1});
+  EXPECT_EQ(predicate.predicate_condition, PredicateCondition::LessThanEquals);
+}
+
+}  // namespace hyrise

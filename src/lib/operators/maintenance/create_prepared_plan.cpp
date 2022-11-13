@@ -3,7 +3,7 @@
 #include "hyrise.hpp"
 #include "storage/prepared_plan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreatePreparedPlan::CreatePreparedPlan(const std::string& prepared_plan_name,
                                        const std::shared_ptr<PreparedPlan>& prepared_plan)
@@ -25,9 +25,13 @@ std::string CreatePreparedPlan::description(DescriptionMode description_mode) co
   return stream.str();
 }
 
-std::shared_ptr<PreparedPlan> CreatePreparedPlan::prepared_plan() const { return _prepared_plan; }
+std::shared_ptr<PreparedPlan> CreatePreparedPlan::prepared_plan() const {
+  return _prepared_plan;
+}
 
-const std::string& CreatePreparedPlan::prepared_plan_name() const { return _prepared_plan_name; }
+const std::string& CreatePreparedPlan::prepared_plan_name() const {
+  return _prepared_plan_name;
+}
 
 std::shared_ptr<const Table> CreatePreparedPlan::_on_execute() {
   Hyrise::get().storage_manager.add_prepared_plan(_prepared_plan_name, _prepared_plan);
@@ -43,4 +47,4 @@ std::shared_ptr<AbstractOperator> CreatePreparedPlan::_on_deep_copy(
   return std::make_shared<CreatePreparedPlan>(_prepared_plan_name, _prepared_plan->deep_copy());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

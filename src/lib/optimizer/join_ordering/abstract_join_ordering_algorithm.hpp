@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 class AbstractCardinalityEstimator;
@@ -72,4 +72,4 @@ class AbstractJoinOrderingAlgorithm {
       const std::shared_ptr<AbstractCostEstimator>& cost_estimator);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

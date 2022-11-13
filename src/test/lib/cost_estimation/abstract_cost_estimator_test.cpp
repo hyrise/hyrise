@@ -8,11 +8,11 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 using MockCosts = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
 
@@ -23,14 +23,18 @@ class MockCostEstimator : public AbstractCostEstimator {
   explicit MockCostEstimator(const MockCosts& init_mock_costs)
       : AbstractCostEstimator(nullptr), mock_costs(init_mock_costs) {}
 
-  std::shared_ptr<AbstractCostEstimator> new_instance() const override { Fail("Shouldn't be called"); }
+  std::shared_ptr<AbstractCostEstimator> new_instance() const override {
+    Fail("Shouldn't be called");
+  }
 
-  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override { return mock_costs.at(node); }
+  Cost estimate_node_cost(const std::shared_ptr<AbstractLQPNode>& node) const override {
+    return mock_costs.at(node);
+  }
 };
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractCostEstimatorTest : public BaseTest {
  public:
@@ -101,4 +105,4 @@ TEST_F(AbstractCostEstimatorTest, PlanCostCacheDiamondShape) {
   EXPECT_EQ(cost_estimator.estimate_plan_cost(predicate_c), 77.0f);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -7,15 +7,15 @@
 #include "logical_query_plan/sort_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SortNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("table_a",
-                                            load_table("resources/test_data/tbl/int_float_double_string.tbl", 2));
+    Hyrise::get().storage_manager.add_table(
+        "table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2}));
 
     _table_node = StoredTableNode::make("table_a");
 
@@ -75,4 +75,4 @@ TEST_F(SortNodeTest, NodeExpressions) {
   EXPECT_EQ(*_sort_node->node_expressions.at(0), *_a_i);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

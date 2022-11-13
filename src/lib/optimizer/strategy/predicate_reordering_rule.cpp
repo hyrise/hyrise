@@ -18,19 +18,23 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Returns whether a certain node is a "predicate-style" node, i.e., a node that can be moved freely within a predicate
 // chain.
 bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
-  if (node->type == LQPNodeType::Predicate) return true;
+  if (node->type == LQPNodeType::Predicate) {
+    return true;
+  }
 
   // Validate can be seen as a Predicate on the MVCC column
-  if (node->type == LQPNodeType::Validate) return true;
+  if (node->type == LQPNodeType::Validate) {
+    return true;
+  }
 
   // Semi-/Anti-Joins also reduce the number of tuples and can be freely reordered within a chain of predicates. This
-  // might place the join below a validate node, but since it is not a "proper" join (i.e., one that returns columns
-  // from multiple tables), the validate will still be able to operate on the semi join's output.
+  // might place the join below a ValidateNode, but since it is not a "proper" join (i.e., one that returns columns
+  // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
     if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
@@ -43,7 +47,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string PredicateReorderingRule::name() const {
   static const auto name = std::string{"PredicateReorderingRule"};
@@ -55,8 +59,10 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   DebugAssert(cost_estimator, "PredicateReorderingRule requires cost estimator to be set");
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
 
+  // We keep track of reordered predicate nodes, so that this rule touches predicate nodes once only.
+  std::unordered_set<std::shared_ptr<AbstractLQPNode>> reordered_predicate_nodes;
   visit_lqp(lqp_root, [&](const auto& node) {
-    if (is_predicate_style_node(node)) {
+    if (is_predicate_style_node(node) && !reordered_predicate_nodes.contains(node)) {
       std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
 
       // Gather adjacent PredicateNodes
@@ -79,6 +85,7 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
        */
       if (predicate_nodes.size() > 1) {
         _reorder_predicates(predicate_nodes);
+        reordered_predicate_nodes.insert(predicate_nodes.cbegin(), predicate_nodes.cend());
       }
     }
 
@@ -130,4 +137,4 @@ void PredicateReorderingRule::_reorder_predicates(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

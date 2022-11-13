@@ -22,9 +22,9 @@
 
 #include "utils/assert.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PredicateReorderingTest : public StrategyBaseTest {
  protected:
@@ -109,7 +109,7 @@ TEST_F(PredicateReorderingTest, ComplexReorderingTest) {
 }
 
 TEST_F(PredicateReorderingTest, SameOrderingForStoredTable) {
-  std::shared_ptr<Table> table_a = load_table("resources/test_data/tbl/int_float4.tbl", 2);
+  std::shared_ptr<Table> table_a = load_table("resources/test_data/tbl/int_float4.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
 
   auto stored_table_node = StoredTableNode::make("table_a");
@@ -270,4 +270,4 @@ TEST_F(PredicateReorderingTest, SimpleValidateReorderingTest) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

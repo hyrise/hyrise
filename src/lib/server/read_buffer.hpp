@@ -4,7 +4,7 @@
 #include "server_types.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Dedicated buffer for read operations. In contrast to the WriteBuffer integer types are converted from network to
 // host byte order and data will only be read from the network device.
@@ -58,4 +58,4 @@ class ReadBuffer {
   std::shared_ptr<SocketType> _socket;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

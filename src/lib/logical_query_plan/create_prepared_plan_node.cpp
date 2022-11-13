@@ -4,7 +4,7 @@
 
 #include "storage/prepared_plan.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreatePreparedPlanNode::CreatePreparedPlanNode(const std::string& init_name,
                                                const std::shared_ptr<PreparedPlan>& init_prepared_plan)
@@ -34,4 +34,4 @@ bool CreatePreparedPlanNode::_on_shallow_equals(const AbstractLQPNode& rhs, cons
   return name == create_prepared_plan_node.name && *prepared_plan == *create_prepared_plan_node.prepared_plan;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

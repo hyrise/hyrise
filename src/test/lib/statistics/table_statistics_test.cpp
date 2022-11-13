@@ -6,12 +6,12 @@
 #include "statistics/table_statistics.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TableStatisticsTest : public BaseTest {};
 
 TEST_F(TableStatisticsTest, FromTable) {
-  const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", 20);
+  const auto table = load_table("resources/test_data/tbl/int_with_nulls_large.tbl", ChunkOffset{20});
 
   const auto table_statistics = TableStatistics::from_table(*table);
 
@@ -41,4 +41,4 @@ TEST_F(TableStatisticsTest, FromTable) {
   EXPECT_FLOAT_EQ(histogram_b->total_distinct_count(), 190);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

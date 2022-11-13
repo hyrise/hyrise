@@ -18,8 +18,8 @@
 #include "storage/table.hpp"
 
 namespace {
-using namespace opossum;                         // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_expression,
@@ -99,7 +99,7 @@ void rewrite_to_disjunction(const std::shared_ptr<AbstractLQPNode>& node,
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string InExpressionRewriteRule::name() const {
   static const auto name = std::string{"InExpressionRewriteRule"};
@@ -107,8 +107,9 @@ std::string InExpressionRewriteRule::name() const {
 }
 
 std::shared_ptr<AbstractCardinalityEstimator> InExpressionRewriteRule::_cardinality_estimator() const {
-  if (!_cardinality_estimator_internal)
+  if (!_cardinality_estimator_internal) {
     _cardinality_estimator_internal = cost_estimator->cardinality_estimator->new_instance();
+  }
 
   return _cardinality_estimator_internal;
 }
@@ -147,7 +148,9 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
         break;
       }
       const auto& value_expression = static_cast<ValueExpression&>(*element);
-      if (variant_is_null(value_expression.value)) continue;
+      if (variant_is_null(value_expression.value)) {
+        continue;
+      }
       if (value_expression.data_type() != *common_data_type) {
         common_data_type = std::nullopt;
         break;
@@ -189,4 +192,4 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

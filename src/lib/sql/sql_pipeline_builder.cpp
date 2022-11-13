@@ -1,8 +1,7 @@
 #include "sql_pipeline_builder.hpp"
 #include "hyrise.hpp"
-#include "utils/tracing/probes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 SQLPipelineBuilder::SQLPipelineBuilder(const std::string& sql)
     : _sql(sql), _pqp_cache(Hyrise::get().default_pqp_cache), _lqp_cache(Hyrise::get().default_lqp_cache) {}
@@ -35,15 +34,14 @@ SQLPipelineBuilder& SQLPipelineBuilder::with_lqp_cache(const std::shared_ptr<SQL
   return *this;
 }
 
-SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() { return with_mvcc(UseMvcc::No); }
+SQLPipelineBuilder& SQLPipelineBuilder::disable_mvcc() {
+  return with_mvcc(UseMvcc::No);
+}
 
 SQLPipeline SQLPipelineBuilder::create_pipeline() const {
-  DTRACE_PROBE1(HYRISE, CREATE_PIPELINE, reinterpret_cast<uintptr_t>(this));
   auto optimizer = _optimizer ? _optimizer : Optimizer::create_default_optimizer();
   auto pipeline = SQLPipeline(_sql, _transaction_context, _use_mvcc, optimizer, _pqp_cache, _lqp_cache);
-  DTRACE_PROBE3(HYRISE, PIPELINE_CREATION_DONE, pipeline.get_sql_per_statement().size(), _sql.c_str(),
-                reinterpret_cast<uintptr_t>(this));
   return pipeline;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

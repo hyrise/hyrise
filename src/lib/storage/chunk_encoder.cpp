@@ -18,7 +18,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Function takes an arbitrary segment and (re-)encodes it. This reencoding can both mean that
@@ -54,6 +54,7 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
     if (encoding_spec.encoding_type == EncodingType::Unencoded) {
       pmr_vector<ColumnDataType> values;
       pmr_vector<bool> null_values;
+      auto contains_nulls = false;
 
       auto iterable = create_any_segment_iterable<ColumnDataType>(*segment);
       iterable.with_iterators([&](auto it, const auto end) {
@@ -68,11 +69,16 @@ std::shared_ptr<AbstractSegment> ChunkEncoder::encode_segment(const std::shared_
           if (!is_null) {
             values[current_position] = segment_item.value();
           } else {
+            contains_nulls = true;
             values[current_position] = {};
           }
         }
       });
-      result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      if (contains_nulls) {
+        result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values), std::move(null_values));
+      } else {
+        result = std::make_shared<ValueSegment<ColumnDataType>>(std::move(values));
+      }
     } else {
       auto encoder = create_encoder(encoding_spec.encoding_type);
       if (encoding_spec.vector_compression_type) {
@@ -150,7 +156,7 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
     const auto chunk = table->get_chunk(chunk_id);
     Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    const auto chunk_encoding_spec = chunk_encoding_specs[chunk_id];
+    const auto& chunk_encoding_spec = chunk_encoding_specs[chunk_id];
     encode_chunk(chunk, column_types, chunk_encoding_spec);
   }
 }
@@ -183,4 +189,4 @@ void ChunkEncoder::encode_all_chunks(const std::shared_ptr<Table>& table,
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

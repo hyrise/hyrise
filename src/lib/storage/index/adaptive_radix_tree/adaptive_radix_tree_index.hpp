@@ -8,7 +8,7 @@
 #include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractSegment;
 class ARTNode;
@@ -92,4 +92,4 @@ class AdaptiveRadixTreeIndex : public AbstractIndex {
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
                 const AdaptiveRadixTreeIndex::BinaryComparable& right);
-}  // namespace opossum
+}  // namespace hyrise

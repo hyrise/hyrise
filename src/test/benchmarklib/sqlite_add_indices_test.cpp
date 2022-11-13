@@ -8,7 +8,7 @@
 #include "utils/sqlite_add_indices.hpp"
 #include "utils/sqlite_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SQLiteAddIndicesTest : public BaseTest {
  protected:
@@ -16,7 +16,8 @@ class SQLiteAddIndicesTest : public BaseTest {
     TableColumnDefinitions column_definitions;
     column_definitions.emplace_back("column_1", DataType::Int, false);
     column_definitions.emplace_back("column_2", DataType::String, false);
-    Hyrise::get().storage_manager.add_table("table_1", std::make_shared<Table>(column_definitions, TableType::Data, 2));
+    Hyrise::get().storage_manager.add_table(
+        "table_1", std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}));
 
     stored_table = Hyrise::get().storage_manager.get_table("table_1");
     stored_table->append({13, "Hello,"});
@@ -43,4 +44,4 @@ TEST_F(SQLiteAddIndicesTest, AddIndexTest) {
   sqlite_wrapper->main_connection.raw_execute_query("DROP INDEX index_1;");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

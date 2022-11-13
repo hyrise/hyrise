@@ -5,7 +5,7 @@
 #include "constant_mappings.hpp"
 #include "static_table_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 CreateTableNode::CreateTableNode(const std::string& init_table_name, const bool init_if_not_exists)
     : AbstractNonQueryNode(LQPNodeType::CreateTable), table_name(init_table_name), if_not_exists(init_if_not_exists) {}
@@ -34,4 +34,4 @@ bool CreateTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   return table_name == create_table_node.table_name && if_not_exists == create_table_node.if_not_exists;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

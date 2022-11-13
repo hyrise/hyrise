@@ -19,7 +19,7 @@
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * This is an index join implementation. It expects to find an index on the index side column.
@@ -143,6 +143,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _index_pos_list->reserve(pos_list_size_to_reserve);
 
   auto& join_index_performance_data = static_cast<PerformanceData&>(*performance_data);
+  join_index_performance_data.right_input_is_index_side = _index_side == IndexSide::Right;
 
   auto secondary_predicate_evaluator = MultiPredicateJoinEvaluator{*_probe_input_table, *_index_input_table, _mode, {}};
 
@@ -539,7 +540,7 @@ void JoinIndex::_write_output_segments(Segments& output_segments, const std::sha
                                        const std::shared_ptr<RowIDPosList>& pos_list) {
   // Add segments from table to output chunk
   const auto column_count = input_table->column_count();
-  for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     std::shared_ptr<AbstractSegment> segment;
 
     if (input_table->type() == TableType::References) {
@@ -609,4 +610,4 @@ void JoinIndex::PerformanceData::output_to_stream(std::ostream& stream, Descript
          << chunks_scanned_with_index << " of " << chunk_count << " chunk" << (chunk_count > 1 ? "s" : "") << ".";
 }
 
-}  // namespace opossum
+}  // namespace hyrise

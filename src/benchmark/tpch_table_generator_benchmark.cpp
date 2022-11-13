@@ -4,7 +4,7 @@
 #include "tpch/tpch_constants.hpp"
 #include "tpch/tpch_table_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This benchmark can only be use as a starting point for investigating TPCHTableGenerator performance, since secondary
@@ -13,10 +13,11 @@ namespace opossum {
  */
 static void BM_TPCHTableGenerator(benchmark::State& state) {  // NOLINT
   for (auto _ : state) {
-    TPCHTableGenerator(0.5f, ClusteringConfiguration::None, 1000).generate_and_store();
+    TPCHTableGenerator(0.5f, ClusteringConfiguration::None, ChunkOffset{1000}).generate_and_store();
     Hyrise::reset();
   }
 }
+
 BENCHMARK(BM_TPCHTableGenerator);
 
-}  // namespace opossum
+}  // namespace hyrise

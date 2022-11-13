@@ -14,7 +14,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
  protected:
@@ -74,7 +74,8 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
     auto list = std::make_shared<RowIDPosList>();
     list->guarantee_single_chunk();
 
-    for (auto offset_in_referenced_chunk = 0u; offset_in_referenced_chunk < _row_count; ++offset_in_referenced_chunk) {
+    for (auto offset_in_referenced_chunk = ChunkOffset{0}; offset_in_referenced_chunk < _row_count;
+         ++offset_in_referenced_chunk) {
       if (offset_in_referenced_chunk % 2) {
         list->push_back(RowID{ChunkID{0}, offset_in_referenced_chunk});
       }
@@ -172,7 +173,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableEmptyStringSegment) {
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-        auto row_idx = 0u;
+        auto row_idx = ChunkOffset{0};
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
           // This covers `EncodedSegment::operator[]`
           if (variant_is_null((*value_segment)[row_idx])) {
@@ -225,7 +226,7 @@ TEST_P(EncodedStringSegmentTest, SequentiallyReadNullableStringSegment) {
 
     value_segment_iterable.with_iterators([&](auto value_segment_it, auto value_segment_end) {
       encoded_segment_iterable.with_iterators([&](auto encoded_segment_it, auto encoded_segment_end) {
-        auto row_idx = 0u;
+        auto row_idx = ChunkOffset{0};
         for (; encoded_segment_it != encoded_segment_end; ++encoded_segment_it, ++value_segment_it, ++row_idx) {
           // This covers `EncodedSegment::operator[]`
           if (variant_is_null((*value_segment)[row_idx])) {
@@ -327,4 +328,4 @@ TEST_F(EncodedStringSegmentTest, SegmentReencoding) {
   EXPECT_SEGMENT_EQ_ORDERED(value_segment, encoded_segment);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

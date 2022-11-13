@@ -6,7 +6,7 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StressTest : public BaseTest {
  protected:
@@ -21,7 +21,7 @@ class StressTest : public BaseTest {
 TEST_F(StressTest, TestTransactionConflicts) {
   // Update a table with two entries and a chunk size of 2. This will lead to a high number of transaction conflicts
   // and many chunks being created
-  auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+  auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
   Hyrise::get().storage_manager.add_table("table_a", table_a);
   auto initial_sum = int64_t{};
 
@@ -58,11 +58,11 @@ TEST_F(StressTest, TestTransactionConflicts) {
   //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
   //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
-  const auto num_threads = 100u;
+  const auto num_threads = uint32_t{100};
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+  for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
@@ -101,7 +101,7 @@ TEST_F(StressTest, TestTransactionInsertsSmallChunks) {
   TableColumnDefinitions column_definitions;
   column_definitions.emplace_back("a", DataType::Int, false);
   column_definitions.emplace_back("b", DataType::Int, false);
-  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, 3, UseMvcc::Yes);
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{3}, UseMvcc::Yes);
   Hyrise::get().storage_manager.add_table("table_b", table);
 
   const auto iterations_per_thread = 20;
@@ -210,4 +210,4 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

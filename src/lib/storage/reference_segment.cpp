@@ -7,7 +7,7 @@
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ReferenceSegment::ReferenceSegment(const std::shared_ptr<const Table>& referenced_table,
                                    const ColumnID referenced_column_id,
@@ -32,18 +32,30 @@ AllTypeVariant ReferenceSegment::operator[](const ChunkOffset chunk_offset) cons
 
   const auto row_id = (*_pos_list)[chunk_offset];
 
-  if (row_id.is_null()) return NULL_VALUE;
+  if (row_id.is_null()) {
+    return NULL_VALUE;
+  }
 
   const auto chunk = _referenced_table->get_chunk(row_id.chunk_id);
 
   return (*chunk->get_segment(_referenced_column_id))[row_id.chunk_offset];
 }
 
-const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const { return _pos_list; }
-const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const { return _referenced_table; }
-ColumnID ReferenceSegment::referenced_column_id() const { return _referenced_column_id; }
+const std::shared_ptr<const AbstractPosList>& ReferenceSegment::pos_list() const {
+  return _pos_list;
+}
 
-ChunkOffset ReferenceSegment::size() const { return static_cast<ChunkOffset>(_pos_list->size()); }
+const std::shared_ptr<const Table>& ReferenceSegment::referenced_table() const {
+  return _referenced_table;
+}
+
+ColumnID ReferenceSegment::referenced_column_id() const {
+  return _referenced_column_id;
+}
+
+ChunkOffset ReferenceSegment::size() const {
+  return static_cast<ChunkOffset>(_pos_list->size());
+}
 
 std::shared_ptr<AbstractSegment> ReferenceSegment::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
@@ -56,4 +68,4 @@ size_t ReferenceSegment::memory_usage(const MemoryUsageCalculationMode mode) con
   return sizeof(*this) + _pos_list->memory_usage(mode);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

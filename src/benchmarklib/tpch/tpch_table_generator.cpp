@@ -15,15 +15,15 @@ extern "C" {
 #include "table_builder.hpp"
 #include "utils/timer.hpp"
 
-extern char** asc_date;
-extern seed_t seed[];  // NOLINT
+extern const char** asc_date;  // NOLINT
+extern seed_t seed[];          // NOLINT
 
 #pragma clang diagnostic ignored "-Wshorten-64-to-32"
 #pragma clang diagnostic ignored "-Wfloat-conversion"
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // clang-format off
 const auto customer_column_types = boost::hana::tuple      <int32_t,    pmr_string,  pmr_string,  int32_t,       pmr_string,  float,       pmr_string,     pmr_string>();  // NOLINT
@@ -51,14 +51,12 @@ const auto region_column_types = boost::hana::tuple<     int32_t,       pmr_stri
 const auto region_column_names = boost::hana::make_tuple("r_regionkey", "r_name",    "r_comment");  // NOLINT
 // clang-format on
 
-std::unordered_map<opossum::TPCHTable, std::underlying_type_t<opossum::TPCHTable>> tpch_table_to_dbgen_id = {
-    {opossum::TPCHTable::Part, PART},     {opossum::TPCHTable::PartSupp, PSUPP}, {opossum::TPCHTable::Supplier, SUPP},
-    {opossum::TPCHTable::Customer, CUST}, {opossum::TPCHTable::Orders, ORDER},   {opossum::TPCHTable::LineItem, LINE},
-    {opossum::TPCHTable::Nation, NATION}, {opossum::TPCHTable::Region, REGION}};
+const std::unordered_map<TPCHTable, std::underlying_type_t<TPCHTable>> tpch_table_to_dbgen_id = {
+    {TPCHTable::Part, PART},    {TPCHTable::PartSupp, PSUPP}, {TPCHTable::Supplier, SUPP}, {TPCHTable::Customer, CUST},
+    {TPCHTable::Orders, ORDER}, {TPCHTable::LineItem, LINE},  {TPCHTable::Nation, NATION}, {TPCHTable::Region, REGION}};
 
 template <typename DSSType, typename MKRetType, typename... Args>
-DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), opossum::TPCHTable table,
-                      Args... args) {
+DSSType call_dbgen_mk(size_t idx, MKRetType (*mk_fn)(DSS_HUGE, DSSType* val, Args...), TPCHTable table, Args... args) {
   /**
    * Preserve calling scheme (row_start(); mk...(); row_stop(); as in dbgen's gen_tbl())
    */
@@ -97,7 +95,7 @@ void dbgen_cleanup() {
 
   if (asc_date) {
     for (size_t idx = 0; idx < TOTDATE; ++idx) {
-      free(asc_date[idx]);  // NOLINT
+      free((void*)asc_date[idx]);  // NOLINT
     }
     free(asc_date);  // NOLINT
   }
@@ -106,15 +104,15 @@ void dbgen_cleanup() {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-std::unordered_map<TPCHTable, std::string> tpch_table_names = {
+const std::unordered_map<TPCHTable, std::string> tpch_table_names = {
     {TPCHTable::Part, "part"},         {TPCHTable::PartSupp, "partsupp"}, {TPCHTable::Supplier, "supplier"},
     {TPCHTable::Customer, "customer"}, {TPCHTable::Orders, "orders"},     {TPCHTable::LineItem, "lineitem"},
     {TPCHTable::Nation, "nation"},     {TPCHTable::Region, "region"}};
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
-                                       uint32_t chunk_size)
+                                       ChunkOffset chunk_size)
     : TPCHTableGenerator(scale_factor, clustering_configuration, create_benchmark_config_with_chunk_size(chunk_size)) {}
 
 TPCHTableGenerator::TPCHTableGenerator(float scale_factor, ClusteringConfiguration clustering_configuration,
@@ -148,10 +146,10 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
                                 customer_count};
   TableBuilder order_builder{_benchmark_config->chunk_size, order_column_types, order_column_names, order_count};
   TableBuilder lineitem_builder{_benchmark_config->chunk_size, lineitem_column_types, lineitem_column_names,
-                                order_count * 4};
+                                ChunkOffset{order_count * 4}};
   TableBuilder part_builder{_benchmark_config->chunk_size, part_column_types, part_column_names, part_count};
   TableBuilder partsupp_builder{_benchmark_config->chunk_size, partsupp_column_types, partsupp_column_names,
-                                part_count * 4};
+                                ChunkOffset{part_count * 4}};
   TableBuilder supplier_builder{_benchmark_config->chunk_size, supplier_column_types, supplier_column_names,
                                 supplier_count};
   TableBuilder nation_builder{_benchmark_config->chunk_size, nation_column_types, nation_column_names, nation_count};
@@ -370,4 +368,4 @@ void TPCHTableGenerator::_add_constraints(
   region_table->add_soft_key_constraint(region_pk_constraint);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

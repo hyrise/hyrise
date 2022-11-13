@@ -4,7 +4,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FileType import_type_to_file_type(const hsql::ImportType import_type) {
   switch (import_type) {
@@ -25,12 +25,17 @@ FileType file_type_from_filename(const std::string& filename) {
   boost::algorithm::to_lower(extension);
   if (extension == ".csv") {
     return FileType::Csv;
-  } else if (extension == ".tbl") {
+  }
+
+  if (extension == ".tbl") {
     return FileType::Tbl;
-  } else if (extension == ".bin") {
+  }
+
+  if (extension == ".bin") {
     return FileType::Binary;
   }
+
   Fail("Unknown file extension " + extension);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

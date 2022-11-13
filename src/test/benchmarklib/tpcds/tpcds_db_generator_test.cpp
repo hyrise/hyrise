@@ -5,7 +5,7 @@
 #include "tpcds/tpcds_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 namespace {
 std::shared_ptr<Table> load_csv(const std::string& file_name) {
@@ -15,7 +15,7 @@ std::shared_ptr<Table> load_csv(const std::string& file_name) {
 }
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 class TPCDSTableGeneratorTest : public BaseTest {};
 
@@ -27,7 +27,7 @@ TEST_F(TPCDSTableGeneratorTest, TableContentsFirstRows) {
   const auto rows_to_check = ds_key_t{50};
 
   // Initialize with different params to check whether global state is correctly reset.
-  TPCDSTableGenerator(10, 2, 42);
+  TPCDSTableGenerator(10, ChunkOffset{2}, 42);
 
   // Run generation twice to make sure no global state (of which tpcds_dbgen has plenty :( ) from the
   //  first generation process carried over into the second
@@ -70,9 +70,9 @@ TEST_F(TPCDSTableGeneratorTest, TableContentsFirstRows) {
 
 TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
   /**
- * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager.
- * Then check whether the row count is correct for all tables.
- */
+   * Check whether all TPC-DS tables are created by the TPCDSTableGenerator and added to the StorageManager.
+   * Then check whether the row count is correct for all tables.
+   */
 
   const auto expected_sizes = std::map<std::string, uint64_t>{{"call_center", 6},
                                                               {"catalog_page", 11718},
@@ -111,4 +111,4 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
   Hyrise::reset();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

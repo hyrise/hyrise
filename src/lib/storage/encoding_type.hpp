@@ -19,7 +19,7 @@
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -62,7 +62,9 @@ bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type)
 
 struct SegmentEncodingSpec {
   constexpr SegmentEncodingSpec() : encoding_type{EncodingType::Dictionary} {}
+
   explicit constexpr SegmentEncodingSpec(EncodingType init_encoding_type) : encoding_type{init_encoding_type} {}
+
   constexpr SegmentEncodingSpec(EncodingType init_encoding_type,
                                 std::optional<VectorCompressionType> init_vector_compression_type)
       : encoding_type{init_encoding_type}, vector_compression_type{init_vector_compression_type} {}
@@ -84,4 +86,4 @@ inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        E
                                                EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
                                                EncodingType::RunLength,        EncodingType::LZ4};
 
-}  // namespace opossum
+}  // namespace hyrise

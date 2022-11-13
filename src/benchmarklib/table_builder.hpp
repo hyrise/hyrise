@@ -13,9 +13,9 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-// helper structs and functions for compile time, the actual code is in namespace opossum
+// helper structs and functions for compile time, the actual code is in namespace hyrise
 namespace table_builder {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // boost::hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
@@ -28,7 +28,9 @@ class OptionalConstexpr {
   static_assert(_has_value);
   static constexpr bool has_value = true;
 
-  T& value() { return _value; }
+  T& value() {
+    return _value;
+  }
 
  private:
   T _value;
@@ -38,7 +40,7 @@ template <typename T, bool _has_value>
 class OptionalConstexpr<T, _has_value, std::enable_if_t<!_has_value>> {
  public:
   template <typename... Args>
-  explicit OptionalConstexpr(Args&&...) {}
+  explicit OptionalConstexpr(Args&&... /*args*/) {}
 
   static_assert(!_has_value);
   static constexpr bool has_value = false;
@@ -108,7 +110,7 @@ class TableBuilder {
   // types may contain std::optional<?>, which will result in a nullable column, otherwise columns are not nullable
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
-               const ChunkOffset estimated_rows = 0)
+               const ChunkOffset estimated_rows = ChunkOffset{0})
       : _estimated_rows_per_chunk(std::min(estimated_rows, chunk_size)), _row_count{0} {
     BOOST_HANA_CONSTANT_ASSERT(boost::hana::size(names) == boost::hana::size(types));
 
@@ -191,7 +193,9 @@ class TableBuilder {
     }
   }
 
-  size_t row_count() const { return _row_count; }
+  size_t row_count() const {
+    return _row_count;
+  }
 
  private:
   std::shared_ptr<Table> _table;
@@ -204,7 +208,9 @@ class TableBuilder {
   boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>
       _null_value_vectors;
 
-  size_t _current_chunk_row_count() const { return _value_vectors[boost::hana::llong_c<0>].size(); }
+  size_t _current_chunk_row_count() const {
+    return _value_vectors[boost::hana::llong_c<0>].size();
+  }
 
   void _emit_chunk() {
     auto segments = Segments{};
@@ -240,4 +246,4 @@ class TableBuilder {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

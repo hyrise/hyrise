@@ -15,9 +15,9 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsUpdateTest : public BaseTest {
  public:
@@ -27,7 +27,7 @@ class OperatorsUpdateTest : public BaseTest {
   }
 
   void SetUp() override {
-    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    const auto table = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     // Update operator works on the StorageManager
     Hyrise::get().storage_manager.add_table(table_to_update_name, table);
   }
@@ -84,4 +84,4 @@ TEST_F(OperatorsUpdateTest, UpdateNone) {
   helper(greater_than_(column_a, 100'000), expression_vector(1, 1.5f), "resources/test_data/tbl/int_float2.tbl");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

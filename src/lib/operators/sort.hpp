@@ -12,7 +12,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Operator to sort a table by one or multiple columns. This implements a stable sort, i.e., rows that share the same
@@ -25,7 +25,8 @@ class Sort : public AbstractReadOnlyOperator {
 
   enum class OperatorSteps : uint8_t { MaterializeSortColumns, Sort, TemporaryResultWriting, WriteOutput };
 
-  Sort(const std::shared_ptr<const AbstractOperator>& in, const std::vector<SortColumnDefinition>& sort_definitions,
+  Sort(const std::shared_ptr<const AbstractOperator>& input_operator,
+       const std::vector<SortColumnDefinition>& sort_definitions,
        const ChunkOffset output_chunk_size = Chunk::DEFAULT_SIZE,
        const ForceMaterialization force_materialization = ForceMaterialization::No);
 
@@ -52,4 +53,4 @@ class Sort : public AbstractReadOnlyOperator {
   const ForceMaterialization _force_materialization;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

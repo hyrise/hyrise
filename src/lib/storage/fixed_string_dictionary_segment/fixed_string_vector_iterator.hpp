@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // We need a custom iterator for this vector, since we have to perform jumps when iterating over the vector.
 // Depending on OnConstStorage, it either returns a (mutable) FixedString or an (immutable) std::string_view
@@ -44,7 +44,9 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   }
 
   size_t distance_to(FixedStringIterator const& other) const {  // NOLINT
-    if (_string_length == 0) return 0;
+    if (_string_length == 0) {
+      return 0;
+    }
     return (std::intptr_t(other._pos) - std::intptr_t(this->_pos)) / std::intptr_t(_string_length);
   }
 
@@ -75,4 +77,4 @@ class FixedStringIterator : public boost::iterator_facade<FixedStringIterator<On
   size_t _pos;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

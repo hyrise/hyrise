@@ -6,10 +6,11 @@
 
 #include "constant_mappings.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::shared_ptr<const AbstractOperator>& left,
                                            const std::shared_ptr<const AbstractOperator>& right, const JoinMode mode,
@@ -30,9 +31,13 @@ AbstractJoinOperator::AbstractJoinOperator(const OperatorType type, const std::s
          "Unsupported predicate condition");
 }
 
-JoinMode AbstractJoinOperator::mode() const { return _mode; }
+JoinMode AbstractJoinOperator::mode() const {
+  return _mode;
+}
 
-const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const { return _primary_predicate; }
+const OperatorJoinPredicate& AbstractJoinOperator::primary_predicate() const {
+  return _primary_predicate;
+}
 
 const std::vector<OperatorJoinPredicate>& AbstractJoinOperator::secondary_predicates() const {
   return _secondary_predicates;
@@ -44,7 +49,9 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
     if (state == OperatorState::ExecutedAndAvailable) {
       const auto& input_table = from_left ? _left_input->get_output() : _right_input->get_output();
       // If input table is still available, use name from there
-      if (input_table) return input_table->column_name(column_id);
+      if (input_table) {
+        return input_table->column_name(column_id);
+      }
     }
 
     if (lqp_node) {
@@ -59,7 +66,12 @@ std::string AbstractJoinOperator::description(DescriptionMode description_mode) 
 
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
   std::stringstream stream;
-  stream << AbstractOperator::description(description_mode) << " (" << _mode << ")" << separator;
+  stream << AbstractOperator::description(description_mode);
+  if (_mode == JoinMode::Semi && lqp_node && std::static_pointer_cast<const JoinNode>(lqp_node)->is_semi_reduction()) {
+    stream << " (Semi Reduction)" << separator;
+  } else {
+    stream << " (" << _mode << ")" << separator;
+  }
   stream << column_name(true, _primary_predicate.column_ids.first) << " ";
   stream << _primary_predicate.predicate_condition << " ";
   stream << column_name(false, _primary_predicate.column_ids.second);
@@ -88,7 +100,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   TableColumnDefinitions output_column_definitions;
 
   // Preparing output table by adding segments from left table
-  for (ColumnID column_id{0}; column_id < left_in_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < left_in_table->column_count(); ++column_id) {
     const auto nullable = (left_may_produce_null || left_in_table->column_is_nullable(column_id));
     output_column_definitions.emplace_back(left_in_table->column_name(column_id),
                                            left_in_table->column_data_type(column_id), nullable);
@@ -96,7 +108,7 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
 
   // Preparing output table by adding segments from right table
   if (_mode != JoinMode::Semi && _mode != JoinMode::AntiNullAsTrue && _mode != JoinMode::AntiNullAsFalse) {
-    for (ColumnID column_id{0}; column_id < right_in_table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < right_in_table->column_count(); ++column_id) {
       const auto nullable = (right_may_produce_null || right_in_table->column_is_nullable(column_id));
       output_column_definitions.emplace_back(right_in_table->column_name(column_id),
                                              right_in_table->column_data_type(column_id), nullable);
@@ -106,4 +118,4 @@ std::shared_ptr<Table> AbstractJoinOperator::_build_output_table(std::vector<std
   return std::make_shared<Table>(output_column_definitions, table_type, std::move(chunks));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

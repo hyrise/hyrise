@@ -8,7 +8,7 @@
 #include "optimizer/strategy/abstract_rule.hpp"
 #include "statistics/cardinality_estimator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct OptimizerRuleMetrics {
   std::string rule_name;
@@ -52,4 +52,4 @@ class Optimizer final {
   std::shared_ptr<AbstractCostEstimator> _cost_estimator;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

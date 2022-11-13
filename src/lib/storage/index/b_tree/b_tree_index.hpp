@@ -6,7 +6,7 @@
 #include "storage/index/abstract_index.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BTreeIndexTest;
 
@@ -28,8 +28,8 @@ class BTreeIndex : public AbstractIndex {
   explicit BTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);
 
  protected:
-  Iterator _lower_bound(const std::vector<AllTypeVariant>&) const override;
-  Iterator _upper_bound(const std::vector<AllTypeVariant>&) const override;
+  Iterator _lower_bound(const std::vector<AllTypeVariant>& values) const override;
+  Iterator _upper_bound(const std::vector<AllTypeVariant>& values) const override;
   Iterator _cbegin() const override;
   Iterator _cend() const override;
   std::vector<std::shared_ptr<const AbstractSegment>> _get_indexed_segments() const override;
@@ -39,4 +39,4 @@ class BTreeIndex : public AbstractIndex {
   std::shared_ptr<BaseBTreeIndexImpl> _impl;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,10 +12,9 @@
 
 /**
  * This file provides better assertions than the std cassert/assert.h - DebugAssert(condition, msg) and Fail(msg) can be
- * used
- * to both harden code by programming by contract and document the invariants enforced in messages.
+ * used to both harden code by programming by contract and document the invariants enforced in messages.
  *
- * --> Use DebugAssert() whenever a certain invariant must hold, as in
+ * --> Use DebugAssert() whenever a certain invariant must hold, as in:
  *
  * int divide(int numerator, int denominator) {
  *   DebugAssert(denominator == 0, "Divisions by zero are not allowed");
@@ -34,30 +33,32 @@
  * }
  *
  * --> Use Assert() whenever an invariant should be checked even in release builds, either because testing it is
- *     very cheap or the invariant is considered very important
+ *     very cheap or the invariant is considered very important.
  *
  * --> Use AssertInput() to check if the user input is correct. This provides a more specific error handling since an
  *     invalid input might want to be caught.
  */
 
-namespace opossum {
+namespace hyrise {
 
 namespace detail {
 // We need this indirection so that we can throw exceptions from destructors without the compiler complaining. That is
 // generally forbidden and might lead to std::terminate, but since we don't want to handle most errors anyway,
 // that's fine.
-[[noreturn]] inline void fail(const std::string& msg) { throw std::logic_error(msg); }
+[[noreturn]] inline void fail(const std::string& msg) {
+  throw std::logic_error(msg);
+}
 }  // namespace detail
 
-#define Fail(msg)                                                                                               \
-  opossum::detail::fail(opossum::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
+#define Fail(msg)                                                                                             \
+  hyrise::detail::fail(hyrise::trim_source_file_path(__FILE__) + ":" BOOST_PP_STRINGIZE(__LINE__) " " + msg); \
   static_assert(true, "End call of macro with a semicolon")
 
 [[noreturn]] inline void FailInput(const std::string& msg) {
   throw InvalidInputException(std::string("Invalid input error: ") + msg);
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 #define Assert(expr, msg)         \
   if (!static_cast<bool>(expr)) { \

@@ -14,7 +14,7 @@
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id,
@@ -28,7 +28,9 @@ ColumnVsValueTableScanImpl::ColumnVsValueTableScanImpl(const std::shared_ptr<con
          "ExpressionEvaluatorTableScanImpl.");
 }
 
-std::string ColumnVsValueTableScanImpl::description() const { return "ColumnVsValue"; }
+std::string ColumnVsValueTableScanImpl::description() const {
+  return "ColumnVsValue";
+}
 
 void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
@@ -39,7 +41,6 @@ void ColumnVsValueTableScanImpl::_scan_non_reference_segment(
     for (const auto& sorted_by : chunk_sorted_by) {
       if (sorted_by.column == _column_id) {
         _scan_sorted_segment(segment, chunk_id, matches, position_filter, sorted_by.sort_mode);
-        ++num_chunks_with_binary_search;
         return;
       }
     }
@@ -132,10 +133,12 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
       {}  // clang-format off
       #pragma omp simd
       // clang-format on
-      for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_size); ++chunk_offset) {
+      // OpenMP directives do not work with strong type defs.
+      for (auto offset = ChunkOffset::base_type{0}; offset < static_cast<ChunkOffset::base_type>(output_size);
+           ++offset) {
         // `matches` might already contain entries if it is called multiple times by
         // AbstractDereferencedColumnTableScanImpl::_scan_reference_segment.
-        matches[output_start_offset + chunk_offset] = RowID{chunk_id, chunk_offset};
+        matches[output_start_offset + offset] = RowID{chunk_id, ChunkOffset{offset}};
       }
     }
 
@@ -170,7 +173,7 @@ void ColumnVsValueTableScanImpl::_scan_dictionary_segment(
 void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id,
                                                       RowIDPosList& matches,
                                                       const std::shared_ptr<const AbstractPosList>& position_filter,
-                                                      const SortMode sort_mode) const {
+                                                      const SortMode sort_mode) {
   resolve_data_and_segment_type(segment, [&](const auto type, const auto& typed_segment) {
     using ColumnDataType = typename decltype(type)::type;
 
@@ -182,9 +185,15 @@ void ColumnVsValueTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
         auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, sort_mode, _column_is_nullable,
                                                          predicate_condition, boost::get<ColumnDataType>(value));
 
-        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter);
-        });
+        sorted_segment_search.scan_sorted_segment(chunk_id, matches, position_filter);
+
+        if (sorted_segment_search.no_rows_matching) {
+          ++num_chunks_with_early_out;
+        } else if (sorted_segment_search.all_rows_matching) {
+          ++num_chunks_with_all_rows_matching;
+        } else {
+          ++num_chunks_with_binary_search;
+        }
       });
     }
   });
@@ -253,4 +262,4 @@ bool ColumnVsValueTableScanImpl::_value_matches_none(const BaseDictionarySegment
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

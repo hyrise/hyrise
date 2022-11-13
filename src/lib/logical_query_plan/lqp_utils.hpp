@@ -10,7 +10,7 @@
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractExpression;
 class AbstractLQPNode;
@@ -93,9 +93,15 @@ void lqp_remove_node(const std::shared_ptr<AbstractLQPNode>& node,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
 void lqp_insert_node(const std::shared_ptr<AbstractLQPNode>& parent_node, const LQPInputSide input_side,
-                     const std::shared_ptr<AbstractLQPNode>& node,
+                     const std::shared_ptr<AbstractLQPNode>& node_to_insert,
                      const AllowRightInput allow_right_input = AllowRightInput::No);
 
+/**
+ * Sets @param node as the left input of @param node_to_insert, and re-connects all outputs to @param node_to_insert.
+ */
+void lqp_insert_node_above(const std::shared_ptr<AbstractLQPNode>& node,
+                           const std::shared_ptr<AbstractLQPNode>& node_to_insert,
+                           const AllowRightInput allow_right_input = AllowRightInput::No);
 /**
  * @return whether all paths to all leaves contain a Validate node - i.e. the LQP can be used in an MVCC aware context
  */
@@ -162,11 +168,17 @@ void visit_lqp(const std::shared_ptr<Node>& lqp, Visitor visitor) {
     auto node = node_queue.front();
     node_queue.pop();
 
-    if (!visited_nodes.emplace(node).second) continue;
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
 
     if (visitor(node) == LQPVisitation::VisitInputs) {
-      if (node->left_input()) node_queue.push(node->left_input());
-      if (node->right_input()) node_queue.push(node->right_input());
+      if (node->left_input()) {
+        node_queue.push(node->left_input());
+      }
+      if (node->right_input()) {
+        node_queue.push(node->right_input());
+      }
     }
   }
 }
@@ -194,10 +206,14 @@ void visit_lqp_upwards(const std::shared_ptr<AbstractLQPNode>& lqp, Visitor visi
     auto node = node_queue.front();
     node_queue.pop();
 
-    if (!visited_nodes.emplace(node).second) continue;
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
 
     if (visitor(node) == LQPUpwardVisitation::VisitOutputs) {
-      for (const auto& output : node->outputs()) node_queue.push(output);
+      for (const auto& output : node->outputs()) {
+        node_queue.push(output);
+      }
     }
   }
 }
@@ -223,8 +239,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
  *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
  */
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::unordered_set<ColumnID>& column_ids);
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids);
 
 /**
  * @return True, if there is unique constraint in the given set of @param unique_constraints matching the given
@@ -246,4 +261,10 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
  */
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
 
-}  // namespace opossum
+/**
+ * Takes the given UnionNode @param union_root_node and traverses the LQP until a common origin node was found.
+ * @returns a shared pointer to the diamond's origin node. If it was not found, a null pointer is returned.
+ */
+std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
+
+}  // namespace hyrise

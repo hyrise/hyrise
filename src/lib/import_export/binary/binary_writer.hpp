@@ -11,9 +11,8 @@
 #include "storage/reference_segment.hpp"
 #include "storage/run_length_segment.hpp"
 #include "storage/value_segment.hpp"
-#include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseCompressedVector;
 enum class CompressedVectorType : uint8_t;
@@ -229,8 +228,5 @@ class BinaryWriter {
   // Chooses the right Compressed Vector depending on the CompressedVectorType and exports it.
   static void _export_compressed_vector(std::ofstream& ofstream, const CompressedVectorType type,
                                         const BaseCompressedVector& compressed_vector);
-
-  template <typename T>
-  static size_t _size(const T& object);
 };
-}  // namespace opossum
+}  // namespace hyrise

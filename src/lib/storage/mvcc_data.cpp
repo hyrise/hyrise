@@ -2,7 +2,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
   DebugAssert(size > 0, "No point in having empty MVCC data, as it cannot grow");
@@ -15,15 +15,21 @@ MvccData::MvccData(const size_t size, CommitID begin_commit_id) {
 
 std::ostream& operator<<(std::ostream& stream, const MvccData& mvcc_data) {
   stream << "TIDs: ";
-  for (const auto& tid : mvcc_data._tids) stream << tid.load() << ", ";
+  for (const auto& tid : mvcc_data._tids) {
+    stream << tid.load() << ", ";
+  }
   stream << std::endl;
 
   stream << "BeginCIDs: ";
-  for (const auto& begin_cid : mvcc_data._begin_cids) stream << begin_cid << ", ";
+  for (const auto& begin_cid : mvcc_data._begin_cids) {
+    stream << begin_cid << ", ";
+  }
   stream << std::endl;
 
   stream << "EndCIDs: ";
-  for (const auto& end_cid : mvcc_data._end_cids) stream << end_cid << ", ";
+  for (const auto& end_cid : mvcc_data._end_cids) {
+    stream << end_cid << ", ";
+  }
   stream << std::endl;
 
   return stream;
@@ -77,4 +83,4 @@ size_t MvccData::memory_usage() const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

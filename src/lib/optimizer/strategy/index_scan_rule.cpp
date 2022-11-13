@@ -28,7 +28,7 @@ constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string IndexScanRule::name() const {
   static const auto name = std::string{"IndexScanRule"};
@@ -62,25 +62,36 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
 
 bool IndexScanRule::_is_index_scan_applicable(const IndexStatistics& index_statistics,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
-  if (!_is_single_segment_index(index_statistics)) return false;
+  if (!_is_single_segment_index(index_statistics)) {
+    return false;
+  }
 
-  if (index_statistics.type != SegmentIndexType::GroupKey) return false;
+  if (index_statistics.type != SegmentIndexType::GroupKey) {
+    return false;
+  }
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
-  if (!operator_predicates) return false;
-  if (operator_predicates->size() != 1) return false;
+  if (!operator_predicates || operator_predicates->size() != 1) {
+    return false;
+  }
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
   // Currently, we do not support two-column predicates
-  if (is_column_id(operator_predicate.value)) return false;
+  if (is_column_id(operator_predicate.value)) {
+    return false;
+  }
 
-  if (index_statistics.column_ids[0] != operator_predicate.column_id) return false;
+  if (index_statistics.column_ids[0] != operator_predicate.column_id) {
+    return false;
+  }
 
   const auto row_count_table =
       cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
-  if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) return false;
+  if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) {
+    return false;
+  }
 
   const auto row_count_predicate = cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node);
   const float selectivity = row_count_predicate / row_count_table;
@@ -92,4 +103,4 @@ bool IndexScanRule::_is_single_segment_index(const IndexStatistics& index_statis
   return index_statistics.column_ids.size() == 1;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

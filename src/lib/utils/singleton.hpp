@@ -2,7 +2,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Singleton implementation à la Scott Meyers.
 // The method is declared inline because there can be some trouble with static local variables across translation
@@ -23,7 +23,8 @@ class Singleton : public Noncopyable {
   // If you need to overwrite the constructor make sure to friend this Singleton class. Otherwise it cannot call
   // the protected constructor of a derived class.
   Singleton() {}
+
   Singleton& operator=(Singleton&&) = default;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

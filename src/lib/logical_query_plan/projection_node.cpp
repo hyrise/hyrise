@@ -7,7 +7,7 @@
 #include "resolve_type.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ProjectionNode::ProjectionNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions)
     : AbstractLQPNode(LQPNodeType::Projection, expressions) {}
@@ -22,7 +22,9 @@ std::string ProjectionNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::output_expressions() const { return node_expressions; }
+std::vector<std::shared_ptr<AbstractExpression>> ProjectionNode::output_expressions() const {
+  return node_expressions;
+}
 
 bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   Assert(column_id < node_expressions.size(), "ColumnID out of range");
@@ -83,4 +85,4 @@ bool ProjectionNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNod
   return expressions_equal_to_expressions_in_different_lqp(node_expressions, rhs_expressions, node_mapping);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

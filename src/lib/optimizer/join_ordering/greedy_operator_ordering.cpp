@@ -9,7 +9,7 @@
 #include "statistics/abstract_cardinality_estimator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
     const JoinGraph& join_graph, const std::shared_ptr<AbstractCostEstimator>& cost_estimator) {
@@ -23,8 +23,9 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
    *       vertex. During the algorithm, vertex clusters are consecutively joined.
    */
   auto vertex_clusters = std::map<JoinGraphVertexSet, std::shared_ptr<AbstractLQPNode>>{};
-  for (auto vertex_idx = size_t{0}; vertex_idx < join_graph.vertices.size(); ++vertex_idx) {
-    auto vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
+  const auto vertex_count = join_graph.vertices.size();
+  for (auto vertex_idx = size_t{0}; vertex_idx < vertex_count; ++vertex_idx) {
+    auto vertex_set = JoinGraphVertexSet{vertex_count};
     vertex_set.set(vertex_idx);
     vertex_clusters.emplace(vertex_set, join_graph.vertices[vertex_idx]);
   }
@@ -39,7 +40,8 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
    */
   auto uncorrelated_predicates = std::vector<std::shared_ptr<AbstractExpression>>{};
   auto remaining_edge_indices = std::vector<size_t>{};
-  for (auto edge_idx = size_t{0}; edge_idx < join_graph.edges.size(); ++edge_idx) {
+  const auto edge_count = join_graph.edges.size();
+  for (auto edge_idx = size_t{0}; edge_idx < edge_count; ++edge_idx) {
     const auto& edge = join_graph.edges[edge_idx];
 
     if (edge.vertex_set.none()) {
@@ -58,7 +60,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
    *          cardinality
    *
    */
-  auto plan_by_edge = std::vector<PlanCardinalityPair>{join_graph.edges.size()};
+  auto plan_by_edge = std::vector<PlanCardinalityPair>{edge_count};
   for (const auto& edge_idx : remaining_edge_indices) {
     plan_by_edge[edge_idx] = _build_plan_for_edge(join_graph.edges[edge_idx], vertex_clusters, cost_estimator);
   }
@@ -87,7 +89,7 @@ std::shared_ptr<AbstractLQPNode> GreedyOperatorOrdering::operator()(
      *      While doing so, remove all the individual vertex clusters connected by the edge from the set of
      *      vertex_clusters - we will add a new vertex cluster comprised of all of them afterwards
      */
-    auto joined_vertex_set = JoinGraphVertexSet{join_graph.vertices.size()};
+    auto joined_vertex_set = JoinGraphVertexSet{vertex_count};
     for (auto vertex_cluster_iter = vertex_clusters.begin(); vertex_cluster_iter != vertex_clusters.end();) {
       if ((vertex_cluster_iter->first & lowest_cardinality_edge.vertex_set).any()) {
         joined_vertex_set |= vertex_cluster_iter->first;
@@ -144,18 +146,18 @@ GreedyOperatorOrdering::PlanCardinalityPair GreedyOperatorOrdering::_build_plan_
                                         edge.predicates, cost_estimator);
 
     return {plan, cardinality_estimator->estimate_cardinality(plan)};
-
-  } else {
-    // Local edges and hyperedges
-    auto plan = vertex_clusters.at(joined_clusters.front());
-
-    for (auto joined_cluster_idx = size_t{1}; joined_cluster_idx < joined_clusters.size(); ++joined_cluster_idx) {
-      plan = JoinNode::make(JoinMode::Cross, plan, vertex_clusters.at(joined_clusters[joined_cluster_idx]));
-    }
-
-    plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator);
-    return {plan, cardinality_estimator->estimate_cardinality(plan)};
   }
+
+  // Local edges and hyperedges
+  auto plan = vertex_clusters.at(joined_clusters.front());
+
+  const auto joined_cluster_count = joined_clusters.size();
+  for (auto joined_cluster_idx = size_t{1}; joined_cluster_idx < joined_cluster_count; ++joined_cluster_idx) {
+    plan = JoinNode::make(JoinMode::Cross, plan, vertex_clusters.at(joined_clusters[joined_cluster_idx]));
+  }
+
+  plan = _add_predicates_to_plan(plan, edge.predicates, cost_estimator);
+  return {plan, cardinality_estimator->estimate_cardinality(plan)};
 }
 
-}  // namespace opossum
+}  // namespace hyrise

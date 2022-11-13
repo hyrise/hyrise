@@ -2,7 +2,7 @@
 
 #include "abstract_tpcc_procedure.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Limitations:
 // 2.7.2   The delivery procedure is not executed in any type of deferred mode (given than we do not have the
@@ -21,4 +21,4 @@ class TPCCDelivery : public AbstractTPCCProcedure {
   int32_t ol_delivery_d;  // Current datetime
 };
 
-}  // namespace opossum
+}  // namespace hyrise

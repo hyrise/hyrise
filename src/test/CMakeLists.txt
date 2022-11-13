@@ -71,6 +71,7 @@ set(
     lib/lossless_cast_test.cpp
     lib/lossy_cast_test.cpp
     lib/memory/segments_using_allocators_test.cpp
+    lib/memory/zero_allocator_test.cpp
     lib/null_value_test.cpp
     lib/operators/aggregate_sort_test.cpp
     lib/operators/aggregate_test.cpp
@@ -205,13 +206,14 @@ set(
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
     lib/utils/column_ids_after_pruning_test.cpp
-    lib/utils/date_utils_test.cpp
+    lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp
     lib/utils/load_table_test.cpp
     lib/utils/log_manager_test.cpp
     lib/utils/lossless_predicate_cast_test.cpp
     lib/utils/meta_table_manager_test.cpp
+    lib/utils/meta_tables/meta_exec_table_test.cpp
     lib/utils/meta_tables/meta_log_table_test.cpp
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
@@ -224,12 +226,14 @@ set(
     lib/utils/plugin_manager_test.cpp
     lib/utils/plugin_test_utils.cpp
     lib/utils/plugin_test_utils.hpp
+    lib/utils/print_utils_test.cpp
     lib/utils/setting_test.cpp
     lib/utils/settings_manager_test.cpp
     lib/utils/singleton_test.cpp
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
+    plugins/ucc_discovery_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
     utils/constraint_test_utils.hpp
@@ -257,7 +261,9 @@ set(
     gtest
     gmock
     SQLite::SQLite3
-    hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
+    # Added plugin targets so that we can test member methods without going through dlsym
+    hyriseMvccDeletePlugin
+    hyriseUccDiscoveryPlugin
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -273,7 +279,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
@@ -292,5 +298,5 @@ endif()
 # Configure hyriseSystemTest
 add_executable(hyriseSystemTest ${SYSTEM_TEST_SOURCES})
 target_link_libraries(hyriseSystemTest PUBLIC hyrise hyriseBenchmarkLib ${LIBRARIES})
-target_link_libraries_system(hyriseSystemTest pqxx_static)
+target_link_libraries_system(hyriseSystemTest pqxx)
 target_compile_options(hyriseSystemTest PRIVATE -DPQXX_HIDE_EXP_OPTIONAL)

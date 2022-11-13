@@ -10,7 +10,7 @@
 #include "storage/value_segment.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StorageFixedStringDictionarySegmentTest : public BaseTest {
  protected:
@@ -57,9 +57,9 @@ TEST_F(StorageFixedStringDictionarySegmentTest, Decode) {
   EXPECT_EQ(dict_segment->compressed_vector_type(), CompressedVectorType::FixedWidthInteger1Byte);
 
   // Decode values
-  EXPECT_EQ((*dict_segment)[0], AllTypeVariant("Bill"));
-  EXPECT_EQ((*dict_segment)[1], AllTypeVariant("Steve"));
-  EXPECT_EQ((*dict_segment)[2], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_segment)[ChunkOffset{0}], AllTypeVariant("Bill"));
+  EXPECT_EQ((*dict_segment)[ChunkOffset{1}], AllTypeVariant("Steve"));
+  EXPECT_EQ((*dict_segment)[ChunkOffset{2}], AllTypeVariant("Bill"));
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, LongStrings) {
@@ -113,7 +113,7 @@ TEST_F(StorageFixedStringDictionarySegmentTest, NullValues) {
   auto dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(segment);
 
   EXPECT_EQ(dict_segment->null_value_id(), 2u);
-  EXPECT_TRUE(variant_is_null((*dict_segment)[1]));
+  EXPECT_TRUE(variant_is_null((*dict_segment)[ChunkOffset{1}]));
 }
 
 TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
@@ -142,4 +142,4 @@ TEST_F(StorageFixedStringDictionarySegmentTest, MemoryUsageEstimation) {
   EXPECT_EQ(dictionary_segment->memory_usage(), empty_memory_usage - 1u + 3 * size_of_attribute + size_of_dictionary);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

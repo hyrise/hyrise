@@ -7,7 +7,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<FrameOfReferenceSegmentIterable<T>> {
@@ -52,7 +52,9 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
     });
   }
 
-  size_t _on_size() const { return _segment.size(); }
+  size_t _on_size() const {
+    return _segment.size();
+  }
 
  private:
   const FrameOfReferenceSegment<T>& _segment;
@@ -75,13 +77,21 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
-    void increment() { ++_chunk_offset; }
+    void increment() {
+      ++_chunk_offset;
+    }
 
-    void decrement() { --_chunk_offset; }
+    void decrement() {
+      --_chunk_offset;
+    }
 
-    void advance(std::ptrdiff_t n) { _chunk_offset += n; }
+    void advance(std::ptrdiff_t n) {
+      _chunk_offset += n;
+    }
 
-    bool equal(const Iterator& other) const { return _chunk_offset == other._chunk_offset; }
+    bool equal(const Iterator& other) const {
+      return _chunk_offset == other._chunk_offset;
+    }
 
     std::ptrdiff_t distance_to(const Iterator& other) const {
       return static_cast<std::ptrdiff_t>(other._chunk_offset) - _chunk_offset;
@@ -147,4 +157,4 @@ class FrameOfReferenceSegmentIterable : public PointAccessibleSegmentIterable<Fr
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 
 #include "bitpacking_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BitPackingVector;
 
@@ -49,4 +49,4 @@ std::unique_ptr<BaseVectorCompressor> BitPackingCompressor::create_new() const {
   return std::make_unique<BitPackingCompressor>();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

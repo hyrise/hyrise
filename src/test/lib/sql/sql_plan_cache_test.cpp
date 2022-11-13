@@ -9,15 +9,15 @@
 #include "sql/sql_pipeline_statement.hpp"
 #include "sql/sql_plan_cache.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class QueryPlanCacheTest : public BaseTest {
  protected:
   void SetUp() override {
     // Load tables.
-    auto table_a = load_table("resources/test_data/tbl/int_float.tbl", 2);
+    auto table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_a", std::move(table_a));
-    auto table_b = load_table("resources/test_data/tbl/int_float2.tbl", 2);
+    auto table_b = load_table("resources/test_data/tbl/int_float2.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_b", std::move(table_b));
 
     _query_plan_cache_hits = 0;
@@ -34,7 +34,9 @@ class QueryPlanCacheTest : public BaseTest {
     }
   }
 
-  size_t query_frequency(const std::string& key) const { return (*(cache->_map.find(key)->second)).frequency; }
+  size_t query_frequency(const std::string& key) const {
+    return (*(cache->_map.find(key)->second)).frequency;
+  }
 
   const std::string Q1 = "SELECT * FROM table_a;";
   const std::string Q2 = "SELECT * FROM table_b;";
@@ -109,4 +111,4 @@ TEST_F(QueryPlanCacheTest, CachedPQPFrequencyCount) {
   EXPECT_EQ(1, query_frequency(Q1));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

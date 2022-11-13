@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief the base class of all table scan impls
@@ -109,7 +109,7 @@ class AbstractTableScanImpl {
     auto matches_out_index = matches_out.size();
 
     // Make sure that we have enough space for the first iteration. We might resize later on.
-    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, 0});
+    matches_out.resize(matches_out.size() + BLOCK_SIZE, RowID{chunk_id, ChunkOffset{0}});
 
     // As we access the offsets after we already moved the iterator, we need a copy of it. Creating this copy outside
     // of the while loop keeps the surprisingly high costs for copying an iterator to a minimum.
@@ -134,19 +134,21 @@ class AbstractTableScanImpl {
       {}  // clang-format off
       #pragma omp simd reduction(|:mask) safelen(BLOCK_SIZE)
       // clang-format on
-      for (size_t i = 0; i < BLOCK_SIZE; ++i) {
+      for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
         // Fill `mask` with 1s at positions where the condition is fulfilled
         const auto& left = *left_it;
 
         if constexpr (std::is_same_v<RightIterator, std::false_type>) {
-          mask |= ((!CheckForNull | !left.is_null()) & func(left)) << i;
+          mask |= ((!CheckForNull | !left.is_null()) && func(left)) << index;
         } else {
           const auto& right = *right_it;
-          mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << i;
+          mask |= ((!CheckForNull | (!left.is_null() && !right.is_null())) & func(left, right)) << index;
         }
 
         ++left_it;
-        if constexpr (!std::is_same_v<RightIterator, std::false_type>) ++right_it;
+        if constexpr (!std::is_same_v<RightIterator, std::false_type>) {
+          ++right_it;
+        }
       }
 
       if (!mask) {
@@ -169,8 +171,8 @@ class AbstractTableScanImpl {
         {}  // clang-format off
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
-        for (size_t i = 0; i < BLOCK_SIZE; ++i) {
-          offsets[i] = first_offset + static_cast<ChunkOffset>(i);
+        for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
+          offsets[index] = first_offset + static_cast<ChunkOffset>(index);
         }
 
         left_it_for_offsets += BLOCK_SIZE;
@@ -181,8 +183,8 @@ class AbstractTableScanImpl {
         {}  // clang-format off
         #pragma omp simd safelen(BLOCK_SIZE)
         // clang-format on
-        for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-          offsets[i] = left_it_for_offsets->chunk_offset();
+        for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
+          offsets[index] = left_it_for_offsets->chunk_offset();
           ++left_it_for_offsets;
         }
       }
@@ -190,9 +192,9 @@ class AbstractTableScanImpl {
       // Now write the matches into matches_out.
 #ifndef __AVX512VL__
       // "Slow" path for non-AVX512VL systems
-      for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        if (mask >> i & 1) {
-          matches_out[matches_out_index++].chunk_offset = offsets[i];
+      for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
+        if (mask >> index & 1) {
+          matches_out[matches_out_index++].chunk_offset = offsets[index];
         }
       }
 
@@ -215,8 +217,8 @@ class AbstractTableScanImpl {
       {}  // clang-format off
       #pragma omp simd safelen(BLOCK_SIZE)
       // clang-format on
-      for (auto i = size_t{0}; i < BLOCK_SIZE; ++i) {
-        matches_out[matches_out_index + i].chunk_offset = (reinterpret_cast<ChunkOffset*>(&offsets_simd))[i];
+      for (auto index = size_t{0}; index < BLOCK_SIZE; ++index) {
+        matches_out[matches_out_index + index].chunk_offset = (reinterpret_cast<ChunkOffset*>(&offsets_simd))[index];
       }
 
       // Count the number of matches and increase the index of the next write to matches_out accordingly
@@ -226,7 +228,7 @@ class AbstractTableScanImpl {
       // As we write directly into the matches_out vector, we have to make sure that is big enough. We grow the vector
       // more aggressively than its default behavior as the potentially wasted space is only ephemeral.
       if (matches_out_index + BLOCK_SIZE >= matches_out.size()) {
-        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, 0});
+        matches_out.resize((BLOCK_SIZE + matches_out.size()) * 3, RowID{chunk_id, ChunkOffset{0}});
       }
     }
 
@@ -239,4 +241,4 @@ class AbstractTableScanImpl {
   /**@}*/
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -1,25 +1,53 @@
 #!/usr/bin/env python3
 
 import json
+import math
+import re
 import subprocess
 
 # This helper test class takes two JSON result files, runs the compare_benchmarks.py script, and checks that the output
 # is as expected. It is called from benchmark tests such as hyriseBenchmarkTPCC_test.py.
 
 
-# The next two functions check for string matches instead of using math.isclose() since extracting values from
-# ANSI-colored text turned out to be too cumbersome.
+# Function removes any ANSI escape sequences, which we use for color coding.
+# Gratefully taken from https://stackoverflow.com/a/14693789/1147726
+def clean_ansi_escape_sequences(input_string):
+    ansi_escape = re.compile(
+        r"""
+    \x1B  # ESC
+    (?:   # 7-bit C1 Fe (except CSI)
+        [@-Z\\-_]
+    |     # or [ for CSI, followed by a control sequence
+        \[
+        [0-?]*  # Parameter bytes
+        [ -/]*  # Intermediate bytes
+        [@-~]   # Final byte
+    )
+    """,
+        re.VERBOSE,
+    )
+    return ansi_escape.sub("", input_string)
+
+
+# As different precisions are used (i.e., precision for rounded latencies is different from rounding precision of
+# throughputs), string comparisons with rounding are hard when we don't want to assume known precisions. We thus clean
+# the strings from the colour coding, parse the strings as floats, and use math.isclose().
 def assert_latency_equals(item_count, runtimes, latency_string):
     if item_count == 0:
         assert "nan" in latency_string
         return
+
     avg_latency = sum(runtimes) / item_count / 1_000_000
-    assert str(round(avg_latency, 1)) in latency_string
+    latency_string_cleaned = clean_ansi_escape_sequences(latency_string)
+
+    assert math.isclose(float(latency_string_cleaned), avg_latency, abs_tol=0.1)
 
 
 def assert_throughput_equals(item_count, duration, throughput_string):
     throughput = item_count / duration * 1_000_000_000
-    assert str(round(throughput, 2)) in throughput_string
+    throughput_string_cleaned = clean_ansi_escape_sequences(throughput_string)
+
+    assert math.isclose(float(throughput_string_cleaned), throughput, abs_tol=0.1)
 
 
 class CompareBenchmarkScriptTest:

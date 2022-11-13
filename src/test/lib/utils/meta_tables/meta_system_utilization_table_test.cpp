@@ -6,7 +6,7 @@
 
 #include "utils/meta_tables/meta_system_utilization_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaSystemUtilizationTest : public BaseTest {
  protected:
@@ -57,4 +57,4 @@ TEST_F(MetaSystemUtilizationTest, CPUAffinity) {
 }
 #endif
 
-}  // namespace opossum
+}  // namespace hyrise

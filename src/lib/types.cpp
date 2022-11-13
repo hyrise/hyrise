@@ -2,7 +2,7 @@
 
 #include "utils/make_bimap.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition) {
   return predicate_condition == PredicateCondition::Equals || predicate_condition == PredicateCondition::NotEquals ||
@@ -120,13 +120,17 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
   if (lower == PredicateCondition::GreaterThan) {
     if (upper == PredicateCondition::LessThan) {
       return PredicateCondition::BetweenExclusive;
-    } else if (upper == PredicateCondition::LessThanEquals) {
+    }
+
+    if (upper == PredicateCondition::LessThanEquals) {
       return PredicateCondition::BetweenLowerExclusive;
     }
   } else if (lower == PredicateCondition::GreaterThanEquals) {
     if (upper == PredicateCondition::LessThan) {
       return PredicateCondition::BetweenUpperExclusive;
-    } else if (upper == PredicateCondition::LessThanEquals) {
+    }
+
+    if (upper == PredicateCondition::LessThanEquals) {
       return PredicateCondition::BetweenInclusive;
     }
   }
@@ -197,4 +201,4 @@ std::ostream& operator<<(std::ostream& stream, TableType table_type) {
   return stream << table_type_to_string.left.at(table_type);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

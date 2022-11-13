@@ -2,7 +2,7 @@
 
 #include "./mock_setting.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SettingTest : public BaseTest {
  protected:
@@ -11,7 +11,9 @@ class SettingTest : public BaseTest {
     mock_setting = std::make_shared<MockSetting>("mock_setting");
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   std::shared_ptr<AbstractSetting> mock_setting;
 };
@@ -25,4 +27,4 @@ TEST_F(SettingTest, RegistrationAtSettingsManager) {
   EXPECT_FALSE(settings_manager.has_setting("mock_setting"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise
