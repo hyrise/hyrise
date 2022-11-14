@@ -1,11 +1,10 @@
-#include "micro_benchmark_basic_fixture.hpp"
-
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
 #include <algorithm>
 #include <numeric>
+#include "micro_benchmark_basic_fixture.hpp"
 
 namespace hyrise {
 
@@ -17,7 +16,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::vector<uint32_t> numbers;
 
   void SetUp(::benchmark::State& state) override {
-    //TODO: Make setup/teardown global per file size to improve benchmark speed
+    // TODO: Make setup/teardown global per file size to improve benchmark speed
     ssize_t BUFFER_SIZE_MB = state.range(0);
 
     // each int32_t contains four bytes
@@ -40,7 +39,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   void TearDown(::benchmark::State& /*state*/) override {
-    //TODO: Error handling
+    // TODO: Error handling
     std::remove("file.txt");
   }
 
@@ -102,7 +101,6 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::Sta
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::State& state) {  // open file
-
   for (auto _ : state) {
     const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
@@ -123,7 +121,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::S
   }
 }
 
-//arguments are file size in MB
+// Arguments are file size in MB
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)->Arg(10)->Arg(100)->Arg(1000);
