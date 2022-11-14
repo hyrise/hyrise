@@ -16,7 +16,6 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   uint64_t control_sum = uint64_t{0};
   std::vector<uint32_t> numbers;
 
-
   void SetUp(::benchmark::State& state) override {
     //TODO: Make setup/teardown global per file size to improve benchmark speed
     ssize_t BUFFER_SIZE_MB = state.range(0);
@@ -24,17 +23,17 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // each int32_t contains four bytes
     uint32_t vector_element_count = (BUFFER_SIZE_MB * MB) / 4;
     numbers = std::vector<uint32_t>(vector_element_count);
-    for(size_t index = 0; index<vector_element_count; ++index){
+    for (size_t index = 0; index < vector_element_count; ++index) {
       numbers[index] = std::rand() % UINT32_MAX;
     }
-    control_sum = std::accumulate(numbers.begin(), numbers.end(),uint64_t {0});
+    control_sum = std::accumulate(numbers.begin(), numbers.end(), uint64_t{0});
 
     int32_t fd;
     if ((fd = creat("file.txt", O_WRONLY)) < 1) {
       std::cout << "create error" << std::endl;
     }
     chmod("file.txt", S_IRWXU);  // enables owner to rwx file
-    if (write(fd, std::data(numbers), BUFFER_SIZE_MB * MB ) != BUFFER_SIZE_MB * MB ) {
+    if (write(fd, std::data(numbers), BUFFER_SIZE_MB * MB) != BUFFER_SIZE_MB * MB) {
       std::cout << "write error" << std::endl;
     }
     close(fd);
@@ -69,7 +68,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::
       Fail("read error: " + strerror(errno));
     }
     state.PauseTiming();
-    auto sum = std::accumulate(read_data.begin(), read_data.end(),uint64_t {0});
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     // sum == 0 because read vector is empty
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
     state.ResumeTiming();
@@ -90,19 +89,19 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::Sta
     read_data.resize(NUMBER_OF_BYTES / 4);
     state.ResumeTiming();
 
-    if (pread(fd, std::data(read_data), NUMBER_OF_BYTES , 0) != NUMBER_OF_BYTES) {
+    if (pread(fd, std::data(read_data), NUMBER_OF_BYTES, 0) != NUMBER_OF_BYTES) {
       Fail("read error: " + strerror(errno));
     }
 
     state.PauseTiming();
-    auto sum = std::accumulate(read_data.begin(), read_data.end(),uint64_t {0});
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
 
     state.ResumeTiming();
   }
 }
 
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::State& state) {// open file
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::State& state) {  // open file
 
   for (auto _ : state) {
     const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
@@ -115,7 +114,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::S
     read_data = numbers;
 
     state.PauseTiming();
-    auto sum = std::accumulate(read_data.begin(), read_data.end(),uint64_t {0});
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
 
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
     Assert(&read_data != &numbers, "Sanity check failed: Same reference");
