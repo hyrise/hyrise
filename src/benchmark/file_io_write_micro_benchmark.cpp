@@ -102,7 +102,7 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
   const int32_t NUMBER_OF_BYTES = file_size * MB;
 
   int32_t fd;
-  if ((fd = open("file.txt", O_RDWR | O_CREAT | O_TRUNC)) < 0) {
+  if ((fd = open("file.txt", O_RDWR)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
 
