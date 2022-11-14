@@ -248,9 +248,7 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
         )
 
         if len(old_unsuccessful_durations) > 0 and len(new_unsuccessful_durations) > 0:
-            diff_throughput_unsuccessful_str = format_diff(
-                new_unsuccessful_per_second / old_unsuccessful_per_second
-            )
+            diff_throughput_unsuccessful_str = format_diff(new_unsuccessful_per_second / old_unsuccessful_per_second)
             diff_duration_unsuccessful_str = format_diff(
                 np.mean(new_unsuccessful_durations) / np.mean(old_unsuccessful_durations)
             )
@@ -265,7 +263,7 @@ for old, new in zip(old_data["benchmarks"], new_data["benchmarks"]):
             diff_duration_unsuccessful_str + " ",  # space added to align diff with "note" char (see above)
             f"{old_unsuccessful_per_second:>.2f}",
             f"{new_unsuccessful_per_second:>.2f}",
-            diff_throughput_unsuccessful_str + " "
+            diff_throughput_unsuccessful_str + " ",
         ]
 
         unsuccessful_info_colored = [colored(text, attrs=["dark"]) for text in unsuccessful_info]
