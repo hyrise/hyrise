@@ -141,7 +141,8 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
         std::vector<int> ind_access_order = generate_random_indexes(NUMBER_OF_BYTES);
         state.ResumeTiming();
         for (uint32_t idx = 0; idx < ind_access_order.size(); ++idx) {
-          map[idx] = 42;
+          auto access_index = ind_access_order[idx];
+          map[access_index] = access_index;
         }
         break;
     }
