@@ -322,7 +322,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
-    const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+    const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const {
   // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
@@ -419,6 +419,27 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates
   if (!operator_scan_predicates) {
+    const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
+
+    // Predicates with an equals condition and an uncorrelated subquery as argument are a filter comparable to a
+    // semi-join with a table containing a single row.
+    if (binary_predicate_expression && binary_predicate_expression->predicate_condition == PredicateCondition::Equals) {
+      auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->left_operand());
+      auto column_expression = binary_predicate_expression->right_operand();
+      if (!subquery_expression) {
+        subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->right_operand());
+        column_expression = binary_predicate_expression->left_operand();
+      }
+
+      if (subquery_expression && !subquery_expression->is_correlated()) {
+        const auto& subquery_output_expressions = subquery_expression->lqp->output_expressions();
+        Assert(subquery_output_expressions.size() == 1, "Uncorrelated subquery must return a single value.");
+        const auto column_id = predicate_node.left_input()->get_column_id(*column_expression);
+        const auto& subquery_statistics = estimate_statistics(subquery_expression->lqp);
+        return estimate_semi_join(column_id, ColumnID{0}, *input_table_statistics, *subquery_statistics);
+      }
+    }
+
     return input_table_statistics;
   }
 
