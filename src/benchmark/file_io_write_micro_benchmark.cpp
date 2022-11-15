@@ -141,7 +141,8 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
         std::vector<int> ind_access_order = generate_random_indexes(NUMBER_OF_BYTES);
         state.ResumeTiming();
         for (uint32_t idx = 0; idx < ind_access_order.size(); ++idx) {
-          map[idx] = 42;
+          auto access_index = ind_access_order[idx];
+          map[access_index] = access_index;
         }
         break;
     }
@@ -162,7 +163,7 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUENTIAL)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUENTIAL)->Arg(10)->Arg(100);
+BENCHMARK_REGISTER_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDOM)->Arg(10)->Arg(100);
 
 }  // namespace hyrise
