@@ -1,7 +1,7 @@
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/mman.h>
 #include <unistd.h>
 #include <algorithm>
 #include <numeric>
@@ -102,63 +102,61 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::Sta
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)(benchmark::State& state) {
-	int32_t fd;
+  int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
   const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
-	for (auto _ : state) {
-		state.PauseTiming();
-		micro_benchmark_clear_disk_cache();
-		state.ResumeTiming();
+  for (auto _ : state) {
+    state.PauseTiming();
+    micro_benchmark_clear_disk_cache();
+    state.ResumeTiming();
 
     // Getting the mapping to memory.
     off_t OFFSET = 0;
 
-    int32_t * map = (int32_t *)mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_PRIVATE, fd, OFFSET);
+    int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_PRIVATE, fd, OFFSET));
     if (map == MAP_FAILED) {
       std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
       continue;
     }
-    
-    //TODO Check if everything is read.
 
+    // TODO(janlemcke): Check if everything is read.
     // Remove memory mapping after job is done.
     if (munmap(map, NUMBER_OF_BYTES) != 0) {
       std::cout << "Unmapping failed." << std::endl;
     }
-	}
+  }
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)(benchmark::State& state) {
-	int32_t fd;
+  int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
   const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
-	for (auto _ : state) {
-		state.PauseTiming();
-		micro_benchmark_clear_disk_cache();
-		state.ResumeTiming();
+  for (auto _ : state) {
+    state.PauseTiming();
+    micro_benchmark_clear_disk_cache();
+    state.ResumeTiming();
 
     // Getting the mapping to memory.
     off_t OFFSET = 0;
 
-    int32_t * map = (int32_t *)mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_SHARED, fd, OFFSET);
+    int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_SHARED, fd, OFFSET));
     if (map == MAP_FAILED) {
       std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
       continue;
     }
 
-    //TODO Check if everything is read.
-    
+    // TODO(janlemcke): Check if everything is read.
     // Remove memory mapping after job is done.
     if (munmap(map, NUMBER_OF_BYTES) != 0) {
       std::cout << "Unmapping failed." << std::endl;
     }
-	}
+  }
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::State& state) {  // open file
@@ -183,6 +181,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::S
 }
 
 // Arguments are file size in MB
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)->Arg(1000)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)->Arg(10)->Arg(100)->Arg(1000);
