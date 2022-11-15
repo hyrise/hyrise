@@ -83,7 +83,39 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::
   }
 }
 
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::State& state) {
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benchmark::State& state) {  // open file
+  int32_t fd;
+  if ((fd = open("file.txt", O_RDONLY)) < 0) {
+    std::cout << "open error " << errno << std::endl;
+  }
+  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    micro_benchmark_clear_disk_cache();
+    std::vector<uint32_t> read_data;
+    auto read_data_size = NUMBER_OF_BYTES / 4;
+    read_data.resize(read_data_size);
+    state.ResumeTiming();
+
+    lseek(fd, 0, SEEK_SET);
+
+    for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
+      read_data[index] = numbers[index];
+    }
+
+    if (read(fd, std::data(read_data), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
+      Fail("read error: " + strerror(errno));
+    }
+    state.PauseTiming();
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
+    // sum == 0 because read vector is empty
+    Assert(control_sum == sum, "Sanity check failed: Not the same result");
+    state.ResumeTiming();
+  }
+}
+
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(benchmark::State& state) {
   int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
@@ -109,6 +141,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)(benchmark::Sta
   }
 }
 
+
+
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(benchmark::State& state) {  // open file
   for (auto _ : state) {
     const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
@@ -119,7 +153,9 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(b
     read_data.resize(read_data_size);
     state.ResumeTiming();
 
- read_data = numbers;
+    for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
+      read_data[index] = numbers[index];
+    }
 
     state.PauseTiming();
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
@@ -157,9 +193,11 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(bench
 
 // Arguments are file size in MB
 //BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+// BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
+
 //BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10);//->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10);//->Arg(100)->Arg(1000);
 
 
 }  // namespace hyrise
