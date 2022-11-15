@@ -1,5 +1,6 @@
 #include "benchmark_sql_executor.hpp"
 
+#include "operators/table_scan.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "utils/check_table_equal.hpp"
 #include "utils/timer.hpp"
@@ -28,6 +29,76 @@ std::pair<SQLPipelineStatus, std::shared_ptr<const Table>> BenchmarkSQLExecutor:
   auto pipeline = pipeline_builder.create_pipeline();
 
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
+
+  // #####################
+  // #####################
+  // #####################
+
+  auto cardinality_estimator = CardinalityEstimator{};
+  cardinality_estimator.guarantee_bottom_up_construction();
+
+  const auto& lqp_plans = pipeline.get_optimized_logical_plans();
+  if (lqp_plans.size() != 1) {
+    std::cerr << "!!!!!!\n!!!!!!\n!!!!!!\n";
+    std::cerr << "!!!!!! Caution: analyzing a pipeline with more than one statement.\n";
+    std::cerr << "!!!!!!\n!!!!!!\n!!!!!!\n" << std::endl;
+  }
+
+  // Prints the logical query plans. Helps for understanding what's actually happening in the query.
+  // We also store visualizations of these plans here: https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/query_plans/tpch/
+  // for (const auto& plan : lqp_plans) {
+  //   std::cout << "\n\n\n\n\n###\n###\n###\n" << *plan << "###\n###\n###\n" << std::endl;
+  // }
+
+  const auto& pqp_plans = pipeline.get_physical_plans();
+  for (const auto& plan_root : pqp_plans) {
+    if (plan_root->type() == OperatorType::CreateView || plan_root->type() == OperatorType::DropView) {
+      // Skip some case. You might find more cases that need to be discarded.
+      std::cout << "Skipping create/drop view operators." << std::endl;
+      continue;
+    }
+
+    auto op = plan_root->left_input();
+    while (op->left_input()) {
+      // Print the type of operator when iterating.
+      // std::cout << magic_enum::enum_name(plan_root->type()) << std::endl;
+
+      // We only care for filters. Anything else is ignored.
+      if (op->type () == OperatorType::TableScan) {
+        const auto table_scan_input = op->left_input();
+        // We only care about the filters that are directly following a GetTable operations.
+        // Again: estimating cardinalities of conjunctive/disjunctive filters is hard and not your task.
+        if (table_scan_input->type() == OperatorType::GetTable) {
+          // To obtain the sizes, we collect two kinds of information here:
+          // (i) for the physical operators, we need to obtain the "performnance data", which stores performance data
+          //     for each executed operator. As we throw away the intermediate results of executed queries, you cannot
+          //     obtain the size of the intermediate tables after the operator has finished. For that reason: use the
+          //     performance data structs.
+          // (ii) for the estimated cardinalities during the query optimization, we access the logical query plan (you
+          //      can obtain the corresponding logical node for each operator via `->lqp_node`) and feed this logical
+          //      node into the cardinality estimator.
+          std::cout << "Information for " << *op->lqp_node << std::endl;
+          const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op);
+          const auto& table_scan_performance_data = table_scan_op->performance_data;
+          const auto& get_table_performance_data = table_scan_input->performance_data;
+          std::cout << "Input size to table scan: " << get_table_performance_data->output_row_count << std::endl;
+          std::cout << "Result size after table scan: " << table_scan_performance_data->output_row_count << std::endl;
+          // std::cout << "Actual selectivity of table scan: " << static_cast<float>(get_table_performance_data->output_row_count) / static_cast<float>(table_scan_performance_data->output_row_count) << std::endl;
+
+          std::cout << "Input size to table scan: " << cardinality_estimator.estimate_cardinality(table_scan_input->lqp_node) << std::endl;
+          std::cout << "Result size after table scan: " << cardinality_estimator.estimate_cardinality(table_scan_op->lqp_node) << std::endl;
+
+          // std::cout << *(table_scan_op->predicate()) << std::endl;
+          // std::cout << magic_enum::enum_name(op->left_input()->type()) << std::endl;
+        }
+      }
+      op = op->left_input();
+    }
+  }
+
+  // #####################
+  // #####################
+  // #####################
 
   if (pipeline_status == SQLPipelineStatus::Failure) {
     return {pipeline_status, nullptr};
