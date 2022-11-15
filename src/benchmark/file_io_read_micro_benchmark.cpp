@@ -65,13 +65,13 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
 
   for (auto _ : state) {
     state.PauseTiming();
+
     micro_benchmark_clear_disk_cache();
     std::vector<uint32_t> read_data;
-
     auto read_data_size = NUMBER_OF_BYTES / 4;
     read_data.resize(read_data_size);
-    state.ResumeTiming();
 
+    state.ResumeTiming();
     for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
       lseek(fd, sizeof (uint32_t) * index, SEEK_SET);
 
@@ -79,11 +79,11 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
         Fail("read error: " + strerror(errno));
       }
     }
-
     state.PauseTiming();
+
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
-    // sum == 0 because read vector is empty
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
+
     state.ResumeTiming();
   }
 }
@@ -97,27 +97,27 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
 
   for (auto _ : state) {
     state.PauseTiming();
+
     micro_benchmark_clear_disk_cache();
     std::vector<uint32_t> read_data;
     auto read_data_size = NUMBER_OF_BYTES / 4;
     read_data.resize(read_data_size);
+
     state.ResumeTiming();
 
     lseek(fd, 0, SEEK_SET);
-
     for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
-      // here
       lseek(fd, sizeof (uint32_t) * random_indices[index], SEEK_SET);
 
       if (read(fd, std::data(read_data) + index, sizeof (uint32_t)) != sizeof (uint32_t)) {
         Fail("read error: " + strerror(errno));
       }
     }
-
     state.PauseTiming();
+
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
-    // sum == 0 because read vector is empty
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
+
     state.ResumeTiming();
   }
 }
@@ -131,10 +131,12 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
 
   for (auto _ : state) {
     state.PauseTiming();
+
     micro_benchmark_clear_disk_cache();
     std::vector<uint32_t> read_data;
     auto read_data_size = NUMBER_OF_BYTES / 4;
     read_data.resize(read_data_size);
+
     state.ResumeTiming();
 
     for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
@@ -142,12 +144,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
         Fail("read error: " + strerror(errno));
       }
     }
-
-    if (pread(fd, std::data(read_data), NUMBER_OF_BYTES, 0) != NUMBER_OF_BYTES) {
-      Fail("read error: " + strerror(errno));
-    }
-
     state.PauseTiming();
+
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
 
@@ -177,14 +175,13 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
       }
     }
     state.PauseTiming();
+
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
 
     state.ResumeTiming();
   }
 }
-
-
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(benchmark::State& state) {  // open file
   for (auto _ : state) {
