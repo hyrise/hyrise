@@ -9,11 +9,14 @@
 namespace hyrise {
 
 const int32_t MB = 1000000;
+const double random_read_amount_factor = 1;
 
 class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   uint64_t control_sum = uint64_t{0};
+  uint64_t control_sum_random = uint64_t{0};
   std::vector<uint32_t> numbers;
+  std::vector<uint32_t> random_indices;
 
   void SetUp(::benchmark::State& state) override {
     // TODO: Make setup/teardown global per file size to improve benchmark speed
@@ -26,6 +29,14 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
       numbers[index] = std::rand() % UINT32_MAX;
     }
     control_sum = std::accumulate(numbers.begin(), numbers.end(), uint64_t{0});
+    control_sum_random = uint64_t{0};
+    // read random 1% of number entries
+    auto random_indices_count = static_cast<size_t>(vector_element_count * random_read_amount_factor);
+    random_indices = std::vector<uint32_t>(random_indices_count);
+    for(auto index = size_t{0}; index < size_t{random_indices_count}; ++index){
+      random_indices[index] = std::rand() % random_indices_count;
+      control_sum_random += numbers[random_indices[index]];
+    }
 
     int32_t fd;
     if ((fd = creat("file.txt", O_WRONLY)) < 1) {
@@ -121,9 +132,35 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)(benchmark::S
   }
 }
 
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(benchmark::State& state) {  // open file
+  for (auto _ : state) {
+    const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+    state.PauseTiming();
+    std::vector<uint32_t> read_data;
+    auto random_read_amount = (NUMBER_OF_BYTES / 4) * random_read_amount_factor;
+    read_data.resize(random_read_amount);
+    state.ResumeTiming();
+
+    for(auto index = size_t{0}; index < random_read_amount; ++index){
+      read_data[index] = numbers[random_indices[index]];
+    }
+
+    state.PauseTiming();
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
+
+    Assert(control_sum_random == static_cast<uint64_t>(sum), "Sanity check failed: Not the same result");
+    Assert(&read_data[0] != &numbers[0], "Sanity check failed: Same reference");
+
+    state.ResumeTiming();
+  }
+}
+
 // Arguments are file size in MB
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)->Arg(10)->Arg(100)->Arg(1000);
+//BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+//BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ)->Arg(10);//->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10);//->Arg(100)->Arg(1000);
+
 
 }  // namespace hyrise
