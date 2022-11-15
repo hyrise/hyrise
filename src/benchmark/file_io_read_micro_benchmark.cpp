@@ -20,6 +20,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
   void SetUp(::benchmark::State& state) override {
     // TODO: Make setup/teardown global per file size to improve benchmark speed
+    // TODO: Generate vector for each loop in state and not only once per state
     ssize_t BUFFER_SIZE_MB = state.range(0);
 
     // each int32_t contains four bytes
@@ -55,7 +56,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  protected:
 };
 
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::State& state) {  // open file
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(benchmark::State& state) {  // open file
   int32_t fd;
   if ((fd = open("file.txt", O_RDONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
@@ -67,14 +68,18 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)(benchmark::
     micro_benchmark_clear_disk_cache();
     std::vector<uint32_t> read_data;
 
-    read_data.resize(NUMBER_OF_BYTES / 4);
+    auto read_data_size = NUMBER_OF_BYTES / 4;
+    read_data.resize(read_data_size);
     state.ResumeTiming();
 
-    lseek(fd, 0, SEEK_SET);
+    for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
+      lseek(fd, sizeof (uint32_t) * index, SEEK_SET);
 
-    if (read(fd, std::data(read_data), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
-      Fail("read error: " + strerror(errno));
+      if (read(fd, std::data(read_data) + index, sizeof (uint32_t)) != sizeof (uint32_t)) {
+        Fail("read error: " + strerror(errno));
+      }
     }
+
     state.PauseTiming();
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     // sum == 0 because read vector is empty
@@ -101,12 +106,14 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
     lseek(fd, 0, SEEK_SET);
 
     for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
-      read_data[index] = numbers[index];
+      // here
+      lseek(fd, sizeof (uint32_t) * random_indices[index], SEEK_SET);
+
+      if (read(fd, std::data(read_data) + index, sizeof (uint32_t)) != sizeof (uint32_t)) {
+        Fail("read error: " + strerror(errno));
+      }
     }
 
-    if (read(fd, std::data(read_data), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
-      Fail("read error: " + strerror(errno));
-    }
     state.PauseTiming();
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     // sum == 0 because read vector is empty
@@ -192,12 +199,12 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(bench
 }
 
 // Arguments are file size in MB
-//BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-// BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)->Arg(10);//->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)->Arg(10);//->Arg(100)->Arg(1000);
 
 //BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10);//->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10);//->Arg(100)->Arg(1000);
+// BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10);//->Arg(100)->Arg(1000);
+// BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10);//->Arg(100)->Arg(1000);
 
 
 }  // namespace hyrise
