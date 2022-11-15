@@ -4,6 +4,8 @@
 #include <unistd.h>
 #include <algorithm>
 #include <numeric>
+#include <random>
+#include <iterator>
 #include "micro_benchmark_basic_fixture.hpp"
 
 namespace hyrise {
@@ -13,7 +15,6 @@ const int32_t MB = 1000000;
 class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   uint64_t control_sum = uint64_t{0};
-  uint64_t control_sum_random = uint64_t{0};
   std::vector<uint32_t> numbers;
   std::vector<uint32_t> random_indices;
 
@@ -31,6 +32,9 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
     random_indices = std::vector<uint32_t>(vector_element_count);
     std::iota(std::begin(random_indices), std::end(random_indices), 0);
+    std::random_device rd;
+    std::mt19937 engine(rd());
+    std::shuffle(random_indices.begin(), random_indices.end(), engine);
 
     int32_t fd;
     if ((fd = creat("file.txt", O_WRONLY)) < 1) {
@@ -115,9 +119,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(b
     read_data.resize(read_data_size);
     state.ResumeTiming();
 
-    for(auto index = size_t{0}; index < static_cast<size_t>(read_data_size); ++index){
-      read_data[index] = numbers[index];
-    }
+ read_data = numbers;
 
     state.PauseTiming();
     auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
@@ -156,8 +158,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(bench
 // Arguments are file size in MB
 //BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
 //BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC)->Arg(10)->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10);//->Arg(100)->Arg(1000);
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10);//->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10)->Arg(100)->Arg(1000);
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
 
 
 }  // namespace hyrise
