@@ -22,7 +22,7 @@ class ExportNodeTest : public BaseTest {
 };
 
 TEST_F(ExportNodeTest, Description) {
-  EXPECT_EQ(_export_node->description(), "[Export]");
+  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name'");
 }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
