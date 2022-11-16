@@ -95,12 +95,12 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
 
 TEST_P(OperatorsExportMultiFileTypeTest, NameAndDescription) {
   const auto exporter = std::make_shared<Export>(nullptr, "a/file/path", GetParam());
-  const auto file_type_string = GetParam() == FileType::Binary ? "binary" : "csv";
+  const auto file_type = GetParam() == FileType::Binary ? "binary" : "csv";
   EXPECT_EQ(exporter->name(), "Export");
   EXPECT_EQ(exporter->description(DescriptionMode::SingleLine),
-            std::string{"Export to 'a/file/path' ("} + file_type_string + ")");
+            std::string{"Export to 'a/file/path' ("} + file_type + ")");
   EXPECT_EQ(exporter->description(DescriptionMode::MultiLine),
-            std::string{"Export\nto 'a/file/path'\n("} + file_type_string + ")");
+            std::string{"Export\nto 'a/file/path'\n("} + file_type + ")");
 }
 
 TEST_F(OperatorsExportTest, NonsensePath) {

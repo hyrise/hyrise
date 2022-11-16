@@ -26,13 +26,10 @@ const std::string& Export::name() const {
 std::string Export::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
-  auto stream = std::stringstream{};
   auto file_type = std::string{magic_enum::enum_name(_file_type)};
   boost::algorithm::to_lower(file_type);
-  stream << AbstractOperator::description(description_mode) << separator << "to '" << _filename << "'" << separator
-         << "(" << file_type << ")";
-
-  return stream.str();
+  return AbstractOperator::description(description_mode) + separator + "to '" + _filename + "'" + separator + "(" +
+         file_type + ")";
 }
 
 std::shared_ptr<const Table> Export::_on_execute() {

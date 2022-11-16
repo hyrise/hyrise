@@ -1,6 +1,6 @@
-#include "base_test.hpp"
-
 #include <regex>
+
+#include "base_test.hpp"
 
 #include "hyrise.hpp"
 #include "utils/meta_tables/meta_log_table.hpp"
