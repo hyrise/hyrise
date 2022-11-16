@@ -9,11 +9,12 @@ namespace hyrise {
 /**
  * Get the number of bytes that are allocated on the heap for the given string.
  */
+template <typename T>
 #ifdef __clang__
 __attribute__((optnone))  // Fixes issues with memcheck. As we are only accessing constant values, shouldn't cost much
 #endif
 size_t
-string_heap_size(const std::string& string) {
+string_heap_size(const T& string) {
   if (string.capacity() > SSO_STRING_CAPACITY) {
     // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
     // since some libraries (e.g. llvm's libc++) also over-allocate the heap strings
@@ -22,25 +23,6 @@ string_heap_size(const std::string& string) {
   }
 
   DebugAssert(string.capacity() == SSO_STRING_CAPACITY, "SSO does not meet expectations");
-  return 0;
-}
-
-/**
- * Get the number of bytes that are allocated on the heap for the given string.
- */
-#ifdef __clang__
-__attribute__((optnone))  // Fixes issues with memcheck. As we are only accessing constant values, shouldn't cost much
-#endif
-size_t
-string_heap_size(const pmr_string& string) {
-  if (string.capacity() > SSO_STRING_CAPACITY_PMR) {
-    // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
-    // since some libraries (e.g. llvm's libc++) also over-allocate the heap strings
-    // (cf. https://shaharmike.com/cpp/std-string/).
-    return string.capacity() + 1;
-  }
-
-  DebugAssert(string.capacity() == SSO_STRING_CAPACITY_PMR, "SSO does not meet expectations");
   return 0;
 }
 
