@@ -81,6 +81,8 @@ TEST_F(OperatorsInsertTest, InsertRespectChunkSize) {
   EXPECT_EQ(table->get_chunk(ChunkID{0})->size(), 3u);
   EXPECT_EQ(table->get_chunk(ChunkID{3})->size(), 2u);
   EXPECT_EQ(table->row_count(), 13u);
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 TEST_F(OperatorsInsertTest, MultipleChunks) {
@@ -108,6 +110,8 @@ TEST_F(OperatorsInsertTest, MultipleChunks) {
   EXPECT_EQ(table->get_chunk(ChunkID{1})->size(), 1u);
   EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
   EXPECT_EQ(table->row_count(), 13u);
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 TEST_F(OperatorsInsertTest, CompressedChunks) {
@@ -135,6 +139,8 @@ TEST_F(OperatorsInsertTest, CompressedChunks) {
   EXPECT_EQ(table->chunk_count(), 7u);
   EXPECT_EQ(table->get_chunk(ChunkID{6})->size(), 2u);
   EXPECT_EQ(table->row_count(), 13u);
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 TEST_F(OperatorsInsertTest, Rollback) {
@@ -220,6 +226,8 @@ TEST_F(OperatorsInsertTest, InsertStringNullValue) {
 
   auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[ChunkOffset{2}];
   EXPECT_TRUE(variant_is_null(null_val));
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
@@ -249,6 +257,8 @@ TEST_F(OperatorsInsertTest, InsertIntFloatNullValues) {
 
   auto null_val_float = (*(table->get_chunk(ChunkID{2})->get_segment(ColumnID{1})))[ChunkOffset{1}];
   EXPECT_TRUE(variant_is_null(null_val_float));
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 TEST_F(OperatorsInsertTest, InsertNullIntoNonNull) {
@@ -295,6 +305,8 @@ TEST_F(OperatorsInsertTest, InsertSingleNullFromDummyProjection) {
 
   auto null_val = (*(table->get_chunk(ChunkID{1})->get_segment(ColumnID{0})))[ChunkOffset{0}];
   EXPECT_TRUE(variant_is_null(null_val));
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
@@ -318,6 +330,8 @@ TEST_F(OperatorsInsertTest, InsertIntoEmptyTable) {
   context->commit();
 
   EXPECT_TABLE_EQ_ORDERED(target_table, table_int_float);
+
+  EXPECT_EQ(insert->get_output(), nullptr);
 }
 
 }  // namespace hyrise

@@ -27,41 +27,41 @@ class DropViewTest : public BaseTest {
 };
 
 TEST_F(DropViewTest, OperatorName) {
-  auto dv = std::make_shared<DropView>("view_name", false);
+  auto drop_view = std::make_shared<DropView>("view_name", false);
 
-  EXPECT_EQ(dv->name(), "DropView");
+  EXPECT_EQ(drop_view->name(), "DropView");
 }
 
 TEST_F(DropViewTest, DeepCopy) {
-  auto dv = std::make_shared<DropView>("view_name", false);
+  auto drop_view = std::make_shared<DropView>("view_name", false);
 
-  dv->execute();
-  EXPECT_NE(dv->get_output(), nullptr);
+  drop_view->execute();
+  EXPECT_EQ(drop_view->get_output(), nullptr);
 
-  const auto copy = dv->deep_copy();
+  const auto copy = drop_view->deep_copy();
   EXPECT_EQ(copy->executed(), false);
 }
 
 TEST_F(DropViewTest, Execute) {
-  auto dv = std::make_shared<DropView>("view_name", false);
-  dv->execute();
+  auto drop_view = std::make_shared<DropView>("view_name", false);
+  drop_view->execute();
 
-  EXPECT_EQ(dv->get_output()->row_count(), 0u);
+  EXPECT_EQ(drop_view->get_output(), nullptr);
 
   EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
 }
 
 TEST_F(DropViewTest, ExecuteWithIfExists) {
-  auto dv_1 = std::make_shared<DropView>("view_name", true);
-  dv_1->execute();
+  auto drop_view_1 = std::make_shared<DropView>("view_name", true);
+  drop_view_1->execute();
 
-  EXPECT_EQ(dv_1->get_output()->row_count(), 0u);
+  EXPECT_EQ(drop_view_1->get_output(), nullptr);
 
   EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
 
-  auto dv_2 = std::make_shared<DropView>("view_name", true);
+  auto drop_view_2 = std::make_shared<DropView>("view_name", true);
 
-  EXPECT_NO_THROW(dv_2->execute());
+  EXPECT_NO_THROW(drop_view_2->execute());
 
   EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
 }

@@ -86,6 +86,7 @@ std::shared_ptr<const Table> Delete::_on_execute(std::shared_ptr<TransactionCont
     }
   }
 
+  // Must match AbstractNonQueryNode::output_expressions().
   return nullptr;
 }
 

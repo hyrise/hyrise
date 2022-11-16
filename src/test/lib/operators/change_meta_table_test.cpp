@@ -57,6 +57,7 @@ TEST_F(ChangeMetaTableTest, Insert) {
 
   EXPECT_EQ(meta_mock_table->insert_calls(), 1);
   EXPECT_EQ(meta_mock_table->insert_values(), right_input->get_output()->get_row(0));
+  EXPECT_EQ(change_meta_table->get_output(), nullptr);
 }
 
 TEST_F(ChangeMetaTableTest, Delete) {
@@ -70,6 +71,7 @@ TEST_F(ChangeMetaTableTest, Delete) {
 
   EXPECT_EQ(meta_mock_table->remove_calls(), 1);
   EXPECT_EQ(meta_mock_table->remove_values(), left_input->get_output()->get_row(0));
+  EXPECT_EQ(change_meta_table->get_output(), nullptr);
 }
 
 TEST_F(ChangeMetaTableTest, Update) {
@@ -84,6 +86,7 @@ TEST_F(ChangeMetaTableTest, Update) {
   EXPECT_EQ(meta_mock_table->update_calls(), 1);
   EXPECT_EQ(meta_mock_table->update_selected_values(), left_input->get_output()->get_row(0));
   EXPECT_EQ(meta_mock_table->update_updated_values(), right_input->get_output()->get_row(0));
+  EXPECT_EQ(change_meta_table->get_output(), nullptr);
 }
 
 TEST_F(ChangeMetaTableTest, OnlyAllowsAutoCommit) {

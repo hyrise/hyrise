@@ -36,6 +36,7 @@ std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<Transa
       break;
   }
 
+  // Must match AbstractNonQueryNode::output_expressions().
   return nullptr;
 }
 

@@ -54,6 +54,7 @@ std::shared_ptr<const Table> Update::_on_execute(std::shared_ptr<TransactionCont
   _insert->execute();
   // Insert cannot fail in the MVCC sense, no check necessary
 
+  // Must match AbstractNonQueryNode::output_expressions().
   return nullptr;
 }
 

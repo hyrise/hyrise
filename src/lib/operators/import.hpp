@@ -32,6 +32,8 @@ class Import : public AbstractReadOnlyOperator {
                   const std::optional<CsvMeta>& csv_meta = std::nullopt);
 
   const std::string& name() const final;
+  std::string description(DescriptionMode description_mode) const final;
+
   const std::string filename;
 
  protected:

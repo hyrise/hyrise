@@ -25,17 +25,36 @@ class OperatorsImportTest : public BaseTest {
 class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
 
 auto import_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
-  auto stream = std::stringstream{};
-  stream << info.param;
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
+  return std::string{magic_enum::enum_name(info.param)};
 };
 
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
                          ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), import_test_formatter);
+
+TEST_P(OperatorsImportMultiFileTypeTest, NameAndDescription) {
+  auto importer = std::make_shared<Import>("import/file/path", "table_name", Chunk::DEFAULT_SIZE, GetParam());
+  EXPECT_EQ(importer->name(), "Import");
+
+  auto file_type = std::string{};
+  switch (GetParam()) {
+    case FileType::Binary:
+      file_type = "binary";
+      break;
+    case FileType::Csv:
+      file_type = "csv";
+      break;
+    case FileType::Tbl:
+      file_type = "tbl";
+      break;
+    case FileType::Auto:
+      Fail("Expected explicit file type");
+  }
+
+  EXPECT_EQ(importer->description(DescriptionMode::SingleLine),
+            "Import table_name from 'import/file/path' (" + file_type + ")");
+  EXPECT_EQ(importer->description(DescriptionMode::MultiLine),
+            "Import table_name\nfrom 'import/file/path'\n(" + file_type + ")");
+}
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   auto expected_table =

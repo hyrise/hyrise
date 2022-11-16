@@ -34,6 +34,7 @@ TEST_F(DropTableTest, NameAndDescription) {
 TEST_F(DropTableTest, Execute) {
   Hyrise::get().storage_manager.add_table("t", table);
   drop_table->execute();
+  EXPECT_EQ(drop_table->get_output(), nullptr);
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 }
 

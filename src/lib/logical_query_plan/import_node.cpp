@@ -14,9 +14,7 @@ ImportNode::ImportNode(const std::string& init_table_name, const std::string& in
       file_type(init_file_type) {}
 
 std::string ImportNode::description(const DescriptionMode mode) const {
-  std::ostringstream stream;
-  stream << "[Import] Name: '" << table_name << "'";
-  return stream.str();
+  return "[Import] " + table_name + " from '" + file_name + "'";
 }
 
 size_t ImportNode::_on_shallow_hash() const {

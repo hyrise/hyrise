@@ -43,7 +43,9 @@ std::shared_ptr<const Table> CreateView::_on_execute() {
   if (!_if_not_exists || !Hyrise::get().storage_manager.has_view(_view_name)) {
     Hyrise::get().storage_manager.add_view(_view_name, _view);
   }
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
+
+  // Must match AbstractNonQueryNode::output_expressions().
+  return nullptr;
 }
 
 }  // namespace hyrise

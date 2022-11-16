@@ -28,6 +28,15 @@ const std::string& Import::name() const {
   return name;
 }
 
+std::string Import::description(DescriptionMode description_mode) const {
+  const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
+
+  auto file_type = std::string{magic_enum::enum_name(_file_type)};
+  boost::algorithm::to_lower(file_type);
+  return AbstractOperator::description(description_mode) + " " + _tablename + separator + "from '" + filename + "'" +
+         separator + "(" + file_type + ")";
+}
+
 std::shared_ptr<const Table> Import::_on_execute() {
   // Check if file exists before giving it to the parser
   std::ifstream file(filename);
@@ -56,7 +65,7 @@ std::shared_ptr<const Table> Import::_on_execute() {
 
   Hyrise::get().storage_manager.add_table(_tablename, table);
 
-  // must match ImportNode::output_expressions
+  // Must match AbstractNonQueryNode::output_expressions().
   return nullptr;
 }
 

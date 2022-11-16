@@ -84,6 +84,7 @@ TEST_F(CreateTableTest, Execute) {
 
   const auto table = Hyrise::get().storage_manager.get_table("t");
 
+  EXPECT_EQ(create_table->get_output(), nullptr);
   EXPECT_EQ(table->row_count(), 0);
   EXPECT_EQ(table->column_definitions(), column_definitions);
 }
