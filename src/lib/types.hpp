@@ -154,7 +154,8 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 
 // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so we
 // use a really short one here.
-const size_t SSO_PMR_STRING_CAPACITY = pmr_string{"."}.capacity();
+const size_t SSO_STRING_CAPACITY = std::string{"."}.capacity();
+const size_t SSO_STRING_CAPACITY_PMR = pmr_string{"."}.capacity();
 
 // The Scheduler currently supports just these 3 priorities, subject to change.
 enum class SchedulePriority {
