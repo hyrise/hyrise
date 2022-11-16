@@ -72,11 +72,9 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
 
-  // optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
+  optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
-
-  optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule, the
   // JoinToSemiJoinuRule, and the SemiJoinReductionRule, or predicates created by the JoinToPredicateRewriteRule are
