@@ -7,6 +7,7 @@
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
+#include "job_task.hpp"
 #include "task_queue.hpp"
 #include "worker.hpp"
 
@@ -17,7 +18,7 @@ namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
-  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 4;
+  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 2;
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
@@ -131,21 +132,36 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   queue->push(task, static_cast<uint32_t>(priority));
 }
 
-void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
-  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
-  // concurrently. The current value has been found with a divining rod.
-  //
-  // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
-  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
+void NodeQueueScheduler::_group_tasks(std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  if (tasks.size() < 16) {
+    return;
+  }
+  const auto task_count_per_group = static_cast<size_t>(std::ceil(tasks.size() / NUM_GROUPS));
 
-  auto round_robin_counter = 0;
+  auto new_grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+
+  auto add_task_group = [&](std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>& grouped_tasks) {
+    if (grouped_tasks->empty()) {
+      return;
+    }
+
+    new_grouped_tasks.emplace_back(std::make_shared<JobTask>([grouped_tasks]() {
+      for (const auto& task : *grouped_tasks) {
+        task->execute();
+      }
+    }));
+  };
+
+  new_grouped_tasks.resize(NUM_GROUPS);
+  auto task_group = std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>{};
+
   auto common_node_id = std::optional<NodeID>{};
-
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty()) {
-      return;
+      add_task_group(task_group);
+      task_group = std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>{};
+      new_grouped_tasks.emplace_back(task);
     }
 
     if (common_node_id) {
@@ -158,14 +174,18 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       common_node_id = task->node_id();
     }
 
-    const auto group_id = round_robin_counter % NUM_GROUPS;
-    const auto& first_task_in_group = grouped_tasks[group_id];
-    if (first_task_in_group) {
-      task->set_as_predecessor_of(first_task_in_group);
+    if (task_group->size() >= task_count_per_group) {
+      add_task_group(task_group);
+      task_group = std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>{};
+      continue;
     }
-    grouped_tasks[group_id] = task;
-    ++round_robin_counter;
+
+    task_group->emplace_back(task);
   }
+
+  tasks.clear();
+  add_task_group(task_group);
+  std::copy(new_grouped_tasks.begin(), new_grouped_tasks.end(), tasks.begin());
 }
 
 }  // namespace hyrise

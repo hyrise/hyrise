@@ -25,7 +25,8 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
   }
 }
 
-void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  
+void AbstractScheduler::_group_tasks(std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   // Do nothing - grouping tasks is implementation-defined
 }
 
@@ -35,7 +36,7 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<Abstrac
   }
 }
 
-void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
+void AbstractScheduler::schedule_and_wait_for_tasks(std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   _group_tasks(tasks);
   schedule_tasks(tasks);
   wait_for_tasks(tasks);
