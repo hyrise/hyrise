@@ -21,7 +21,7 @@ class ChangeMetaTableNodeTest : public BaseTest {
 };
 
 TEST_F(ChangeMetaTableNodeTest, Description) {
-  EXPECT_EQ(_change_meta_table_node->description(), "[Change Meta Table] meta_table");
+  EXPECT_EQ(_change_meta_table_node->description(), "[Change Meta Table] meta_table (Insert)");
 }
 
 TEST_F(ChangeMetaTableNodeTest, HashingAndEqualityCheck) {

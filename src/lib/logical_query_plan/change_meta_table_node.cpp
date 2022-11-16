@@ -1,5 +1,7 @@
 #include "change_meta_table_node.hpp"
 
+#include <magic_enum.hpp>
+
 namespace hyrise {
 
 ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,
@@ -7,7 +9,7 @@ ChangeMetaTableNode::ChangeMetaTableNode(const std::string& init_table_name,
     : AbstractNonQueryNode(LQPNodeType::ChangeMetaTable), table_name(init_table_name), change_type(init_change_type) {}
 
 std::string ChangeMetaTableNode::description(const DescriptionMode mode) const {
-  return "[Change Meta Table] " + table_name;
+  return "[Change Meta Table] " + table_name + " (" + std::string{magic_enum::enum_name(change_type)} + ")";
 }
 
 std::shared_ptr<AbstractLQPNode> ChangeMetaTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

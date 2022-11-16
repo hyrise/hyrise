@@ -46,9 +46,16 @@ class ChangeMetaTableTest : public BaseTest {
   std::shared_ptr<TransactionContext> context;
 };
 
+TEST_F(ChangeMetaTableTest, Name) {
+  const auto change_meta_table =
+      std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, left_input, right_input);
+  EXPECT_EQ(change_meta_table->name(), "ChangeMetaTable");
+}
+
 TEST_F(ChangeMetaTableTest, Insert) {
   auto change_meta_table =
       std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Insert, left_input, right_input);
+  EXPECT_EQ(change_meta_table->description(DescriptionMode::SingleLine), "ChangeMetaTable meta_mock (Insert)");
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();
@@ -63,6 +70,7 @@ TEST_F(ChangeMetaTableTest, Insert) {
 TEST_F(ChangeMetaTableTest, Delete) {
   auto change_meta_table =
       std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Delete, left_input, right_input);
+  EXPECT_EQ(change_meta_table->description(DescriptionMode::SingleLine), "ChangeMetaTable meta_mock (Delete)");
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();
@@ -77,6 +85,7 @@ TEST_F(ChangeMetaTableTest, Delete) {
 TEST_F(ChangeMetaTableTest, Update) {
   auto change_meta_table =
       std::make_shared<ChangeMetaTable>("meta_mock", MetaTableChangeType::Update, left_input, right_input);
+  EXPECT_EQ(change_meta_table->description(DescriptionMode::SingleLine), "ChangeMetaTable meta_mock (Update)");
 
   change_meta_table->set_transaction_context(context);
   change_meta_table->execute();

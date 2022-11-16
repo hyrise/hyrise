@@ -32,6 +32,7 @@ class ChangeMetaTable : public AbstractReadWriteOperator {
                            const std::shared_ptr<const AbstractOperator>& modification_values);
 
   const std::string& name() const override;
+  std::string description(DescriptionMode description_mode) const final;
 
  protected:
   std::shared_ptr<const Table> _on_execute(std::shared_ptr<TransactionContext> context) override;

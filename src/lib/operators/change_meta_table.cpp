@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+#include <magic_enum.hpp>
+
 #include "hyrise.hpp"
 
 namespace hyrise {
@@ -19,6 +21,11 @@ ChangeMetaTable::ChangeMetaTable(const std::string& table_name, const MetaTableC
 const std::string& ChangeMetaTable::name() const {
   static const auto name = std::string{"ChangeMetaTable"};
   return name;
+}
+
+std::string ChangeMetaTable::description(DescriptionMode /*description_mode*/) const {
+  return AbstractOperator::description(DescriptionMode::SingleLine) + " " + _meta_table_name + " (" +
+         std::string{magic_enum::enum_name(_change_type)} + ")";
 }
 
 std::shared_ptr<const Table> ChangeMetaTable::_on_execute(std::shared_ptr<TransactionContext> context) {
