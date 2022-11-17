@@ -18,7 +18,7 @@ namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
-  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 2;
+  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 4;
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
@@ -132,38 +132,41 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   queue->push(task, static_cast<uint32_t>(priority));
 }
 
-void NodeQueueScheduler::_group_tasks(std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  if (tasks.size() < 16) {
-    return;
+std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  if (tasks.size() < NUM_GROUPS) {
+    // If we do not create more than NUM_GROUPS tasks per worker, we consider grouping unneccessary.
+    return std::nullopt;
   }
-  const auto task_count_per_group = static_cast<size_t>(std::ceil(tasks.size() / NUM_GROUPS));
 
+  const auto task_count_per_group = static_cast<size_t>(std::ceil(tasks.size() / NUM_GROUPS));
+  // std::printf("task_count_per_group is %lu (tasks: %lu, NUM_GROUPS: %lu)\n", task_count_per_group, tasks.size(), NUM_GROUPS);
   auto new_grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  new_grouped_tasks.reserve(NUM_GROUPS);
 
   auto add_task_group = [&](std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>& grouped_tasks) {
     if (grouped_tasks->empty()) {
       return;
     }
 
+    // std::printf("Merging %lu tasks.\n", grouped_tasks->size());
     new_grouped_tasks.emplace_back(std::make_shared<JobTask>([grouped_tasks]() {
+      // std::printf("now executing task with %lu subtasks.\n", grouped_tasks->size());
+      // int i = 0;
       for (const auto& task : *grouped_tasks) {
-        task->execute();
+        auto jt = std::dynamic_pointer_cast<JobTask>(task);
+        // std::printf("subtask %d\n", i);
+        // task->now();
+        jt->now();
+        // std::printf("/subtask %d\n", i);
+        // ++i;
       }
     }));
   };
 
-  new_grouped_tasks.resize(NUM_GROUPS);
-  auto task_group = std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>{};
+  auto task_group = std::make_shared<std::vector<std::shared_ptr<AbstractTask>>>();
 
   auto common_node_id = std::optional<NodeID>{};
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty()) {
-      add_task_group(task_group);
-      task_group = std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>{};
-      new_grouped_tasks.emplace_back(task);
-    }
-
     if (common_node_id) {
       // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
       // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
@@ -174,18 +177,27 @@ void NodeQueueScheduler::_group_tasks(std::vector<std::shared_ptr<AbstractTask>>
       common_node_id = task->node_id();
     }
 
-    if (task_group->size() >= task_count_per_group) {
-      add_task_group(task_group);
-      task_group = std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>{};
+    if (!task->predecessors().empty() || !task->successors().empty()) {
+      // std::printf("Dep task.\n");
+      add_task_group(task_group);  // Add grouped task for previously gathered tasks.
+      task_group = std::make_shared<std::vector<std::shared_ptr<AbstractTask>>>();
+      new_grouped_tasks.emplace_back(task);  // Add single task.
       continue;
     }
+    // std::printf("Path to merge.\n");
 
+    if (task_group->size() >= task_count_per_group) {
+      add_task_group(task_group);
+      task_group = std::make_shared<std::vector<std::shared_ptr<AbstractTask>>>();
+    }
+
+    // std::printf("Added task to group.\n");
     task_group->emplace_back(task);
   }
 
-  tasks.clear();
   add_task_group(task_group);
-  std::copy(new_grouped_tasks.begin(), new_grouped_tasks.end(), tasks.begin());
+  // std::printf("In: %lu \t Out: %lu\n", tasks.size(), new_grouped_tasks.size());
+  return new_grouped_tasks;
 }
 
 }  // namespace hyrise

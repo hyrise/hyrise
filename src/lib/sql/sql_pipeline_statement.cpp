@@ -268,7 +268,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipelineSta
     return {SQLPipelineStatus::Success, _result_table};
   }
 
-  auto& tasks = get_tasks();
+  const auto& tasks = get_tasks();
 
   const auto started = std::chrono::steady_clock::now();
 

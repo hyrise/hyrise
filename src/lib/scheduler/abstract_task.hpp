@@ -173,6 +173,8 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
    */
   void execute();
 
+  void now() {std::printf("NOWv\n");}
+
   TaskState state() const;
 
  protected:

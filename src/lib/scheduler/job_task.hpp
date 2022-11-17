@@ -32,6 +32,8 @@ class JobTask : public AbstractTask {
                    bool stealable = true)
       : AbstractTask(priority, stealable), _fn(fn) {}
 
+  void now();
+
  protected:
   void _on_execute() override;
 

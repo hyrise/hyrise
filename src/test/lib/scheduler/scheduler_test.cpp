@@ -145,36 +145,24 @@ TEST_F(SchedulerTest, LinearDependenciesWithScheduler) {
 }
 
 TEST_F(SchedulerTest, Grouping) {
-  // Tests the grouping described in AbstractScheduler::schedule_and_wait_for_tasks and
-  // NodeQueueScheduler::_group_tasks. Also tests that successor tasks are called immediately after their dependencies
-  // finish. Not really a multi-threading test, though.
-  Hyrise::get().topology.use_fake_numa_topology(1, 1);
+  const auto worker_count = uint32_t{4};
+  Hyrise::get().topology.use_fake_numa_topology(worker_count, 1);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
-  auto output = std::vector<size_t>{};
+  auto counter = std::atomic_uint32_t{0};
+  auto counter_spawned = uint32_t{0};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
 
-  constexpr auto TASK_COUNT = 50;
+  constexpr auto task_count = worker_count * 100;
 
-  for (auto task_id = 0; task_id < TASK_COUNT; ++task_id) {
-    tasks.emplace_back(std::make_shared<JobTask>([&output, task_id] { output.emplace_back(task_id); }));
+  for (auto task_id = uint32_t{0}; task_id < task_count; ++task_id) {
+    tasks.emplace_back(std::make_shared<JobTask>([&counter] { counter++; }));
+    ++counter_spawned;
   }
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   Hyrise::get().scheduler()->finish();
 
-  // We expect NUM_GROUPS chains of tasks to be created. As tasks are added to the chains by calling
-  // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called. This
-  // results in [40 30 20 10 0 41 31 21 11 1 ...]
-  const auto num_groups = 17;
-  EXPECT_EQ(TASK_COUNT % num_groups, 0);
-  auto expected_output = std::vector<size_t>{};
-  for (auto group = 0; group < num_groups; ++group) {
-    for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
-      expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
-    }
-  }
-
-  EXPECT_EQ(output, expected_output);
+  EXPECT_EQ(counter, counter_spawned);
 }
 
 TEST_F(SchedulerTest, MultipleDependenciesWithScheduler) {
