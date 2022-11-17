@@ -93,16 +93,16 @@ TEST_F(MockNodeTest, UniqueConstraints) {
   _mock_node_a->set_key_constraints(table_key_constraints);
 
   // Basic checks
-  const auto& unique_constraints_mock_node_a = _mock_node_a->unique_constraints();
-  EXPECT_EQ(unique_constraints_mock_node_a->size(), 2);
-  EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
+  const auto& unique_column_combinations_mock_node_a = _mock_node_a->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations_mock_node_a->size(), 2);
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
 
   // In-depth verification
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints_mock_node_a));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints_mock_node_a));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations_mock_node_a));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_column_combinations_mock_node_a));
 
   // Check whether MockNode is referenced by the constraint's expressions
-  for (const auto& unique_constraint : *unique_constraints_mock_node_a) {
+  for (const auto& unique_constraint : *unique_column_combinations_mock_node_a) {
     for (const auto& expression : unique_constraint.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
@@ -118,17 +118,17 @@ TEST_F(MockNodeTest, UniqueConstraintsPrunedColumns) {
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node_a->set_key_constraints({key_constraint_a, key_constraint_a_b, key_constraint_c});
   EXPECT_EQ(_mock_node_a->key_constraints().size(), 3);
-  auto unique_constraints = _mock_node_a->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 3);
+  auto unique_column_combinations = _mock_node_a->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations->size(), 3);
 
   // Prune column a, which should remove two unique constraints
   _mock_node_a->set_pruned_column_ids({ColumnID{0}});
 
   // Basic check
-  unique_constraints = _mock_node_a->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 1);
+  unique_column_combinations = _mock_node_a->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations->size(), 1);
   // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_column_combinations));
 }
 
 }  // namespace hyrise

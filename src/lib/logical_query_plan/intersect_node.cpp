@@ -28,15 +28,15 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const {
+std::shared_ptr<UniqueColumnCombinations> IntersectNode::unique_column_combinations() const {
   /**
    * Because INTERSECT acts as a pure filter for both input tables, all unique constraints remain valid.
    *
    * Future Work: Merge unique constraints from the left and right input node.
    */
-  DebugAssert(left_input()->unique_constraints() == right_input()->unique_constraints(),
+  DebugAssert(left_input()->unique_column_combinations() == right_input()->unique_column_combinations(),
               "Merging of unique constraints should be implemented.");
-  return _forward_left_unique_constraints();
+  return _forward_left_unique_column_combinations();
 }
 
 std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependencies() const {

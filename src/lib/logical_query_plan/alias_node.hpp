@@ -20,7 +20,7 @@ class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
 
   // Forwards unique constraints from the left input node
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   const std::vector<std::string> aliases;
 

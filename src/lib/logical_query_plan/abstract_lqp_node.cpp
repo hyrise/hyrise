@@ -288,17 +288,17 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const {
+bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
   DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
-  const auto& unique_constraints = this->unique_constraints();
-  if (unique_constraints->empty()) {
+  const auto& unique_column_combinations = this->unique_column_combinations();
+  if (unique_column_combinations->empty()) {
     return false;
   }
 
-  return contains_matching_unique_constraint(unique_constraints, expressions);
+  return contains_matching_unique_constraint(unique_column_combinations, expressions);
 }
 
 std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
@@ -328,13 +328,13 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
   }
 
   // (2) Derive trivial FDs from the node's unique constraints
-  const auto& unique_constraints = this->unique_constraints();
+  const auto& unique_column_combinations = this->unique_column_combinations();
   // Early exit, if there are no unique constraints
-  if (unique_constraints->empty()) {
+  if (unique_column_combinations->empty()) {
     return non_trivial_fds;
   }
 
-  auto trivial_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
+  auto trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
 
   // (3) Merge and return FDs
   return union_fds(non_trivial_fds, trivial_fds);
@@ -426,18 +426,18 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_constraints() const {
+std::shared_ptr<UniqueColumnCombinations> AbstractLQPNode::_forward_left_unique_column_combinations() const {
   Assert(left_input(), "Cannot forward unique constraints without an input node.");
-  const auto& input_unique_constraints = left_input()->unique_constraints();
+  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
-    for (const auto& unique_constraint : *input_unique_constraints) {
+    for (const auto& unique_constraint : *input_unique_column_combinations) {
       Assert(has_output_expressions(unique_constraint.expressions),
              "Forwarding of constraints is illegal because node misses output expressions.");
     }
   }
-  return input_unique_constraints;
+  return input_unique_column_combinations;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

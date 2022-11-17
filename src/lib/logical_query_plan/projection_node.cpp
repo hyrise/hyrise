@@ -32,14 +32,14 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
-  unique_constraints->reserve(node_expressions.size());
+std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinations() const {
+  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
+  unique_column_combinations->reserve(node_expressions.size());
 
   // Forward unique constraints, if applicable
-  const auto& input_unique_constraints = left_input()->unique_constraints();
+  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
-  for (const auto& input_unique_constraint : *input_unique_constraints) {
+  for (const auto& input_unique_constraint : *input_unique_column_combinations) {
     if (!has_output_expressions(input_unique_constraint.expressions)) {
       continue;
       /**
@@ -50,10 +50,10 @@ std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const
        * Instead of discarding a unique constraint for 'column', we could create and output a new one for 'column + 1'.
        */
     }
-    unique_constraints->emplace_back(input_unique_constraint);
+    unique_column_combinations->emplace_back(input_unique_constraint);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
 std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_dependencies() const {

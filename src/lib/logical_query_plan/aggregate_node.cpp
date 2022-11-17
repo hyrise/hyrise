@@ -94,8 +94,8 @@ bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinations() const {
+  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
   /**
    * (1) Forward unique constraints from child nodes if all expressions belong to the group-by section.
@@ -110,8 +110,8 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    *     following example:
    *
    *     Consider a StoredTableNode with the column expressions {a, b, c, d} and two unique constraints:
-   *       - LQPUniqueConstraint for {a, c}.
-   *       - LQPUniqueConstraint for {b, d}.
+   *       - UniqueColumnCombination for {a, c}.
+   *       - UniqueColumnCombination for {b, d}.
    *     An AggregateNode which follows defines the following:
    *       - COUNT(a), MAX(b)
    *       - Group By {c, d}
@@ -123,14 +123,14 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    */
 
   // Check each constraint for applicability
-  const auto& input_unique_constraints = left_input()->unique_constraints();
-  for (const auto& input_unique_constraint : *input_unique_constraints) {
+  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  for (const auto& input_unique_constraint : *input_unique_column_combinations) {
     if (!has_output_expressions(input_unique_constraint.expressions)) {
       continue;
     }
 
     // Forward constraint
-    unique_constraints->emplace_back(input_unique_constraint);
+    unique_column_combinations->emplace_back(input_unique_constraint);
   }
 
   // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
@@ -141,8 +141,9 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
     // Make sure, we do not add an already existing or a superset unique constraint.
-    if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
-      unique_constraints->emplace_back(group_by_columns);
+    if (unique_column_combinations->empty() ||
+        !contains_matching_unique_constraint(unique_column_combinations, group_by_columns)) {
+      unique_column_combinations->emplace_back(group_by_columns);
     }
   }
 
@@ -157,7 +158,7 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    * See the following discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r453220838.
    */
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
 std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependencies() const {

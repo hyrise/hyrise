@@ -1,13 +1,13 @@
-#include "lqp_unique_constraint.hpp"
+#include "unique_column_combination.hpp"
 
 namespace hyrise {
 
-LQPUniqueConstraint::LQPUniqueConstraint(ExpressionUnorderedSet init_expressions)
+UniqueColumnCombination::UniqueColumnCombination(ExpressionUnorderedSet init_expressions)
     : expressions(std::move(init_expressions)) {
-  Assert(!expressions.empty(), "LQPUniqueConstraint cannot be empty.");
+  Assert(!expressions.empty(), "UniqueColumnCombination cannot be empty.");
 }
 
-bool LQPUniqueConstraint::operator==(const LQPUniqueConstraint& rhs) const {
+bool UniqueColumnCombination::operator==(const UniqueColumnCombination& rhs) const {
   if (expressions.size() != rhs.expressions.size()) {
     return false;
   }
@@ -15,11 +15,11 @@ bool LQPUniqueConstraint::operator==(const LQPUniqueConstraint& rhs) const {
                      [&rhs](const auto column_expression) { return rhs.expressions.contains(column_expression); });
 }
 
-bool LQPUniqueConstraint::operator!=(const LQPUniqueConstraint& rhs) const {
+bool UniqueColumnCombination::operator!=(const UniqueColumnCombination& rhs) const {
   return !(rhs == *this);
 }
 
-size_t LQPUniqueConstraint::hash() const {
+size_t UniqueColumnCombination::hash() const {
   size_t hash = 0;
   for (const auto& expression : expressions) {
     // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
@@ -29,10 +29,10 @@ size_t LQPUniqueConstraint::hash() const {
   return boost::hash_value(hash - expressions.size());
 }
 
-std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique_constraint) {
+std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc) {
   stream << "{";
-  auto expressions_vector = std::vector<std::shared_ptr<AbstractExpression>>{unique_constraint.expressions.begin(),
-                                                                             unique_constraint.expressions.end()};
+  auto expressions_vector =
+      std::vector<std::shared_ptr<AbstractExpression>>{ucc.expressions.begin(), ucc.expressions.end()};
   stream << expressions_vector.at(0)->as_column_name();
   for (auto expression_idx = size_t{1}; expression_idx < expressions_vector.size(); ++expression_idx) {
     stream << ", " << expressions_vector[expression_idx]->as_column_name();
@@ -46,8 +46,8 @@ std::ostream& operator<<(std::ostream& stream, const LQPUniqueConstraint& unique
 
 namespace std {
 
-size_t hash<hyrise::LQPUniqueConstraint>::operator()(const hyrise::LQPUniqueConstraint& lqp_unique_constraint) const {
-  return lqp_unique_constraint.hash();
+size_t hash<hyrise::UniqueColumnCombination>::operator()(const hyrise::UniqueColumnCombination& ucc) const {
+  return ucc.hash();
 }
 
 }  // namespace std

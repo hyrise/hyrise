@@ -28,10 +28,10 @@ bool ExceptNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> ExceptNode::unique_constraints() const {
+std::shared_ptr<UniqueColumnCombinations> ExceptNode::unique_column_combinations() const {
   // Because EXCEPT acts as a pure filter for the left input table, all unique constraints from the left input node
   // remain valid.
-  return _forward_left_unique_constraints();
+  return _forward_left_unique_column_combinations();
 }
 
 std::vector<FunctionalDependency> ExceptNode::non_trivial_functional_dependencies() const {

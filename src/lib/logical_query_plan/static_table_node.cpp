@@ -49,19 +49,19 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   return *_output_expressions;
 }
 
-std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() const {
+std::shared_ptr<UniqueColumnCombinations> StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_constraints->emplace_back(column_expressions);
+    unique_column_combinations->emplace_back(column_expressions);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {

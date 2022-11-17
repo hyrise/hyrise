@@ -73,8 +73,8 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _output_expressions.reset();
 }
 
-std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations() const {
+  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
@@ -92,11 +92,11 @@ std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create LQPUniqueConstraint
-    unique_constraints->emplace_back(column_expressions);
+    // Create UniqueColumnCombination
+    unique_column_combinations->emplace_back(column_expressions);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const {

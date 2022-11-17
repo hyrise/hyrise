@@ -82,7 +82,7 @@ TEST_F(StaticTableNodeTest, Copy) {
 
 TEST_F(StaticTableNodeTest, UniqueConstraintsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());
-  EXPECT_TRUE(static_table_node->unique_constraints()->empty());
+  EXPECT_TRUE(static_table_node->unique_column_combinations()->empty());
 }
 
 TEST_F(StaticTableNodeTest, UniqueConstraints) {
@@ -93,11 +93,11 @@ TEST_F(StaticTableNodeTest, UniqueConstraints) {
   dummy_table->add_soft_key_constraint(key_constraint_a_b);
 
   // Basic check
-  const auto& unique_constraints = static_table_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 2);
+  const auto& unique_column_combinations = static_table_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations->size(), 2);
   // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a, unique_constraints));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a, unique_column_combinations));
+  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations));
 }
 
 }  // namespace hyrise

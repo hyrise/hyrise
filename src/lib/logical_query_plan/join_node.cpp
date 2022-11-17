@@ -73,31 +73,31 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   return output_expressions;
 }
 
-std::shared_ptr<LQPUniqueConstraints> JoinNode::unique_constraints() const {
+std::shared_ptr<UniqueColumnCombinations> JoinNode::unique_column_combinations() const {
   // Semi- and Anti-Joins act as mere filters for input_left().
   // Therefore, existing unique constraints remain valid.
   if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
-    return _forward_left_unique_constraints();
+    return _forward_left_unique_column_combinations();
   }
 
-  const auto& left_unique_constraints = left_input()->unique_constraints();
-  const auto& right_unique_constraints = right_input()->unique_constraints();
+  const auto& left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto& right_unique_column_combinations = right_input()->unique_column_combinations();
 
-  return _output_unique_constraints(left_unique_constraints, right_unique_constraints);
+  return _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 }
 
-std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
-    const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
-    const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const {
-  if (left_unique_constraints->empty() && right_unique_constraints->empty()) {
+std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combinations(
+    const std::shared_ptr<UniqueColumnCombinations>& left_unique_column_combinations,
+    const std::shared_ptr<UniqueColumnCombinations>& right_unique_column_combinations) const {
+  if (left_unique_column_combinations->empty() && right_unique_column_combinations->empty()) {
     // Early exit
-    return std::make_shared<LQPUniqueConstraints>();
+    return std::make_shared<UniqueColumnCombinations>();
   }
 
   const auto predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) {
     // No guarantees implemented yet for Cross Joins and multi-predicate joins
-    return std::make_shared<LQPUniqueConstraints>();
+    return std::make_shared<UniqueColumnCombinations>();
   }
 
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
@@ -107,37 +107,37 @@ std::shared_ptr<LQPUniqueConstraints> JoinNode::_output_unique_constraints(
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
     // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join)
-    return std::make_shared<LQPUniqueConstraints>();
+    return std::make_shared<UniqueColumnCombinations>();
   }
 
   // Check uniqueness of join columns
   bool left_operand_is_unique =
-      !left_unique_constraints->empty() &&
-      contains_matching_unique_constraint(left_unique_constraints, {join_predicate->left_operand()});
+      !left_unique_column_combinations->empty() &&
+      contains_matching_unique_constraint(left_unique_column_combinations, {join_predicate->left_operand()});
   bool right_operand_is_unique =
-      !right_unique_constraints->empty() &&
-      contains_matching_unique_constraint(right_unique_constraints, {join_predicate->right_operand()});
+      !right_unique_column_combinations->empty() &&
+      contains_matching_unique_constraint(right_unique_column_combinations, {join_predicate->right_operand()});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the constraints of both sides remain valid.
-    auto unique_constraints =
-        std::make_shared<LQPUniqueConstraints>(left_unique_constraints->begin(), left_unique_constraints->end());
-    std::copy(right_unique_constraints->begin(), right_unique_constraints->end(),
-              std::back_inserter(*unique_constraints));
-    return unique_constraints;
+    auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>(
+        left_unique_column_combinations->begin(), left_unique_column_combinations->end());
+    std::copy(right_unique_column_combinations->begin(), right_unique_column_combinations->end(),
+              std::back_inserter(*unique_column_combinations));
+    return unique_column_combinations;
   }
 
   if (left_operand_is_unique) {
     // Uniqueness on the left prevents duplication of records on the right
-    return right_unique_constraints;
+    return right_unique_column_combinations;
   }
 
   if (right_operand_is_unique) {
     // Uniqueness on the right prevents duplication of records on the left
-    return left_unique_constraints;
+    return left_unique_column_combinations;
   }
 
-  return std::make_shared<LQPUniqueConstraints>();
+  return std::make_shared<UniqueColumnCombinations>();
 }
 
 std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies() const {
@@ -158,29 +158,33 @@ std::vector<FunctionalDependency> JoinNode::non_trivial_functional_dependencies(
   auto fds_left = std::vector<FunctionalDependency>();
   auto fds_right = std::vector<FunctionalDependency>();
 
-  const auto left_unique_constraints = left_input()->unique_constraints();
-  const auto right_unique_constraints = right_input()->unique_constraints();
-  const auto& output_unique_constraints = _output_unique_constraints(left_unique_constraints, right_unique_constraints);
+  const auto left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto right_unique_column_combinations = right_input()->unique_column_combinations();
+  const auto& output_unique_column_combinations =
+      _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 
-  if (output_unique_constraints->empty() && !left_unique_constraints->empty() && !right_unique_constraints->empty()) {
+  if (output_unique_column_combinations->empty() && !left_unique_column_combinations->empty() &&
+      !right_unique_column_combinations->empty()) {
     // Left and Right unique constraints become discarded, so we have to manually forward all FDs from the input nodes.
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->functional_dependencies();
-  } else if ((output_unique_constraints->empty() || output_unique_constraints == right_unique_constraints) &&
-             !left_unique_constraints->empty()) {
+  } else if ((output_unique_column_combinations->empty() ||
+              output_unique_column_combinations == right_unique_column_combinations) &&
+             !left_unique_column_combinations->empty()) {
     // Left unique constraints become discarded, so we have to manually forward all left input node's FDs
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->non_trivial_functional_dependencies();
-  } else if ((output_unique_constraints->empty() || output_unique_constraints == left_unique_constraints) &&
-             !right_unique_constraints->empty()) {
+  } else if ((output_unique_column_combinations->empty() ||
+              output_unique_column_combinations == left_unique_column_combinations) &&
+             !right_unique_column_combinations->empty()) {
     // Right unique constraints become discarded, so we have to manually forward all right input node's FDs
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->functional_dependencies();
   } else {
     // No unique constraints become discarded. We only have to forward non-trivial FDs.
-    DebugAssert(
-        output_unique_constraints->size() == (left_unique_constraints->size() + right_unique_constraints->size()),
-        "Unexpected number of unique constraints.");
+    DebugAssert(output_unique_column_combinations->size() ==
+                    (left_unique_column_combinations->size() + right_unique_column_combinations->size()),
+                "Unexpected number of unique constraints.");
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->non_trivial_functional_dependencies();
   }

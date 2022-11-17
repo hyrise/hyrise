@@ -6,8 +6,8 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "functional_dependency.hpp"
-#include "lqp_unique_constraint.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -180,17 +180,17 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
-   * @return Unique constraints valid for the current LQP. See lqp_unique_constraint.hpp for more documentation.
+   * @return Unique column combinations (UCCs) valid for the current LQP. See unique_column_combination.hpp for more
+   *         documentation.
    */
-  virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
+  virtual std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const = 0;
 
   /**
-   * @return True, if there is a unique constraint matching the given subset of output expressions.
-   *         (i.e., the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_unique_constraint(unique_constraints(), ...) as it performs additional sanity
-   *         checks.
+   * @return True, if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
+   *         the rows are guaranteed to be unique). This is preferred over calling
+   *         contains_matching_ucc(unique_column_combinations(), ...) as it performs additional sanity checks.
    */
-  bool has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const;
+  bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
@@ -258,7 +258,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method for node types that do not have an effect on the unique constraints from input nodes.
    * @return All unique constraints from the left input node.
    */
-  std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
+  std::shared_ptr<UniqueColumnCombinations> _forward_left_unique_column_combinations() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

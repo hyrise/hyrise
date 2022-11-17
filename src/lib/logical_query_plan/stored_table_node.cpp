@@ -98,8 +98,8 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combinations() const {
+  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
   // We create unique constraints from selected table key constraints
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
@@ -121,11 +121,11 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create LQPUniqueConstraint
-    unique_constraints->emplace_back(column_expressions);
+    // Create UniqueColumnCombination
+    unique_column_combinations->emplace_back(column_expressions);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {

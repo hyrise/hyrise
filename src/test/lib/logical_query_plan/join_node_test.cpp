@@ -264,8 +264,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialLeft) {
     const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({});
-    EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
-    EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
+    EXPECT_TRUE(_mock_node_a->unique_column_combinations()->empty());
+    EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
 
     if (join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
@@ -290,8 +290,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialRight) {
     const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
     _mock_node_a->set_non_trivial_functional_dependencies({});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
-    EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
+    EXPECT_TRUE(_mock_node_a->unique_column_combinations()->empty());
+    EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
 
     if (join_mode == JoinMode::Left || join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
@@ -317,8 +317,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesForwardNonTrivialBoth) {
     const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
     _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
     _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-    EXPECT_TRUE(_mock_node_a->unique_constraints()->empty());
-    EXPECT_TRUE(_mock_node_b->unique_constraints()->empty());
+    EXPECT_TRUE(_mock_node_a->unique_column_combinations()->empty());
+    EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
 
     if (join_mode == JoinMode::FullOuter) {
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 0);
@@ -473,7 +473,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
   EXPECT_EQ(non_trivial_fds.size(), 1);
   EXPECT_EQ(non_trivial_fds.at(0), fd_a_b);
 
-  const auto& trivial_fds = fds_from_unique_constraints(join_node, join_node->unique_constraints());
+  const auto& trivial_fds = fds_from_unique_column_combinations(join_node, join_node->unique_column_combinations());
   EXPECT_EQ(trivial_fds.size(), 3);
   EXPECT_EQ(trivial_fds.at(0), expected_fd_a_b);
   EXPECT_EQ(trivial_fds.at(1), expected_fd_c);
@@ -506,7 +506,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsSemiAndAntiJoins) {
       _mock_node_b);
     // clang-format on
 
-    EXPECT_EQ(*join_node->unique_constraints(), *_mock_node_a->unique_constraints());
+    EXPECT_EQ(*join_node->unique_column_combinations(), *_mock_node_a->unique_column_combinations());
   }
 }
 
@@ -529,7 +529,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
     //          RIGHT table's join column (y) uniqueness : No
     _mock_node_a->set_key_constraints({*_key_constraint_b_c});
     _mock_node_b->set_key_constraints({*_key_constraint_x});
-    EXPECT_TRUE(join_node->unique_constraints()->empty());
+    EXPECT_TRUE(join_node->unique_column_combinations()->empty());
 
     // Case 2 – LEFT  table's join column (a) uniqueness : Yes
     //          RIGHT table's join column (y) uniqueness : No
@@ -537,9 +537,9 @@ TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
     _mock_node_b->set_key_constraints({*_key_constraint_x});
 
     // Expect unique constraints of RIGHT table to be forwarded
-    auto join_unique_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_unique_constraints->size(), 1);
-    EXPECT_TRUE(*join_unique_constraints == *_mock_node_b->unique_constraints());
+    auto join_unique_column_combinations = join_node->unique_column_combinations();
+    EXPECT_EQ(join_unique_column_combinations->size(), 1);
+    EXPECT_TRUE(*join_unique_column_combinations == *_mock_node_b->unique_column_combinations());
 
     // Case 3 – LEFT  table's join column (a) uniqueness : No
     //          RIGHT table's join column (y) uniqueness : Yes
@@ -547,9 +547,9 @@ TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
     _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 
     // Expect unique constraints of LEFT table (b_c) to be forwarded
-    join_unique_constraints = join_node->unique_constraints();
-    EXPECT_EQ(join_unique_constraints->size(), 1);
-    EXPECT_TRUE(*join_unique_constraints == *_mock_node_a->unique_constraints());
+    join_unique_column_combinations = join_node->unique_column_combinations();
+    EXPECT_EQ(join_unique_column_combinations->size(), 1);
+    EXPECT_TRUE(*join_unique_column_combinations == *_mock_node_a->unique_column_combinations());
 
     // Case 4 – LEFT  table's join column (a) uniqueness : Yes
     //          RIGHT table's join column (y) uniqueness : Yes
@@ -557,15 +557,15 @@ TEST_F(JoinNodeTest, UniqueConstraintsInnerAndOuterJoins) {
     _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 
     // Expect unique constraints of both, LEFT (a, b_c) and RIGHT (x, y) table to be forwarded
-    join_unique_constraints = join_node->unique_constraints();
+    join_unique_column_combinations = join_node->unique_column_combinations();
 
     // Basic check
-    EXPECT_EQ(join_unique_constraints->size(), 4);
+    EXPECT_EQ(join_unique_column_combinations->size(), 4);
     // In-depth checks
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a, join_unique_constraints));
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b_c, join_unique_constraints));
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_x, join_unique_constraints));
-    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_y, join_unique_constraints));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a, join_unique_column_combinations));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_x, join_unique_column_combinations));
+    EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_y, join_unique_column_combinations));
   }
 }
 
@@ -580,7 +580,7 @@ TEST_F(JoinNodeTest, UniqueConstraintsNonEquiJoin) {
     _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(theta_join_node->unique_constraints()->empty());
+  EXPECT_TRUE(theta_join_node->unique_column_combinations()->empty());
 }
 
 TEST_F(JoinNodeTest, UniqueConstraintsNonSemiNonAntiMultiPredicateJoin) {
@@ -594,14 +594,14 @@ TEST_F(JoinNodeTest, UniqueConstraintsNonSemiNonAntiMultiPredicateJoin) {
     _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(join_node->unique_constraints()->empty());
+  EXPECT_TRUE(join_node->unique_column_combinations()->empty());
 }
 
 TEST_F(JoinNodeTest, UniqueConstraintsCrossJoin) {
   _mock_node_a->set_key_constraints({*_key_constraint_a, *_key_constraint_b_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x, *_key_constraint_y});
 
-  EXPECT_TRUE(_cross_join_node->unique_constraints()->empty());
+  EXPECT_TRUE(_cross_join_node->unique_column_combinations()->empty());
 }
 
 TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {

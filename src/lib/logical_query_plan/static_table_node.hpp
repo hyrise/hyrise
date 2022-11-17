@@ -22,7 +22,7 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Generates unique constraints from table's key constraints.
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   const std::shared_ptr<Table> table;
 

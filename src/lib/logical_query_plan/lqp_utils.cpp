@@ -453,13 +453,13 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
-bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstraints>& unique_constraints,
+bool contains_matching_unique_constraint(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
                                          const ExpressionUnorderedSet& expressions) {
-  DebugAssert(!unique_constraints->empty(), "Invalid input: Set of unique constraints should not be empty.");
+  DebugAssert(!unique_column_combinations->empty(), "Invalid input: Set of unique constraints should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
   // Look for a unique constraint that is based on a subset of the given expressions
-  for (const auto& unique_constraint : *unique_constraints) {
+  for (const auto& unique_constraint : *unique_column_combinations) {
     if (unique_constraint.expressions.size() <= expressions.size() &&
         std::all_of(unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
                     [&expressions](const auto unique_constraint_expression) {
@@ -473,10 +473,10 @@ bool contains_matching_unique_constraint(const std::shared_ptr<LQPUniqueConstrai
   return false;
 }
 
-std::vector<FunctionalDependency> fds_from_unique_constraints(
+std::vector<FunctionalDependency> fds_from_unique_column_combinations(
     const std::shared_ptr<const AbstractLQPNode>& lqp,
-    const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
-  Assert(!unique_constraints->empty(), "Did not expect empty vector of unique constraints");
+    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
+  Assert(!unique_column_combinations->empty(), "Did not expect empty vector of unique constraints");
 
   auto fds = std::vector<FunctionalDependency>{};
 
@@ -489,7 +489,7 @@ std::vector<FunctionalDependency> fds_from_unique_constraints(
     }
   }
 
-  for (const auto& unique_constraint : *unique_constraints) {
+  for (const auto& unique_constraint : *unique_column_combinations) {
     auto determinants = unique_constraint.expressions;
 
     // (1) Verify whether we can create an FD from the given unique constraint (non-nullable determinant expressions)

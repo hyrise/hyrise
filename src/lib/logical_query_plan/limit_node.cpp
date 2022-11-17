@@ -20,8 +20,8 @@ std::string LimitNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+std::shared_ptr<UniqueColumnCombinations> LimitNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {

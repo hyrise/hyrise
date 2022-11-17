@@ -36,7 +36,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * (2) Discards all input unique constraints for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins
    * (3) Forwards selected input unique constraints for Inner and Outer Equi-Joins based on join column uniqueness.
    */
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   /**
    * (a) Semi- & Anti-Joins:
@@ -111,8 +111,8 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   std::optional<LQPInputSide> _prunable_input_side = std::nullopt;
 
   /**
-   * @return A subset of the given LQPUniqueConstraints @param left_unique_constraints and @param
-   *         right_unique_constraints that remains valid despite the join operation.
+   * @return A subset of the given UniqueColumnCombinations @param left_unique_column_combinations and @param
+   *         right_unique_column_combinations that remains valid despite the join operation.
    *         Depending on the join columns,
    *          (a) the left,
    *          (b) the right,
@@ -121,9 +121,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    *         of the given unique constraint sets are returned.
    * Please note: This helper function can be called for all joins, except for Semi- and Anti-Join types.
    */
-  std::shared_ptr<LQPUniqueConstraints> _output_unique_constraints(
-      const std::shared_ptr<LQPUniqueConstraints>& left_unique_constraints,
-      const std::shared_ptr<LQPUniqueConstraints>& right_unique_constraints) const;
+  std::shared_ptr<UniqueColumnCombinations> _output_unique_column_combinations(
+      const std::shared_ptr<UniqueColumnCombinations>& left_unique_column_combinations,
+      const std::shared_ptr<UniqueColumnCombinations>& right_unique_column_combinations) const;
 
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

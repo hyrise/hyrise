@@ -28,8 +28,8 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+std::shared_ptr<UniqueColumnCombinations> PredicateNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {

@@ -1,11 +1,11 @@
 #include "base_test.hpp"
 
-#include "logical_query_plan/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/mock_node.hpp"
 
 namespace hyrise {
 
-class LQPUniqueConstraintTest : public BaseTest {
+class UniqueColumnCombinationTest : public BaseTest {
  public:
   void SetUp() override {
     _mock_node_a = MockNode::make(
@@ -25,37 +25,37 @@ class LQPUniqueConstraintTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _a, _b, _c, _x, _y;
 };
 
-TEST_F(LQPUniqueConstraintTest, Equals) {
-  const auto unique_constraint_a = LQPUniqueConstraint({_a});
-  const auto unique_constraint_a_b_c = LQPUniqueConstraint({_a, _b, _c});
+TEST_F(UniqueColumnCombinationTest, Equals) {
+  const auto unique_constraint_a = UniqueColumnCombination({_a});
+  const auto unique_constraint_a_b_c = UniqueColumnCombination({_a, _b, _c});
 
   // Equal
-  EXPECT_EQ(unique_constraint_a, LQPUniqueConstraint({_a}));
-  EXPECT_EQ(unique_constraint_a_b_c, LQPUniqueConstraint({_a, _b, _c}));
-  EXPECT_EQ(unique_constraint_a_b_c, LQPUniqueConstraint({_b, _a, _c}));
-  EXPECT_EQ(unique_constraint_a_b_c, LQPUniqueConstraint({_b, _c, _a}));
+  EXPECT_EQ(unique_constraint_a, UniqueColumnCombination({_a}));
+  EXPECT_EQ(unique_constraint_a_b_c, UniqueColumnCombination({_a, _b, _c}));
+  EXPECT_EQ(unique_constraint_a_b_c, UniqueColumnCombination({_b, _a, _c}));
+  EXPECT_EQ(unique_constraint_a_b_c, UniqueColumnCombination({_b, _c, _a}));
   // Not Equal
-  EXPECT_NE(unique_constraint_a, LQPUniqueConstraint({_a, _b}));
-  EXPECT_NE(unique_constraint_a, LQPUniqueConstraint({_b}));
-  EXPECT_NE(unique_constraint_a_b_c, LQPUniqueConstraint({_a, _b}));
-  EXPECT_NE(unique_constraint_a_b_c, LQPUniqueConstraint({_a, _b, _c, _x}));
+  EXPECT_NE(unique_constraint_a, UniqueColumnCombination({_a, _b}));
+  EXPECT_NE(unique_constraint_a, UniqueColumnCombination({_b}));
+  EXPECT_NE(unique_constraint_a_b_c, UniqueColumnCombination({_a, _b}));
+  EXPECT_NE(unique_constraint_a_b_c, UniqueColumnCombination({_a, _b, _c, _x}));
 }
 
-TEST_F(LQPUniqueConstraintTest, Hash) {
-  const auto unique_constraint_a = LQPUniqueConstraint({_a});
-  const auto unique_constraint_a_b_c = LQPUniqueConstraint({_a, _b, _c});
+TEST_F(UniqueColumnCombinationTest, Hash) {
+  const auto unique_constraint_a = UniqueColumnCombination({_a});
+  const auto unique_constraint_a_b_c = UniqueColumnCombination({_a, _b, _c});
 
   // Equal Hash
-  EXPECT_EQ(unique_constraint_a.hash(), LQPUniqueConstraint({_a}).hash());
-  EXPECT_EQ(unique_constraint_a_b_c.hash(), LQPUniqueConstraint({_a, _b, _c}).hash());
-  EXPECT_EQ(unique_constraint_a_b_c.hash(), LQPUniqueConstraint({_c, _a, _b}).hash());
-  EXPECT_EQ(unique_constraint_a_b_c.hash(), LQPUniqueConstraint({_c, _b, _a}).hash());
+  EXPECT_EQ(unique_constraint_a.hash(), UniqueColumnCombination({_a}).hash());
+  EXPECT_EQ(unique_constraint_a_b_c.hash(), UniqueColumnCombination({_a, _b, _c}).hash());
+  EXPECT_EQ(unique_constraint_a_b_c.hash(), UniqueColumnCombination({_c, _a, _b}).hash());
+  EXPECT_EQ(unique_constraint_a_b_c.hash(), UniqueColumnCombination({_c, _b, _a}).hash());
 
   // Non-Equal Hash
-  EXPECT_NE(unique_constraint_a.hash(), LQPUniqueConstraint({_a, _b}).hash());
-  EXPECT_NE(unique_constraint_a.hash(), LQPUniqueConstraint({_b}).hash());
-  EXPECT_NE(unique_constraint_a_b_c.hash(), LQPUniqueConstraint({_a, _b}).hash());
-  EXPECT_NE(unique_constraint_a_b_c.hash(), LQPUniqueConstraint({_a, _b, _c, _x}).hash());
+  EXPECT_NE(unique_constraint_a.hash(), UniqueColumnCombination({_a, _b}).hash());
+  EXPECT_NE(unique_constraint_a.hash(), UniqueColumnCombination({_b}).hash());
+  EXPECT_NE(unique_constraint_a_b_c.hash(), UniqueColumnCombination({_a, _b}).hash());
+  EXPECT_NE(unique_constraint_a_b_c.hash(), UniqueColumnCombination({_a, _b, _c, _x}).hash());
 }
 
 }  // namespace hyrise

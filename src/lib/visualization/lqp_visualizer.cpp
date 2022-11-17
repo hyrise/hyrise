@@ -152,23 +152,23 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
 
   if (!dynamic_pointer_cast<AbstractNonQueryNode>(source_node)) {
     // Edge Tooltip: Unique Constraints
-    const auto& unique_constraints = source_node->unique_constraints();
+    const auto& unique_column_combinations = source_node->unique_column_combinations();
     tooltip_stream << "\n"
                    << "Unique Constraints: \n";
-    if (unique_constraints->empty()) {
+    if (unique_column_combinations->empty()) {
       tooltip_stream << " <none>\n";
     }
 
-    const auto unique_constraint_count = unique_constraints->size();
+    const auto unique_constraint_count = unique_column_combinations->size();
     for (auto constraint_index = size_t{0}; constraint_index < unique_constraint_count; ++constraint_index) {
       tooltip_stream << " (" << constraint_index + 1 << ") ";
-      tooltip_stream << unique_constraints->at(constraint_index) << "\n";
+      tooltip_stream << unique_column_combinations->at(constraint_index) << "\n";
     }
 
     // Edge Tooltip: Trivial FDs
     auto trivial_fds = std::vector<FunctionalDependency>();
-    if (!unique_constraints->empty()) {
-      trivial_fds = fds_from_unique_constraints(source_node, unique_constraints);
+    if (!unique_column_combinations->empty()) {
+      trivial_fds = fds_from_unique_column_combinations(source_node, unique_column_combinations);
     }
     tooltip_stream << "\n"
                    << "Functional Dependencies (trivial): \n";

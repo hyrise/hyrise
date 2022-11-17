@@ -44,7 +44,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Generates unique constraints from table's key constraints and pays respect to pruned columns.
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   const std::string table_name;
 

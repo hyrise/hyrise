@@ -9,12 +9,13 @@ namespace hyrise {
 /**
  * Verifies whether a given table key constraint is represented in a given set of unique constraints.
  */
-static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& table_key_constraint,
-                                                     const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
+static bool find_unique_constraint_by_key_constraint(
+    const TableKeyConstraint& table_key_constraint,
+    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
   const auto& column_ids =
       std::set<ColumnID>{table_key_constraint.columns().cbegin(), table_key_constraint.columns().cend()};
 
-  for (const auto& unique_constraint : *unique_constraints) {
+  for (const auto& unique_constraint : *unique_column_combinations) {
     // Basic comparison: Column count
     if (column_ids.size() != unique_constraint.expressions.size()) {
       continue;

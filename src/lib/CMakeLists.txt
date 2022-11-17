@@ -115,6 +115,10 @@ set(
     logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
+    logical_query_plan/data_dependencies/functional_dependency.cpp
+    logical_query_plan/data_dependencies/functional_dependency.hpp
+    logical_query_plan/data_dependencies/unique_column_combination.cpp
+    logical_query_plan/data_dependencies/unique_column_combination.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
     logical_query_plan/drop_table_node.cpp
@@ -128,8 +132,6 @@ set(
     logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
-    logical_query_plan/functional_dependency.cpp
-    logical_query_plan/functional_dependency.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -144,8 +146,6 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
-    logical_query_plan/lqp_unique_constraint.cpp
-    logical_query_plan/lqp_unique_constraint.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp

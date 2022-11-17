@@ -36,7 +36,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Generates unique constraints from table's key constraints and pays respect to pruned columns.
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.

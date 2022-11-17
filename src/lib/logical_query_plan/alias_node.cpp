@@ -36,8 +36,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions()
   return node_expressions;
 }
 
-std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+std::shared_ptr<UniqueColumnCombinations> AliasNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 size_t AliasNode::_on_shallow_hash() const {
