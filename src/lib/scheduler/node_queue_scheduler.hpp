@@ -107,7 +107,6 @@ class NodeQueueScheduler : public AbstractScheduler {
   void wait_for_all_tasks() override;
 
   // Number of groups for _group_tasks.
-  size_t NUM_GROUPS = 10;
 
  protected:
   std::optional<std::vector<std::shared_ptr<AbstractTask>>>  _group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const override;
@@ -118,6 +117,8 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
+  size_t _num_task_groups{4};
+  size_t _num_workers{4};
 };
 
 }  // namespace hyrise

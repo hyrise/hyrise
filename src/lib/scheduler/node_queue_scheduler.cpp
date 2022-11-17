@@ -18,7 +18,12 @@ namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
-  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 4;
+  _num_workers = Hyrise::get().topology.num_cpus();
+
+  // Create more task groups than workers to distribute load equally in case of skewed task runtimes.
+  _num_task_groups = _num_workers * 4;
+
+  std::printf("Scheduler initialized with %lu cores and _num_task_groups of %lu\n", Hyrise::get().topology.num_cpus(), _num_task_groups);
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
@@ -32,7 +37,7 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
 
-  _workers.reserve(Hyrise::get().topology.num_cpus());
+  _workers.reserve(_num_workers);
   _queues.reserve(Hyrise::get().topology.nodes().size());
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
@@ -134,14 +139,14 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 
 std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   constexpr auto MIN_JOBS_PER_GROUPED_TASK = 5;
-  if (tasks.size() < NUM_GROUPS * MIN_JOBS_PER_GROUPED_TASK) {
-    // If we do not create more than NUM_GROUPS tasks per worker, we consider grouping unneccessary.
+  if (tasks.size() < (_num_task_groups * MIN_JOBS_PER_GROUPED_TASK)) {
+    // If we do not create more than _num_task_groups tasks per worker, we consider grouping unneccessary.
     // If we don't have at least MIN_JOBS_PER_GROUPED_TASK jobs per grouped task, there is no reason to group.
     return std::nullopt;
   }
 
-  const auto task_count_per_group = static_cast<size_t>(std::ceil(tasks.size() / NUM_GROUPS));
-  // std::printf("task_count_per_group is %lu (tasks: %lu, NUM_GROUPS: %lu)\n", task_count_per_group, tasks.size(), NUM_GROUPS);
+  const auto task_count_per_group = static_cast<size_t>(std::ceil(tasks.size() / _num_task_groups));
+  // std::printf("task_count_per_group is %lu (tasks: %lu, _num_task_groups: %lu)\n", task_count_per_group, tasks.size(), _num_task_groups);
   auto new_grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
   new_grouped_tasks.reserve(tasks.size());  // reserve to largest possible size, when all jobs are dependent (see below).
 
@@ -167,20 +172,30 @@ std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_g
   task_group->reserve(task_count_per_group);
 
   auto common_node_id = std::optional<NodeID>{};
+  auto task_counter = size_t{0};
   for (const auto& task : tasks) {
-    if (common_node_id) {
-      // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
-      // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
-      // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
-      // node ids.
-      DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id");
-    } else {
-      common_node_id = task->node_id();
+    ++task_counter;
+
+    if (HYRISE_DEBUG) {
+      if (common_node_id) {
+        // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
+        // Worker::execute_next), we would ignore all but the first node_id. At the time of writing, we did not do any
+        // smart node assignment. This assertion is only here so that this behavior is understood if we ever assign NUMA
+        // node ids.
+        DebugAssert(task->node_id() == *common_node_id, "Expected all grouped tasks to have the same node_id");
+      } else {
+        common_node_id = task->node_id();
+      }
+    }
+
+    // For immediately start the processing, we start the first jobs directly.
+    if (task_counter <= _num_workers) {
+      new_grouped_tasks.emplace_back(task);
+      new_grouped_tasks.back()->schedule();
+      continue;
     }
 
     if (!task->predecessors().empty() || !task->successors().empty()) {
-      // std::printf("Dep task.\n");
-
       // Add grouped task for previously gathered tasks.
       add_task_group_and_schedule(task_group);
 
@@ -194,7 +209,6 @@ std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_g
       
       continue;
     }
-    // std::printf("Path to merge.\n");
 
     if (task_group->size() >= task_count_per_group) {
       add_task_group_and_schedule(task_group);
@@ -202,13 +216,12 @@ std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_g
       task_group->reserve(task_count_per_group);
     }
 
-    // std::printf("Added task to group.\n");
     task_group->emplace_back(task);
   }
 
-  // Add last batch of tasks and schedule.
+  // Add last task group and schedule.
   add_task_group_and_schedule(task_group);
-  // std::printf("In: %lu \t Out: %lu\n", tasks.size(), new_grouped_tasks.size());
+  // std::printf("In: %lu \t Grouped tasks: %lu\n", tasks.size(), new_grouped_tasks.size());
   return new_grouped_tasks;
 }
 
