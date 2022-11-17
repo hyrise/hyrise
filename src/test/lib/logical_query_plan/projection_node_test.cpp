@@ -6,7 +6,7 @@
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
-#include "storage/table_key_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT

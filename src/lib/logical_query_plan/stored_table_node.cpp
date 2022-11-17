@@ -110,7 +110,8 @@ std::shared_ptr<LQPUniqueConstraints> StoredTableNode::unique_constraints() cons
     const auto& key_constraint_column_ids = table_key_constraint.columns();
     if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
                     [&key_constraint_column_ids](const auto& pruned_column_id) {
-                      return key_constraint_column_ids.contains(pruned_column_id);
+                      return std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(),
+                                         [&](const auto column_id) { return column_id == pruned_column_id; });
                     })) {
       continue;
     }

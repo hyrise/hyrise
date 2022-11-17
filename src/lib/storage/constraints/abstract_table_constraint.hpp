@@ -1,7 +1,5 @@
 #pragma once
 
-#include <set>
-
 #include "types.hpp"
 
 namespace hyrise {
@@ -13,7 +11,7 @@ namespace hyrise {
  */
 class AbstractTableConstraint {
  public:
-  explicit AbstractTableConstraint(std::set<ColumnID> init_columns);
+  explicit AbstractTableConstraint(const std::vector<ColumnID>& columns);
 
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
@@ -22,7 +20,7 @@ class AbstractTableConstraint {
 
   virtual ~AbstractTableConstraint() = default;
 
-  const std::set<ColumnID>& columns() const;
+  const std::vector<ColumnID>& columns() const;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
   bool operator!=(const AbstractTableConstraint& rhs) const;
@@ -36,12 +34,10 @@ class AbstractTableConstraint {
    */
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
+  std::vector<ColumnID> _columns;
+
  private:
-  /**
-   * Usually, we prefer unordered_set because it ensures lookups in O(1). However, std::set guarantees a well-defined
-   * order when iterating it. We use this property for hashing table constraints.
-   */
-  std::set<ColumnID> _columns;
+  AbstractTableConstraint() = delete;
 };
 
 }  // namespace hyrise

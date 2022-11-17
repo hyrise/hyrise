@@ -175,6 +175,7 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
+    lib/storage/constraints/table_key_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp
@@ -202,7 +203,6 @@ set(
     lib/storage/segment_iterators_test.cpp
     lib/storage/storage_manager_test.cpp
     lib/storage/table_column_definition_test.cpp
-    lib/storage/table_key_constraint_test.cpp
     lib/storage/table_test.cpp
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp

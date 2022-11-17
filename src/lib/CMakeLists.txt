@@ -430,14 +430,16 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
-    storage/abstract_table_constraint.cpp
-    storage/abstract_table_constraint.hpp
-    storage/table_key_constraint.cpp
-    storage/table_key_constraint.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/constraints/abstract_table_constraint.cpp
+    storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/table_key_constraint.cpp
+    storage/constraints/table_key_constraint.hpp
+    storage/constraints/table_order_constraint.cpp
+    storage/constraints/table_order_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp

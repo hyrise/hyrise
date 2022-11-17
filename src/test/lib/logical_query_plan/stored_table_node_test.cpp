@@ -9,9 +9,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT

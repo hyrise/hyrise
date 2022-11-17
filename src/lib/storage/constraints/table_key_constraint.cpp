@@ -2,8 +2,8 @@
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(std::set<ColumnID> init_columns, KeyConstraintType init_key_type)
-    : AbstractTableConstraint(std::move(init_columns)), _key_type(init_key_type) {}
+TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, KeyConstraintType init_key_type)
+    : AbstractTableConstraint{{columns.cbegin(), columns.cend()}}, _key_type{init_key_type} {}
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;
@@ -28,11 +28,10 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   if (_key_type < rhs.key_type()) {
     return true;
   }
-  const auto& columns = this->columns();
-  const auto& rhs_columns = rhs.columns();
+
   // As the columns are stored in a std::set, iteration is sorted and the result is not ambiguous.
   // We do not use the < operator for the column sets because it is deprecated in C++20.
-  return std::lexicographical_compare(columns.cbegin(), columns.cend(), rhs_columns.cbegin(), rhs_columns.cend());
+  return std::lexicographical_compare(_columns.cbegin(), _columns.cend(), rhs._columns.cbegin(), rhs._columns.cend());
 }
 
 }  // namespace hyrise

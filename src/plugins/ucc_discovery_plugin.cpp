@@ -100,7 +100,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
     if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
                     [&column_id](const auto& key_constraint) {
                       const auto& columns = key_constraint.columns();
-                      return columns.size() == 1 && columns.contains(column_id);
+                      return columns.size() == 1 && columns.front() == column_id;
                     })) {
       message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);

@@ -2,7 +2,7 @@
 
 #include "../base_test.hpp"
 #include "gtest/gtest.h"
-#include "storage/table_key_constraint.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
@@ -11,7 +11,8 @@ namespace hyrise {
  */
 static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& table_key_constraint,
                                                      const std::shared_ptr<LQPUniqueConstraints>& unique_constraints) {
-  const auto& column_ids = table_key_constraint.columns();
+  const auto& column_ids =
+      std::set<ColumnID>{table_key_constraint.columns().cbegin(), table_key_constraint.columns().cend()};
 
   for (const auto& unique_constraint : *unique_constraints) {
     // Basic comparison: Column count
