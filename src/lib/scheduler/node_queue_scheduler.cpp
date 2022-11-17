@@ -133,17 +133,19 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  if (tasks.size() < NUM_GROUPS) {
+  constexpr auto MIN_JOBS_PER_GROUPED_TASK = 5;
+  if (tasks.size() < NUM_GROUPS * MIN_JOBS_PER_GROUPED_TASK) {
     // If we do not create more than NUM_GROUPS tasks per worker, we consider grouping unneccessary.
+    // If we don't have at least MIN_JOBS_PER_GROUPED_TASK jobs per grouped task, there is no reason to group.
     return std::nullopt;
   }
 
   const auto task_count_per_group = static_cast<size_t>(std::ceil(tasks.size() / NUM_GROUPS));
   // std::printf("task_count_per_group is %lu (tasks: %lu, NUM_GROUPS: %lu)\n", task_count_per_group, tasks.size(), NUM_GROUPS);
   auto new_grouped_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  new_grouped_tasks.reserve(NUM_GROUPS);
+  new_grouped_tasks.reserve(tasks.size());  // reserve to largest possible size, when all jobs are dependent (see below).
 
-  auto add_task_group = [&](std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>& grouped_tasks) {
+  auto add_task_group_and_schedule = [&](std::shared_ptr<std::vector<std::shared_ptr<AbstractTask>>>& grouped_tasks) {
     if (grouped_tasks->empty()) {
       return;
     }
@@ -153,17 +155,16 @@ std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_g
       // std::printf("now executing task with %lu subtasks.\n", grouped_tasks->size());
       // int i = 0;
       for (const auto& task : *grouped_tasks) {
-        auto jt = std::dynamic_pointer_cast<JobTask>(task);
-        // std::printf("subtask %d\n", i);
-        // task->now();
-        jt->now();
-        // std::printf("/subtask %d\n", i);
-        // ++i;
+        DebugAssert(std::dynamic_pointer_cast<JobTask>(task), "Requiring an executable JobTask.");
+        const auto job_task = std::static_pointer_cast<JobTask>(task);
+        job_task->now();
       }
     }));
+    new_grouped_tasks.back()->schedule();
   };
 
   auto task_group = std::make_shared<std::vector<std::shared_ptr<AbstractTask>>>();
+  task_group->reserve(task_count_per_group);
 
   auto common_node_id = std::optional<NodeID>{};
   for (const auto& task : tasks) {
@@ -179,23 +180,34 @@ std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_g
 
     if (!task->predecessors().empty() || !task->successors().empty()) {
       // std::printf("Dep task.\n");
-      add_task_group(task_group);  // Add grouped task for previously gathered tasks.
+
+      // Add grouped task for previously gathered tasks.
+      add_task_group_and_schedule(task_group);
+
+      // Add single task to main task queue and schedule it immediately.
+      new_grouped_tasks.emplace_back(task);
+      new_grouped_tasks.back()->schedule();
+
+      // Start new task group.
       task_group = std::make_shared<std::vector<std::shared_ptr<AbstractTask>>>();
-      new_grouped_tasks.emplace_back(task);  // Add single task.
+      task_group->reserve(task_count_per_group);
+      
       continue;
     }
     // std::printf("Path to merge.\n");
 
     if (task_group->size() >= task_count_per_group) {
-      add_task_group(task_group);
+      add_task_group_and_schedule(task_group);
       task_group = std::make_shared<std::vector<std::shared_ptr<AbstractTask>>>();
+      task_group->reserve(task_count_per_group);
     }
 
     // std::printf("Added task to group.\n");
     task_group->emplace_back(task);
   }
 
-  add_task_group(task_group);
+  // Add last batch of tasks and schedule.
+  add_task_group_and_schedule(task_group);
   // std::printf("In: %lu \t Out: %lu\n", tasks.size(), new_grouped_tasks.size());
   return new_grouped_tasks;
 }

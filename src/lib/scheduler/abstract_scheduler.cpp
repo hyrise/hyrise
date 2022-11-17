@@ -48,7 +48,8 @@ void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::share
   const auto regrouped = _group_tasks(tasks);
   if (regrouped) {
     // std::printf("Proessing regrouped tasks ... size of this vector is %lu\n", regrouped->size());
-    process_tasks(*regrouped);
+    // process_tasks(*regrouped);
+    wait_for_tasks(*regrouped);
   } else {
     process_tasks(tasks);
   }
