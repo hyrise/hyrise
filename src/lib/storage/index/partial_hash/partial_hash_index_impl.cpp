@@ -126,7 +126,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 
     // Prevents multiple threads from indexing the same chunk concurrently.
     {
-      std::lock_guard<std::mutex> lock{insert_entries_mutex};
+      auto lock = std::lock_guard<std::mutex>{_insert_entries_mutex};
       
       if (_indexed_chunk_ids.contains(chunk.first)) {
       // Another thread could have added the same chunk in the meantime.
