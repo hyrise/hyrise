@@ -21,7 +21,7 @@ NodeQueueScheduler::NodeQueueScheduler() {
   _num_workers = Hyrise::get().topology.num_cpus();
 
   // Create more task groups than workers to distribute load equally in case of skewed task runtimes.
-  _num_task_groups = _num_workers * 2;
+  _num_task_groups = _num_workers * FIRST;
 
   std::printf("Scheduler initialized with %lu cores and _num_task_groups of %lu\n", Hyrise::get().topology.num_cpus(), _num_task_groups);
 }
@@ -138,7 +138,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 std::optional<std::vector<std::shared_ptr<AbstractTask>>> NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
-  constexpr auto MIN_JOBS_PER_GROUPED_TASK = 1;
+  constexpr auto MIN_JOBS_PER_GROUPED_TASK = SECOND;
   if (tasks.size() < (_num_task_groups * MIN_JOBS_PER_GROUPED_TASK)) {
     // If we do not create more than _num_task_groups tasks per worker, we consider grouping unneccessary.
     // If we don't have at least MIN_JOBS_PER_GROUPED_TASK jobs per grouped task, there is no reason to group.
