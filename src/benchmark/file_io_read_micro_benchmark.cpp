@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-const int32_t MB = 1000000;
+const auto MB = uint32_t{1'000'000};
 
 class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
@@ -66,15 +66,16 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
   }
 
   const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
-  const auto read_data_size = NUMBER_OF_BYTES / 4;
-  const auto max_read_data_size = static_cast<size_t>(read_data_size);
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+  const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
+  const auto max_read_data_size = static_cast<size_t>(read_data_size);
+
 
   for (auto _ : state) {
     state.PauseTiming();
 
     micro_benchmark_clear_disk_cache();
-    std::vector<uint32_t> read_data;
+    auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
 
     state.ResumeTiming();
@@ -84,7 +85,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
       if (read(fd, std::data(read_data) + index, uint32_t_size) != uint32_t_size) {
         Fail("read error: " + strerror(errno));
       }
-      // Assert(read(fd, read_data_start + index, uint32_t_size) != uint32_t_size, "read error: " + strerror(errno));
+      //Assert(read(fd, read_data_start + index, uint32_t_size) != uint32_t_size, "read error: " + strerror(errno));
     }
     state.PauseTiming();
 
@@ -102,15 +103,15 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
   }
 
   const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
-  const auto read_data_size = NUMBER_OF_BYTES / 4;
-  const auto max_read_data_size = static_cast<size_t>(read_data_size);
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+  const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
+  const auto max_read_data_size = static_cast<size_t>(read_data_size);
 
   for (auto _ : state) {
     state.PauseTiming();
 
     micro_benchmark_clear_disk_cache();
-    std::vector<uint32_t> read_data;
+    auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
 
@@ -122,7 +123,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
       if (read(fd, read_data_start + index, uint32_t_size) != uint32_t_size) {
         Fail("read error: " + strerror(errno));
       }
-      // Assert(read(fd, read_data_start + index, uint32_t_size) != uint32_t_size, "read error: " + strerror(errno));
+      //Assert(read(fd, read_data_start + index, uint32_t_size) != uint32_t_size, "read error: " + strerror(errno));
     }
     state.PauseTiming();
 
@@ -140,15 +141,15 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
   }
 
   const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
-  const auto read_data_size = NUMBER_OF_BYTES / 4;
-  const auto max_read_data_size = static_cast<size_t>(read_data_size);
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+  const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
+  const auto max_read_data_size = static_cast<size_t>(read_data_size);
 
   for (auto _ : state) {
     state.PauseTiming();
 
     micro_benchmark_clear_disk_cache();
-    std::vector<uint32_t> read_data;
+    auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
 
@@ -158,9 +159,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
       if (pread(fd, read_data_start + index, uint32_t_size, uint32_t_size * index) != uint32_t_size) {
         Fail("read error: " + strerror(errno));
       }
-      // TODO Find out why permission error
-      // Assert(pread(fd, read_data_start + index, uint32_t_size, uint32_t_size * index) != uint32_t_size,
-      //       "read error: " + strerror(errno));
+      //Assert(pread(fd, read_data_start + index, uint32_t_size, uint32_t_size * index) != uint32_t_size, "read error: " + strerror(errno));
     }
     state.PauseTiming();
 
@@ -178,14 +177,15 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
   }
 
   const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
-  const auto read_data_size = NUMBER_OF_BYTES / 4;
-  const auto max_read_data_size = static_cast<size_t>(read_data_size);
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+  const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
+  const auto max_read_data_size = static_cast<size_t>(read_data_size);
+
 
   for (auto _ : state) {
     state.PauseTiming();
     micro_benchmark_clear_disk_cache();
-    std::vector<uint32_t> read_data;
+    auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
 
@@ -207,12 +207,13 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(benchmark::State& state) {  // open file
   const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
-  const auto read_data_size = NUMBER_OF_BYTES / 4;
+  const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+  const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
 
   for (auto _ : state) {
     state.PauseTiming();
-    std::vector<uint32_t> read_data;
+    auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
 
     state.ResumeTiming();
@@ -233,11 +234,12 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(b
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(benchmark::State& state) {  // open file
   const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
-  const auto random_read_amount = static_cast<size_t>(NUMBER_OF_BYTES / 4);
+  const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+  const auto random_read_amount = static_cast<size_t>(NUMBER_OF_BYTES / uint32_t_size);
 
   for (auto _ : state) {
     state.PauseTiming();
-    std::vector<uint32_t> read_data;
+    auto read_data = std::vector<uint32_t>{};
     read_data.resize(random_read_amount);
     state.ResumeTiming();
 
