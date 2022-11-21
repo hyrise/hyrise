@@ -15,8 +15,8 @@ const auto MB = uint32_t{1'000'000};
 
 class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
-  uint64_t control_sum = uint64_t{0};
-  std::vector<uint32_t> numbers;
+  auto control_sum = uint64_t{0};
+  auto numbers = std::vector<uint32_t>{};
   uint32_t vector_element_count;
 
   void SetUp(::benchmark::State& state) override {
