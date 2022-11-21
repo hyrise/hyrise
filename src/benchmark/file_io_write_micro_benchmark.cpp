@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-const int32_t MB = 1000000;
+const auto MB = uint32_t{1'000'000};
 
 class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
@@ -18,7 +18,7 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     // TODO(phoeinx): Make setup/teardown global per file size to improve benchmark speed
     ssize_t BUFFER_SIZE_MB = state.range(0);
     // each int32_t contains four bytes
-    int32_t vector_element_count = (BUFFER_SIZE_MB * MB) / 4;
+    int32_t vector_element_count = (BUFFER_SIZE_MB * MB) / sizeof(uint32_t);
     data_to_write = std::vector<int32_t>(vector_element_count, 42);
 
     if (creat("file.txt", O_WRONLY) < 1) {
@@ -42,7 +42,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
-  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+  const uint32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -60,7 +60,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
-  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+  const uint32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -99,7 +99,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RAND
 */
 void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& state, const int flag,
                                                             int data_access_mode, const int32_t file_size) {
-  const int32_t NUMBER_OF_BYTES = file_size * MB;
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
 
   int32_t fd;
   if ((fd = open("file.txt", O_RDWR)) < 0) {
@@ -117,7 +117,7 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
     state.ResumeTiming();
 
     // Getting the mapping to memory.
-    off_t OFFSET = 0;
+    const auto OFFSET = off_t{0};
     /*
     mmap man page: 
     MAP_SHARED:
@@ -138,7 +138,7 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
       case 1:
         state.PauseTiming();
         // Generating random indexes should not play a role in the benchmark.
-        std::vector<int> ind_access_order = generate_random_indexes(NUMBER_OF_BYTES);
+        const auto ind_access_order = generate_random_indexes(NUMBER_OF_BYTES);
         state.ResumeTiming();
         for (uint32_t idx = 0; idx < ind_access_order.size(); ++idx) {
           auto access_index = ind_access_order[idx];
@@ -160,7 +160,7 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
 }
 
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, IN_MEMORY_WRITE)(benchmark::State& state) {  // open file
-  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+  const uint32_t NUMBER_OF_BYTES = state.range(0) * MB;
 
   std::vector<uint64_t> contents(NUMBER_OF_BYTES / sizeof(uint64_t));
   for (auto index = size_t{0}; index < contents.size(); index++) {

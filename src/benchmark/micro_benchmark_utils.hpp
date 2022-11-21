@@ -6,6 +6,6 @@ namespace hyrise {
 
 void micro_benchmark_clear_cache();
 void micro_benchmark_clear_disk_cache();
-std::vector<int> generate_random_indexes(int number);
+std::vector<uint> generate_random_indexes(uint number);
 
 }  // namespace hyrise

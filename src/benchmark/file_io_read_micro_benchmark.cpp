@@ -24,7 +24,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
     ssize_t BUFFER_SIZE_MB = state.range(0);
 
     // each int32_t contains four bytes
-    vector_element_count = (BUFFER_SIZE_MB * MB) / 4;
+    vector_element_count = (BUFFER_SIZE_MB * MB) / sizeof(uint32_t);
     numbers = std::vector<uint32_t>(vector_element_count);
     for (size_t index = 0; index < vector_element_count; ++index) {
       numbers[index] = std::rand() % UINT32_MAX;
@@ -50,17 +50,6 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
     std::remove("file.txt");
   }
 
-  std::vector<uint32_t> CreateRandomIndices(){
-    std::vector<uint32_t> random_indices;
-    random_indices = std::vector<uint32_t>(vector_element_count);
-    std::iota(std::begin(random_indices), std::end(random_indices), 0);
-    auto rd = std::random_device{};
-    auto engine = std::mt19937{rd()};
-    std::shuffle(random_indices.begin(), random_indices.end(), engine);
-
-    return random_indices;
-  }
-
  protected:
 };
 
@@ -70,7 +59,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
     std::cout << "open error " << errno << std::endl;
   }
 
-  const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
@@ -108,7 +97,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
     std::cout << "open error " << errno << std::endl;
   }
 
-  const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
@@ -117,7 +106,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
     state.PauseTiming();
 
     micro_benchmark_clear_disk_cache();
-    const auto random_indices = CreateRandomIndices();
+    const auto random_indices = generate_random_indexes(vector_element_count);
     auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
@@ -148,7 +137,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
     std::cout << "open error " << errno << std::endl;
   }
 
-  const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
@@ -187,12 +176,12 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_RAND
 
   for (auto _ : state) {
     state.PauseTiming();
-    const auto random_indices = CreateRandomIndices();
+    const auto random_indices = generate_random_indexes(vector_element_count);
     micro_benchmark_clear_disk_cache();
     state.ResumeTiming();
 
     // Getting the mapping to memory.
-    const off_t OFFSET = 0;
+    const auto OFFSET = off_t{0};
 
     int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_PRIVATE, fd, OFFSET));
     if (map == MAP_FAILED) {
@@ -231,7 +220,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_SEQU
     state.ResumeTiming();
 
     // Getting the mapping to memory.
-    const off_t OFFSET = 0;
+    const auto OFFSET = off_t{0};
 
     int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_PRIVATE, fd, OFFSET));
     if (map == MAP_FAILED) {
@@ -266,12 +255,12 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDO
 
   for (auto _ : state) {
     state.PauseTiming();
-    const auto random_indices = CreateRandomIndices();
+    const auto random_indices = generate_random_indexes(vector_element_count);
     micro_benchmark_clear_disk_cache();
     state.ResumeTiming();
 
     // Getting the mapping to memory.
-    const off_t OFFSET = 0;
+    const auto OFFSET = off_t{0};
 
     int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_SHARED, fd, OFFSET));
     if (map == MAP_FAILED) {
@@ -310,7 +299,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUE
     state.ResumeTiming();
 
     // Getting the mapping to memory.
-    const off_t OFFSET = 0;
+    const auto OFFSET = off_t{0};
 
     int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_SHARED, fd, OFFSET));
     if (map == MAP_FAILED) {
@@ -342,7 +331,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
     std::cout << "open error " << errno << std::endl;
   }
 
-  const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
@@ -351,7 +340,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
   for (auto _ : state) {
     state.PauseTiming();
     micro_benchmark_clear_disk_cache();
-    const auto random_indices = CreateRandomIndices();
+    const auto random_indices = generate_random_indexes(vector_element_count);
     auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
@@ -374,7 +363,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(benchmark::State& state) {  // open file
-  const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
@@ -401,13 +390,13 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(b
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(benchmark::State& state) {  // open file
-  const auto NUMBER_OF_BYTES = int32_t{static_cast<int32_t>(state.range(0) * MB)};
+  const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto random_read_amount = static_cast<size_t>(NUMBER_OF_BYTES / uint32_t_size);
 
   for (auto _ : state) {
     state.PauseTiming();
-    const auto random_indices = CreateRandomIndices();
+    const auto random_indices = generate_random_indexes(vector_element_count);
     auto read_data = std::vector<uint32_t>{};
     read_data.resize(random_read_amount);
     state.ResumeTiming();

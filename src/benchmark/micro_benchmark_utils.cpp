@@ -25,10 +25,10 @@ void micro_benchmark_clear_disk_cache() {
 }
 
 /**
- * Generates random indexes between 0 and number.
+ * Generates a vector containing random indexes between 0 and number.
 */
-std::vector<int> generate_random_indexes(int number) {
-  std::vector<int> sequence(number);
+std::vector<uint> generate_random_indexes(uint number) {
+  std::vector<uint> sequence(number);
   std::iota(std::begin(sequence), std::end(sequence), 0);
   auto rng = std::default_random_engine{};
   std::shuffle(std::begin(sequence), std::end(sequence), rng);
