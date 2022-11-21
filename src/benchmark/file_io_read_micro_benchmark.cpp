@@ -16,26 +16,19 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   uint64_t control_sum = uint64_t{0};
   std::vector<uint32_t> numbers;
-  std::vector<uint32_t> random_indices;
+  uint32_t vector_element_count;
 
-  void SetUp(::benchmark::State& state) override {
+      void SetUp(::benchmark::State& state) override {
     // TODO: Make setup/teardown global per file size to improve benchmark speed
-    // TODO: Generate vector for each loop in state and not only once per state
     ssize_t BUFFER_SIZE_MB = state.range(0);
 
     // each int32_t contains four bytes
-    uint32_t vector_element_count = (BUFFER_SIZE_MB * MB) / 4;
+    vector_element_count = (BUFFER_SIZE_MB * MB) / 4;
     numbers = std::vector<uint32_t>(vector_element_count);
     for (size_t index = 0; index < vector_element_count; ++index) {
       numbers[index] = std::rand() % UINT32_MAX;
     }
     control_sum = std::accumulate(numbers.begin(), numbers.end(), uint64_t{0});
-
-    random_indices = std::vector<uint32_t>(vector_element_count);
-    std::iota(std::begin(random_indices), std::end(random_indices), 0);
-    auto rd = std::random_device{};
-    auto engine = std::mt19937{rd()};
-    std::shuffle(random_indices.begin(), random_indices.end(), engine);
 
     int32_t fd;
     if ((fd = creat("file.txt", O_WRONLY)) < 1) {
@@ -54,6 +47,17 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void TearDown(::benchmark::State& /*state*/) override {
     // TODO: Error handling
     std::remove("file.txt");
+  }
+
+  std::vector<uint32_t> CreateRandomIndices(){
+    std::vector<uint32_t> random_indices;
+    random_indices = std::vector<uint32_t>(vector_element_count);
+    std::iota(std::begin(random_indices), std::end(random_indices), 0);
+    auto rd = std::random_device{};
+    auto engine = std::mt19937{rd()};
+    std::shuffle(random_indices.begin(), random_indices.end(), engine);
+
+    return random_indices;
   }
 
  protected:
@@ -111,6 +115,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
     state.PauseTiming();
 
     micro_benchmark_clear_disk_cache();
+    const auto random_indices = CreateRandomIndices();
     auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
@@ -185,6 +190,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
   for (auto _ : state) {
     state.PauseTiming();
     micro_benchmark_clear_disk_cache();
+    const auto random_indices = CreateRandomIndices();
     auto read_data = std::vector<uint32_t>{};
     read_data.resize(read_data_size);
     auto* read_data_start = std::data(read_data);
@@ -239,6 +245,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(bench
 
   for (auto _ : state) {
     state.PauseTiming();
+    const auto random_indices = CreateRandomIndices();
     auto read_data = std::vector<uint32_t>{};
     read_data.resize(random_read_amount);
     state.ResumeTiming();
