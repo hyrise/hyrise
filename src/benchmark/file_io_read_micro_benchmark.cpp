@@ -1,4 +1,5 @@
 #include <fcntl.h>
+#include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -18,8 +19,8 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::vector<uint32_t> numbers;
   uint32_t vector_element_count;
 
-      void SetUp(::benchmark::State& state) override {
-    // TODO: Make setup/teardown global per file size to improve benchmark speed
+  void SetUp(::benchmark::State& state) override {
+    // TODO(everybody): Make setup/teardown global per file size to improve benchmark speed
     ssize_t BUFFER_SIZE_MB = state.range(0);
 
     // each int32_t contains four bytes
@@ -45,7 +46,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   void TearDown(::benchmark::State& /*state*/) override {
-    // TODO: Error handling
+    // TODO(everybody): Error handling
     std::remove("file.txt");
   }
 
@@ -170,8 +171,81 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
 
     const auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
-
     state.ResumeTiming();
+  }
+}
+
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)(benchmark::State& state) {
+  int32_t fd;
+  if ((fd = open("file.txt", O_RDONLY)) < 0) {
+    std::cout << "open error " << errno << std::endl;
+  }
+  const uint32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    micro_benchmark_clear_disk_cache();
+    std::vector<uint32_t> read_data;
+    read_data.resize(NUMBER_OF_BYTES / 4);
+    state.ResumeTiming();
+
+    // Getting the mapping to memory.
+    off_t OFFSET = 0;
+
+    int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_PRIVATE, fd, OFFSET));
+    if (map == MAP_FAILED) {
+      std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
+      continue;
+    }
+
+    memcpy(std::data(read_data), map, NUMBER_OF_BYTES);
+
+    state.PauseTiming();
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
+    Assert(control_sum == sum, "Sanity check failed: Not the same result");
+    state.ResumeTiming();
+
+    // Remove memory mapping after job is done.
+    if (munmap(map, NUMBER_OF_BYTES) != 0) {
+      std::cout << "Unmapping failed." << std::endl;
+    }
+  }
+}
+
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)(benchmark::State& state) {
+  int32_t fd;
+  if ((fd = open("file.txt", O_RDONLY)) < 0) {
+    std::cout << "open error " << errno << std::endl;
+  }
+  const int32_t NUMBER_OF_BYTES = state.range(0) * MB;
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    micro_benchmark_clear_disk_cache();
+    std::vector<uint32_t> read_data;
+    read_data.resize(NUMBER_OF_BYTES / 4);
+    state.ResumeTiming();
+
+    // Getting the mapping to memory.
+    off_t OFFSET = 0;
+
+    int32_t* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, MAP_SHARED, fd, OFFSET));
+    if (map == MAP_FAILED) {
+      std::cout << "Mapping Failed. " << std::strerror(errno) << std::endl;
+      continue;
+    }
+
+    memcpy(std::data(read_data), map, NUMBER_OF_BYTES);
+
+    state.PauseTiming();
+    auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
+    Assert(control_sum == sum, "Sanity check failed: Not the same result");
+    state.ResumeTiming();
+
+    // Remove memory mapping after job is done.
+    if (munmap(map, NUMBER_OF_BYTES) != 0) {
+      std::cout << "Unmapping failed." << std::endl;
+    }
   }
 }
 
@@ -273,5 +347,9 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)->Arg(
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
+
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)->Arg(10)->Arg(100)->Arg(1000);
+
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED)->Arg(10)->Arg(100)->Arg(1000);
 
 }  // namespace hyrise
