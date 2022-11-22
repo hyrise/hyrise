@@ -10,11 +10,11 @@ namespace hyrise {
 class TableInclusionConstraint final : public AbstractTableConstraint {
  public:
   TableInclusionConstraint(std::vector<ColumnID> columns, std::vector<ColumnID> dependent_columns,
-                           const std::string& dependent_table_name);
+                           const std::string& referenced_table_name);
 
   const std::vector<ColumnID>& dependent_columns() const;
 
-  const std::string& dependent_table_name() const;
+  const std::string& referenced_table_name() const;
 
   size_t hash() const override;
 
@@ -25,7 +25,18 @@ class TableInclusionConstraint final : public AbstractTableConstraint {
 
   // Table names are the unique identifier of relational tables. Furthermore, we have no other means to actually check
   // if two tables are the same.
-  std::string _dependent_table_name;
+  std::string _referenced_table_name;
 };
 
+using TableInclusionConstraints = std::unordered_set<TableInclusionConstraint>;
+
 }  // namespace hyrise
+
+namespace std {
+
+template <>
+struct hash<hyrise::TableInclusionConstraint> {
+  size_t operator()(const hyrise::TableInclusionConstraint& inclusion_constraint) const;
+};
+
+}  // namespace std

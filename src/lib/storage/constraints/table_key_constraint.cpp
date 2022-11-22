@@ -24,14 +24,21 @@ bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constra
 }
 
 bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
-  // PRIMARY_KEY constraints are "smaller" than UNIQUE constraints. Thus, they are listed first (e.g., for printing).
+  // PRIMARY_KEY constraints are "smaller" than UNIQUE constraints. Thus, they are listed first when printing them.
   if (_key_type < rhs.key_type()) {
     return true;
   }
 
-  // As the columns are stored in a std::set, iteration is sorted and the result is not ambiguous.
-  // We do not use the < operator for the column sets because it is deprecated in C++20.
+  // As the columns were originally stored in a std::set, iteration is sorted and the result is not ambiguous.
   return std::lexicographical_compare(_columns.cbegin(), _columns.cend(), rhs._columns.cbegin(), rhs._columns.cend());
 }
 
 }  // namespace hyrise
+
+namespace std {
+
+size_t hash<hyrise::TableKeyConstraint>::operator()(const hyrise::TableKeyConstraint& key_constraint) const {
+  return key_constraint.hash();
+}
+
+}  // namespace std

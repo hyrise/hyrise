@@ -23,8 +23,8 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   size_t hash() const override;
 
   /**
-   * Required for storing TableKeyConstraints in a sort-based std::set.
-   * The comparison result does not need to be meaningful as long as it is consistent.
+   * Required for storing TableKeyConstraints in a sort-based std::set, which we used for formatted printing of all
+   * table's unique constraints. The comparison result does not need to be meaningful as long as it is consistent.
    */
   bool operator<(const TableKeyConstraint& rhs) const;
 
@@ -35,9 +35,15 @@ class TableKeyConstraint final : public AbstractTableConstraint {
   KeyConstraintType _key_type;
 };
 
-/**
- * We use std::set here to have a well-defined iteration order when hashing StaticTableNode.
- */
-using TableKeyConstraints = std::set<TableKeyConstraint>;
+using TableKeyConstraints = std::unordered_set<TableKeyConstraint>;
 
 }  // namespace hyrise
+
+namespace std {
+
+template <>
+struct hash<hyrise::TableKeyConstraint> {
+  size_t operator()(const hyrise::TableKeyConstraint& table_constraint) const;
+};
+
+}  // namespace std

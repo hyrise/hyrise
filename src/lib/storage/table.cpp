@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -380,6 +381,61 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
 
     _table_key_constraints.insert(table_key_constraint);
   }
+}
+
+void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_inclusion_constraint) {
+  Assert(_type == TableType::Data, "Inclusion constraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of specified columns
+  for (const auto& column_id : table_inclusion_constraint.columns()) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+  }
+
+  Assert(Hyrise::get().storage_manager.has_table(table_inclusion_constraint.referenced_table_name()),
+         "Referenced table must exist");
+  const auto referenced_table_column_count =
+      Hyrise::get().storage_manager.get_table(table_inclusion_constraint.referenced_table_name())->column_count();
+
+  // Check validity of referenced columns
+  for (const auto& column_id : table_inclusion_constraint.dependent_columns()) {
+    Assert(column_id < referenced_table_column_count, "ColumnID out of range");
+  }
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    Assert(!_table_inclusion_constraints.contains(table_inclusion_constraint),
+           "TableInclusionConstraint is already set");
+    _table_inclusion_constraints.insert(table_inclusion_constraint);
+    std::cout << __FILE__ << ":" << __LINE__ << std::endl;
+  }
+}
+
+const TableInclusionConstraints& Table::soft_inclusion_constraints() const {
+  return _table_inclusion_constraints;
+}
+
+void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
+  Assert(_type == TableType::Data, "Inclusion constraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of specified columns
+  for (const auto& column_id : table_order_constraint.columns()) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+  }
+
+  // Check validity of referenced columns
+  for (const auto& column_id : table_order_constraint.ordered_columns()) {
+    Assert(column_id < column_count(), "ColumnID out of range");
+  }
+
+  {
+    auto scoped_lock = acquire_append_mutex();
+    Assert(!_table_order_constraints.contains(table_order_constraint), "TableInclusionConstraint is already set");
+    _table_order_constraints.insert(table_order_constraint);
+  }
+}
+
+const TableOrderConstraints& Table::soft_order_constraints() const {
+  return _table_order_constraints;
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const {

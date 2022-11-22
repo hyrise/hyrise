@@ -2,7 +2,7 @@
 
 namespace hyrise {
 
-AbstractTableConstraint::AbstractTableConstraint(const std::vector<ColumnID>& columns) : _columns{columns} {}
+AbstractTableConstraint::AbstractTableConstraint(std::vector<ColumnID> columns) : _columns{std::move(columns)} {}
 
 const std::vector<ColumnID>& AbstractTableConstraint::columns() const {
   return _columns;

@@ -86,7 +86,8 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
 
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator) {
-  const auto& table_key_constraints = table->soft_key_constraints();
+  const auto& table_key_constraints =
+      std::set<TableKeyConstraint>{table->soft_key_constraints().cbegin(), table->soft_key_constraints().cend()};
   if (table_key_constraints.empty()) {
     return;
   }

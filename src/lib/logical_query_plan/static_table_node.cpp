@@ -73,11 +73,13 @@ size_t StaticTableNode::_on_shallow_hash() const {
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
-  for (const auto& table_key_constraint : table->soft_key_constraints()) {
-    boost::hash_combine(hash, table_key_constraint.hash());
+  const auto& soft_key_constraints = table->soft_key_constraints();
+  for (const auto& table_key_constraint : soft_key_constraints) {
+    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
+    hash = hash ^ table_key_constraint.hash();
   }
 
-  return hash;
+  return boost::hash_value(hash - soft_key_constraints.size());
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

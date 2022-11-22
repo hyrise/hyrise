@@ -10,16 +10,27 @@ namespace hyrise {
  */
 class TableOrderConstraint final : public AbstractTableConstraint {
  public:
-  TableOrderConstraint(std::vector<ColumnID> columns, std::vector<ColumnID> dependent_columns);
+  TableOrderConstraint(std::vector<ColumnID> columns, std::vector<ColumnID> ordered_columns);
 
-  const std::vector<ColumnID>& dependent_columns() const;
+  const std::vector<ColumnID>& ordered_columns() const;
 
   size_t hash() const override;
 
  protected:
   bool _on_equals(const AbstractTableConstraint& order_constraint) const override;
 
-  std::vector<ColumnID> _dependent_columns;
+  std::vector<ColumnID> _ordered_columns;
 };
 
+using TableOrderConstraints = std::unordered_set<TableOrderConstraint>;
+
 }  // namespace hyrise
+
+namespace std {
+
+template <>
+struct hash<hyrise::TableOrderConstraint> {
+  size_t operator()(const hyrise::TableOrderConstraint& order_constraint) const;
+};
+
+}  // namespace std

@@ -11,7 +11,7 @@ namespace hyrise {
  */
 class AbstractTableConstraint {
  public:
-  explicit AbstractTableConstraint(const std::vector<ColumnID>& columns);
+  explicit AbstractTableConstraint(std::vector<ColumnID> columns);
 
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;

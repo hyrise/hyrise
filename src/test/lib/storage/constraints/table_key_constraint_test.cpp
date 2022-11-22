@@ -1,8 +1,5 @@
-#include <memory>
-
 #include "base_test.hpp"
 
-#include "hyrise.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/table.hpp"
 
@@ -13,7 +10,7 @@ class TableKeyConstraintTest : public BaseTest {
   void SetUp() override {
     auto& sm = Hyrise::get().storage_manager;
     {
-      TableColumnDefinitions column_definitions;
+      auto column_definitions = TableColumnDefinitions{};
       column_definitions.emplace_back("column0", DataType::Int, false);
       column_definitions.emplace_back("column1", DataType::Int, false);
       column_definitions.emplace_back("column2", DataType::Int, false);
@@ -24,7 +21,7 @@ class TableKeyConstraintTest : public BaseTest {
     }
 
     {
-      TableColumnDefinitions column_definitions;
+      auto column_definitions = TableColumnDefinitions{};
       column_definitions.emplace_back("column0", DataType::Int, false);
       column_definitions.emplace_back("column1", DataType::Int, true);
       _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
@@ -155,8 +152,8 @@ TEST_F(TableKeyConstraintTest, OrderIndependence) {
   const auto key_constraint_1 = TableKeyConstraint{{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_2 = TableKeyConstraint{{ColumnID{2}, ColumnID{3}}, KeyConstraintType::UNIQUE};
 
-  auto key_constraints_a = TableKeyConstraints{};
-  auto key_constraints_b = TableKeyConstraints{};
+  auto key_constraints_a = std::set<TableKeyConstraint>{};
+  auto key_constraints_b = std::set<TableKeyConstraint>{};
 
   key_constraints_a.insert(key_constraint_1);
   key_constraints_a.insert(key_constraint_2);
