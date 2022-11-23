@@ -1,3 +1,4 @@
+#include <future>
 #include <memory>
 #include <string>
 #include <utility>
@@ -12,6 +13,7 @@
 #include "operators/join_hash.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/union_positions.hpp"
+#include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT
@@ -107,4 +109,56 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 }
+
+TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
+  // Operators reuse the created OperatorTasks when the tasks are still available. This may happen concurrently, e.g.,
+  // when an uncorrelated subquery is used in multiple TableScans. This test ensures that concurrently creating/reusing
+  // tasks from the same operator is thread-safe and does not lead to segmentation faults or tasks waiting forever to
+  // finish.
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+
+  const auto get_table = std::make_shared<GetTable>("table_b");
+  const auto scan_predicate = greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), 100);
+  const auto table_scan = std::make_shared<TableScan>(get_table, scan_predicate);
+
+  const auto num_threads = 50;
+  const auto iterations_per_thread = 50;
+  auto thread_futures = std::vector<std::future<void>>{};
+  thread_futures.reserve(num_threads);
+  auto threads = std::vector<std::thread>{};
+  threads.reserve(num_threads);
+  auto successful_executions = std::atomic_size_t{0};
+
+  for (auto thread_id = 0; thread_id < num_threads; ++thread_id) {
+    auto task = std::packaged_task<void()>{[&]() {
+      for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+        const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(table_scan);
+        Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+        if (table_scan->get_output()) {
+          ++successful_executions;
+        }
+      }
+    }};
+
+    thread_futures.emplace_back(task.get_future());
+    threads.emplace_back(std::move(task));
+  }
+
+  for (auto& thread_future : thread_futures) {
+    // We give this a lot of time, not because we usually need that long for 50 threads to finish, but because
+    // sanitizers and other tools like valgrind sometimes bring a high overhead.
+    if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
+      FAIL() << "At least one thread got stuck and did not commit.";
+    }
+    // Retrieve the future so that exceptions stored in its state are thrown
+    thread_future.get();
+  }
+
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  EXPECT_EQ(successful_executions, num_threads * iterations_per_thread);
+}
+
 }  // namespace hyrise

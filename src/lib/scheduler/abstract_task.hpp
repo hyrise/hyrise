@@ -207,6 +207,7 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::atomic_uint32_t _pending_predecessors{0};
   std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::shared_ptr<AbstractTask>> _successors;
+  std::mutex _set_as_predecessor_mutex;
 
   // State management
   std::atomic<TaskState> _state{TaskState::Created};

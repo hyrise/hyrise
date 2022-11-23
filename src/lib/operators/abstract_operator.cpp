@@ -331,8 +331,9 @@ OperatorState AbstractOperator::state() const {
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   std::lock_guard<std::mutex> lock(_operator_task_mutex);
   // Return the OperatorTask that owns this operator if it already exists.
-  if (!_operator_task.expired()) {
-    return _operator_task.lock();
+  auto operator_task = _operator_task.lock();
+  if (operator_task) {
+    return operator_task;
   }
 
   if constexpr (HYRISE_DEBUG) {
@@ -344,8 +345,8 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
     Assert(is_uninitialized || executed(), "This operator was owned by an OperatorTask that did not execute.");
   }
 
-  auto operator_task = std::make_shared<OperatorTask>(shared_from_this());
-  _operator_task = std::weak_ptr<OperatorTask>(operator_task);
+  operator_task = std::make_shared<OperatorTask>(shared_from_this());
+  _operator_task = operator_task;
   if (executed()) {
     // Skip task to reduce scheduling overhead.
     operator_task->skip_operator_task();
