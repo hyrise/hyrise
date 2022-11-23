@@ -13,11 +13,24 @@
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
+
+namespace {
+  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.5f;
+  constexpr auto NUM_GROUPS_MAX_FACTOR = 5.0f;
+
+  constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
+
+  constexpr auto MAX_QUEUE_SIZE_FACTOR = size_t{32};
+}
+
 namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
-  NUM_GROUPS = Hyrise::get().topology.num_cpus() * 4;
+
+  // Good default value
+  _num_workers =Hyrise::get().topology.num_cpus();
+  NUM_GROUPS = _num_workers;
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
@@ -142,11 +155,36 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
-  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
+  auto num_groups = NUM_GROUPS;
+
+  if (!tasks.empty() && tasks.size() > NUM_GROUPS) {
+    //std::printf("1\n");
+
+    //const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
+    const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID || tasks[0]->node_id() == INVALID_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
+
+    //std::printf("1a, %u\n", static_cast<NodeID::base_type>(node_id_for_queue_check));
+    //std::printf("1b, %lu\n", static_cast<size_t>(tasks[0]->node_id()));
+    //std::printf("1c, %lu\n", static_cast<size_t>(CURRENT_NODE_ID));
+    const auto cumu_length_queues = _queues[node_id_for_queue_check]->_queues[0].unsafe_size() + _queues[node_id_for_queue_check]->_queues[1].unsafe_size();
+    //std::printf("2\n");
+
+    const auto upper_limit = _num_workers * MAX_QUEUE_SIZE_FACTOR;  // Everything above this limit yields the max value for grouping.
+    const auto fill_level = std::min(cumu_length_queues, upper_limit);
+    const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(upper_limit));
+    const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
+
+    //std::printf("3\n");
+    num_groups = static_cast<size_t>(static_cast<float>(_num_workers) * fill_factor);
+    //std::printf("(%lu)", cumu_length_queues);
+  }
+
+  std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(num_groups);
   for (const auto& task : tasks) {
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
+
 
     if (common_node_id) {
       // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
@@ -158,7 +196,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
       common_node_id = task->node_id();
     }
 
-    const auto group_id = round_robin_counter % NUM_GROUPS;
+    const auto group_id = round_robin_counter % num_groups;
     const auto& first_task_in_group = grouped_tasks[group_id];
     if (first_task_in_group) {
       task->set_as_predecessor_of(first_task_in_group);
