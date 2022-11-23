@@ -38,6 +38,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Generates unique constraints from table's key constraints and pays respect to pruned columns.
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
+  std::shared_ptr<OrderDependencies> order_dependencies() const override;
+
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.
    * Vector passed to `set_pruned_column_ids()` needs to be sorted and unique

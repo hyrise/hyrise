@@ -65,6 +65,28 @@ std::shared_ptr<UniqueColumnCombinations> UnionNode::unique_column_combinations(
   Fail("Unhandled UnionMode");
 }
 
+std::shared_ptr<OrderDependencies> UnionNode::order_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Positions: {
+      const auto& left_order_dependencies = left_input()->order_dependencies();
+      Assert(*left_order_dependencies == *right_input()->order_dependencies(),
+             "Input tables should have the same constraints.");
+      return left_order_dependencies;
+    }
+    case SetOperationMode::All: {
+      /**
+       * With UnionAll, two tables become merged. The resulting table might contain duplicates.
+       * To forward constraints from child nodes, we would have to ensure that both input tables are completely
+       * distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
+       */
+      return std::make_shared<OrderDependencies>();
+    }
+    case SetOperationMode::Unique:
+      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+  }
+  Fail("Unhandled UnionMode");
+}
+
 std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::All: {

@@ -24,6 +24,8 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   // Generates unique constraints from table's key constraints.
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
+  std::shared_ptr<OrderDependencies> order_dependencies() const override;
+
   const std::shared_ptr<Table> table;
 
  protected:

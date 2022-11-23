@@ -31,6 +31,8 @@ class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public Abstrac
 
   // Forwards unique constraints from the left input node
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+
+  std::shared_ptr<OrderDependencies> order_dependencies() const override;
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;

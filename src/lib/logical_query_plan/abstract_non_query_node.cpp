@@ -15,7 +15,11 @@ bool AbstractNonQueryNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 std::shared_ptr<UniqueColumnCombinations> AbstractNonQueryNode::unique_column_combinations() const {
-  Fail("Node does not support unique constraints.");
+  Fail("Node does not support unique column combinations.");
+}
+
+std::shared_ptr<OrderDependencies> AbstractNonQueryNode::order_dependencies() const {
+  Fail("Node does not support order depedencies.");
 }
 
 std::vector<FunctionalDependency> AbstractNonQueryNode::non_trivial_functional_dependencies() const {

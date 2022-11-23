@@ -128,6 +128,11 @@ std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combina
   return unique_column_combinations;
 }
 
+std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
+  // TODO: generate from table, remove pruned columns
+  return std::make_shared<OrderDependencies>();
+}
+
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 

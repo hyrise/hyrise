@@ -86,6 +86,21 @@ std::shared_ptr<UniqueColumnCombinations> JoinNode::unique_column_combinations()
   return _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 }
 
+std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
+  if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+    return _forward_left_order_dependencies();
+  }
+
+  // ODs are not effected from removing or duplicating tuples, so we simply have to foward left and right ODs without
+  // duplicate ODs. We simply achieve deduplication by using sets for ODs.
+  const auto& left_order_dependencies = left_input()->order_dependencies();
+  const auto& right_order_dependencies = right_input()->order_dependencies();
+  auto order_dependencies =
+      std::make_shared<OrderDependencies>(left_order_dependencies->cbegin(), left_order_dependencies->cend());
+  order_dependencies->insert(right_order_dependencies->cbegin(), right_order_dependencies->cend());
+  return order_dependencies;
+}
+
 std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combinations(
     const std::shared_ptr<UniqueColumnCombinations>& left_unique_column_combinations,
     const std::shared_ptr<UniqueColumnCombinations>& right_unique_column_combinations) const {

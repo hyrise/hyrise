@@ -46,6 +46,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   // Generates unique constraints from table's key constraints and pays respect to pruned columns.
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
+  std::shared_ptr<OrderDependencies> order_dependencies() const override;
+
   const std::string table_name;
 
   // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these

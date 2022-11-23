@@ -28,6 +28,10 @@ std::shared_ptr<UniqueColumnCombinations> DummyTableNode::unique_column_combinat
   return std::make_shared<UniqueColumnCombinations>();
 }
 
+std::shared_ptr<OrderDependencies> DummyTableNode::order_dependencies() const {
+  return std::make_shared<OrderDependencies>();
+}
+
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<DummyTableNode>();
 }

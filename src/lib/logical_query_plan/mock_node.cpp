@@ -99,6 +99,11 @@ std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations()
   return unique_column_combinations;
 }
 
+std::shared_ptr<OrderDependencies> MockNode::order_dependencies() const {
+  // TODO: store and forward ODs.
+  return std::make_shared<OrderDependencies>();
+}
+
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }

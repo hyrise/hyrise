@@ -39,6 +39,10 @@ std::shared_ptr<UniqueColumnCombinations> IntersectNode::unique_column_combinati
   return _forward_left_unique_column_combinations();
 }
 
+std::shared_ptr<OrderDependencies> IntersectNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependencies() const {
   Fail("Merging of FDs should be implemented.");
 }

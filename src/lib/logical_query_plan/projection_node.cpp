@@ -36,11 +36,12 @@ std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinat
   auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
   unique_column_combinations->reserve(node_expressions.size());
 
-  // Forward unique constraints, if applicable
+  // Forward unique column combinations, if applicable
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto& output_expressions = this->output_expressions();
 
   for (const auto& input_unique_constraint : *input_unique_column_combinations) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) {
+    if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
       /**
        * Future Work:
@@ -54,6 +55,26 @@ std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinat
   }
 
   return unique_column_combinations;
+}
+
+std::shared_ptr<OrderDependencies> ProjectionNode::order_dependencies() const {
+  auto order_dependencies = std::make_shared<OrderDependencies>();
+  order_dependencies->reserve(node_expressions.size());
+
+  // Forward unique constraints, if applicable
+  const auto& input_order_dependencies = left_input()->order_dependencies();
+  const auto& output_expressions = this->output_expressions();
+
+  for (const auto& input_order_dependency : *input_order_dependencies) {
+    // As is the case for UCCs, we have opportunities for creating ODs from different projections in the future.
+    if (!(contains_all_expressions(input_order_dependency.expressions, output_expressions) &&
+          contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
+      continue;
+    }
+    order_dependencies->emplace(input_order_dependency);
+  }
+
+  return order_dependencies;
 }
 
 std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_dependencies() const {

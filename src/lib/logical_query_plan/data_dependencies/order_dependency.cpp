@@ -5,20 +5,25 @@
 
 namespace hyrise {
 
-OrderDependency::OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_determinants,
-                                 std::vector<std::shared_ptr<AbstractExpression>> init_dependents)
-    : determinants{std::move(init_determinants)}, dependents{std::move(init_dependents)} {
-  Assert(!determinants.empty() && !dependents.empty(), "OrderDependency cannot be empty.");
+OrderDependency::OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_expressions,
+                                 std::vector<std::shared_ptr<AbstractExpression>> init_ordered_expessions)
+    : expressions{std::move(init_expressions)}, ordered_expressions{std::move(init_ordered_expessions)} {
+  Assert(!expressions.empty() && !ordered_expressions.empty(), "OrderDependency cannot be empty.");
 }
 
 bool OrderDependency::operator==(const OrderDependency& rhs) const {
-  if (determinants.size() != rhs.determinants.size()) {
+  if (expressions.size() != rhs.expressions.size() || ordered_expressions.size() != rhs.ordered_expressions.size()) {
     return false;
   }
 
-  for (auto expression_idx = size_t{0}; expression_idx < determinants.size(); ++expression_idx) {
-    if (*determinants[expression_idx] != *rhs.determinants[expression_idx] ||
-        *dependents[expression_idx] != *rhs.dependents[expression_idx]) {
+  for (auto expression_idx = size_t{0}; expression_idx < expressions.size(); ++expression_idx) {
+    if (*expressions[expression_idx] != *rhs.expressions[expression_idx]) {
+      return false;
+    }
+  }
+
+  for (auto expression_idx = size_t{0}; expression_idx < ordered_expressions.size(); ++expression_idx) {
+    if (*ordered_expressions[expression_idx] != *rhs.ordered_expressions[expression_idx]) {
       return false;
     }
   }
@@ -31,12 +36,13 @@ bool OrderDependency::operator!=(const OrderDependency& rhs) const {
 }
 
 size_t OrderDependency::hash() const {
-  auto hash = boost::hash_value(determinants.size());
-  for (const auto& expression : determinants) {
+  auto hash = boost::hash_value(expressions.size());
+  for (const auto& expression : expressions) {
     boost::hash_combine(hash, expression->hash());
   }
 
-  for (const auto& expression : dependents) {
+  boost::hash_combine(hash, ordered_expressions.size());
+  for (const auto& expression : ordered_expressions) {
     boost::hash_combine(hash, expression->hash());
   }
 
@@ -45,14 +51,14 @@ size_t OrderDependency::hash() const {
 
 std::ostream& operator<<(std::ostream& stream, const OrderDependency& od) {
   stream << "{";
-  stream << od.determinants.at(0)->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < od.determinants.size(); ++expression_idx) {
-    stream << ", " << od.determinants[expression_idx]->as_column_name();
+  stream << od.expressions[0]->as_column_name();
+  for (auto expression_idx = size_t{1}; expression_idx < od.expressions.size(); ++expression_idx) {
+    stream << ", " << od.expressions[expression_idx]->as_column_name();
   }
-  stream << "} orders {";
-  stream << od.dependents.at(0)->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < od.dependents.size(); ++expression_idx) {
-    stream << ", " << od.dependents[expression_idx]->as_column_name();
+  stream << "} |-> {";
+  stream << od.ordered_expressions[0]->as_column_name();
+  for (auto expression_idx = size_t{1}; expression_idx < od.ordered_expressions.size(); ++expression_idx) {
+    stream << ", " << od.ordered_expressions[expression_idx]->as_column_name();
   }
   stream << "}";
   return stream;

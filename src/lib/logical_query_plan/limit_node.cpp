@@ -24,6 +24,10 @@ std::shared_ptr<UniqueColumnCombinations> LimitNode::unique_column_combinations(
   return _forward_left_unique_column_combinations();
 }
 
+std::shared_ptr<OrderDependencies> LimitNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {
   return node_expressions[0];
 }

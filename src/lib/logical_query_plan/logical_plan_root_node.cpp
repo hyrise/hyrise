@@ -17,7 +17,11 @@ std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_on_shallow_copy(LQPNodeMa
 }
 
 std::shared_ptr<UniqueColumnCombinations> LogicalPlanRootNode::unique_column_combinations() const {
-  Fail("LogicalPlanRootNode is not expected to be queried for unique constraints.");
+  Fail("LogicalPlanRootNode is not expected to be queried for unique column combinations.");
+}
+
+std::shared_ptr<OrderDependencies> LogicalPlanRootNode::order_dependencies() const {
+  Fail("LogicalPlanRootNode is not expected to be queried for order depedencies.");
 }
 
 std::vector<FunctionalDependency> LogicalPlanRootNode::non_trivial_functional_dependencies() const {

@@ -14,6 +14,10 @@ std::shared_ptr<UniqueColumnCombinations> ValidateNode::unique_column_combinatio
   return _forward_left_unique_column_combinations();
 }
 
+std::shared_ptr<OrderDependencies> ValidateNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return ValidateNode::make();
 }

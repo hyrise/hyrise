@@ -21,6 +21,8 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
    */
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
+  std::shared_ptr<OrderDependencies> order_dependencies() const override;
+
   // Returns non-trivial FDs from the left input node that remain valid.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 

@@ -95,7 +95,7 @@ bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinations() const {
-  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
+  const auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
   /**
    * (1) Forward unique constraints from child nodes if all expressions belong to the group-by section.
@@ -123,9 +123,10 @@ std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinati
    */
 
   // Check each constraint for applicability
+  const auto& output_expressions = this->output_expressions();
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
   for (const auto& input_unique_constraint : *input_unique_column_combinations) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) {
+    if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
     }
 
@@ -159,6 +160,24 @@ std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinati
    */
 
   return unique_column_combinations;
+}
+
+std::shared_ptr<OrderDependencies> AggregateNode::order_dependencies() const {
+  const auto order_dependencies = std::make_shared<OrderDependencies>();
+
+  // Similarly to UCCs, forward ODs if all expressions are part of the GROUP-BY expressions.
+  const auto& input_order_dependencies = left_input()->order_dependencies();
+  const auto& output_expressions = this->output_expressions();
+
+  for (const auto& input_order_dependency : *input_order_dependencies) {
+    if (!(contains_all_expressions(input_order_dependency.expressions, output_expressions) &&
+          contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
+      continue;
+    }
+    order_dependencies->emplace(input_order_dependency);
+  }
+
+  return order_dependencies;
 }
 
 std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependencies() const {

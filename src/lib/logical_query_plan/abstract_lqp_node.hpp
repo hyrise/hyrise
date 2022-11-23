@@ -7,6 +7,8 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
+#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 
@@ -214,6 +216,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
 
+  virtual std::shared_ptr<OrderDependencies> order_dependencies() const = 0;
+
   /**
    * Perform a deep equality check
    */
@@ -259,6 +263,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return All unique constraints from the left input node.
    */
   std::shared_ptr<UniqueColumnCombinations> _forward_left_unique_column_combinations() const;
+
+  std::shared_ptr<OrderDependencies> _forward_left_order_dependencies() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

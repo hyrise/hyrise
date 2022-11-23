@@ -270,15 +270,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 
 bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expressions) const {
   const auto& output_expressions = this->output_expressions();
-
-  for (const auto& expression : expressions) {
-    if (!std::any_of(output_expressions.cbegin(), output_expressions.cend(),
-                     [&expression](const auto& output_expression) { return *output_expression == *expression; })) {
-      return false;
-    }
-  }
-
-  return true;
+  return contains_all_expressions(expressions, output_expressions);
 }
 
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
@@ -427,17 +419,33 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
 }
 
 std::shared_ptr<UniqueColumnCombinations> AbstractLQPNode::_forward_left_unique_column_combinations() const {
-  Assert(left_input(), "Cannot forward unique constraints without an input node.");
+  Assert(left_input(), "Cannot forward unique column combinations without an input node.");
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
-    for (const auto& unique_constraint : *input_unique_column_combinations) {
-      Assert(has_output_expressions(unique_constraint.expressions),
-             "Forwarding of constraints is illegal because node misses output expressions.");
+    for (const auto& ucc : *input_unique_column_combinations) {
+      Assert(has_output_expressions(ucc.expressions),
+             "Forwarding of UCC is illegal because node misses output expressions.");
     }
   }
   return input_unique_column_combinations;
+}
+
+std::shared_ptr<OrderDependencies> AbstractLQPNode::_forward_left_order_dependencies() const {
+  Assert(left_input(), "Cannot forward order dependencies without an input node.");
+  const auto& input_order_dependencies = left_input()->order_dependencies();
+
+  if constexpr (HYRISE_DEBUG) {
+    // Check whether output expressions are missing
+    const auto& output_expressions = this->output_expressions();
+    for (const auto& od : *input_order_dependencies) {
+      Assert(contains_all_expressions(od.expressions, output_expressions) &&
+                 contains_all_expressions(od.ordered_expressions, output_expressions),
+             "Forwarding of OD is illegal because node misses output expressions.");
+    }
+  }
+  return input_order_dependencies;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

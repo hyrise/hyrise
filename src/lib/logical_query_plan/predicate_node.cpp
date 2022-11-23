@@ -32,6 +32,10 @@ std::shared_ptr<UniqueColumnCombinations> PredicateNode::unique_column_combinati
   return _forward_left_unique_column_combinations();
 }
 
+std::shared_ptr<OrderDependencies> PredicateNode::order_dependencies() const {
+  return _forward_left_order_dependencies();
+}
+
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
   return node_expressions[0];
 }

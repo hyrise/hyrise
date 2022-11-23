@@ -14,20 +14,20 @@ namespace hyrise {
  *       there has been a ValidateNode before or where MVCC is disabled).
  */
 struct OrderDependency final {
-  explicit OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_dependents,
-                           std::vector<std::shared_ptr<AbstractExpression>> init_determinants);
+  explicit OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_expressions,
+                           std::vector<std::shared_ptr<AbstractExpression>> init_ordered_expessions);
 
   bool operator==(const OrderDependency& rhs) const;
   bool operator!=(const OrderDependency& rhs) const;
   size_t hash() const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> determinants;
-  std::vector<std::shared_ptr<AbstractExpression>> dependents;
+  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  std::vector<std::shared_ptr<AbstractExpression>> ordered_expressions;
 };
 
-std::ostream& operator<<(std::ostream& stream, const OrderDependency& ucc);
+std::ostream& operator<<(std::ostream& stream, const OrderDependency& od);
 
-using OrderDependencies = std::vector<OrderDependency>;
+using OrderDependencies = std::unordered_set<OrderDependency>;
 
 }  // namespace hyrise
 
@@ -35,7 +35,7 @@ namespace std {
 
 template <>
 struct hash<hyrise::OrderDependency> {
-  size_t operator()(const hyrise::OrderDependency& ucc) const;
+  size_t operator()(const hyrise::OrderDependency& od) const;
 };
 
 }  // namespace std
