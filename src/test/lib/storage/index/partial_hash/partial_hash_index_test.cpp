@@ -51,7 +51,7 @@ class PartialHashIndexTest : public BaseTest {
    * private scope. Since the variable is set in setup() references are not possible.
    */
 
-  tbb::concurrent_unordered_map<pmr_string, tbb::concurrent_vector<RowID>>* index_map = nullptr;
+  std::unordered_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 };
 
 TEST_F(PartialHashIndexTest, Type) {
@@ -437,19 +437,19 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(std::unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
-  expected_memory_usage += 9 * sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += 9 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 11 * sizeof(RowID);
   // + vector size NULL values (index NULL positions)
-  expected_memory_usage += sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += sizeof(std::vector<RowID>);
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
 
@@ -477,19 +477,19 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(std::unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
-  expected_memory_usage += 0 * sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
   // + vector size NULL values (index NULL positions)
-  expected_memory_usage += sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += sizeof(std::vector<RowID>);
   // + number of NULL values * RowID
   expected_memory_usage += 2 * sizeof(RowID);
 
@@ -518,19 +518,19 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(std::unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 9 * sizeof(size_t);
   // + number of different non-NULL values * vector size
-  expected_memory_usage += 9 * sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += 9 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 11 * sizeof(RowID);
   // + vector size NULL values (index NULL positions)
-  expected_memory_usage += sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += sizeof(std::vector<RowID>);
   // + number of NULL values * RowID
   expected_memory_usage += 5 * sizeof(RowID);
 
@@ -557,19 +557,19 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(std::unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
-  expected_memory_usage += 0 * sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
   // + vector size NULL values (index NULL positions)
-  expected_memory_usage += sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += sizeof(std::vector<RowID>);
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
 
@@ -588,19 +588,19 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 0 * sizeof(ChunkID);
   // + map size
-  expected_memory_usage += sizeof(tbb::concurrent_unordered_map<pmr_string, std::vector<RowID>>);
+  expected_memory_usage += sizeof(std::unordered_map<pmr_string, std::vector<RowID>>);
   // + number of different non-NULL values * hash size
   expected_memory_usage += 0 * sizeof(size_t);
   // + number of different non-NULL values * vector size
-  expected_memory_usage += 0 * sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
   // + number of non-NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
   // + vector size NULL values (index NULL positions)
-  expected_memory_usage += sizeof(tbb::concurrent_vector<RowID>);
+  expected_memory_usage += sizeof(std::vector<RowID>);
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);
 

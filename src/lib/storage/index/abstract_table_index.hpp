@@ -5,8 +5,6 @@
 #include <utility>
 #include <vector>
 
-#include <tbb/concurrent_unordered_set.h>  // NOLINT linter identifies this file as a C header.
-
 #include "all_type_variant.hpp"
 #include "types.hpp"
 
@@ -36,6 +34,9 @@ class BaseTableIndexIterator {
   virtual bool operator==(const BaseTableIndexIterator& other) const;
   virtual bool operator!=(const BaseTableIndexIterator& other) const;
   virtual std::shared_ptr<BaseTableIndexIterator> clone() const;
+
+//  protected:
+//   std::shared_mutex _data_access_mutex;
 };
 
 /**
@@ -55,7 +56,7 @@ class IteratorWrapper {
   using reference = const RowID&;
 
   explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr);
-  IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr, std::unique_lock<std::mutex> data_access_lock);
+  IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr, std::shared_lock<std::shared_mutex> data_access_lock);
   IteratorWrapper(const IteratorWrapper& other);
   IteratorWrapper& operator=(const IteratorWrapper& other);
   reference operator*() const;
@@ -65,7 +66,7 @@ class IteratorWrapper {
 
  private:
   std::shared_ptr<BaseTableIndexIterator> _impl;
-  std::unique_lock<std::mutex> _data_access_lock;
+  std::shared_lock<std::shared_mutex> _data_access_lock;
 };
 
 /**
@@ -155,7 +156,7 @@ class AbstractTableIndex : private Noncopyable {
    *
    * @return An ordered set of the chunk ids.
    */
-  tbb::concurrent_unordered_set<ChunkID> get_indexed_chunk_ids() const;
+  std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
 
   /**
    * Returns the ColumnID covered by the index.
@@ -172,7 +173,7 @@ class AbstractTableIndex : private Noncopyable {
   virtual IteratorPair _range_equals(const AllTypeVariant& value) const = 0;
   virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
-  virtual tbb::concurrent_unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
+  virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual ColumnID _get_indexed_column_id() const = 0;
   virtual size_t _estimate_memory_usage() const = 0;
 

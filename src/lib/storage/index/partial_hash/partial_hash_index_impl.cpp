@@ -1,13 +1,15 @@
 #include "partial_hash_index_impl.hpp"
 #include "storage/segment_iterate.hpp"
 
-#include <mutex>
-
 namespace hyrise {
 
 template <typename DataType>
 TableIndexTbbUnorderedMapIterator<DataType>::TableIndexTbbUnorderedMapIterator(MapIteratorType it)
     : _map_iterator(it), _vector_index(0) {}
+
+// template <typename DataType>
+// TableIndexTbbUnorderedMapIterator<DataType>::TableIndexTbbUnorderedMapIterator(MapIteratorType it, std::shared_lock<std::shared_mutex> data_access_lock)
+//     : _map_iterator(it), _vector_index(0) {}
 
 template <typename DataType>
 const RowID& TableIndexTbbUnorderedMapIterator<DataType>::operator*() const {
@@ -102,8 +104,8 @@ bool BasePartialHashIndexImpl::is_index_for(const ColumnID column_id) const {
   return false;
 }
 
-tbb::concurrent_unordered_set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const {
-  return tbb::concurrent_unordered_set<ChunkID>{};
+std::unordered_set<ChunkID> BasePartialHashIndexImpl::get_indexed_chunk_ids() const {
+  return std::unordered_set<ChunkID>{};
 }
 
 template <typename DataType>
@@ -126,7 +128,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 
     // Prevents multiple threads from indexing the same chunk concurrently.
     {
-      auto lock = std::lock_guard<std::mutex>{_insert_entries_mutex};
+      auto lock = std::lock_guard<std::shared_mutex>{_insert_entries_mutex};
       
       if (_indexed_chunk_ids.contains(chunk.first)) {
       // Another thread could have added the same chunk in the meantime.
@@ -175,7 +177,10 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cbegin()));
+  auto iterator = _map.cbegin();
+  std::shared_lock<std::shared_mutex> lock(_insert_entries_mutex);
+  (void)lock;
+  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(iterator));
 }
 
 template <typename DataType>
@@ -204,7 +209,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   // TBB's concurrent_unordered_map uses tbb_hasher as hash function, so the hash size equals the size of a size_t.
   bytes += sizeof(size_t) * _map.size();
 
-  bytes += sizeof(tbb::concurrent_vector<RowID>) * _map.size();
+  bytes += sizeof(std::vector<RowID>) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
   bytes += sizeof(_null_values);  // NOLINT
@@ -214,7 +219,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
 }
 
 template <typename DataType>
-tbb::concurrent_unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
+std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
   return _indexed_chunk_ids;
 }
 

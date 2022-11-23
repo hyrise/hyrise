@@ -25,7 +25,7 @@ std::shared_ptr<BaseTableIndexIterator> BaseTableIndexIterator::clone() const {
 IteratorWrapper::IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
     : _impl(std::move(table_index_iterator_ptr)) {}
 
-IteratorWrapper::IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr, std::unique_lock<std::mutex> _data_access_lock)
+IteratorWrapper::IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr, std::shared_lock<std::shared_mutex> _data_access_lock)
     : _impl(std::move(table_index_iterator_ptr)), _data_access_lock(std::move(_data_access_lock)) {}
 
 IteratorWrapper::IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}
@@ -97,7 +97,7 @@ bool AbstractTableIndex::is_index_for(const ColumnID column_id) const {
   return _is_index_for(column_id);
 }
 
-tbb::concurrent_unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
+std::unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
   return _get_indexed_chunk_ids();
 }
 
