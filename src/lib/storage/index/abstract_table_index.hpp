@@ -55,6 +55,7 @@ class IteratorWrapper {
   using reference = const RowID&;
 
   explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr);
+  IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr, std::unique_lock<std::mutex> data_access_lock);
   IteratorWrapper(const IteratorWrapper& other);
   IteratorWrapper& operator=(const IteratorWrapper& other);
   reference operator*() const;
@@ -64,6 +65,7 @@ class IteratorWrapper {
 
  private:
   std::shared_ptr<BaseTableIndexIterator> _impl;
+  std::unique_lock<std::mutex> _data_access_lock;
 };
 
 /**
