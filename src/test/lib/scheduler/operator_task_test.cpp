@@ -121,7 +121,7 @@ TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
   const auto scan_predicate = greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), 100);
   const auto table_scan = std::make_shared<TableScan>(get_table, scan_predicate);
 
-  const auto num_threads = 50;
+  const auto num_threads = 100;
   const auto iterations_per_thread = 50;
   auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
@@ -145,7 +145,7 @@ TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
   }
 
   for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we usually need that long for 50 threads to finish, but because
+    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
       FAIL() << "At least one thread got stuck and did not commit.";
