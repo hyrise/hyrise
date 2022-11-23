@@ -145,7 +145,7 @@ TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
   }
 
   for (auto& thread_future : thread_futures) {
-    // We give this a lot of time, not because we usually need that long for 100 threads to finish, but because
+    // We give this a lot of time, not because we usually need that long for 50 threads to finish, but because
     // sanitizers and other tools like valgrind sometimes bring a high overhead.
     if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
       FAIL() << "At least one thread got stuck and did not commit.";
