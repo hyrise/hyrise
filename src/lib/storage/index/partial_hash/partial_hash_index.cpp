@@ -30,6 +30,10 @@ size_t PartialHashIndex::insert_entries(
   return _impl->insert_entries(chunks_to_index, _column_id);
 }
 
+size_t PartialHashIndex::remove_entries(const std::vector<ChunkID>& chunks_to_remove) {
+  return _impl->remove_entries(chunks_to_remove);
+}
+
 PartialHashIndex::IteratorPair PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
   return _impl->range_equals(value);
 }

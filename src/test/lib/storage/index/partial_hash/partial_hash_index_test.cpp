@@ -197,6 +197,25 @@ TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
   EXPECT_EQ(*empty_index.range_equals("hotel").first, (RowID{ChunkID{0}, ChunkOffset{0}}));
 }
 
+TEST_F(PartialHashIndexTest, Remove) {
+  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
+
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{1}}));
+  EXPECT_EQ(std::distance(index->cbegin(), index->cend()), 7);
+  EXPECT_EQ(std::distance(index->null_cbegin(), index->null_cend()), 1);
+  EXPECT_EQ(index->range_equals("hotel").first, index->cend());
+
+  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
+}
+
+TEST_F(PartialHashIndexTest, RemoveFromEmpty) {
+  auto empty_index = PartialHashIndex(DataType::Int, ColumnID{0});
+
+  EXPECT_EQ(empty_index.remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
+  EXPECT_EQ(empty_index.get_indexed_chunk_ids().size(), 0);
+  EXPECT_EQ(empty_index.cbegin(), empty_index.cend());
+}
+
 TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
   auto chunks_to_add = std::vector<std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>>{};
 
