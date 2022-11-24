@@ -122,7 +122,7 @@ void BenchmarkRunner::run() {
     _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
   }
 
-  // _mine_dependencies();
+  _mine_dependencies();
 
   switch (_config.benchmark_mode) {
     case BenchmarkMode::Ordered: {
