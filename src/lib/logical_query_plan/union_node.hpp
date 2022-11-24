@@ -35,6 +35,8 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
   // Implementation is limited to SetOperationMode::Positions only. Passes FDs from the left input node.
   std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
 

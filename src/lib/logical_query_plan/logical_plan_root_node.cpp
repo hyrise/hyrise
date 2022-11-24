@@ -24,6 +24,10 @@ std::shared_ptr<OrderDependencies> LogicalPlanRootNode::order_dependencies() con
   Fail("LogicalPlanRootNode is not expected to be queried for order depedencies.");
 }
 
+std::shared_ptr<InclusionDependencies> LogicalPlanRootNode::inclusion_dependencies() const {
+  Fail("LogicalPlanRootNode is not expected to be queried for inclusion dependencies");
+}
+
 std::vector<FunctionalDependency> LogicalPlanRootNode::non_trivial_functional_dependencies() const {
   Fail("LogicalPlanRootNode is not expected to be queried for functional dependencies.");
 }

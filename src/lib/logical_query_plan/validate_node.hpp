@@ -20,6 +20,8 @@ class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractL
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;

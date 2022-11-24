@@ -48,6 +48,8 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
   const std::string table_name;
 
   // By default, the StoredTableNode takes its statistics from the table. This field can be used to overwrite these
@@ -63,6 +65,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
   std::vector<ChunkID> _pruned_chunk_ids;
   std::vector<ColumnID> _pruned_column_ids;
+  mutable std::unordered_map<std::string, std::weak_ptr<const StoredTableNode>> _ind_stored_table_node_cache;
 };
 
 }  // namespace hyrise

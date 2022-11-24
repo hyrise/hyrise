@@ -33,6 +33,8 @@ class PredicateNode : public EnableMakeForLQPNode<PredicateNode>, public Abstrac
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
   std::shared_ptr<AbstractExpression> predicate() const;
 
   ScanType scan_type{ScanType::TableScan};

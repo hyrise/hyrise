@@ -42,33 +42,25 @@ TEST_F(TableInclusionConstraintTest, OrderedColumnIDs) {
   EXPECT_EQ(inclusion_constraint.columns().front(), ColumnID{2});
   EXPECT_EQ(inclusion_constraint.columns().back(), ColumnID{1});
 
-  EXPECT_EQ(inclusion_constraint.dependent_columns().size(), 2);
-  EXPECT_EQ(inclusion_constraint.dependent_columns().front(), ColumnID{3});
-  EXPECT_EQ(inclusion_constraint.dependent_columns().back(), ColumnID{4});
+  EXPECT_EQ(inclusion_constraint.included_columns().size(), 2);
+  EXPECT_EQ(inclusion_constraint.included_columns().front(), ColumnID{3});
+  EXPECT_EQ(inclusion_constraint.included_columns().back(), ColumnID{4});
 }
 
 TEST_F(TableInclusionConstraintTest, AddInclusionConstraints) {
   EXPECT_EQ(_table->soft_inclusion_constraints().size(), 0);
 
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-
   const auto inclusion_constraint_1 = TableInclusionConstraint{{ColumnID{0}}, {ColumnID{1}}, "table"};
   _table->add_soft_inclusion_constraint({{ColumnID{0}}, {ColumnID{1}}, "table"});
   EXPECT_EQ(_table->soft_inclusion_constraints().size(), 1);
-
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   const auto inclusion_constraint_2 = TableInclusionConstraint{{ColumnID{0}}, {ColumnID{3}}, "table"};
   _table->add_soft_inclusion_constraint({{ColumnID{0}}, {ColumnID{3}}, "table"});
   EXPECT_EQ(_table->soft_inclusion_constraints().size(), 2);
 
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
-
   const auto inclusion_constraint_3 = TableInclusionConstraint{{ColumnID{0}}, {ColumnID{1}}, "table_nullable"};
   _table->add_soft_inclusion_constraint({{ColumnID{0}}, {ColumnID{1}}, "table_nullable"});
   EXPECT_EQ(_table->soft_inclusion_constraints().size(), 3);
-
-  std::cout << __FILE__ << ":" << __LINE__ << std::endl;
 
   const auto inclusion_constraint_4 = TableInclusionConstraint{{ColumnID{1}}, {ColumnID{0}}, "table"};
   _table->add_soft_inclusion_constraint({{ColumnID{1}}, {ColumnID{0}}, "table"});

@@ -9,7 +9,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 std::shared_ptr<const AbstractLQPNode> original_node_from_expression(
     const std::shared_ptr<AbstractExpression>& expression) {
-  Assert(expression->type == ExpressionType::LQPColumn, "InclusionDependency must reference columns");
+  Assert(expression->type == ExpressionType::LQPColumn, "InclusionDependency must reference expressions");
   const auto& column_expression = static_cast<LQPColumnExpression&>(*expression);
   const auto& original_node = column_expression.original_node.lock();
   Assert(original_node, "Expected node");
@@ -20,30 +20,31 @@ std::shared_ptr<const AbstractLQPNode> original_node_from_expression(
 
 namespace hyrise {
 
-InclusionDependency::InclusionDependency(std::vector<std::shared_ptr<AbstractExpression>> init_determinants,
-                                         std::vector<std::shared_ptr<AbstractExpression>> init_dependents)
-    : determinants{std::move(init_determinants)}, dependents{std::move(init_dependents)} {
-  Assert(!determinants.empty(), "InclusionDependency cannot be empty.");
-  Assert(dependents.size() == determinants.size(),
-         "InclusionDependency expects same amount of determinant and depedent columns.");
+InclusionDependency::InclusionDependency(std::vector<std::shared_ptr<AbstractExpression>> init_expressions,
+                                         std::vector<std::shared_ptr<AbstractExpression>> init_included_expressions)
+    : expressions{std::move(init_expressions)}, included_expressions{std::move(init_included_expressions)} {
+  Assert(!expressions.empty(), "InclusionDependency cannot be empty.");
+  Assert(expressions.size() == included_expressions.size(),
+         "InclusionDependency expects same amount of including and included expressions.");
 
   if constexpr (HYRISE_DEBUG) {
-    const auto& first_original_node = original_node_from_expression(dependents.front());
-    for (const auto& expression : dependents) {
+    const auto& first_original_node = original_node_from_expression(included_expressions.front());
+    for (const auto& expression : included_expressions) {
       const auto& original_node = original_node_from_expression(expression);
-      Assert(original_node == first_original_node, "Columns must stem from same node.");
+      Assert(original_node == first_original_node, "expressions must stem from same node.");
     }
   }
 }
 
 bool InclusionDependency::operator==(const InclusionDependency& rhs) const {
-  if (determinants.size() != rhs.determinants.size()) {
+  if (expressions.size() != rhs.expressions.size()) {
     return false;
   }
+  auto expression_count = expressions.size();
 
-  for (auto expression_idx = size_t{0}; expression_idx < determinants.size(); ++expression_idx) {
-    if (*determinants[expression_idx] != *rhs.determinants[expression_idx] ||
-        *dependents[expression_idx] != *rhs.dependents[expression_idx]) {
+  for (auto expression_idx = size_t{0}; expression_idx < expression_count; ++expression_idx) {
+    if (*expressions[expression_idx] != *rhs.expressions[expression_idx] ||
+        *included_expressions[expression_idx] != *rhs.included_expressions[expression_idx]) {
       return false;
     }
   }
@@ -56,12 +57,12 @@ bool InclusionDependency::operator!=(const InclusionDependency& rhs) const {
 }
 
 size_t InclusionDependency::hash() const {
-  auto hash = boost::hash_value(determinants.size());
-  for (const auto& expression : determinants) {
+  auto hash = boost::hash_value(expressions.size());
+  for (const auto& expression : expressions) {
     boost::hash_combine(hash, expression->hash());
   }
 
-  for (const auto& expression : dependents) {
+  for (const auto& expression : included_expressions) {
     boost::hash_combine(hash, expression->hash());
   }
 
@@ -70,14 +71,14 @@ size_t InclusionDependency::hash() const {
 
 std::ostream& operator<<(std::ostream& stream, const InclusionDependency& ind) {
   stream << "{";
-  stream << ind.dependents.at(0)->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < ind.dependents.size(); ++expression_idx) {
-    stream << ", " << ind.dependents[expression_idx]->as_column_name();
+  stream << ind.included_expressions.at(0)->as_column_name();
+  for (auto expression_idx = size_t{1}; expression_idx < ind.included_expressions.size(); ++expression_idx) {
+    stream << ", " << ind.included_expressions[expression_idx]->as_column_name();
   }
-  stream << "} IN {";
-  stream << ind.determinants.at(0)->as_column_name();
-  for (auto expression_idx = size_t{1}; expression_idx < ind.determinants.size(); ++expression_idx) {
-    stream << ", " << ind.determinants[expression_idx]->as_column_name();
+  stream << "} in {";
+  stream << ind.expressions.at(0)->as_column_name();
+  for (auto expression_idx = size_t{1}; expression_idx < ind.expressions.size(); ++expression_idx) {
+    stream << ", " << ind.expressions[expression_idx]->as_column_name();
   }
   stream << "}";
   return stream;

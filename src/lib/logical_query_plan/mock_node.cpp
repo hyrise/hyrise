@@ -104,6 +104,11 @@ std::shared_ptr<OrderDependencies> MockNode::order_dependencies() const {
   return std::make_shared<OrderDependencies>();
 }
 
+std::shared_ptr<InclusionDependencies> MockNode::inclusion_dependencies() const {
+  // TODO: store and forward INDs.
+  return std::make_shared<InclusionDependencies>();
+}
+
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }

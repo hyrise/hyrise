@@ -87,6 +87,28 @@ std::shared_ptr<OrderDependencies> UnionNode::order_dependencies() const {
   Fail("Unhandled UnionMode");
 }
 
+std::shared_ptr<InclusionDependencies> UnionNode::inclusion_dependencies() const {
+  switch (set_operation_mode) {
+    case SetOperationMode::Positions: {
+      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      Assert(*left_inclusion_dependencies == *right_input()->inclusion_dependencies(),
+             "Input tables should have the same constraints.");
+      return left_inclusion_dependencies;
+    }
+    case SetOperationMode::All: {
+      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      const auto& right_inclusion_dependencies = right_input()->inclusion_dependencies();
+      const auto inclusion_dependencies = std::make_shared<InclusionDependencies>(left_inclusion_dependencies->cbegin(),
+                                                                                  left_inclusion_dependencies->cend());
+      inclusion_dependencies->insert(right_inclusion_dependencies->cbegin(), right_inclusion_dependencies->cend());
+      return inclusion_dependencies;
+    }
+    case SetOperationMode::Unique:
+      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
+  }
+  Fail("Unhandled UnionMode");
+}
+
 std::vector<FunctionalDependency> UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::All: {

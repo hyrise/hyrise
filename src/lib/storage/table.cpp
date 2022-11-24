@@ -391,13 +391,13 @@ void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_
     Assert(column_id < column_count(), "ColumnID out of range");
   }
 
-  Assert(Hyrise::get().storage_manager.has_table(table_inclusion_constraint.referenced_table_name()),
+  Assert(Hyrise::get().storage_manager.has_table(table_inclusion_constraint.included_table_name()),
          "Referenced table must exist");
   const auto referenced_table_column_count =
-      Hyrise::get().storage_manager.get_table(table_inclusion_constraint.referenced_table_name())->column_count();
+      Hyrise::get().storage_manager.get_table(table_inclusion_constraint.included_table_name())->column_count();
 
-  // Check validity of referenced columns
-  for (const auto& column_id : table_inclusion_constraint.dependent_columns()) {
+  // Check validity of included columns
+  for (const auto& column_id : table_inclusion_constraint.included_columns()) {
     Assert(column_id < referenced_table_column_count, "ColumnID out of range");
   }
 
@@ -406,7 +406,6 @@ void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_
     Assert(!_table_inclusion_constraints.contains(table_inclusion_constraint),
            "TableInclusionConstraint is already set");
     _table_inclusion_constraints.insert(table_inclusion_constraint);
-    std::cout << __FILE__ << ":" << __LINE__ << std::endl;
   }
 }
 
@@ -416,15 +415,16 @@ const TableInclusionConstraints& Table::soft_inclusion_constraints() const {
 
 void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
   Assert(_type == TableType::Data, "Inclusion constraints are not tracked for reference tables across the PQP.");
+  const auto column_count = this->column_count();
 
-  // Check validity of specified columns
+  // Check validity of columns
   for (const auto& column_id : table_order_constraint.columns()) {
-    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range");
   }
 
-  // Check validity of referenced columns
+  // Check validity of ordered columns
   for (const auto& column_id : table_order_constraint.ordered_columns()) {
-    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range");
   }
 
   {

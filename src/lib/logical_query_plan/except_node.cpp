@@ -38,6 +38,10 @@ std::shared_ptr<OrderDependencies> ExceptNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
+std::shared_ptr<InclusionDependencies> ExceptNode::inclusion_dependencies() const {
+  return std::make_shared<InclusionDependencies>();
+}
+
 std::vector<FunctionalDependency> ExceptNode::non_trivial_functional_dependencies() const {
   // The right input node is used for filtering only. It does not contribute any FDs.
   return left_input()->non_trivial_functional_dependencies();

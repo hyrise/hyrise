@@ -101,6 +101,13 @@ std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
   return order_dependencies;
 }
 
+std::shared_ptr<InclusionDependencies> JoinNode::inclusion_dependencies() const {
+  // TODO: INDs of one joined table only exist further if all tuples of this side match --> there is an IND between the
+  // other side's join column and the table's join column. e.g.: Join A.a = B.b, A has IND C.c in A.d --> only valide if
+  // IND A.a in B.b
+  return std::make_shared<InclusionDependencies>();
+}
+
 std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combinations(
     const std::shared_ptr<UniqueColumnCombinations>& left_unique_column_combinations,
     const std::shared_ptr<UniqueColumnCombinations>& right_unique_column_combinations) const {

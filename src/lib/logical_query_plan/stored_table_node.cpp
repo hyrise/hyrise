@@ -10,6 +10,40 @@
 #include "utils/assert.hpp"
 #include "utils/column_ids_after_pruning.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
+  return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& current_column_id) {
+    return std::any_of(search_columns.cbegin(), search_columns.cend(),
+                       [&](const auto column_id) { return column_id == current_column_id; });
+  });
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> find_expressions(
+    const std::vector<ColumnID>& column_ids,
+    const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions) {
+  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
+  expressions.reserve(column_ids.size());
+
+  for (const auto column_id : column_ids) {
+    for (const auto& expression : output_expressions) {
+      Assert(expression->type == ExpressionType::LQPColumn, "Invalid output expression for StoredTableNode");
+      const auto& column_expression = static_cast<LQPColumnExpression&>(*expression);
+      if (column_expression.original_column_id == column_id) {
+        expressions.emplace_back(expression);
+        break;
+      }
+    }
+  }
+
+  Assert(expressions.size() == column_ids.size(), "Could not resolve all column IDs to expressions");
+  return expressions;
+}
+
+}  // namespace
+
 namespace hyrise {
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
@@ -101,18 +135,13 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combinations() const {
   auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
-  // We create unique constraints from selected table key constraints
+  // We create unique column combinations from selected table key constraints
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_key_constraints = table->soft_key_constraints();
 
-  for (const TableKeyConstraint& table_key_constraint : table_key_constraints) {
+  for (const auto& table_key_constraint : table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
-    const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
-                    [&key_constraint_column_ids](const auto& pruned_column_id) {
-                      return std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(),
-                                         [&](const auto column_id) { return column_id == pruned_column_id; });
-                    })) {
+    if (contains_any_column_id(table_key_constraint.columns(), _pruned_column_ids)) {
       continue;
     }
 
@@ -129,8 +158,104 @@ std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combina
 }
 
 std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
-  // TODO: generate from table, remove pruned columns
-  return std::make_shared<OrderDependencies>();
+  const auto order_dependencies = std::make_shared<OrderDependencies>();
+
+  // We create order dependencies from table order constraints
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_order_constraints = table->soft_order_constraints();
+
+  for (const auto& table_order_constraint : table_order_constraints) {
+    // Discard order constraints that involve pruned column id(s).
+    if (contains_any_column_id(table_order_constraint.columns(), _pruned_column_ids) ||
+        contains_any_column_id(table_order_constraint.ordered_columns(), _pruned_column_ids)) {
+      continue;
+    }
+
+    // Search for expressions representing the order constraint's ColumnIDs
+    const auto& output_expressions = this->output_expressions();
+    const auto& column_expressions = find_expressions(table_order_constraint.columns(), output_expressions);
+    const auto& ordered_column_expressions =
+        find_expressions(table_order_constraint.ordered_columns(), output_expressions);
+
+    // Create OrderDependency
+    order_dependencies->emplace(column_expressions, ordered_column_expressions);
+  }
+
+  return order_dependencies;
+}
+
+std::shared_ptr<InclusionDependencies> StoredTableNode::inclusion_dependencies() const {
+  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+
+  // We create inclusion dependencies from table inclusion constraints
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& table_inclusion_constraints = table->soft_inclusion_constraints();
+
+  for (const auto& table_inclusion_constraint : table_inclusion_constraints) {
+    const auto& referenced_table_name = table_inclusion_constraint.included_table_name();
+    if (!Hyrise::get().storage_manager.has_table(referenced_table_name)) {
+      // Referenced table was deleted, IND is useless.
+      continue;
+    }
+
+    // Discard inclusion constraints that involve pruned column id(s).
+    if (contains_any_column_id(table_inclusion_constraint.columns(), _pruned_column_ids)) {
+      continue;
+    }
+
+    // Lookup referenced StoredTableNode from cache
+    auto referenced_stored_table_node = std::shared_ptr<const StoredTableNode>{};
+    const auto& stored_table_node_it = _ind_stored_table_node_cache.find(referenced_table_name);
+    if (stored_table_node_it != _ind_stored_table_node_cache.cend()) {
+      referenced_stored_table_node = stored_table_node_it->second.lock();
+    }
+
+    if (!referenced_stored_table_node) {
+      // Lookup failed or node expired (e.g., due to deep_copy()). Search for node.
+      auto root_node = std::shared_ptr<const AbstractLQPNode>{};
+      visit_lqp_upwards(shared_from_this(), [&](const auto& node) {
+        if (node->output_count() == 0) {
+          Assert(!root_node, "LQP has multiple root nodes");
+          root_node = node;
+        }
+
+        return LQPUpwardVisitation::VisitOutputs;
+      });
+
+      Assert(root_node, "LQP has no root node");
+      visit_lqp(root_node, [&](const auto& node) {
+        if (referenced_stored_table_node) {
+          return LQPVisitation::DoNotVisitInputs;
+        }
+
+        if (node->type == LQPNodeType::StoredTable) {
+          const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(node);
+          if (stored_table_node->table_name == referenced_table_name) {
+            referenced_stored_table_node = stored_table_node;
+            _ind_stored_table_node_cache[referenced_table_name] = stored_table_node;
+          }
+        }
+
+        return LQPVisitation::VisitInputs;
+      });
+    }
+
+    // Discard inclusion constraints that involve pruned column id(s) from other node.
+    if (contains_any_column_id(table_inclusion_constraint.included_columns(),
+                               referenced_stored_table_node->pruned_column_ids())) {
+      continue;
+    }
+
+    // Search for expressions representing the inclusion constraint's ColumnIDs
+    const auto& column_expressions = find_expressions(table_inclusion_constraint.columns(), this->output_expressions());
+    const auto& included_column_expressions = find_expressions(table_inclusion_constraint.included_columns(),
+                                                               referenced_stored_table_node->output_expressions());
+
+    // Create InclusionDependency
+    inclusion_dependencies->emplace(column_expressions, included_column_expressions);
+  }
+
+  return inclusion_dependencies;
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {

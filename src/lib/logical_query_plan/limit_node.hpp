@@ -20,6 +20,8 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
   std::shared_ptr<AbstractExpression> num_rows_expression() const;
 
  protected:

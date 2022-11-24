@@ -23,6 +23,8 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
   const std::vector<SortMode> sort_modes;
 
  protected:

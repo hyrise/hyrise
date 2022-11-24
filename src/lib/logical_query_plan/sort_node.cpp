@@ -44,6 +44,10 @@ std::shared_ptr<OrderDependencies> SortNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
+std::shared_ptr<InclusionDependencies> SortNode::inclusion_dependencies() const {
+  return _forward_left_inclusion_dependencies();
+}
+
 size_t SortNode::_on_shallow_hash() const {
   auto hash = size_t{0};
   for (const auto& sort_mode : sort_modes) {

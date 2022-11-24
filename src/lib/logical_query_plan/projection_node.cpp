@@ -61,7 +61,7 @@ std::shared_ptr<OrderDependencies> ProjectionNode::order_dependencies() const {
   auto order_dependencies = std::make_shared<OrderDependencies>();
   order_dependencies->reserve(node_expressions.size());
 
-  // Forward unique constraints, if applicable
+  // Forward order dependencies, if applicable
   const auto& input_order_dependencies = left_input()->order_dependencies();
   const auto& output_expressions = this->output_expressions();
 
@@ -75,6 +75,24 @@ std::shared_ptr<OrderDependencies> ProjectionNode::order_dependencies() const {
   }
 
   return order_dependencies;
+}
+
+std::shared_ptr<InclusionDependencies> ProjectionNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+  inclusion_dependencies->reserve(node_expressions.size());
+
+  // Forward inclusion dependencies, if applicable
+  const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
+  const auto& output_expressions = this->output_expressions();
+
+  for (const auto& input_inclusion_dependency : *input_inclusion_dependencies) {
+    if (!contains_all_expressions(input_inclusion_dependency.expressions, output_expressions)) {
+      continue;
+    }
+    inclusion_dependencies->emplace(input_inclusion_dependency);
+  }
+
+  return inclusion_dependencies;
 }
 
 std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_dependencies() const {

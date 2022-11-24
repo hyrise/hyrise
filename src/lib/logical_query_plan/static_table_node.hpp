@@ -26,6 +26,8 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
+  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+
   const std::shared_ptr<Table> table;
 
  protected:

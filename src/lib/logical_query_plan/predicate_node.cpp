@@ -36,6 +36,11 @@ std::shared_ptr<OrderDependencies> PredicateNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
+std::shared_ptr<InclusionDependencies> PredicateNode::inclusion_dependencies() const {
+  // TODO: forward if IS NOT NULL scan
+  return std::make_shared<InclusionDependencies>();
+}
+
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
   return node_expressions[0];
 }
