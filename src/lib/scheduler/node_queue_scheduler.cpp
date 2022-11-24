@@ -15,12 +15,12 @@
 
 
 namespace {
-  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.5f;
-  constexpr auto NUM_GROUPS_MAX_FACTOR = 5.0f;
+  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.4f;
+  constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
 
   constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
-  constexpr auto MAX_QUEUE_SIZE_FACTOR = size_t{32};
+  constexpr auto MAX_QUEUE_SIZE_FACTOR = size_t{16};
 }
 
 namespace hyrise {
@@ -157,7 +157,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   auto num_groups = NUM_GROUPS;
 
-  if (!tasks.empty() && tasks.size() > NUM_GROUPS) {
+  if (!tasks.empty() && tasks.size() > static_cast<size_t>(static_cast<float>(NUM_GROUPS) * 0.5f)) {
     //std::printf("1\n");
 
     //const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
@@ -184,7 +184,6 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
-
 
     if (common_node_id) {
       // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
