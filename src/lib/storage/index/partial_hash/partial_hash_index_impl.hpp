@@ -28,7 +28,7 @@ class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
 
   explicit TableIndexTbbUnorderedMapIterator(MapIteratorType itr);
 
-  // TableIndexTbbUnorderedMapIterator(MapIteratorType itr, std::shared_lock<std::shared_mutex> data_access_lock);
+  TableIndexTbbUnorderedMapIterator(MapIteratorType itr, std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
 
   reference operator*() const override;
 
@@ -43,7 +43,6 @@ class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
  private:
   MapIteratorType _map_iterator;
   size_t _vector_index;
-  // std::shared_mutex _data_access_lock;
 };
 
 /**
@@ -54,6 +53,8 @@ class TableIndexVectorIterator : public BaseTableIndexIterator {
   using MapIteratorType = typename std::vector<RowID>::const_iterator;
 
   explicit TableIndexVectorIterator(MapIteratorType itr);
+
+  explicit TableIndexVectorIterator(MapIteratorType itr, std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
 
   reference operator*() const override;
 
@@ -143,7 +144,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_map<DataType, std::vector<RowID>> _map;
   std::vector<RowID> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
-  mutable std::shared_mutex _insert_entries_mutex;
+  mutable std::shared_mutex _data_access_mutex;
 };
 
 }  // namespace hyrise

@@ -28,6 +28,7 @@ class BaseTableIndexIterator {
 
   BaseTableIndexIterator(const BaseTableIndexIterator& it) = default;
   BaseTableIndexIterator() = default;
+  BaseTableIndexIterator(std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
   virtual ~BaseTableIndexIterator() = default;
   virtual reference operator*() const;
   virtual BaseTableIndexIterator& operator++();
@@ -35,8 +36,8 @@ class BaseTableIndexIterator {
   virtual bool operator!=(const BaseTableIndexIterator& other) const;
   virtual std::shared_ptr<BaseTableIndexIterator> clone() const;
 
-//  protected:
-//   std::shared_mutex _data_access_mutex;
+ protected:
+  std::shared_ptr<std::shared_lock<std::shared_mutex>> _data_access_lock;
 };
 
 /**
@@ -56,7 +57,6 @@ class IteratorWrapper {
   using reference = const RowID&;
 
   explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr);
-  IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr, std::shared_lock<std::shared_mutex> data_access_lock);
   IteratorWrapper(const IteratorWrapper& other);
   IteratorWrapper& operator=(const IteratorWrapper& other);
   reference operator*() const;
@@ -66,7 +66,6 @@ class IteratorWrapper {
 
  private:
   std::shared_ptr<BaseTableIndexIterator> _impl;
-  std::shared_lock<std::shared_mutex> _data_access_lock;
 };
 
 /**
