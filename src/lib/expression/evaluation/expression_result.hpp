@@ -11,7 +11,7 @@
 #include "storage/segment_iterables/segment_positions.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class BaseExpressionResult {
  public:
@@ -70,9 +70,17 @@ class ExpressionResult : public BaseExpressionResult {
     DebugAssert(nulls.empty() || nulls.size() == 1 || nulls.size() == values.size(), "Mismatching number of nulls");
   }
 
-  bool is_nullable_series() const { return size() != 1; }
-  bool is_literal() const { return size() == 1; }
-  bool is_nullable() const { return !nulls.empty(); }
+  bool is_nullable_series() const {
+    return size() != 1;
+  }
+
+  bool is_literal() const {
+    return size() == 1;
+  }
+
+  bool is_nullable() const {
+    return !nulls.empty();
+  }
 
   const T& value(const size_t idx) const {
     DebugAssert(size() == 1 || idx < size(), "Invalid ExpressionResult access");
@@ -85,7 +93,9 @@ class ExpressionResult : public BaseExpressionResult {
 
   bool is_null(const size_t idx) const {
     DebugAssert(size() == 1 || idx < size(), "Null idx out of bounds");
-    if (nulls.empty()) return false;
+    if (nulls.empty()) {
+      return false;
+    }
     return nulls[std::min(idx, nulls.size() - 1)];
   }
 
@@ -109,10 +119,12 @@ class ExpressionResult : public BaseExpressionResult {
     }
   }
 
-  size_t size() const { return values.size(); }
+  size_t size() const {
+    return values.size();
+  }
 
   pmr_vector<T> values;
   pmr_vector<bool> nulls;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

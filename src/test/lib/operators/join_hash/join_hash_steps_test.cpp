@@ -7,7 +7,7 @@
 #include "resolve_type.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
   The purpose of this test case is to test the single steps of the Hash Join (e.g., build(), probe(), etc.).
@@ -244,7 +244,9 @@ TEST_F(JoinHashStepsTest, MaterializeInputHistograms) {
         // Again, due to the hashing, we do not know which cluster holds the value
         // But we know that two buckets have _table_size_zero_one/2 items and two have none items.
         EXPECT_TRUE(count == this->_chunk_size_zero_one / 2 || count == 0);
-        if (count == 0) ++empty_cluster_count;
+        if (count == 0) {
+          ++empty_cluster_count;
+        }
       }
     }
     EXPECT_EQ(empty_cluster_count, 2 * this->_table_size_zero_one / this->_chunk_size_zero_one);
@@ -306,10 +308,12 @@ TEST_F(JoinHashStepsTest, BuildRespectsBloomFilter) {
 }
 
 TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
-  size_t radix_bit_count = 0;
-  std::vector<std::vector<size_t>> histograms;
+  auto radix_bit_count = size_t{0};
+  auto histograms = std::vector<std::vector<size_t>>{};
   BloomFilter bloom_filter;  // Ignored in this test
 
   const auto materialized_without_null_handling = materialize_input<int, int, false>(
@@ -325,4 +329,4 @@ TEST_F(JoinHashStepsTest, ThrowWhenNoNullValuesArePassed) {
                std::logic_error);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

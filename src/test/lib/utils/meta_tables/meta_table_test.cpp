@@ -16,7 +16,7 @@
 
 #include "meta_mock_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 using MetaTable = std::shared_ptr<AbstractMetaTable>;
 using MetaTables = std::vector<MetaTable>;
@@ -79,7 +79,9 @@ class MetaTableTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
     Hyrise::get().meta_table_manager.add_table(table);
@@ -206,4 +208,4 @@ TEST_F(MetaTableTest, IsNotCached) {
   EXPECT_EQ(mock_table->generate_calls(), 8);
   EXPECT_EQ(mock_table->update_calls(), 2);
 }
-}  // namespace opossum
+}  // namespace hyrise

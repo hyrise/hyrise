@@ -7,7 +7,7 @@
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
 
@@ -24,7 +24,9 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
 
   struct PosListsHasher {
-    size_t operator()(const PosLists& pos_lists) const { return boost::hash_range(pos_lists.begin(), pos_lists.end()); }
+    size_t operator()(const PosLists& pos_lists) const {
+      return boost::hash_range(pos_lists.begin(), pos_lists.end());
+    }
   };
 
   std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher> shared_pos_lists_by_pos_lists;
@@ -36,7 +38,7 @@ inline PosListsByChunk setup_pos_lists_by_chunk(const std::shared_ptr<const Tabl
   const auto input_columns_count = input_table->column_count();
 
   // For every column, for every chunk
-  for (ColumnID column_id{0}; column_id < input_columns_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < input_columns_count; ++column_id) {
     // Get all the input pos lists so that we only have to pointer cast the segments once
     auto pos_list_ptrs = std::make_shared<PosLists>(input_table->chunk_count());
     auto pos_lists_iter = pos_list_ptrs->begin();
@@ -79,7 +81,7 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
   // Add segments from input table to output chunk
   // for every column for every row in pos_list: get corresponding PosList of input_pos_list_ptrs_sptrs_by_segments
   // and add it to new_pos_list which is added to output_segments
-  for (ColumnID column_id{0}; column_id < input_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < input_table->column_count(); ++column_id) {
     if (input_table->type() == TableType::References) {
       if (input_table->chunk_count() > 0) {
         const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[column_id];
@@ -128,7 +130,9 @@ inline void write_output_segments(Segments& output_segments, const std::shared_p
         // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
         // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
         // it.
-        if (!dummy_table) dummy_table = Table::create_dummy_table(input_table->column_definitions());
+        if (!dummy_table) {
+          dummy_table = Table::create_dummy_table(input_table->column_definitions());
+        }
         output_segments.push_back(std::make_shared<ReferenceSegment>(dummy_table, column_id, pos_list));
       }
     } else {
@@ -205,7 +209,6 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
   // For every partition, create a reference segment.
   auto partition_id = size_t{0};
-  auto output_chunk_id = size_t{0};
   while (partition_id < pos_lists_left_size) {
     // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
@@ -269,8 +272,7 @@ inline std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
     output_chunks.emplace_back(output_chunk);
     ++partition_id;
-    ++output_chunk_id;
   }
   return output_chunks;
 }
-}  // namespace opossum
+}  // namespace hyrise

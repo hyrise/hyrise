@@ -2,7 +2,7 @@
 
 #include "abstract_expression.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Represents a placeholder (SELECT a + ? ...) in a PreparedPlan. Will be replaced by a different expression by
@@ -26,4 +26,4 @@ class PlaceholderExpression : public AbstractExpression {
   bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

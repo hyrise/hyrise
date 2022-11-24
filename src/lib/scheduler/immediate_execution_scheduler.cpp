@@ -1,6 +1,6 @@
 #include "immediate_execution_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void ImmediateExecutionScheduler::begin() {}
 
@@ -8,9 +8,13 @@ void ImmediateExecutionScheduler::wait_for_all_tasks() {}
 
 void ImmediateExecutionScheduler::finish() {}
 
-bool ImmediateExecutionScheduler::active() const { return false; }
+bool ImmediateExecutionScheduler::active() const {
+  return false;
+}
 
-const std::vector<std::shared_ptr<TaskQueue>>& ImmediateExecutionScheduler::queues() const { return _queues; }
+const std::vector<std::shared_ptr<TaskQueue>>& ImmediateExecutionScheduler::queues() const {
+  return _queues;
+}
 
 void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                            SchedulePriority priority) {
@@ -28,4 +32,4 @@ void ImmediateExecutionScheduler::schedule(std::shared_ptr<AbstractTask> task, N
   Assert(task->is_done(), "Task should have been executed by now.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

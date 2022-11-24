@@ -6,7 +6,7 @@
 #include "concurrency/transaction_context.hpp"
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TransactionManagerTest : public BaseTest {
  protected:
@@ -19,6 +19,7 @@ class TransactionManagerTest : public BaseTest {
   static void register_transaction(CommitID snapshot_commit_id) {
     Hyrise::get().transaction_manager._register_transaction(snapshot_commit_id);
   }
+
   static void deregister_transaction(CommitID snapshot_commit_id) {
     Hyrise::get().transaction_manager._deregister_transaction(snapshot_commit_id);
   }
@@ -84,4 +85,4 @@ TEST_F(TransactionManagerTest, TrackActiveCommitIDs) {
   register_transaction(t3_snapshot_commit_id);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

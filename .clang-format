@@ -1,6 +1,5 @@
 ---
 Language:        Cpp
-# BasedOnStyle:  Google
 AccessModifierOffset: -1
 AlignAfterOpenBracket: Align
 AlignConsecutiveAssignments: false
@@ -9,11 +8,11 @@ AlignEscapedNewlinesLeft: true
 AlignOperands:   true
 AlignTrailingComments: true
 AllowAllParametersOfDeclarationOnNextLine: true
-AllowShortBlocksOnASingleLine: false
+AllowShortBlocksOnASingleLine: Empty
 AllowShortCaseLabelsOnASingleLine: false
-AllowShortFunctionsOnASingleLine: All
-AllowShortIfStatementsOnASingleLine: true
-AllowShortLoopsOnASingleLine: true
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
 AlwaysBreakAfterDefinitionReturnType: None
 AlwaysBreakAfterReturnType: None
 AlwaysBreakBeforeMultilineStrings: true
@@ -36,8 +35,6 @@ BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Attach
 BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
-# BreakAfterJavaFieldAnnotations: false
-# BreakStringLiterals: true
 ColumnLimit:     120
 CommentPragmas:  '^ IWYU pragma:'
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
@@ -46,6 +43,7 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat:   false
+EmptyLineBeforeAccessModifier: LogicalBlock
 ExperimentalAutoDetectBinPacking: false
 ForEachMacros:   [ foreach, Q_FOREACH, BOOST_FOREACH ]
 IncludeCategories:
@@ -55,12 +53,10 @@ IncludeCategories:
     Priority:        2
   - Regex:           '.*'
     Priority:        3
-# IncludeIsMainRegex: '([-_](test|unittest))?$'
 IndentCaseLabels: true
 IndentWidth:     2
 IndentWrappedFunctionNames: false
-# JavaScriptQuotes: Leave
-# JavaScriptWrapImports: true
+# InsertBraces: true     TODO(anyone): enable when clang15 is widely used.
 KeepEmptyLinesAtTheStartOfBlocks: false
 MacroBlockBegin: ''
 MacroBlockEnd:   ''
@@ -77,6 +73,7 @@ PenaltyExcessCharacter: 1000000
 PenaltyReturnTypeOnItsOwnLine: 200
 PointerAlignment: Left
 ReflowComments:  false
+SeparateDefinitionBlocks: Always
 SortIncludes:    true
 SpaceAfterCStyleCast: false
 SpaceBeforeAssignmentOperators: true
@@ -84,12 +81,14 @@ SpaceBeforeParens: ControlStatements
 SpaceInEmptyParentheses: false
 SpacesBeforeTrailingComments: 2
 SpacesInAngles:  false
-SpacesInContainerLiterals: true
+SpacesInConditionalStatement: false
+SpacesInContainerLiterals: false
 SpacesInCStyleCastParentheses: false
+SpacesInLineCommentPrefix:
+  Minimum:         1
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard:        Auto
 TabWidth:        8
 UseTab:          Never
 ...
-

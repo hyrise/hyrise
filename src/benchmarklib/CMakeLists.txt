@@ -79,7 +79,7 @@ set(
 )
 
 
-# Configure the regular opossum library used for tests/server/playground...
+# Configure the regular hyrise library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
 

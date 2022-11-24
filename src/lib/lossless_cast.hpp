@@ -26,7 +26,7 @@
  * Those might incur information loss and might thus introduce bugs. See #1306, #1525.
  */
 
-namespace opossum {
+namespace hyrise {
 
 // Identity
 template <typename Target, typename Source>
@@ -143,13 +143,21 @@ lossless_cast(const Source& source) {
   // (Note: We evaluated multiple approaches to identify whether a float/double is representable as a int32/64. None
   //        of them was really portable/readable/"clean". The bounding values approach at least makes intuitive sense.)
   if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int32_t>) {
-    if (source >= 2'147'483'648.0f || source <= -2'147'483'904.0f) return std::nullopt;
+    if (source >= 2'147'483'648.0f || source <= -2'147'483'904.0f) {
+      return std::nullopt;
+    }
   } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int32_t>) {
-    if (source >= 2'147'483'648.0 || source <= -2'147'483'649.0) return std::nullopt;
+    if (source >= 2'147'483'648.0 || source <= -2'147'483'649.0) {
+      return std::nullopt;
+    }
   } else if constexpr (std::is_same_v<Source, float> && std::is_same_v<Target, int64_t>) {
-    if (source >= 9'223'372'036'854'775'808.0f || source <= -9'223'373'136'366'403'584.0f) return std::nullopt;
+    if (source >= 9'223'372'036'854'775'808.0f || source <= -9'223'373'136'366'403'584.0f) {
+      return std::nullopt;
+    }
   } else if constexpr (std::is_same_v<Source, double> && std::is_same_v<Target, int64_t>) {
-    if (source >= 9'223'372'036'854'775'808.0 || source <= -9'223'372'036'854'777'856.0) return std::nullopt;
+    if (source >= 9'223'372'036'854'775'808.0 || source <= -9'223'372'036'854'777'856.0) {
+      return std::nullopt;
+    }
   }
 
   return static_cast<Target>(source);
@@ -211,4 +219,4 @@ std::optional<Target> lossless_variant_cast(const AllTypeVariant& variant) {
 
 std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& variant, DataType target_data_type);
 
-}  // namespace opossum
+}  // namespace hyrise

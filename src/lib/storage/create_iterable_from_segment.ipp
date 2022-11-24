@@ -7,7 +7,7 @@
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 #include "storage/value_segment/value_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T, bool EraseSegmentType>
 auto create_iterable_from_segment(const ValueSegment<T>& segment) {
@@ -81,4 +81,4 @@ auto create_iterable_from_segment(const LZ4Segment<T>& segment) {
   return AnySegmentIterable<T>(LZ4SegmentIterable<T>(segment));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -17,7 +17,7 @@
 #include "resolve_type.hpp"
 #include "type_comparison.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<const Table>& in_table,
                                                        const ColumnID column_id, const AllTypeVariant& init_left_value,
@@ -32,7 +32,9 @@ ColumnBetweenTableScanImpl::ColumnBetweenTableScanImpl(const std::shared_ptr<con
   Assert(column_data_type == data_type_from_all_type_variant(right_value), "Type of upper bound has to match column");
 }
 
-std::string ColumnBetweenTableScanImpl::description() const { return "ColumnBetween"; }
+std::string ColumnBetweenTableScanImpl::description() const {
+  return "ColumnBetween";
+}
 
 void ColumnBetweenTableScanImpl::_scan_non_reference_segment(
     const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
@@ -192,9 +194,7 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
         auto sorted_segment_search = SortedSegmentSearch(segment_begin, segment_end, sort_mode, _column_is_nullable,
                                                          predicate_condition, typed_left_value, typed_right_value);
 
-        sorted_segment_search.scan_sorted_segment([&](auto begin, auto end) {
-          sorted_segment_search._write_rows_to_matches(begin, end, chunk_id, matches, position_filter);
-        });
+        sorted_segment_search.scan_sorted_segment(chunk_id, matches, position_filter);
 
         if (sorted_segment_search.no_rows_matching) {
           ++num_chunks_with_early_out;
@@ -208,4 +208,4 @@ void ColumnBetweenTableScanImpl::_scan_sorted_segment(const AbstractSegment& seg
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

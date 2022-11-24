@@ -5,7 +5,7 @@
 #include "storage/segment_iterables.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeVectorIterable> {
  public:
@@ -46,7 +46,9 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
     _access_counter[SegmentAccessCounter::access_type(*position_filter)] += position_filter->size();
   }
 
-  size_t _on_size() const { return _attribute_vector.size(); }
+  size_t _on_size() const {
+    return _attribute_vector.size();
+  }
 
  private:
   const BaseCompressedVector& _attribute_vector;
@@ -58,6 +60,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   class Iterator : public AbstractSegmentIterator<Iterator<CompressedVectorIterator>, SegmentPosition<ValueID>> {
    public:
     using ValueType = ValueID;
+
     explicit Iterator(const ValueID null_value_id, CompressedVectorIterator&& attribute_it, ChunkOffset chunk_offset)
         : _null_value_id{null_value_id}, _attribute_it{std::move(attribute_it)}, _chunk_offset{chunk_offset} {}
 
@@ -74,14 +77,18 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
       --_chunk_offset;
     }
 
-    bool equal(const Iterator& other) const { return _attribute_it == other._attribute_it; }
+    bool equal(const Iterator& other) const {
+      return _attribute_it == other._attribute_it;
+    }
 
     void advance(std::ptrdiff_t n) {
       _attribute_it += n;
       _chunk_offset += n;
     }
 
-    std::ptrdiff_t distance_to(const Iterator& other) const { return other._attribute_it - _attribute_it; }
+    std::ptrdiff_t distance_to(const Iterator& other) const {
+      return other._attribute_it - _attribute_it;
+    }
 
     SegmentPosition<ValueID> dereference() const {
       const auto value_id = static_cast<ValueID>(*_attribute_it);
@@ -102,6 +109,7 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
                                                   SegmentPosition<ValueID>, PosListIteratorType> {
    public:
     using ValueType = ValueID;
+
     PointAccessIterator(const ValueID null_value_id, Decompressor&& attribute_decompressor,
                         const PosListIteratorType&& position_filter_begin, PosListIteratorType&& position_filter_it)
         : AbstractPointAccessSegmentIterator<PointAccessIterator<Decompressor, PosListIteratorType>,
@@ -130,4 +138,4 @@ class AttributeVectorIterable : public PointAccessibleSegmentIterable<AttributeV
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

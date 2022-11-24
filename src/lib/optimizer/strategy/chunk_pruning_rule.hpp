@@ -10,7 +10,7 @@
 #include "statistics/table_statistics.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class ChunkStatistics;
@@ -61,4 +61,4 @@ class ChunkPruningRule : public AbstractRule {
       _excluded_chunk_ids_by_predicate_node_cache;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

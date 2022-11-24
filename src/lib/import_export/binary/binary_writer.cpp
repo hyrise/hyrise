@@ -6,20 +6,18 @@
 #include <string>
 #include <vector>
 
+#include "resolve_type.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/segment_iterate.hpp"
 #include "storage/vector_compression/bitpacking/bitpacking_vector.hpp"
 #include "storage/vector_compression/compressed_vector_type.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_utils.hpp"
 #include "storage/vector_compression/fixed_width_integer/fixed_width_integer_vector.hpp"
-
-#include "constant_mappings.hpp"
-#include "resolve_type.hpp"
 #include "types.hpp"
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
@@ -45,7 +43,9 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   export_values(ofstream, string_lengths);
 
   // We do not have to iterate over values if all strings are empty.
-  if (total_length == 0) return;
+  if (total_length == 0) {
+    return;
+  }
 
   // Write all string contents into to buffer.
   pmr_vector<char> buffer(total_length);
@@ -64,7 +64,7 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
 }
 
 void export_values(std::ofstream& ofstream, const FixedStringVector& values) {
-  ofstream.write(values.data(), values.size() * values.string_length());
+  ofstream.write(values.data(), static_cast<int64_t>(values.size() * values.string_length()));
 }
 
 // specialized implementation for string values
@@ -89,12 +89,12 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& values) {
   export_value(ofstream, static_cast<uint8_t>(values.bits()));
-  ofstream.write(reinterpret_cast<const char*>(values.get()), values.bytes());
+  ofstream.write(reinterpret_cast<const char*>(values.get()), static_cast<int64_t>(values.bytes()));
 }
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 void BinaryWriter::write(const Table& table, const std::string& filename) {
   std::ofstream ofstream;
@@ -119,7 +119,7 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   pmr_vector<bool> columns_are_nullable(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (ColumnID column_id{0}; column_id < table.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
     column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
     column_names[column_id] = table.column_name(column_id);
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
@@ -143,7 +143,7 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 
   // Iterating over all segments of this chunk and exporting them
-  for (ColumnID column_id{0}; column_id < chunk->column_count(); column_id++) {
+  for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); column_id++) {
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
                                   [&](const auto data_type_t, const auto& resolved_segment) {
                                     _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
@@ -169,32 +169,31 @@ void BinaryWriter::_write_segment(const ValueSegment<T>& value_segment, bool col
 
 void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, bool column_is_nullable,
                                   std::ofstream& ofstream) {
-  // We materialize reference segments and save them as value segments
+  // We materialize reference segments and save them as value segments.
   export_value(ofstream, EncodingType::Unencoded);
 
-  if (reference_segment.size() == 0) return;
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
-    auto iterable = ReferenceSegmentIterable<SegmentDataType, EraseReferencedSegmentType::No>{reference_segment};
 
-    if (reference_segment.data_type() == DataType::String) {
-      std::stringstream values;
-      pmr_vector<size_t> string_lengths(reference_segment.size());
+    auto values = pmr_vector<SegmentDataType>(reference_segment.size());
+    auto null_values = pmr_vector<bool>(reference_segment.size());
+    auto current_position = size_t{0};
 
-      // We export the values materialized
-      iterable.for_each([&](const auto& value) {
-        string_lengths.push_back(_size(value.value()));
-        values << value.value();
-      });
+    segment_iterate<SegmentDataType>(reference_segment, [&](const auto& position) {
+      if (position.is_null()) {
+        null_values[current_position] = true;
+      } else {
+        values[current_position] = position.value();
+      }
+      ++current_position;
+    });
 
-      export_values(ofstream, string_lengths);
-      ofstream << values.rdbuf();
-
-    } else {
-      // Unfortunately, we have to iterate over all values of the reference segment
-      // to materialize its contents. Then we can write them to the file
-      iterable.for_each([&](const auto& value) { export_value(ofstream, value.value()); });
+    if (column_is_nullable) {
+      export_value(ofstream, true);
+      export_values(ofstream, null_values);
     }
+
+    export_values(ofstream, values);
   });
 }
 
@@ -372,14 +371,4 @@ void BinaryWriter::_export_compressed_vector(std::ofstream& ofstream, const Comp
   }
 }
 
-template <typename T>
-size_t BinaryWriter::_size(const T& object) {
-  return sizeof(object);
-}
-
-template <>
-size_t BinaryWriter::_size(const pmr_string& object) {
-  return object.length();
-}
-
-}  // namespace opossum
+}  // namespace hyrise

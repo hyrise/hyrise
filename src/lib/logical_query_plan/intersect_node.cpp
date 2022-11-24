@@ -9,7 +9,7 @@
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 IntersectNode::IntersectNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Intersect), set_operation_mode(init_operation_mode) {}
@@ -43,7 +43,9 @@ std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependen
   Fail("Merging of FDs should be implemented.");
 }
 
-size_t IntersectNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
+size_t IntersectNode::_on_shallow_hash() const {
+  return boost::hash_value(set_operation_mode);
+}
 
 std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return IntersectNode::make(set_operation_mode);
@@ -54,4 +56,4 @@ bool IntersectNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
   return set_operation_mode == intersect_node.set_operation_mode;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

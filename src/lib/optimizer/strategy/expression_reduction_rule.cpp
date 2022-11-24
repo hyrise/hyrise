@@ -14,9 +14,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
 std::string ExpressionReductionRule::name() const {
   static const auto name = std::string{"ExpressionReductionRule"};
@@ -155,7 +155,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
     reduce_constant_expression(argument);
   }
 
-  if (input_expression->arguments.empty()) return;
+  if (input_expression->arguments.empty()) {
+    return;
+  }
 
   // Only prune a whitelisted selection of ExpressionTypes, because we can't, e.g., prune List of literals.
   if (input_expression->type != ExpressionType::Predicate && input_expression->type != ExpressionType::Arithmetic &&
@@ -167,7 +169,9 @@ void ExpressionReductionRule::reduce_constant_expression(std::shared_ptr<Abstrac
       std::all_of(input_expression->arguments.begin(), input_expression->arguments.end(),
                   [&](const auto& argument) { return argument->type == ExpressionType::Value; });
 
-  if (!all_arguments_are_values) return;
+  if (!all_arguments_are_values) {
+    return;
+  }
 
   resolve_data_type(input_expression->data_type(), [&](const auto data_type_t) {
     using ExpressionDataType = typename decltype(data_type_t)::type;
@@ -220,7 +224,9 @@ void ExpressionReductionRule::rewrite_like_prefix_wildcard(std::shared_ptr<Abstr
   const auto bounds = LikeMatcher::bounds(pattern);
 
   // In case of an ASCII overflow
-  if (!bounds) return;
+  if (!bounds) {
+    return;
+  }
 
   const auto [lower_bound, upper_bound] = *bounds;
 
@@ -240,7 +246,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> counts;
   std::vector<std::reference_wrapper<const std::shared_ptr<AbstractExpression>>> avgs;
   for (auto& input_expression : input_expressions) {
-    if (input_expression->type != ExpressionType::Aggregate) continue;
+    if (input_expression->type != ExpressionType::Aggregate) {
+      continue;
+    }
     auto& aggregate_expression = static_cast<AggregateExpression&>(*input_expression);
     switch (aggregate_expression.aggregate_function) {
       case AggregateFunction::Sum: {
@@ -300,12 +308,14 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 
   // No replacements possible
-  if (replacements.empty()) return;
+  if (replacements.empty()) {
+    return;
+  }
 
   // Back up the current column names
   const auto& root_expressions = root_node->output_expressions();
   auto old_column_names = std::vector<std::string>(root_expressions.size());
-  for (auto expression_idx = size_t{0}; expression_idx < root_expressions.size(); ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < root_expressions.size(); ++expression_idx) {
     old_column_names[expression_idx] = root_expressions[expression_idx]->as_column_name();
   }
 
@@ -330,7 +340,9 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
       expression_deep_replace(expression, replacements);
     }
 
-    if (node->type == LQPNodeType::Alias) updated_an_alias = true;
+    if (node->type == LQPNodeType::Alias) {
+      updated_an_alias = true;
+    }
 
     return LQPUpwardVisitation::VisitOutputs;
   });
@@ -348,4 +360,4 @@ void ExpressionReductionRule::remove_duplicate_aggregate(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

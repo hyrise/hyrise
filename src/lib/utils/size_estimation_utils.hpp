@@ -4,7 +4,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Get the number of bytes that are allocated on the heap for the given string.
@@ -15,18 +15,14 @@ __attribute__((optnone))  // Fixes issues with memcheck. As we are only accessin
 #endif
 size_t
 string_heap_size(const T& string) {
-  // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so
-  // we use a really short one here.
-  const auto sso_string_capacity = T{"."}.capacity();
-
-  if (string.capacity() > sso_string_capacity) {
+  if (string.capacity() > SSO_STRING_CAPACITY) {
     // For heap-allocated strings, \0 is appended to denote the end of the string. capacity() is used over length()
     // since some libraries (e.g. llvm's libc++) also over-allocate the heap strings
     // (cf. https://shaharmike.com/cpp/std-string/).
     return string.capacity() + 1;
   }
 
-  DebugAssert(string.capacity() == sso_string_capacity, "SSO does not meet expectations");
+  DebugAssert(string.capacity() == SSO_STRING_CAPACITY, "SSO does not meet expectations");
   return 0;
 }
 
@@ -47,7 +43,9 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
   const auto base_size = sizeof(V);
 
   // Early out
-  if (string_vector.empty()) return base_size + (string_vector.capacity() * sizeof(StringType));
+  if (string_vector.empty()) {
+    return base_size + (string_vector.capacity() * sizeof(StringType));
+  }
 
   constexpr auto sampling_factor = 0.005f;
   constexpr auto min_rows = size_t{10};
@@ -94,4 +92,4 @@ size_t string_vector_memory_usage(const V& string_vector, const MemoryUsageCalcu
                          static_cast<float>((string_vector.capacity() - string_vector.size()) * sizeof(StringType)));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -6,7 +6,7 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/lqp_view.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents the CREATE VIEW management command.
@@ -27,4 +27,4 @@ class CreateViewNode : public EnableMakeForLQPNode<CreateViewNode>, public Abstr
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

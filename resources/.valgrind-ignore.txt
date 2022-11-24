@@ -58,12 +58,21 @@
 {
    <False_positive_optional>
    Memcheck:Cond
-   fun:_ZN7opossum14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
+   fun:_ZN7hyrise14encode_segmentENS_12EncodingTypeENS_6detail8DataTypeERKSt10shared_ptrIKNS_16BaseValueSegmentEESt8optionalINS_21VectorCompressionTypeEE
+}
+
+# Within LZ4 segments, an std::optional storing an index is conditionally accessed when set. The check is not directly
+# on the std::optional, but via an indirection (see variable `use_caching` which is only true, when the std::optional
+# is set). Valgrind appears to misinterpret this conditional access.
+{
+   <False_positive_optional_LZ4Segment>
+   Memcheck:Cond
+   fun:_ZNK6hyrise10LZ4SegmentINSt7__cxx1112basic_stringIcSt11char_traitsIcEN5boost9container3pmr21polymorphic_allocatorIcEEEEE10decompressERKNS_11ChunkOffsetESt8optionalImERSt6vectorIcSaIcEE
 }
 
 # Similar to the suppression introduced via https://github.com/hyrise/hyrise/pull/1851#issuecomment-618937388, we need
-# to suppress a conditional jump check. We removed the previous suppression as it has not been triggered by
-# GoogleTest anymore.
+# to suppress a conditional jump check. We removed the previous suppression as it has not been triggered by GoogleTest
+# anymore.
 {
    <PR_2458_memcheck>
    Memcheck:Cond

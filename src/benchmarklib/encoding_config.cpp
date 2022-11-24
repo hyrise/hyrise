@@ -2,7 +2,7 @@
 
 #include "constant_mappings.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
 
@@ -16,7 +16,9 @@ EncodingConfig::EncodingConfig(const SegmentEncodingSpec& init_default_encoding_
       type_encoding_mapping{std::move(init_type_encoding_mapping)},
       custom_encoding_mapping{std::move(init_encoding_mapping)} {}
 
-EncodingConfig EncodingConfig::unencoded() { return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}}; }
+EncodingConfig EncodingConfig::unencoded() {
+  return EncodingConfig{SegmentEncodingSpec{EncodingType::Unencoded}};
+}
 
 SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string& encoding_str,
                                                                const std::string& compression_str) {
@@ -33,7 +35,9 @@ EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding
 }
 
 std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(const std::string& compression_str) {
-  if (compression_str.empty()) return std::nullopt;
+  if (compression_str.empty()) {
+    return std::nullopt;
+  }
 
   const auto compression = vector_compression_type_to_string.right.find(compression_str);
   Assert(compression != vector_compression_type_to_string.right.end(),
@@ -81,7 +85,7 @@ nlohmann::json EncodingConfig::to_json() const {
 }
 
 // This is intentionally limited to 80 chars per line, as cxxopts does this too and it looks bad otherwise.
-const char* EncodingConfig::description = R"(
+const char* const EncodingConfig::description = R"(
 ======================
 Encoding Configuration
 ======================
@@ -132,4 +136,4 @@ The encoding is always required, the compression is optional.
   }
 })";
 
-}  // namespace opossum
+}  // namespace hyrise

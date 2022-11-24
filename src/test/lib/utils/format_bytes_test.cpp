@@ -2,7 +2,7 @@
 
 #include "utils/format_bytes.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class FormatBytesTest : public BaseTest {};
 
@@ -16,4 +16,4 @@ TEST_F(FormatBytesTest, Bytes) {
   EXPECT_EQ(format_bytes(1'234'567'890), "1.234GB");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

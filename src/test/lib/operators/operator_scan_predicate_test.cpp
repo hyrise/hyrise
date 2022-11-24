@@ -4,9 +4,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorScanPredicateTest : public BaseTest {
  public:
@@ -142,4 +142,4 @@ TEST_F(OperatorScanPredicateTest, NotConvertible) {
   EXPECT_FALSE(operator_predicate_a);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

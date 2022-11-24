@@ -9,7 +9,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
@@ -27,7 +27,9 @@ void expression_bind_placeholders_impl(
       sub_expression = parameter_iter->second;
 
       return ExpressionVisitation::DoNotVisitArguments;
-    } else if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
+    }
+
+    if (const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression)) {
       lqp_bind_placeholders_impl(subquery_expression->lqp, parameters, visited_nodes);
     }
 
@@ -39,7 +41,9 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
                                 const std::unordered_map<ParameterID, std::shared_ptr<AbstractExpression>>& parameters,
                                 std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   visit_lqp(lqp, [&](const auto& node) {
-    if (!visited_nodes.emplace(node).second) return LQPVisitation::DoNotVisitInputs;
+    if (!visited_nodes.emplace(node).second) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
 
     for (auto& expression : node->node_expressions) {
       expression_bind_placeholders_impl(expression, parameters, visited_nodes);
@@ -51,7 +55,7 @@ void lqp_bind_placeholders_impl(const std::shared_ptr<AbstractLQPNode>& lqp,
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 PreparedPlan::PreparedPlan(const std::shared_ptr<AbstractLQPNode>& init_lqp,
                            const std::vector<ParameterID>& init_parameter_ids)
@@ -97,11 +101,13 @@ std::ostream& operator<<(std::ostream& stream, const PreparedPlan& prepared_plan
   stream << "ParameterIDs: [";
   for (auto parameter_idx = size_t{0}; parameter_idx < prepared_plan.parameter_ids.size(); ++parameter_idx) {
     stream << prepared_plan.parameter_ids[parameter_idx];
-    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) stream << ", ";
+    if (parameter_idx + 1 < prepared_plan.parameter_ids.size()) {
+      stream << ", ";
+    }
   }
   stream << "]\n";
   stream << *prepared_plan.lqp;
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

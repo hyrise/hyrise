@@ -6,7 +6,7 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents the CREATE TABLE management command.
@@ -26,4 +26,4 @@ class CreateTableNode : public EnableMakeForLQPNode<CreateTableNode>, public Abs
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

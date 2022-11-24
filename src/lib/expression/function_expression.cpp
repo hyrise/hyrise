@@ -8,7 +8,7 @@
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FunctionExpression::FunctionExpression(const FunctionType init_function_type,
                                        const std::vector<std::shared_ptr<AbstractExpression>>& init_arguments)
@@ -38,7 +38,9 @@ std::string FunctionExpression::description(const DescriptionMode mode) const {
   stream << function_type << "(";
   for (auto argument_idx = size_t{0}; argument_idx < arguments.size(); ++argument_idx) {
     stream << arguments[argument_idx]->description(mode);
-    if (argument_idx + 1 < arguments.size()) stream << ",";
+    if (argument_idx + 1 < arguments.size()) {
+      stream << ",";
+    }
   }
   stream << ")";
   return stream.str();
@@ -62,6 +64,8 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
          expressions_equal(arguments, function_expression.arguments);
 }
 
-size_t FunctionExpression::_shallow_hash() const { return boost::hash_value(static_cast<size_t>(function_type)); }
+size_t FunctionExpression::_shallow_hash() const {
+  return boost::hash_value(static_cast<size_t>(function_type));
+}
 
-}  // namespace opossum
+}  // namespace hyrise

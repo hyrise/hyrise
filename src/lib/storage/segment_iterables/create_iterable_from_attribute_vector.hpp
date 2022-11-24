@@ -4,7 +4,7 @@
 #include "storage/dictionary_segment/attribute_vector_iterable.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @defgroup Uniform interface to create an attribute vector iterable from a dictionary segment
@@ -24,4 +24,4 @@ inline auto create_iterable_from_attribute_vector(const BaseDictionarySegment& s
 
 /**@}*/
 
-}  // namespace opossum
+}  // namespace hyrise

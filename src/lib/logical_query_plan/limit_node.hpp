@@ -4,7 +4,7 @@
 
 #include "abstract_lqp_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This node type represents limiting a result to a certain number of rows (LIMIT operator).
@@ -25,4 +25,4 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

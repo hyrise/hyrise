@@ -4,11 +4,11 @@
 #include <random>
 
 #include "tpch/tpch_queries.hpp"
-#include "utils/date_utils.hpp"
+#include "utils/date_time_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JCCHBenchmarkItemRunner::JCCHBenchmarkItemRunner(const bool skewed, const std::string& dbgen_path,
                                                  const std::string& data_path,
@@ -56,6 +56,10 @@ void JCCHBenchmarkItemRunner::_load_params() {
     Assert(std::filesystem::exists(dbgen_queries_path),
            std::string{"Query templates not found at "} + dbgen_queries_path);
 
+    // NOLINTBEGIN(concurrency-mt-unsafe)
+    // clang-tidy complains that system() is not thread-safe. We can ignore this warning, because _load_params is only
+    // called in the constructor once.
+
     // Create local directory and copy query templates if needed
     const auto local_queries_dir_created = std::filesystem::create_directory(local_queries_path);
     Assert(std::filesystem::exists(local_queries_path), "Creating JCC-H queries folder failed");
@@ -76,6 +80,7 @@ void JCCHBenchmarkItemRunner::_load_params() {
       auto ret = system(cmd.str().c_str());
       Assert(!ret, "Calling qgen failed");
     }
+    // NOLINTEND(concurrency-mt-unsafe)
 
     std::cout << " (" << timer.lap_formatted() << ")" << std::endl;
   }
@@ -138,7 +143,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 4 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -147,7 +152,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 5 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(1));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(1))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -157,7 +162,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 6 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -212,7 +217,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 12 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(2));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(2))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -228,7 +233,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 14 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Month);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
@@ -239,7 +244,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     case 15 - 1: {
       auto query_15 = std::string{tpch_queries.at(15)};
 
-      const auto begin_date = *string_to_date(raw_params_iter->at(0));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(0))->date();
       const auto end_date = date_interval(begin_date, 3, DatetimeComponent::Month);
 
       // Hack: We cannot use prepared statements in TPC-H 15. Thus, we need to build the SQL string by hand.
@@ -264,7 +269,9 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     case 16 - 1: {
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "'");
       parameters.emplace_back("'"s + raw_params_iter->at(1) + "'");
-      for (auto i = 0; i < 8; ++i) parameters.emplace_back(raw_params_iter->at(2 + i));
+      for (auto index = size_t{0}; index < 8; ++index) {
+        parameters.emplace_back(raw_params_iter->at(2 + index));
+      }
       break;
     }
 
@@ -305,7 +312,7 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     }
 
     case 20 - 1: {
-      const auto begin_date = *string_to_date(raw_params_iter->at(1));
+      const auto begin_date = string_to_timestamp(raw_params_iter->at(1))->date();
       const auto end_date = date_interval(begin_date, 1, DatetimeComponent::Year);
 
       parameters.emplace_back("'"s + raw_params_iter->at(0) + "%'");
@@ -322,8 +329,13 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
 
     case 22 - 1: {
       // We need the same country code twice - have a look at the query
-      for (auto i = 0; i < 7; ++i) parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
-      for (auto i = 0; i < 7; ++i) parameters.emplace_back("'"s + raw_params_iter->at(i) + "'");
+      for (auto index = size_t{0}; index < 7; ++index) {
+        parameters.emplace_back("'"s + raw_params_iter->at(index) + "'");
+      }
+
+      for (auto index = size_t{0}; index < 7; ++index) {
+        parameters.emplace_back("'"s + raw_params_iter->at(index) + "'");
+      }
       break;
     }
 
@@ -331,11 +343,13 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       Fail("There are only 22 JCC-H queries");
   }
 
-  if (sql.empty()) sql = _substitute_placeholders(item_id, parameters);
+  if (sql.empty()) {
+    sql = _substitute_placeholders(item_id, parameters);
+  }
 
   const auto [status, table] = sql_executor.execute(sql, nullptr);
   Assert(status == SQLPipelineStatus::Success, "JCC-H items should not fail");
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

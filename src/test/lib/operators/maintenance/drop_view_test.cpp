@@ -9,7 +9,7 @@
 #include "storage/lqp_view.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DropViewTest : public BaseTest {
  protected:
@@ -66,4 +66,4 @@ TEST_F(DropViewTest, ExecuteWithIfExists) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_view("view_name"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "operators/projection.hpp"
 #include "operators/table_wrapper.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsJoinNestedLoopTest : public BaseTest {
  public:
@@ -56,4 +56,4 @@ TEST_F(OperatorsJoinNestedLoopTest, DeepCopy) {
   EXPECT_NE(join_operator_copy->right_input(), nullptr);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

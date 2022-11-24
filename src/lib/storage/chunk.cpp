@@ -16,7 +16,7 @@
 #include "storage/segment_iterate.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
              const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
@@ -38,10 +38,14 @@ Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
     }
   }
 
-  if (alloc) _alloc = *alloc;
+  if (alloc) {
+    _alloc = *alloc;
+  }
 }
 
-bool Chunk::is_mutable() const { return _is_mutable; }
+bool Chunk::is_mutable() const {
+  return _is_mutable;
+}
 
 void Chunk::replace_segment(size_t column_id, const std::shared_ptr<AbstractSegment>& segment) {
   std::atomic_store(&_segments.at(column_id), segment);
@@ -73,17 +77,25 @@ std::shared_ptr<AbstractSegment> Chunk::get_segment(ColumnID column_id) const {
   return std::atomic_load(&_segments.at(column_id));
 }
 
-ColumnCount Chunk::column_count() const { return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())}; }
+ColumnCount Chunk::column_count() const {
+  return ColumnCount{static_cast<ColumnCount::base_type>(_segments.size())};
+}
 
 ChunkOffset Chunk::size() const {
-  if (_segments.empty()) return ChunkOffset{0};
+  if (_segments.empty()) {
+    return ChunkOffset{0};
+  }
   const auto first_segment = get_segment(ColumnID{0});
   return static_cast<ChunkOffset>(first_segment->size());
 }
 
-bool Chunk::has_mvcc_data() const { return _mvcc_data != nullptr; }
+bool Chunk::has_mvcc_data() const {
+  return _mvcc_data != nullptr;
+}
 
-std::shared_ptr<MvccData> Chunk::mvcc_data() const { return _mvcc_data; }
+std::shared_ptr<MvccData> Chunk::mvcc_data() const {
+  return _mvcc_data;
+}
 
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
@@ -139,20 +151,30 @@ void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
 }
 
 bool Chunk::references_exactly_one_table() const {
-  if (column_count() == 0) return false;
+  if (column_count() == 0) {
+    return false;
+  }
 
   auto first_segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(ColumnID{0}));
-  if (!first_segment) return false;
+  if (!first_segment) {
+    return false;
+  }
   auto first_referenced_table = first_segment->referenced_table();
   auto first_pos_list = first_segment->pos_list();
 
-  for (ColumnID column_id{1}; column_id < column_count(); ++column_id) {
+  for (auto column_id = ColumnID{1}; column_id < column_count(); ++column_id) {
     const auto segment = std::dynamic_pointer_cast<const ReferenceSegment>(get_segment(column_id));
-    if (!segment) return false;
+    if (!segment) {
+      return false;
+    }
 
-    if (first_referenced_table != segment->referenced_table()) return false;
+    if (first_referenced_table != segment->referenced_table()) {
+      return false;
+    }
 
-    if (first_pos_list != segment->pos_list()) return false;
+    if (first_pos_list != segment->pos_list()) {
+      return false;
+    }
   }
 
   return true;
@@ -172,7 +194,9 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
   _segments = std::move(new_segments);
 }
 
-const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const { return _alloc; }
+const PolymorphicAllocator<Chunk>& Chunk::get_allocator() const {
+  return _alloc;
+}
 
 size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
@@ -193,8 +217,12 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
 std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
   DebugAssert(([&]() {
-                for (auto column_id : column_ids)
-                  if (column_id >= static_cast<ColumnID>(column_count())) return false;
+                const auto number_of_columns = static_cast<ColumnID>(column_count());
+                for (const auto& column_id : column_ids) {
+                  if (column_id >= number_of_columns) {
+                    return false;
+                  }
+                }
                 return true;
               }()),
               "column ids not within range [0, column_count()).");
@@ -206,7 +234,9 @@ std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids
   return segments;
 }
 
-const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const { return _pruning_statistics; }
+const std::optional<ChunkPruningStatistics>& Chunk::pruning_statistics() const {
+  return _pruning_statistics;
+}
 
 void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& pruning_statistics) {
   Assert(!is_mutable(), "Cannot set pruning statistics on mutable chunks.");
@@ -215,9 +245,14 @@ void Chunk::set_pruning_statistics(const std::optional<ChunkPruningStatistics>& 
 
   _pruning_statistics = pruning_statistics;
 }
-void Chunk::increase_invalid_row_count(const ChunkOffset count) const { _invalid_row_count += count; }
 
-const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const { return _sorted_by; }
+void Chunk::increase_invalid_row_count(const ChunkOffset count) const {
+  _invalid_row_count += count;
+}
+
+const std::vector<SortColumnDefinition>& Chunk::individually_sorted_by() const {
+  return _sorted_by;
+}
 
 void Chunk::set_individually_sorted_by(const SortColumnDefinition& sorted_by) {
   set_individually_sorted_by(std::vector<SortColumnDefinition>{sorted_by});
@@ -233,15 +268,21 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
   if constexpr (HYRISE_DEBUG) {
     for (const auto& sorted_by_column : sorted_by) {
       const auto& sorted_segment = get_segment(sorted_by_column.column);
-      if (sorted_segment->size() < 2) break;
+      if (sorted_segment->size() < 2) {
+        break;
+      }
 
       segment_with_iterators(*sorted_segment, [&](auto begin, auto end) {
         Assert(std::is_sorted(begin, end,
                               [sort_mode = sorted_by_column.sort_mode](const auto& left, const auto& right) {
                                 // is_sorted evaluates the segment by calling the lambda with the SegmentPositions at
                                 // it+n and it (n being non-negative), which needs to evaluate to false.
-                                if (right.is_null()) return false;  // handles right side is NULL and both are NULL
-                                if (left.is_null()) return true;
+                                if (right.is_null()) {
+                                  return false;  // handles right side is NULL and both are NULL
+                                }
+                                if (left.is_null()) {
+                                  return true;
+                                }
                                 const auto ascending = sort_mode == SortMode::Ascending;
                                 return ascending ? left.value() < right.value() : left.value() > right.value();
                               }),
@@ -254,7 +295,6 @@ void Chunk::set_individually_sorted_by(const std::vector<SortColumnDefinition>& 
 }
 
 std::optional<CommitID> Chunk::get_cleanup_commit_id() const {
-  // TODO(Martin): check with PR #2402 whether GCC still needs the `.load()` (some used in abstract_task.cpp twice).
   if (_cleanup_commit_id.load() == CommitID{0}) {
     // Cleanup-Commit-ID is not yet set
     return std::nullopt;
@@ -267,4 +307,4 @@ void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   _cleanup_commit_id.store(cleanup_commit_id);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

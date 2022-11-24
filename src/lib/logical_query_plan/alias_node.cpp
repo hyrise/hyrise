@@ -6,7 +6,7 @@
 
 #include "expression/expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AliasNode::AliasNode(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                      const std::vector<std::string>& init_aliases)
@@ -25,12 +25,16 @@ std::string AliasNode::description(const DescriptionMode mode) const {
       stream << node_expressions[column_id]->description(expression_mode) << " AS " << aliases[column_id];
     }
 
-    if (column_id + 1u < node_expressions.size()) stream << ", ";
+    if (column_id + 1u < node_expressions.size()) {
+      stream << ", ";
+    }
   }
   return stream.str();
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const { return node_expressions; }
+std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions() const {
+  return node_expressions;
+}
 
 std::shared_ptr<LQPUniqueConstraints> AliasNode::unique_constraints() const {
   return _forward_left_unique_constraints();
@@ -56,4 +60,4 @@ bool AliasNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapp
          aliases == alias_node.aliases;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

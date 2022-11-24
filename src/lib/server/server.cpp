@@ -8,7 +8,7 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Specified port (default: 5432) will be opened after initializing the _acceptor
 Server::Server(const boost::asio::ip::address& address, const uint16_t port,
@@ -22,7 +22,7 @@ void Server::run() {
   _is_initialized = false;
 
   // Set scheduler so that the server can execute the tasks on separate threads.
-  Hyrise::get().set_scheduler(std::make_shared<opossum::NodeQueueScheduler>());
+  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   // Set caches
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
@@ -72,9 +72,13 @@ void Server::_start_session(const std::shared_ptr<Session>& new_session, const b
   _accept_new_session();
 }
 
-boost::asio::ip::address Server::server_address() const { return _acceptor.local_endpoint().address(); }
+boost::asio::ip::address Server::server_address() const {
+  return _acceptor.local_endpoint().address();
+}
 
-uint16_t Server::server_port() const { return _acceptor.local_endpoint().port(); }
+uint16_t Server::server_port() const {
+  return _acceptor.local_endpoint().port();
+}
 
 void Server::shutdown() {
   while (_num_running_sessions > 0) {
@@ -84,6 +88,8 @@ void Server::shutdown() {
   _io_service.stop();
 }
 
-bool Server::is_initialized() const { return _is_initialized; }
+bool Server::is_initialized() const {
+  return _is_initialized;
+}
 
-}  // namespace opossum
+}  // namespace hyrise

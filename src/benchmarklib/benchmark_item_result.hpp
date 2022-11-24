@@ -5,7 +5,7 @@
 #include "benchmark_config.hpp"
 #include "benchmark_item_run_result.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // Stores the result of ALL runs of a single benchmark item (e.g., TPC-H query 5).
 struct BenchmarkItemResult {
@@ -26,4 +26,4 @@ struct BenchmarkItemResult {
   std::atomic<std::optional<bool>> verification_passed{std::nullopt};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

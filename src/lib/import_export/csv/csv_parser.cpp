@@ -19,7 +19,7 @@
 #include "utils/assert.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const ChunkOffset chunk_size,
                                         const std::optional<CsvMeta>& csv_meta) {
@@ -38,7 +38,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   std::ifstream csvfile{filename};
 
   // return empty table if input file is empty
-  if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') return table;
+  if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') {
+    return table;
+  }
 
   {
     std::string line;
@@ -58,7 +60,9 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   csvfile.read(content.data(), csvfile_size);
 
   // make sure content ends with a delimiter for better row processing later
-  if (content.back() != meta.config.delimiter) content.push_back(meta.config.delimiter);
+  if (content.back() != meta.config.delimiter) {
+    content.push_back(meta.config.delimiter);
+  }
 
   std::string_view content_view{content.c_str(), content.size()};
 
@@ -193,7 +197,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
     });
   }
 
-  Assert(field_ends.size() == row_count * column_count, "Unexpected number of fields");
+  Assert(field_ends.size() == static_cast<size_t>(row_count) * column_count, "Unexpected number of fields");
 
   size_t start = 0;
   size_t row_id = 0;
@@ -239,4 +243,4 @@ void CsvParser::_sanitize_field(std::string& field, const CsvMeta& meta, const s
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

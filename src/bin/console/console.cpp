@@ -73,15 +73,15 @@ namespace {
  * The known caveats of goto/longjmp aside, this will probably also cause problems (queries continuing to run in the
  * background) when the scheduler/multithreading is enabled.
  */
-sigjmp_buf jmp_env;
+sigjmp_buf jmp_env;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables)
 
 // Returns a string containing a timestamp of the current date and time
 std::string current_timestamp() {
-  auto t = std::time(nullptr);
-  auto tm = *std::localtime(&t);
+  auto time = std::time(nullptr);
+  const auto local_time = *std::localtime(&time);  // NOLINT(concurrency-mt-unsafe) - not called concurrently
 
   std::ostringstream oss;
-  oss << std::put_time(&tm, "%Y-%m-%d %H:%M:%S");
+  oss << std::put_time(&local_time, "%Y-%m-%d %H:%M:%S");
   return oss.str();
 }
 
@@ -116,13 +116,12 @@ std::vector<std::string> tokenize(std::string input) {
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 // Console implementation
 
 Console::Console()
     : _prompt("> "),
-      _multiline_input(""),
       _out(std::cout.rdbuf()),
       _log("console.log", std::ios_base::app | std::ios_base::out),
       _verbose(false),
@@ -198,7 +197,9 @@ int Console::read() {
   return _eval(input);
 }
 
-int Console::execute_script(const std::string& filepath) { return _exec_script(filepath); }
+int Console::execute_script(const std::string& filepath) {
+  return _exec_script(filepath);
+}
 
 int Console::_eval(const std::string& input) {
   // Do nothing if no input was given
@@ -279,7 +280,9 @@ bool Console::_initialize_pipeline(const std::string& sql) {
 }
 
 int Console::_eval_sql(const std::string& sql) {
-  if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  if (!_initialize_pipeline(sql)) {
+    return ReturnCode::Error;
+  }
 
   try {
     _sql_pipeline->get_result_tables();
@@ -321,9 +324,13 @@ int Console::_eval_sql(const std::string& sql) {
   return ReturnCode::Ok;
 }
 
-void Console::register_command(const std::string& name, const CommandFunction& func) { _commands[name] = func; }
+void Console::register_command(const std::string& name, const CommandFunction& func) {
+  _commands[name] = func;
+}
 
-Console::RegisteredCommands Console::commands() { return _commands; }
+Console::RegisteredCommands Console::commands() {
+  return _commands;
+}
 
 void Console::set_prompt(const std::string& prompt) {
   if (HYRISE_DEBUG) {
@@ -386,7 +393,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   stream.str(stream_backup);
 
   static bool pagination_disabled = false;
-  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {  // NOLINT(concurrency-mt-unsafe)
     out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
         "Pagination is disabled.\n\n");
     pagination_disabled = true;
@@ -405,7 +412,9 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
 // Command functions
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
-int Console::_exit(const std::string& /*args*/) { return Console::ReturnCode::Quit; }
+int Console::_exit(const std::string& /*args*/) {
+  return Console::ReturnCode::Quit;
+}
 
 int Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
@@ -545,7 +554,7 @@ int Console::_load_table(const std::string& args) {
   const auto filepath = std::filesystem::path{arguments.at(0)};
   const auto tablename = arguments.size() >= 2 ? arguments.at(1) : std::string{filepath.stem()};
 
-  out("Loading " + std::string(filepath) + " into table \"" + tablename + "\"\n");
+  out("Loading " + filepath.string() + " into table \"" + tablename + "\"\n");
 
   if (Hyrise::get().storage_manager.has_table(tablename)) {
     out("Table \"" + tablename + "\" already existed. Replacing it.\n");
@@ -710,8 +719,8 @@ int Console::_visualize(const std::string& input) {
   const auto sql = boost::algorithm::join(input_words, " ");
 
   // If no SQL is provided, use the last execution. Else, create a new pipeline.
-  if (!sql.empty()) {
-    if (!_initialize_pipeline(sql)) return ReturnCode::Error;
+  if (!sql.empty() && !_initialize_pipeline(sql)) {
+    return ReturnCode::Error;
   }
 
   // If there is no pipeline (i.e., neither was SQL passed in with the visualize command,
@@ -782,6 +791,7 @@ int Console::_visualize(const std::string& input) {
     } break;
   }
 
+  // NOLINTBEGIN(concurrency-mt-unsafe) - system() is not thread-safe, but it's not used concurrently here.
   auto scripts_dir = std::string{"./scripts/"};
   auto ret = system((scripts_dir + "planviz/is_iterm2.sh 2>/dev/null").c_str());
   if (ret != 0) {
@@ -800,6 +810,7 @@ int Console::_visualize(const std::string& input) {
   auto cmd = scripts_dir + "/planviz/imgcat.sh " + img_filename;
   ret = system(cmd.c_str());
   Assert(ret == 0, "Printing the image using ./scripts/imgcat.sh failed.");
+  // NOLINTEND(concurrency-mt-unsafe)
 
   return ReturnCode::Ok;
 }
@@ -840,7 +851,9 @@ int Console::_exec_script(const std::string& script_file) {
   if (!script.good()) {
     out("Error: Script file '" + filepath + "' does not exist.\n");
     return ReturnCode::Error;
-  } else if (!is_regular_file(filepath)) {
+  }
+
+  if (!is_regular_file(filepath)) {
     out("Error: '" + filepath + "' is not a regular file.\n");
     return ReturnCode::Error;
   }
@@ -988,12 +1001,11 @@ char* Console::_command_generator(const char* text, int state, const std::vector
     it = commands.begin();
   }
 
-  while (it != commands.end()) {
+  for (; it != commands.end(); ++it) {
     const auto& command = *it;
-    ++it;
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)
-      snprintf(completion, command.size() + 1, "%s", command.c_str());
+      static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
   }
@@ -1020,18 +1032,18 @@ char* Console::_command_generator_setting_scheduler(const char* text, int state)
   return _command_generator(text, state, {"on", "off"});
 }
 
-}  // namespace opossum
+}  // namespace hyrise
 
 int main(int argc, char** argv) {
   // Make sure the TransactionManager is initialized before the console so that we don't run into destruction order
   // problems (#1635)
-  opossum::Hyrise::get();
+  hyrise::Hyrise::get();
 
-  using Return = opossum::Console::ReturnCode;
-  auto& console = opossum::Console::get();
+  using Return = hyrise::Console::ReturnCode;
+  auto& console = hyrise::Console::get();
 
   // Bind CTRL-C to behaviour specified in Console::handle_signal
-  std::signal(SIGINT, &opossum::Console::handle_signal);
+  static_cast<void>(std::signal(SIGINT, &hyrise::Console::handle_signal));
 
   console.set_prompt("> ");
   console.set_logfile("console.log");
@@ -1077,8 +1089,7 @@ int main(int argc, char** argv) {
 
   // Set jmp_env to current program state in preparation for siglongjmp(2)
   // See comment on jmp_env for details
-  while (sigsetjmp(jmp_env, 1) != 0) {
-  }
+  while (sigsetjmp(jmp_env, 1) != 0) {}
 
   // Main REPL loop
   while (return_code != Return::Quit) {

@@ -18,7 +18,7 @@ static constexpr auto EPSILON = 0.0001;
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 constexpr int HEADER_SIZE = 3;
 
@@ -47,7 +47,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
   std::stringstream stream;
   bool previous_row_highlighted = false;
 
-  for (auto row_id = size_t{0}; row_id < matrix.size(); row_id++) {
+  for (auto row_id = size_t{0}; row_id < matrix.size(); ++row_id) {
     auto highlight = false;
     auto it = std::find_if(highlight_cells.begin(), highlight_cells.end(),
                            [&](const auto& element) { return element.first == row_id; });
@@ -66,6 +66,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     if (highlight) {
       coloring = highlight_color_bg;
     }
+
     if (row_id >= HEADER_SIZE) {
       stream << coloring << std::setw(4) << std::to_string(row_id - HEADER_SIZE) << ANSI_COLOR_RESET;
     } else {
@@ -73,7 +74,7 @@ std::string matrix_to_string(const Matrix& matrix, const std::vector<std::pair<u
     }
 
     // Highlicht each (applicable) cell with highlight color
-    for (auto column_id = ColumnID{0}; column_id < matrix[row_id].size(); column_id++) {
+    for (auto column_id = ColumnID{0}; column_id < matrix[row_id].size(); ++column_id) {
       auto cell = boost::lexical_cast<std::string>(matrix[row_id][column_id]);
       coloring = "";
       if (highlight && it->second == column_id) {
@@ -91,14 +92,14 @@ bool almost_equals(T left_val, T right_val, FloatComparisonMode float_comparison
   static_assert(std::is_floating_point_v<T>, "Values must be of floating point type.");
   if (float_comparison_mode == FloatComparisonMode::AbsoluteDifference) {
     return std::fabs(left_val - right_val) < EPSILON;
-  } else {
-    return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));
   }
+
+  return std::fabs(left_val - right_val) < std::max(EPSILON, std::fabs(right_val * EPSILON));
 }
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 bool check_segment_equal(const std::shared_ptr<AbstractSegment>& actual_segment,
                          const std::shared_ptr<AbstractSegment>& expected_segment, OrderSensitivity order_sensitivity,
@@ -132,9 +133,17 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
                                              OrderSensitivity order_sensitivity, TypeCmpMode type_cmp_mode,
                                              FloatComparisonMode float_comparison_mode,
                                              IgnoreNullable ignore_nullable) {
-  if (!actual_table && expected_table) return "No 'actual' table given";
-  if (actual_table && !expected_table) return "No 'expected' table given";
-  if (!actual_table && !expected_table) return "No 'expected' table and no 'actual' table given";
+  if (!actual_table && expected_table) {
+    return "No 'actual' table given";
+  }
+
+  if (actual_table && !expected_table) {
+    return "No 'expected' table given";
+  }
+
+  if (!actual_table && !expected_table) {
+    return "No 'expected' table and no 'actual' table given";
+  }
 
   auto stream = std::stringstream{};
 
@@ -195,13 +204,16 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
       }
 
       bool all_null = true;
-      for (auto row_id = size_t{HEADER_SIZE}; row_id < expected_matrix.size(); row_id++) {
+      for (auto row_id = size_t{HEADER_SIZE}; row_id < expected_matrix.size(); ++row_id) {
         if (!variant_is_null(expected_matrix[row_id][column_id])) {
           all_null = false;
           break;
         }
       }
-      if (all_null) expected_column_type = actual_column_type;
+
+      if (all_null) {
+        expected_column_type = actual_column_type;
+      }
     }
 
     if (!boost::iequals(actual_table->column_name(column_id), expected_table->column_name(column_id))) {
@@ -263,8 +275,8 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   };
 
   // Compare each cell, skipping header
-  for (auto row_id = size_t{HEADER_SIZE}; row_id < actual_matrix.size(); row_id++) {
-    for (auto column_id = ColumnID{0}; column_id < actual_matrix[row_id].size(); column_id++) {
+  for (auto row_id = size_t{HEADER_SIZE}; row_id < actual_matrix.size(); ++row_id) {
+    for (auto column_id = ColumnID{0}; column_id < actual_matrix[row_id].size(); ++column_id) {
       if (variant_is_null(actual_matrix[row_id][column_id]) || variant_is_null(expected_matrix[row_id][column_id])) {
         highlight_if(
             !(variant_is_null(actual_matrix[row_id][column_id]) && variant_is_null(expected_matrix[row_id][column_id])),
@@ -310,4 +322,4 @@ std::optional<std::string> check_table_equal(const std::shared_ptr<const Table>&
   return std::nullopt;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

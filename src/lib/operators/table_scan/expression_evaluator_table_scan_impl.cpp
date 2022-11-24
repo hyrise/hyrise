@@ -3,14 +3,16 @@
 #include "expression/evaluation/expression_evaluator.hpp"
 #include "expression/expression_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ExpressionEvaluatorTableScanImpl::ExpressionEvaluatorTableScanImpl(
     const std::shared_ptr<const Table>& in_table, const std::shared_ptr<const AbstractExpression>& expression,
     const std::shared_ptr<const ExpressionEvaluator::UncorrelatedSubqueryResults>& uncorrelated_subquery_results)
     : _in_table(in_table), _expression(expression), _uncorrelated_subquery_results(uncorrelated_subquery_results) {}
 
-std::string ExpressionEvaluatorTableScanImpl::description() const { return "ExpressionEvaluator"; }
+std::string ExpressionEvaluatorTableScanImpl::description() const {
+  return "ExpressionEvaluator";
+}
 
 std::shared_ptr<RowIDPosList> ExpressionEvaluatorTableScanImpl::scan_chunk(ChunkID chunk_id) {
   return std::make_shared<RowIDPosList>(
@@ -18,4 +20,4 @@ std::shared_ptr<RowIDPosList> ExpressionEvaluatorTableScanImpl::scan_chunk(Chunk
           *_expression));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

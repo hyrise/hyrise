@@ -8,7 +8,7 @@
 
 #include "storage/reference_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 Product::Product(const std::shared_ptr<const AbstractOperator>& left,
                  const std::shared_ptr<const AbstractOperator>& right)
     : AbstractReadOnlyOperator(OperatorType::Product, left, right) {}
@@ -22,12 +22,14 @@ std::shared_ptr<const Table> Product::_on_execute() {
   TableColumnDefinitions column_definitions;
 
   // add columns from left table to output
-  for (ColumnID column_id{0}; column_id < left_input_table()->column_count(); ++column_id) {
+  const auto left_input_column_count = left_input_table()->column_count();
+  for (auto column_id = ColumnID{0}; column_id < left_input_column_count; ++column_id) {
     column_definitions.emplace_back(left_input_table()->column_definitions()[column_id]);
   }
 
   // add columns from right table to output
-  for (ColumnID column_id{0}; column_id < right_input_table()->column_count(); ++column_id) {
+  const auto right_input_column_count = right_input_table()->column_count();
+  for (auto column_id = ColumnID{0}; column_id < right_input_column_count; ++column_id) {
     column_definitions.emplace_back(right_input_table()->column_definitions()[column_id]);
   }
 
@@ -35,11 +37,11 @@ std::shared_ptr<const Table> Product::_on_execute() {
   auto chunk_count_left_table = left_input_table()->chunk_count();
   auto chunk_count_right_table = right_input_table()->chunk_count();
 
-  for (ChunkID chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
+  for (auto chunk_id_left = ChunkID{0}; chunk_id_left < chunk_count_left_table; ++chunk_id_left) {
     const auto chunk_left = left_input_table()->get_chunk(chunk_id_left);
     Assert(chunk_left, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
-    for (ChunkID chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
+    for (auto chunk_id_right = ChunkID{0}; chunk_id_right < chunk_count_right_table; ++chunk_id_right) {
       const auto chunk_right = right_input_table()->get_chunk(chunk_id_right);
       Assert(chunk_right, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -77,7 +79,8 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
     // duplication
     auto table = is_left_side ? left_input_table() : right_input_table();
 
-    for (ColumnID column_id{0}; column_id < chunk_in->column_count(); ++column_id) {
+    const auto column_count = chunk_in->column_count();
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       std::shared_ptr<const Table> referenced_table;
       ColumnID referenced_segment;
       std::shared_ptr<const AbstractPosList> pos_list_in;
@@ -92,17 +95,20 @@ void Product::_add_product_of_two_chunks(const std::shared_ptr<Table>& output, C
         referenced_segment = column_id;
       }
 
-      // see if we can reuse a PosList that we already calculated - important to use a reference here so that the map
-      // gets updated accordingly
+      // See if we can reuse a PosList that we already calculated - important to use a reference here so that the map
+      // gets updated accordingly.
       auto& pos_list_out = (is_left_side ? calculated_pos_lists_left : calculated_pos_lists_right)[pos_list_in];
       if (!pos_list_out) {
         // can't reuse
+        const auto left_chunk_size = chunk_left->size();
+        const auto right_chunk_size = chunk_right->size();
+        const auto pos_list_size = static_cast<size_t>(left_chunk_size) * right_chunk_size;
         pos_list_out = std::make_shared<RowIDPosList>();
-        pos_list_out->reserve(chunk_left->size() * chunk_right->size());
-        for (size_t i = 0; i < chunk_left->size() * chunk_right->size(); ++i) {
+        pos_list_out->reserve(pos_list_size);
+        for (auto pos_list_index = size_t{0}; pos_list_index < pos_list_size; ++pos_list_index) {
           // size_t is sufficient here, because ChunkOffset::max is 2^32 and (2^32 * 2^32 = 2^64)
-          auto offset = is_left_side ? static_cast<ChunkOffset>(i / chunk_right->size())
-                                     : static_cast<ChunkOffset>(i % chunk_right->size());
+          auto offset = is_left_side ? static_cast<ChunkOffset>(pos_list_index / right_chunk_size)
+                                     : static_cast<ChunkOffset>(pos_list_index % right_chunk_size);
           if (pos_list_in) {
             pos_list_out->emplace_back((*pos_list_in)[offset]);
           } else {
@@ -128,4 +134,4 @@ std::shared_ptr<AbstractOperator> Product::_on_deep_copy(
 
 void Product::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-}  // namespace opossum
+}  // namespace hyrise

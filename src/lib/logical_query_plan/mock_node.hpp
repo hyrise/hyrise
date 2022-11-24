@@ -10,7 +10,7 @@
 #include "all_type_variant.hpp"
 #include "storage/table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LQPColumnExpression;
 class TableStatistics;
@@ -77,4 +77,4 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::vector<FunctionalDependency> _functional_dependencies;
   TableKeyConstraints _table_key_constraints;
 };
-}  // namespace opossum
+}  // namespace hyrise

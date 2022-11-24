@@ -5,7 +5,7 @@
 
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std::string& data_path, float scale_factor,
                                        ClusteringConfiguration clustering_configuration, ChunkOffset chunk_size)
@@ -22,6 +22,10 @@ JCCHTableGenerator::JCCHTableGenerator(const std::string& dbgen_path, const std:
 
 std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate() {
   const auto tables_path = _path + "/tables/";
+
+  // NOLINTBEGIN(concurrency-mt-unsafe)
+  // clang-tidy complains that system() is not thread-safe. We ignore this warning as we expect that users will not call
+  // the JCCH table generator in parallel.
 
   // Check if table data has already been generated (and converted to .bin by the FileBasedTableGenerator)
   if (!std::filesystem::exists(tables_path + "/customer.bin")) {
@@ -85,6 +89,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     Assert(!ret, "Removing csv/csv.json files failed");
   }
 
+  // NOLINTEND(concurrency-mt-unsafe)
+
   return generated_tables;
 }
 
@@ -93,4 +99,4 @@ void JCCHTableGenerator::_add_constraints(
   TPCHTableGenerator::_add_constraints(table_info_by_name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

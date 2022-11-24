@@ -5,7 +5,7 @@
 #include "transaction_context.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TransactionManager::TransactionManager()
     : _next_transaction_id{INITIAL_TRANSACTION_ID},
@@ -25,7 +25,9 @@ TransactionManager& TransactionManager::operator=(TransactionManager&& transacti
   return *this;
 }
 
-CommitID TransactionManager::last_commit_id() const { return _last_commit_id; }
+CommitID TransactionManager::last_commit_id() const {
+  return _last_commit_id;
+}
 
 std::shared_ptr<TransactionContext> TransactionManager::new_transaction_context(const AutoCommit auto_commit) {
   const CommitID snapshot_commit_id = _last_commit_id;
@@ -90,7 +92,9 @@ std::shared_ptr<CommitContext> TransactionManager::_new_commit_context() {
 
     success = current_context->try_set_next(next_context);
 
-    if (!success) continue;
+    if (!success) {
+      continue;
+    }
 
     /**
      * Only one thread at a time can ever reach this code since only one thread
@@ -110,14 +114,18 @@ void TransactionManager::_try_increment_last_commit_id(const std::shared_ptr<Com
   while (current_context->is_pending()) {
     auto expected_last_commit_id = CommitID{current_context->commit_id() - 1};
 
-    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) return;
+    if (!_last_commit_id.compare_exchange_strong(expected_last_commit_id, current_context->commit_id())) {
+      return;
+    }
 
     current_context->fire_callback();
 
-    if (!current_context->has_next()) return;
+    if (!current_context->has_next()) {
+      return;
+    }
 
     current_context = current_context->next();
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

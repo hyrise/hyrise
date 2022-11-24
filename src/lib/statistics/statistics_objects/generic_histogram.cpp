@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 GenericHistogram<T>::GenericHistogram(std::vector<T>&& bin_minima, std::vector<T>&& bin_maxima,
@@ -61,10 +61,10 @@ BinID GenericHistogram<T>::bin_count() const {
 
 template <typename T>
 BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
-  const auto it = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
-  const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), it));
+  const auto iter = std::lower_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
+  const auto index = static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 
-  if (it == _bin_maxima.cend() || value < bin_minimum(index) || value > bin_maximum(index)) {
+  if (iter == _bin_maxima.cend() || value < bin_minimum(index) || value > bin_maximum(index)) {
     return INVALID_BIN_ID;
   }
 
@@ -73,13 +73,13 @@ BinID GenericHistogram<T>::_bin_for_value(const T& value) const {
 
 template <typename T>
 BinID GenericHistogram<T>::_next_bin_for_value(const T& value) const {
-  const auto it = std::upper_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
+  const auto iter = std::upper_bound(_bin_maxima.cbegin(), _bin_maxima.cend(), value);
 
-  if (it == _bin_maxima.cend()) {
+  if (iter == _bin_maxima.cend()) {
     return INVALID_BIN_ID;
   }
 
-  return static_cast<BinID>(std::distance(_bin_maxima.cbegin(), it));
+  return static_cast<BinID>(std::distance(_bin_maxima.cbegin(), iter));
 }
 
 template <typename T>
@@ -124,4 +124,4 @@ bool GenericHistogram<T>::operator==(const GenericHistogram<T>& rhs) const {
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(GenericHistogram);
 
-}  // namespace opossum
+}  // namespace hyrise

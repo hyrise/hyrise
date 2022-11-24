@@ -10,7 +10,7 @@
 #include "types.hpp"
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
  public:
@@ -65,4 +65,4 @@ class RunLengthEncoder : public SegmentEncoder<RunLengthEncoder> {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

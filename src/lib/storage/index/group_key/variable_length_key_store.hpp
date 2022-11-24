@@ -8,7 +8,7 @@
 
 #include "variable_length_key.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class VariableLengthKeyProxy;
 class VariableLengthKeyConstProxy;
@@ -135,11 +135,21 @@ class VariableLengthKeyStore {
                           VariableLengthKeyWord* data)
         : _bytes_per_key(bytes_per_key), _key_alignment(key_alignment), _data(data) {}
 
-    void increment() { _data += _key_alignment; }
-    void decrement() { _data -= _key_alignment; }
-    void advance(size_t n) { _data += n * _key_alignment; }
+    void increment() {
+      _data += _key_alignment;
+    }
 
-    Proxy dereference() const { return Proxy(_data, _bytes_per_key); }
+    void decrement() {
+      _data -= _key_alignment;
+    }
+
+    void advance(size_t n) {
+      _data += n * _key_alignment;
+    }
+
+    Proxy dereference() const {
+      return Proxy(_data, _bytes_per_key);
+    }
 
     /**
      * Check for equality between any combination of iterator and const_iterator
@@ -164,4 +174,4 @@ class VariableLengthKeyStore {
   };
 };
 
-}  // namespace opossum
+}  // namespace hyrise

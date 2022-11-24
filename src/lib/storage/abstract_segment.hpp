@@ -7,7 +7,7 @@
 #include "segment_access_counter.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 // AbstractSegment is the abstract super class for all segment types,
 // e.g., ValueSegment, ReferenceSegment
@@ -39,4 +39,4 @@ class AbstractSegment : private Noncopyable {
  private:
   const DataType _data_type;
 };
-}  // namespace opossum
+}  // namespace hyrise

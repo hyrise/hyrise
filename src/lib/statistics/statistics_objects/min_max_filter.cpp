@@ -11,7 +11,7 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 MinMaxFilter<T>::MinMaxFilter(T init_min, T init_max)
@@ -159,10 +159,12 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       const auto value2 = boost::get<T>(*variant_value2);
       return value >= max || value2 <= min;
     }
-    case PredicateCondition::Like: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
+    // NOLINTBEGIN(bugprone-branch-clone)
+    // clang-tidy considers the following two cases to be identical. They are only identical for non-strings.
+    case PredicateCondition::Like: {
       // We use the ascii collation for min/max filters. This means that lower case letters are considered larger than
-      // upper case letters. This can lead to a situation, where the USA% (e.g., JOB query XXXXX) is not pruned
-      // whenever just a single value starts with a lower case letter.
+      // upper case letters. This can lead to a situation, where the USA% (e.g., Join Order Benchamrk query 15c) is not
+      // pruned whenever just a single value starts with a lower case letter.
       // Examples for the handling of Like predicate:
       //                        | test%         | %test   | test\x7F% | test           | '' (empty string)
       // LikeMatcher::bounds()  | {test, tesu}  | nullopt | nullopt   | {test, test\0} | {'', '\0'}
@@ -170,16 +172,17 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       //                        | min >= tesu   |         |           | min >= test\0  | min >= '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto bounds = LikeMatcher::bounds(value);
-        if (!bounds) return false;
+        if (!bounds) {
+          return false;
+        }
 
         const auto [lower_bound, upper_bound] = *bounds;
-
         return max < lower_bound || upper_bound <= min;
       }
 
       return false;
     }
-    case PredicateCondition::NotLike: {  // NOLINTNEXTLINE - clang-tidy doesn't like the else path of the if constexpr
+    case PredicateCondition::NotLike: {
       // Examples for the handling of NotLike predicate:
       //                          | test%           | %test   | test\x7F% | test             | '' (empty string)
       // LikeMatcher::bounds()    | {test, tesu}    | nullopt | nullopt   | {test, test\0}   | {'', '\0'}
@@ -187,15 +190,17 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
       //                          | max < tesu      |         |           | max < test\0     | max < '\0'
       if constexpr (std::is_same_v<T, pmr_string>) {
         const auto bounds = LikeMatcher::bounds(value);
-        if (!bounds) return false;
+        if (!bounds) {
+          return false;
+        }
 
         const auto [lower_bound, upper_bound] = *bounds;
-
         return max < upper_bound && lower_bound <= min;
       }
 
       return false;
     }
+    // NOLINTEND(bugprone-branch-clone)
     default:
       return false;
   }
@@ -203,4 +208,4 @@ bool MinMaxFilter<T>::does_not_contain(const PredicateCondition predicate_condit
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(MinMaxFilter);
 
-}  // namespace opossum
+}  // namespace hyrise

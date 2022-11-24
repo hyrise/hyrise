@@ -4,7 +4,7 @@
 #include <optional>
 #include <vector>
 
-namespace opossum {
+namespace hyrise {
 
 std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t original_table_column_count,
                                                               const std::vector<ColumnID>& pruned_column_ids) {
@@ -26,4 +26,4 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
   return column_id_mapping;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

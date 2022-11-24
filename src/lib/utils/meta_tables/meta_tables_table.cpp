@@ -2,7 +2,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaTablesTable::MetaTablesTable()
     : AbstractMetaTable(TableColumnDefinitions{{"table_name", DataType::String, false},
@@ -28,4 +28,4 @@ std::shared_ptr<Table> MetaTablesTable::_on_generate() const {
   return output_table;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

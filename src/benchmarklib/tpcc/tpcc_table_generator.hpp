@@ -13,7 +13,7 @@
 #include "resolve_type.hpp"
 #include "tpcc_random_generator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -41,7 +41,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   using OrderLineCounts = std::vector<std::vector<std::vector<size_t>>>;
 
-  OrderLineCounts generate_order_line_counts();
+  OrderLineCounts generate_order_line_counts() const;
 
   std::shared_ptr<Table> generate_order_table(const OrderLineCounts& order_line_counts);
 
@@ -59,14 +59,14 @@ class TPCCTableGenerator : public AbstractTableGenerator {
 
   template <typename T>
   std::vector<std::optional<T>> _generate_inner_order_line_column(
-      std::vector<size_t> indices, OrderLineCounts order_line_counts,
-      const std::function<std::optional<T>(std::vector<size_t>)>& generator_function);
+      const std::vector<size_t>& indices, OrderLineCounts order_line_counts,
+      const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function);
 
   template <typename T>
   void _add_order_line_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                               std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
                               OrderLineCounts order_line_counts,
-                              const std::function<std::optional<T>(std::vector<size_t>)>& generator_function);
+                              const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function);
 
   // Used to generate not only random numbers, but also non-uniform numbers and random last names as defined by the
   // TPC-C Specification.
@@ -103,7 +103,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<std::vector<std::optional<T>>(std::vector<size_t>)>& generator_function) {
+                   const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)>& generator_function) {
     const auto chunk_size = _benchmark_config->chunk_size;
 
     bool is_first_column = column_definitions.size() == 0;
@@ -126,9 +126,9 @@ class TPCCTableGenerator : public AbstractTableGenerator {
     /**
      * The loop over all records that the final column of the table will contain, e.g. loop_count = 30 000 for CUSTOMER
      */
-    size_t row_index = 0;
+    auto row_index = size_t{0};
 
-    for (size_t loop_index = 0; loop_index < loop_count; loop_index++) {
+    for (auto loop_index = size_t{0}; loop_index < loop_count; ++loop_index) {
       std::vector<size_t> indices(cardinalities->size());
 
       /**
@@ -142,7 +142,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * WAREHOUSE_ID | DISTRICT_ID | CUSTOMER_ID
        * indices[0]   | indices[1]  | indices[2]
        */
-      for (size_t loop = 0; loop < cardinalities->size(); loop++) {
+      for (auto loop = size_t{0}; loop < cardinalities->size(); ++loop) {
         auto divisor = std::accumulate(std::begin(*cardinalities) + loop + 1, std::end(*cardinalities), 1u,
                                        std::multiplies<size_t>());
         indices[loop] = (loop_index / divisor) % cardinalities->at(loop);
@@ -156,7 +156,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
        * and iterate it to add to the output segment.
        */
       auto values = generator_function(indices);
-      for (auto& value : values) {
+      for (const auto& value : values) {
         if (value) {
           data.emplace_back(std::move(*value));
         } else {
@@ -187,7 +187,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
           null_values = {};
           null_values.reserve(chunk_size);
         }
-        row_index++;
+        ++row_index;
       }
     }
 
@@ -200,7 +200,7 @@ class TPCCTableGenerator : public AbstractTableGenerator {
         segments_by_chunk.emplace_back();
         segments_by_chunk.back().emplace_back(value_segment);
       } else {
-        ChunkID chunk_id{static_cast<uint32_t>(row_index / chunk_size)};
+        ChunkID chunk_id{static_cast<ChunkID::base_type>(row_index / chunk_size)};
         segments_by_chunk[chunk_id].emplace_back(value_segment);
       }
     }
@@ -223,9 +223,11 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<T(std::vector<size_t>)>& generator_function) {
-    const std::function<std::vector<T>(std::vector<size_t>)> wrapped_generator_function =
-        [generator_function](std::vector<size_t> indices) { return std::vector<T>({generator_function(indices)}); };
+                   const std::function<T(const std::vector<size_t>&)>& generator_function) {
+    const std::function<std::vector<T>(const std::vector<size_t>&)> wrapped_generator_function =
+        [generator_function](const std::vector<size_t>& indices) {
+          return std::vector<T>({generator_function(indices)});
+        };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 
@@ -241,12 +243,12 @@ class TPCCTableGenerator : public AbstractTableGenerator {
   template <typename T>
   void _add_column(std::vector<Segments>& segments_by_chunk, TableColumnDefinitions& column_definitions,
                    std::string name, std::shared_ptr<std::vector<size_t>> cardinalities,
-                   const std::function<std::optional<T>(std::vector<size_t>)>& generator_function) {
-    const std::function<std::vector<std::optional<T>>(std::vector<size_t>)> wrapped_generator_function =
-        [generator_function](std::vector<size_t> indices) {
+                   const std::function<std::optional<T>(const std::vector<size_t>&)>& generator_function) {
+    const std::function<std::vector<std::optional<T>>(const std::vector<size_t>&)> wrapped_generator_function =
+        [generator_function](const std::vector<size_t>& indices) {
           return std::vector<std::optional<T>>({generator_function(indices)});
         };
     _add_column(segments_by_chunk, column_definitions, name, cardinalities, wrapped_generator_function);
   }
 };
-}  // namespace opossum
+}  // namespace hyrise

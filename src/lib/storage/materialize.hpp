@@ -6,7 +6,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Materialization convenience functions.
@@ -49,4 +49,4 @@ void materialize_nulls(const AbstractSegment& segment, Container& container) {
   });
 }
 
-}  // namespace opossum
+}  // namespace hyrise

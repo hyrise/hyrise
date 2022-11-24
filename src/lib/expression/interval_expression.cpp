@@ -4,12 +4,14 @@
 
 #include <magic_enum.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 IntervalExpression::IntervalExpression(const int64_t init_duration, const DatetimeComponent init_unit)
     : AbstractExpression(ExpressionType::Interval, {}), duration(init_duration), unit(init_unit) {}
 
-DataType IntervalExpression::data_type() const { return DataType::String; }
+DataType IntervalExpression::data_type() const {
+  return DataType::String;
+}
 
 std::shared_ptr<AbstractExpression> IntervalExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
@@ -35,4 +37,4 @@ size_t IntervalExpression::_shallow_hash() const {
   return hash;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

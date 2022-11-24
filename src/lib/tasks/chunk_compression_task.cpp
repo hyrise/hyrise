@@ -11,7 +11,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ChunkCompressionTask::ChunkCompressionTask(const std::string& table_name, const ChunkID chunk_id)
     : ChunkCompressionTask{table_name, std::vector<ChunkID>{chunk_id}} {}
@@ -40,7 +40,9 @@ void ChunkCompressionTask::_on_execute() {
 }
 
 bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chunk, const uint32_t target_chunk_size) {
-  if (chunk->size() != target_chunk_size) return false;
+  if (chunk->size() != target_chunk_size) {
+    return false;
+  }
 
   const auto& mvcc_data = chunk->mvcc_data();
 
@@ -48,10 +50,12 @@ bool ChunkCompressionTask::_chunk_is_completed(const std::shared_ptr<Chunk>& chu
     // TODO(anybody) Reading the non-atomic begin_cid (which is written to in Insert without a write lock) is likely UB
     //               When activating the ChunkCompressionTask, please look for a different means of determining whether
     //               all Inserts to a Chunk finished.
-    if (mvcc_data->get_begin_cid(chunk_offset) == MvccData::MAX_COMMIT_ID) return false;
+    if (mvcc_data->get_begin_cid(chunk_offset) == MvccData::MAX_COMMIT_ID) {
+      return false;
+    }
   }
 
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

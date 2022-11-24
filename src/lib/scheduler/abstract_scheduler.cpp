@@ -1,6 +1,6 @@
 #include "abstract_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   DebugAssert(([&]() {
@@ -19,7 +19,9 @@ void AbstractScheduler::wait_for_tasks(const std::vector<std::shared_ptr<Abstrac
   if (worker) {
     worker->_wait_for_tasks(tasks);
   } else {
-    for (const auto& task : tasks) task->_join();
+    for (const auto& task : tasks) {
+      task->_join();
+    }
   }
 }
 
@@ -28,9 +30,7 @@ void AbstractScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractT
 }
 
 void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
-  DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS, tasks.size());
   for (const auto& task : tasks) {
-    DTRACE_PROBE2(HYRISE, TASKS, reinterpret_cast<uintptr_t>(&tasks), reinterpret_cast<uintptr_t>(task.get()));
     task->schedule();
   }
 }
@@ -38,8 +38,7 @@ void AbstractScheduler::schedule_tasks(const std::vector<std::shared_ptr<Abstrac
 void AbstractScheduler::schedule_and_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) {
   _group_tasks(tasks);
   schedule_tasks(tasks);
-  DTRACE_PROBE1(HYRISE, SCHEDULE_TASKS_AND_WAIT, tasks.size());
   wait_for_tasks(tasks);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

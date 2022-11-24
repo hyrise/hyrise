@@ -2,7 +2,7 @@
 
 #include "lossy_cast.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class LossyCastTest : public BaseTest {};
 
@@ -21,4 +21,4 @@ TEST_F(LossyCastTest, LossyVariantCast) {
   EXPECT_ANY_THROW(lossy_variant_cast<int32_t>("3.5"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

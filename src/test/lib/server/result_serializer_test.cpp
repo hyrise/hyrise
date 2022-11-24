@@ -4,7 +4,7 @@
 #include "server/postgres_protocol_handler.hpp"
 #include "server/result_serializer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class ResultSerializerTest : public BaseTest {
  protected:
@@ -29,7 +29,7 @@ TEST_F(ResultSerializerTest, RowDescription) {
 
   EXPECT_EQ(NetworkConversionHelper::get_message_length(file_content.cbegin() + 1), file_content.size() - 1);
   EXPECT_EQ(NetworkConversionHelper::get_small_int(file_content.cbegin() + 5), _test_table->column_count());
-  for (ColumnID column_id{0}; column_id < _test_table->column_count(); column_id++) {
+  for (auto column_id = ColumnID{0}; column_id < _test_table->column_count(); column_id++) {
     EXPECT_NE(file_content.find(_test_table->column_name(column_id)), std::string::npos);
   }
 }
@@ -50,4 +50,4 @@ TEST_F(ResultSerializerTest, CommandCompleteMessage) {
   EXPECT_EQ(ResultSerializer::build_command_complete_message(OperatorType::Projection, 1), "SELECT 1");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

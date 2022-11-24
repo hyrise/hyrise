@@ -14,7 +14,7 @@
 
 #include "utils/enum_constant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -73,4 +73,4 @@ CompressedVectorType get_compressed_vector_type() {
   return *compression_type;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

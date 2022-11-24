@@ -5,7 +5,7 @@
 #include "constant_mappings.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 InExpression::InExpression(const PredicateCondition init_predicate_condition,
                            const std::shared_ptr<AbstractExpression>& value,
@@ -15,11 +15,17 @@ InExpression::InExpression(const PredicateCondition init_predicate_condition,
               "Expected either IN or NOT IN as PredicateCondition");
 }
 
-bool InExpression::is_negated() const { return predicate_condition == PredicateCondition::NotIn; }
+bool InExpression::is_negated() const {
+  return predicate_condition == PredicateCondition::NotIn;
+}
 
-const std::shared_ptr<AbstractExpression>& InExpression::value() const { return arguments[0]; }
+const std::shared_ptr<AbstractExpression>& InExpression::value() const {
+  return arguments[0];
+}
 
-const std::shared_ptr<AbstractExpression>& InExpression::set() const { return arguments[1]; }
+const std::shared_ptr<AbstractExpression>& InExpression::set() const {
+  return arguments[1];
+}
 
 std::shared_ptr<AbstractExpression> InExpression::_on_deep_copy(
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
@@ -35,4 +41,4 @@ std::string InExpression::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-}  // namespace opossum
+}  // namespace hyrise

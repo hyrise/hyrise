@@ -7,11 +7,11 @@
 
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /*
- * This class wraps the sqlite3 library for opossum. It creates an in-memory sqlite database on construction.
- * When executing a sql query, the wrapper converts the result into an opossum Table.
+ * This class wraps the sqlite3 library for Hyrise. It creates an in-memory sqlite database on construction.
+ * When executing a sql query, the wrapper converts the result into a Hyrise Table.
  */
 class SQLiteWrapper final {
  public:
@@ -25,7 +25,7 @@ class SQLiteWrapper final {
   void reset_table_from_copy(const std::string& table_name_to_reset, const std::string& table_name_to_copy_from) const;
 
   /*
-   * Creates a table in the sqlite database from a given opossum Table
+   * Creates a table in the sqlite database from a given Hyrise Table
    *
    * @param table      The table to load into sqlite
    * @param tablename  The desired table name
@@ -79,4 +79,4 @@ class SQLiteWrapper final {
   Connection main_connection;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

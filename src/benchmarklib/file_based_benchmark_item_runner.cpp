@@ -10,7 +10,7 @@
 #include "utils/assert.hpp"
 #include "utils/list_directory.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 FileBasedBenchmarkItemRunner::FileBasedBenchmarkItemRunner(
     const std::shared_ptr<BenchmarkConfig>& config, const std::string& query_path,
@@ -58,7 +58,9 @@ std::string FileBasedBenchmarkItemRunner::item_name(const BenchmarkItemID item_i
   return _queries[item_id].name;
 }
 
-const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const { return _items; }
+const std::vector<BenchmarkItemID>& FileBasedBenchmarkItemRunner::items() const {
+  return _items;
+}
 
 void FileBasedBenchmarkItemRunner::_parse_query_file(
     const std::filesystem::path& query_file_path, const std::optional<std::unordered_set<std::string>>& query_subset) {
@@ -104,4 +106,4 @@ void FileBasedBenchmarkItemRunner::_parse_query_file(
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

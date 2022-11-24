@@ -7,7 +7,7 @@
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LimitNode::LimitNode(const std::shared_ptr<AbstractExpression>& num_rows_expression)
     : AbstractLQPNode(LQPNodeType::Limit, {num_rows_expression}) {}
@@ -24,7 +24,9 @@ std::shared_ptr<LQPUniqueConstraints> LimitNode::unique_constraints() const {
   return _forward_left_unique_constraints();
 }
 
-std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const { return node_expressions[0]; }
+std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {
+  return node_expressions[0];
+}
 
 std::shared_ptr<AbstractLQPNode> LimitNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return LimitNode::make(expression_copy_and_adapt_to_different_lqp(*num_rows_expression(), node_mapping));
@@ -36,4 +38,4 @@ bool LimitNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapp
                                                          node_mapping);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

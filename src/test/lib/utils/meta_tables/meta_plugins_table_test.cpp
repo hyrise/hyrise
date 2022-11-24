@@ -5,7 +5,7 @@
 
 #include "../plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class MetaPluginsTest : public BaseTest {
  protected:
@@ -24,7 +24,9 @@ class MetaPluginsTest : public BaseTest {
     mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override { Hyrise::reset(); }
+  void TearDown() override {
+    Hyrise::reset();
+  }
 
   const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
     return table->_generate();
@@ -99,4 +101,4 @@ TEST_F(MetaPluginsTest, RepeatedInsert) {
   EXPECT_EQ(generate_meta_table(meta_plugins_table)->row_count(), 1);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

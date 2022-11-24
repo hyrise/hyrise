@@ -17,6 +17,8 @@
 #include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
+#include "strategy/join_to_predicate_rewrite_rule.hpp"
+#include "strategy/join_to_semi_join_rule.hpp"
 #include "strategy/null_scan_removal_rule.hpp"
 #include "strategy/predicate_merge_rule.hpp"
 #include "strategy/predicate_placement_rule.hpp"
@@ -27,7 +29,7 @@
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Some optimizer rules affect each other, as noted below. Sometimes, a later rule enables a new optimization for an
@@ -68,10 +70,15 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
+  optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
+
+  optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
+
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
-  // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule and the
-  // SemiJoinReductionRule are properly placed, too.
+  // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule, the
+  // JoinToSemiJoinuRule, and the SemiJoinReductionRule, or predicates created by the JoinToPredicateRewriteRule are
+  // properly placed, too.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
   optimizer->add_rule(std::make_unique<JoinPredicateOrderingRule>());
@@ -123,7 +130,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   const auto root_node = LogicalPlanRootNode::make(std::move(input));
   input = nullptr;
 
-  if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+  if constexpr (HYRISE_DEBUG) {
+    validate_lqp(root_node);
+  }
 
   for (const auto& rule : _rules) {
     Timer rule_timer{};
@@ -134,7 +143,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
     }
 
-    if constexpr (HYRISE_DEBUG) validate_lqp(root_node);
+    if constexpr (HYRISE_DEBUG) {
+      validate_lqp(root_node);
+    }
   }
 
   // Remove LogicalPlanRootNode
@@ -180,7 +191,9 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
                                                        node->description() + "` not found in LQP");
 
         for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
-          if (other_lqp == lqp) continue;
+          if (other_lqp == lqp) {
+            continue;
+          }
           Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
                                             node->description() + "` found in different LQP");
         }
@@ -192,7 +205,9 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
       // at the latest. However, feel free to add that check here.
       for (const auto& node_expression : node->node_expressions) {
         visit_expression(node_expression, [&](const auto& sub_expression) {
-          if (sub_expression->type != ExpressionType::LQPColumn) return ExpressionVisitation::VisitArguments;
+          if (sub_expression->type != ExpressionType::LQPColumn) {
+            return ExpressionVisitation::VisitArguments;
+          }
           const auto original_node = dynamic_cast<LQPColumnExpression&>(*sub_expression).original_node.lock();
           Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
           Assert(nodes_by_lqp[lqp].contains(original_node),
@@ -249,4 +264,4 @@ void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) 
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -23,9 +23,9 @@
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class IndexScanRuleTest : public StrategyBaseTest {
  public:
@@ -177,4 +177,4 @@ TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
   EXPECT_EQ(predicate_node_1->scan_type, ScanType::TableScan);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

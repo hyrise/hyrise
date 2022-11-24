@@ -16,7 +16,7 @@
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> table) {
   const auto table_iter = _tables.find(name);
@@ -70,7 +70,9 @@ std::vector<std::string> StorageManager::table_names() const {
   table_names.reserve(_tables.size());
 
   for (const auto& table_item : _tables) {
-    if (!table_item.second) continue;
+    if (!table_item.second) {
+      continue;
+    }
 
     table_names.emplace_back(table_item.first);
   }
@@ -83,7 +85,9 @@ std::unordered_map<std::string, std::shared_ptr<Table>> StorageManager::tables()
 
   for (const auto& [table_name, table] : _tables) {
     // Skip dropped table, as we don't remove the map entry when dropping, but only reset the table pointer.
-    if (!table) continue;
+    if (!table) {
+      continue;
+    }
 
     result[table_name] = table;
   }
@@ -130,7 +134,9 @@ std::vector<std::string> StorageManager::view_names() const {
   view_names.reserve(_views.size());
 
   for (const auto& view_item : _views) {
-    if (!view_item.second) continue;
+    if (!view_item.second) {
+      continue;
+    }
 
     view_names.emplace_back(view_item.first);
   }
@@ -142,7 +148,9 @@ std::unordered_map<std::string, std::shared_ptr<LQPView>> StorageManager::views(
   std::unordered_map<std::string, std::shared_ptr<LQPView>> result;
 
   for (const auto& [view_name, view] : _views) {
-    if (!view) continue;
+    if (!view) {
+      continue;
+    }
 
     result[view_name] = view;
   }
@@ -186,7 +194,9 @@ std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> StorageManager::p
   std::unordered_map<std::string, std::shared_ptr<PreparedPlan>> result;
 
   for (const auto& [prepared_plan_name, prepared_plan] : _prepared_plans) {
-    if (!prepared_plan) continue;
+    if (!prepared_plan) {
+      continue;
+    }
 
     result[prepared_plan_name] = prepared_plan;
   }
@@ -199,7 +209,9 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
   tasks.reserve(_tables.size());
 
   for (const auto& table_item : _tables) {
-    if (!table_item.second) continue;
+    if (!table_item.second) {
+      continue;
+    }
 
     auto job_task = std::make_shared<JobTask>([table_item, &path]() {
       const auto& name = table_item.first;
@@ -248,4 +260,4 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

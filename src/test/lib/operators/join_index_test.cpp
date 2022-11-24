@@ -16,7 +16,7 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsJoinIndexTest : public BaseTest {
  public:
@@ -77,7 +77,7 @@ class OperatorsJoinIndexTest : public BaseTest {
       const auto chunk = table->get_chunk(chunk_id);
 
       std::vector<ColumnID> columns{1};
-      for (ColumnID column_id{0}; column_id < chunk->column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
         columns[0] = column_id;
         chunk->create_index<GroupKeyIndex>(columns);
       }
@@ -274,4 +274,4 @@ TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSide
                    1, true);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

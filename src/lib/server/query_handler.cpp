@@ -5,14 +5,16 @@
 #include "sql/sql_pipeline_builder.hpp"
 #include "sql/sql_translator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandler::execute_pipeline(
     const std::string& query, const SendExecutionInfo send_execution_info,
     const std::shared_ptr<TransactionContext>& transaction_context) {
   // A simple query command invalidates unnamed statements
   // See: https://postgresql.org/docs/12/protocol-flow.html#PROTOCOL-FLOW-EXT-QUERY
-  if (Hyrise::get().storage_manager.has_prepared_plan("")) Hyrise::get().storage_manager.drop_prepared_plan("");
+  if (Hyrise::get().storage_manager.has_prepared_plan("")) {
+    Hyrise::get().storage_manager.drop_prepared_plan("");
+  }
 
   DebugAssert(!transaction_context || !transaction_context->is_auto_commit(),
               "Auto-commit transaction contexts should not be passed around this far");
@@ -35,11 +37,11 @@ std::pair<ExecutionInformation, std::shared_ptr<TransactionContext>> QueryHandle
     }
   } else if (pipeline_status == SQLPipelineStatus::Failure) {
     const std::string failed_statement = sql_pipeline.failed_pipeline_statement()->get_sql_string();
-    execution_info.error_message = {{PostgresMessageType::HumanReadableError,
-                                     "Transaction conflict, transaction was rolled back. Following statements might "
-                                     "have still been sent and executed. Failed statement: " +
-                                         failed_statement},
-                                    {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
+    execution_info.error_messages = {{PostgresMessageType::HumanReadableError,
+                                      "Transaction conflict, transaction was rolled back. Following statements might "
+                                      "have still been sent and executed. Failed statement: " +
+                                          failed_statement},
+                                     {PostgresMessageType::SqlstateCodeError, TRANSACTION_CONFLICT}};
   }
   return {execution_info, sql_pipeline.transaction_context()};
 }
@@ -79,8 +81,9 @@ std::shared_ptr<AbstractOperator> QueryHandler::bind_prepared_plan(const Prepare
 
   const auto prepared_plan = Hyrise::get().storage_manager.get_prepared_plan(statement_details.statement_name);
 
-  auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{statement_details.parameters.size()};
-  for (auto parameter_idx = size_t{0}; parameter_idx < statement_details.parameters.size(); ++parameter_idx) {
+  const auto parameter_count = statement_details.parameters.size();
+  auto parameter_expressions = std::vector<std::shared_ptr<AbstractExpression>>{parameter_count};
+  for (auto parameter_idx = size_t{0}; parameter_idx < parameter_count; ++parameter_idx) {
     parameter_expressions[parameter_idx] =
         std::make_shared<ValueExpression>(statement_details.parameters[parameter_idx]);
   }
@@ -130,4 +133,4 @@ void QueryHandler::_handle_transaction_statement_message(ExecutionInformation& e
     }
   }
 }
-}  // namespace opossum
+}  // namespace hyrise

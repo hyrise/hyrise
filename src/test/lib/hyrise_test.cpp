@@ -11,11 +11,13 @@
 #include "utils/plugin_manager.hpp"
 #include "utils/plugin_test_utils.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class HyriseTest : public BaseTest {
  protected:
-  void SetUp() override { Hyrise::reset(); }
+  void SetUp() override {
+    Hyrise::reset();
+  }
 
   // This wrapper method is needed to access the plugins vector since it is a private member of PluginManager
   std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() {
@@ -61,4 +63,4 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

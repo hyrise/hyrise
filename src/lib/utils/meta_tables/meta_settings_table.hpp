@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This meta table controls settings, such as, the available memory budget for an index plugin.
@@ -23,4 +23,4 @@ class MetaSettingsTable : public AbstractMetaTable {
                   const std::vector<AllTypeVariant>& update_values) final;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

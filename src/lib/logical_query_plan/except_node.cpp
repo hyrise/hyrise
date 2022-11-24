@@ -9,7 +9,7 @@
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 ExceptNode::ExceptNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Except), set_operation_mode(init_operation_mode) {}
@@ -39,7 +39,9 @@ std::vector<FunctionalDependency> ExceptNode::non_trivial_functional_dependencie
   return left_input()->non_trivial_functional_dependencies();
 }
 
-size_t ExceptNode::_on_shallow_hash() const { return boost::hash_value(set_operation_mode); }
+size_t ExceptNode::_on_shallow_hash() const {
+  return boost::hash_value(set_operation_mode);
+}
 
 std::shared_ptr<AbstractLQPNode> ExceptNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return ExceptNode::make(set_operation_mode);
@@ -50,4 +52,4 @@ bool ExceptNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
   return set_operation_mode == except_node.set_operation_mode;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

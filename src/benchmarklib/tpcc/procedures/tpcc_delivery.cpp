@@ -3,17 +3,15 @@
 
 #include "tpcc_delivery.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TPCCDelivery::TPCCDelivery(const int num_warehouses, BenchmarkSQLExecutor& sql_executor)
-    : AbstractTPCCProcedure(sql_executor) {
+    : AbstractTPCCProcedure(sql_executor), ol_delivery_d{static_cast<int32_t>(std::time(nullptr))} {
   std::uniform_int_distribution<> warehouse_dist{1, num_warehouses};
   w_id = warehouse_dist(_random_engine);
 
   std::uniform_int_distribution<> carrier_dist{1, 10};
   o_carrier_id = carrier_dist(_random_engine);
-
-  ol_delivery_d = static_cast<int32_t>(std::time(nullptr));
 }
 
 bool TPCCDelivery::_on_execute() {
@@ -26,7 +24,9 @@ bool TPCCDelivery::_on_execute() {
 
     // TODO(anyone): Selecting MIN(NO_O_ID) IS NULL and using it here would not be necessary if get_value returned
     // NULLs as nullopt
-    if (*new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) continue;
+    if (*new_order_table->get_value<int32_t>(ColumnID{0}, 0) == 1) {
+      continue;
+    }
 
     // The oldest undelivered order in that district
     const auto no_o_id = *new_order_table->get_value<int32_t>(ColumnID{1}, 0);
@@ -87,4 +87,4 @@ bool TPCCDelivery::_on_execute() {
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

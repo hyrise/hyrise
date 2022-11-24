@@ -6,7 +6,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Data structure that ensures transaction are committed in an orderly manner.
@@ -54,4 +54,4 @@ class CommitContext : private Noncopyable {
   std::shared_ptr<CommitContext> _next;
   std::function<void()> _callback;
 };
-}  // namespace opossum
+}  // namespace hyrise

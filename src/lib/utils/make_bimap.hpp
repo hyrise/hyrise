@@ -4,7 +4,7 @@
 
 #include <boost/bimap.hpp>
 
-namespace opossum {
+namespace hyrise {
 
 /*
  * boost::bimap does not support initializer_lists.
@@ -15,4 +15,4 @@ boost::bimap<L, R> make_bimap(std::initializer_list<typename boost::bimap<L, R>:
   return boost::bimap<L, R>(list.begin(), list.end());
 }
 
-}  // namespace opossum
+}  // namespace hyrise

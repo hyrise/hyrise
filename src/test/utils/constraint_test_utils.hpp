@@ -4,7 +4,7 @@
 #include "gtest/gtest.h"
 #include "storage/table_key_constraint.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * Verifies whether a given table key constraint is represented in a given set of unique constraints.
@@ -15,10 +15,12 @@ static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& t
 
   for (const auto& unique_constraint : *unique_constraints) {
     // Basic comparison: Column count
-    if (column_ids.size() != unique_constraint.expressions.size()) continue;
+    if (column_ids.size() != unique_constraint.expressions.size()) {
+      continue;
+    }
 
     // In-depth comparison: Column IDs
-    auto unique_constraint_column_ids = std::unordered_set<ColumnID>();
+    auto unique_constraint_column_ids = std::set<ColumnID>();
     for (const auto& expression : unique_constraint.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       if (column_expression) {
@@ -35,4 +37,4 @@ static bool find_unique_constraint_by_key_constraint(const TableKeyConstraint& t
   return false;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

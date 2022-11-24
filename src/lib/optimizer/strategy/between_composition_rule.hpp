@@ -9,7 +9,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 class PredicateNode;
@@ -67,4 +67,4 @@ class BetweenCompositionRule : public AbstractRule {
   static ColumnBoundary _get_boundary(const std::shared_ptr<BinaryPredicateExpression>& expression, const size_t id);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

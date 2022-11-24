@@ -23,7 +23,7 @@
 #include "utils/timer.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // `get_or_add_result` is called once per row when iterating over a column that is to be aggregated. The row's `key` has
 // been calculated as part of `_partition_by_groupby_keys`. We also pass in the `row_id` of that row. This row id is
@@ -139,13 +139,14 @@ AggregateKey& get_aggregate_key([[maybe_unused]] KeysPerChunk<AggregateKey>& key
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& in,
+AggregateHash::AggregateHash(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids,
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids,
                                 std::make_unique<OperatorPerformanceData<OperatorSteps>>()) {
+  // NOLINTNEXTLINE - clang-tidy wants _has_aggregate_functions in the member initializer list
   _has_aggregate_functions =
       !_aggregates.empty() && !std::all_of(_aggregates.begin(), _aggregates.end(), [](const auto aggregate_expression) {
         return aggregate_expression->aggregate_function == AggregateFunction::Any;
@@ -166,7 +167,9 @@ std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
 
 void AggregateHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-void AggregateHash::_on_cleanup() { _contexts_per_column.clear(); }
+void AggregateHash::_on_cleanup() {
+  _contexts_per_column.clear();
+}
 
 /*
 Visitor context for the AggregateVisitor. The AggregateResultContext can be used without knowing the
@@ -268,7 +271,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
     keys_per_chunk.reserve(chunk_count);
     for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
 
       if constexpr (std::is_same_v<AggregateKey, AggregateKeySmallVector>) {
         keys_per_chunk.emplace_back(chunk->size(), AggregateKey(_groupby_column_ids.size()));
@@ -422,7 +427,9 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
 
             for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
               const auto chunk_in = input_table->get_chunk(chunk_id);
-              if (!chunk_in) continue;
+              if (!chunk_in) {
+                continue;
+              }
 
               auto& keys = keys_per_chunk[chunk_id];
 
@@ -438,19 +445,19 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                 } else {
                   // We need to generate an ID that is unique for the value. In some cases, we can use an optimization,
                   // in others, we can't. We need to somehow track whether we have found an ID or not. For this, we
-                  // first set `id` to its maximum value. If after all branches it is still that max value, no optimized
-                  // ID generation was applied and we need to generate the ID using the value->ID map.
-                  auto id = std::numeric_limits<AggregateKeyEntry>::max();
+                  // first set `value_id` to its maximum value. If after all branches it is still that max value, no
+                  // optimized  ID generation was applied and we need to generate the ID using the value->ID map.
+                  auto value_id = std::numeric_limits<AggregateKeyEntry>::max();
 
                   if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
                     const auto& string = position.value();
                     if (string.size() < 5) {
                       static_assert(std::is_same_v<AggregateKeyEntry, uint64_t>, "Calculation only valid for uint64_t");
 
-                      const auto char_to_uint = [](const char in, const uint bits) {
+                      const auto char_to_uint = [](const char char_in, const uint32_t bits) {
                         // chars may be signed or unsigned. For the calculation as described below, we need signed
                         // chars.
-                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&in)) << bits;
+                        return static_cast<uint64_t>(*reinterpret_cast<const uint8_t*>(&char_in)) << bits;
                       };
 
                       switch (string.size()) {
@@ -469,45 +476,47 @@ KeysPerChunk<AggregateKey> AggregateHash::_partition_by_groupby_keys() {
                           // more complicated.
 
                         case 0: {
-                          id = uint64_t{1};
+                          value_id = uint64_t{1};
                         } break;
 
                         case 1: {
-                          id = uint64_t{2} + char_to_uint(string[0], 0);
+                          value_id = uint64_t{2} + char_to_uint(string[0], 0);
                         } break;
 
                         case 2: {
-                          id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                          value_id = uint64_t{258} + char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
 
                         case 3: {
-                          id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
-                               char_to_uint(string[0], 0);
+                          value_id = uint64_t{65'794} + char_to_uint(string[2], 16) + char_to_uint(string[1], 8) +
+                                     char_to_uint(string[0], 0);
                         } break;
 
                         case 4: {
-                          id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
-                               char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
+                          value_id = uint64_t{16'843'010} + char_to_uint(string[3], 24) + char_to_uint(string[2], 16) +
+                                     char_to_uint(string[1], 8) + char_to_uint(string[0], 0);
                         } break;
                       }
                     }
                   }
 
-                  if (id == std::numeric_limits<AggregateKeyEntry>::max()) {
+                  if (value_id == std::numeric_limits<AggregateKeyEntry>::max()) {
                     // Could not take the shortcut above, either because we don't have a string or because it is too
                     // long
                     auto inserted = id_map.try_emplace(position.value(), id_counter);
 
-                    id = inserted.first->second;
+                    value_id = inserted.first->second;
 
                     // if the id_map didn't have the value as a key and a new element was inserted
-                    if (inserted.second) ++id_counter;
+                    if (inserted.second) {
+                      ++id_counter;
+                    }
                   }
 
                   if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
-                    keys[chunk_offset] = id;
+                    keys[chunk_offset] = value_id;
                   } else {
-                    keys[chunk_offset][group_column_index] = id;
+                    keys[chunk_offset][group_column_index] = value_id;
                   }
                 }
 
@@ -583,7 +592,8 @@ void AggregateHash::_aggregate() {
    * created on. We do this here, and not in the per-chunk-loop below, because there might be no Chunks in the input
    * and _write_aggregate_output() needs these contexts anyway.
    */
-  for (ColumnID aggregate_idx{0}; aggregate_idx < _aggregates.size(); ++aggregate_idx) {
+  const auto aggregate_count = _aggregates.size();
+  for (auto aggregate_idx = ColumnID{0}; aggregate_idx < aggregate_count; ++aggregate_idx) {
     const auto& aggregate = _aggregates[aggregate_idx];
 
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
@@ -607,7 +617,9 @@ void AggregateHash::_aggregate() {
   const auto chunk_count = input_table->chunk_count();
   for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk_in = input_table->get_chunk(chunk_id);
-    if (!chunk_in) continue;
+    if (!chunk_in) {
+      continue;
+    }
 
     // Sometimes, gcc is really bad at accessing loop conditions only once, so we cache that here.
     const auto input_chunk_size = chunk_in->size();
@@ -616,7 +628,7 @@ void AggregateHash::_aggregate() {
       /**
        * DISTINCT implementation
        *
-       * In Opossum we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
+       * In Hyrise we handle the SQL keyword DISTINCT by using an aggregate operator with grouping but without 
        * aggregate functions. All input columns (either explicitly specified as `SELECT DISTINCT a, b, c` OR implicitly
        * as `SELECT DISTINCT *` are passed as `groupby_column_ids`).
        *
@@ -801,7 +813,9 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     for (const auto& result : context->results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
       // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-      if (result.row_id.is_null()) continue;
+      if (result.row_id.is_null()) {
+        continue;
+      }
       pos_list.emplace_back(result.row_id);
     }
     _write_groupby_output(pos_list);
@@ -862,7 +876,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator);
@@ -884,7 +900,9 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     values.emplace_back(result.aggregate_count);
   }
@@ -900,7 +918,9 @@ std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     values.emplace_back(result.accumulator.size());
   }
@@ -917,7 +937,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 0) {
       values.emplace_back(result.accumulator / static_cast<AggregateType>(result.aggregate_count));
@@ -949,7 +971,9 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
   for (const auto& result : results) {
     // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
     // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-    if (result.row_id.is_null()) continue;
+    if (result.row_id.is_null()) {
+      continue;
+    }
 
     if (result.aggregate_count > 1) {
       values.emplace_back(result.accumulator[3]);
@@ -1116,7 +1140,9 @@ void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
     for (const auto& result : results) {
       // NULL_ROW_ID (just a marker, not literally NULL) means that this result is either a gap (in the case of an
       // unused immediate key) or the result of overallocating the result vector. As such, it must be skipped.
-      if (result.row_id.is_null()) continue;
+      if (result.row_id.is_null()) {
+        continue;
+      }
       pos_list.emplace_back(result.row_id);
     }
     Timer write_groupby_output_timer;
@@ -1200,4 +1226,4 @@ std::shared_ptr<SegmentVisitorContext> AggregateHash::_create_aggregate_context(
   return context;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

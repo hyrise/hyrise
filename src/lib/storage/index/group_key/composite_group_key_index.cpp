@@ -17,11 +17,12 @@
 #include "utils/assert.hpp"
 #include "variable_length_key_proxy.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t CompositeGroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
-  return ((row_count + distinct_count) * sizeof(ChunkOffset) + distinct_count * value_bytes);
+  return (static_cast<size_t>(row_count) + distinct_count) * sizeof(ChunkOffset) +
+         static_cast<size_t>(distinct_count * value_bytes);
 }
 
 CompositeGroupKeyIndex::CompositeGroupKeyIndex(
@@ -100,7 +101,9 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _key_offsets.reserve(segment_size);
   _key_offsets.emplace_back(0);
   for (auto chunk_offset = ChunkOffset{1}; chunk_offset < static_cast<ChunkOffset>(segment_size); ++chunk_offset) {
-    if (_keys[chunk_offset] != _keys[ChunkOffset{chunk_offset - 1}]) _key_offsets.emplace_back(chunk_offset);
+    if (_keys[chunk_offset] != _keys[ChunkOffset{chunk_offset - 1}]) {
+      _key_offsets.emplace_back(chunk_offset);
+    }
   }
   _key_offsets.shrink_to_fit();
 
@@ -110,9 +113,13 @@ CompositeGroupKeyIndex::CompositeGroupKeyIndex(
   _keys.shrink_to_fit();
 }
 
-AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const { return _position_list.cbegin(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cbegin() const {
+  return _position_list.cbegin();
+}
 
-AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const { return _position_list.cend(); }
+AbstractIndex::Iterator CompositeGroupKeyIndex::_cend() const {
+  return _position_list.cend();
+}
 
 AbstractIndex::Iterator CompositeGroupKeyIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   auto composite_key = _create_composite_key(values, false);
@@ -148,8 +155,8 @@ VariableLengthKey CompositeGroupKeyIndex::_create_composite_key(const std::vecto
 
   // fill empty space of key with zeros if less values than segments were provided
   auto empty_bits = std::accumulate(
-      _indexed_segments.cbegin() + values.size(), _indexed_segments.cend(), static_cast<uint8_t>(0u),
-      [](auto value, auto segment) {
+      _indexed_segments.cbegin() + static_cast<int64_t>(values.size()), _indexed_segments.cend(), uint8_t{0},
+      [](const auto& value, const auto& segment) {
         return value + byte_width_for_fixed_width_integer_type(*segment->compressed_vector_type()) * CHAR_BIT;
       });
   result <<= empty_bits;
@@ -161,7 +168,9 @@ AbstractIndex::Iterator CompositeGroupKeyIndex::_get_position_iterator_for_key(c
   // get an iterator pointing to the search-key in the keystore
   // (use always lower_bound() since the search method is already handled within creation of composite key)
   auto key_it = std::lower_bound(_keys.cbegin(), _keys.cend(), key);
-  if (key_it == _keys.cend()) return _position_list.cend();
+  if (key_it == _keys.cend()) {
+    return _position_list.cend();
+  }
 
   // get the start position in the position-vector, ie the offset, by getting the offset_iterator for the key
   // (which is at the same position as the iterator for the key in the keystore)
@@ -185,10 +194,10 @@ std::vector<std::shared_ptr<const AbstractSegment>> CompositeGroupKeyIndex::_get
 }
 
 size_t CompositeGroupKeyIndex::_memory_consumption() const {
-  size_t byte_count = _keys.size() * _keys.key_size();
+  auto byte_count = static_cast<size_t>(_keys.size() * _keys.key_size());
   byte_count += _key_offsets.size() * sizeof(ChunkOffset);
   byte_count += _position_list.size() * sizeof(ChunkOffset);
   return byte_count;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

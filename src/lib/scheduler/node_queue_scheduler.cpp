@@ -13,15 +13,17 @@
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-NodeQueueScheduler::NodeQueueScheduler() { _worker_id_allocator = std::make_shared<UidAllocator>(); }
+NodeQueueScheduler::NodeQueueScheduler() {
+  _worker_id_allocator = std::make_shared<UidAllocator>();
+}
 
 NodeQueueScheduler::~NodeQueueScheduler() {
   if (HYRISE_DEBUG && _active) {
     // We cannot throw an exception because destructors are noexcept by default.
     std::cerr << "NodeQueueScheduler::finish() wasn't called prior to destroying it" << std::endl;
-    std::exit(EXIT_FAILURE);
+    std::exit(EXIT_FAILURE);  // NOLINT(concurrency-mt-unsafe)
   }
 }
 
@@ -58,7 +60,9 @@ void NodeQueueScheduler::wait_for_all_tasks() {
       num_finished_tasks += worker->num_finished_tasks();
     }
 
-    if (num_finished_tasks == _task_counter) break;
+    if (num_finished_tasks == _task_counter) {
+      break;
+    }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
   }
@@ -85,9 +89,13 @@ void NodeQueueScheduler::finish() {
   _task_counter = 0;
 }
 
-bool NodeQueueScheduler::active() const { return _active; }
+bool NodeQueueScheduler::active() const {
+  return _active;
+}
 
-const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const { return _queues; }
+const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() const {
+  return _queues;
+}
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
@@ -100,7 +108,9 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(TaskID{task_counter});
 
-  if (!task->is_ready()) return;
+  if (!task->is_ready()) {
+    return;
+  }
 
   // Lookup node id for current worker.
   if (preferred_node_id == CURRENT_NODE_ID) {
@@ -133,7 +143,9 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty()) return;
+    if (!task->predecessors().empty() || !task->successors().empty()) {
+      return;
+    }
 
     if (common_node_id) {
       // This is not really a hard assertion. As the chain will likely be executed on the same Worker (see
@@ -155,4 +167,4 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

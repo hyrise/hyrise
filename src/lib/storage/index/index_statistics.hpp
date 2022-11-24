@@ -5,7 +5,7 @@
 #include "segment_index_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 struct IndexStatistics {
   std::vector<ColumnID> column_ids;
@@ -16,4 +16,4 @@ struct IndexStatistics {
 // For googletest
 bool operator==(const IndexStatistics& left, const IndexStatistics& right);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -5,7 +5,7 @@
 #include "encoding_config.hpp"
 #include "storage/chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * "Ordered" runs each item a number of times and then the next one
@@ -50,4 +50,4 @@ class BenchmarkConfig {
   BenchmarkConfig() = default;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

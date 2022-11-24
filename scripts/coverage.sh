@@ -3,7 +3,7 @@
 set -e
 
 verlte() {
-    [  "$1" = "`echo -e "$1\n$2" | sort -V | head -n1`" ]
+    [  "$1" = "$(echo -e "$1\n$2" | sort -V | head -n1)" ]
 }
 
 verlt() {
@@ -33,18 +33,24 @@ fi
 mkdir -p build-coverage
 cd build-coverage
 
+# We use clang 11 for the coverage check as clang 14 (the default clang version for Ubuntu 22.04) has an unresolved
+# issue (see https://github.com/llvm/llvm-project/issues/54907).
 path_to_compiler=''
+c_compiler='clang-11'
+cxx_compiler='clang++-11'
 
-unamestr=`uname`
+unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
    # Use homebrew clang for OS X
-   path_to_compiler='/usr/local/opt/llvm/bin/'
+   path_to_compiler="$(brew --prefix llvm@11)/bin/"
+   c_compiler='clang'
+   cxx_compiler='clang++'
 fi
 
-cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}clang -DCMAKE_CXX_COMPILER=${path_to_compiler}clang++ -DENABLE_COVERAGE=ON ..
+cmake -DCMAKE_CXX_COMPILER_LAUNCHER=$launcher -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER=${path_to_compiler}${c_compiler} -DCMAKE_CXX_COMPILER=${path_to_compiler}${cxx_compiler} -DENABLE_COVERAGE=ON ..
 
 cores=$(grep -c ^processor /proc/cpuinfo 2>/dev/null || sysctl -n hw.ncpu)
-make hyriseTest -j $((cores / 2))
+make hyriseTest -j $((cores / 10))
 cd -
 
 rm -fr coverage; mkdir coverage

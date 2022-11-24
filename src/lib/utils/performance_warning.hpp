@@ -24,14 +24,16 @@
  * Warnings do not print in tests.
  */
 
-namespace opossum {
+namespace hyrise {
 
 class PerformanceWarningDisabler;
 
 class PerformanceWarningClass {
  public:
   explicit PerformanceWarningClass(const std::string& text) {
-    if (_disabled) return;
+    if (_disabled) {
+      return;
+    }
     std::cerr << "[PERF] " << text << "\n\tPerformance can be affected. This warning is only shown once.\n"
               << std::endl;
   }
@@ -45,7 +47,9 @@ class PerformanceWarningClass {
     return previous;
   }
 
-  static void enable() { _disabled = false; }
+  static void enable() {
+    _disabled = false;
+  }
 
   friend class PerformanceWarningDisabler;
 };
@@ -55,8 +59,11 @@ class PerformanceWarningDisabler {
 
  public:
   PerformanceWarningDisabler() : _previously_disabled(PerformanceWarningClass::disable()) {}
+
   ~PerformanceWarningDisabler() {
-    if (!_previously_disabled) PerformanceWarningClass::enable();
+    if (!_previously_disabled) {
+      PerformanceWarningClass::enable();
+    }
   }
 };
 
@@ -67,4 +74,4 @@ class PerformanceWarningDisabler {
   }                                                                                                    \
   static_assert(true, "End call of macro with a semicolon")
 
-}  // namespace opossum
+}  // namespace hyrise

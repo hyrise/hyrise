@@ -7,17 +7,20 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 DeleteNode::DeleteNode() : AbstractNonQueryNode(LQPNodeType::Delete) {}
 
-std::string DeleteNode::description(const DescriptionMode mode) const { return "[Delete]"; }
+std::string DeleteNode::description(const DescriptionMode mode) const {
+  return "[Delete]";
+}
 
-bool DeleteNode::is_column_nullable(const ColumnID column_id) const { Fail("Delete does not output any columns"); }
+bool DeleteNode::is_column_nullable(const ColumnID column_id) const {
+  Fail("Delete does not output any columns");
+}
 
 std::vector<std::shared_ptr<AbstractExpression>> DeleteNode::output_expressions() const {
-  static std::vector<std::shared_ptr<AbstractExpression>> empty_vector;
-  return empty_vector;
+  return {};
 }
 
 std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
@@ -28,4 +31,4 @@ bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMap
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

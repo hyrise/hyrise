@@ -15,9 +15,9 @@
  * which are separately tested.
  */
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class JoinOrderingRuleTest : public StrategyBaseTest {
  public:
@@ -78,4 +78,4 @@ TEST_F(JoinOrderingRuleTest, MultipleJoinGraphs) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

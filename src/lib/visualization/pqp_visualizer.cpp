@@ -13,7 +13,7 @@
 #include "visualization/abstract_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 PQPVisualizer::PQPVisualizer() = default;
 
@@ -77,7 +77,9 @@ void PQPVisualizer::_build_graph(const std::vector<std::shared_ptr<AbstractOpera
 void PQPVisualizer::_build_subtree(const std::shared_ptr<const AbstractOperator>& op,
                                    std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   // Avoid drawing dataflows/ops redundantly in diamond shaped PQPs
-  if (visualized_ops.find(op) != visualized_ops.end()) return;
+  if (visualized_ops.find(op) != visualized_ops.end()) {
+    return;
+  }
   visualized_ops.insert(op);
 
   _add_operator(op);
@@ -122,7 +124,9 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
                                           std::unordered_set<std::shared_ptr<const AbstractOperator>>& visualized_ops) {
   visit_expression(expression, [&](const auto& sub_expression) {
     const auto pqp_subquery_expression = std::dynamic_pointer_cast<PQPSubqueryExpression>(sub_expression);
-    if (!pqp_subquery_expression) return ExpressionVisitation::VisitArguments;
+    if (!pqp_subquery_expression) {
+      return ExpressionVisitation::VisitArguments;
+    }
 
     _build_subtree(pqp_subquery_expression->pqp, visualized_ops);
 
@@ -136,12 +140,12 @@ void PQPVisualizer::_visualize_subqueries(const std::shared_ptr<const AbstractOp
   });
 }
 
-void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& from,
-                                    const std::shared_ptr<const AbstractOperator>& to, const InputSide side) {
+void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator>& source_node,
+                                    const std::shared_ptr<const AbstractOperator>& target_node, const InputSide side) {
   VizEdgeInfo info = _default_edge;
 
-  const auto& performance_data = *from->performance_data;
-  if (from->executed() && performance_data.has_output) {
+  const auto& performance_data = *source_node->performance_data;
+  if (source_node->executed() && performance_data.has_output) {
     std::stringstream stream;
 
     // Use a copy of the stream's default locale with thousands separators: Dynamically allocated raw pointers should
@@ -157,11 +161,11 @@ void PQPVisualizer::_build_dataflow(const std::shared_ptr<const AbstractOperator
   }
 
   info.pen_width = static_cast<double>(performance_data.output_row_count);
-  if (to->right_input() != nullptr) {
+  if (target_node->right_input() != nullptr) {
     info.arrowhead = side == InputSide::Left ? "lnormal" : "rnormal";
   }
 
-  _add_edge(from, to, info);
+  _add_edge(source_node, target_node, info);
 }
 
 void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>& op) {
@@ -187,4 +191,4 @@ void PQPVisualizer::_add_operator(const std::shared_ptr<const AbstractOperator>&
   _add_vertex(op, info);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

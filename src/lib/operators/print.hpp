@@ -7,7 +7,7 @@
 
 #include "abstract_read_only_operator.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * PrintFlags::Mvcc:                   If set, print begin commit id and end commit id and transaction id for each tuple
@@ -21,14 +21,14 @@ enum class PrintFlags : uint32_t { None = 0u, Mvcc = 1u << 0u, IgnoreChunkBounda
  */
 class Print : public AbstractReadOnlyOperator {
  public:
-  explicit Print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags = PrintFlags::None,
-                 std::ostream& out = std::cout);
+  explicit Print(const std::shared_ptr<const AbstractOperator>& input_operator,
+                 const PrintFlags flags = PrintFlags::None, std::ostream& out = std::cout);
 
   const std::string& name() const override;
 
   static void print(const std::shared_ptr<const Table>& table, const PrintFlags flags = PrintFlags::None,
                     std::ostream& out = std::cout);
-  static void print(const std::shared_ptr<const AbstractOperator>& in, const PrintFlags flags = PrintFlags::None,
+  static void print(const std::shared_ptr<const AbstractOperator>& op, const PrintFlags flags = PrintFlags::None,
                     std::ostream& out = std::cout);
 
   // Convenience method to print the result of an SQL query
@@ -52,4 +52,4 @@ class Print : public AbstractReadOnlyOperator {
   static constexpr uint16_t _min_cell_width = 8;
   static constexpr uint16_t _max_cell_width = 20;
 };
-}  // namespace opossum
+}  // namespace hyrise

@@ -4,7 +4,7 @@
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 AbstractMetaTable::AbstractMetaTable(const TableColumnDefinitions& column_definitions)
     : _column_definitions(column_definitions) {}
@@ -21,11 +21,17 @@ std::shared_ptr<Table> AbstractMetaTable::_generate() const {
   return table;
 }
 
-bool AbstractMetaTable::can_insert() const { return false; }
+bool AbstractMetaTable::can_insert() const {
+  return false;
+}
 
-bool AbstractMetaTable::can_update() const { return false; }
+bool AbstractMetaTable::can_update() const {
+  return false;
+}
 
-bool AbstractMetaTable::can_delete() const { return false; }
+bool AbstractMetaTable::can_delete() const {
+  return false;
+}
 
 void AbstractMetaTable::_insert(const std::vector<AllTypeVariant>& values) {
   Assert(can_insert(), "Cannot insert into " + name() + ".");
@@ -70,6 +76,8 @@ void AbstractMetaTable::_validate_data_types(const std::vector<AllTypeVariant>& 
   }
 }
 
-const TableColumnDefinitions& AbstractMetaTable::column_definitions() const { return _column_definitions; }
+const TableColumnDefinitions& AbstractMetaTable::column_definitions() const {
+  return _column_definitions;
+}
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 #include "statistics/statistics_objects/min_max_filter.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 template <typename T>
 class MinMaxFilterTest : public BaseTest {
@@ -239,4 +239,4 @@ TYPED_TEST(MinMaxFilterTest, SliceWithPredicateReturnsNullptr) {
   EXPECT_EQ(filter->sliced(PredicateCondition::GreaterThan, this->_values.back()), nullptr);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

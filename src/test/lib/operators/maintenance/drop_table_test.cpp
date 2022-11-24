@@ -8,7 +8,7 @@
 
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class DropTableTest : public BaseTest {
  public:
@@ -37,7 +37,9 @@ TEST_F(DropTableTest, Execute) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 }
 
-TEST_F(DropTableTest, NoSuchTable) { EXPECT_THROW(drop_table->execute(), std::logic_error); }
+TEST_F(DropTableTest, NoSuchTable) {
+  EXPECT_THROW(drop_table->execute(), std::logic_error);
+}
 
 TEST_F(DropTableTest, ExecuteWithIfExists) {
   Hyrise::get().storage_manager.add_table("t", table);
@@ -50,4 +52,4 @@ TEST_F(DropTableTest, ExecuteWithIfExists) {
   EXPECT_FALSE(Hyrise::get().storage_manager.has_table("t"));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

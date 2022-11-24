@@ -12,7 +12,7 @@
 #include "storage/value_segment/value_segment_iterable.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SegmentAccessCounterTest : public BaseTest {
  protected:
@@ -196,4 +196,4 @@ TEST_F(SegmentAccessCounterTest, AccessPattern8) {
   EXPECT_EQ(_access_pattern(positions), AccessPattern::Random);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

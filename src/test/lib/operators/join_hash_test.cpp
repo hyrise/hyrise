@@ -4,7 +4,7 @@
 #include "operators/table_wrapper.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsJoinHashTest : public BaseTest {
  protected:
@@ -117,4 +117,4 @@ TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
             0ul);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

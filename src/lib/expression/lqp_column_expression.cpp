@@ -9,7 +9,7 @@
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 LQPColumnExpression::LQPColumnExpression(const std::shared_ptr<const AbstractLQPNode>& init_original_node,
                                          const ColumnID init_original_column_id)
@@ -25,7 +25,9 @@ std::shared_ptr<AbstractExpression> LQPColumnExpression::_on_deep_copy(
 std::string LQPColumnExpression::description(const DescriptionMode mode) const {
   // Even if the LQP is invalid, we still want to be able to print it as good as possible
   const auto original_node_locked = original_node.lock();
-  if (!original_node_locked) return "<Expired Column>";
+  if (!original_node_locked) {
+    return "<Expired Column>";
+  }
 
   std::stringstream output;
   if (mode == AbstractExpression::DescriptionMode::Detailed) {
@@ -97,7 +99,9 @@ DataType LQPColumnExpression::data_type() const {
   }
 }
 
-bool LQPColumnExpression::requires_computation() const { return false; }
+bool LQPColumnExpression::requires_computation() const {
+  return false;
+}
 
 bool LQPColumnExpression::_shallow_equals(const AbstractExpression& expression) const {
   DebugAssert(dynamic_cast<const LQPColumnExpression*>(&expression),
@@ -122,4 +126,4 @@ bool LQPColumnExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) con
       "AbstractExpression::is_nullable_on_lqp()");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

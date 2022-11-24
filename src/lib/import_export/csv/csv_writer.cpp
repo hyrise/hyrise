@@ -5,7 +5,7 @@
 #include <vector>
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 void CsvWriter::write(const Table& table, const std::string& filename, const ParseConfig& config) {
   _generate_meta_info_file(table, filename + CsvMeta::META_FILE_EXTENSION);
@@ -40,7 +40,7 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
    * as it does not care about representation of values. Also, probably, the main reason for this,
    * it makes is very easy to load this data into a different database.
    * The disadvantage is that it can be quite slow if the data has been compressed before.
-   * Also, it does not involve the column-oriented style used in OpossumDB.
+   * Also, it does not involve the column-oriented style used in Hyrise.
    */
 
   // Open file for writing
@@ -84,7 +84,9 @@ void CsvWriter::_generate_content_file(const Table& table, const std::string& fi
 }
 
 void CsvWriter::_write(const AllTypeVariant& value, std::ofstream& ofstream, const ParseConfig& config) {
-  if (variant_is_null(value)) return;
+  if (variant_is_null(value)) {
+    return;
+  }
 
   if (value.type() == typeid(pmr_string)) {
     _write_string_value(boost::get<pmr_string>(value), ofstream, config);
@@ -123,4 +125,4 @@ pmr_string CsvWriter::_escape(const pmr_string& string, const ParseConfig& confi
   return result;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

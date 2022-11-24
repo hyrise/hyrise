@@ -10,9 +10,9 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
                                const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
@@ -51,4 +51,4 @@ BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_ConstantTerm)(benchmark::S
   benchmark_projection_impl(state, _table_wrapper_a, {add_(a, 5)});
 }
 
-}  // namespace opossum
+}  // namespace hyrise

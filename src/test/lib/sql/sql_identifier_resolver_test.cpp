@@ -9,10 +9,10 @@
 #include "sql/sql_identifier_resolver.hpp"
 #include "sql/sql_identifier_resolver_proxy.hpp"
 
-using namespace std::string_literals;            // NOLINT
-using namespace opossum::expression_functional;  // NOLINT
+using namespace std::string_literals;           // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class SQLIdentifierResolverTest : public BaseTest {
  public:
@@ -201,4 +201,4 @@ TEST_F(SQLIdentifierResolverTest, ResolveTableName) {
   EXPECT_EQ(context.resolve_table_name("T2"), t2_expressions);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

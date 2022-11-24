@@ -12,7 +12,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * @brief Compares one column to a literal (i.e., an AllTypeVariant)
@@ -41,8 +41,7 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
                                 const std::shared_ptr<const AbstractPosList>& position_filter);
 
   void _scan_sorted_segment(const AbstractSegment& segment, const ChunkID chunk_id, RowIDPosList& matches,
-                            const std::shared_ptr<const AbstractPosList>& position_filter,
-                            const SortMode sort_mode) const;
+                            const std::shared_ptr<const AbstractPosList>& position_filter, const SortMode sort_mode);
 
   /**
    * @defgroup Methods used for handling dictionary segments
@@ -80,9 +79,10 @@ class ColumnVsValueTableScanImpl : public AbstractDereferencedColumnTableScanImp
         Fail("Unsupported comparison type encountered");
     }
   }
+
   /**@}*/
  private:
   const bool _column_is_nullable;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

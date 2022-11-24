@@ -9,7 +9,7 @@
 #include "join_graph.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class AbstractLQPNode;
 
@@ -46,6 +46,7 @@ class JoinGraphBuilder final {
    * Traverse the LQP recursively identifying predicates and vertices along the way
    */
   void _traverse(const std::shared_ptr<AbstractLQPNode>& node);
+
   /**
    * A subgraph in the LQP consisting of PredicateNodes can be translated into a single complex predicate
    *
@@ -88,4 +89,4 @@ class JoinGraphBuilder final {
   std::vector<std::shared_ptr<AbstractLQPNode>> _vertices;
   std::vector<std::shared_ptr<AbstractExpression>> _predicates;
 };
-}  // namespace opossum
+}  // namespace hyrise

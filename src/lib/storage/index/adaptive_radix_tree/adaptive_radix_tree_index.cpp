@@ -14,7 +14,7 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                            uint32_t value_bytes) {
@@ -62,11 +62,14 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vector<A
   ValueID value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else if (_root) {  // _root is nullptr if the index contains NULL positions only
-    return _root->lower_bound(BinaryComparable(value_id), 0);
-  } else {
-    return _cend();
   }
+
+  // _root is nullptr if the index contains NULL positions only
+  if (_root) {
+    return _root->lower_bound(BinaryComparable(value_id), 0);
+  }
+
+  return _cend();
 }
 
 AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<AllTypeVariant>& values) const {
@@ -77,26 +80,33 @@ AbstractIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vector<A
   ValueID value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
-  } else if (_root) {  // _root is nullptr if the index contains NULL positions only
-    return _root->lower_bound(BinaryComparable(value_id), 0);
-  } else {
-    return _cend();
   }
+
+  // _root is nullptr if the index contains NULL positions only
+  if (_root) {
+    return _root->lower_bound(BinaryComparable(value_id), 0);
+  }
+
+  return _cend();
 }
 
-AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const { return _chunk_offsets.cbegin(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cbegin() const {
+  return _chunk_offsets.cbegin();
+}
 
-AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const { return _chunk_offsets.cend(); }
+AbstractIndex::Iterator AdaptiveRadixTreeIndex::_cend() const {
+  return _chunk_offsets.cend();
+}
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
     const std::vector<std::pair<BinaryComparable, ChunkOffset>>& values) {
   if (values.empty()) {
     return nullptr;
-  } else {
-    _chunk_offsets.reserve(values.size());
-    auto begin = _chunk_offsets.cbegin();
-    return _bulk_insert(values, static_cast<size_t>(0u), begin);
   }
+
+  _chunk_offsets.reserve(values.size());
+  auto begin = _chunk_offsets.cbegin();
+  return _bulk_insert(values, static_cast<size_t>(0u), begin);
 }
 
 std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
@@ -141,13 +151,17 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   // finally create the appropriate ARTNode according to the size of the children
   if (children.size() <= 4) {
     return std::make_shared<ARTNode4>(children);
-  } else if (children.size() <= 16) {
-    return std::make_shared<ARTNode16>(children);
-  } else if (children.size() <= 48) {
-    return std::make_shared<ARTNode48>(children);
-  } else {
-    return std::make_shared<ARTNode256>(children);
   }
+
+  if (children.size() <= 16) {
+    return std::make_shared<ARTNode16>(children);
+  }
+
+  if (children.size() <= 48) {
+    return std::make_shared<ARTNode48>(children);
+  }
+
+  return std::make_shared<ARTNode256>(children);
 }
 
 std::vector<std::shared_ptr<const AbstractSegment>> AdaptiveRadixTreeIndex::_get_indexed_segments() const {
@@ -160,7 +174,7 @@ size_t AdaptiveRadixTreeIndex::_memory_consumption() const {
 }
 
 AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _parts(sizeof(value)) {
-  for (size_t byte_id = 1; byte_id <= _parts.size(); ++byte_id) {
+  for (auto byte_id = size_t{1}; byte_id <= _parts.size(); ++byte_id) {
     // grab the 8 least significant bits and put them at the front of the vector
     _parts[_parts.size() - byte_id] = static_cast<uint8_t>(value) & 0xFFu;
     // rightshift 8 bits
@@ -168,7 +182,9 @@ AdaptiveRadixTreeIndex::BinaryComparable::BinaryComparable(ValueID value) : _par
   }
 }
 
-size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const { return _parts.size(); }
+size_t AdaptiveRadixTreeIndex::BinaryComparable::size() const {
+  return _parts.size();
+}
 
 uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) const {
   Assert(position < _parts.size(), "BinaryComparable indexed out of bounds");
@@ -178,11 +194,17 @@ uint8_t AdaptiveRadixTreeIndex::BinaryComparable::operator[](size_t position) co
 
 bool operator==(const AdaptiveRadixTreeIndex::BinaryComparable& left,
                 const AdaptiveRadixTreeIndex::BinaryComparable& right) {
-  if (left.size() != right.size()) return false;
-  for (size_t i = 0; i < left.size(); ++i) {
-    if (left[i] != right[i]) return false;
+  const auto left_size = left.size();
+  if (left_size != right.size()) {
+    return false;
+  }
+
+  for (auto index = size_t{0}; index < left_size; ++index) {
+    if (left[index] != right[index]) {
+      return false;
+    }
   }
   return true;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

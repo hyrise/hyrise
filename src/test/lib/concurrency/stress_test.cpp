@@ -6,7 +6,7 @@
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class StressTest : public BaseTest {
  protected:
@@ -58,11 +58,11 @@ TEST_F(StressTest, TestTransactionConflicts) {
   //  - https://stackoverflow.com/questions/12508653/what-is-the-issue-with-stdasync
   //  - Mastering the C++17 STL, pages 205f
   // TODO(anyone): Change this to proper threads+futures, or at least do not reuse this code.
-  const auto num_threads = 100u;
+  const auto num_threads = uint32_t{100};
   std::vector<std::future<void>> thread_futures;
   thread_futures.reserve(num_threads);
 
-  for (auto thread_num = 0u; thread_num < num_threads; ++thread_num) {
+  for (auto thread_num = uint32_t{0}; thread_num < num_threads; ++thread_num) {
     // We want a future to the thread running, so we can kill it after a future.wait(timeout) or the test would freeze
     thread_futures.emplace_back(std::async(std::launch::async, run));
   }
@@ -210,4 +210,4 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -15,9 +15,9 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorPerformanceDataTest : public BaseTest {
  protected:
@@ -64,36 +64,34 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->append({2});
   table->append({2});
   table->append({3});
+  table->append({3});
+  table->append({3});
 
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table);
+  auto table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+  const auto column_a = get_column_expression(table_wrapper, ColumnID{0});
 
   {
-    auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
-    auto table_scan =
-        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    auto table_scan = std::make_shared<TableScan>(table_wrapper, equals_(column_a, 2));
     table_scan->execute();
 
     auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1ul);
     EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
     EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
 
   {
-    const auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
-    const auto table_scan =
-        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 1));
+    const auto table_scan = std::make_shared<TableScan>(table_wrapper, equals_(column_a, 1));
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 3ul);
     EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
     EXPECT_EQ(performance_data.num_chunks_with_binary_search, 0ul);
   }
@@ -103,39 +101,25 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->get_chunk(ChunkID{1})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   table->get_chunk(ChunkID{2})->set_individually_sorted_by(SortColumnDefinition{ColumnID{0}, SortMode::Ascending});
   {
-    const auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
-    const auto table_scan =
-        std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
+    const auto table_scan = std::make_shared<TableScan>(table_wrapper, equals_(column_a, 2));
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 3ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 1ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
+    EXPECT_EQ(performance_data.num_chunks_with_binary_search, 2ul);
   }
 
   // Between scan
   {
-    const auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
-    const auto table_scan = std::make_shared<TableScan>(
-        table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 4));
+    const auto table_scan = std::make_shared<TableScan>(table_wrapper, between_inclusive_(column_a, 3, 4));
     table_scan->execute();
 
     const auto& performance_data = dynamic_cast<TableScan::PerformanceData&>(*table_scan->performance_data);
-    /*
-     * TODO(anyone) actually, there could be 3 chunks with all rows matching, and none with binary search.
-     * However, the all-match shortcurt of the sorted segment search currently always assumes an exclusive between
-     * when checking for the all-match-shortcut, and an inclusive between when checking for the no-match-shortcut.
-     * This is not wrong, so it should not break anything, but it may lead to unnecessary sorted scans.
-     */
     EXPECT_GT(performance_data.walltime.count(), 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_early_out, 0ul);
-    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_early_out, 2ul);
+    EXPECT_EQ(performance_data.num_chunks_with_all_rows_matching, 1ul);
     EXPECT_EQ(performance_data.num_chunks_with_binary_search, 1ul);
   }
 
@@ -151,11 +135,12 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
   table->last_chunk()->finalize();
   ChunkEncoder::encode_all_chunks(table);
 
+  table_wrapper = std::make_shared<TableWrapper>(table);
+  table_wrapper->never_clear_output();
+  table_wrapper->execute();
+
   // ColumnVsValue scan
   {
-    const auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
     const auto table_scan =
         std::make_shared<TableScan>(table_wrapper, equals_(get_column_expression(table_wrapper, ColumnID{0}), 2));
     table_scan->execute();
@@ -169,9 +154,6 @@ TEST_F(OperatorPerformanceDataTest, TableScanPerformanceData) {
 
   // Between scan on nullable columns
   {
-    const auto table_wrapper = std::make_shared<TableWrapper>(table);
-    table_wrapper->execute();
-
     const auto table_scan = std::make_shared<TableScan>(
         table_wrapper, between_inclusive_(get_column_expression(table_wrapper, ColumnID{0}), 1, 4));
     table_scan->execute();
@@ -270,6 +252,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
+    EXPECT_EQ(perf.right_input_is_index_side, true);
   }
 
   // Add group-key index (required dictionary encoding) to table
@@ -288,6 +271,22 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
+    EXPECT_EQ(perf.right_input_is_index_side, true);
+  }
+  {
+    auto join = std::make_shared<JoinIndex>(
+        table_wrapper, table_wrapper, JoinMode::Inner,
+        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals},
+        std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
+    join->execute();
+    auto& perf = dynamic_cast<const JoinIndex::PerformanceData&>(*join->performance_data);
+
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::IndexJoining).count(), 0);
+    EXPECT_EQ(perf.get_step_runtime(JoinIndex::OperatorSteps::NestedLoopJoining).count(), 0);
+    EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
+    EXPECT_EQ(perf.chunks_scanned_with_index, 2);
+    EXPECT_EQ(perf.chunks_scanned_without_index, 0);
+    EXPECT_EQ(perf.right_input_is_index_side, false);
   }
   {
     // insert should create unencoded (unindexed) chunk
@@ -304,6 +303,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
+    EXPECT_EQ(perf.right_input_is_index_side, true);
   }
 }
 
@@ -427,4 +427,4 @@ TEST_F(OperatorPerformanceDataTest, OutputToStream) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

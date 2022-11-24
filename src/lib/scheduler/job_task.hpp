@@ -4,7 +4,7 @@
 
 #include "abstract_task.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * A general purpose Task for any kind of work (i.e. anything that fits into a void()-function) that can be
@@ -38,4 +38,4 @@ class JobTask : public AbstractTask {
  private:
   std::function<void()> _fn;
 };
-}  // namespace opossum
+}  // namespace hyrise

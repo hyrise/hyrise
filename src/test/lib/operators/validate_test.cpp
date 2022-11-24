@@ -18,9 +18,9 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsValidateTest : public BaseTest {
  protected:
@@ -140,7 +140,9 @@ TEST_F(OperatorsValidateTest, ValidateAfterDelete) {
 }
 
 TEST_F(OperatorsValidateTest, ChunkEntirelyVisibleThrowsOnRefChunk) {
-  if (!HYRISE_DEBUG) GTEST_SKIP();
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
 
   auto snapshot_cid = CommitID{1};
   auto pos_list = std::make_shared<RowIDPosList>(std::initializer_list<RowID>({RowID{ChunkID{0}, ChunkOffset{0}}}));
@@ -227,7 +229,7 @@ TEST_F(OperatorsValidateTest, ValidateReferenceSegmentWithMultipleChunks) {
   }
 
   Segments segments;
-  for (ColumnID column_id{0}; column_id < _test_table->column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < _test_table->column_count(); ++column_id) {
     segments.emplace_back(std::make_shared<ReferenceSegment>(_test_table, column_id, pos_list));
   }
 
@@ -264,7 +266,9 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
   const auto chunk_count = sorted_table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto& chunk = sorted_table->get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
     chunk->set_individually_sorted_by(sort_column_definition);
   }
   const auto sorted_table_wrapper = std::make_shared<TableWrapper>(sorted_table);
@@ -283,4 +287,4 @@ TEST_F(OperatorsValidateTest, ForwardSortedByFlag) {
   }
 }
 
-}  // namespace opossum
+}  // namespace hyrise

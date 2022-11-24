@@ -4,7 +4,7 @@
 
 #include "constant_mappings.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 namespace hana = boost::hana;
 
@@ -35,4 +35,4 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) 
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

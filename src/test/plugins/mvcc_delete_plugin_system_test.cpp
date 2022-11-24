@@ -21,7 +21,7 @@
 #include "utils/pausable_loop_thread.hpp"
 #include "utils/plugin_manager.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 class MvccDeletePluginSystemTest : public BaseTest {
  public:
@@ -64,7 +64,9 @@ class MvccDeletePluginSystemTest : public BaseTest {
    * - Updates stop just before the end of Chunk 3 (at position 598), so that it is "fresh" and not cleaned up.
    */
   void update_next_row() {
-    if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2) return;  // -> if (_counter == 598)...
+    if (_counter == INITIAL_CHUNK_COUNT * CHUNK_SIZE - 2 /* 598 */) {
+      return;
+    }
 
     auto column = expression_functional::pqp_column_(ColumnID{0}, DataType::Int, false, "number");
 
@@ -170,7 +172,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       // Chunk 2 should have been logically deleted by now
       const auto chunk2 = _table->get_chunk(ChunkID{1});
       EXPECT_TRUE(chunk2);
-      if (chunk2->get_cleanup_commit_id()) break;
+      if (chunk2->get_cleanup_commit_id()) {
+        break;
+      }
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
@@ -206,7 +210,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     auto attempts_remaining = max_attempts;
     while (attempts_remaining--) {
       // Chunk 2 should have been physically deleted by now
-      if (_table->get_chunk(ChunkID{1}) == nullptr) break;
+      if (_table->get_chunk(ChunkID{1}) == nullptr) {
+        break;
+      }
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE);
@@ -271,7 +277,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
       // Chunk 3 should have been logically deleted by now
       const auto chunk3 = _table->get_chunk(ChunkID{2});
       EXPECT_TRUE(chunk3);
-      if (chunk3->get_cleanup_commit_id()) break;
+      if (chunk3->get_cleanup_commit_id()) {
+        break;
+      }
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_LOGICAL_DELETE);
@@ -301,7 +309,9 @@ TEST_F(MvccDeletePluginSystemTest, CheckPlugin) {
     auto attempts_remaining = max_attempts;
     while (attempts_remaining--) {
       // Chunk 3 should have been physically deleted by now
-      if (_table->get_chunk(ChunkID{2}) == nullptr) break;
+      if (_table->get_chunk(ChunkID{2}) == nullptr) {
+        break;
+      }
 
       // Not yet. Give the plugin some more time.
       std::this_thread::sleep_for(MvccDeletePlugin::IDLE_DELAY_PHYSICAL_DELETE);

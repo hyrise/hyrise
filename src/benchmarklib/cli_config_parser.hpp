@@ -8,7 +8,7 @@
 #include "benchmark_config.hpp"
 #include "encoding_config.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class CLIConfigParser {
  public:
@@ -20,4 +20,4 @@ class CLIConfigParser {
   static bool print_help_if_requested(const cxxopts::Options& options, const cxxopts::ParseResult& parse_result);
 };
 
-}  // namespace opossum
+}  // namespace hyrise

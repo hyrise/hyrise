@@ -10,7 +10,7 @@
 #include "hyrise.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 int main(int argc, char* argv[]) {
   auto cli_options = BenchmarkRunner::get_basic_cli_options("Hyrise Benchmark Runner");
@@ -31,7 +31,9 @@ int main(int argc, char* argv[]) {
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
-  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
+    return 0;
+  }
 
   query_path = cli_parse_result["query_path"].as<std::string>();
   table_path = cli_parse_result["table_path"].as<std::string>();

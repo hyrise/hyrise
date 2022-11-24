@@ -872,7 +872,7 @@ const char* const tpch_query_22 =
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 const std::map<size_t, const char*> tpch_queries = {
     {1, tpch_query_1},   {2, tpch_query_2},   {3, tpch_query_3},   {4, tpch_query_4},   {5, tpch_query_5},
@@ -881,4 +881,4 @@ const std::map<size_t, const char*> tpch_queries = {
     {16, tpch_query_16}, {17, tpch_query_17}, {18, tpch_query_18}, {19, tpch_query_19}, {20, tpch_query_20},
     {21, tpch_query_21}, {22, tpch_query_22}};
 
-}  // namespace opossum
+}  // namespace hyrise

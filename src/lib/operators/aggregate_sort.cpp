@@ -16,7 +16,7 @@
 
 namespace {
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<const Table>& table_to_sort,
                                                       const std::vector<ColumnID>& column_ids) {
@@ -38,12 +38,12 @@ std::shared_ptr<const Table> sort_table_by_column_ids(const std::shared_ptr<cons
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
-AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& in,
+AggregateSort::AggregateSort(const std::shared_ptr<AbstractOperator>& input_operator,
                              const std::vector<std::shared_ptr<AggregateExpression>>& aggregates,
                              const std::vector<ColumnID>& groupby_column_ids)
-    : AbstractAggregateOperator(in, aggregates, groupby_column_ids) {}
+    : AbstractAggregateOperator(input_operator, aggregates, groupby_column_ids) {}
 
 const std::string& AggregateSort::name() const {
   static const auto name = std::string{"AggregateSort"};
@@ -74,7 +74,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   auto aggregator = AggregateFunctionBuilder<ColumnType, AggregateType, aggregate_function>().get_aggregate_function();
 
   // We already know beforehand how many aggregate values (=group-by-combinations) we have to calculate
-  const size_t num_groups = group_boundaries.size() + 1;
+  const auto num_groups = group_boundaries.size() + 1;
 
   // Vectors to store aggregate values (and if they are NULL) for later usage in value segments
   auto aggregate_results = pmr_vector<AggregateType>(num_groups);
@@ -83,19 +83,19 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
   // Variables needed for the aggregates. Not all variables are needed for all aggregates
 
   // Row counts per group, ex- and including null values. Needed for count (<column>/*) and average
-  uint64_t value_count = 0u;
-  uint64_t value_count_with_null = 0u;
+  auto value_count = uint64_t{0};
+  auto value_count_with_null = uint64_t{0};
 
   // All unique values found. Needed for count distinct
-  std::unordered_set<ColumnType> unique_values;
+  auto unique_values = std::unordered_set<ColumnType>{};
 
   // The number of the current group-by-combination. Used as offset when storing values
-  uint64_t aggregate_group_index = 0u;
+  auto aggregate_group_index = uint64_t{0};
 
   const auto chunk_count = sorted_table->chunk_count();
 
   AggregateAccumulator<aggregate_function, AggregateType> accumulator{};
-  ChunkID current_chunk_id{0};
+  auto current_chunk_id = ChunkID{0};
   if (aggregate_function == AggregateFunction::Count && input_column_id == INVALID_COLUMN_ID) {
     /*
      * Special COUNT(*) implementation.
@@ -111,7 +111,7 @@ void AggregateSort::_aggregate_values(const std::set<RowID>& group_boundaries, c
         value_count_with_null = group_boundary.chunk_offset - current_group_begin_pointer.chunk_offset;
       } else {
         // Group is spread over multiple chunks
-        uint64_t count = 0;
+        auto count = uint64_t{0};
         count += sorted_table->get_chunk(current_group_begin_pointer.chunk_id)->size() -
                  current_group_begin_pointer.chunk_offset;
         for (auto chunk_id = ChunkID{current_group_begin_pointer.chunk_id + 1}; chunk_id < group_boundary.chunk_id;
@@ -334,7 +334,7 @@ std::shared_ptr<Table> AggregateSort::_sort_table_chunk_wise(const std::shared_p
         reference_segments.reserve(column_count);
 
         // Create actual ReferenceSegment objects.
-        for (ColumnID column_id{0}; column_id < column_count; ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           auto ref_segment_out = std::make_shared<ReferenceSegment>(input_table, column_id, pos_list);
           reference_segments.push_back(ref_segment_out);
         }
@@ -791,4 +791,4 @@ void AggregateSort::create_aggregate_column_definitions(ColumnID column_index) {
                                                                                    : aggregate->as_column_name();
   _output_column_definitions.emplace_back(column_name, aggregate_data_type, nullable);
 }
-}  // namespace opossum
+}  // namespace hyrise

@@ -17,7 +17,7 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
   return std::make_shared<Table>(column_definitions, TableType::Data);
@@ -45,7 +45,9 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
 
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
              "Empty chunk other than mutable chunk at the end was found");
@@ -59,11 +61,17 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
   }
 }
 
-const TableColumnDefinitions& Table::column_definitions() const { return _column_definitions; }
+const TableColumnDefinitions& Table::column_definitions() const {
+  return _column_definitions;
+}
 
-TableType Table::type() const { return _type; }
+TableType Table::type() const {
+  return _type;
+}
 
-UseMvcc Table::uses_mvcc() const { return _use_mvcc; }
+UseMvcc Table::uses_mvcc() const {
+  return _use_mvcc;
+}
 
 ColumnCount Table::column_count() const {
   return ColumnCount{static_cast<ColumnCount::base_type>(_column_definitions.size())};
@@ -159,7 +167,9 @@ uint64_t Table::row_count() const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (chunk) row_count += chunk->size();
+    if (chunk) {
+      row_count += chunk->size();
+    }
   }
 
   if (_type == TableType::References) {
@@ -174,9 +184,13 @@ uint64_t Table::row_count() const {
   return row_count;
 }
 
-bool Table::empty() const { return row_count() == 0u; }
+bool Table::empty() const {
+  return row_count() == 0u;
+}
 
-ChunkID Table::chunk_count() const { return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())}; }
+ChunkID Table::chunk_count() const {
+  return ChunkID{static_cast<ChunkID::base_type>(_chunks.size())};
+}
 
 ChunkOffset Table::target_chunk_size() const {
   DebugAssert(_type == TableType::Data, "target_chunk_size is only valid for data tables");
@@ -188,9 +202,9 @@ std::shared_ptr<Chunk> Table::get_chunk(ChunkID chunk_id) {
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks[chunk_id];
-  } else {
-    return std::atomic_load(&_chunks[chunk_id]);
   }
+
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
@@ -198,9 +212,9 @@ std::shared_ptr<const Chunk> Table::get_chunk(ChunkID chunk_id) const {
   if (_type == TableType::References) {
     // see comment in non-const function
     return _chunks[chunk_id];
-  } else {
-    return std::atomic_load(&_chunks[chunk_id]);
   }
+
+  return std::atomic_load(&_chunks[chunk_id]);
 }
 
 std::shared_ptr<Chunk> Table::last_chunk() const {
@@ -208,9 +222,9 @@ std::shared_ptr<Chunk> Table::last_chunk() const {
   if (_type == TableType::References) {
     // Not written concurrently, since reference tables are not modified anymore once they are written.
     return _chunks.back();
-  } else {
-    return std::atomic_load(&_chunks.back());
   }
+
+  return std::atomic_load(&_chunks.back());
 }
 
 void Table::remove_chunk(ChunkID chunk_id) {
@@ -241,7 +255,9 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
     const auto chunk_count = _chunks.size();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
-      if (!chunk) continue;
+      if (!chunk) {
+        continue;
+      }
 
       // An empty, mutable chunk at the end is fine, but in that case, append_chunk shouldn't have to be called.
       DebugAssert(chunk->size() > 0, "append_chunk called on a table that has an empty chunk");
@@ -262,19 +278,21 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     if (row_idx < chunk->size()) {
       auto row = std::vector<AllTypeVariant>(column_count());
 
-      for (ColumnID column_id{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
         row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
       }
 
       return row;
-    } else {
-      row_idx -= chunk->size();
     }
+
+    row_idx -= chunk->size();
   }
 
   Fail("row_idx out of bounds");
@@ -295,7 +313,9 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
       segment_iterate(*chunk->get_segment(column_id), [&](const auto& segment_position) {
@@ -311,17 +331,25 @@ std::vector<std::vector<AllTypeVariant>> Table::get_rows() const {
   return rows;
 }
 
-std::unique_lock<std::mutex> Table::acquire_append_mutex() { return std::unique_lock<std::mutex>(*_append_mutex); }
+std::unique_lock<std::mutex> Table::acquire_append_mutex() {
+  return std::unique_lock<std::mutex>(*_append_mutex);
+}
 
-std::shared_ptr<TableStatistics> Table::table_statistics() const { return _table_statistics; }
+std::shared_ptr<TableStatistics> Table::table_statistics() const {
+  return _table_statistics;
+}
 
 void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
 }
 
-std::vector<IndexStatistics> Table::indexes_statistics() const { return _indexes; }
+std::vector<IndexStatistics> Table::indexes_statistics() const {
+  return _indexes;
+}
 
-const TableKeyConstraints& Table::soft_key_constraints() const { return _table_key_constraints; }
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
 
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
@@ -350,18 +378,22 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
              "Another key constraint for the same column set has already been defined.");
     }
 
-    _table_key_constraints.push_back(table_key_constraint);
+    _table_key_constraints.insert(table_key_constraint);
   }
 }
 
-const std::vector<ColumnID>& Table::value_clustered_by() const { return _value_clustered_by; }
+const std::vector<ColumnID>& Table::value_clustered_by() const {
+  return _value_clustered_by;
+}
 
 void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_by) {
   // Ensure that all chunks are finalized because the table should not be altered afterwards.
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     Assert(!get_chunk(chunk_id)->is_mutable(), "Cannot set value_clustering on table with mutable chunks");
   }
@@ -401,7 +433,9 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
-    if (!chunk) continue;
+    if (!chunk) {
+      continue;
+    }
 
     bytes += chunk->memory_usage(mode);
   }
@@ -416,4 +450,4 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

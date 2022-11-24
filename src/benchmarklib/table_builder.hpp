@@ -13,9 +13,9 @@
 #include "resolve_type.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
-// helper structs and functions for compile time, the actual code is in namespace opossum
+// helper structs and functions for compile time, the actual code is in namespace hyrise
 namespace table_builder {
 // similar to std::optional but has_value is known at compile time, so "if constexpr" can be used
 // boost::hana::optional does not allow moving and reinitializing its value (or I just did not find out how)
@@ -28,7 +28,9 @@ class OptionalConstexpr {
   static_assert(_has_value);
   static constexpr bool has_value = true;
 
-  T& value() { return _value; }
+  T& value() {
+    return _value;
+  }
 
  private:
   T _value;
@@ -191,7 +193,9 @@ class TableBuilder {
     }
   }
 
-  size_t row_count() const { return _row_count; }
+  size_t row_count() const {
+    return _row_count;
+  }
 
  private:
   std::shared_ptr<Table> _table;
@@ -204,7 +208,9 @@ class TableBuilder {
   boost::hana::tuple<table_builder::OptionalConstexpr<pmr_vector<bool>, (table_builder::is_optional<DataTypes>())>...>
       _null_value_vectors;
 
-  size_t _current_chunk_row_count() const { return _value_vectors[boost::hana::llong_c<0>].size(); }
+  size_t _current_chunk_row_count() const {
+    return _value_vectors[boost::hana::llong_c<0>].size();
+  }
 
   void _emit_chunk() {
     auto segments = Segments{};
@@ -240,4 +246,4 @@ class TableBuilder {
   }
 };
 
-}  // namespace opossum
+}  // namespace hyrise

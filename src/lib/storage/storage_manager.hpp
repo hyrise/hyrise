@@ -13,7 +13,7 @@
 #include "prepared_plan.hpp"
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 class AbstractLQPNode;
@@ -65,13 +65,13 @@ class StorageManager : public Noncopyable {
   friend class Hyrise;
 
   // We preallocate maps to prevent costly re-allocation.
-  static constexpr size_t _INITIAL_MAP_SIZE = 100;
+  static constexpr size_t INITIAL_MAP_SIZE = 100;
 
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{_INITIAL_MAP_SIZE};
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{_INITIAL_MAP_SIZE};
-  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{_INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{INITIAL_MAP_SIZE};
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -12,12 +12,12 @@
 #include "logical_query_plan/stored_table_node.hpp"
 
 namespace {
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 // Modified hash code generation for StoredTableNodes where column pruning information is omitted. Struct is used to
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrHash final {
-  size_t operator()(const std::shared_ptr<opossum::StoredTableNode>& node) const {
+  size_t operator()(const std::shared_ptr<StoredTableNode>& node) const {
     size_t hash{0};
     boost::hash_combine(hash, node->table_name);
     for (const auto& pruned_chunk_id : node->pruned_chunk_ids()) {
@@ -30,8 +30,7 @@ struct StoredTableNodeSharedPtrHash final {
 // Modified equals evaluation code for StoredTableNodes where column pruning information is omitted. Struct is used to
 // enable hash-based containers containing std::shared_ptr<StoredTableNode>.
 struct StoredTableNodeSharedPtrEqual final {
-  size_t operator()(const std::shared_ptr<opossum::StoredTableNode>& lhs,
-                    const std::shared_ptr<opossum::StoredTableNode>& rhs) const {
+  size_t operator()(const std::shared_ptr<StoredTableNode>& lhs, const std::shared_ptr<StoredTableNode>& rhs) const {
     DebugAssert(std::is_sorted(lhs->pruned_chunk_ids().cbegin(), lhs->pruned_chunk_ids().cend()),
                 "Expected sorted vector of ChunkIDs");
     DebugAssert(std::is_sorted(rhs->pruned_chunk_ids().cbegin(), rhs->pruned_chunk_ids().cend()),
@@ -41,7 +40,7 @@ struct StoredTableNodeSharedPtrEqual final {
 };
 
 using ColumnPruningAgnosticMultiSet =
-    std::unordered_multiset<std::shared_ptr<opossum::StoredTableNode>, StoredTableNodeSharedPtrHash,
+    std::unordered_multiset<std::shared_ptr<StoredTableNode>, StoredTableNodeSharedPtrHash,
                             StoredTableNodeSharedPtrEqual>;
 
 ColumnPruningAgnosticMultiSet collect_stored_table_nodes(const std::vector<std::shared_ptr<AbstractLQPNode>>& lqps) {
@@ -93,7 +92,7 @@ void align_pruned_column_ids(const ColumnPruningAgnosticMultiSet& grouped_stored
 
 }  // namespace
 
-namespace opossum {
+namespace hyrise {
 
 std::string StoredTableColumnAlignmentRule::name() const {
   static const auto name = std::string{"StoredTableColumnAlignmentRule"};
@@ -125,4 +124,4 @@ void StoredTableColumnAlignmentRule::_apply_to_plan_without_subqueries(
   Fail("Did not expect this function to be called.");
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -19,7 +19,7 @@
 #include "utils/assert.hpp"
 #include "utils/sqlite_add_indices.hpp"
 
-using namespace opossum;  // NOLINT
+using namespace hyrise;  // NOLINT
 
 /**
  * This benchmark measures Hyrise's performance executing the TPC-H *queries*, it doesn't (yet) support running the
@@ -63,7 +63,9 @@ int main(int argc, char* argv[]) {
   // Parse command line args
   const auto cli_parse_result = cli_options.parse(argc, argv);
 
-  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) return 0;
+  if (CLIConfigParser::print_help_if_requested(cli_options, cli_parse_result)) {
+    return 0;
+  }
 
   if (cli_parse_result.count("queries")) {
     comma_separated_queries = cli_parse_result["queries"].as<std::string>();

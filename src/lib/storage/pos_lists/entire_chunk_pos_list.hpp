@@ -3,7 +3,7 @@
 #include "abstract_pos_list.hpp"
 #include "storage/chunk.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class EntireChunkPosList : public AbstractPosList {
  public:
@@ -20,7 +20,9 @@ class EntireChunkPosList : public AbstractPosList {
   ChunkID common_chunk_id() const final;
 
   // Implemented in hpp for performance reasons (to allow inlining)
-  RowID operator[](const size_t index) const final { return RowID{_common_chunk_id, static_cast<ChunkOffset>(index)}; }
+  RowID operator[](const size_t index) const final {
+    return RowID{_common_chunk_id, ChunkOffset{static_cast<ChunkOffset::base_type>(index)}};
+  }
 
   bool empty() const final;
   size_t size() const final;
@@ -40,4 +42,4 @@ class EntireChunkPosList : public AbstractPosList {
   const ChunkOffset _common_chunk_size;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

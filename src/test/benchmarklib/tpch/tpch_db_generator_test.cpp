@@ -5,7 +5,7 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "utils/load_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class TPCHTableGeneratorTest : public BaseTest {};
 
@@ -32,7 +32,9 @@ TEST_F(TPCHTableGeneratorTest, SmallScaleFactor) {
 #if (__has_feature(thread_sanitizer) || __has_feature(address_sanitizer))
   // We verified thread and address safety above. As this is quite expensive to sanitize, don't perform the following
   // check - double parantheses mark the code as explicitly dead.
-  if ((true)) return;
+  if ((true)) {
+    return;
+  }
 #endif
 #endif
 
@@ -98,4 +100,4 @@ TEST_F(TPCHTableGeneratorTest, GenerateAndStore) {
 
   Hyrise::reset();
 }
-}  // namespace opossum
+}  // namespace hyrise

@@ -13,7 +13,7 @@
 #include "hyrise.hpp"
 #include "meta_system_utilization_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaSystemUtilizationTable::MetaSystemUtilizationTable()
     : AbstractMetaTable(TableColumnDefinitions{{"cpu_system_time", DataType::Long, false},
@@ -140,6 +140,7 @@ uint64_t MetaSystemUtilizationTable::_get_process_cpu_time() {
   // A clock that measures (user and system) CPU time consumed by (all of the threads in) the calling process.
 #ifdef __linux__
   struct timespec time_spec {};
+
   const auto ret = clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &time_spec);
   Assert(ret == 0, "Failed in clock_gettime");
 
@@ -245,6 +246,7 @@ MetaSystemUtilizationTable::ProcessMemoryUsage MetaSystemUtilizationTable::_get_
 
 #ifdef __APPLE__
   struct task_basic_info info {};
+
   mach_msg_type_number_t count = TASK_BASIC_INFO_COUNT;
   const auto ret = task_info(mach_task_self(), TASK_BASIC_INFO, reinterpret_cast<task_info_t>(&info), &count);
   Assert(ret == KERN_SUCCESS, "Failed to get task_info");
@@ -334,4 +336,4 @@ std::vector<int64_t> MetaSystemUtilizationTable::_parse_value_string(std::string
 }
 #endif
 
-}  // namespace opossum
+}  // namespace hyrise

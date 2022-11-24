@@ -7,7 +7,7 @@
 
 #include "all_type_variant.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& variant) {
   if (is_parameter_id(variant)) {
@@ -21,4 +21,4 @@ std::ostream& operator<<(std::ostream& stream, const AllParameterVariant& varian
   return stream;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -15,7 +15,12 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-namespace opossum {
+namespace {
+using NodeExpressionsDifferenceType =
+    typename std::iterator_traits<decltype(hyrise::AggregateNode::node_expressions)::iterator>::difference_type;
+}  // namespace
+
+namespace hyrise {
 
 AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpression>>& group_by_expressions,
                              const std::vector<std::shared_ptr<AbstractExpression>>& aggregate_expressions)
@@ -31,7 +36,7 @@ AggregateNode::AggregateNode(const std::vector<std::shared_ptr<AbstractExpressio
   node_expressions.resize(group_by_expressions.size() + aggregate_expressions.size());
   std::copy(group_by_expressions.begin(), group_by_expressions.end(), node_expressions.begin());
   std::copy(aggregate_expressions.begin(), aggregate_expressions.end(),
-            node_expressions.begin() + group_by_expressions.size());
+            node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(group_by_expressions.size()));
 }
 
 std::string AggregateNode::description(const DescriptionMode mode) const {
@@ -41,9 +46,11 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   stream << "[Aggregate] ";
 
   stream << "GroupBy: [";
-  for (auto expression_idx = size_t{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
+  for (auto expression_idx = ColumnID{0}; expression_idx < aggregate_expressions_begin_idx; ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
-    if (expression_idx + 1 < aggregate_expressions_begin_idx) stream << ", ";
+    if (expression_idx + 1u < aggregate_expressions_begin_idx) {
+      stream << ", ";
+    }
   }
   stream << "] ";
 
@@ -51,7 +58,9 @@ std::string AggregateNode::description(const DescriptionMode mode) const {
   for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < node_expressions.size();
        ++expression_idx) {
     stream << node_expressions[expression_idx]->description(expression_mode);
-    if (expression_idx + 1 < node_expressions.size()) stream << ", ";
+    if (expression_idx + 1 < node_expressions.size()) {
+      stream << ", ";
+    }
   }
   stream << "]";
 
@@ -64,7 +73,8 @@ std::vector<std::shared_ptr<AbstractExpression>> AggregateNode::output_expressio
   // that reference the ANY'd column.
   auto output_expressions = node_expressions;
 
-  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expressions.size();
+  const auto output_expression_count = output_expressions.size();
+  for (auto expression_idx = aggregate_expressions_begin_idx; expression_idx < output_expression_count;
        ++expression_idx) {
     auto& output_expression = output_expressions[expression_idx];
     DebugAssert(output_expression->type == ExpressionType::Aggregate,
@@ -115,7 +125,9 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
   // Check each constraint for applicability
   const auto& input_unique_constraints = left_input()->unique_constraints();
   for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) continue;
+    if (!has_output_expressions(input_unique_constraint.expressions)) {
+      continue;
+    }
 
     // Forward constraint
     unique_constraints->emplace_back(input_unique_constraint);
@@ -158,14 +170,18 @@ std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependen
   return non_trivial_fds;
 }
 
-size_t AggregateNode::_on_shallow_hash() const { return aggregate_expressions_begin_idx; }
+size_t AggregateNode::_on_shallow_hash() const {
+  return aggregate_expressions_begin_idx;
+}
 
 std::shared_ptr<AbstractLQPNode> AggregateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   const auto group_by_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
-      node_expressions.begin(), node_expressions.begin() + aggregate_expressions_begin_idx};
+      node_expressions.begin(),
+      node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx)};
 
   const auto aggregate_expressions = std::vector<std::shared_ptr<AbstractExpression>>{
-      node_expressions.begin() + aggregate_expressions_begin_idx, node_expressions.end()};
+      node_expressions.begin() + static_cast<NodeExpressionsDifferenceType>(aggregate_expressions_begin_idx),
+      node_expressions.end()};
 
   return std::make_shared<AggregateNode>(
       expressions_copy_and_adapt_to_different_lqp(group_by_expressions, node_mapping),
@@ -179,4 +195,4 @@ bool AggregateNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNode
                                                            node_mapping) &&
          aggregate_expressions_begin_idx == aggregate_node.aggregate_expressions_begin_idx;
 }
-}  // namespace opossum
+}  // namespace hyrise

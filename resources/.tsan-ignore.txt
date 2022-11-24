@@ -23,14 +23,14 @@ race:boost::detail::thread_data_base
 race:thread_data
 
 # A DebugAssert makes sure that predecessors are not added to scheduled tasks, but it is missing in release builds
-race:^opossum::AbstractTask::set_as_predecessor_of
+race:^hyrise::AbstractTask::set_as_predecessor_of
 
 # tsan does not understand parts of our MVCC concept - see mvcc_data.hpp for documentation
-race:^opossum::MvccData::get_begin_cid
-race:^opossum::MvccData::set_begin_cid
-race:^opossum::MvccData::get_end_cid
-race:^opossum::MvccData::set_end_cid
-race:^opossum::ValueSegment*::resize
+race:^hyrise::MvccData::get_begin_cid
+race:^hyrise::MvccData::set_begin_cid
+race:^hyrise::MvccData::get_end_cid
+race:^hyrise::MvccData::set_end_cid
+race:^hyrise::ValueSegment*::resize
 
 # This is likely false positive seen only on Mac, as even the strictest locking does not "fix" the warning
-race:^opossum::TableStatistics::from_table
+race:^hyrise::TableStatistics::from_table

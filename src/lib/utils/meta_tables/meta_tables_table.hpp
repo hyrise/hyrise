@@ -2,7 +2,7 @@
 
 #include "utils/meta_tables/abstract_meta_table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 /**
  * This is a class for showing all stored tables via a meta table.
@@ -18,4 +18,4 @@ class MetaTablesTable : public AbstractMetaTable {
   std::shared_ptr<Table> _on_generate() const final;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

@@ -10,7 +10,7 @@
 #include "operators/validate.hpp"
 #include "storage/table.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class OperatorsValidateVisibilityTest : public BaseTest {
  protected:
@@ -154,4 +154,4 @@ TEST_F(OperatorsValidateVisibilityTest, UncommittedInsertOrFutureInsert) {
   EXPECT_EQ(validate->get_output()->row_count(), 0u);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

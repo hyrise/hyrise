@@ -4,7 +4,7 @@
 
 #include "hyrise.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 MetaExecTable::MetaExecTable()
     : AbstractMetaTable(TableColumnDefinitions{{"plugin_name", DataType::String, false},
@@ -15,7 +15,9 @@ const std::string& MetaExecTable::name() const {
   return name;
 }
 
-bool MetaExecTable::can_insert() const { return true; }
+bool MetaExecTable::can_insert() const {
+  return true;
+}
 
 std::shared_ptr<Table> MetaExecTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
@@ -34,4 +36,4 @@ void MetaExecTable::_on_insert(const std::vector<AllTypeVariant>& values) {
   Hyrise::get().plugin_manager.exec_user_function(plugin_name, function_name);
 }
 
-}  // namespace opossum
+}  // namespace hyrise

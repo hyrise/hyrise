@@ -1,6 +1,6 @@
 #include "table_column_definition.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 TableColumnDefinition::TableColumnDefinition(const std::string& init_name, const DataType init_data_type,
                                              const bool init_nullable)
@@ -23,4 +23,4 @@ TableColumnDefinitions concatenated(const TableColumnDefinitions& lhs, const Tab
   return column_definitions;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

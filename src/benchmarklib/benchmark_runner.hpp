@@ -25,7 +25,7 @@
 #include "storage/encoding_type.hpp"
 #include "utils/performance_warning.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class SQLPipeline;
 struct SQLPipelineMetrics;
@@ -48,7 +48,7 @@ class BenchmarkRunner : public Noncopyable {
 
   static nlohmann::json create_context(const BenchmarkConfig& config);
 
-  // If the query execution should be validated, this stores a pointer to the used SQLite instance
+  // If the query execution should be validated, this stores a pointer to the used SQLite instance.
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
   // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
@@ -57,20 +57,20 @@ class BenchmarkRunner : public Noncopyable {
   void write_report_to_file() const;
 
  private:
-  // Run benchmark in BenchmarkMode::Shuffled mode
+  // Run benchmark in BenchmarkMode::Shuffled mode.
   void _benchmark_shuffled();
 
-  // Run benchmark in BenchmarkMode::Ordered mode
+  // Run benchmark in BenchmarkMode::Ordered mode.
   void _benchmark_ordered();
 
-  // Execute warmup run of a benchmark item
+  // Execute warmup run(s) of a benchmark item. The item's SQL query will be cached.
   void _warmup(const BenchmarkItemID item_id);
 
   // Schedules a run of the specified for execution. After execution, the result is updated. If the scheduler is
   // disabled, the item is executed immediately.
   void _schedule_item_run(const BenchmarkItemID item_id);
 
-  // Converts the result of a SQL query into a JSON object
+  // Converts the result of a SQL query into a JSON object.
   static nlohmann::json _sql_to_json(const std::string& sql);
 
   // Writes the current meta_segments table into the benchmark_segments_log tables. The `moment` parameter can be used
@@ -97,7 +97,7 @@ class BenchmarkRunner : public Noncopyable {
   std::chrono::system_clock::time_point _benchmark_wall_clock_start;
 
   // The atomic uints are modified by other threads when finishing an item, to keep track of when we can
-  // let a simulated client schedule the next item, as well as the total number of finished items so far
+  // let a simulated client schedule the next item, as well as the total number of finished items so far.
   std::atomic_uint32_t _currently_running_clients{0};
 
   // For BenchmarkMode::Shuffled, we count the number of runs executed across all items. This also includes items that
@@ -109,4 +109,4 @@ class BenchmarkRunner : public Noncopyable {
   int _snapshot_id{0};
 };
 
-}  // namespace opossum
+}  // namespace hyrise

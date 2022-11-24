@@ -11,7 +11,7 @@
 
 STRONG_TYPEDEF(size_t, BenchmarkItemID);
 
-namespace opossum {
+namespace hyrise {
 
 // Item runners execute the SQL queries associated with a given benchmark. In their simplest form, an item is a single
 // query, for example a TPC-H query. Examples for more complex items are those of the TPC-C benchmark, which combine
@@ -64,4 +64,4 @@ class AbstractBenchmarkItemRunner {
   std::shared_ptr<SQLiteWrapper> _sqlite_wrapper;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

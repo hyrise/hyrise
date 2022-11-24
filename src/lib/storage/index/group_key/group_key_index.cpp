@@ -7,7 +7,7 @@
 #include "storage/index/abstract_index.hpp"
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                   uint32_t value_bytes) {
@@ -105,9 +105,13 @@ GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVar
   return _get_positions_iterator_at(value_id);
 }
 
-GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const { return _positions.cbegin(); }
+GroupKeyIndex::Iterator GroupKeyIndex::_cbegin() const {
+  return _positions.cbegin();
+}
 
-GroupKeyIndex::Iterator GroupKeyIndex::_cend() const { return _positions.cend(); }
+GroupKeyIndex::Iterator GroupKeyIndex::_cend() const {
+  return _positions.cend();
+}
 
 /**
    *
@@ -141,4 +145,4 @@ size_t GroupKeyIndex::_memory_consumption() const {
   return bytes;
 }
 
-}  // namespace opossum
+}  // namespace hyrise

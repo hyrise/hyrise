@@ -6,9 +6,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace opossum::expression_functional;  // NOLINT
+using namespace hyrise::expression_functional;  // NOLINT
 
-namespace opossum {
+namespace hyrise {
 
 class PredicateNodeTest : public BaseTest {
  protected:
@@ -28,7 +28,9 @@ class PredicateNodeTest : public BaseTest {
   std::shared_ptr<PredicateNode> _predicate_node;
 };
 
-TEST_F(PredicateNodeTest, Descriptions) { EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5"); }
+TEST_F(PredicateNodeTest, Descriptions) {
+  EXPECT_EQ(_predicate_node->description(), "[Predicate] i = 5");
+}
 
 TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_predicate_node, *_predicate_node);
@@ -54,11 +56,13 @@ TEST_F(PredicateNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(other_predicate_node_e->hash(), _predicate_node->hash());
 }
 
-TEST_F(PredicateNodeTest, Copy) { EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node); }
+TEST_F(PredicateNodeTest, Copy) {
+  EXPECT_EQ(*_predicate_node->deep_copy(), *_predicate_node);
+}
 
 TEST_F(PredicateNodeTest, NodeExpressions) {
   ASSERT_EQ(_predicate_node->node_expressions.size(), 1u);
   EXPECT_EQ(*_predicate_node->node_expressions.at(0), *equals_(_i, 5));
 }
 
-}  // namespace opossum
+}  // namespace hyrise

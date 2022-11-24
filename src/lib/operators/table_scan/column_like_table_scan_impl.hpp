@@ -14,7 +14,7 @@
 
 #include "types.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 class Table;
 
@@ -59,4 +59,4 @@ class ColumnLikeTableScanImpl : public AbstractDereferencedColumnTableScanImpl {
   const bool _invert_results;
 };
 
-}  // namespace opossum
+}  // namespace hyrise

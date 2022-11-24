@@ -3,7 +3,7 @@
 #include "resolve_type.hpp"
 #include "storage/index/segment_index_type.hpp"
 
-namespace opossum {
+namespace hyrise {
 
 size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
                                                uint32_t value_bytes) {
@@ -22,7 +22,9 @@ BTreeIndex::BTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>
   });
 }
 
-size_t BTreeIndex::_memory_consumption() const { return _impl->memory_consumption(); }
+size_t BTreeIndex::_memory_consumption() const {
+  return _impl->memory_consumption();
+}
 
 BTreeIndex::Iterator BTreeIndex::_lower_bound(const std::vector<AllTypeVariant>& values) const {
   Assert(!values.empty(), "Value vector has to be non-empty.");
@@ -40,12 +42,16 @@ BTreeIndex::Iterator BTreeIndex::_upper_bound(const std::vector<AllTypeVariant>&
   return _impl->upper_bound(values);
 }
 
-BTreeIndex::Iterator BTreeIndex::_cbegin() const { return _impl->cbegin(); }
+BTreeIndex::Iterator BTreeIndex::_cbegin() const {
+  return _impl->cbegin();
+}
 
-BTreeIndex::Iterator BTreeIndex::_cend() const { return _impl->cend(); }
+BTreeIndex::Iterator BTreeIndex::_cend() const {
+  return _impl->cend();
+}
 
 std::vector<std::shared_ptr<const AbstractSegment>> BTreeIndex::_get_indexed_segments() const {
   return {_indexed_segment};
 }
 
-}  // namespace opossum
+}  // namespace hyrise
