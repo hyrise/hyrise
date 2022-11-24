@@ -14,6 +14,7 @@
 #include "operators/operator_scan_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
+#include "expression/is_null_expression.hpp"
 
 namespace hyrise {
 
@@ -37,8 +38,14 @@ std::shared_ptr<OrderDependencies> PredicateNode::order_dependencies() const {
 }
 
 std::shared_ptr<InclusionDependencies> PredicateNode::inclusion_dependencies() const {
-  // TODO: forward if IS NOT NULL scan
+  const auto& is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate());
+
+  if (is_null_expression && is_null_expression->predicate_condition == PredicateCondition::IsNotNull) {
+    return _forward_left_inclusion_dependencies();
+  }
+
   return std::make_shared<InclusionDependencies>();
+
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
