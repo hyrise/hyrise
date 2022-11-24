@@ -9,12 +9,12 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
-#include "expression/is_null_expression.hpp"
 
 namespace hyrise {
 
@@ -38,14 +38,29 @@ std::shared_ptr<OrderDependencies> PredicateNode::order_dependencies() const {
 }
 
 std::shared_ptr<InclusionDependencies> PredicateNode::inclusion_dependencies() const {
+  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
   const auto& is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate());
 
+  // Only forward INDs where there is an IS NOT NULL scan on the expressions.
+  // In the future, also checking for FDs with not null scans is possible.
   if (is_null_expression && is_null_expression->predicate_condition == PredicateCondition::IsNotNull) {
-    return _forward_left_inclusion_dependencies();
+    const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
+    const auto& operand = is_null_expression->operand();
+
+    for (const auto& input_inclusion_dependency : *input_inclusion_dependencies) {
+      if (input_inclusion_dependency.expressions.size() > 1) {
+        continue;
+      }
+
+      if (*operand != *input_inclusion_dependency.expressions.front()) {
+        continue;
+      }
+
+      inclusion_dependencies->emplace(input_inclusion_dependency);
+    }
   }
 
-  return std::make_shared<InclusionDependencies>();
-
+  return inclusion_dependencies;
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {
