@@ -28,7 +28,8 @@ class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
 
   explicit TableIndexTbbUnorderedMapIterator(MapIteratorType itr);
 
-  TableIndexTbbUnorderedMapIterator(MapIteratorType itr, std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
+  TableIndexTbbUnorderedMapIterator(MapIteratorType itr,
+                                    std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
 
   reference operator*() const override;
 
@@ -54,7 +55,8 @@ class TableIndexVectorIterator : public BaseTableIndexIterator {
 
   explicit TableIndexVectorIterator(MapIteratorType itr);
 
-  explicit TableIndexVectorIterator(MapIteratorType itr, std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
+  explicit TableIndexVectorIterator(MapIteratorType itr,
+                                    std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
 
   reference operator*() const override;
 

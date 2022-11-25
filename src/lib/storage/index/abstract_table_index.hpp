@@ -28,7 +28,7 @@ class BaseTableIndexIterator {
 
   BaseTableIndexIterator(const BaseTableIndexIterator& it) = default;
   BaseTableIndexIterator() = default;
-  BaseTableIndexIterator(std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
+  explicit BaseTableIndexIterator(std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock);
   virtual ~BaseTableIndexIterator() = default;
   virtual reference operator*() const;
   virtual BaseTableIndexIterator& operator++();

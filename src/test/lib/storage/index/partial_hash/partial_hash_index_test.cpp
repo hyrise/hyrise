@@ -299,10 +299,7 @@ TEST_F(PartialHashIndexTest, ParallelWritesStressTest) {
   auto chunks_to_add =
       std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))};
 
-
-  auto insert_entries_to_index = [&]() {
-    index->insert_entries(chunks_to_add);
-  };
+  auto insert_entries_to_index = [&]() { index->insert_entries(chunks_to_add); };
 
   constexpr auto N_THREADS = uint8_t{8};
   auto threads = std::vector<std::thread>(N_THREADS);
