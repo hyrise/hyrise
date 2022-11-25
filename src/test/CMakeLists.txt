@@ -134,6 +134,8 @@ set(
     lib/optimizer/strategy/index_scan_rule_test.cpp
     lib/optimizer/strategy/join_ordering_rule_test.cpp
     lib/optimizer/strategy/join_predicate_ordering_rule_test.cpp
+    lib/optimizer/strategy/join_to_predicate_rewrite_rule_test.cpp
+    lib/optimizer/strategy/join_to_semi_join_rule_test.cpp
     lib/optimizer/strategy/null_scan_removal_rule_test.cpp
     lib/optimizer/strategy/predicate_merge_rule_test.cpp
     lib/optimizer/strategy/predicate_placement_rule_test.cpp
@@ -234,6 +236,7 @@ set(
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
+    plugins/ucc_discovery_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
     utils/constraint_test_utils.hpp
@@ -261,7 +264,9 @@ set(
     gtest
     gmock
     SQLite::SQLite3
-    hyriseMvccDeletePlugin  # So that we can test member methods without going through dlsym
+    # Added plugin targets so that we can test member methods without going through dlsym
+    hyriseMvccDeletePlugin
+    hyriseUccDiscoveryPlugin
 )
 
 # This warning does not play well with SCOPED_TRACE
@@ -277,7 +282,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin)
+add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

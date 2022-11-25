@@ -160,6 +160,7 @@ Contact: firstname.lastname@hpi.de
 -   Yannick   Bäumer
 -   Lawrence  Benson
 -   Jasper    Blum
+-   Lukas     Budach
 -   Timo      Djürken
 -   Alexander Dubrawski
 -   Fabian    Dumke
@@ -188,6 +189,7 @@ Contact: firstname.lastname@hpi.de
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
+-   Henok     Lachmann
 -   Sven      Lehmann
 -   Till      Lehmann
 -   Tom       Lichtenstein
