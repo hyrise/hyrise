@@ -33,7 +33,7 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   }
 
   void sanity_check(uint32_t NUMBER_OF_BYTES ) {
-    int32_t fd;
+    auto fd = int32_t{};
     if ((fd = open("file.txt", O_RDONLY)) < 0) {
       std::cout << "open error " << std::strerror(errno) << std::endl;
     }
@@ -56,6 +56,8 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
     if (munmap(map, NUMBER_OF_BYTES) != 0) {
       std::cout << "Unmapping for Sanity Check failed." << std::endl;
     }
+
+    close(fd);
   }
 
   void TearDown(::benchmark::State& /*state*/) override {
@@ -69,7 +71,7 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 };
 
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark::State& state) {  // open file
-  int32_t fd;
+  auto fd = int32_t{};
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
@@ -88,10 +90,12 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark
     sanity_check(NUMBER_OF_BYTES);
     state.ResumeTiming();
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::State& state) {
-  int32_t fd;
+  auto fd = int32_t{};
   if ((fd = open("file.txt", O_WRONLY)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
@@ -110,6 +114,8 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, PWRITE_ATOMIC)(benchmark::S
     sanity_check(NUMBER_OF_BYTES);
     state.ResumeTiming();
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)(benchmark::State& state) {
@@ -140,7 +146,7 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
                                                             int data_access_mode, const int32_t file_size) {
   const auto NUMBER_OF_BYTES = uint32_t{static_cast<uint32_t>(state.range(0) * MB)};
 
-  int32_t fd;
+  auto fd = int32_t{};
   if ((fd = open("file.txt", O_RDWR)) < 0) {
     std::cout << "open error " << errno << std::endl;
   }
@@ -212,6 +218,8 @@ void FileIOWriteMicroBenchmarkFixture::mmap_write_benchmark(benchmark::State& st
       std::cout << "Unmapping failed." << std::endl;
     }
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, IN_MEMORY_WRITE)(benchmark::State& state) {  // open file
