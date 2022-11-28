@@ -3,10 +3,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
+
 #include <algorithm>
 #include <iterator>
 #include <numeric>
 #include <random>
+#include <ostream>
 #include "micro_benchmark_basic_fixture.hpp"
 
 namespace hyrise {
@@ -21,19 +23,20 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
   void SetUp(::benchmark::State& state) override {
     // TODO(everybody): Make setup/teardown global per file size to improve benchmark speed
-    ssize_t BUFFER_SIZE_MB = state.range(0);
+    auto BUFFER_SIZE_MB = state.range(0);
 
     // each int32_t contains four bytes
     vector_element_count = (BUFFER_SIZE_MB * MB) / sizeof(uint32_t);
     numbers = std::vector<uint32_t>(vector_element_count);
-    for (size_t index = 0; index < vector_element_count; ++index) {
+    for (auto index = size_t{0}; index < vector_element_count; ++index) {
       numbers[index] = std::rand() % UINT32_MAX;
     }
     control_sum = std::accumulate(numbers.begin(), numbers.end(), uint64_t{0});
 
-    int32_t fd;
+    auto fd = int32_t{};
     if ((fd = creat("file.txt", O_WRONLY)) < 1) {
       std::cout << "create error" << std::endl;
+      exit(1);
     }
     //Assert((fd = creat("file.txt", O_WRONLY)) < 1, "create error");
     chmod("file.txt", S_IRWXU);  // enables owner to rwx file
@@ -89,6 +92,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
 
     state.ResumeTiming();
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benchmark::State& state) {  // open file
@@ -129,6 +134,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_RANDOM)(benc
 
     state.ResumeTiming();
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(benchmark::State& state) {
@@ -165,6 +172,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL)(ben
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
     state.ResumeTiming();
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_RANDOM)(benchmark::State& state) {
@@ -205,6 +214,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_RAND
       std::cout << "Unmapping failed." << std::endl;
     }
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)(benchmark::State& state) {
@@ -244,6 +255,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_SEQU
       std::cout << "Unmapping failed." << std::endl;
     }
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDOM)(benchmark::State& state) {
@@ -284,6 +297,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDO
       std::cout << "Unmapping failed." << std::endl;
     }
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUENTIAL)(benchmark::State& state) {
@@ -323,6 +338,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUE
       std::cout << "Unmapping failed." << std::endl;
     }
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchmark::State& state) {
@@ -360,6 +377,8 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
 
     state.ResumeTiming();
   }
+
+  close(fd);
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)(benchmark::State& state) {  // open file
