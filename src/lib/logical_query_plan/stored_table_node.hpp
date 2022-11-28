@@ -60,6 +60,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;
+  std::shared_ptr<const StoredTableNode> _get_or_find_referenced_node(const std::string& table_name) const;
 
  private:
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
