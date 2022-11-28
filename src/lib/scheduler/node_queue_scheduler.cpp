@@ -45,7 +45,7 @@ void NodeQueueScheduler::begin() {
           std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
     }
   }
-
+  _worker_count = _workers.size();
   _active = true;
 
   for (auto& worker : _workers) {
@@ -97,6 +97,10 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
   return _queues;
 }
 
+const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const {
+  return _workers;
+}
+
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**
@@ -116,9 +120,23 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   if (preferred_node_id == CURRENT_NODE_ID) {
     auto worker = Worker::get_this_thread_worker();
     if (worker) {
+      std::cout << "default path\n";
       preferred_node_id = worker->queue()->node_id();
+    } else if (_worker_count > 1) {
+      std::stringstream ss;
+      ss << "new path. previously default to 0. now we check the lengths: ";
+      for (const auto& queue : _queues) {
+        ss << queue->estimate_load() << " and ";
+      }
+      const auto min_queue = std::min_element(_queues.cbegin(), _queues.cend(), [](const auto& lhs, const auto& rhs) {
+        std::printf("loads: %lu & %lu\n", lhs->estimate_load(), lhs->estimate_load());
+        return lhs->estimate_load() < lhs->estimate_load();
+      });
+      preferred_node_id = NodeID{std::distance(_queues.cbegin(), min_queue)};
+      ss << " and chose queue id: " << preferred_node_id << "\n";
+      std::cout << ss.str() << std::flush;
     } else {
-      // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
+      std::printf("Else\n");
       preferred_node_id = NodeID{0};
     }
   }
@@ -127,7 +145,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
               "preferred_node_id is not within range of available nodes");
 
   auto queue = _queues[preferred_node_id];
-  queue->push(task, static_cast<uint32_t>(priority));
+  queue->push(task, priority);
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {

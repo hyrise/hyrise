@@ -134,7 +134,7 @@ void Worker::execute_next(const std::shared_ptr<AbstractTask>& task) {
     Assert(successfully_enqueued, "Task was already enqueued, expected to be solely responsible for execution");
     _next_task = task;
   } else {
-    _queue->push(task, static_cast<uint32_t>(SchedulePriority::Default));
+    _queue->push(task, SchedulePriority::Default);
   }
 }
 

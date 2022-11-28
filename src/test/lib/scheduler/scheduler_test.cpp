@@ -1,3 +1,4 @@
+#include <chrono>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -13,6 +14,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/task_queue.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT
 
@@ -89,11 +91,11 @@ class SchedulerTest : public BaseTest {
 
   void increment_counter_in_subtasks(std::atomic_uint32_t& counter) {
     std::vector<std::shared_ptr<AbstractTask>> tasks;
-    for (size_t i = 0; i < 10; i++) {
+    for (auto outer_counter = size_t{0}; outer_counter < 10; outer_counter++) {
       auto task = std::make_shared<JobTask>([&]() {
         std::vector<std::shared_ptr<AbstractTask>> jobs;
-        for (size_t j = 0; j < 3; j++) {
-          auto job = std::make_shared<JobTask>([&]() { counter++; });
+        for (auto inner_counter = size_t{0}; inner_counter < 3; inner_counter++) {
+          auto job = std::make_shared<JobTask>([&]() { ++counter; });
 
           job->schedule();
           jobs.emplace_back(job);
@@ -269,6 +271,66 @@ TEST_F(SchedulerTest, VerifyTaskQueueSetup) {
   EXPECT_EQ(1, Hyrise::get().scheduler()->queues().size());
 
   Hyrise::get().scheduler()->finish();
+}
+
+TEST_F(SchedulerTest, TaskToNodeAssignment) {
+  if (std::thread::hardware_concurrency() < 2) {
+    GTEST_SKIP();
+  }
+
+  Hyrise::get().topology.use_fake_numa_topology(2, 1);
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+  EXPECT_EQ(2, node_queue_scheduler->queues().size());
+
+  auto task_1 = std::make_shared<JobTask>([&]() {}, SchedulePriority::Default, false);
+  auto task_2 = std::make_shared<JobTask>([&]() {}, SchedulePriority::Default, false);
+  auto task_3 = std::make_shared<JobTask>([&]() {}, SchedulePriority::Default, false);
+  auto task_4 = std::make_shared<JobTask>([&]() {}, SchedulePriority::Default, false);
+
+  task_1->schedule(NodeID{0});
+  task_2->schedule(NodeID{0});
+  task_3->schedule(NodeID{0});
+  task_4->schedule(NodeID{1});
+
+  node_queue_scheduler->wait_for_all_tasks();
+
+  EXPECT_EQ(node_queue_scheduler->workers()[0]->num_finished_tasks(), 3);
+  EXPECT_EQ(node_queue_scheduler->workers()[1]->num_finished_tasks(), 1);
+}
+
+TEST_F(SchedulerTest, TaskToIdlingNodeAssigment) {
+  if (std::thread::hardware_concurrency() < 2) {
+    GTEST_SKIP();
+  }
+
+  Hyrise::get().topology.use_fake_numa_topology(2, 1);
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Just a sufficiently large number to trigger 
+  constexpr auto JOB_COUNT = 100;
+  constexpr auto LOOP_TIME = std::chrono::microseconds{50};
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(JOB_COUNT);
+  for (auto task_count = size_t{0}; task_count < JOB_COUNT; ++task_count) {
+    jobs.push_back(std::make_shared<JobTask>([&]() {
+      // Jobs loop for a short time to ensure that jobs are not already taken out of the queue before the next job is
+      // scheduled.
+      const auto start = std::chrono::steady_clock::now();
+
+      auto counter = size_t{0};
+      while ((std::chrono::steady_clock::now() - start) < LOOP_TIME) {
+        ++counter;
+      }
+    }));
+  }
+  node_queue_scheduler->schedule_and_wait_for_tasks(jobs);
+
+  // On a modern CPU, LOOP_TIME should ensure that we almost always end up with 50/50. So >40 is a conservative check.
+  EXPECT_GT(node_queue_scheduler->workers()[0]->num_finished_tasks(), 40);
+  EXPECT_GT(node_queue_scheduler->workers()[1]->num_finished_tasks(), 40);
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {

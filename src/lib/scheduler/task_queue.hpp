@@ -26,7 +26,7 @@ class TaskQueue {
 
   NodeID node_id() const;
 
-  void push(const std::shared_ptr<AbstractTask>& task, uint32_t priority);
+  void push(const std::shared_ptr<AbstractTask>& task, const SchedulePriority priority);
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from the queue
@@ -37,6 +37,11 @@ class TaskQueue {
    * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues
    */
   std::shared_ptr<AbstractTask> steal();
+
+  /**
+   * XXXX
+   */
+  size_t estimate_load();
 
   /**
    * Notifies one worker as soon as a new task gets pushed into the queue

@@ -96,6 +96,8 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
+  const std::vector<std::shared_ptr<Worker>>& workers() const;
+
   /**
    * @param task
    * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later
@@ -118,6 +120,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
+  size_t _worker_count{1};
 };
 
 }  // namespace hyrise
