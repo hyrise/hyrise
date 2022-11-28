@@ -329,7 +329,7 @@ OperatorState AbstractOperator::state() const {
 }
 
 std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
-  std::lock_guard<std::mutex> lock(_operator_task_mutex);
+  auto lock = std::lock_guard<std::mutex>{_operator_task_mutex};
   // Return the OperatorTask that owns this operator if it already exists.
   auto operator_task = _operator_task.lock();
   if (operator_task) {

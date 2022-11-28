@@ -16,9 +16,9 @@
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorTaskTest : public BaseTest {
  protected:
@@ -111,18 +111,26 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
 }
 
 TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
-  // Operators reuse the created OperatorTasks when the tasks are still available. This may happen concurrently, e.g.,
-  // when an uncorrelated subquery is used in multiple TableScans. This test ensures that concurrently creating/reusing
-  // tasks from the same operator is thread-safe and does not lead to segmentation faults or tasks waiting forever to
-  // finish.
+  // Operators reuse the created OperatorTasks when the tasks are still available. Requesting the tasks may happen con-
+  // currently, e.g., when an uncorrelated subquery is used in multiple TableScans (see #2520). This test ensures that
+  // concurrently creating/reusing tasks from the same operator is thread-safe and does not lead to segmentation faults
+  // or tasks waiting forever to finish. This test addresses multiple issues:
+  // - Operators store a weak pointer to an OperatorTask. If the task has been destructed, we must ensure to create the
+  //   task again instead of returning nullptr.
+  // - An AbstractTask stores its succeeding tasks in a vector. If different threads concurrently access this vector, we
+  //   must ensure that (i) parallel access is safe (e.g., via locking), and (ii) this vector does not contain dupli-
+  //   cates, which would lead to deadlocks.
+  // We test both requirements by letting many threads create and execute tasks from the same root operator concurrent-
+  // ly. Thus, we concurrently access a task's successors and likely have expiring tasks referenced by operators.
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   const auto get_table = std::make_shared<GetTable>("table_b");
-  const auto scan_predicate = greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), 100);
+  const auto column_a = pqp_column_(ColumnID{0}, DataType::Int, false, "a");
+  const auto scan_predicate = greater_than_(column_a, 100);
   const auto table_scan = std::make_shared<TableScan>(get_table, scan_predicate);
 
   const auto num_threads = 100;
-  const auto iterations_per_thread = 50;
+  const auto iterations_per_thread = 100;
   auto thread_futures = std::vector<std::future<void>>{};
   thread_futures.reserve(num_threads);
   auto threads = std::vector<std::thread>{};
@@ -132,6 +140,8 @@ TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
   for (auto thread_id = 0; thread_id < num_threads; ++thread_id) {
     auto task = std::packaged_task<void()>{[&]() {
       for (auto iteration = 0; iteration < iterations_per_thread; ++iteration) {
+        // Each thread creates tasks from the same operator, which leads to massive task reusage. However, tasks will
+        // likely also be recreated since the operator is short-running.
         const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(table_scan);
         Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
         if (table_scan->get_output()) {
@@ -150,7 +160,7 @@ TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
     if (thread_future.wait_for(std::chrono::seconds(180)) == std::future_status::timeout) {
       FAIL() << "At least one thread got stuck and did not commit.";
     }
-    // Retrieve the future so that exceptions stored in its state are thrown
+    // Retrieve the future so that exceptions stored in its state are thrown.
     thread_future.get();
   }
 
