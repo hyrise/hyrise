@@ -7,6 +7,8 @@
 
 namespace hyrise {
 
+class AbstractBenchmarkItemRunner;
+
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
 #define EXPORT_PLUGIN(PluginName)        \
@@ -16,6 +18,8 @@ namespace hyrise {
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;
+using PreBenchmarkHook = std::function<void(const std::shared_ptr<AbstractBenchmarkItemRunner>&)>;
+using PostBenchmarkHook = std::function<void(void)>;
 
 // AbstractPlugin is the abstract super class for all plugins. An example implementation can be found
 // under test/utils/test_plugin.cpp. Usually plugins are implemented as singletons because there
@@ -37,6 +41,10 @@ class AbstractPlugin {
   // is YOUR responsibility to keep these function calls as short and efficient as possible, e.g.,
   // by spinning up a thread inside the plugin to execute the actual functionality.
   virtual std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions();
+
+  virtual std::optional<PreBenchmarkHook> pre_benchmark_hook();
+
+  virtual std::optional<PostBenchmarkHook> post_benchmark_hook();
 };
 
 }  // namespace hyrise
