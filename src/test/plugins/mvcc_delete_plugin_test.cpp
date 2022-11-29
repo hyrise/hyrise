@@ -85,9 +85,13 @@ class MvccDeletePluginTest : public BaseTest {
 };
 
 TEST_F(MvccDeletePluginTest, LoadUnloadPlugin) {
-  auto& pm = Hyrise::get().plugin_manager;
-  pm.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin"));
-  pm.unload_plugin("hyriseMvccDeletePlugin");
+  auto& plugin_manager = Hyrise::get().plugin_manager;
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseMvccDeletePlugin")));
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseMvccDeletePlugin"));
+}
+
+TEST_F(MvccDeletePluginTest, Description) {
+  EXPECT_EQ(MvccDeletePlugin{}.description(), "Physical MVCC delete plugin");
 }
 
 /**
