@@ -111,6 +111,17 @@ TEST_F(UccDiscoveryPluginTest, UserCallableFunction) {
   EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
 }
 
+TEST_F(UccDiscoveryPluginTest, BenchmarkHooks) {
+  auto& plugin_manager = Hyrise::get().plugin_manager;
+
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
+  // We only check if the plugin has a pre-benchmark hook. Actually executing it requires benchmark items and tables.
+  EXPECT_TRUE(plugin_manager.has_pre_benchmark_hook("hyriseUccDiscoveryPlugin"));
+  EXPECT_FALSE(plugin_manager.has_post_benchmark_hook("hyriseUccDiscoveryPlugin"));
+  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseUccDiscoveryPlugin"), std::logic_error);
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
+}
+
 TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
   for (const auto join_mode : {JoinMode::Inner, JoinMode::Semi}) {
     // clang-format off
