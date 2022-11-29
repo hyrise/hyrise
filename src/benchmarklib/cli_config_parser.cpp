@@ -137,6 +137,16 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Not tracking SQL metrics" << std::endl;
   }
 
+  auto plugins = std::vector<std::string>{};
+  auto comma_separated_plugins = parse_result["plugins"].as<std::string>();
+  if (!comma_separated_plugins.empty()) {
+    boost::trim_if(comma_separated_plugins, boost::is_any_of(","));
+    boost::split(plugins, comma_separated_plugins, boost::is_any_of(","), boost::token_compress_on);
+    for (const auto& plugin : plugins) {
+      std::cout << plugin << std::endl;
+    }
+  }
+
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
@@ -152,7 +162,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
                          enable_visualization,
                          verify,
                          cache_binary_tables,
-                         metrics};
+                         metrics,
+                         plugins};
 }
 
 EncodingConfig CLIConfigParser::parse_encoding_config(const std::string& encoding_file_str) {

@@ -11,14 +11,12 @@ class AbstractBenchmarkItemRunner;
 
 // This is necessary to make the plugin instantiable, it leads to plain C linkage to avoid
 // ugly mangled names. Use EXPORT in the implementation file of your plugin.
-#define EXPORT_PLUGIN(PluginName)        \
-  extern "C" AbstractPlugin* factory() { \
-    return new PluginName();             \
-  }
+#define EXPORT_PLUGIN(PluginName) \
+  extern "C" AbstractPlugin* factory() { return new PluginName(); }
 
 using PluginFunctionName = std::string;
 using PluginFunctionPointer = std::function<void(void)>;
-using PreBenchmarkHook = std::function<void(const std::shared_ptr<AbstractBenchmarkItemRunner>&)>;
+using PreBenchmarkHook = std::function<void(const std::unique_ptr<AbstractBenchmarkItemRunner>&)>;
 using PostBenchmarkHook = std::function<void(void)>;
 
 // AbstractPlugin is the abstract super class for all plugins. An example implementation can be found

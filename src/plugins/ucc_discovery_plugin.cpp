@@ -2,6 +2,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
@@ -17,7 +18,6 @@
 #include "storage/segment_iterate.hpp"
 #include "utils/format_duration.hpp"
 #include "utils/timer.hpp"
-#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 
 namespace hyrise {
 
@@ -52,19 +52,11 @@ UccDiscoveryPlugin::provided_user_executable_functions() {
 }
 
 std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {
-  return [&](const auto& benchmark_item_runner){
+  return [&](const auto& benchmark_item_runner) {
     for (const auto item_id : benchmark_item_runner->items()) {
       benchmark_item_runner->execute_item(item_id);
-      this->_validate_ucc_candidates(_identify_ucc_candidates());
     }
-  };
-}
-
-std::optional<PostBenchmarkHook> UccDiscoveryPlugin::post_benchmark_hook() {
-  return [&](){
-    for (const auto& log_entry : Hyrise::get().log_manager.log_entries()) {
-      std::cout << log_entry.reporter << ": " << log_entry.message << std::endl;
-    }
+    _validate_ucc_candidates(_identify_ucc_candidates());
   };
 }
 

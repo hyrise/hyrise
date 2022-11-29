@@ -74,6 +74,16 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     std::cout << "- All tables loaded into SQLite (" << timer.lap_formatted() << ")" << std::endl;
     _benchmark_item_runner->set_sqlite_wrapper(sqlite_wrapper);
   }
+
+  if (!_config.plugins.empty()) {
+    _loaded_plugins.reserve(_config.plugins.size());
+    for (const auto& plugin : _config.plugins) {
+      const auto& plugin_name = plugin_name_from_path(plugin);
+      std::cout << "- Load plugin" << plugin_name << std::endl;
+      Hyrise::get().plugin_manager.load_plugin(plugin);
+      _loaded_plugins.emplace_back(plugin_name);
+    }
+  }
 }
 
 void BenchmarkRunner::run() {
@@ -122,6 +132,15 @@ void BenchmarkRunner::run() {
     _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
   }
 
+  for (const auto& plugin : _loaded_plugins) {
+    if (!Hyrise::get().plugin_manager.has_pre_benchmark_hook(plugin)) {
+      continue;
+    }
+
+    std::cout << "- Run pre-benchmark hook for " << plugin << std::endl;
+    Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, _benchmark_item_runner);
+  }
+
   switch (_config.benchmark_mode) {
     case BenchmarkMode::Ordered: {
       _benchmark_ordered();
@@ -131,6 +150,15 @@ void BenchmarkRunner::run() {
       _benchmark_shuffled();
       break;
     }
+  }
+
+  for (const auto& plugin : _loaded_plugins) {
+    if (!Hyrise::get().plugin_manager.has_post_benchmark_hook(plugin)) {
+      continue;
+    }
+
+    std::cout << "- Run post-benchmark hook for " << plugin << std::endl;
+    Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin);
   }
 
   // Create report
@@ -496,6 +524,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
+    ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false"))

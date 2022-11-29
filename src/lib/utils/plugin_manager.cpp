@@ -74,10 +74,19 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
   plugin_handle_wrapper.plugin->start();
   _plugins[plugin_name] = std::move(plugin_handle_wrapper);
 
-  // Add the newly loaded plugin's user executable functions to our map of functions.
-  const auto& user_executable_functions = _plugins[plugin_name].plugin->provided_user_executable_functions();
+  // Add the newly loaded plugin's user executable function and benchmark hooks to our maps of functions.
+  auto& plugin_ref = *_plugins[plugin_name].plugin;
+  const auto& user_executable_functions = plugin_ref.provided_user_executable_functions();
   for (const auto& [function_name, function_pointer] : user_executable_functions) {
     _user_executable_functions[{plugin_name, function_name}] = function_pointer;
+  }
+  const auto& pre_benchmark_hook = plugin_ref.pre_benchmark_hook();
+  if (pre_benchmark_hook) {
+    _pre_benchmark_hooks[plugin_name] = *pre_benchmark_hook;
+  }
+  const auto& post_benchmark_hook = plugin_ref.post_benchmark_hook();
+  if (post_benchmark_hook) {
+    _post_benchmark_hooks[plugin_name] = *post_benchmark_hook;
   }
 }
 
@@ -95,6 +104,39 @@ void PluginManager::exec_user_function(const PluginName& plugin_name, const Plug
       LogLevel::Info);
 }
 
+void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
+                                            const std::unique_ptr<AbstractBenchmarkItemRunner>& benchmark_item_runner) {
+  Assert(_pre_benchmark_hooks.contains({plugin_name}),
+         "There is no pre-benchmark hook defined for plugin " + plugin_name + ".");
+
+  const auto pre_benchmark_hook = _pre_benchmark_hooks[plugin_name];
+  pre_benchmark_hook(benchmark_item_runner);
+
+  auto& log_manager = Hyrise::get().log_manager;
+  log_manager.add_message("PluginManager", "Called pre-benchmark hook provided by plugin `" + plugin_name + "`.",
+                          LogLevel::Info);
+}
+
+void PluginManager::exec_post_benchmark_hook(const PluginName& plugin_name) {
+  Assert(_post_benchmark_hooks.contains({plugin_name}),
+         "There is no post-benchmark hook defined for plugin " + plugin_name + ".");
+
+  const auto post_benchmark_hook = _post_benchmark_hooks[plugin_name];
+  post_benchmark_hook();
+
+  auto& log_manager = Hyrise::get().log_manager;
+  log_manager.add_message("PluginManager", "Called post-benchmark hook provided by plugin `" + plugin_name + "`.",
+                          LogLevel::Info);
+}
+
+bool PluginManager::has_pre_benchmark_hook(const PluginName& plugin_name) const {
+  return _pre_benchmark_hooks.contains(plugin_name);
+}
+
+bool PluginManager::has_post_benchmark_hook(const PluginName& plugin_name) const {
+  return _post_benchmark_hooks.contains(plugin_name);
+}
+
 void PluginManager::unload_plugin(const PluginName& plugin_name) {
   auto plugin_iter = _plugins.find(plugin_name);
   Assert(plugin_iter != _plugins.cend(),
@@ -108,11 +150,13 @@ std::unordered_map<PluginName, PluginHandleWrapper>::iterator PluginManager::_un
   const PluginName plugin_name = plugin_iter->first;
   const auto& plugin_handle_wrapper = plugin_iter->second;
 
-  // Delete user exectuable functions of the plugin to be unloaded from the map of functions.
+  // Delete user exectuable functions and benchmark hooks of the plugin to be unloaded from the maps of functions.
   std::erase_if(_user_executable_functions, [&](const auto& item) {
     const auto& [item_plugin_name, _] = item.first;
     return item_plugin_name == plugin_name;
   });
+  _pre_benchmark_hooks.erase(plugin_name);
+  _post_benchmark_hooks.erase(plugin_name);
 
   plugin_handle_wrapper.plugin->stop();
   auto* const handle = plugin_handle_wrapper.handle;

@@ -107,6 +107,8 @@ class BenchmarkRunner : public Noncopyable {
   BenchmarkState _state{Duration{0}};
 
   int _snapshot_id{0};
+
+  std::vector<std::string> _loaded_plugins{};
 };
 
 }  // namespace hyrise

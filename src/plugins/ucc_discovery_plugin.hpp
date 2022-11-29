@@ -46,8 +46,6 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 
   std::optional<PreBenchmarkHook> pre_benchmark_hook() final;
 
-  std::optional<PostBenchmarkHook> post_benchmark_hook() final;
-
  protected:
   friend class UccDiscoveryPluginTest;
 

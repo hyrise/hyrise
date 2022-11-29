@@ -1,5 +1,6 @@
 #include "test_plugin.hpp"
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -9,9 +10,8 @@ std::string TestPlugin::description() const {
 }
 
 void TestPlugin::start() {
-  TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("col_1", DataType::Int, false);
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  const auto column_definitions = TableColumnDefinitions{{"col_1", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   storage_manager.add_table("DummyTable", table);
 }
@@ -26,9 +26,8 @@ std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> TestPlugin::pr
 }
 
 void TestPlugin::a_user_executable_function() {
-  TableColumnDefinitions column_definitions;
-  column_definitions.emplace_back("col_A", DataType::Int, false);
-  auto table = std::make_shared<Table>(column_definitions, TableType::Data);
+  const auto column_definitions = TableColumnDefinitions{{"col_A", DataType::Int, false}};
+  const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   storage_manager.add_table("TableOfTestPlugin_" + std::to_string(_added_tables_count), table);
   ++_added_tables_count;
@@ -36,6 +35,22 @@ void TestPlugin::a_user_executable_function() {
 
 void TestPlugin::a_static_user_executable_function() {
   std::cout << "This is never being called!" << std::endl;
+}
+
+std::optional<PreBenchmarkHook> TestPlugin::pre_benchmark_hook() {
+  return [&](const auto& benchmark_item_runner) {
+    const auto column_definitions = TableColumnDefinitions{{"item_id", DataType::Int, false}};
+    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+
+    for (const auto item_id : benchmark_item_runner->items()) {
+      table->append({static_cast<int32_t>(item_id)});
+    }
+    storage_manager.add_table("BenchmarkItems", table);
+  };
+}
+
+std::optional<PostBenchmarkHook> TestPlugin::post_benchmark_hook() {
+  return [&]() { storage_manager.drop_table("BenchmarkItems"); };
 }
 
 EXPORT_PLUGIN(TestPlugin)
