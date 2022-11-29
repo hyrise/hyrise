@@ -7,8 +7,8 @@
 #include <algorithm>
 #include <iterator>
 #include <numeric>
-#include <random>
 #include <ostream>
+#include <random>
 #include "micro_benchmark_basic_fixture.hpp"
 
 namespace hyrise {
@@ -66,7 +66,6 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL)(
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
-
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -352,7 +351,6 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM)(benchma
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto read_data_size = NUMBER_OF_BYTES / uint32_t_size;
   const auto max_read_data_size = static_cast<size_t>(read_data_size);
-
 
   for (auto _ : state) {
     state.PauseTiming();
