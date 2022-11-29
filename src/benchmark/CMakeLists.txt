@@ -40,6 +40,60 @@ target_link_libraries_system(
 )
 
 add_executable(
+        hyriseMicroIOReadBenchmark
+
+        micro_benchmark_basic_fixture.cpp
+        micro_benchmark_basic_fixture.hpp
+        micro_benchmark_main.cpp
+        micro_benchmark_utils.cpp
+        micro_benchmark_utils.hpp
+        file_io_read_micro_benchmark.cpp
+)
+
+target_link_libraries(
+        hyriseMicroIOReadBenchmark
+        PRIVATE
+
+        hyrise
+        hyriseBenchmarkLib
+)
+
+# Ignore -Wshift-sign-overflow of google benchmark introduced with
+# https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
+target_link_libraries_system(
+        hyriseMicroIOReadBenchmark
+
+        benchmark::benchmark
+)
+
+add_executable(
+        hyriseMicroIOWriteBenchmark
+
+        micro_benchmark_basic_fixture.cpp
+        micro_benchmark_basic_fixture.hpp
+        micro_benchmark_main.cpp
+        micro_benchmark_utils.cpp
+        micro_benchmark_utils.hpp
+        file_io_write_micro_benchmark.cpp
+)
+
+target_link_libraries(
+        hyriseMicroIOWriteBenchmark
+        PRIVATE
+
+        hyrise
+        hyriseBenchmarkLib
+)
+
+# Ignore -Wshift-sign-overflow of google benchmark introduced with
+# https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
+target_link_libraries_system(
+        hyriseMicroIOWriteBenchmark
+
+        benchmark::benchmark
+)
+
+add_executable(
     hyriseBenchmarkPlayground
 
     benchmark_playground.cpp
