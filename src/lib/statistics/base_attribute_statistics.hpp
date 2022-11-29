@@ -34,8 +34,8 @@ class BaseAttributeStatistics {
   /**
    * Creates a new AttributeStatistics with all members of this slice scaled as requested. We use this method to estima-
    * te how the statistics would change if we executed any predicate with the given selectivity on the column/segment
-   * (e.g., another column wa sliced by the predicate and we scale the current column down to the selectivity). When we
-   * cannot be sure how the statistics will change, we assume the worst-case scenario (i.e., nothing changes).
+   * (e.g., another column was sliced by the predicate and we scale the current column down with the selectivity). When
+   * we cannot be sure how the statistics will change, we assume the worst-case scenario (i.e., nothing changes).
    */
   virtual std::shared_ptr<BaseAttributeStatistics> scaled(const Selectivity selectivity) const = 0;
 

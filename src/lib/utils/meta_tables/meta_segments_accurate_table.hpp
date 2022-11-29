@@ -8,7 +8,8 @@ namespace hyrise {
  * This is a class for showing information of all stored segments via a meta table. Here, we provide
  * - the distinct value count per segment, which is computed if it is not cached, and
  * - memory usage derived by iterating over all values.
- * For faster results where this information is less accurate use MetaSegmentsAccurateTable.
+ * MetaSegmentsTable provides similar information, but only uses cached distinct value counts and estimates the memory
+ * usage by sampling.
  */
 class MetaSegmentsAccurateTable : public AbstractMetaTable {
  public:
