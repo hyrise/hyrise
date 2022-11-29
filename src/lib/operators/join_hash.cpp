@@ -95,7 +95,7 @@ size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t
       static_cast<double>(sizeof(uint32_t)) / 0.8;
 
   const auto cluster_count = std::max(1.0, complete_hash_map_size / L2_CACHE_MAX_USABLE);
-  
+
   // We limit the max fan out for radix partitioning to 8 bits (i.e., 256 partitions). "An Experimental Comparison of
   // Thirteen Relational Equi-Joins in Main Memory" by Schuh et al. analyzed the number of radix bits and how much
   // large fan outs hurt performance due to TLB misses. As we do not use software-managed buffers, a smaller number of
