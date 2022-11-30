@@ -136,7 +136,7 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       // Index already contains entries for the given chunk.
       continue;
     }
-    
+
     _indexed_chunk_ids.insert(chunk.first);
     ++indexed_chunks;
 
