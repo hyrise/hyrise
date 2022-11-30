@@ -16,7 +16,7 @@
 
 namespace {
 
-constexpr auto MIN_LOAD_TO_DISTRIBUTE_TASKS = size_t{2'048};
+constexpr auto MIN_LOAD_TO_DISTRIBUTE_TASKS = size_t{4'096};
 
 }
 
