@@ -15,12 +15,12 @@
 
 
 namespace {
-  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.4f;
-  constexpr auto NUM_GROUPS_MAX_FACTOR = 5.0f;
+  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
+  constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
 
   constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
-  constexpr auto MAX_QUEUE_SIZE_FACTOR = size_t{16};
+  constexpr auto MAX_QUEUE_SIZE_FACTOR = size_t{6};
 }
 
 namespace hyrise {
@@ -32,8 +32,8 @@ NodeQueueScheduler::NodeQueueScheduler() {
   _num_workers =Hyrise::get().topology.num_cpus();
   NUM_GROUPS = _num_workers;
   std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(0.4f));
-  std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(5.0f));
-  std::printf("####\n####\n####\t\t %lu\n###\n####\n####\n", static_cast<size_t>(16));
+  std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(4.0f));
+  std::printf("####\n####\n####\t\t %lu\n###\n####\n####\n", static_cast<size_t>(8));
   std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(1.0f));
 }
 
@@ -161,7 +161,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   auto num_groups = NUM_GROUPS;
 
-  if (!tasks.empty() && tasks.size() > static_cast<size_t>(static_cast<float>(NUM_GROUPS) * static_cast<float>(1.0f))) {
+  if (!tasks.empty() && tasks.size() > static_cast<size_t>(static_cast<float>(NUM_GROUPS) * static_cast<float>(0.75f))) {
     //std::printf("1\n");
 
     //const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
@@ -170,7 +170,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     //std::printf("1a, %u\n", static_cast<NodeID::base_type>(node_id_for_queue_check));
     //std::printf("1b, %lu\n", static_cast<size_t>(tasks[0]->node_id()));
     //std::printf("1c, %lu\n", static_cast<size_t>(CURRENT_NODE_ID));
-    const auto cumu_length_queues = _queues[node_id_for_queue_check]->_queues[0].unsafe_size() + _queues[node_id_for_queue_check]->_queues[1].unsafe_size();
+    const auto cumu_length_queues = 2*_queues[node_id_for_queue_check]->_queues[0].unsafe_size() + _queues[node_id_for_queue_check]->_queues[1].unsafe_size();
     //std::printf("2\n");
 
     const auto upper_limit = _num_workers * MAX_QUEUE_SIZE_FACTOR;  // Everything above this limit yields the max value for grouping.
@@ -180,7 +180,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
     //std::printf("3\n");
     num_groups = static_cast<size_t>(static_cast<float>(_num_workers) * fill_factor);
-    //std::printf("(%lu)", cumu_length_queues);
+    //std::printf("num groups: %lu for length: %lu (fill degree is %f)\n", num_groups, cumu_length_queues, fill_factor);
   }
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(num_groups);
