@@ -1,9 +1,6 @@
 [submodule "resources/benchmark/tpcds/tpcds-result-reproduction"]
 	path = resources/benchmark/tpcds/tpcds-result-reproduction
 	url = https://github.com/hyrise-mp/tpcds-result-reproduction.git
-[submodule "third_party/abseil-cpp"]
-	path = third_party/abseil-cpp
-	url = https://github.com/abseil/abseil-cpp.git
 [submodule "third_party/benchmark"]
 	path = third_party/benchmark
 	url = https://github.com/google/benchmark.git
@@ -50,6 +47,9 @@
 [submodule "third_party/robin-map"]
 	path = third_party/robin-map
 	url = https://github.com/Tessil/robin-map.git
+[submodule "third_party/sparse-map"]
+	path = third_party/sparse-map
+	url = https://github.com/Tessil/sparse-map.git
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
 	url = https://github.com/hyrise/sql-parser.git
@@ -59,6 +59,3 @@
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
-[submodule "third_party/sparse-map"]
-	path = third_party/sparse-map
-	url = https://github.com/Tessil/sparse-map.git
