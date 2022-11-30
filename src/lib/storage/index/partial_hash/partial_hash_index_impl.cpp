@@ -127,37 +127,30 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
+  // Prevents multiple threads from indexing the same chunk concurrently.
+  auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
+
   auto indexed_chunks = size_t{0};
   for (const auto& chunk : chunks_to_index) {
     if (_indexed_chunk_ids.contains(chunk.first)) {
       // Index already contains entries for the given chunk.
       continue;
     }
+    
+    _indexed_chunk_ids.insert(chunk.first);
+    ++indexed_chunks;
 
-    // Prevents multiple threads from indexing the same chunk concurrently.
-    {
-      auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
-
-      if (_indexed_chunk_ids.contains(chunk.first)) {
-        // Another thread could have added the same chunk in the meantime.
-        continue;
+    // Iterate over the segment to index and populate the index.
+    const auto& indexed_segment = chunk.second->get_segment(column_id);
+    segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
+      const auto row_id = RowID{chunk.first, position.chunk_offset()};
+      // If value is NULL, add to NULL vector, otherwise add into value map.
+      if (position.is_null()) {
+        _null_values.emplace_back(row_id);
+      } else {
+        _map[position.value()].emplace_back(row_id);
       }
-
-      _indexed_chunk_ids.insert(chunk.first);
-      ++indexed_chunks;
-
-      // Iterate over the segment to index and populate the index.
-      const auto& indexed_segment = chunk.second->get_segment(column_id);
-      segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
-        const auto row_id = RowID{chunk.first, position.chunk_offset()};
-        // If value is NULL, add to NULL vector, otherwise add into value map.
-        if (position.is_null()) {
-          _null_values.emplace_back(row_id);
-        } else {
-          _map[position.value()].emplace_back(row_id);
-        }
-      });
-    }
+    });
   }
 
   return indexed_chunks;
