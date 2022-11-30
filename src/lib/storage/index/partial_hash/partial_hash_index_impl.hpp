@@ -1,6 +1,6 @@
 #pragma once
 
-#include <absl/container/flat_hash_map.h>
+#include <tsl/sparse_map.h>
 
 #include <unordered_set>
 #include <utility>
@@ -17,7 +17,7 @@ class AbstractSegment;
 class PartialHashIndexTest;
 
 /**
- * Forward iterator that iterates over a absl::flat_hash_map that maps a DataType to a vector of RowIDs. The
+ * Forward iterator that iterates over a tsl::sparse_map that maps a DataType to a vector of RowIDs. The
  * iteration process is as if the map would have been flattened and then been iterated.
  *
  * @tparam DataType The key type of the underlying map.
@@ -25,7 +25,7 @@ class PartialHashIndexTest;
 template <typename DataType>
 class TableIndexTbbUnorderedMapIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename absl::flat_hash_map<DataType, std::vector<RowID>>::const_iterator;
+  using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
   explicit TableIndexTbbUnorderedMapIterator(MapIteratorType itr);
 
@@ -152,7 +152,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const override;
 
  private:
-  absl::flat_hash_map<DataType, std::vector<RowID>> _map;
+  tsl::sparse_map<DataType, std::vector<RowID>> _map;
   std::vector<RowID> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
   mutable std::shared_mutex _data_access_mutex;

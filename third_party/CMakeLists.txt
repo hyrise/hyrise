@@ -18,6 +18,7 @@ add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(zstd/build/cmake)
 # The library target provided by the zstd library is incomplete, see https://github.com/facebook/zstd/issues/2377

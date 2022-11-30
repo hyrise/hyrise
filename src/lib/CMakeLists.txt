@@ -733,6 +733,7 @@ target_link_libraries_system(
     flat-hash-map
     nlohmann_json::nlohmann_json
     robin_map
+    sparse_map
     SQLite::SQLite3
     tbb
 )
