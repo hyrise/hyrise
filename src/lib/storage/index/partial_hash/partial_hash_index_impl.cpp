@@ -185,13 +185,15 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 
   // Iterate over all values stored in the index.
   auto map_iter = _map.begin();
+  // auto keys_to_delete = std::vector<DataType>{};
+  // (void)keys_to_delete;
   while (map_iter != _map.end()) {
     auto& row_ids = _map.at(map_iter->first);
 
     // Remove every RowID entry of the value that references one of the chunks.
     row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_unindex), row_ids.end());
 
-    map_iter = row_ids.empty() ? _map.erase(map_iter) : ++map_iter;
+    ++map_iter;// = row_ids.empty() ? _map.erase(map_iter) : ++map_iter;
   }
 
   auto& nulls = _null_values;

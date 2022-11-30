@@ -727,6 +727,7 @@ target_link_libraries_system(
     hyrise_impl
 
     ${BOOST_LIBS}
+    absl::flat_hash_map
     cpp-btree
     cxxopts
     flat-hash-map
