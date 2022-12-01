@@ -48,7 +48,8 @@ Checks: '
          -readability-identifier-naming,
          -misc-no-recursion,
          -bugprone-easily-swappable-parameters,
-         -readability-function-cognitive-complexity
+         -readability-function-cognitive-complexity,
+         -bugprone-suspicious-include
          '
 
 WarningsAsErrors: '*'
