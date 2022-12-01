@@ -136,6 +136,20 @@ class AbstractTableIndex : private Noncopyable {
    */
   Iterator null_cend() const;
 
+  // For iterating from _cbegin() to _cend()
+  template <typename Functor>
+  void access_values_with_iterators(const Functor& functor) const;
+
+  // For iterating from _null_cbegin() to _null_cend()
+  template <typename Functor>
+  void access_null_values_with_iterators(const Functor& functor) const;
+
+  template <typename Functor>
+  void range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const;
+
+  template <typename Functor>
+  void range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const;
+
   TableIndexType type() const;
 
   /**
