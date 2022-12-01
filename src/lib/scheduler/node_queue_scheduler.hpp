@@ -118,8 +118,9 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
-
+  size_t _min_tasks_count_for_regrouping{8};
   size_t _num_workers{8};
+  size_t _regrouping_upper_limit{32};
 };
 
 }  // namespace hyrise

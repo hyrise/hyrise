@@ -28,9 +28,6 @@ namespace hyrise {
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
 
-  // Good default value
-  _num_workers =Hyrise::get().topology.num_cpus();
-  NUM_GROUPS = _num_workers;
   std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(0.4f));
   std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(4.0f));
   std::printf("####\n####\n####\t\t %lu\n###\n####\n####\n", static_cast<size_t>(8));
@@ -48,8 +45,17 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
 
+  _num_workers =Hyrise::get().topology.num_cpus();
+
+  // Good default value
+  NUM_GROUPS = _num_workers;
+
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _queues.reserve(Hyrise::get().topology.nodes().size());
+
+  // 
+  _min_tasks_count_for_regrouping = std::max(size_t{16}, _num_workers);
+  _regrouping_upper_limit = _num_workers * MAX_QUEUE_SIZE_FACTOR;  // Everything above this limit yields the max value for grouping.
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
@@ -161,7 +167,7 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   auto num_groups = NUM_GROUPS;
 
-  if (!tasks.empty() && tasks.size() > static_cast<size_t>(static_cast<float>(NUM_GROUPS) * static_cast<float>(0.75f))) {
+  if (tasks.size() >= _min_tasks_count_for_regrouping) {
     //std::printf("1\n");
 
     //const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
@@ -173,9 +179,8 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
     const auto cumu_length_queues = 2*_queues[node_id_for_queue_check]->_queues[0].unsafe_size() + _queues[node_id_for_queue_check]->_queues[1].unsafe_size();
     //std::printf("2\n");
 
-    const auto upper_limit = _num_workers * MAX_QUEUE_SIZE_FACTOR;  // Everything above this limit yields the max value for grouping.
-    const auto fill_level = std::min(cumu_length_queues, upper_limit);
-    const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(upper_limit));
+    const auto fill_level = std::min(cumu_length_queues, _regrouping_upper_limit);
+    const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
     const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
 
     //std::printf("3\n");
