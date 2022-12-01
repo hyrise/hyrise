@@ -132,12 +132,12 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
     return false;
   }
 
-  std::string search_for{meta.config.separator, meta.config.delimiter, meta.config.quote};
+  auto search_for = std::string{meta.config.separator, meta.config.delimiter, meta.config.quote};
 
-  size_t from = 0;
-  unsigned int rows = 0;
-  unsigned int field_count = 1;
-  bool in_quotes = false;
+  auto from = size_t{0};
+  auto rows = uint64_t{0};
+  auto field_count = uint16{1};
+  auto in_quotes = false;
   while (rows < table.target_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
     auto pos = csv_content.find_first_of(search_for, from);
@@ -160,8 +160,8 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
     // Determine if delimiter marks end of row or is part of the (string) value
     if (elem == meta.config.delimiter && !in_quotes) {
-      DebugAssert(field_count == static_cast<size_t>(table.column_count()),
-                  "Number of CSV fields does not match number of columns.");
+      Assert(field_count == static_cast<size_t>(table.column_count()),
+             "Number of CSV fields does not match number of columns.");
       ++rows;
       field_count = 0;
     }
@@ -184,7 +184,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
   // For each csv column, create a CsvConverter which builds up a ValueSegment
   const auto column_count = table.column_count();
   const auto row_count = ChunkOffset{static_cast<ChunkOffset::base_type>(field_ends.size() / column_count)};
-  std::vector<std::unique_ptr<BaseCsvConverter>> converters;
+  auto converters = std::vector<std::unique_ptr<BaseCsvConverter>>{};
 
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto is_nullable = table.column_is_nullable(column_id);
@@ -199,10 +199,10 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   Assert(field_ends.size() == static_cast<size_t>(row_count) * column_count, "Unexpected number of fields");
 
-  size_t start = 0;
-  size_t row_id = 0;
-  size_t field_idx = 0;
-  ColumnID column_id{0};
+  auto start = size_t{0};
+  auto row_id = size_t{0};
+  auto field_idx = size_t{0};
+  auto column_id = ColumnID{0};
 
   try {
     for (; row_id < row_count; ++row_id) {
@@ -236,7 +236,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 }
 
 void CsvParser::_sanitize_field(std::string& field, const CsvMeta& meta, const std::string& escaped_linebreak) {
-  std::string::size_type pos = 0;
+  auto pos = std::string::size_type{0};
   while ((pos = field.find(escaped_linebreak, pos)) != std::string::npos) {
     field.replace(pos, escaped_linebreak.size(), 1, meta.config.delimiter);
     ++pos;
