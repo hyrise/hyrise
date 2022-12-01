@@ -24,7 +24,7 @@ namespace hyrise {
 std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const ChunkOffset chunk_size,
                                         const std::optional<CsvMeta>& csv_meta) {
   // If no meta info is given as a parameter, look for a json file
-  CsvMeta meta;
+  auto meta = CsvMeta{};
   if (csv_meta == std::nullopt) {
     meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
   } else {
@@ -35,7 +35,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
 
   auto table = _create_table_from_meta(chunk_size, meta);
 
-  std::ifstream csvfile{filename};
+  auto csvfile = std::ifstream{filename};
 
   // return empty table if input file is empty
   if (!csvfile || csvfile.peek() == EOF || csvfile.peek() == '\r' || csvfile.peek() == '\n') {
@@ -43,7 +43,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
   }
 
   {
-    std::string line;
+    auto line = std::string{};
     std::getline(csvfile, line);
     Assert(line.find('\r') == std::string::npos, "Windows encoding is not supported, use dos2unix");
   }
@@ -55,7 +55,7 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
    */
   csvfile.seekg(0, std::ios::end);
   const auto csvfile_size = csvfile.tellg();
-  std::string content(csvfile_size, ' ');
+  auto content = std::string(csvfile_size, ' ');
   csvfile.seekg(0);
   csvfile.read(content.data(), csvfile_size);
 
@@ -64,20 +64,20 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
     content.push_back(meta.config.delimiter);
   }
 
-  std::string_view content_view{content.c_str(), content.size()};
+  auto content_view = std::string_view{content.c_str(), content.size()};
 
   // Save chunks in list to avoid memory relocation
-  std::list<Segments> segments_by_chunks;
-  std::vector<std::shared_ptr<AbstractTask>> tasks;
-  std::vector<size_t> field_ends;
-  std::mutex append_chunk_mutex;
+  auto segments_by_chunks = std::list<Segments>{};
+  auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+  auto field_ends = std::vector<size_t>{};
+  auto append_chunk_mutex = std::mutex{};
   while (_find_fields_in_chunk(content_view, *table, field_ends, meta)) {
     // create empty chunk
     segments_by_chunks.emplace_back();
     auto& segments = segments_by_chunks.back();
 
     // Only pass the part of the string that is actually needed to the parsing task
-    std::string_view relevant_content = content_view.substr(0, field_ends.back());
+    auto relevant_content = std::string_view{content_view.substr(0, field_ends.back())};
 
     // Remove processed part of the csv content
     content_view = content_view.substr(field_ends.back() + 1);
@@ -136,7 +136,7 @@ bool CsvParser::_find_fields_in_chunk(std::string_view csv_content, const Table&
 
   auto from = size_t{0};
   auto rows = uint64_t{0};
-  auto field_count = uint16{1};
+  auto field_count = uint16_t{1};
   auto in_quotes = false;
   while (rows < table.target_chunk_size()) {
     // Find either of row separator, column delimiter, quote identifier
