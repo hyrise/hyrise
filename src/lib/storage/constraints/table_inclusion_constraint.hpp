@@ -11,7 +11,7 @@ namespace hyrise {
  */
 class TableInclusionConstraint final : public AbstractTableConstraint {
  public:
-  TableInclusionConstraint(std::vector<ColumnID> columns, std::vector<ColumnID> included_columns,
+  TableInclusionConstraint(const std::vector<ColumnID>& columns, const std::vector<ColumnID>& included_columns,
                            const std::string& included_table_name);
 
   const std::vector<ColumnID>& included_columns() const;

@@ -50,17 +50,17 @@ size_t OrderDependency::hash() const {
 }
 
 std::ostream& operator<<(std::ostream& stream, const OrderDependency& od) {
-  stream << "{";
+  stream << "[";
   stream << od.expressions[0]->as_column_name();
   for (auto expression_idx = size_t{1}; expression_idx < od.expressions.size(); ++expression_idx) {
     stream << ", " << od.expressions[expression_idx]->as_column_name();
   }
-  stream << "} |-> {";
+  stream << "] |-> [";
   stream << od.ordered_expressions[0]->as_column_name();
   for (auto expression_idx = size_t{1}; expression_idx < od.ordered_expressions.size(); ++expression_idx) {
     stream << ", " << od.ordered_expressions[expression_idx]->as_column_name();
   }
-  stream << "}";
+  stream << "]";
   return stream;
 }
 

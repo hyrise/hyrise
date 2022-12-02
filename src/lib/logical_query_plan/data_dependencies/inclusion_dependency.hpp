@@ -9,8 +9,8 @@ namespace hyrise {
  * TODO
  */
 struct InclusionDependency final {
-  explicit InclusionDependency(std::vector<std::shared_ptr<AbstractExpression>> init_expressions,
-                               std::vector<std::shared_ptr<AbstractExpression>> init_included_expressions);
+  explicit InclusionDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions,
+                               const std::vector<std::shared_ptr<AbstractExpression>>& init_included_expressions);
 
   bool operator==(const InclusionDependency& rhs) const;
   bool operator!=(const InclusionDependency& rhs) const;

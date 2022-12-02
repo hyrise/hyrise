@@ -35,16 +35,17 @@ class TableInclusionConstraintTest : public BaseTest {
 };
 
 TEST_F(TableInclusionConstraintTest, OrderedColumnIDs) {
-  // Implementation should not mess up the order of the column IDs.
+  // To handle equuivalent INDs with swapped columns, we sort the columns and apply the permutation to the included
+  // columns.
   const auto inclusion_constraint =
       TableInclusionConstraint({{ColumnID{2}, ColumnID{1}}, {{ColumnID{3}, ColumnID{4}}}, "table_a"});
   EXPECT_EQ(inclusion_constraint.columns().size(), 2);
-  EXPECT_EQ(inclusion_constraint.columns().front(), ColumnID{2});
-  EXPECT_EQ(inclusion_constraint.columns().back(), ColumnID{1});
+  EXPECT_EQ(inclusion_constraint.columns().front(), ColumnID{1});
+  EXPECT_EQ(inclusion_constraint.columns().back(), ColumnID{2});
 
   EXPECT_EQ(inclusion_constraint.included_columns().size(), 2);
-  EXPECT_EQ(inclusion_constraint.included_columns().front(), ColumnID{3});
-  EXPECT_EQ(inclusion_constraint.included_columns().back(), ColumnID{4});
+  EXPECT_EQ(inclusion_constraint.included_columns().front(), ColumnID{4});
+  EXPECT_EQ(inclusion_constraint.included_columns().back(), ColumnID{3});
 }
 
 TEST_F(TableInclusionConstraintTest, AddInclusionConstraints) {
@@ -66,10 +67,19 @@ TEST_F(TableInclusionConstraintTest, AddInclusionConstraints) {
   _table->add_soft_inclusion_constraint({{ColumnID{1}}, {ColumnID{0}}, "table"});
   EXPECT_EQ(_table->soft_inclusion_constraints().size(), 4);
 
+  const auto inclusion_constraint_5 =
+      TableInclusionConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, "table"};
+  _table->add_soft_inclusion_constraint({{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, "table"});
+  EXPECT_EQ(_table->soft_inclusion_constraints().size(), 5);
+  // The constraint is the swapped version of the previous constraint, which is equivalent. Thus, it cannot be added as a duplicate.
+  EXPECT_THROW(_table->add_soft_inclusion_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{3}, ColumnID{2}}, "table"}),
+               std::logic_error);
+
   EXPECT_TRUE(_table->soft_inclusion_constraints().contains(inclusion_constraint_1));
   EXPECT_TRUE(_table->soft_inclusion_constraints().contains(inclusion_constraint_2));
   EXPECT_TRUE(_table->soft_inclusion_constraints().contains(inclusion_constraint_3));
   EXPECT_TRUE(_table->soft_inclusion_constraints().contains(inclusion_constraint_4));
+  EXPECT_TRUE(_table->soft_inclusion_constraints().contains(inclusion_constraint_5));
 }
 
 TEST_F(TableInclusionConstraintTest, AddInclusionConstraintsInvalid) {
@@ -107,6 +117,8 @@ TEST_F(TableInclusionConstraintTest, Equals) {
       TableInclusionConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}, "table_a"};
   const auto inclusion_constraint_e_reordered =
       TableInclusionConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{3}, ColumnID{2}}, "table_a"};
+  const auto inclusion_constraint_f =
+      TableInclusionConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, "table_a"};
 
   EXPECT_TRUE(inclusion_constraint_a == inclusion_constraint_a);
   EXPECT_TRUE(inclusion_constraint_a == inclusion_constraint_a_copy);
@@ -123,8 +135,11 @@ TEST_F(TableInclusionConstraintTest, Equals) {
 
   EXPECT_FALSE(inclusion_constraint_e == inclusion_constraint_a);
   EXPECT_FALSE(inclusion_constraint_a == inclusion_constraint_e);
-  EXPECT_FALSE(inclusion_constraint_e == inclusion_constraint_e_reordered);
-  EXPECT_FALSE(inclusion_constraint_e_reordered == inclusion_constraint_e);
+  EXPECT_TRUE(inclusion_constraint_e == inclusion_constraint_e_reordered);
+  EXPECT_TRUE(inclusion_constraint_e_reordered == inclusion_constraint_e);
+
+  EXPECT_FALSE(inclusion_constraint_e == inclusion_constraint_f);
+  EXPECT_FALSE(inclusion_constraint_f == inclusion_constraint_e);
 }
 
 TEST_F(TableInclusionConstraintTest, Hash) {
@@ -138,6 +153,8 @@ TEST_F(TableInclusionConstraintTest, Hash) {
       TableInclusionConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}, "table_a"};
   const auto inclusion_constraint_e_reordered =
       TableInclusionConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{3}, ColumnID{2}}, "table_a"};
+  const auto inclusion_constraint_f =
+      TableInclusionConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, "table_a"};
 
   EXPECT_TRUE(inclusion_constraint_a.hash() == inclusion_constraint_a.hash());
   EXPECT_TRUE(inclusion_constraint_a.hash() == inclusion_constraint_a_copy.hash());
@@ -154,8 +171,11 @@ TEST_F(TableInclusionConstraintTest, Hash) {
 
   EXPECT_FALSE(inclusion_constraint_e.hash() == inclusion_constraint_a.hash());
   EXPECT_FALSE(inclusion_constraint_a.hash() == inclusion_constraint_e.hash());
-  EXPECT_FALSE(inclusion_constraint_e.hash() == inclusion_constraint_e_reordered.hash());
-  EXPECT_FALSE(inclusion_constraint_e_reordered.hash() == inclusion_constraint_e.hash());
+  EXPECT_TRUE(inclusion_constraint_e.hash() == inclusion_constraint_e_reordered.hash());
+  EXPECT_TRUE(inclusion_constraint_e_reordered.hash() == inclusion_constraint_e.hash());
+
+  EXPECT_FALSE(inclusion_constraint_e.hash() == inclusion_constraint_f.hash());
+  EXPECT_FALSE(inclusion_constraint_f.hash() == inclusion_constraint_e.hash());
 }
 
 }  // namespace hyrise
