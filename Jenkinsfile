@@ -53,6 +53,33 @@ try {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
             checkout scm
+            
+            sh '''
+            git config --global --add safe.directory $WORKSPACE
+            # Get the paths of the submodules; for each path, add it as a git safe.directory
+            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
+            '''
+
+            sh "./install_dependencies.sh"
+
+            cmake = 'cmake -DCI_BUILD=ON'
+
+            // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
+            unity = '-DCMAKE_UNITY_BUILD=ON'
+ 
+            // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
+            // support older versions. We test the oldest LLVM version shipped with Ubuntu 22.04 (i.e., LLVM 11) and
+            // GCC 9 (oldest version supported by Hyrise). We execute at least debug runs for them.
+            // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
+            // the documentation (README, Wiki).
+            clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+            clang11 = '-DCMAKE_C_COMPILER=clang-11 -DCMAKE_CXX_COMPILER=clang++-11'
+            gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+            gcc9 = '-DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9'
+
+            debug = '-DCMAKE_BUILD_TYPE=Debug'
+            release = '-DCMAKE_BUILD_TYPE=Release'
+            relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
 
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
@@ -78,7 +105,34 @@ try {
       stage("clangReleaseMacArm") {
         if (env.BRANCH_NAME == 'master' || full_ci) {
           try {
-            checkout scm          
+            checkout scm
+            
+            sh '''
+            git config --global --add safe.directory $WORKSPACE
+            # Get the paths of the submodules; for each path, add it as a git safe.directory
+            grep path .gitmodules | sed 's/.*=//' | xargs -n 1 -I '{}' git config --global --add safe.directory $WORKSPACE/'{}'
+            '''
+
+            sh "./install_dependencies.sh"
+
+            cmake = 'cmake -DCI_BUILD=ON'
+
+            // We don't use unity builds with GCC 9 as it triggers https://github.com/google/googletest/issues/3552
+            unity = '-DCMAKE_UNITY_BUILD=ON'
+ 
+            // With Hyrise, we aim to support the most recent compiler versions and do not invest a lot of work to
+            // support older versions. We test the oldest LLVM version shipped with Ubuntu 22.04 (i.e., LLVM 11) and
+            // GCC 9 (oldest version supported by Hyrise). We execute at least debug runs for them.
+            // If you want to upgrade compiler versions, please update install_dependencies.sh,  DEPENDENCIES.md, and
+            // the documentation (README, Wiki).
+            clang = '-DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++'
+            clang11 = '-DCMAKE_C_COMPILER=clang-11 -DCMAKE_CXX_COMPILER=clang++-11'
+            gcc = '-DCMAKE_C_COMPILER=gcc -DCMAKE_CXX_COMPILER=g++'
+            gcc9 = '-DCMAKE_C_COMPILER=gcc-9 -DCMAKE_CXX_COMPILER=g++-9'
+
+            debug = '-DCMAKE_BUILD_TYPE=Debug'
+            release = '-DCMAKE_BUILD_TYPE=Release'
+            relwithdebinfo = '-DCMAKE_BUILD_TYPE=RelWithDebInfo'
             
             // We do not use install_dependencies.sh here as there is no way to run OS X in a Docker container
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
