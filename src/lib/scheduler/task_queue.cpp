@@ -61,7 +61,7 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
   }
   return nullptr;
 }
-/*
+
 size_t TaskQueue::estimate_load() {
   auto estimated_load = size_t{0};
 
@@ -74,6 +74,5 @@ size_t TaskQueue::estimate_load() {
 
   return estimated_load;
 }
-*/
 
 }  // namespace hyrise

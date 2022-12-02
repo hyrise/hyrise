@@ -96,7 +96,7 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
-  //const std::vector<std::shared_ptr<Worker>>& workers() const;
+  const std::vector<std::shared_ptr<Worker>>& workers() const;
 
   /**
    * @param task

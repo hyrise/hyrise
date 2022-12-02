@@ -41,7 +41,7 @@ class TaskQueue {
   /**
    * XXXX
    */
-  //size_t estimate_load();
+  size_t estimate_load();
 
   /**
    * Notifies one worker as soon as a new task gets pushed into the queue
