@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 #include "utils/assert.hpp"
@@ -73,6 +74,29 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _output_expressions.reset();
 }
 
+const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
+  return _pruned_column_ids;
+}
+
+std::string MockNode::description(const DescriptionMode mode) const {
+  std::ostringstream stream;
+  stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
+
+  auto column_id = ColumnID{0};
+  for (const auto& column : _column_definitions) {
+    if (std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), column_id) != _pruned_column_ids.end()) {
+      ++column_id;
+      continue;
+    }
+    stream << " " << column.second;
+    ++column_id;
+  }
+
+  stream << " | pruned: " << _pruned_column_ids.size() << "/" << _column_definitions.size() << " columns";
+
+  return stream.str();
+}
+
 std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations() const {
   auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
@@ -99,37 +123,39 @@ std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations()
   return unique_column_combinations;
 }
 
+void MockNode::set_order_dependencies(const OrderDependencies& order_dependencies) {
+  _order_dependencies = order_dependencies;
+}
+
 std::shared_ptr<OrderDependencies> MockNode::order_dependencies() const {
-  // TODO: store and forward ODs.
-  return std::make_shared<OrderDependencies>();
+  const auto order_dependencies = std::make_shared<OrderDependencies>();
+  const auto& output_expressions = this->output_expressions();
+  for (const auto& od : _order_dependencies) {
+    if (!(contains_all_expressions(od.expressions, output_expressions) &&
+          contains_all_expressions(od.ordered_expressions, output_expressions))) {
+      continue;
+    }
+
+    order_dependencies->emplace(od);
+  }
+  return order_dependencies;
+}
+
+void MockNode::set_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies) {
+  _inclusion_dependencies = inclusion_dependencies;
 }
 
 std::shared_ptr<InclusionDependencies> MockNode::inclusion_dependencies() const {
-  // TODO: store and forward INDs.
-  return std::make_shared<InclusionDependencies>();
-}
-
-const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
-  return _pruned_column_ids;
-}
-
-std::string MockNode::description(const DescriptionMode mode) const {
-  std::ostringstream stream;
-  stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
-
-  auto column_id = ColumnID{0};
-  for (const auto& column : _column_definitions) {
-    if (std::find(_pruned_column_ids.begin(), _pruned_column_ids.end(), column_id) != _pruned_column_ids.end()) {
-      ++column_id;
+  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+  const auto& output_expressions = this->output_expressions();
+  for (const auto& ind : _inclusion_dependencies) {
+    if (contains_all_expressions(ind.expressions, output_expressions)) {
       continue;
     }
-    stream << " " << column.second;
-    ++column_id;
+
+    inclusion_dependencies->emplace(ind);
   }
-
-  stream << " | pruned: " << _pruned_column_ids.size() << "/" << _column_definitions.size() << " columns";
-
-  return stream.str();
+  return inclusion_dependencies;
 }
 
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {

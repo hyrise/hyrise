@@ -65,12 +65,10 @@ std::shared_ptr<UniqueColumnCombinations> StaticTableNode::unique_column_combina
 }
 
 std::shared_ptr<OrderDependencies> StaticTableNode::order_dependencies() const {
-  // TODO: generate from Table constraints
   return std::make_shared<OrderDependencies>();
 }
 
 std::shared_ptr<InclusionDependencies> StaticTableNode::inclusion_dependencies() const {
-  // TODO: generate from Table constraints or store locally
   return std::make_shared<InclusionDependencies>();
 }
 
