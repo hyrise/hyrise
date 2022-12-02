@@ -85,7 +85,7 @@ try {
             sh "git submodule update --init --recursive --jobs 4 --depth=1"
 
             sh "mkdir clang-debug && cd clang-debug && /usr/local/bin/cmake ${debug} ${unity} -DCMAKE_C_COMPILER=/usr/local/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@15/bin/clang++ .."
-            sh "cd clang-debug && make -j $(sysctl -n hw.logicalcpu)"
+            sh "cd clang-debug && make -j4"
             sh "./clang-debug/hyriseTest"
             sh "./clang-debug/hyriseSystemTest --gtest_filter=\"-TPCCTest*:TPCDSTableGeneratorTest.*:TPCHTableGeneratorTest.RowCountsMediumScaleFactor:*.CompareToSQLite/Line1*WithLZ4\""
             sh "PATH=/usr/local/bin/:$PATH ./scripts/test/hyriseConsole_test.py clang-debug"
@@ -139,7 +139,7 @@ try {
             
             // NOTE: These paths differ from x64 - brew on ARM uses /opt (https://docs.brew.sh/Installation)
             sh "mkdir clang-release && cd clang-release && cmake ${release} -DCMAKE_C_COMPILER=/opt/homebrew/opt/llvm@15/bin/clang -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm@15/bin/clang++ .."
-            sh "cd clang-release && make -j $(sysctl -n hw.logicalcpu)"
+            sh "cd clang-release && make -j8"
 
             // Check whether arm64 binaries are built to ensure that we are not accidentally running rosetta that
             // executes x86 binaries on arm.
