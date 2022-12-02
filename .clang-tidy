@@ -104,8 +104,9 @@ WarningsAsErrors: '*'
 #   - bugprone-easily-swappable-parameters                      Ignore issues with swapple parameters as we found them to be of no help.
 #   - readability-function-cognitive-complexity                 When appropriate, long functions with a sequential data flow (which is sometimes easier to read) are fine. In many
 #                                                                places, the rule catches functions where the code could be improved, but will likely not be due to a lack of time.
-#   -bugprone-suspicious-include                                Unity builds use #include's for cpp files. However, unity build significantly improve the runtime of clang-tidy,
-#                                                                which is otherwise the slowest step of the CI pipeline by a factor of two.
+#   -bugprone-suspicious-include                                Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
+#                                                                which is otherwise the slowest step of the CI pipeline by a factor of two. Furthermore, the linter checks for 
+#                                                                these includes as well.
 
 
 CheckOptions:
