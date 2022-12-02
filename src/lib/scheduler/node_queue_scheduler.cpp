@@ -105,9 +105,11 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
   return _queues;
 }
 
+/*
 const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const {
   return _workers;
 }
+*/
 
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
