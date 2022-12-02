@@ -50,6 +50,11 @@ void FileIOWriteMicroBenchmarkFixture::sanity_check(uint32_t NUMBER_OF_BYTES) {
     Fail("Open error:" + std::strerror(errno));
   }
 
+
+  const auto file_size = lseek(fd, 0, SEEK_END);
+  Assert(file_size == NUMBER_OF_BYTES, "Sanity check failed: Actual size of " + std::to_string(file_size) +
+      " does not match expected file size of " + std::to_string(NUMBER_OF_BYTES) + ".");
+
   auto read_data = std::vector<uint32_t>(NUMBER_OF_BYTES / sizeof(uint32_t));
 
   const off_t OFFSET = 0;
@@ -80,6 +85,7 @@ BENCHMARK_DEFINE_F(FileIOWriteMicroBenchmarkFixture, WRITE_NON_ATOMIC)(benchmark
     micro_benchmark_clear_disk_cache();
     state.ResumeTiming();
 
+    lseek(fd, 0, SEEK_SET);
     if (write(fd, std::data(data_to_write), NUMBER_OF_BYTES) != NUMBER_OF_BYTES) {
       close(fd);
       Fail("Write error:" + std::strerror(errno));
