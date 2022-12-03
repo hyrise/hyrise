@@ -172,6 +172,8 @@ set(
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
+    lib/storage/buffer/buffer_manager_test.cpp
+    lib/storage/buffer/clock_replacement_strategy_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
@@ -241,7 +243,7 @@ set(
     utils/constraint_test_utils.hpp
 )
 
-set (
+set(
     SYSTEM_TEST_SOURCES
     ${SHARED_SOURCES}
     benchmarklib/synthetic_table_generator_test.cpp
@@ -263,6 +265,7 @@ set(
     gtest
     gmock
     SQLite::SQLite3
+
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
@@ -285,8 +288,9 @@ add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDe
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
+    target_compile_options(hyriseTest PUBLIC -Xclang -fno-pch-timestamp)
 endif()
+
 if(NOT ${CMAKE_VERSION} VERSION_LESS "3.16.0")
     target_precompile_headers(hyriseTest PRIVATE
         <gtest/gtest.h>

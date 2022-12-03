@@ -103,6 +103,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * during optimization by other rules, such as the JoinToSemiJoinRule and the JoinToPredicateRewriteRule.
    * 
    * Example: SELECT c_name FROM customer, nation WHERE c_nationkey = n_nationkey AND n_name = 'GERMANY'
+   * 
    * In this target query, the table nation is purely used for filtering out tuples from the customer table. All
    * attributes of the nation table are completely projected away afterwards.
    * 

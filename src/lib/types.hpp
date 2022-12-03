@@ -43,6 +43,8 @@ STRONG_TYPEDEF(uint32_t, CpuID);
 STRONG_TYPEDEF(uint32_t, WorkerID);
 STRONG_TYPEDEF(uint32_t, TaskID);
 STRONG_TYPEDEF(uint32_t, ChunkOffset);
+STRONG_TYPEDEF(uint32_t, PageID);
+STRONG_TYPEDEF(uint32_t, FrameID);
 
 // When changing the following two strong typedefs to 64-bit types, please be aware that both are used with
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
@@ -136,6 +138,8 @@ constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID::base_type>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
+constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
+constexpr FrameID INVALID_FRAME_ID{std::numeric_limits<FrameID::base_type>::max()};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
 // yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
