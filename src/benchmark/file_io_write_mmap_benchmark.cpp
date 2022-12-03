@@ -12,7 +12,8 @@ namespace hyrise {
 
 class FileIOWriteMmapBenchmarkFixture : public FileIOWriteMicroBenchmarkFixture {
  protected:
-  void mmap_write_benchmark(benchmark::State& state, const int flag, const int data_access_mode, const ssize_t file_size);
+  void mmap_write_benchmark(benchmark::State& state, const int flag, const int data_access_mode,
+                            const ssize_t file_size);
 };
 
 /*
@@ -28,7 +29,7 @@ class FileIOWriteMmapBenchmarkFixture : public FileIOWriteMicroBenchmarkFixture 
  *      file_size: Size argument of benchmark.
 */
 void FileIOWriteMmapBenchmarkFixture::mmap_write_benchmark(benchmark::State& state, const int flag,
-                                                            const int data_access_mode, const ssize_t file_size) {
+                                                           const int data_access_mode, const ssize_t file_size) {
   auto fd = int32_t{};
   if ((fd = open(filename, O_RDWR)) < 0) {
     close(fd);
@@ -92,7 +93,6 @@ void FileIOWriteMmapBenchmarkFixture::mmap_write_benchmark(benchmark::State& sta
 
   close(fd);
 }
-
 
 BENCHMARK_DEFINE_F(FileIOWriteMmapBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)(benchmark::State& state) {
   mmap_write_benchmark(state, MAP_PRIVATE, 0, state.range(0));

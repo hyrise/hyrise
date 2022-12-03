@@ -1,16 +1,16 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include <fcntl.h>
-#include <numeric>
 #include <sys/mman.h>
 #include <sys/stat.h>
+#include <numeric>
 
 namespace hyrise {
 
 const auto MB = uint32_t{1'000'000};
 
 class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
-public:
+ public:
   void SetUp(::benchmark::State& state) override {
     NUMBER_OF_BYTES = state.range(0) * MB;
     NUMBER_OF_ELEMENTS = NUMBER_OF_BYTES / sizeof(uint32_t);
@@ -27,7 +27,7 @@ public:
     Assert(std::remove(filename) == 0, "Remove error: " + std::strerror(errno));
   }
 
-protected:
+ protected:
   void sanity_check();
 
   std::vector<uint32_t> data_to_write;
@@ -46,8 +46,8 @@ void FileIOWriteMicroBenchmarkFixture::sanity_check() {
 
   const auto file_size = lseek(fd, 0, SEEK_END);
   Assert(file_size == NUMBER_OF_BYTES, "Sanity check failed: Actual size of " + std::to_string(file_size) +
-                                       " does not match expected file size of " + std::to_string(NUMBER_OF_BYTES) +
-                                       ".");
+                                           " does not match expected file size of " + std::to_string(NUMBER_OF_BYTES) +
+                                           ".");
 
   auto read_data = std::vector<uint32_t>(NUMBER_OF_ELEMENTS);
 
