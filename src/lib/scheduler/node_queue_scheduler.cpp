@@ -16,7 +16,7 @@
 
 namespace {
 
-//constexpr auto MIN_LOAD_TO_DISTRIBUTE_TASKS = size_t{128};
+constexpr auto MIN_LOAD_TO_DISTRIBUTE_TASKS = size_t{128};
 
 }
 
@@ -130,7 +130,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     if (worker) {
       //std::cout << "default path\n";
       preferred_node_id = worker->queue()->node_id();
-/*    } else if (_queue_count > 1) {
+    } else if (_queue_count > 1) {
       //std::stringstream ss;
       //ss << "new path. previously default to 0. now we check the lengths: ";
       //for (const auto& queue : _queues) {
@@ -169,7 +169,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
       } else {
         preferred_node_id = NodeID{0};
       }
-*/
+
     } else {
       //std::printf("Else\n");
       preferred_node_id = NodeID{0};
