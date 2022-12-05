@@ -1,4 +1,5 @@
 #include "micro_benchmark_utils.hpp"
+#include "utils/assert.hpp"
 
 #include <stddef.h>
 #include <unistd.h>
