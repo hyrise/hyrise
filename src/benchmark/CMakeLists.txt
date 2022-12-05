@@ -21,7 +21,7 @@ add_executable(
     operators/union_all_benchmark.cpp
     tpch_data_micro_benchmark.cpp
     tpch_table_generator_benchmark.cpp
-)
+        file_io_read_mmap_benchmark.cpp)
 
 target_link_libraries(
     hyriseMicroBenchmarks
@@ -75,6 +75,8 @@ add_executable(
         micro_benchmark_utils.cpp
         micro_benchmark_utils.hpp
         file_io_write_micro_benchmark.cpp
+        file_io_read_micro_benchmark.cpp
+        file_io_read_mmap_benchmark.cpp
 )
 
 target_link_libraries(
@@ -89,6 +91,33 @@ target_link_libraries(
 # https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
 target_link_libraries_system(
         hyriseMicroIOWriteBenchmark
+
+        benchmark::benchmark
+)
+
+add_executable(
+        hyriseMicroIOReadMmapBenchmark
+
+        micro_benchmark_basic_fixture.cpp
+        micro_benchmark_basic_fixture.hpp
+        micro_benchmark_main.cpp
+        micro_benchmark_utils.cpp
+        micro_benchmark_utils.hpp
+        file_io_read_micro_benchmark.hpp
+        file_io_read_mmap_benchmark.cpp
+)
+
+target_link_libraries(
+        hyriseMicroIOReadMmapBenchmark
+        PRIVATE
+
+        hyrise
+        hyriseBenchmarkLib
+)
+# Ignore -Wshift-sign-overflow of google benchmark introduced with
+# https://github.com/google/benchmark/commit/926f61da9ac8d0100eb75a5246b45484cc9c94b7
+target_link_libraries_system(
+        hyriseMicroIOReadMmapBenchmark
 
         benchmark::benchmark
 )
