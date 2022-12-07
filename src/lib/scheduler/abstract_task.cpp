@@ -53,7 +53,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // with the given successor (compare discussion https://github.com/hyrise/hyrise/pull/2340#discussion_r602174096).
   // The following guard prevents adding duplicate successors/predecessors:
   {
-    auto lock = std::lock_guard<std::mutex>{_set_as_predecessor_mutex};
+    auto lock = std::unique_lock<std::shared_mutex>{_successors_mutex};
     if (std::find(_successors.cbegin(), _successors.cend(), successor) != _successors.cend()) {
       return;
     }
@@ -147,8 +147,11 @@ void AbstractTask::execute() {
     Assert(success_done, "Expected successful transition to TaskState::Done.");
   }
 
-  for (auto& successor : _successors) {
-    successor->_on_predecessor_done();
+  {
+    const auto lock = acquire_successors_mutex();
+    for (auto& successor : _successors) {
+      successor->_on_predecessor_done();
+    }
   }
 
   if (_done_callback) {
@@ -243,6 +246,10 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
 
   _state.exchange(new_state);
   return true;
+}
+
+std::shared_lock<std::shared_mutex> AbstractTask::acquire_successors_mutex() {
+  return std::shared_lock{_successors_mutex};
 }
 
 }  // namespace hyrise

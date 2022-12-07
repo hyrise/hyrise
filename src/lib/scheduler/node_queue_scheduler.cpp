@@ -143,8 +143,11 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(NUM_GROUPS);
   for (const auto& task : tasks) {
-    if (!task->predecessors().empty() || !task->successors().empty()) {
-      return;
+    {
+      const auto lock = task->acquire_successors_mutex();
+      if (!task->predecessors().empty() || !task->successors().empty()) {
+        return;
+      }
     }
 
     if (common_node_id) {
