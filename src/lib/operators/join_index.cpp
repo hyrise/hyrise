@@ -18,70 +18,6 @@
 #include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
-namespace {
-class perform_data_join_using_table_index_iterators {
- public:
-  perform_data_join_using_table_index_iterators(const hyrise::ChunkOffset probe_chunk_offset,
-                                                const hyrise::ChunkID probe_chunk_id, const hyrise::JoinMode mode,
-                                                hyrise::IndexSide index_side,
-                                                std::vector<std::vector<bool>>& probe_matches,
-                                                std::vector<std::vector<bool>>& index_matches,
-                                                std::shared_ptr<hyrise::RowIDPosList> probe_pos_list,
-                                                std::shared_ptr<hyrise::RowIDPosList> index_pos_list)
-      : _mode{mode},
-        _index_side{index_side},
-        _probe_matches{probe_matches},
-        _index_matches{index_matches},
-        _probe_pos_list{probe_pos_list},
-        _index_pos_list{index_pos_list} {}
-
-  void operator()(const hyrise::AbstractTableIndex::Iterator range_begin,
-                  const hyrise::AbstractTableIndex::Iterator range_end) const {
-    const auto index_matches_count = std::distance(range_begin, range_end);
-
-    if (index_matches_count == 0) {
-      return;
-    }
-
-    const auto is_semi_or_anti_join = _mode == hyrise::JoinMode::Semi || _mode == hyrise::JoinMode::AntiNullAsFalse ||
-                                      _mode == hyrise::JoinMode::AntiNullAsTrue;
-
-    // Remember the matches for non-inner joins.
-    if (((is_semi_or_anti_join || _mode == hyrise::JoinMode::Left) && _index_side == hyrise::IndexSide::Right) ||
-        (_mode == hyrise::JoinMode::Right && _index_side == hyrise::IndexSide::Left) ||
-        _mode == hyrise::JoinMode::FullOuter) {
-      _probe_matches[_probe_chunk_id][_probe_chunk_offset] = true;
-    }
-
-    if (!is_semi_or_anti_join) {
-      // We replicate the probe side value for each index side value.
-      std::fill_n(std::back_inserter(*_probe_pos_list), index_matches_count,
-                  hyrise::RowID{_probe_chunk_id, _probe_chunk_offset});
-
-      std::copy(range_begin, range_end, std::back_inserter(*_index_pos_list));
-    }
-
-    if ((_mode == hyrise::JoinMode::Left && _index_side == hyrise::IndexSide::Left) ||
-        (_mode == hyrise::JoinMode::Right && _index_side == hyrise::IndexSide::Right) ||
-        _mode == hyrise::JoinMode::FullOuter || (is_semi_or_anti_join && _index_side == hyrise::IndexSide::Left)) {
-      std::for_each(range_begin, range_end, [this](hyrise::RowID index_row_id) {
-        _index_matches[index_row_id.chunk_id][index_row_id.chunk_offset] = true;
-      });
-    }
-  }
-
- private:
-  const hyrise::ChunkOffset _probe_chunk_offset;
-  const hyrise::ChunkID _probe_chunk_id;
-  hyrise::JoinMode _mode;
-  hyrise::IndexSide _index_side;
-  std::vector<std::vector<bool>>& _probe_matches;
-  std::vector<std::vector<bool>>& _index_matches;
-  std::shared_ptr<hyrise::RowIDPosList> _probe_pos_list;
-  std::shared_ptr<hyrise::RowIDPosList> _index_pos_list;
-};
-}  // namespace
-
 namespace hyrise {
 
 /*
@@ -449,28 +385,29 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
 
-    auto join_funtor = perform_data_join_using_table_index_iterators(probe_side_position.chunk_offset(), probe_chunk_id,
-                                                                     _mode, _index_side, _probe_matches, _index_matches,
-                                                                     _probe_pos_list, _index_pos_list);
-
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
     // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
     // has a match.
+
+    auto append_matches = [&probe_side_position, &probe_chunk_id, this](auto index_begin, auto index_end) {
+      _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
+    };
+
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
       if (probe_side_position.is_null() || indexed_null_values) {
-        table_index->access_values_with_iterators(join_funtor);
-        table_index->access_null_values_with_iterators(join_funtor);
+        table_index->access_values_with_iterators(append_matches);
+        table_index->access_null_values_with_iterators(append_matches);
       }
     } else {
       if (!probe_side_position.is_null()) {
         switch (_adjusted_primary_predicate.predicate_condition) {
           case PredicateCondition::Equals: {
-            table_index->range_equals_with_iterators(join_funtor, probe_side_position.value());
+            table_index->range_equals_with_iterators(append_matches, probe_side_position.value());
             break;
           }
           case PredicateCondition::NotEquals: {
-            table_index->range_not_equals_with_iterators(join_funtor, probe_side_position.value());
+            table_index->range_not_equals_with_iterators(append_matches, probe_side_position.value());
             break;
           }
           default: {
