@@ -13,8 +13,9 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:
   /**
-   * By requesting a std::set for the constructor, we encure that the ColumnIDs have a well-defined order when creating
-   * the vector. Thus, we can safely hash and compare key constraints without using the set semantics of the constraint.
+   * By requesting a std::set for the constructor, we ensure that the ColumnIDs have a well-defined order when creating
+   * the vector (and equal constraints have equal columns). Thus, we can safely hash and compare key constraints without
+   * voilating the set semantics of the constraint.
    */
   TableKeyConstraint(const std::set<ColumnID>& columns, KeyConstraintType init_key_type);
 
