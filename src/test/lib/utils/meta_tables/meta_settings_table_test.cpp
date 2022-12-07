@@ -14,9 +14,6 @@ class MetaSettingsTest : public BaseTest {
   std::shared_ptr<Table> expected_table;
 
   void SetUp() override {
-    Hyrise::reset();
-    Hyrise::get().settings_manager = SettingsManager{};
-
     meta_settings_table = std::make_shared<MetaSettingsTable>();
 
     const auto column_definitions = meta_settings_table->column_definitions();
@@ -33,10 +30,6 @@ class MetaSettingsTest : public BaseTest {
 
     mock_setting = std::make_shared<MockSetting>("mock_setting");
     mock_setting->register_at_settings_manager();
-  }
-
-  void TearDown() override {
-    Hyrise::reset();
   }
 
   const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {

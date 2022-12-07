@@ -37,8 +37,6 @@ class SQLPipelineTest : public BaseTest {
   }
 
   void SetUp() override {
-    Hyrise::reset();
-
     // We reload table_a every time since it is modified during the test case.
     _table_a = load_table("resources/test_data/tbl/int_float.tbl", ChunkOffset{2});
     Hyrise::get().storage_manager.add_table("table_a", _table_a);
