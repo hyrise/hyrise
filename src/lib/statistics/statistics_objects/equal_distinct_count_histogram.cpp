@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include <boost/sort/sort.hpp>
 #include <tsl/robin_map.h>  // NOLINT linter identifies this file as a C header.
+#include <boost/sort/sort.hpp>
 
 #include "generic_histogram.hpp"
 #include "resolve_type.hpp"
