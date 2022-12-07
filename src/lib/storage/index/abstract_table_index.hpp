@@ -194,4 +194,28 @@ class AbstractTableIndex : private Noncopyable {
   const TableIndexType _type;
 };
 
+template <typename Functor>
+void AbstractTableIndex::access_values_with_iterators(const Functor& functor) const {
+  std::cout << "AHH";
+  functor(_cbegin(), _cend());
+}
+
+template <typename Functor>
+void AbstractTableIndex::access_null_values_with_iterators(const Functor& functor) const {
+  functor(_null_cbegin(), _null_cend());
+}
+
+template <typename Functor>
+void AbstractTableIndex::range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
+  const auto [index_begin, index_end] = _range_equals(value);
+  functor(index_begin, index_end);
+}
+
+template <typename Functor>
+void AbstractTableIndex::range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
+  const auto [not_equals_range_left, not_equals_range_right] = _range_not_equals(value);
+  functor(not_equals_range_left.first, not_equals_range_left.second);
+  functor(not_equals_range_right.first, not_equals_range_right.second);
+}
+
 }  // namespace hyrise
