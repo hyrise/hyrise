@@ -47,7 +47,7 @@ void NodeQueueScheduler::begin() {
           std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
     }
   }
-  _worker_count = _workers.size();
+
   _active = true;
 
   for (auto& worker : _workers) {

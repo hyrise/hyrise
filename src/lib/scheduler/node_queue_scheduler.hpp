@@ -121,7 +121,6 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
 
-  size_t _worker_count{1};
   size_t _queue_count{1};
 };
 
