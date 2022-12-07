@@ -15,10 +15,6 @@ namespace hyrise {
 
 class HyriseTest : public BaseTest {
  protected:
-  void SetUp() override {
-    Hyrise::reset();
-  }
-
   // This wrapper method is needed to access the plugins vector since it is a private member of PluginManager
   std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() {
     auto& pm = Hyrise::get().plugin_manager;

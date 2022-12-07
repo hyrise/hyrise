@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "base_attribute_statistics.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram.hpp"
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
@@ -45,6 +46,7 @@ class AttributeStatistics : public BaseAttributeStatistics {
   std::shared_ptr<MinMaxFilter<T>> min_max_filter;
   std::shared_ptr<RangeFilter<T>> range_filter;
   std::shared_ptr<NullValueRatioStatistics> null_value_ratio;
+  std::shared_ptr<DistinctValueCount> distinct_value_count;
 };
 
 template <typename T>
@@ -67,6 +69,10 @@ std::ostream& operator<<(std::ostream& stream, const AttributeStatistics<T>& att
 
   if (attribute_statistics.null_value_ratio) {
     stream << "NullValueRatio: " << attribute_statistics.null_value_ratio->ratio << std::endl;
+  }
+
+  if (attribute_statistics.distinct_value_count) {
+    stream << "DistinctValueCount: " << attribute_statistics.distinct_value_count->count << std::endl;
   }
 
   stream << "}" << std::endl;
