@@ -13,7 +13,6 @@
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
-
 namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
