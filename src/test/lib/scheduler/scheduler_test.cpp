@@ -328,7 +328,7 @@ TEST_F(SchedulerTest, TaskToIdlingNodeAssigment) {
   }
   node_queue_scheduler->schedule_and_wait_for_tasks(jobs);
 
-  // On a modern CPU, LOOP_TIME should ensure that we almost always end up with 50/50. So >40 is a conservative check.
+  // Sleeping for LOOP_TIME should ensure that we most often end up with 50/50. So >40 is a conservative check.
   EXPECT_GT(node_queue_scheduler->workers()[0]->num_finished_tasks(), 40);
   EXPECT_GT(node_queue_scheduler->workers()[1]->num_finished_tasks(), 40);
 }

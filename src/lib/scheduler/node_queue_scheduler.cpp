@@ -14,12 +14,6 @@
 #include "utils/assert.hpp"
 
 
-namespace {
-
-constexpr auto MIN_LOAD_TO_DISTRIBUTE_TASKS = size_t{4'096};
-
-}
-
 namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
@@ -38,8 +32,9 @@ void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
 
   _workers.reserve(Hyrise::get().topology.num_cpus());
-  _queues.reserve(Hyrise::get().topology.nodes().size());
-
+  _queue_count = Hyrise::get().topology.nodes().size();
+  _queues.reserve(_queue_count);
+  
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
@@ -52,7 +47,7 @@ void NodeQueueScheduler::begin() {
           std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
     }
   }
-  _worker_count = _workers.size();
+
   _active = true;
 
   for (auto& worker : _workers) {
@@ -123,34 +118,32 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     return;
   }
 
+  // There is no need to check for preferred nodes or a worker's queue, if there is only a single node/queue.
+  if (_queue_count == 1) {
+    _queues[0]->push(task, priority);
+    return;
+  }
+
   // Lookup node id for current worker.
   if (preferred_node_id == CURRENT_NODE_ID) {
     auto worker = Worker::get_this_thread_worker();
     if (worker) {
-      //std::cout << "default path\n";
       preferred_node_id = worker->queue()->node_id();
-    } else if (_worker_count > 1) {
-      //std::stringstream ss;
-      //ss << "new path. previously default to 0. now we check the lengths: ";
-      //for (const auto& queue : _queues) {
-      //  ss << queue->estimate_load() << " and ";
-      //}
-      const auto min_queue = std::min_element(_queues.cbegin(), _queues.cend(), [](const auto& lhs, const auto& rhs) {
-        //std::printf("loads: %lu & %lu\n", lhs->estimate_load(), lhs->estimate_load());
-        return lhs->estimate_load() < lhs->estimate_load();
-      });
+    } else if (_queue_count > 1) {
+      // Get load of Node 0. 
+      auto min_load_queue_id = NodeID{0};
+      const auto load_queue_0 = _queues[0]->estimate_load();
+      auto min_load = load_queue_0;
 
-      if ((*min_queue)->estimate_load() == 0 && _queues[0]->estimate_load() > MIN_LOAD_TO_DISTRIBUTE_TASKS) {
-        preferred_node_id = NodeID{std::distance(_queues.cbegin(), min_queue)};
-        //std::printf("(%d)\n", static_cast<uint32_t>(preferred_node_id));
-      } else {
-        preferred_node_id = NodeID{0};
+      for (auto queue_id = NodeID{1}; queue_id < _queue_count; ++queue_id) {
+        const auto queue_load = _queues[queue_id]->estimate_load();
+        if (queue_load < min_load) {
+          min_load_queue_id = queue_id;
+          min_load = queue_load;
+        }
       }
-
-      //ss << " and chose queue id: " << preferred_node_id << "\n";
-      //std::cout << ss.str() << std::flush;
+      preferred_node_id = min_load_queue_id;
     } else {
-      //std::printf("Else\n");
       preferred_node_id = NodeID{0};
     }
   }

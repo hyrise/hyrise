@@ -39,7 +39,9 @@ class TaskQueue {
   std::shared_ptr<AbstractTask> steal();
 
   /**
-   * XXXX
+   * Returns an estimated load for the queue. The load is estimated as the used TBB queue does not guarantee that
+   * size() returns the correct size at a given point in time. The priority queues are weighted, i.e., a task in the
+   * high priority causes a larger assumed load than a task in the default priority's queue.
    */
   size_t estimate_load();
 

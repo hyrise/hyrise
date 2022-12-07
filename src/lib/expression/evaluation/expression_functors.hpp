@@ -143,8 +143,8 @@ using AdditionEvaluator = STLArithmeticFunctorWrapper<std::plus>;
 using SubtractionEvaluator = STLArithmeticFunctorWrapper<std::minus>;
 using MultiplicationEvaluator = STLArithmeticFunctorWrapper<std::multiplies>;
 
-// Modulo selects between the operator `%` for integrals and fmod() for floats. Custom NULL logic returns NULL if the
-// divisor is NULL
+// Modulo selects between the operator `%` for integrals and std::fmod() for floats. Custom NULL logic returns NULL if
+// the divisor is NULL.
 struct ModuloEvaluator {
   template <typename Result, typename ArgA, typename ArgB>
   struct supports {
