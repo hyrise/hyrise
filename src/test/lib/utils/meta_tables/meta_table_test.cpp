@@ -2,8 +2,8 @@
 #include "lib/utils/meta_tables/meta_mock_table.hpp"
 
 #include "operators/table_wrapper.hpp"
+#include "statistics/attribute_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 #include "utils/meta_tables/meta_chunk_sort_orders_table.hpp"
 #include "utils/meta_tables/meta_chunks_table.hpp"
@@ -13,8 +13,6 @@
 #include "utils/meta_tables/meta_segments_table.hpp"
 #include "utils/meta_tables/meta_settings_table.hpp"
 #include "utils/meta_tables/meta_tables_table.hpp"
-
-#include "meta_mock_table.hpp"
 
 namespace hyrise {
 
@@ -47,15 +45,14 @@ class MetaTableTest : public BaseTest {
     return names;
   }
 
-  const std::shared_ptr<Table> generate_meta_table(const std::shared_ptr<AbstractMetaTable>& table) const {
+  const std::shared_ptr<Table> generate_meta_table(const MetaTable& table) const {
     return table->_generate();
   }
 
  protected:
-  const std::string test_file_path = "resources/test_data/tbl/meta_tables/meta_";
+  const std::string test_file_path{"resources/test_data/tbl/meta_tables/meta_"};
   std::shared_ptr<Table> int_int;
   std::shared_ptr<Table> int_int_int_null;
-  std::shared_ptr<const Table> mock_manipulation_values;
 
   void SetUp() override {
     auto& storage_manager = Hyrise::get().storage_manager;
@@ -70,21 +67,23 @@ class MetaTableTest : public BaseTest {
 
     storage_manager.add_table("int_int", int_int);
     storage_manager.add_table("int_int_int_null", int_int_int_null);
-
-    const auto column_definitions = MetaMockTable().column_definitions();
-    const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
-    table->append({pmr_string{"foo"}});
-    auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
-    table_wrapper->execute();
-    mock_manipulation_values = table_wrapper->get_output();
   }
 
-  void TearDown() override {
-    Hyrise::reset();
-  }
-
-  void _add_meta_table(const std::shared_ptr<AbstractMetaTable>& table) {
+  void _add_meta_table(const MetaTable& table) const {
     Hyrise::get().meta_table_manager.add_table(table);
+  }
+
+  void _insert_into_meta_table(const MetaTable& table, const std::vector<AllTypeVariant>& values) const {
+    return table->_insert(values);
+  }
+
+  void _delete_from_meta_table(const MetaTable& table, const std::vector<AllTypeVariant>& values) const {
+    return table->_remove(values);
+  }
+
+  void _update_meta_table(const MetaTable& table, const std::vector<AllTypeVariant>& old_values,
+                          const std::vector<AllTypeVariant>& new_values) const {
+    return table->_update(old_values, new_values);
   }
 };
 
@@ -107,10 +106,17 @@ TEST_P(MultiMetaTablesTest, IsImmutable) {
   EXPECT_FALSE(GetParam()->can_insert());
   EXPECT_FALSE(GetParam()->can_update());
   EXPECT_FALSE(GetParam()->can_delete());
+
+  const auto mock_values = std::vector<AllTypeVariant>(GetParam()->column_definitions().size());
+  EXPECT_THROW(_insert_into_meta_table(GetParam(), mock_values), std::logic_error);
+  EXPECT_THROW(_delete_from_meta_table(GetParam(), mock_values), std::logic_error);
+  EXPECT_THROW(_update_meta_table(GetParam(), mock_values, mock_values), std::logic_error);
 }
 
 TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
+
   const auto meta_table = generate_meta_table(GetParam());
   const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
 
@@ -121,9 +127,16 @@ TEST_P(MultiMetaTablesTest, MetaTableGeneration) {
 
 TEST_P(MultiMetaTablesTest, IsDynamic) {
   std::string suffix = GetParam()->name() == "segments" || GetParam()->name() == "segments_accurate" ? lib_suffix : "";
+  int_int->get_chunk(ChunkID{0})->set_pruning_statistics({});
+
+  {
+    const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + ".tbl");
+    const auto meta_table = generate_meta_table(GetParam());
+    EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+  }
+
   SQLPipelineBuilder{"UPDATE int_int SET a = a + 1000 WHERE a < 1000"}.create_pipeline().get_result_table();
   SQLPipelineBuilder{"INSERT INTO int_int_int_null (a, b, c) VALUES (NULL, 1, 2)"}.create_pipeline().get_result_table();
-
   if (GetParam()->name() == "chunk_sort_orders") {
     Hyrise::get()
         .storage_manager.get_table("int_int")
@@ -131,10 +144,11 @@ TEST_P(MultiMetaTablesTest, IsDynamic) {
         ->set_individually_sorted_by(SortColumnDefinition(ColumnID{1}, SortMode::Ascending));
   }
 
-  const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
-  const auto meta_table = generate_meta_table(GetParam());
-
-  EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+  {
+    const auto expected_table = load_table(test_file_path + GetParam()->name() + suffix + "_updated.tbl");
+    const auto meta_table = generate_meta_table(GetParam());
+    EXPECT_TABLE_EQ_UNORDERED(meta_table, expected_table);
+  }
 }
 
 TEST_P(MultiMetaTablesTest, HandlesDeletedChunks) {
@@ -177,7 +191,7 @@ TEST_F(MetaTableTest, SingleGenerationInPipeline) {
 }
 
 TEST_F(MetaTableTest, IsNotCached) {
-  auto mock_table = std::make_shared<MetaMockTable>();
+  const auto mock_table = std::make_shared<MetaMockTable>();
   _add_meta_table(mock_table);
   Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
   Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
@@ -208,4 +222,5 @@ TEST_F(MetaTableTest, IsNotCached) {
   EXPECT_EQ(mock_table->generate_calls(), 8);
   EXPECT_EQ(mock_table->update_calls(), 2);
 }
+
 }  // namespace hyrise

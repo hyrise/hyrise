@@ -5,9 +5,9 @@
 namespace hyrise {
 
 // For consistency with other statistics, also single values are wrapped by an AbstractStatisticsObject.
-class NullValueRatioStatistics : public AbstractStatisticsObject {
+class DistinctValueCount : public AbstractStatisticsObject {
  public:
-  explicit NullValueRatioStatistics(const float init_ratio);
+  explicit DistinctValueCount(const size_t init_count);
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
       const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
@@ -15,7 +15,7 @@ class NullValueRatioStatistics : public AbstractStatisticsObject {
 
   std::shared_ptr<AbstractStatisticsObject> scaled(const Selectivity selectivity) const override;
 
-  float ratio{0};
+  size_t count{0};
 };
 
 }  // namespace hyrise

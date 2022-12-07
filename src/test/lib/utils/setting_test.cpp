@@ -7,12 +7,7 @@ namespace hyrise {
 class SettingTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
     mock_setting = std::make_shared<MockSetting>("mock_setting");
-  }
-
-  void TearDown() override {
-    Hyrise::reset();
   }
 
   std::shared_ptr<AbstractSetting> mock_setting;

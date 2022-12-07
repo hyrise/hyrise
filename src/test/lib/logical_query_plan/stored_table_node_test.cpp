@@ -21,8 +21,6 @@ namespace hyrise {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     Hyrise::get().storage_manager.add_table("t_a",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
     Hyrise::get().storage_manager.add_table("t_b",

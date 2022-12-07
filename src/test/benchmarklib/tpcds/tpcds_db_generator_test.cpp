@@ -107,8 +107,6 @@ TEST_F(TPCDSTableGeneratorTest, GenerateAndStoreRowCounts) {
     SCOPED_TRACE("checking table " + std::string{name});
     EXPECT_EQ(Hyrise::get().storage_manager.get_table(name)->row_count(), size);
   }
-
-  Hyrise::reset();
 }
 
 }  // namespace hyrise
