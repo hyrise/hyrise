@@ -449,12 +449,9 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
 
-    std::vector<TableIndexRange> index_ranges{};
-    // Index ranges can consist of a single range (e.g. Equals) or two independent ranges at max (e.g. NotEquals).
-    index_ranges.reserve(2);
-
-    // auto join_funtor = perform_data_join_using_table_index_iterators();
-    // (void)join_funtor;
+    auto join_funtor = perform_data_join_using_table_index_iterators(probe_side_position.chunk_offset(), probe_chunk_id,
+                                                                     _mode, _index_side, _probe_matches, _index_matches,
+                                                                     _probe_pos_list, _index_pos_list);
 
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
     // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
@@ -462,24 +459,18 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
       if (probe_side_position.is_null() || indexed_null_values) {
-        // table_index->access_values_with_iterators(join_funtor);
-        // table_index->access_values_with_iterators([](AbstractTableIndex::Iterator begin, AbstractTableIndex::Iterator end){});
-        index_ranges.emplace_back(TableIndexRange{table_index->cbegin(), table_index->cend()});
-        index_ranges.emplace_back(TableIndexRange{table_index->null_cbegin(), table_index->null_cend()});
+        table_index->access_values_with_iterators(join_funtor);
+        table_index->access_null_values_with_iterators(join_funtor);
       }
     } else {
       if (!probe_side_position.is_null()) {
         switch (_adjusted_primary_predicate.predicate_condition) {
           case PredicateCondition::Equals: {
-            const auto [index_begin, index_end] = table_index->range_equals(probe_side_position.value());
-            index_ranges.emplace_back(TableIndexRange{index_begin, index_end});
+            table_index->range_equals_with_iterators(join_funtor, probe_side_position.value());
             break;
           }
           case PredicateCondition::NotEquals: {
-            const auto [not_equals_range_left, not_equals_range_right] =
-                table_index->range_not_equals(probe_side_position.value());
-            index_ranges.emplace_back(TableIndexRange{not_equals_range_left.first, not_equals_range_left.second});
-            index_ranges.emplace_back(TableIndexRange{not_equals_range_right.first, not_equals_range_right.second});
+            table_index->range_not_equals_with_iterators(join_funtor, probe_side_position.value());
             break;
           }
           default: {
@@ -487,9 +478,6 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
           }
         }
       }
-    }
-    for (const auto& [index_begin, index_end] : index_ranges) {
-      _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
     }
   }
 }
