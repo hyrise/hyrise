@@ -41,7 +41,7 @@ class BaseTestWithParam
   /**
    * Base test uses its destructor instead of TearDown() to clean up. This way, derived test classes can override TearDown()
    * safely without preventing the BaseTest-cleanup from happening.
-   * GTest runs the destructor right after TearDown(): https://github.com/abseil/googletest/blob/master/googletest/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown
+   * GTest runs the destructor right after TearDown(): https://github.com/google/googletest/blob/main/docs/faq.md#should-i-use-the-constructordestructor-of-the-test-fixture-or-setupteardown-ctorvssetup
    */
   ~BaseTestWithParam() override {
     Hyrise::reset();
