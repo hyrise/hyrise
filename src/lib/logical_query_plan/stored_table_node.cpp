@@ -1,5 +1,7 @@
 #include "stored_table_node.hpp"
 
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "lqp_utils.hpp"
@@ -45,6 +47,8 @@ std::vector<std::shared_ptr<AbstractExpression>> find_expressions(
 }  // namespace
 
 namespace hyrise {
+
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -160,7 +164,7 @@ std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combina
 std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
   const auto order_dependencies = std::make_shared<OrderDependencies>();
 
-  // We create order dependencies from table order constraints
+  // We create order dependencies from table order constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_order_constraints = table->soft_order_constraints();
 
@@ -171,15 +175,44 @@ std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
       continue;
     }
 
-    // Search for expressions representing the order constraint's ColumnIDs
+    // Search for expressions representing the order constraint's ColumnIDs.
     const auto& output_expressions = this->output_expressions();
     const auto& column_expressions = find_expressions(table_order_constraint.columns(), output_expressions);
     const auto& ordered_column_expressions =
         find_expressions(table_order_constraint.ordered_columns(), output_expressions);
 
-    // Create OrderDependency
+    // Create OrderDependency.
     order_dependencies->emplace(column_expressions, ordered_column_expressions);
   }
+
+  // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
+  auto transitive_ods = std::vector<OrderDependency>{};
+  do {
+    transitive_ods = std::vector<OrderDependency>{};
+    for (const auto& od : *order_dependencies) {
+      const auto& ordered_expressions = od.ordered_expressions;
+      for (const auto& candidate_od : *order_dependencies) {
+        const auto& candidate_expressions = candidate_od.expressions;
+        if (ordered_expressions.size() != candidate_expressions.size() ||
+            !contains_all_expressions(ordered_expressions, candidate_expressions)) {
+          continue;
+        }
+
+        const auto& transitive_od = OrderDependency(od.expressions, candidate_od.ordered_expressions);
+        // Skip if OD is already known or OD has column on both sides.
+        if (order_dependencies->contains(transitive_od) ||
+            std::any_of(
+                transitive_od.expressions.cbegin(), transitive_od.expressions.cend(), [&](const auto& expression) {
+                  return contains_all_expressions(expression_vector(expression), candidate_od.ordered_expressions);
+                })) {
+          continue;
+        }
+
+        transitive_ods.emplace_back(transitive_od);
+      }
+    }
+    order_dependencies->insert(transitive_ods.cbegin(), transitive_ods.cend());
+  } while (!transitive_ods.empty());
 
   return order_dependencies;
 }

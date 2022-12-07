@@ -41,4 +41,18 @@ TEST_F(LimitNodeTest, NodeExpressions) {
   EXPECT_EQ(*_limit_node->node_expressions.at(0u), *value_(10));
 }
 
+TEST_F(LimitNodeTest, ForwardOrderDependencies) {
+  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+  const auto a = mock_node->get_column("a");
+  const auto b = mock_node->get_column("b");
+  const auto od = OrderDependency{{a}, {b}};
+  mock_node->set_order_dependencies({od});
+  EXPECT_EQ(mock_node->order_dependencies()->size(), 1);
+
+  _limit_node->set_left_input(mock_node);
+  const auto& order_dependencies = _limit_node->order_dependencies();
+  EXPECT_EQ(order_dependencies->size(), 1);
+  EXPECT_TRUE(order_dependencies->contains(od));
+}
+
 }  // namespace hyrise

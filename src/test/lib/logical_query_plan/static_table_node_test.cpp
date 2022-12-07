@@ -100,4 +100,8 @@ TEST_F(StaticTableNodeTest, UniqueConstraints) {
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations));
 }
 
+TEST_F(StaticTableNodeTest, NoOrderDependencies) {
+  EXPECT_TRUE(static_table_node->order_dependencies()->empty());
+}
+
 }  // namespace hyrise

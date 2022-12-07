@@ -40,4 +40,8 @@ TEST_F(ImportNodeTest, Copy) {
   EXPECT_EQ(*_import_node, *_import_node->deep_copy());
 }
 
+TEST_F(ImportNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(_import_node->order_dependencies(), std::logic_error);
+}
+
 }  // namespace hyrise

@@ -429,7 +429,7 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
 
   {
     auto scoped_lock = acquire_append_mutex();
-    Assert(!_table_order_constraints.contains(table_order_constraint), "TableInclusionConstraint is already set");
+    Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set");
     _table_order_constraints.insert(table_order_constraint);
   }
 }

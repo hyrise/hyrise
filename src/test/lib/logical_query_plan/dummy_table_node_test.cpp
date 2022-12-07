@@ -40,4 +40,8 @@ TEST_F(DummyTableNodeTest, NodeExpressions) {
   ASSERT_EQ(_dummy_table_node->node_expressions.size(), 0u);
 }
 
+TEST_F(DummyTableNodeTest, NoOrderDependencies) {
+  EXPECT_TRUE(_dummy_table_node->order_dependencies()->empty());
+}
+
 }  // namespace hyrise

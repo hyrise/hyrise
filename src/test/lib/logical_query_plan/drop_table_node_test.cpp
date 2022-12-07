@@ -33,4 +33,8 @@ TEST_F(DropTableNodeTest, Copy) {
   EXPECT_EQ(*drop_table_node, *drop_table_node->deep_copy());
 }
 
+TEST_F(DropTableNodeTest, NoOrderDependencies) {
+  EXPECT_THROW(drop_table_node->order_dependencies(), std::logic_error);
+}
+
 }  // namespace hyrise

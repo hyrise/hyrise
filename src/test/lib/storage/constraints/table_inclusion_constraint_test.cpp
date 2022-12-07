@@ -71,7 +71,8 @@ TEST_F(TableInclusionConstraintTest, AddInclusionConstraints) {
       TableInclusionConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, "table"};
   _table->add_soft_inclusion_constraint({{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, "table"});
   EXPECT_EQ(_table->soft_inclusion_constraints().size(), 5);
-  // The constraint is the swapped version of the previous constraint, which is equivalent. Thus, it cannot be added as a duplicate.
+  // The constraint is the swapped version of the previous constraint, which is equivalent. Thus, it cannot be added as
+  // a duplicate.
   EXPECT_THROW(_table->add_soft_inclusion_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{3}, ColumnID{2}}, "table"}),
                std::logic_error);
 

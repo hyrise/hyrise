@@ -326,6 +326,8 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     return non_trivial_fds;
   }
 
+  // TODO: FDs from ODs (an OD is kind of an FD + sorting)
+
   auto trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
 
   // (3) Merge and return FDs

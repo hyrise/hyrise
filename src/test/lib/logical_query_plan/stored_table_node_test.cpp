@@ -21,8 +21,6 @@ namespace hyrise {
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     Hyrise::get().storage_manager.add_table("t_a",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
     Hyrise::get().storage_manager.add_table("t_b",
@@ -361,6 +359,53 @@ TEST_F(StoredTableNodeTest, HasMatchingUniqueConstraint) {
   // Test superset of column ids
   EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _b}));
   EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _c}));
+}
+
+TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {
+  // Create ODs from table constraints.
+  const auto& table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}}});
+  EXPECT_EQ(table->soft_order_constraints().size(), 2);
+
+  const auto& order_dependencies = _stored_table_node->order_dependencies();
+  EXPECT_EQ(order_dependencies->size(), 2);
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_b}}));
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_c}}));
+}
+
+TEST_F(StoredTableNodeTest, OrderDependenciesPrunedColumns) {
+  // Discard ODs that involve pruned columns.
+  const auto& table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}}});
+  EXPECT_EQ(table->soft_order_constraints().size(), 2);
+
+  _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
+  const auto& order_dependencies = _stored_table_node->order_dependencies();
+  EXPECT_TRUE(order_dependencies->empty());
+}
+
+TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
+  // Construct transitive ODs, but do not run into cycles. Furthermore, do not add ODs where LHS and RHS include the
+  // same column.
+  const auto& table = Hyrise::get().storage_manager.get_table("t_a");
+  table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  table->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{2}}});
+  table->add_soft_order_constraint({{ColumnID{2}}, {ColumnID{0}}});
+  EXPECT_EQ(table->soft_order_constraints().size(), 3);
+
+  const auto& order_dependencies = _stored_table_node->order_dependencies();
+  EXPECT_EQ(order_dependencies->size(), 6);
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_b}}));
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_b}, {_c}}));
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_c}, {_a}}));
+  // Created from [a] |-> [b] and [b] |-> [c].
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_c}}));
+  // Created from [c] |-> [a] and [a] |-> [b].
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_c}, {_b}}));
+  // Created from [b] |-> [c] and [c] |-> [a].
+  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_b}, {_a}}));
 }
 
 }  // namespace hyrise
