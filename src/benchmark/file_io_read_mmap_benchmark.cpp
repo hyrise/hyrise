@@ -17,7 +17,7 @@ void read_mmap_chunk_random(const size_t from, const size_t to, const int32_t* m
   }
 }
 
-void FileIOMicroReadBenchmarkFixture::mmap_read_single_threaded(benchmark::State state, const int mmap_mode_flag,
+void FileIOMicroReadBenchmarkFixture::mmap_read_single_threaded(benchmark::State& state, const int mmap_mode_flag,
                                                                 const int access_order) {
   auto fd = int32_t{};
   Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
