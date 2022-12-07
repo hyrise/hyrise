@@ -392,25 +392,34 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
     // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
     // has a match.
+
+    auto append_matches = [&probe_side_position, &probe_chunk_id](auto index_begin, auto index_end) {
+      _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id)
+    }
+
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
       if (probe_side_position.is_null() || indexed_null_values) {
-        index_ranges.emplace_back(TableIndexRange{table_index->cbegin(), table_index->cend()});
-        index_ranges.emplace_back(TableIndexRange{table_index->null_cbegin(), table_index->null_cend()});
+        table_index->access_values_with_iterators(append_matches);
+        table_index->access_null_values_with_iterators(append_matches);
+        // index_ranges.emplace_back(TableIndexRange{table_index->cbegin(), table_index->cend()});
+        // index_ranges.emplace_back(TableIndexRange{table_index->null_cbegin(), table_index->null_cend()});
       }
     } else {
       if (!probe_side_position.is_null()) {
         switch (_adjusted_primary_predicate.predicate_condition) {
           case PredicateCondition::Equals: {
-            const auto [index_begin, index_end] = table_index->range_equals(probe_side_position.value());
-            index_ranges.emplace_back(TableIndexRange{index_begin, index_end});
+            // const auto [index_begin, index_end] = table_index->range_equals(probe_side_position.value());
+            //index_ranges.emplace_back(TableIndexRange{index_begin, index_end});
+            table_index->range_equals_with_iterators(append_matches, probe_side_position.value());
             break;
           }
           case PredicateCondition::NotEquals: {
-            const auto [not_equals_range_left, not_equals_range_right] =
+            //const auto [not_equals_range_left, not_equals_range_right] =
                 table_index->range_not_equals(probe_side_position.value());
-            index_ranges.emplace_back(TableIndexRange{not_equals_range_left.first, not_equals_range_left.second});
-            index_ranges.emplace_back(TableIndexRange{not_equals_range_right.first, not_equals_range_right.second});
+            // index_ranges.emplace_back(TableIndexRange{not_equals_range_left.first, not_equals_range_left.second});
+            //index_ranges.emplace_back(TableIndexRange{not_equals_range_right.first, not_equals_range_right.second});
+            table_index->range_not_equals_with_iterators(append_matches, probe_side_position.value());
             break;
           }
           default: {
@@ -419,9 +428,9 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
         }
       }
     }
-    for (const auto& [index_begin, index_end] : index_ranges) {
-      _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
-    }
+    //for (const auto& [index_begin, index_end] : index_ranges) {
+    //  _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
+    //}
   }
 }
 
