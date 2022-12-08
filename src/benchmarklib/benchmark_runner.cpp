@@ -155,7 +155,8 @@ void BenchmarkRunner::run() {
                                                 [](const auto& sum, const auto& element) {
                                                   return sum + element.duration.count();
                                                 });
-      sum_of_mean_query_runtimes += static_cast<double>(runtimes_sum) / static_cast<double>(_results[item_id].successful_runs.size());
+      sum_of_mean_query_runtimes += static_cast<double>(runtimes_sum) /
+          static_cast<double>(_results[item_id].successful_runs.size());
       if (!_results[item_id].unsuccessful_runs.empty()) {
         std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
