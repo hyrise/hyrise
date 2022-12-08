@@ -385,14 +385,13 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
 
-    // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
-    // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
-    // has a match.
-
     auto append_matches = [&probe_side_position, &probe_chunk_id, this](auto index_begin, auto index_end) {
       _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
     };
 
+    // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
+    // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
+    // has a match.
     if (_mode == JoinMode::AntiNullAsTrue) {
       const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
       if (probe_side_position.is_null() || indexed_null_values) {
