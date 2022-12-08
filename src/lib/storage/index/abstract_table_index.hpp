@@ -76,7 +76,7 @@ class AbstractTableIndex : private Noncopyable {
 
   AbstractTableIndex() = delete;
   explicit AbstractTableIndex(const TableIndexType type);
-  AbstractTableIndex(AbstractTableIndex&&) = default;
+  AbstractTableIndex(AbstractTableIndex&&) = delete;
   virtual ~AbstractTableIndex() = default;
 
   // For iterating from _cbegin() to _cend()
