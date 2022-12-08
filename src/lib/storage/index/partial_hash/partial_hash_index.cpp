@@ -27,6 +27,8 @@ PartialHashIndex::PartialHashIndex(const DataType data_type, const ColumnID colu
 
 size_t PartialHashIndex::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
+  // Prevents multiple threads from indexing the same chunk concurrently.
+  auto lock = std::lock_guard<std::shared_mutex>{AbstractTableIndex::_data_access_mutex};
   return _impl->insert_entries(chunks_to_index, _column_id);
 }
 

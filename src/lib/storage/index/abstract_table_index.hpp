@@ -189,6 +189,7 @@ class AbstractTableIndex : private Noncopyable {
   virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual ColumnID _get_indexed_column_id() const = 0;
   virtual size_t _estimate_memory_usage() const = 0;
+  mutable std::shared_mutex _data_access_mutex;
 
  private:
   const TableIndexType _type;
@@ -196,22 +197,26 @@ class AbstractTableIndex : private Noncopyable {
 
 template <typename Functor>
 void AbstractTableIndex::access_values_with_iterators(const Functor& functor) const {
+  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
   functor(_cbegin(), _cend());
 }
 
 template <typename Functor>
 void AbstractTableIndex::access_null_values_with_iterators(const Functor& functor) const {
+  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
   functor(_null_cbegin(), _null_cend());
 }
 
 template <typename Functor>
 void AbstractTableIndex::range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
+  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
   const auto [index_begin, index_end] = _range_equals(value);
   functor(index_begin, index_end);
 }
 
 template <typename Functor>
 void AbstractTableIndex::range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
+  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
   const auto [not_equals_range_left, not_equals_range_right] = _range_not_equals(value);
   functor(not_equals_range_left.first, not_equals_range_left.second);
   functor(not_equals_range_right.first, not_equals_range_right.second);

@@ -8,11 +8,6 @@ TableIndexTbbUnorderedMapIterator<DataType>::TableIndexTbbUnorderedMapIterator(M
     : _map_iterator(itr), _vector_index(0) {}
 
 template <typename DataType>
-TableIndexTbbUnorderedMapIterator<DataType>::TableIndexTbbUnorderedMapIterator(
-    MapIteratorType itr, std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock)
-    : BaseTableIndexIterator(data_access_lock), _map_iterator(itr), _vector_index(0) {}
-
-template <typename DataType>
 const RowID& TableIndexTbbUnorderedMapIterator<DataType>::operator*() const {
   return _map_iterator->second[_vector_index];
 }
@@ -46,10 +41,6 @@ std::shared_ptr<BaseTableIndexIterator> TableIndexTbbUnorderedMapIterator<DataTy
 }
 
 TableIndexVectorIterator::TableIndexVectorIterator(MapIteratorType itr) : _map_iterator(itr) {}
-
-TableIndexVectorIterator::TableIndexVectorIterator(
-    MapIteratorType itr, std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock)
-    : BaseTableIndexIterator(std::move(data_access_lock)), _map_iterator(itr) {}
 
 const RowID& TableIndexVectorIterator::operator*() const {
   return *_map_iterator;
@@ -127,9 +118,6 @@ PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
-  // Prevents multiple threads from indexing the same chunk concurrently.
-  auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
-
   auto indexed_chunks = size_t{0};
   for (const auto& chunk : chunks_to_index) {
     if (_indexed_chunk_ids.contains(chunk.first)) {
@@ -197,16 +185,14 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
     const AllTypeVariant& value) const {
-  auto lock = std::make_shared<std::shared_lock<std::shared_mutex>>(_data_access_mutex);
-
   const auto begin = _map.find(boost::get<DataType>(value));
   if (begin == _map.end()) {
     const auto end_iter = cend();
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(begin, lock)),
-                        Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(++end, lock)));
+  return std::make_pair(Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(begin)),
+                        Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(++end)));
 }
 
 template <typename DataType>
@@ -218,26 +204,22 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  auto lock = std::make_shared<std::shared_lock<std::shared_mutex>>(_data_access_mutex);
-  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cbegin(), lock));
+  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  auto lock = std::make_shared<std::shared_lock<std::shared_mutex>>(_data_access_mutex);
-  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cend(), lock));
+  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cend()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  auto lock = std::make_shared<std::shared_lock<std::shared_mutex>>(_data_access_mutex);
-  return Iterator{std::make_shared<TableIndexVectorIterator>(_null_values.cbegin(), lock)};
+  return Iterator{std::make_shared<TableIndexVectorIterator>(_null_values.cbegin())};
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  auto lock = std::make_shared<std::shared_lock<std::shared_mutex>>(_data_access_mutex);
-  return Iterator{std::make_shared<TableIndexVectorIterator>(_null_values.cend(), lock)};
+  return Iterator{std::make_shared<TableIndexVectorIterator>(_null_values.cend())};
 }
 
 template <typename DataType>
