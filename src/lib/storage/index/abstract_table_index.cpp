@@ -2,9 +2,6 @@
 
 namespace hyrise {
 
-BaseTableIndexIterator::BaseTableIndexIterator(std::shared_ptr<std::shared_lock<std::shared_mutex>> data_access_lock)
-    : _data_access_lock(std::move(data_access_lock)) {}
-
 BaseTableIndexIterator::reference BaseTableIndexIterator::operator*() const {
   Fail("cannot dereference on empty iterator");
 }
