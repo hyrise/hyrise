@@ -196,7 +196,6 @@ class AbstractTableIndex : private Noncopyable {
 
 template <typename Functor>
 void AbstractTableIndex::access_values_with_iterators(const Functor& functor) const {
-  std::cout << "AHH";
   functor(_cbegin(), _cend());
 }
 
