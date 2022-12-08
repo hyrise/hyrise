@@ -146,6 +146,26 @@ TEST_F(PartialHashIndexTest, Iterators) {
   EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);
 }
 
+TEST_F(PartialHashIndexTest, XWithIterators) {
+  auto test_access_values_with_iterators = [](auto index_begin, auto index_end) {
+    auto begin_copy = index_begin;
+    EXPECT_EQ(begin_copy, index_begin);
+    ++begin_copy;
+    EXPECT_NE(begin_copy, index_begin);
+    // Test size of index iterator.
+    EXPECT_EQ(std::distance(index_begin, index_end), 14);
+    // Test for not-existing value in iterator.
+    EXPECT_NE(std::find(index_begin, index_end, RowID{ChunkID{0}, ChunkOffset{4}}), index_end);
+  };
+  index->access_values_with_iterators(test_access_values_with_iterators);
+
+  auto access_null_values_with_iterators = [](auto index_begin, auto index_end) {
+    // Test size of NULL values index iterator.
+    EXPECT_EQ(std::distance(index_begin, index_end), 2);
+  };
+  index->access_null_values_with_iterators(access_null_values_with_iterators);
+}
+
 TEST_F(PartialHashIndexTest, NullValues) {
   auto begin = index_impl->null_cbegin();
   auto end = index_impl->null_cend();
