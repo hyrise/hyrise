@@ -308,7 +308,7 @@ TEST_F(SchedulerTest, TaskToIdlingNodeAssigment) {
   auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  // Just a sufficiently large number to trigger 
+  // Just a sufficiently large number to trigger a non-empty queue.
   constexpr auto JOB_COUNT = 100;
   constexpr auto LOOP_TIME = std::chrono::microseconds{50};
 
@@ -328,9 +328,12 @@ TEST_F(SchedulerTest, TaskToIdlingNodeAssigment) {
   }
   node_queue_scheduler->schedule_and_wait_for_tasks(jobs);
 
-  // Sleeping for LOOP_TIME should ensure that we most often end up with 50/50. So >40 is a conservative check.
-  EXPECT_GT(node_queue_scheduler->workers()[0]->num_finished_tasks(), 40);
-  EXPECT_GT(node_queue_scheduler->workers()[1]->num_finished_tasks(), 40);
+  // Check if tasks have been scheduled on node 2 as well. Due to the busy looping, workers cannot pull and execute
+  // tasks as fast as we are scheduling them. Thus, at least some tasks should be scheduled on node 2.
+  EXPECT_GT(node_queue_scheduler->workers()[0]->num_finished_tasks(), 5);
+  EXPECT_GT(node_queue_scheduler->workers()[1]->num_finished_tasks(), 5);
+  EXPECT_EQ(node_queue_scheduler->workers()[0]->num_finished_tasks() +
+            node_queue_scheduler->workers()[1]->num_finished_tasks(), JOB_COUNT);
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
