@@ -40,7 +40,6 @@ class PartialHashIndexTest : public BaseTest {
 
     empty_index = std::make_shared<PartialHashIndex>(DataType::String, ColumnID{0});
     empty_index_impl = (std::dynamic_pointer_cast<PartialHashIndexImpl<pmr_string>>(empty_index->_impl)).get();
-
   }
 
   pmr_vector<pmr_string> values1;
@@ -50,7 +49,6 @@ class PartialHashIndexTest : public BaseTest {
   std::shared_ptr<Table> table = nullptr;
   std::shared_ptr<PartialHashIndex> index = nullptr;
   std::shared_ptr<PartialHashIndex> empty_index = nullptr;
-
 
   /**
    * Use pointers to inner data structures of PartialHashIndex in order to bypass the
