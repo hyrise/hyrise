@@ -393,8 +393,7 @@ void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_it
     // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
     // has a match.
     if (_mode == JoinMode::AntiNullAsTrue) {
-      const auto indexed_null_values = table_index->null_cbegin() != table_index->null_cend();
-      if (probe_side_position.is_null() || indexed_null_values) {
+      if (probe_side_position.is_null() || table_index->indexed_null_values()) {
         table_index->access_values_with_iterators(append_matches);
         table_index->access_null_values_with_iterators(append_matches);
       }

@@ -57,29 +57,8 @@ bool IteratorWrapper::operator!=(const IteratorWrapper& other) const {
 
 AbstractTableIndex::AbstractTableIndex(const TableIndexType type) : _type(type) {}
 
-AbstractTableIndex::IteratorPair AbstractTableIndex::range_equals(const AllTypeVariant& value) const {
-  return _range_equals(value);
-}
-
-std::pair<AbstractTableIndex::IteratorPair, AbstractTableIndex::IteratorPair> AbstractTableIndex::range_not_equals(
-    const AllTypeVariant& value) const {
-  return _range_not_equals(value);
-}
-
-AbstractTableIndex::Iterator AbstractTableIndex::cbegin() const {
-  return _cbegin();
-}
-
-AbstractTableIndex::Iterator AbstractTableIndex::cend() const {
-  return _cend();
-}
-
-AbstractTableIndex::Iterator AbstractTableIndex::null_cbegin() const {
-  return _null_cbegin();
-}
-
-AbstractTableIndex::Iterator AbstractTableIndex::null_cend() const {
-  return _null_cend();
+bool AbstractTableIndex::indexed_null_values() const {
+  return _null_cbegin() != _null_cend();
 }
 
 TableIndexType AbstractTableIndex::type() const {

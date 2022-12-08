@@ -83,59 +83,6 @@ class AbstractTableIndex : private Noncopyable {
   AbstractTableIndex(AbstractTableIndex&&) = default;
   virtual ~AbstractTableIndex() = default;
 
-  /**
-   * Searches for all positions of the entry within the table index.
-   *
-   * Calls _equals() of the derived class.
-   * @param value used to query the index.
-   * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the
-   * table index.
-   */
-  IteratorPair range_equals(const AllTypeVariant& value) const;
-
-  /**
-   * Searches for all positions that do not equal to the entry in the table index.
-   *
-   * Calls _not_equals() of the derived class.
-   * @param value used to query the index.
-   * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the
-   * first occurence of a value equals to the searched entry and the range from the end of the value until the end of
-   * the map.
-   */
-  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
-
-  /**
-   * Returns an Iterator to the position of the first indexed non-NULL element.
-   * Iterating from cbegin() to cend() will result in a position list.
-   * Calls _cbegin() of the derived class.
-   * @return An Iterator on the position of first non-NULL element of the Index.
-   */
-  Iterator cbegin() const;
-
-  /**
-   * Returns an Iterator past the position of the last indexed non-NULL element.
-   * Iterating from cbegin() to cend() will result in a position list.
-   * Calls _cend() of the derived class.
-   * @return An Iterator on the end of the non-NULL elements (one after the last element).
-   */
-  Iterator cend() const;
-
-  /**
-   * Returns an Iterator to the first NULL.
-   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
-   *
-   * @return An Iterator on the position of the first NULL.
-   */
-  Iterator null_cbegin() const;
-
-  /**
-   * Returns an Iterator past the position of the last NULL.
-   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
-   *
-   * @return An Iterator on the end of the NULLs (one after the last NULL).
-   */
-  Iterator null_cend() const;
-
   // For iterating from _cbegin() to _cend()
   template <typename Functor>
   void access_values_with_iterators(const Functor& functor) const;
@@ -149,6 +96,8 @@ class AbstractTableIndex : private Noncopyable {
 
   template <typename Functor>
   void range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const;
+
+  bool indexed_null_values() const;
 
   TableIndexType type() const;
 
@@ -179,11 +128,57 @@ class AbstractTableIndex : private Noncopyable {
   ColumnID get_indexed_column_id() const;
 
  protected:
+  /**
+   * Returns an Iterator to the position of the first indexed non-NULL element.
+   * Iterating from cbegin() to cend() will result in a position list.
+   * Calls _cbegin() of the derived class.
+   * @return An Iterator on the position of first non-NULL element of the Index.
+   */
   virtual Iterator _cbegin() const = 0;
+
+  /**
+   * Returns an Iterator past the position of the last indexed non-NULL element.
+   * Iterating from cbegin() to cend() will result in a position list.
+   * Calls _cend() of the derived class.
+   * @return An Iterator on the end of the non-NULL elements (one after the last element).
+   */
   virtual Iterator _cend() const = 0;
+
+  /**
+   * Returns an Iterator to the first NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   *
+   * @return An Iterator on the position of the first NULL.
+   */
   virtual Iterator _null_cbegin() const = 0;
+
+  /**
+   * Returns an Iterator past the position of the last NULL.
+   * Iterating from null_cbegin() to null_cend() will result in a position list with all NULL values.
+   *
+   * @return An Iterator on the end of the NULLs (one after the last NULL).
+   */
   virtual Iterator _null_cend() const = 0;
+
+  /**
+   * Searches for all positions of the entry within the table index.
+   *
+   * Calls _equals() of the derived class.
+   * @param value used to query the index.
+   * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the
+   * table index.
+   */
   virtual IteratorPair _range_equals(const AllTypeVariant& value) const = 0;
+
+  /**
+   * Searches for all positions that do not equal to the entry in the table index.
+   *
+   * Calls _not_equals() of the derived class.
+   * @param value used to query the index.
+   * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the
+   * first occurence of a value equals to the searched entry and the range from the end of the value until the end of
+   * the map.
+   */
   virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
   virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
