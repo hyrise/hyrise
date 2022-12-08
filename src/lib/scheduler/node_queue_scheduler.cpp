@@ -34,7 +34,7 @@ void NodeQueueScheduler::begin() {
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
-  
+
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
@@ -130,7 +130,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     if (worker) {
       preferred_node_id = worker->queue()->node_id();
     } else if (_queue_count > 1) {
-      // Get load of Node 0. 
+      // Get load of Node 0.
       auto min_load_queue_id = NodeID{0};
       const auto load_queue_0 = _queues[0]->estimate_load();
       auto min_load = load_queue_0;
