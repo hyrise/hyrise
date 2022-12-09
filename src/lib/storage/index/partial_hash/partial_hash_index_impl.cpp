@@ -4,16 +4,16 @@
 namespace hyrise {
 
 template <typename DataType>
-TableIndexTbbUnorderedMapIterator<DataType>::TableIndexTbbUnorderedMapIterator(MapIteratorType itr)
+TableIndexSparseMapIterator<DataType>::TableIndexSparseMapIterator(MapIteratorType itr)
     : _map_iterator(itr), _vector_index(0) {}
 
 template <typename DataType>
-const RowID& TableIndexTbbUnorderedMapIterator<DataType>::operator*() const {
+const RowID& TableIndexSparseMapIterator<DataType>::operator*() const {
   return _map_iterator->second[_vector_index];
 }
 
 template <typename DataType>
-TableIndexTbbUnorderedMapIterator<DataType>& TableIndexTbbUnorderedMapIterator<DataType>::operator++() {
+TableIndexSparseMapIterator<DataType>& TableIndexSparseMapIterator<DataType>::operator++() {
   if (++_vector_index >= _map_iterator->second.size()) {
     _map_iterator++;
     _vector_index = 0;
@@ -22,22 +22,22 @@ TableIndexTbbUnorderedMapIterator<DataType>& TableIndexTbbUnorderedMapIterator<D
 }
 
 template <typename DataType>
-bool TableIndexTbbUnorderedMapIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
-  auto other_iterator = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
+bool TableIndexSparseMapIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
+  auto other_iterator = dynamic_cast<const TableIndexSparseMapIterator*>(&other);
   return other_iterator && _map_iterator == other_iterator->_map_iterator &&
          _vector_index == other_iterator->_vector_index;
 }
 
 template <typename DataType>
-bool TableIndexTbbUnorderedMapIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
-  auto other_iterator = dynamic_cast<const TableIndexTbbUnorderedMapIterator*>(&other);
+bool TableIndexSparseMapIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
+  auto other_iterator = dynamic_cast<const TableIndexSparseMapIterator*>(&other);
   return !other_iterator || _map_iterator != other_iterator->_map_iterator ||
          _vector_index != other_iterator->_vector_index;
 }
 
 template <typename DataType>
-std::shared_ptr<BaseTableIndexIterator> TableIndexTbbUnorderedMapIterator<DataType>::clone() const {
-  return std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(*this);
+std::shared_ptr<BaseTableIndexIterator> TableIndexSparseMapIterator<DataType>::clone() const {
+  return std::make_shared<TableIndexSparseMapIterator<DataType>>(*this);
 }
 
 TableIndexVectorIterator::TableIndexVectorIterator(MapIteratorType itr) : _map_iterator(itr) {}
@@ -191,8 +191,8 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(begin)),
-                        Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(++end)));
+  return std::make_pair(Iterator(std::make_shared<TableIndexSparseMapIterator<DataType>>(begin)),
+                        Iterator(std::make_shared<TableIndexSparseMapIterator<DataType>>(++end)));
 }
 
 template <typename DataType>
@@ -204,12 +204,12 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cbegin()));
+  return Iterator(std::make_shared<TableIndexSparseMapIterator<DataType>>(_map.cbegin()));
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return Iterator(std::make_shared<TableIndexTbbUnorderedMapIterator<DataType>>(_map.cend()));
+  return Iterator(std::make_shared<TableIndexSparseMapIterator<DataType>>(_map.cend()));
 }
 
 template <typename DataType>
@@ -230,7 +230,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
-  // TBB's concurrent_unordered_map uses tbb_hasher as hash function, so the hash size equals the size of a size_t.
+  // Tessils's soarse_map uses std::hash as hash function, so the hash size equals the size of a size_t.
   bytes += sizeof(size_t) * _map.size();
 
   bytes += sizeof(std::vector<RowID>) * _map.size();
