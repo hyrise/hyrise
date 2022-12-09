@@ -146,22 +146,22 @@ TEST_F(PartialHashIndexTest, Iterators) {
   EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);
 }
 
-TEST_F(PartialHashIndexTest, XWithIterators) {
-  auto test_access_values_with_iterators = [](auto index_begin, auto index_end) {
-    auto begin_copy = index_begin;
-    EXPECT_EQ(begin_copy, index_begin);
-    ++begin_copy;
-    EXPECT_NE(begin_copy, index_begin);
+TEST_F(PartialHashIndexTest, AccessWithIterators) {
+  auto test_access_values_with_iterators = [](auto begin, auto end) {
+    auto current_iter = begin;
+    EXPECT_EQ(current_iter, begin);
+    ++current_iter;
+    EXPECT_NE(current_iter, begin);
     // Test size of index iterator.
-    EXPECT_EQ(std::distance(index_begin, index_end), 14);
-    // Test for not-existing value in iterator.
-    EXPECT_NE(std::find(index_begin, index_end, RowID{ChunkID{0}, ChunkOffset{4}}), index_end);
+    EXPECT_EQ(std::distance(begin, end), 14);
+    // Test for not-existing value in the iterator.
+    EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);
   };
   index->access_values_with_iterators(test_access_values_with_iterators);
 
-  auto access_null_values_with_iterators = [](auto index_begin, auto index_end) {
+  auto access_null_values_with_iterators = [](auto begin, auto end) {
     // Test size of NULL values index iterator.
-    EXPECT_EQ(std::distance(index_begin, index_end), 2);
+    EXPECT_EQ(std::distance(begin, end), 2);
   };
   index->access_null_values_with_iterators(access_null_values_with_iterators);
 }
@@ -275,9 +275,9 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
   };
 
   auto read_from_index = [&]() {
-    auto read_from_index_functor = [](auto index_begin, auto index_end) {
-      for (; index_begin != index_end; ++index_begin) {
-        auto data = *index_begin;
+    auto read_from_index_functor = [](auto begin, auto end) {
+      for (auto iterator = begin; iterator != end; ++iterator) {
+        auto data = *iterator;
         (void)data;
       }
     };
