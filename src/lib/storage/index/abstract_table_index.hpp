@@ -79,19 +79,70 @@ class AbstractTableIndex : private Noncopyable {
   AbstractTableIndex(AbstractTableIndex&&) = delete;
   virtual ~AbstractTableIndex() = default;
 
-  // For iterating from _cbegin() to _cend()
-  template <typename Functor>
-  void access_values_with_iterators(const Functor& functor) const;
+  /**
+   * The following four methods are used to access any table index. Each of them accepts a generic lambda (or similar)
+   * that expects a begin and end iterator to the underlying data structure as parameter. When accessing the index with
+   * one of these methods, one or two pairs of iterators are passed to the lambda. For more information, please refer
+   * to the method description.
+   * 
+   * Unfortunately, it is not possible to locate the implementations of these methods inside the source file because of
+   * the separate compilation model. In this case, it is not possible to use explicit template instantiation since
+   * otherwise all used lambdas and functors would have to be instantiated in abstract_table_index.cpp.
+   */
 
-  // For iterating from _null_cbegin() to _null_cend()
+  /**
+   * Acquires iterators to the first and last indexed non-NULL elements and passes them to the passed functor.
+   * 
+   * @param functor is a generic lambda accepting two iterators as arguments
+  */
   template <typename Functor>
-  void access_null_values_with_iterators(const Functor& functor) const;
+  void access_values_with_iterators(const Functor& functor) const {
+    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    functor(_cbegin(), _cend());
+  }
 
+  /**
+   * Acquires iterators to the first and last indexed NULL elements and passes them to the passed functor.
+   * 
+   * @param functor is a generic lambda accepting two iterators as arguments
+  */
   template <typename Functor>
-  void range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const;
+  void access_null_values_with_iterators(const Functor& functor) const {
+    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    functor(_null_cbegin(), _null_cend());
+  }
 
+  /**
+   * Searches for all positions of the entry within the table index and acquires a pair of Iterators containing the
+   * start and end iterator for the stored RowIDs of the element inside the table index. These are then passed to the
+   * functor.
+   * 
+   * @param functor is a generic lambda accepting two iterators as arguments
+   * @param value is the entry searched for
+  */
   template <typename Functor>
-  void range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const;
+  void range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
+    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    const auto [index_begin, index_end] = _range_equals(value);
+    functor(index_begin, index_end);
+  }
+
+  /**
+   * Searches for all positions that do not equal to the entry in the table index and acquires a pair of IteratorPairs
+   * containing two iterator ranges: the range from the beginning of the map until the first occurence of a value
+   * equals to the searched entry and the range from the end of the value until the end of the map. After this the
+   * functor is called twice, each time with one of the pairs.
+   * 
+   * @param functor is a generic lambda accepting two iterators as arguments
+   * @param value is the entry searched for
+  */
+  template <typename Functor>
+  void range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
+    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    const auto [not_equals_range_left, not_equals_range_right] = _range_not_equals(value);
+    functor(not_equals_range_left.first, not_equals_range_left.second);
+    functor(not_equals_range_right.first, not_equals_range_right.second);
+  }
 
   bool indexed_null_values() const;
 
@@ -185,32 +236,4 @@ class AbstractTableIndex : private Noncopyable {
  private:
   const TableIndexType _type;
 };
-
-template <typename Functor>
-void AbstractTableIndex::access_values_with_iterators(const Functor& functor) const {
-  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
-  functor(_cbegin(), _cend());
-}
-
-template <typename Functor>
-void AbstractTableIndex::access_null_values_with_iterators(const Functor& functor) const {
-  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
-  functor(_null_cbegin(), _null_cend());
-}
-
-template <typename Functor>
-void AbstractTableIndex::range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
-  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
-  const auto [index_begin, index_end] = _range_equals(value);
-  functor(index_begin, index_end);
-}
-
-template <typename Functor>
-void AbstractTableIndex::range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
-  auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
-  const auto [not_equals_range_left, not_equals_range_right] = _range_not_equals(value);
-  functor(not_equals_range_left.first, not_equals_range_left.second);
-  functor(not_equals_range_right.first, not_equals_range_right.second);
-}
-
 }  // namespace hyrise
