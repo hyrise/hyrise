@@ -150,15 +150,13 @@ void BenchmarkRunner::run() {
     for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
       std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times" << std::endl;
-      // const auto runtimes_sum = std::reduce(_results[item_id].successful_runs.cbegin(),
-      //                                           _results[item_id].successful_runs.cend(), 0,
-      //                                           [](const auto lhs, const auto rhs) { return lhs.duration + rhs.duration; });
       const auto runtimes_sum = std::accumulate(_results[item_id].successful_runs.cbegin(),
                                                 _results[item_id].successful_runs.cend(), size_t{0},
-                                                [](const auto& sum, const auto& element) { return sum + element.duration.count(); std::cout << element.duration.count();});
-                                                // [](const auto& lhs, const auto& rhs) {return lhs.duration.count() + rhs.duration.count(); });
-                                                // [](const auto lhs, const auto rhs) { return lhs.duration + rhs.duration; });
-      sum_of_mean_query_runtimes += static_cast<double>(runtimes_sum) / static_cast<double>(_results[item_id].successful_runs.size());
+                                                [](const auto& sum, const auto& element) {
+                                                  return sum + element.duration.count();
+                                                });
+      sum_of_mean_query_runtimes += static_cast<double>(runtimes_sum) /
+          static_cast<double>(_results[item_id].successful_runs.size());
       if (!_results[item_id].unsuccessful_runs.empty()) {
         std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
