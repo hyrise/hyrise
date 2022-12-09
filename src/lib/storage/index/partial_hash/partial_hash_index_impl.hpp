@@ -110,16 +110,6 @@ class BasePartialHashIndexImpl : public Noncopyable {
 /* Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
  * Chunks can be added via `insert_entries()`.
  *
- * For now, we do not support removing entries for a given chunk id. Thus, if previously inserted index entries for a
- * given chunk are to be removed, the index has to be re-created for the desired set of chunks. This is a current
- * simplification and limitation to enable concurrent access using the `tbb::concurrent_unordered_map`, which supports
- * concurrent insertion, lookup, and traversal, but does not support concurrent erasure. If one wants to use a different
- * hash map, as well as shared and unique locks for enabling thread-safe operations, one has to make sure that the hash
- * map is locked until the read and write accesses are complete. Since this index implementation's operations return
- * iterators, only locking while retrieving the iterators would not suffice since another thread might modify the hash
- * map and, thus, invalidate (depending on the hash map implementation) the retreived iterators with modifications.
- * For further notes and discussions, please review PR #2448.
- *
  * We did not perform a comprehensive experimental evaluation of different hash maps for concurrent workloads
  * (including reads and modifications) yet. Thus, choosing a different hash map might result in better performance.
  */
