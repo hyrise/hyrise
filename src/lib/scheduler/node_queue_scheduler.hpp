@@ -122,6 +122,8 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic_bool _active{false};
 
   size_t _queue_count{1};
+  size_t _workers_per_node{2};
+  //bool _print_cpu{true};
 };
 
 }  // namespace hyrise

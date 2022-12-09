@@ -47,6 +47,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
+  _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -110,6 +111,17 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down");
   DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
 
+  /*
+  if (time(NULL) % 17 == 0) {
+    if (_print_cpu) {
+      std::printf("Running on %d\n", sched_getcpu());
+      _print_cpu = false;
+    }
+  } else {
+    _print_cpu = true;
+  }
+  */
+
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(TaskID{task_counter});
 
@@ -131,8 +143,13 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     } else if (_queue_count > 1) {
       // Get load of Node 0. 
       auto min_load_queue_id = NodeID{0};
-      const auto load_queue_0 = _queues[0]->estimate_load();
-      auto min_load = load_queue_0;
+      auto min_load = _queues[0]->estimate_load();
+
+      // When the current load in node 0 is small, we do not check other queues.
+      if (min_load < _workers_per_node) {
+        _queues[0]->push(task, priority);
+        return;
+      }
 
       for (auto queue_id = NodeID{1}; queue_id < _queue_count; ++queue_id) {
         const auto queue_load = _queues[queue_id]->estimate_load();
