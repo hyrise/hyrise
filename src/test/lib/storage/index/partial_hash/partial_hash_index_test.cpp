@@ -164,6 +164,16 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
     EXPECT_EQ(std::distance(begin, end), 2);
   };
   index->access_null_values_with_iterators(access_null_values_with_iterators);
+
+  auto access_range_equals_with_iterators = [](auto begin, auto end) {
+    EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{0}}));
+  };
+  index->range_equals_with_iterators(access_range_equals_with_iterators, "hotel");
+
+  auto access_range_not_equals_with_iterators = [](auto begin, auto end) {
+    EXPECT_TRUE((*begin == (RowID{ChunkID{0}, ChunkOffset{1}})) || (*begin == (RowID{ChunkID{0}, ChunkOffset{4}})));
+  };
+  index->range_not_equals_with_iterators(access_range_not_equals_with_iterators, "names");
 }
 
 TEST_F(PartialHashIndexTest, NullValues) {
@@ -278,7 +288,7 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
     auto read_from_index_functor = [](auto begin, auto end) {
       for (auto iterator = begin; iterator != end; ++iterator) {
         auto data = *iterator;
-        (void)data;
+        static_cast<void>(data);
       }
     };
 
