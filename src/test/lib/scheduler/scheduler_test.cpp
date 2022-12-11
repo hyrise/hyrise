@@ -310,7 +310,7 @@ TEST_F(SchedulerTest, TaskToIdlingNodeAssigment) {
 
   // Just a sufficiently large number to trigger a non-empty queue.
   constexpr auto JOB_COUNT = 100;
-  constexpr auto LOOP_TIME = std::chrono::microseconds{50};
+  constexpr auto LOOP_TIME = std::chrono::microseconds{1'000};  // TODO: argue for large number
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(JOB_COUNT);
