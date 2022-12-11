@@ -111,17 +111,6 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   DebugAssert(_active, "Can't schedule more tasks after the NodeQueueScheduler was shut down");
   DebugAssert(task->is_scheduled(), "Don't call NodeQueueScheduler::schedule(), call schedule() on the task");
 
-  /*
-  if (time(NULL) % 17 == 0) {
-    if (_print_cpu) {
-      std::printf("Running on %d\n", sched_getcpu());
-      _print_cpu = false;
-    }
-  } else {
-    _print_cpu = true;
-  }
-  */
-
   const auto task_counter = _task_counter++;  // Atomically take snapshot of counter
   task->set_id(TaskID{task_counter});
 
