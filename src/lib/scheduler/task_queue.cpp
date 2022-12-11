@@ -69,7 +69,7 @@ size_t TaskQueue::estimate_load() {
   // (starting with 2^0) to calculate the cost factor per priority level.
   for (auto queue_id = size_t{0}; queue_id < NUM_PRIORITY_LEVELS; ++queue_id) {
     // The lowest priority has a multiplier of 2^0, the next higher priority 2^1, and so on.
-    estimated_load += _queues[queue_id].unsafe_size() * (1 << (NUM_PRIORITY_LEVELS - 1 - queue_id));
+    estimated_load += _queues[queue_id].unsafe_size() * (size_t{1} << (NUM_PRIORITY_LEVELS - 1 - queue_id));
   }
 
   return estimated_load;
