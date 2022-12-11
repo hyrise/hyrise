@@ -145,24 +145,13 @@ void BenchmarkRunner::run() {
 
   // For the Ordered mode, results have already been printed to the console
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
-    auto sum_of_mean_query_runtimes = 0.0;
-
     for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
       std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times" << std::endl;
-      const auto runtimes_sum = std::accumulate(_results[item_id].successful_runs.cbegin(),
-                                                _results[item_id].successful_runs.cend(), size_t{0},
-                                                [](const auto& sum, const auto& element) {
-                                                  return sum + element.duration.count();
-                                                });
-      sum_of_mean_query_runtimes += static_cast<double>(runtimes_sum) /
-          static_cast<double>(_results[item_id].successful_runs.size());
       if (!_results[item_id].unsuccessful_runs.empty()) {
         std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
-    std::cout << "- Summary\n  -> The mean runtime of all benchmark query mean runtimes was "
-              << sum_of_mean_query_runtimes / 1'000'000'000 << " seconds." << std::endl;
   }
 
   // Fail if verification against SQLite was requested and failed
