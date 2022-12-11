@@ -129,12 +129,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     auto worker = Worker::get_this_thread_worker();
     if (worker) {
       preferred_node_id = worker->queue()->node_id();
-    } else if (_queue_count > 1) {
-      // Get load of Node 0.
+    } else {
+      // Initial min values with Node 0.
       auto min_load_queue_id = NodeID{0};
       auto min_load = _queues[0]->estimate_load();
 
-      // When the current load in node 0 is small, we do not check other queues.
+      // When the current load of node 0 is small, we do not check other queues.
       if (min_load < _workers_per_node) {
         _queues[0]->push(task, priority);
         return;
@@ -148,8 +148,6 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
         }
       }
       preferred_node_id = min_load_queue_id;
-    } else {
-      preferred_node_id = NodeID{0};
     }
   }
 
