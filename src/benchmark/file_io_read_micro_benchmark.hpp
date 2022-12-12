@@ -7,12 +7,10 @@
 
 namespace hyrise {
 
-const auto MB = uint32_t{1'000'000};
-
 class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
  public:
   void SetUp(::benchmark::State& state) override {
-    NUMBER_OF_BYTES = state.range(0) * MB;
+    NUMBER_OF_BYTES = _align_to_pagesize(state.range(0));
     NUMBER_OF_ELEMENTS = NUMBER_OF_BYTES / uint32_t_size;
 
     // each int32_t contains four bytes
@@ -46,10 +44,12 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void pread_atomic_single_threaded(benchmark::State& state);
   void pread_atomic_random_multi_threaded(benchmark::State& state, uint16_t thread_count);
   void pread_atomic_random_single_threaded(benchmark::State& state);
-  void mmap_read_single_threaded(benchmark::State& state, const int mmap_mode_flag, const int access_order);
-  void mmap_read_multi_threaded(benchmark::State& state, const int mmap_mode_flag, const uint16_t thread_count, const int access_order);
+  void memory_mapped_read_single_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag, const int access_order);
+  void memory_mapped_read_multi_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag, const uint16_t thread_count, const int access_order);
+
   // enums for mmap benchmarks
+  enum MAPPING_TYPE { MMAP, UMAP };
   enum DATA_ACCESS_TYPES { SEQUENTIAL, RANDOM };
-  enum MMAP_ACCESS_TYPES { SHARED = MAP_SHARED, PRIVATE = MAP_PRIVATE };
+  enum MAP_ACCESS_TYPES { SHARED = MAP_SHARED, PRIVATE = MAP_PRIVATE };
 };
 }  // namespace hyrise
