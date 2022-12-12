@@ -265,7 +265,6 @@ set(
     gmock
     SQLite::SQLite3
     # Added plugin targets so that we can test member methods without going through dlsym
-    hyriseTestPlugin
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
     hyriseBenchmarkLib
