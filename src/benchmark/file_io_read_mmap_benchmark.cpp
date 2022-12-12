@@ -213,17 +213,17 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQU
 }
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)
-    ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 24, 32, 48}})
     ->UseRealTime();
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_RANDOM)
-    ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 24, 32, 48}})
     ->UseRealTime();
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUENTIAL)
-    ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 24, 32, 48}})
     ->UseRealTime();
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDOM)
-    ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 24, 32, 48}})
     ->UseRealTime();
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)

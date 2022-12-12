@@ -1,6 +1,7 @@
 #include "micro_benchmark_utils.hpp"
 #include "utils/assert.hpp"
 
+#include <aio.h>
 #include <stddef.h>
 #include <unistd.h>
 #include <fstream>
@@ -25,6 +26,17 @@ void micro_benchmark_clear_disk_cache() {
   std::ofstream ofs("/proc/sys/vm/drop_caches");
   ofs << "3" << std::endl;
 }
+
+void aio_error_handling(aiocb* aiocb, uint32_t expected_bytes) {
+  const auto err = aio_error(aiocb);
+  const auto ret = aio_return(aiocb);
+
+  Assert(err == 0, "Error at aio_error(): " + std::strerror(errno));
+
+  Assert(ret == static_cast<int32_t>(expected_bytes),
+         "Error at aio_return(). Got: " + std::to_string(ret) + " Expected: " + std::to_string(expected_bytes) + ".");
+}
+
 
 /**
  * Generates a vector containing random indexes between 0 and number.
@@ -51,5 +63,4 @@ std::string fail_and_close_file(int32_t fd, std::string message, int error_num) 
   close(fd);
   return message + std::strerror(error_num);
 }
-
 }  // namespace hyrise

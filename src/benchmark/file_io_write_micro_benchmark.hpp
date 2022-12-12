@@ -1,6 +1,7 @@
 #include "micro_benchmark_basic_fixture.hpp"
 #include "micro_benchmark_utils.hpp"
 
+#include <aio.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -30,6 +31,8 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void write_non_atomic_single_threaded(benchmark::State& state);
   void pwrite_atomic_single_threaded(benchmark::State& state);
   void pwrite_atomic_multi_threaded(benchmark::State& state, uint16_t thread_count);
+  void aio_single_threaded(benchmark::State& state);
+  void aio_multi_threaded(benchmark::State& state, uint16_t thread_count);
 
   std::vector<uint32_t> data_to_write;
   uint64_t control_sum = uint64_t{0};
