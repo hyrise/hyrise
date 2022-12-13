@@ -550,7 +550,6 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelated) {
   pqp_b->never_clear_output();
   execute_all({table_wrapper_a, table_wrapper_b, pqp_a, pqp_b});
 
-  // Test it without pre-calculated uncorrelated_subquery_results
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, subquery_a), {1, 1, 1, 1}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(add_(a, 2), subquery_a), {1, 1, 0, 0}));
@@ -642,6 +641,11 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryCorrelated) {
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.0, subquery_b), {std::nullopt, 0, 0, std::nullopt}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *not_in_(36.3, subquery_b),
                                        {std::nullopt, std::nullopt, std::nullopt, std::nullopt}));
+
+  // The ExpressionEvaluator must ensure not to reuse correlated subqueries and create a copy for each row. Thus, no
+  // subquery operator should have been executed.
+  EXPECT_FALSE(pqp_a->executed());
+  EXPECT_FALSE(pqp_b->executed());
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, NotInListLiterals) {
@@ -704,6 +708,9 @@ TEST_F(ExpressionEvaluatorToValuesTest, Exists) {
 
   EXPECT_EQ(exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
   EXPECT_EQ(not_exists_expression->data_type(), ExpressionEvaluator::DataTypeBool);
+
+  // Correlated subqueries cannot be reused and should be deep copied before execution.
+  EXPECT_FALSE(a_plus_x_eq_13_scan->executed());
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, ExtractLiterals) {
