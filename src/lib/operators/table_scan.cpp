@@ -454,10 +454,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
   }
 
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
-  const auto& uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate,
-                                                            uncorrelated_subquery_results);
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate);
 }
 
 void TableScan::_on_cleanup() {

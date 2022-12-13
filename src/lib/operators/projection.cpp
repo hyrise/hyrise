@@ -113,15 +113,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   });
   const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
 
-  // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
-  const auto uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-
-  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  if (!uncorrelated_subquery_results->empty()) {
-    step_performance_data.set_step_runtime(OperatorSteps::UncorrelatedSubqueries, timer.lap());
-  }
-
   auto forwarding_cost = std::chrono::nanoseconds{};
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
@@ -176,9 +167,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
 
     // Defines the job that performs the evaluation if the columns are newly generated.
-    auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
-                                          &output_segments_by_chunk, &column_is_nullable, &forwarded_pqp_columns]() {
-      auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
+    auto perform_projection_evaluation = [this, chunk_id, expression_count, &output_segments_by_chunk,
+                                          &column_is_nullable, &forwarded_pqp_columns]() {
+      auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id};
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
         const auto& expression = expressions[column_id];
@@ -209,6 +200,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
 
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
 

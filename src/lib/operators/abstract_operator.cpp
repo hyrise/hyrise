@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
 #include "resolve_type.hpp"
@@ -17,7 +18,6 @@
 #include "utils/format_duration.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
-#include "expression/pqp_subquery_expression.hpp"
 
 namespace hyrise {
 

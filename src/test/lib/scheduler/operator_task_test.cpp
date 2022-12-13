@@ -9,15 +9,15 @@
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
 #include "operators/abstract_join_operator.hpp"
+#include "operators/aggregate_hash.hpp"
 #include "operators/get_table.hpp"
 #include "operators/join_hash.hpp"
+#include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
-#include "operators/aggregate_hash.hpp"
-#include "operators/table_wrapper.hpp"
-#include "operators/projection.hpp"
 
 namespace hyrise {
 
@@ -127,9 +127,10 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   using AggregateExpressions = std::vector<std::shared_ptr<AggregateExpression>>;
   auto aggregate_a = std::make_shared<AggregateHash>(gt_b, AggregateExpressions{min_(b_a)}, std::vector<ColumnID>{});
   auto scan = std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int, false)));
-  auto aggregate_b = std::make_shared<AggregateHash>(scan,  AggregateExpressions{avg_(a_a)}, std::vector<ColumnID>{});
+  auto aggregate_b = std::make_shared<AggregateHash>(scan, AggregateExpressions{avg_(a_a)}, std::vector<ColumnID>{});
   auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
-  auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(add_(value_(1), pqp_subquery_(aggregate_b, DataType::Double, false))));
+  auto projection = std::make_shared<Projection>(
+      table_wrapper, expression_vector(add_(value_(1), pqp_subquery_(aggregate_b, DataType::Double, false))));
 
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(projection);
 
@@ -151,18 +152,18 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
 
   EXPECT_EQ(scan->get_or_create_operator_task()->successors(), TaskVector{aggregate_b->get_or_create_operator_task()});
 
-  EXPECT_EQ(aggregate_b->get_or_create_operator_task()->successors(), TaskVector{projection->get_or_create_operator_task()});
-  EXPECT_EQ(table_wrapper->get_or_create_operator_task()->successors(), TaskVector{projection->get_or_create_operator_task()});
+  EXPECT_EQ(aggregate_b->get_or_create_operator_task()->successors(),
+            TaskVector{projection->get_or_create_operator_task()});
+  EXPECT_EQ(table_wrapper->get_or_create_operator_task()->successors(),
+            TaskVector{projection->get_or_create_operator_task()});
 
   EXPECT_EQ(root_operator_task, projection->get_or_create_operator_task());
   EXPECT_TRUE(projection->get_or_create_operator_task()->successors().empty());
-
 
   for (auto& task : tasks) {
     EXPECT_NO_THROW(task->schedule());
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
-
 }
 
 TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {

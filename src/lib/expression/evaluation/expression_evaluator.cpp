@@ -140,13 +140,8 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
 
 namespace hyrise {
 
-ExpressionEvaluator::ExpressionEvaluator(
-    const std::shared_ptr<const Table>& table, const ChunkID chunk_id,
-    const std::shared_ptr<const UncorrelatedSubqueryResults>& uncorrelated_subquery_results)
-    : _table(table),
-      _chunk(_table->get_chunk(chunk_id)),
-      _chunk_id(chunk_id),
-      _uncorrelated_subquery_results(uncorrelated_subquery_results) {
+ExpressionEvaluator::ExpressionEvaluator(const std::shared_ptr<const Table>& table, const ChunkID chunk_id)
+    : _table(table), _chunk(_table->get_chunk(chunk_id)), _chunk_id(chunk_id) {
   _output_row_count = _chunk->size();
   _segment_materializations.resize(_chunk->column_count());
 }
@@ -929,16 +924,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
 
 std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquery_expression_to_tables(
     const PQPSubqueryExpression& expression) {
-  // If the SubqueryExpression is uncorrelated, evaluating it once is sufficient
-  if (expression.parameters.empty()) {
-    if (_uncorrelated_subquery_results) {
-      // This was already evaluated before
-      const auto table_iter = _uncorrelated_subquery_results->find(expression.pqp);
-      DebugAssert(table_iter != _uncorrelated_subquery_results->cend(),
-                  "All uncorrelated PQPSubqueryExpression should be cached if cache is present");
-      return {table_iter->second};
-    }
-
+  // If the SubqueryExpression is uncorrelated, evaluating it has already been executed.
+  if (!expression.is_correlated()) {
     // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
     Assert(expression.pqp->state() == OperatorState::ExecutedAndAvailable, "bla");
     return {expression.pqp->get_output()};
@@ -956,23 +943,6 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
   }
 
   return results;
-}
-
-std::shared_ptr<ExpressionEvaluator::UncorrelatedSubqueryResults>
-ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(
-    const std::vector<std::shared_ptr<PQPSubqueryExpression>>& expressions) {
-  auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
-  auto evaluator = ExpressionEvaluator{};
-
-  for (const auto& pqp_subquery_expression : expressions) {
-    Assert(!pqp_subquery_expression->is_correlated(), "Did not expect a correlated subquery.");
-    const auto pqp = pqp_subquery_expression->pqp;
-
-    // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
-    Assert(pqp->state() == OperatorState::ExecutedAndAvailable, "Uncorrelated subquery was not executed or has already been cleared.");
-    uncorrelated_subquery_results->emplace(pqp, pqp->get_output());
-  }
-  return uncorrelated_subquery_results;
 }
 
 std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_for_row(
@@ -1004,7 +974,8 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   } else {
     // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
-    Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable, "Uncorrelated subquery was not executed or has already been cleared.");
+    Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable,
+           "Uncorrelated subquery was not executed or has already been cleared.");
   }
 
   return row_pqp->get_output();

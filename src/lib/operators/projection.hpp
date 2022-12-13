@@ -27,12 +27,7 @@ class Projection : public AbstractReadOnlyOperator {
 
   const std::string& name() const override;
 
-  enum class OperatorSteps : uint8_t {
-    UncorrelatedSubqueries,
-    ForwardUnmodifiedColumns,
-    EvaluateNewColumns,
-    BuildOutput
-  };
+  enum class OperatorSteps : uint8_t { ForwardUnmodifiedColumns, EvaluateNewColumns, BuildOutput };
 
   /**
    * The dummy table is used for literal projections that have no input table.
