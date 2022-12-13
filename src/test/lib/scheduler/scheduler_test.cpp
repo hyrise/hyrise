@@ -1,5 +1,6 @@
 #include <chrono>
 #include <memory>
+#include <numeric>
 #include <utility>
 #include <vector>
 
@@ -299,41 +300,50 @@ TEST_F(SchedulerTest, TaskToNodeAssignment) {
   EXPECT_EQ(node_queue_scheduler->workers()[1]->num_finished_tasks(), 1);
 }
 
-TEST_F(SchedulerTest, TaskToIdlingNodeAssigment) {
+TEST_F(SchedulerTest, MultiNodeStressTest) {
   if (std::thread::hardware_concurrency() < 2) {
     GTEST_SKIP();
   }
 
-  Hyrise::get().topology.use_fake_numa_topology(2, 1);
+  Hyrise::get().topology.use_fake_numa_topology(128, 1);
   auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   // Just a sufficiently large number to trigger a non-empty queue.
-  constexpr auto JOB_COUNT = 100;
-  constexpr auto LOOP_TIME = std::chrono::milliseconds{100};  // TODO(martin): argue for large number
+  constexpr auto JOB_COUNT = size_t{10'240};
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   jobs.reserve(JOB_COUNT);
+
+  std::atomic_uint32_t counter{0};
+  //std::condition_variable condition_variable;
+  //std::mutex cv_mutex;
+ 
+  auto start_jobs = false;
+
   for (auto task_count = size_t{0}; task_count < JOB_COUNT; ++task_count) {
     jobs.push_back(std::make_shared<JobTask>([&]() {
-      // Jobs loop for a short time to ensure that jobs are not already taken out of the queue before the next job is
-      // scheduled.
-      const auto start = std::chrono::steady_clock::now();
-
-      auto counter = size_t{0};
-      while ((std::chrono::steady_clock::now() - start) < LOOP_TIME) {
-        ++counter;
-      }
+      while (!start_jobs) {}
+      ++counter;
     }));
+    jobs.back()->schedule();
   }
-  node_queue_scheduler->schedule_and_wait_for_tasks(jobs);
+  EXPECT_GT(node_queue_scheduler->workers().front()->queue()->estimate_load(), 0);
+  EXPECT_GT(node_queue_scheduler->workers().back()->queue()->estimate_load(), 0);
+
+  start_jobs = true;
+  node_queue_scheduler->wait_for_tasks(jobs);
+
+  EXPECT_EQ(counter, JOB_COUNT);
+  EXPECT_EQ(std::accumulate(node_queue_scheduler->workers().begin(), node_queue_scheduler->workers().end(),
+                           size_t{0}, [] (const auto carry_over, const auto& element) { return carry_over + element->num_finished_tasks(); }), JOB_COUNT);
 
   // Check if tasks have been scheduled on node 2 as well. Due to the busy looping, workers cannot pull and execute
   // tasks as fast as we are scheduling them. Thus, at least some tasks should be scheduled on node 2.
-  EXPECT_GT(node_queue_scheduler->workers()[0]->num_finished_tasks(), 5);
-  EXPECT_GT(node_queue_scheduler->workers()[1]->num_finished_tasks(), 5);
-  EXPECT_EQ(node_queue_scheduler->workers()[0]->num_finished_tasks() +
-            node_queue_scheduler->workers()[1]->num_finished_tasks(), JOB_COUNT);
+  //EXPECT_GT(node_queue_scheduler->workers()[0]->num_finished_tasks(), 5);
+  //EXPECT_GT(node_queue_scheduler->workers()[1]->num_finished_tasks(), 5);
+  //EXPECT_EQ(node_queue_scheduler->workers()[0]->num_finished_tasks() +
+  //          node_queue_scheduler->workers()[1]->num_finished_tasks(), JOB_COUNT);
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {

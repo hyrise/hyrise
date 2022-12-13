@@ -106,6 +106,8 @@ class NodeQueueScheduler : public AbstractScheduler {
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;
 
+  NodeID determine_queue_id_for_task(std::shared_ptr<AbstractTask>& task, NodeID preferred_node_id);
+
   void wait_for_all_tasks() override;
 
   // Number of groups for _group_tasks
