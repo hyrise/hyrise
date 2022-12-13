@@ -31,7 +31,7 @@
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
