@@ -228,7 +228,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
 
   std::atomic_uint32_t counter{0};
-  auto start_jobs = false;
+  volatile auto start_jobs = false;
 
   auto job_lists = std::vector<std::vector<std::shared_ptr<AbstractTask>>>{};
   for (const auto job_count : job_counts) {
@@ -244,7 +244,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
       jobs.back()->schedule();
     }
   }
-
+ 
   // As we create more tasks than we have queues and tasks cannot be processed until `start_jobs` is set, tasks should
   // put on different queues to distribute the load.
   EXPECT_GT(node_queue_scheduler->workers().front()->queue()->estimate_load(), 0);
