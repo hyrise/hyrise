@@ -1,10 +1,12 @@
 #include <future>
+#include <numeric>
 #include <thread>
 
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/task_queue.hpp"
 
 namespace hyrise {
 
@@ -208,6 +210,59 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{1}, row), iterations_per_thread);
     EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{2}, row), row % 2 ? 0 : iterations_per_thread);
   }
+}
+
+TEST_F(StressTest, NodeSchedulerStressTest) {
+  if (std::thread::hardware_concurrency() < 2) {
+    GTEST_SKIP();
+  }
+
+  // Create a large number of nodes in a fake topology (many workers will share the same thread).
+  const auto node_count = std::thread::hardware_concurrency() * 8;
+
+  Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Just a sufficiently large number to trigger a non-empty queue.
+  const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
+
+  std::atomic_uint32_t counter{0};
+  auto start_jobs = false;
+
+  auto job_lists = std::vector<std::vector<std::shared_ptr<AbstractTask>>>{};
+  for (const auto job_count : job_counts) {
+    job_lists.push_back(std::vector<std::shared_ptr<AbstractTask>>{});
+    auto& jobs = job_lists.back();
+    jobs.reserve(job_count);
+
+    for (auto task_count = size_t{0}; task_count < job_count; ++task_count) {
+      jobs.push_back(std::make_shared<JobTask>([&]() {
+        while (!start_jobs) {}
+        ++counter;
+      }));
+      jobs.back()->schedule();
+    }
+
+  }
+
+  // As we create more tasks than we have queues and tasks cannot be processed until `start_jobs` is set, tasks should
+  // put on different queues to distribute the load.
+  EXPECT_GT(node_queue_scheduler->workers().front()->queue()->estimate_load(), 0);
+  EXPECT_GT(node_queue_scheduler->workers().back()->queue()->estimate_load(), 0);
+
+  // Set flag to allow tasks to continue.
+  start_jobs = true;
+  for (const auto& jobs : job_lists) {
+    node_queue_scheduler->wait_for_tasks(jobs);
+  }
+
+  const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
+  EXPECT_EQ(counter, job_count_sum);
+  EXPECT_EQ(std::accumulate(node_queue_scheduler->workers().cbegin(), node_queue_scheduler->workers().cend(),
+                            size_t{0}, [] (const auto carry_over, const auto& element) {
+                              return carry_over + element->num_finished_tasks();
+                            }), job_count_sum);
 }
 
 }  // namespace hyrise
