@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "concurrency/transaction_context.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -25,7 +26,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
-  // Tell input operators that we want to consume their output
+  // Tell input operators that we want to consume their output. Operators with uncorrelated subqueries have to call
   if (_left_input) {
     mutable_left_input()->register_consumer();
   }
@@ -375,6 +376,27 @@ std::vector<std::shared_ptr<AbstractOperator>> AbstractOperator::uncorrelated_su
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}
 
 void AbstractOperator::_on_cleanup() {}
+
+void AbstractOperator::_search_and_register_subqueries(const std::shared_ptr<AbstractExpression>& expression) {
+  /**
+   * Register as a consumer for all uncorrelated subqueries. In contrast, we do not register for correlated subqueries,
+   * which cannot be reused by design. They are fully owned and managed by the ExpressionEvaluator.
+   */
+  auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+  for (const auto& subquery_expression : pqp_subquery_expressions) {
+    if (subquery_expression->is_correlated()) {
+      continue;
+    }
+    /**
+     * The results of uncorrelated subqueries might be used in the operator's _on_execute() method. Therefore, we
+     * 1. register as a consumer and
+     * 2. store pointers to (i) return the uncorrelated subqueries when the OperatorTasks are created and (ii)
+     *    deregister after execution.
+     */
+    subquery_expression->pqp->register_consumer();
+    _uncorrelated_subquery_expressions.push_back(subquery_expression);
+  }
+}
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {

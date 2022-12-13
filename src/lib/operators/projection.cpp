@@ -29,26 +29,8 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
-  /**
-   * Register as a consumer for all uncorrelated subqueries.
-   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
-   * and managed by the ExpressionEvaluator.
-   */
   for (const auto& expression : expressions) {
-    auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
-    for (const auto& subquery_expression : pqp_subquery_expressions) {
-      if (subquery_expression->is_correlated()) {
-        continue;
-      }
-
-      /**
-       * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
-       * 1. register as a consumer and
-       * 2. store pointers to call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
-       */
-      subquery_expression->pqp->register_consumer();
-      _uncorrelated_subquery_expressions.push_back(subquery_expression);
-    }
+    _search_and_register_subqueries(expression);
   }
 }
 

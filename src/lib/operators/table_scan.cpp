@@ -44,24 +44,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operat
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
-  /**
-   * Register as a consumer for all uncorrelated subqueries.
-   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
-   * and managed by the ExpressionEvaluator.
-   */
-  auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
-  for (const auto& subquery_expression : pqp_subquery_expressions) {
-    if (subquery_expression->is_correlated()) {
-      continue;
-    }
-    /**
-     * Uncorrelated subqueries will be resolved when TableScan::create_impl is called. Therefore, we
-     * 1. register as a consumer and
-     * 2. store pointers to eventually call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
-     */
-    subquery_expression->pqp->register_consumer();
-    _uncorrelated_subquery_expressions.push_back(subquery_expression);
-  }
+  _search_and_register_subqueries(predicate);
 }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const {

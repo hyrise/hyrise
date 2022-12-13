@@ -246,6 +246,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const = 0;
 
+  // Operators that might rely on uncorrelated subqueries should use this method in order to let AbstractOperator
+  // register and deregister as a consumer of the subqueries and ensure their tasks are scheduled.
+  void _search_and_register_subqueries(const std::shared_ptr<AbstractExpression>& expression);
+
   const OperatorType _type;
 
   // Shared pointers to input operators, can be nullptr.
