@@ -243,7 +243,6 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
       }));
       jobs.back()->schedule();
     }
-
   }
 
   // As we create more tasks than we have queues and tasks cannot be processed until `start_jobs` is set, tasks should
