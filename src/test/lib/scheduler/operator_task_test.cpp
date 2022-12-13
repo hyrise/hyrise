@@ -15,6 +15,9 @@
 #include "operators/union_positions.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "operators/aggregate_hash.hpp"
+#include "operators/table_wrapper.hpp"
+#include "operators/projection.hpp"
 
 namespace hyrise {
 
@@ -38,7 +41,7 @@ TEST_F(OperatorTaskTest, BasicTasksFromOperatorTest) {
   const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(gt);
 
   ASSERT_EQ(tasks.size(), 1);
-  root_operator_task->schedule();
+  EXPECT_NO_THROW(root_operator_task->schedule());
 
   EXPECT_TABLE_EQ_UNORDERED(_test_table_a, gt->get_output());
 }
@@ -50,7 +53,7 @@ TEST_F(OperatorTaskTest, SingleDependencyTasksFromOperatorTest) {
 
   const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(ts);
   for (auto& task : tasks) {
-    task->schedule();
+    EXPECT_NO_THROW(task->schedule());
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
@@ -67,7 +70,7 @@ TEST_F(OperatorTaskTest, DoubleDependencyTasksFromOperatorTest) {
 
   const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(join);
   for (auto& task : tasks) {
-    task->schedule();
+    EXPECT_NO_THROW(task->schedule());
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 
@@ -105,23 +108,76 @@ TEST_F(OperatorTaskTest, MakeDiamondShape) {
   EXPECT_EQ(union_positions->get_or_create_operator_task()->successors(), TaskVector{});
 
   for (auto& task : tasks) {
-    task->schedule();
+    EXPECT_NO_THROW(task->schedule());
     // We don't have to wait here, because we are running the task tests without a scheduler
   }
 }
 
+TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
+  // Uncorrelated subqueries in the predicates of TableScan and Projection operators should be wrapped in tasks once
+  // together with the rest of the PQP. Thus, the subqueries are scheduled accordingly and not created and executed
+  // multiple times.
+  // The query plan used in this test ... the following query:
+  // SELECT 1 + (SELECT  AVG(table_a.a) FROM table_a WHERE table_a.a > (SELECT MIN(table_b.a) FROM table_b));
+  auto gt_a = std::make_shared<GetTable>("table_a");
+  auto gt_b = std::make_shared<GetTable>("table_b", std::vector<ChunkID>{}, std::vector<ColumnID>{0});
+  auto a_a = PQPColumnExpression::from_table(*_test_table_a, "a");
+  auto b_a = PQPColumnExpression::from_table(*_test_table_b, "a");
+
+  using AggregateExpressions = std::vector<std::shared_ptr<AggregateExpression>>;
+  auto aggregate_a = std::make_shared<AggregateHash>(gt_b, AggregateExpressions{min_(b_a)}, std::vector<ColumnID>{});
+  auto scan = std::make_shared<TableScan>(gt_a, greater_than_(a_a, pqp_subquery_(aggregate_a, DataType::Int, false)));
+  auto aggregate_b = std::make_shared<AggregateHash>(scan,  AggregateExpressions{avg_(a_a)}, std::vector<ColumnID>{});
+  auto table_wrapper = std::make_shared<TableWrapper>(Projection::dummy_table());
+  auto projection = std::make_shared<Projection>(table_wrapper, expression_vector(add_(value_(1), pqp_subquery_(aggregate_b, DataType::Double, false))));
+
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(projection);
+
+  ASSERT_EQ(tasks.size(), 7);
+  auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+  EXPECT_TRUE(tasks_set.contains(gt_a->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(gt_b->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(aggregate_a->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(scan->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(aggregate_b->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(table_wrapper->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
+
+  using TaskVector = std::vector<std::shared_ptr<AbstractTask>>;
+  EXPECT_EQ(gt_b->get_or_create_operator_task()->successors(), TaskVector{aggregate_a->get_or_create_operator_task()});
+
+  EXPECT_EQ(gt_a->get_or_create_operator_task()->successors(), TaskVector{scan->get_or_create_operator_task()});
+  EXPECT_EQ(aggregate_a->get_or_create_operator_task()->successors(), TaskVector{scan->get_or_create_operator_task()});
+
+  EXPECT_EQ(scan->get_or_create_operator_task()->successors(), TaskVector{aggregate_b->get_or_create_operator_task()});
+
+  EXPECT_EQ(aggregate_b->get_or_create_operator_task()->successors(), TaskVector{projection->get_or_create_operator_task()});
+  EXPECT_EQ(table_wrapper->get_or_create_operator_task()->successors(), TaskVector{projection->get_or_create_operator_task()});
+
+  EXPECT_EQ(root_operator_task, projection->get_or_create_operator_task());
+  EXPECT_TRUE(projection->get_or_create_operator_task()->successors().empty());
+
+
+  for (auto& task : tasks) {
+    EXPECT_NO_THROW(task->schedule());
+    // We don't have to wait here, because we are running the task tests without a scheduler
+  }
+
+}
+
 TEST_F(OperatorTaskTest, ConcurrentTaskReusage) {
-  // Operators reuse the created OperatorTasks when the tasks are still available. Requesting the tasks may happen con-
-  // currently, e.g., when an uncorrelated subquery is used in multiple TableScans (see #2520). This test ensures that
+  // Operators reuse the created OperatorTasks when the tasks are still available. Requesting the tasks may happen
+  // concurrently, e.g., when a correlated subquery is used in multiple TableScans (see #2520). This test ensures that
   // concurrently creating/reusing tasks from the same operator is thread-safe and does not lead to segmentation faults
   // or tasks waiting forever to finish. This test addresses multiple issues:
   // - Operators store a weak pointer to an OperatorTask. If the task has been destructed, we must ensure to create the
   //   task again instead of returning nullptr.
   // - An AbstractTask stores its succeeding tasks in a vector. If different threads concurrently access this vector, we
-  //   must ensure that (i) parallel access is safe (e.g., via locking), and (ii) this vector does not contain dupli-
-  //   cates, which would lead to deadlocks.
-  // We test both requirements by letting many threads create and execute tasks from the same root operator concurrent-
-  // ly. Thus, we concurrently access a task's successors and likely have expiring tasks referenced by operators.
+  //   must ensure that (i) parallel access is safe (e.g., via locking), and (ii) this vector does not contain
+  //   duplicates, which would lead to deadlocks.
+  // We test both requirements by letting many threads create and execute tasks from the same root operator
+  // concurrently. Thus, we concurrently access a task's successors and likely have expiring tasks referenced by
+  // operators.
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
   const auto get_table = std::make_shared<GetTable>("table_b");

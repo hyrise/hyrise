@@ -17,6 +17,7 @@
 #include "utils/format_duration.hpp"
 #include "utils/print_utils.hpp"
 #include "utils/timer.hpp"
+#include "expression/pqp_subquery_expression.hpp"
 
 namespace hyrise {
 
@@ -119,6 +120,10 @@ void AbstractOperator::execute() {
 
   if (_right_input) {
     mutable_right_input()->deregister_consumer();
+  }
+
+  for (const auto& subquery_expression : _uncorrelated_subquery_expressions) {
+    subquery_expression->pqp->deregister_consumer();
   }
 
   if constexpr (HYRISE_DEBUG) {
@@ -251,9 +256,9 @@ void AbstractOperator::deregister_consumer() {
   //     clear_output() for the first time.
   //  3) T1 wakes up and continues with the if statement. Since _consumer_count equals zero, it also calls
   //     clear_output(), which leads to an illegal state transition ExecutedAndCleared -> ExecutedAndCleared.
-  std::lock_guard<std::mutex> lock(_deregister_consumer_mutex);
+  const auto lock = std::lock_guard<std::mutex>{_deregister_consumer_mutex};
 
-  _consumer_count--;
+  --_consumer_count;
   if (_consumer_count == 0) {
     clear_output();
   }
@@ -354,6 +359,17 @@ std::shared_ptr<OperatorTask> AbstractOperator::get_or_create_operator_task() {
   }
 
   return operator_task;
+}
+
+std::vector<std::shared_ptr<AbstractOperator>> AbstractOperator::uncorrelated_subqueries() const {
+  auto subquery_pqps = std::vector<std::shared_ptr<AbstractOperator>>{};
+  subquery_pqps.reserve(_uncorrelated_subquery_expressions.size());
+
+  for (const auto& subquery_expression : _uncorrelated_subquery_expressions) {
+    subquery_pqps.emplace_back(subquery_expression->pqp);
+  }
+
+  return subquery_pqps;
 }
 
 void AbstractOperator::_on_set_transaction_context(const std::weak_ptr<TransactionContext>& transaction_context) {}

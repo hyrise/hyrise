@@ -116,10 +116,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
   const auto uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  // Deregister, because we obtained the results and no longer need the subquery plans.
-  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
-    pqp_subquery_expression->pqp->deregister_consumer();
-  }
 
   auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   if (!uncorrelated_subquery_results->empty()) {

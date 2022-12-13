@@ -204,11 +204,13 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
 TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
   const auto table_wrapper_all = std::make_shared<TableWrapper>(Projection::dummy_table());
   table_wrapper_all->never_clear_output();
+  table_wrapper_all->execute();
   const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int, false);
 
   const auto empty_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   const auto table_wrapper_empty = std::make_shared<TableWrapper>(empty_table);
+  table_wrapper_empty->execute();
   const auto subquery_returning_none = pqp_subquery_(table_wrapper_empty, DataType::Int, false);
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(subquery_returning_all),

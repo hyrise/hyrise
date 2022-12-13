@@ -940,7 +940,8 @@ std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquer
     }
 
     // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
-    return {_evaluate_subquery_expression_for_row(expression, ChunkOffset{0})};
+    Assert(expression.pqp->state() == OperatorState::ExecutedAndAvailable, "bla");
+    return {expression.pqp->get_output()};
   }
 
   // Make sure all columns (i.e. segments) that are parameters are materialized
@@ -965,9 +966,11 @@ ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(
 
   for (const auto& pqp_subquery_expression : expressions) {
     Assert(!pqp_subquery_expression->is_correlated(), "Did not expect a correlated subquery.");
-    // Uncorrelated subquery expressions have the same result for every row, so executing them for row 0 is fine.
-    auto result = evaluator._evaluate_subquery_expression_for_row(*pqp_subquery_expression, ChunkOffset{0});
-    uncorrelated_subquery_results->emplace(pqp_subquery_expression->pqp, result);
+    const auto pqp = pqp_subquery_expression->pqp;
+
+    // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
+    Assert(pqp->state() == OperatorState::ExecutedAndAvailable, "Uncorrelated subquery was not executed or has already been cleared.");
+    uncorrelated_subquery_results->emplace(pqp, pqp->get_output());
   }
   return uncorrelated_subquery_results;
 }
@@ -977,9 +980,10 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
   Assert(expression.parameters.empty() || _chunk,
          "Sub-SELECT references external Columns but Expression doesn't operate on a Table/Chunk");
 
-  std::unordered_map<ParameterID, AllTypeVariant> parameters;
-
   const auto expression_parameter_count = expression.parameters.size();
+  auto parameters = std::unordered_map<ParameterID, AllTypeVariant>{};
+  parameters.reserve(expression_parameter_count);
+
   for (auto parameter_idx = size_t{0}; parameter_idx < expression_parameter_count; ++parameter_idx) {
     const auto& parameter_id_column_id = expression.parameters[parameter_idx];
     const auto parameter_id = parameter_id_column_id.first;
@@ -996,10 +1000,12 @@ std::shared_ptr<const Table> ExpressionEvaluator::_evaluate_subquery_expression_
     // Therefore, PQPs are deep-copied to ensure that we start without cached results.
     row_pqp = expression.pqp->deep_copy();
     row_pqp->set_parameters(parameters);
+    const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
+    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+  } else {
+    // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
+    Assert(row_pqp->state() == OperatorState::ExecutedAndAvailable, "Uncorrelated subquery was not executed or has already been cleared.");
   }
-
-  const auto& [tasks, _] = OperatorTask::make_tasks_from_operator(row_pqp);
-  Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
 
   return row_pqp->get_output();
 }

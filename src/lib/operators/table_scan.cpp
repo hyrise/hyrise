@@ -76,7 +76,7 @@ const std::string& TableScan::name() const {
 std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
   stream << "Impl: " << _impl_description;
@@ -106,7 +106,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   _impl = create_impl();
   _impl_description = _impl->description();
 
-  std::mutex output_mutex;
+  auto output_mutex = std::mutex{};
 
   const auto excluded_chunk_set = std::unordered_set<ChunkID>{excluded_chunk_ids.cbegin(), excluded_chunk_ids.cend()};
 
@@ -133,7 +133,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       const auto column_count = in_table->column_count();
-      Segments out_segments;
+      auto out_segments = Segments{};
       out_segments.reserve(column_count);
 
       /**
@@ -214,7 +214,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {
         chunk->set_individually_sorted_by(chunk_in->individually_sorted_by());
       }
-      std::lock_guard<std::mutex> lock(output_mutex);
+      const auto lock = std::lock_guard<std::mutex>{output_mutex};
       output_chunks.emplace_back(chunk);
     };
     // Spawn job when chunk sufficiently large. The upper bound of the chunk size, still needs to be re-evaluated over
@@ -261,7 +261,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
   auto arguments_count = predicate->arguments.size();
   auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
   new_arguments.reserve(arguments_count);
-  auto computed_subqueries_count = int{0};
+  auto computed_subqueries_count = size_t{0};
 
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
@@ -280,13 +280,10 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       }
     });
     new_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
-
-    // Deregister, because we obtained the subquery result and no longer need the subquery plan.
-    subquery->pqp->deregister_consumer();
-    computed_subqueries_count++;
+    ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
-  DebugAssert(static_cast<int>(_uncorrelated_subquery_expressions.size()) == computed_subqueries_count,
+  DebugAssert(_uncorrelated_subquery_expressions.size() == computed_subqueries_count,
               "Expected to resolve all uncorrelated subqueries.");
 
   // Return original predicate if we did not compute any subquery results
@@ -459,10 +456,6 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
   const auto& uncorrelated_subquery_results =
       ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  // Deregister, because we obtained the results and no longer need the subquery plans.
-  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
-    pqp_subquery_expression->pqp->deregister_consumer();
-  }
   return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate,
                                                             uncorrelated_subquery_results);
 }

@@ -17,6 +17,7 @@ namespace hyrise {
 class OperatorTask;
 class Table;
 class TransactionContext;
+class PQPSubqueryExpression;
 
 enum class OperatorType {
   Aggregate,
@@ -211,6 +212,12 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
    */
   std::shared_ptr<OperatorTask> get_or_create_operator_task();
 
+  /**
+   * Returns root nodes of uncorrelated subqueries so they can be translated to OperatorTasks and get scheduled
+   * accordingly.
+   */
+  std::vector<std::shared_ptr<AbstractOperator>> uncorrelated_subqueries() const;
+
   // LQP node with which this operator has been created. Might be uninitialized.
   std::shared_ptr<const AbstractLQPNode> lqp_node;
 
@@ -250,6 +257,10 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Weak pointer breaks cyclical dependency between operators and context
   std::optional<std::weak_ptr<TransactionContext>> _transaction_context;
+
+  // Some operators, e.g., TableScans or Projections, have predicates with uncorrelated subqueries. We store these
+  // subqueries in AbstractOperator to create their tasks.
+  std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 
  private:
   // We track the number of consuming operators to automate the clearing of operator results.

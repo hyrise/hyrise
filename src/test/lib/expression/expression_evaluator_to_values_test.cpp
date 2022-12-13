@@ -550,6 +550,10 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithoutPrecalculat
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
   const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
 
+  pqp_a->never_clear_output();
+  pqp_b->never_clear_output();
+  execute_all({table_wrapper_a, table_wrapper_b, pqp_a, pqp_b});
+
   // Test it without pre-calculated uncorrelated_subquery_results
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(6, subquery_a), {0}));
   EXPECT_TRUE(test_expression<int32_t>(table_a, *in_(a, subquery_a), {1, 1, 1, 1}));
@@ -584,12 +588,12 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedWithPrecalculated)
       std::make_shared<Projection>(table_wrapper_b, expression_vector(PQPColumnExpression::from_table(*table_a, "c")));
   const auto subquery_b = pqp_subquery_(pqp_b, DataType::Int, true);
 
+  pqp_a->never_clear_output();
+  pqp_b->never_clear_output();
+  execute_all({table_wrapper_a, table_wrapper_b, pqp_a, pqp_b});
+
   // Test it with pre-calculated uncorrelated_subquery_results
   auto uncorrelated_subquery_results = std::make_shared<ExpressionEvaluator::UncorrelatedSubqueryResults>();
-  table_wrapper_a->execute();
-  pqp_a->execute();
-  table_wrapper_b->execute();
-  pqp_b->execute();
   uncorrelated_subquery_results->emplace(pqp_a, pqp_a->get_output());
   uncorrelated_subquery_results->emplace(pqp_b, pqp_b->get_output());
 

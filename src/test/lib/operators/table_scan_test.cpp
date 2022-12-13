@@ -29,9 +29,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace hyrise::expression_functional;
 
 class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:
@@ -343,7 +343,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
-  subquery_pqp->never_clear_output();
+  execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
   {
     auto scan = std::make_shared<TableScan>(get_int_float_op(),
                                             greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
@@ -366,7 +366,7 @@ TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   const auto subquery_pqp =
       std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
                               to_expression(int64_t{1}));
-  subquery_pqp->never_clear_output();
+  execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
   {
     auto scan = std::make_shared<TableScan>(
         get_int_float_op(),
