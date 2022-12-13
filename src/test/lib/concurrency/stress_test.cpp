@@ -247,8 +247,9 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
  
   // As we create more tasks than we have queues and tasks cannot be processed until `start_jobs` is set, tasks should
   // put on different queues to distribute the load.
-  EXPECT_GT(node_queue_scheduler->workers().front()->queue()->estimate_load(), 0);
-  EXPECT_GT(node_queue_scheduler->workers().back()->queue()->estimate_load(), 0);
+  auto second_worker = ++(node_queue_scheduler->workers().cbegin());
+  EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
+                          [] (const auto& worker) { return  worker->queue()->estimate_load() > 0; }));
 
   // Set flag to allow tasks to continue.
   start_jobs = true;
