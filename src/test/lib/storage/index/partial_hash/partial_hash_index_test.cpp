@@ -68,11 +68,13 @@ class PartialHashIndexTest : public BaseTest {
     return index->_null_cend();
   }
 
-  AbstractTableIndex::IteratorPair range_equals(std::shared_ptr<PartialHashIndex> index, const AllTypeVariant& value) const {
+  AbstractTableIndex::IteratorPair range_equals(std::shared_ptr<PartialHashIndex> index,
+                                                const AllTypeVariant& value) const {
     return index->_range_equals(value);
   }
 
-  std::pair<AbstractTableIndex::IteratorPair, AbstractTableIndex::IteratorPair> range_not_equals(std::shared_ptr<PartialHashIndex> index, const AllTypeVariant& value) const {
+  std::pair<AbstractTableIndex::IteratorPair, AbstractTableIndex::IteratorPair> range_not_equals(
+      std::shared_ptr<PartialHashIndex> index, const AllTypeVariant& value) const {
     return index->_range_not_equals(value);
   }
 };
@@ -189,7 +191,6 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
     EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{1}}));
     EXPECT_EQ(*end, (RowID{ChunkID{1}, ChunkOffset{0}}));
     EXPECT_EQ(std::distance(begin, end), 3);
-
   };
   index->range_equals_with_iterators(access_range_equals_with_iterators, "delta");
 
@@ -200,7 +201,7 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
     if (end != cend(index)) {
       EXPECT_EQ(*end, (RowID{ChunkID{1}, ChunkOffset{3}}));
     }
-    
+
     EXPECT_TRUE((std::distance(begin, end) == 6) || (std::distance(begin, end) == 7));
   };
   index->range_not_equals_with_iterators(access_range_not_equals_with_iterators, "names");
