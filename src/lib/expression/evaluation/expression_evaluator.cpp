@@ -891,21 +891,29 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_unary_m
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquery_expression(
     const PQPSubqueryExpression& subquery_expression) {
-  // One table per row. Each table should have a single row with a single value
+  // One table per row. Each table should have a single row with a single value.
   const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(subquery_expression);
 
-  // One ExpressionResult<Result> per row. Each ExpressionResult<Result> should have a single value
+  // One ExpressionResult<Result> per row. Each ExpressionResult<Result> should have a single value.
   const auto subquery_results = _prune_tables_to_expression_results<Result>(subquery_result_tables);
 
   const auto subquery_result_count = static_cast<ChunkOffset>(subquery_results.size());
   auto result_values = pmr_vector<Result>(subquery_result_count);
   auto result_nulls = pmr_vector<bool>{};
 
-  // Materialize values
+  // Materialize values.
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < subquery_result_count; ++chunk_offset) {
-    Assert(subquery_results[chunk_offset]->size() == 1,
-           "Expected precisely one row to be returned from SelectExpression");
-    result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
+    // Uncorrelated subqueries used in scan predicates can stem from rewrites of joins. These subqueries may return an
+    // empty result if tuples do not have a join partner.
+    const auto row_count = subquery_results[chunk_offset]->size();
+    if (row_count == 0) {
+      Assert(!subquery_expression.is_correlated(), "Correlated subqueries must return one row for each tuple.");
+      return std::make_shared<ExpressionResult<Result>>();
+    } else {
+      Assert(subquery_results[chunk_offset]->size() == 1,
+             "Expected precisely one row to be returned from SelectExpression.");
+      result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
+    }
   }
 
   // Optionally materialize nulls if any row returned a nullable result.
@@ -924,19 +932,19 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
 
 std::vector<std::shared_ptr<const Table>> ExpressionEvaluator::_evaluate_subquery_expression_to_tables(
     const PQPSubqueryExpression& expression) {
-  // If the SubqueryExpression is uncorrelated, evaluating it has already been executed.
+  // Uncorrelated subqueries should have been scheduled and executed just like regular input operators.
   if (!expression.is_correlated()) {
-    // If a subquery is uncorrelated, it has the same result for all rows, so we just execute it for the first row
-    Assert(expression.pqp->state() == OperatorState::ExecutedAndAvailable, "bla");
+    Assert(expression.pqp->state() == OperatorState::ExecutedAndAvailable,
+           "Uncorrelated subquery was not executed or has already been cleared.");
     return {expression.pqp->get_output()};
   }
 
-  // Make sure all columns (i.e. segments) that are parameters are materialized
+  // Make sure all columns (i.e., segments) that are parameters are materialized.
   for (const auto& parameter : expression.parameters) {
     _materialize_segment_if_not_yet_materialized(parameter.second);
   }
 
-  std::vector<std::shared_ptr<const Table>> results(_output_row_count);
+  auto results = std::vector<std::shared_ptr<const Table>>{_output_row_count};
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count); ++chunk_offset) {
     results[chunk_offset] = _evaluate_subquery_expression_for_row(expression, chunk_offset);

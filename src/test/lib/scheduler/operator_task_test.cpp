@@ -128,7 +128,7 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   const auto aggregate_a =
       std::make_shared<AggregateHash>(gt_b, AggregateExpressions{min_(b_a)}, std::vector<ColumnID>{});
 
-  // SELECT AVG(table_a.a) FROM table_a.a > <subquery_result>
+  // SELECT AVG(table_a.a) FROM table_a WHERE table_a.a > <subquery_result>
   const auto gt_a = std::make_shared<GetTable>("table_a");
   const auto a_a = PQPColumnExpression::from_table(*_test_table_a, "a");
   const auto scan =

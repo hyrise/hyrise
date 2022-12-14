@@ -15,6 +15,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -27,6 +28,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_between_table_scan_impl.hpp"
 #include "table_scan/column_is_null_table_scan_impl.hpp"
@@ -39,6 +41,8 @@
 #include "utils/performance_warning.hpp"
 
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
@@ -253,16 +257,29 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       continue;
     }
 
-    auto subquery_result = AllTypeVariant{};
-    resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      auto expression_result = ExpressionEvaluator{}.evaluate_expression_to_result<ColumnDataType>(*subquery);
-      Assert(expression_result->size() == 1, "Expected subquery to return a single row");
-      if (!expression_result->is_null(0)) {
-        subquery_result = AllTypeVariant{expression_result->value(0)};
-      }
-    });
-    new_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
+    auto subquery_result = NULL_VALUE;
+    const auto subquery_pqp = subquery->pqp;
+    Assert(subquery_pqp->state() == OperatorState::ExecutedAndAvailable,
+           "Uncorrelated subquery was not executed or has already been cleared.");
+    const auto& subquery_result_table = subquery_pqp->get_output();
+    const auto row_count = subquery_result_table->row_count();
+    Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
+           "Uncorrelated subqueries may only return a single value.");
+
+    if (row_count == 1) {
+      const auto chunk = subquery_result_table->get_chunk(ChunkID{0});
+      Assert(chunk, "Subquery results cannot be physically deleted.");
+      resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        segment_iterate<ColumnDataType>(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
+          if (!position.is_null()) {
+            subquery_result = position.value();
+          }
+        });
+      });
+    }
+
+    new_arguments.emplace_back(value_(std::move(subquery_result)));
     ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
