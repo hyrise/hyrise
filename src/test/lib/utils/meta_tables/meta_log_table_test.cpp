@@ -1,3 +1,5 @@
+#include <regex>
+
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
@@ -43,6 +45,12 @@ TEST_F(MetaLogTest, TableGeneration) {
   EXPECT_GT(boost::get<int64_t>(values[0]), timestamp_ns - static_cast<int64_t>(60e9));
   // Since the clock is not necessarily precise enough, we use "less or equals" instead of "less than" here.
   EXPECT_LE(boost::get<int64_t>(values[0]), timestamp_ns);
+
+  // We only check if the human-readable timestamp has the format YYYY-MM-DD HH:MM:SS.
+  const auto timestamp_regex = std::regex{"\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}"};
+  auto match = std::smatch{};
+  const auto timestamp_string = std::string{boost::get<pmr_string>(values[1])};
+  EXPECT_TRUE(std::regex_match(timestamp_string, match, timestamp_regex));
 
   EXPECT_EQ(values[2], AllTypeVariant{pmr_string{"Info"}});
   EXPECT_EQ(values[3], AllTypeVariant{static_cast<int32_t>(1)});
