@@ -73,9 +73,9 @@ static_assert(static_cast<std::underlying_type_t<TaskState>>(TaskState::Created)
               "TaskState::Created is not equal to 0. TaskState enum values are expected to be ordered.");
 
 /**
- * Base class for anything that can be scheduled by the Scheduler and gets executed by a Worker.
+ * Base class for anything that can be scheduled by the scheduler and gets executed by a worker.
  *
- * Derive and implement logic in _on_execute()
+ * Derive and implement logic in _on_execute().
  */
 class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   // Using friend classes is quite uncommon in Hyrise. The reason it is done here is that the _join method must
@@ -94,60 +94,60 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   NodeID node_id() const;
 
   /**
-   * @return All dependencies are done
+   * @return true if all dependencies are done.
    */
   bool is_ready() const;
 
   /**
-   * @return The task finished executing
+   * @return true if the task finished executing.
    */
   bool is_done() const;
 
   /**
-   * @return Workers are allowed to steal the task from another node
+   * @return true if workers are allowed to steal the task from another node.
    */
   bool is_stealable() const;
 
   /**
-   * Description for debugging purposes
+   * Description for debugging purposes.
    */
   virtual std::string description() const;
 
   /**
-   * Task ids are determined on scheduling, no one else but the Scheduler should have any reason to call this
-   * @param id id, unique during the lifetime of the program, of the task
+   * Task ids are determined on scheduling, no one else but the scheduler should have any reason to call this.
+   * @param task_id ID, unique during the lifetime of the program, of the task.
    */
   void set_id(TaskID task_id);
 
   /**
-   * Make this Task the dependency of another
-   * @param successor Task that will be executed after this
+   * Make this task the dependency of another. Not thread-safe, see OperatorTask::make_tasks_from_operator.
+   * @param successor Task that will be executed after this.
    */
   void set_as_predecessor_of(const std::shared_ptr<AbstractTask>& successor);
 
   /**
-   * @return the predecessors of this Task
+   * @return the predecessors of this task.
    */
   const std::vector<std::weak_ptr<AbstractTask>>& predecessors() const;
 
   /**
-   * @return the successors of this Task
+   * @return the successors of this task.
    */
   const std::vector<std::shared_ptr<AbstractTask>>& successors() const;
 
   /**
-   * Node ids are changed when moving the Task between nodes (e.g. during work stealing)
+   * Node IDs are changed when moving the task between nodes (e.g. during work stealing).
    */
   void set_node_id(NodeID node_id);
 
   /**
-   * Callback to be executed right after the Task finished.
-   * Notice the execution of the callback might happen on ANY thread
+   * Callback to be executed right after the task finished. Notice the execution of the callback might happen on ANY
+   * thread.
    */
   void set_done_callback(const std::function<void()>& done_callback);
 
   /**
-   * Schedules the task if a Scheduler is available, otherwise just executes it on the current Thread
+   * Schedules the task if a scheduler is available, otherwise just executes it on the current thread.
    */
   void schedule(NodeID preferred_node_id = CURRENT_NODE_ID);
 
@@ -157,20 +157,18 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   bool is_scheduled() const;
 
   /**
-   * @returns true whether the caller is atomically the first to try to enqueue this task into a TaskQueue,
-   * false otherwise.
-   * Makes sure a task only gets put into a TaskQueue once
+   * @returns true if the caller is atomically the first to try to enqueue this task into a TaskQueue, false otherwise.
+   * Makes sure a task only gets put into a TaskQueue once.
    */
   bool try_mark_as_enqueued();
 
   /**
-   * returns true whether the caller is atomically the first to try to assign this task to a worker,
-   * false otherwise.
+   * @returns true whether the caller is atomically the first to try to assign this task to a worker, false otherwise.
    */
   bool try_mark_as_assigned_to_worker();
 
   /**
-   * Executes the task in the current Thread, blocks until all operations are finished
+   * Executes the task in the current thread, blocks until all operations are finished.
    */
   void execute();
 
@@ -181,20 +179,19 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
 
   /**
    * Transitions the task's state to @param new_state.
-   * @returns true on success and
-   *          false if another caller/thread/worker was faster in progressing this task's state.
+   * @returns true on success and false if another caller/thread/worker was faster in progressing this task's state.
    */
   [[nodiscard]] bool _try_transition_to(TaskState new_state);
 
  private:
   /**
-   * Called by a dependency when it finished execution
+   * Called by a dependency when it finished execution.
    */
   void _on_predecessor_done();
 
   /**
-   * Blocks the calling thread until the Task finished executing.
-   * This is only called from non-Worker threads and from Hyrise::get().scheduler()->wait_for_tasks().
+   * Blocks the calling thread until the Task finished executing. This is only called from non-Worker threads and from
+   * Hyrise::get().scheduler()->wait_for_tasks().
    */
   void _join();
 
@@ -204,20 +201,20 @@ class AbstractTask : public std::enable_shared_from_this<AbstractTask> {
   std::atomic_bool _stealable;
   std::function<void()> _done_callback;
 
-  // For dependencies
+  // For dependencies.
   std::atomic_uint32_t _pending_predecessors{0};
   std::vector<std::weak_ptr<AbstractTask>> _predecessors;
   std::vector<std::shared_ptr<AbstractTask>> _successors;
 
-  // State management
+  // State management.
   std::atomic<TaskState> _state{TaskState::Created};
   std::mutex _transition_to_mutex;
 
-  // For making Tasks join()-able
+  // For making Tasks join()-able.
   std::condition_variable _done_condition_variable;
   std::mutex _done_condition_variable_mutex;
 
-  // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled
+  // Purely for debugging purposes, in order to be able to identify tasks after they have been scheduled.
   std::string _description;
 };
 
