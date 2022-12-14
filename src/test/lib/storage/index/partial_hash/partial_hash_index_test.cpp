@@ -188,9 +188,13 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
   index->access_null_values_with_iterators(access_null_values_with_iterators);
 
   auto access_range_equals_with_iterators = [](auto begin, auto end) {
-    EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{1}}));
-    EXPECT_EQ(*end, (RowID{ChunkID{1}, ChunkOffset{0}}));
     EXPECT_EQ(std::distance(begin, end), 3);
+
+    EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{1}}));
+    ++begin;
+    EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{3}}));
+    ++begin;
+    EXPECT_EQ(*begin, (RowID{ChunkID{1}, ChunkOffset{1}}));
   };
   index->range_equals_with_iterators(access_range_equals_with_iterators, "delta");
 
