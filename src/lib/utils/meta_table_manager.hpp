@@ -37,11 +37,9 @@ class MetaTableManager : public Noncopyable {
 
  protected:
   friend class Hyrise;
-
   MetaTableManager();
 
-  static std::string _trim_table_name(const std::string& table_name);
-
+ private:
   std::unordered_map<std::string, std::shared_ptr<AbstractMetaTable>> _meta_tables;
   std::vector<std::string> _table_names;
 };

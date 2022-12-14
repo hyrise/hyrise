@@ -54,18 +54,12 @@ class MetaTableManagerTest : public BaseTest {
   std::shared_ptr<const Table> mock_manipulation_values;
 
   void SetUp() override {
-    Hyrise::reset();
-
     const auto column_definitions = MetaMockTable().column_definitions();
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2});
     table->append({pmr_string{"foo"}});
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
     table_wrapper->execute();
     mock_manipulation_values = table_wrapper->get_output();
-  }
-
-  void TearDown() override {
-    Hyrise::reset();
   }
 };
 

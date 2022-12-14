@@ -8,6 +8,7 @@
 #include "operators/table_wrapper.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
+#include "statistics/statistics_objects/distinct_value_count.hpp"
 #include "statistics/statistics_objects/equal_distinct_count_histogram.hpp"
 #include "statistics/statistics_objects/generic_histogram_builder.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
@@ -24,18 +25,16 @@ using namespace hyrise;  // NOLINT
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
                                            const pmr_vector<T>& dictionary) {
-  std::shared_ptr<AbstractStatisticsObject> pruning_statistics;
   if constexpr (std::is_arithmetic_v<T>) {
-    pruning_statistics = RangeFilter<T>::build_filter(dictionary);
+    segment_statistics.set_statistics_object(RangeFilter<T>::build_filter(dictionary));
   } else {
     if (!dictionary.empty()) {
-      pruning_statistics = std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back());
+      segment_statistics.set_statistics_object(
+          std::make_shared<MinMaxFilter<T>>(dictionary.front(), dictionary.back()));
     }
   }
 
-  if (pruning_statistics) {
-    segment_statistics.set_statistics_object(pruning_statistics);
-  }
+  segment_statistics.set_statistics_object(std::make_shared<DistinctValueCount>(dictionary.size()));
 }
 
 }  // namespace

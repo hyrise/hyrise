@@ -13,8 +13,6 @@ namespace hyrise {
 class StressTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     // Set scheduler so that we can execute multiple SQL statements on separate threads.
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }

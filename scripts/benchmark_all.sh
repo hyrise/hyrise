@@ -180,7 +180,7 @@ do
         "mt") echo -n "multi-threaded, shuffled, ${num_phy_cores} clients, ${num_phy_cores} cores" ;;
       esac
     fi
-    
+
     echo "**"
     echo "<details>"
     echo "<summary>"
