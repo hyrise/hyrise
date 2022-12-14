@@ -194,15 +194,20 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
   };
   index->range_equals_with_iterators(access_range_equals_with_iterators, "delta");
 
-  // This lambda is called two times by range_not_equals_with_iterators() with different expected values.
+  // The following lambda is called two times by range_not_equals_with_iterators(), so it must know which call is the
+  // current to expect the correct results.
+  auto first_access = true;
   auto access_range_not_equals_with_iterators = [&](auto begin, auto end) {
-    EXPECT_TRUE((*begin == (RowID{ChunkID{0}, ChunkOffset{1}})) || (*begin == (RowID{ChunkID{0}, ChunkOffset{4}})));
-
-    if (end != cend(index)) {
+    if (first_access) {
+      EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{1}}));
       EXPECT_EQ(*end, (RowID{ChunkID{1}, ChunkOffset{3}}));
+      EXPECT_EQ(std::distance(begin, end), 6);
+    } else {
+      EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{4}}));
+      EXPECT_EQ(end, cend(index));
+      EXPECT_EQ(std::distance(begin, end), 7);
     }
-
-    EXPECT_TRUE((std::distance(begin, end) == 6) || (std::distance(begin, end) == 7));
+    first_access = false;
   };
   index->range_not_equals_with_iterators(access_range_not_equals_with_iterators, "names");
 }
