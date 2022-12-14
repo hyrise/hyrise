@@ -14,6 +14,7 @@
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
 #include "scheduler/operator_task.hpp"
+#include "scheduler/task_queue.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT
 
@@ -315,6 +316,25 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
   EXPECT_TRUE(task_done);
 
   Hyrise::get().scheduler()->finish();
+}
+
+TEST_F(SchedulerTest, DetermineQueueIDForTask) {
+  if (std::thread::hardware_concurrency() < 2) {
+    GTEST_SKIP();
+  }
+
+  Hyrise::get().topology.use_fake_numa_topology(2, 1);
+  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  std::shared_ptr<AbstractTask> task = std::make_shared<JobTask>([&]() {});
+
+  EXPECT_EQ(node_queue_scheduler->determine_queue_id_for_task(task, NodeID{1}), NodeID{1});
+
+  // For the case of no load on node ID 0 (which is the case here), tasks are always scheduled on this node.
+  EXPECT_EQ(node_queue_scheduler->determine_queue_id_for_task(task, CURRENT_NODE_ID), NodeID{0});
+
+  // The distribution of tasks under high load is tested in the concurrency stress tests.
 }
 
 }  // namespace hyrise
