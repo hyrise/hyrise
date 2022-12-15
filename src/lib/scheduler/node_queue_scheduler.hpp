@@ -100,13 +100,19 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   /**
    * @param task
-   * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later
-   * @param priority Determines whether tasks are inserted at the beginning or end of the queue.
+   * @param preferred_node_id
+   * @param priority Determines to which queue tasks are added.
    */
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;
 
-  NodeID determine_queue_id_for_task(std::shared_ptr<AbstractTask>& task, NodeID preferred_node_id);
+  /**
+   * @param task
+   * @param preferred_node_id If a node ID is passed, the task is added to this node (might get stolen by other nodes
+                              later). When the node is the default of CURRENT_NODE_ID and no current node can be
+                              obtained, the node with the lowest queue pressure is chosen.
+   */
+  NodeID determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, NodeID preferred_node_id);
 
   void wait_for_all_tasks() override;
 

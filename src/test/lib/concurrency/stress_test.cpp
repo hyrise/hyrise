@@ -219,13 +219,13 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   const auto node_count = std::thread::hardware_concurrency() * 8;
 
   Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
-  auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
   // Just a sufficiently large number to trigger a non-empty queue.
   const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
 
-  std::atomic_uint32_t counter{0};
+  std::atomic_uint32_t jobs_finished_counter{0};
   volatile auto start_jobs = std::atomic_bool{false};
 
   auto job_lists = std::vector<std::vector<std::shared_ptr<AbstractTask>>>{};
@@ -237,15 +237,16 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
     for (auto task_count = size_t{0}; task_count < job_count; ++task_count) {
       jobs.push_back(std::make_shared<JobTask>([&]() {
         while (!start_jobs) {}
-        ++counter;
+        ++jobs_finished_counter;
       }));
       jobs.back()->schedule();
     }
   }
 
-  // As we create more tasks than we have queues and tasks cannot be processed until `start_jobs` is set, tasks should
-  // put on different queues to distribute the load.
-  auto second_worker = ++(node_queue_scheduler->workers().cbegin());
+  // In the default case, tasks are added to node 0 when its load is low. In this test, tasks cannot be processed until
+  // `start_jobs` is set, leading to high queues that cannot be processed. New tasks that are scheduled should thus be
+  // assigned to different task queues to distribute the load.
+  auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
   EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
                           [] (const auto& worker) { return  worker->queue()->estimate_load() > 0; }));
 
@@ -255,8 +256,10 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
     node_queue_scheduler->wait_for_tasks(jobs);
   }
 
+  // We schedule three batches of jobs concurrently. Now, check that the incremented `jobs_finished_counter` has the
+  // expected size. Further, check that the number of processed tasks that each worker reports also adds up.
   const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
-  EXPECT_EQ(counter, job_count_sum);
+  EXPECT_EQ(jobs_finished_counter, job_count_sum);
   EXPECT_EQ(std::accumulate(node_queue_scheduler->workers().cbegin(), node_queue_scheduler->workers().cend(),
                             size_t{0}, [] (const auto carry_over, const auto& element) {
                               return carry_over + element->num_finished_tasks();

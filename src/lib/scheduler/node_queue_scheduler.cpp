@@ -119,12 +119,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   }
 
   const auto node_id_for_queue = determine_queue_id_for_task(task, preferred_node_id);
-  DebugAssert(!(static_cast<size_t>(node_id_for_queue) >= _queues.size()),
+  DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
   _queues[node_id_for_queue]->push(task, priority);
 }
 
-NodeID NodeQueueScheduler::determine_queue_id_for_task(std::shared_ptr<AbstractTask>& task, NodeID preferred_node_id) {
+NodeID NodeQueueScheduler::determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, NodeID preferred_node_id) {
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (_queue_count == 1) {
     return NodeID{0};
