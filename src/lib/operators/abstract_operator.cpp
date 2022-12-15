@@ -27,6 +27,7 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
   // Tell input operators that we want to consume their output. Operators with uncorrelated subqueries have to call
+  // _search_and_register_subqueries for desired expressions to register as a consumer of the subqueries.
   if (_left_input) {
     mutable_left_input()->register_consumer();
   }
