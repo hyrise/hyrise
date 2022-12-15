@@ -248,7 +248,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   // assigned to different task queues to distribute the load.
   auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
   EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
-                          [] (const auto& worker) { return  worker->queue()->estimate_load() > 0; }));
+                          [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
 
   // Set flag to allow tasks to continue.
   start_jobs = true;
@@ -260,10 +260,10 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   // expected size. Further, check that the number of processed tasks that each worker reports also adds up.
   const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
   EXPECT_EQ(jobs_finished_counter, job_count_sum);
-  EXPECT_EQ(std::accumulate(node_queue_scheduler->workers().cbegin(), node_queue_scheduler->workers().cend(),
-                            size_t{0}, [] (const auto carry_over, const auto& element) {
-                              return carry_over + element->num_finished_tasks();
-                            }), job_count_sum);
+  EXPECT_EQ(std::accumulate(
+                node_queue_scheduler->workers().cbegin(), node_queue_scheduler->workers().cend(), size_t{0},
+                [](const auto carry_over, const auto& element) { return carry_over + element->num_finished_tasks(); }),
+            job_count_sum);
 }
 
 }  // namespace hyrise

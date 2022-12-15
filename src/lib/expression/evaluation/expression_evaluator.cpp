@@ -37,12 +37,11 @@
 #include "utils/date_time_utils.hpp"
 #include "utils/performance_warning.hpp"
 
-using namespace std::string_literals;           // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace std::string_literals;           // NOLINT(build/namespaces)
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 template <typename Functor>
 void resolve_binary_predicate_evaluator(const PredicateCondition predicate_condition, const Functor functor) {

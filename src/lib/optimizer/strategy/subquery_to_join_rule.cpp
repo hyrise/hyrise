@@ -25,11 +25,10 @@
 #include "logical_query_plan/validate_node.hpp"
 #include "utils/assert.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 using NodeExpressionsDifferenceType =
     typename std::iterator_traits<decltype(AggregateNode::node_expressions)::iterator>::difference_type;

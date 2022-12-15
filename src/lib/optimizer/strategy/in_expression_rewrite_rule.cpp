@@ -18,8 +18,9 @@
 #include "storage/table.hpp"
 
 namespace {
-using namespace hyrise;                         // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
+
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 void rewrite_to_join(const std::shared_ptr<AbstractLQPNode>& node,
                      const std::shared_ptr<AbstractExpression>& left_expression,

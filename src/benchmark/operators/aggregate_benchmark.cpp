@@ -12,7 +12,7 @@
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_AggregateHash)(benchmark::State& state) {
   _clear_cache();
