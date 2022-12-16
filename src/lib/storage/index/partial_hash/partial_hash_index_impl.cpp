@@ -150,8 +150,9 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
 
   auto indexed_chunks_to_unindex = std::unordered_set<ChunkID>{};
   for (const auto& chunk_id : chunks_to_unindex) {
-    if (!_indexed_chunk_ids.contains(chunk_id))
+    if (!_indexed_chunk_ids.contains(chunk_id)) {
       continue;
+    }
 
     indexed_chunks_to_unindex.insert(chunk_id);
     _indexed_chunk_ids.erase(chunk_id);
