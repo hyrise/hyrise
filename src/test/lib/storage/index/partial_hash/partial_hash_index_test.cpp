@@ -164,8 +164,10 @@ TEST_F(PartialHashIndexTest, Iterators) {
   EXPECT_EQ(std::distance(begin, end), 14);
   // Test size of NULL values index iterator.
   EXPECT_EQ(std::distance(null_cbegin(index), null_cend(index)), 2);
-  // Test for not-existing value in iterator.
+  // Test for existing value in iterator.
   EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);
+  // Test for not-existing value in iterator.
+  EXPECT_EQ(std::find(begin, end, RowID{ChunkID{2}, ChunkOffset{4}}), end);
 }
 
 TEST_F(PartialHashIndexTest, AccessWithIterators) {
@@ -176,8 +178,10 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
     EXPECT_NE(current_iter, begin);
     // Test size of index iterator.
     EXPECT_EQ(std::distance(begin, end), 14);
-    // Test for not-existing value in the iterator.
+    // Test for existing value in iterator.
     EXPECT_NE(std::find(begin, end, RowID{ChunkID{0}, ChunkOffset{4}}), end);
+    // Test for not-existing value in iterator.
+    EXPECT_EQ(std::find(begin, end, RowID{ChunkID{2}, ChunkOffset{4}}), end);
   };
   index->access_values_with_iterators(test_access_values_with_iterators);
 
@@ -198,22 +202,41 @@ TEST_F(PartialHashIndexTest, AccessWithIterators) {
   };
   index->range_equals_with_iterators(access_range_equals_with_iterators, "delta");
 
-  // The following lambda is called two times by range_not_equals_with_iterators(), so it must know which call is the
-  // current to expect the correct results.
-  auto first_access = true;
-  auto access_range_not_equals_with_iterators = [&](auto begin, auto end) {
-    if (first_access) {
-      EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{1}}));
-      EXPECT_EQ(*end, (RowID{ChunkID{1}, ChunkOffset{3}}));
-      EXPECT_EQ(std::distance(begin, end), 6);
-    } else {
-      EXPECT_EQ(*begin, (RowID{ChunkID{0}, ChunkOffset{4}}));
-      EXPECT_EQ(end, cend(index));
-      EXPECT_EQ(std::distance(begin, end), 7);
-    }
-    first_access = false;
+  auto access_range_equals_non_existing_value_with_iterators = [&](auto begin, auto end) {
+    EXPECT_EQ(begin, cend(index));
+    EXPECT_EQ(end, cend(index));
   };
+  index->range_equals_with_iterators(access_range_equals_non_existing_value_with_iterators, "blub");
+
+  auto size = size_t{0};
+  std::multiset<RowID> expected_when_value_exists = {RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}, RowID{ChunkID{0}, ChunkOffset{4}}, RowID{ChunkID{0}, ChunkOffset{5}}, RowID{ChunkID{0}, ChunkOffset{6}}, RowID{ChunkID{0}, ChunkOffset{7}}, RowID{ChunkID{1}, ChunkOffset{0}}, RowID{ChunkID{1}, ChunkOffset{1}}, RowID{ChunkID{1}, ChunkOffset{2}}, RowID{ChunkID{1}, ChunkOffset{5}}, RowID{ChunkID{1}, ChunkOffset{6}}, RowID{ChunkID{1}, ChunkOffset{7}}};
+  std::multiset<RowID> actual_when_value_exists = {};
+  
+  auto access_range_not_equals_with_iterators = [&](auto begin, auto end) {
+    for (auto it = begin; it != end; ++it) {
+      ++size;
+      actual_when_value_exists.insert(*it);
+    }
+  };
+
   index->range_not_equals_with_iterators(access_range_not_equals_with_iterators, "names");
+  EXPECT_EQ(actual_when_value_exists, expected_when_value_exists);
+  EXPECT_EQ(size, 13);
+
+  size = 0;
+  std::set<RowID> expected_when_value_not_exists = {RowID{ChunkID{0}, ChunkOffset{0}}, RowID{ChunkID{0}, ChunkOffset{1}}, RowID{ChunkID{0}, ChunkOffset{3}}, RowID{ChunkID{0}, ChunkOffset{4}}, RowID{ChunkID{0}, ChunkOffset{5}}, RowID{ChunkID{0}, ChunkOffset{6}}, RowID{ChunkID{0}, ChunkOffset{7}}, RowID{ChunkID{1}, ChunkOffset{0}}, RowID{ChunkID{1}, ChunkOffset{1}}, RowID{ChunkID{1}, ChunkOffset{2}}, RowID{ChunkID{1}, ChunkOffset{3}}, RowID{ChunkID{1}, ChunkOffset{5}}, RowID{ChunkID{1}, ChunkOffset{6}}, RowID{ChunkID{1}, ChunkOffset{7}}};
+  std::set<RowID> actual_when_value_not_exists = {};
+
+  auto access_range_not_equals_non_existing_value_with_iterators = [&](auto begin, auto end) {
+    for (auto it = begin; it != end; ++it) {
+      ++size;
+      actual_when_value_not_exists.insert(*it);
+    }
+  };
+  index->range_not_equals_with_iterators(access_range_not_equals_non_existing_value_with_iterators, "blub");
+
+  EXPECT_EQ(actual_when_value_not_exists, expected_when_value_not_exists);
+  EXPECT_EQ(size, 14);
 }
 
 TEST_F(PartialHashIndexTest, NullValues) {
@@ -223,7 +246,7 @@ TEST_F(PartialHashIndexTest, NullValues) {
   std::multiset<RowID> expected = {RowID{ChunkID{0}, ChunkOffset{2}}, RowID{ChunkID{1}, ChunkOffset{4}}};
   std::multiset<RowID> actual = {};
 
-  int size = 0;
+  auto size = size_t{0};
   while (begin != end) {
     actual.insert(*begin);
     ++begin;
