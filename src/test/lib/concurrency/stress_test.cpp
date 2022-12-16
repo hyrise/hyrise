@@ -225,7 +225,7 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
   // Just a sufficiently large number to trigger a non-empty queue.
   const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
 
-  std::atomic_uint32_t jobs_finished_counter{0};
+  auto num_finished_jobs = std::atomic_uint32_t{0};
   volatile auto start_jobs = std::atomic_bool{false};
 
   auto job_lists = std::vector<std::vector<std::shared_ptr<AbstractTask>>>{};
@@ -237,15 +237,15 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
     for (auto task_count = size_t{0}; task_count < job_count; ++task_count) {
       jobs.push_back(std::make_shared<JobTask>([&]() {
         while (!start_jobs) {}
-        ++jobs_finished_counter;
+        ++num_finished_jobs;
       }));
       jobs.back()->schedule();
     }
   }
 
   // In the default case, tasks are added to node 0 when its load is low. In this test, tasks cannot be processed until
-  // `start_jobs` is set, leading to high queues that cannot be processed. New tasks that are scheduled should thus be
-  // assigned to different task queues to distribute the load.
+  // `start_jobs` is set, leading to a high queue load that cannot be processed. New tasks that are scheduled should
+  // thus be assigned to different task queues to distribute the load.
   auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
   EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
                           [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
@@ -256,10 +256,10 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
     node_queue_scheduler->wait_for_tasks(jobs);
   }
 
-  // We schedule three batches of jobs concurrently. Now, check that the incremented `jobs_finished_counter` has the
+  // We schedule three batches of jobs concurrently. Now, check that the incremented `num_finished_jobs` has the
   // expected size. Further, check that the number of processed tasks that each worker reports also adds up.
   const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
-  EXPECT_EQ(jobs_finished_counter, job_count_sum);
+  EXPECT_EQ(num_finished_jobs, job_count_sum);
   EXPECT_EQ(std::accumulate(
                 node_queue_scheduler->workers().cbegin(), node_queue_scheduler->workers().cend(), size_t{0},
                 [](const auto carry_over, const auto& element) { return carry_over + element->num_finished_tasks(); }),

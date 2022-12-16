@@ -23,8 +23,8 @@ TEST_F(TaskQueueTest, EstimateLoad) {
   task_queue.push(std::make_shared<JobTask>([]() { return; }, SchedulePriority::High), SchedulePriority::High);
   task_queue.push(std::make_shared<JobTask>([]() { return; }, SchedulePriority::Default), SchedulePriority::Default);
 
-  // Tasks of higher priority are weighter higher. Tasks with the default priority have a multiplier of 1, while high
-  // priority tasks have a factor of two. Thus we calculate the load as `1 * 2^0 + 1 * 2^1`.
+  // Tasks of higher priority are weighted higher. Tasks with the default priority have a multiplier of 1, while high
+  // priority tasks have a multiplier of two. Thus we calculate the load as `1 * 2^0 + 1 * 2^1`.
   EXPECT_EQ(task_queue.estimate_load(), size_t{3});
 }
 
