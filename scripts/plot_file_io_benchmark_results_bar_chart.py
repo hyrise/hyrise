@@ -22,16 +22,16 @@ if len(sys.argv) != 2:
 
 # TODO: make pretty with arguments if statistical evaluation should be done
 
-with open(sys.argv[1]) as csv_file:
-    df = pd.read_csv(csv_file)
-    df[["fixture", "type", "filesize_mb"]] = df["name"].str.split("/", 2, expand=True)
+df = pd.read_csv(sys.argv[1])
 
-    # drop rows containing pre-calculated statistical data (if provided)
-    df.drop(df[df.filesize_mb.str.contains("_mean|_median|_stddev|_cv")].index, inplace=True)
+df[["fixture", "type", "filesize_mb"]] = df["name"].str.split("/", 2, expand=True)
 
-    df["filesize_mb"] = pd.to_numeric(df["filesize_mb"])
-    df["real_time_sec"] = df["real_time"] / 1000000000
-    df["mb_per_sec"] = df["filesize_mb"] / df["real_time_sec"]
+# drop rows containing pre-calculated statistical data (if provided)
+df.drop(df[df.filesize_mb.str.contains("_mean|_median|_stddev|_cv")].index, inplace=True)
+
+df["filesize_mb"] = pd.to_numeric(df["filesize_mb"])
+df["real_time_sec"] = df["real_time"] / 1000000000
+df["mb_per_sec"] = df["filesize_mb"] / df["real_time_sec"]
 
 benchmark_results = sns.barplot(data=df, x="filesize_mb", y="mb_per_sec", hue="type", capsize=0.1, errwidth=1)
 
