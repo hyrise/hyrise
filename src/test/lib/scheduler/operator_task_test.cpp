@@ -21,7 +21,7 @@
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorTaskTest : public BaseTest {
  protected:
