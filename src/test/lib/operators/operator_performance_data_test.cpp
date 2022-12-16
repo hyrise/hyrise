@@ -252,7 +252,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 0);
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
-    EXPECT_EQ(perf.right_input_is_index_side, true);
+    EXPECT_TRUE(perf.right_input_is_index_side);
   }
 
   // Add group-key index (required dictionary encoding) to table
@@ -271,7 +271,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
-    EXPECT_EQ(perf.right_input_is_index_side, true);
+    EXPECT_TRUE(perf.right_input_is_index_side);
   }
   {
     auto join = std::make_shared<JoinIndex>(
@@ -286,7 +286,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 0);
-    EXPECT_EQ(perf.right_input_is_index_side, false);
+    EXPECT_FALSE(perf.right_input_is_index_side);
   }
   {
     // insert should create unencoded (unindexed) chunk
@@ -303,7 +303,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_GT(perf.get_step_runtime(JoinIndex::OperatorSteps::OutputWriting).count(), 0);
     EXPECT_EQ(perf.chunks_scanned_with_index, 2);
     EXPECT_EQ(perf.chunks_scanned_without_index, 1);
-    EXPECT_EQ(perf.right_input_is_index_side, true);
+    EXPECT_TRUE(perf.right_input_is_index_side);
   }
 }
 

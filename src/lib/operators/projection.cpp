@@ -29,26 +29,8 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
     : AbstractReadOnlyOperator(OperatorType::Projection, input_operator, nullptr,
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
-  /**
-   * Register as a consumer for all uncorrelated subqueries.
-   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
-   * and managed by the ExpressionEvaluator.
-   */
   for (const auto& expression : expressions) {
-    auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
-    for (const auto& subquery_expression : pqp_subquery_expressions) {
-      if (subquery_expression->is_correlated()) {
-        continue;
-      }
-
-      /**
-       * Uncorrelated subqueries will be resolved when Projection::_on_execute is called. Therefore, we
-       * 1. register as a consumer and
-       * 2. store pointers to call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
-       */
-      subquery_expression->pqp->register_consumer();
-      _uncorrelated_subquery_expressions.push_back(subquery_expression);
-    }
+    _search_and_register_subqueries(expression);
   }
 }
 
@@ -113,19 +95,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   });
   const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
 
-  // Uncorrelated subqueries need to be evaluated exactly once, not once per chunk.
-  const auto uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  // Deregister, because we obtained the results and no longer need the subquery plans.
-  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
-    pqp_subquery_expression->pqp->deregister_consumer();
-  }
-
-  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
-  if (!uncorrelated_subquery_results->empty()) {
-    step_performance_data.set_step_runtime(OperatorSteps::UncorrelatedSubqueries, timer.lap());
-  }
-
   auto forwarding_cost = std::chrono::nanoseconds{};
   auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
@@ -180,9 +149,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     }
 
     // Defines the job that performs the evaluation if the columns are newly generated.
-    auto perform_projection_evaluation = [this, chunk_id, &uncorrelated_subquery_results, expression_count,
-                                          &output_segments_by_chunk, &column_is_nullable, &forwarded_pqp_columns]() {
-      auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id, uncorrelated_subquery_results};
+    auto perform_projection_evaluation = [this, chunk_id, expression_count, &output_segments_by_chunk,
+                                          &column_is_nullable, &forwarded_pqp_columns]() {
+      auto evaluator = ExpressionEvaluator{left_input_table(), chunk_id};
 
       for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
         const auto& expression = expressions[column_id];
@@ -213,6 +182,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
   expression_evaluator_cost += timer.lap();
 
+  auto& step_performance_data = dynamic_cast<OperatorPerformanceData<OperatorSteps>&>(*performance_data);
   step_performance_data.set_step_runtime(OperatorSteps::ForwardUnmodifiedColumns, forwarding_cost);
   step_performance_data.set_step_runtime(OperatorSteps::EvaluateNewColumns, expression_evaluator_cost);
 

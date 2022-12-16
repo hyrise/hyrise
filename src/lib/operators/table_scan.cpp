@@ -15,6 +15,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/is_null_expression.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -27,6 +28,7 @@
 #include "storage/abstract_segment.hpp"
 #include "storage/chunk.hpp"
 #include "storage/reference_segment.hpp"
+#include "storage/segment_iterate.hpp"
 #include "storage/table.hpp"
 #include "table_scan/column_between_table_scan_impl.hpp"
 #include "table_scan/column_is_null_table_scan_impl.hpp"
@@ -40,28 +42,13 @@
 
 namespace hyrise {
 
+using namespace expression_functional;  // NOLINT(build/namespaces)
+
 TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
-  /**
-   * Register as a consumer for all uncorrelated subqueries.
-   * In contrast, we do not register for correlated subqueries which cannot be reused by design. They are fully owned
-   * and managed by the ExpressionEvaluator.
-   */
-  auto pqp_subquery_expressions = find_pqp_subquery_expressions(predicate);
-  for (const auto& subquery_expression : pqp_subquery_expressions) {
-    if (subquery_expression->is_correlated()) {
-      continue;
-    }
-    /**
-     * Uncorrelated subqueries will be resolved when TableScan::create_impl is called. Therefore, we
-     * 1. register as a consumer and
-     * 2. store pointers to eventually call ExpressionEvaluator::populate_uncorrelated_subquery_results_cache later on.
-     */
-    subquery_expression->pqp->register_consumer();
-    _uncorrelated_subquery_expressions.push_back(subquery_expression);
-  }
+  _search_and_register_subqueries(predicate);
 }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const {
@@ -76,7 +63,7 @@ const std::string& TableScan::name() const {
 std::string TableScan::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
   stream << "Impl: " << _impl_description;
@@ -106,7 +93,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
   _impl = create_impl();
   _impl_description = _impl->description();
 
-  std::mutex output_mutex;
+  auto output_mutex = std::mutex{};
 
   const auto excluded_chunk_set = std::unordered_set<ChunkID>{excluded_chunk_ids.cbegin(), excluded_chunk_ids.cend()};
 
@@ -133,7 +120,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       }
 
       const auto column_count = in_table->column_count();
-      Segments out_segments;
+      auto out_segments = Segments{};
       out_segments.reserve(column_count);
 
       /**
@@ -214,7 +201,7 @@ std::shared_ptr<const Table> TableScan::_on_execute() {
       if (keep_chunk_sort_order && !chunk_in->individually_sorted_by().empty()) {
         chunk->set_individually_sorted_by(chunk_in->individually_sorted_by());
       }
-      std::lock_guard<std::mutex> lock(output_mutex);
+      const auto lock = std::lock_guard<std::mutex>{output_mutex};
       output_chunks.emplace_back(chunk);
     };
     // Spawn job when chunk sufficiently large. The upper bound of the chunk size, still needs to be re-evaluated over
@@ -261,7 +248,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
   auto arguments_count = predicate->arguments.size();
   auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
   new_arguments.reserve(arguments_count);
-  auto computed_subqueries_count = int{0};
+  auto computed_subqueries_count = size_t{0};
 
   for (auto argument_idx = size_t{0}; argument_idx < arguments_count; ++argument_idx) {
     const auto subquery = std::dynamic_pointer_cast<PQPSubqueryExpression>(predicate->arguments.at(argument_idx));
@@ -270,23 +257,33 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       continue;
     }
 
-    auto subquery_result = AllTypeVariant{};
-    resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
-      auto expression_result = ExpressionEvaluator{}.evaluate_expression_to_result<ColumnDataType>(*subquery);
-      Assert(expression_result->size() == 1, "Expected subquery to return a single row");
-      if (!expression_result->is_null(0)) {
-        subquery_result = AllTypeVariant{expression_result->value(0)};
-      }
-    });
-    new_arguments.emplace_back(std::make_shared<ValueExpression>(std::move(subquery_result)));
+    auto subquery_result = NULL_VALUE;
+    const auto subquery_pqp = subquery->pqp;
+    Assert(subquery_pqp->state() == OperatorState::ExecutedAndAvailable,
+           "Uncorrelated subquery was not executed or has already been cleared.");
+    const auto& subquery_result_table = subquery_pqp->get_output();
+    const auto row_count = subquery_result_table->row_count();
+    Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
+           "Uncorrelated subqueries may only return a single value.");
 
-    // Deregister, because we obtained the subquery result and no longer need the subquery plan.
-    subquery->pqp->deregister_consumer();
-    computed_subqueries_count++;
+    if (row_count == 1) {
+      const auto chunk = subquery_result_table->get_chunk(ChunkID{0});
+      Assert(chunk, "Subquery results cannot be physically deleted.");
+      resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
+        using ColumnDataType = typename decltype(data_type_t)::type;
+        segment_iterate<ColumnDataType>(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
+          if (!position.is_null()) {
+            subquery_result = position.value();
+          }
+        });
+      });
+    }
+
+    new_arguments.emplace_back(value_(std::move(subquery_result)));
+    ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");
-  DebugAssert(static_cast<int>(_uncorrelated_subquery_expressions.size()) == computed_subqueries_count,
+  DebugAssert(_uncorrelated_subquery_expressions.size() == computed_subqueries_count,
               "Expected to resolve all uncorrelated subqueries.");
 
   // Return original predicate if we did not compute any subquery results
@@ -457,14 +454,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
   }
 
   // Predicate pattern: Everything else. Fall back to ExpressionEvaluator.
-  const auto& uncorrelated_subquery_results =
-      ExpressionEvaluator::populate_uncorrelated_subquery_results_cache(_uncorrelated_subquery_expressions);
-  // Deregister, because we obtained the results and no longer need the subquery plans.
-  for (const auto& pqp_subquery_expression : _uncorrelated_subquery_expressions) {
-    pqp_subquery_expression->pqp->deregister_consumer();
-  }
-  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate,
-                                                            uncorrelated_subquery_results);
+  return std::make_unique<ExpressionEvaluatorTableScanImpl>(left_input_table(), resolved_predicate);
 }
 
 void TableScan::_on_cleanup() {

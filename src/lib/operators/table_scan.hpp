@@ -87,7 +87,6 @@ class TableScan : public AbstractReadOnlyOperator {
 
  private:
   const std::shared_ptr<AbstractExpression> _predicate;
-  std::vector<std::shared_ptr<PQPSubqueryExpression>> _uncorrelated_subquery_expressions;
 
   std::unique_ptr<AbstractTableScanImpl> _impl;
 
