@@ -80,14 +80,14 @@ class AbstractTableIndex : private Noncopyable {
   virtual ~AbstractTableIndex() = default;
 
   /**
-   * The following four methods are used to access any table index. Each of them accepts a generic function object (or
-   * similar) that expects a begin and end iterator to the underlying data structure as parameter. When accessing the
-   * index with one of these methods, one or two pairs of iterators are passed to the function object. For more
-   * information, please refer to the method description.
+   * The following four methods are used to access any table index. Each of them accepts a generic function object that
+   * expects a begin and end iterator to the underlying data structure as parameter. When accessing the index with one
+   * of these methods, one or two pairs of iterators are passed to the function object. For more information, please
+   * refer to the method description.
    * 
    * Unfortunately, it is not possible to locate the implementations of these methods inside the source file because of
    * the separate compilation model. In this case, it is not possible to use explicit template instantiation since
-   * otherwise all used function objects and functors would have to be instantiated in abstract_table_index.cpp.
+   * otherwise all used function objects would have to be instantiated in abstract_table_index.cpp.
    */
 
   /**
@@ -130,7 +130,7 @@ class AbstractTableIndex : private Noncopyable {
   /**
    * Searches for all positions that do not equal to the entry in the table index and acquires a pair of IteratorPairs
    * containing two iterator ranges: the range from the beginning of the map until the first occurence of a value
-   * equals to the searched entry and the range from the end of the value until the end of the map. After this the
+   * equals to the searched entry and the range from the end of the value until the end of the map. After this, the
    * functor is called twice, each time with one of the pairs.
    * 
    * @param functor is a generic function object accepting two iterators as arguments

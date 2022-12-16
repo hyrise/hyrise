@@ -51,7 +51,7 @@ class PartialHashIndexTest : public BaseTest {
    */
   tsl::sparse_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 
-  // Utility functions to access an index's private functions.
+  // Utility functions to access an index's protected functions.
   AbstractTableIndex::Iterator cbegin(std::shared_ptr<PartialHashIndex> index) const {
     return index->_cbegin();
   }
