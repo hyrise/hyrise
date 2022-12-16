@@ -231,8 +231,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
-  // Tessils's soarse_map uses std::hash as hash function, so the hash size equals the size of a size_t.
-  bytes += sizeof(size_t) * _map.size();
+  bytes += sizeof(size_t) * sizeof(DataType);
 
   bytes += sizeof(std::vector<RowID>) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
