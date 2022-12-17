@@ -256,10 +256,17 @@ TEST_F(StressTest, NodeSchedulerStressTest) {
     node_queue_scheduler->wait_for_tasks(jobs);
   }
 
-  // We schedule three batches of jobs concurrently. Now, check that the incremented `num_finished_jobs` has the
-  // expected size. Further, check that the number of processed tasks that each worker reports also adds up.
+  // Three batches of jobs have been concurrently scheduled. Now, check that the incremented `num_finished_jobs` has the
+  // expected value.  const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
   const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
   EXPECT_EQ(num_finished_jobs, job_count_sum);
+
+  // We put this thread to sleep to ensure that all worker threads are done processing the jobs. We intentionally
+  // overleaded the system with worker threads in this stress test. In this situation, it can happen that a worker
+  // thread is paused between executing the task and increasing its  `_num_finsihed_tasks` counter.
+  std::this_thread::sleep_for(std::chrono::milliseconds(1));
+
+  // Check that the number of processed worker tasks is correct.
   EXPECT_EQ(std::accumulate(
                 node_queue_scheduler->workers().cbegin(), node_queue_scheduler->workers().cend(), size_t{0},
                 [](const auto carry_over, const auto& element) { return carry_over + element->num_finished_tasks(); }),
