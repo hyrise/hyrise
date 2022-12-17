@@ -231,7 +231,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_map);
-  bytes += sizeof(size_t) * sizeof(DataType);
+  bytes += sizeof(DataType) * _map.size();
 
   bytes += sizeof(std::vector<RowID>) * _map.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
