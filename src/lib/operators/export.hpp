@@ -31,6 +31,7 @@ class Export : public AbstractReadOnlyOperator {
                   const FileType& file_type = FileType::Auto);
 
   const std::string& name() const final;
+  std::string description(DescriptionMode description_mode) const override;
 
  protected:
   /**

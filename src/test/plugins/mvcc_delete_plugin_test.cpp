@@ -33,10 +33,6 @@ class MvccDeletePluginTest : public BaseTest {
     Hyrise::get().storage_manager.add_table(_table_name, table);
   }
 
-  void TearDown() override {
-    Hyrise::reset();
-  }
-
  protected:
   void _increment_all_values_by_one() {
     auto transaction_context = Hyrise::get().transaction_manager.new_transaction_context(AutoCommit::No);

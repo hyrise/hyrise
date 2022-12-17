@@ -15,10 +15,6 @@ namespace hyrise {
 
 class HyriseTest : public BaseTest {
  protected:
-  void SetUp() override {
-    Hyrise::reset();
-  }
-
   // This wrapper method is needed to access the plugins vector since it is a private member of PluginManager
   std::unordered_map<PluginName, PluginHandleWrapper>& get_plugins() {
     auto& pm = Hyrise::get().plugin_manager;
@@ -36,10 +32,10 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
 
   const auto table_name = "test_table";
 
-  EXPECT_EQ(hyrise.storage_manager.has_table(table_name), false);
+  EXPECT_FALSE(hyrise.storage_manager.has_table(table_name));
   const auto table = std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   hyrise.storage_manager.add_table(table_name, table);
-  EXPECT_EQ(hyrise.storage_manager.has_table(table_name), true);
+  EXPECT_TRUE(hyrise.storage_manager.has_table(table_name));
 
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
 
@@ -59,7 +55,7 @@ TEST_F(HyriseTest, GetAndResetHyrise) {
   Hyrise::reset();
 
   EXPECT_EQ(get_plugins().size(), 0);
-  EXPECT_EQ(hyrise.storage_manager.has_table(table_name), false);
+  EXPECT_FALSE(hyrise.storage_manager.has_table(table_name));
   EXPECT_EQ(hyrise.transaction_manager.last_commit_id(), CommitID{1});
 }
 
