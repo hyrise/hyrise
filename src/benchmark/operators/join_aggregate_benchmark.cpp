@@ -28,7 +28,7 @@ constexpr auto SELECTIVITY = 0.2;
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 pmr_vector<int32_t> generate_ids(const size_t table_size) {
   auto values = pmr_vector<int32_t>(table_size);

@@ -47,11 +47,9 @@ void NodeQueueScheduler::begin() {
 
   _num_workers =Hyrise::get().topology.num_cpus();
 
-  // Good default value
-  NUM_GROUPS = _num_workers;
-
   _workers.reserve(Hyrise::get().topology.num_cpus());
-  _queues.reserve(Hyrise::get().topology.nodes().size());
+  _queue_count = Hyrise::get().topology.nodes().size();
+  _queues.reserve(_queue_count);
 
   // 
   _min_tasks_count_for_regrouping = std::max(size_t{16}, _num_workers);
@@ -70,6 +68,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
+  _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -121,6 +120,10 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
   return _queues;
 }
 
+const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const {
+  return _workers;
+}
+
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**
@@ -136,57 +139,78 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     return;
   }
 
-  // Lookup node id for current worker.
-  if (preferred_node_id == CURRENT_NODE_ID) {
-    auto worker = Worker::get_this_thread_worker();
-    if (worker) {
-      preferred_node_id = worker->queue()->node_id();
-    } else {
-      // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
-      preferred_node_id = NodeID{0};
+  const auto node_id_for_queue = determine_queue_id_for_task(task, preferred_node_id);
+  DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
+              "Node ID is not within range of available nodes.");
+  _queues[node_id_for_queue]->push(task, priority);
+}
+
+NodeID NodeQueueScheduler::determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task,
+                                                       NodeID preferred_node_id) const {
+  // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
+  if (_queue_count == 1) {
+    return NodeID{0};
+  }
+
+  if (preferred_node_id != CURRENT_NODE_ID) {
+    return preferred_node_id;
+  }
+
+  // If the current node is requested, try to obtain node from current worker.
+  const auto& worker = Worker::get_this_thread_worker();
+  if (worker) {
+    return worker->queue()->node_id();
+  }
+
+  // Initial min values with Node 0.
+  auto min_load_queue_id = NodeID{0};
+  auto min_load = _queues[0]->estimate_load();
+
+  // When the current load of node 0 is small, do not check other queues.
+  if (min_load < _workers_per_node) {
+    return NodeID{0};
+  }
+
+  for (auto queue_id = NodeID{1}; queue_id < _queue_count; ++queue_id) {
+    const auto queue_load = _queues[queue_id]->estimate_load();
+    if (queue_load < min_load) {
+      min_load_queue_id = queue_id;
+      min_load = queue_load;
     }
   }
 
-  DebugAssert(!(static_cast<size_t>(preferred_node_id) >= _queues.size()),
-              "preferred_node_id is not within range of available nodes");
-
-  auto queue = _queues[preferred_node_id];
-  queue->push(task, static_cast<uint32_t>(priority));
+  return min_load_queue_id;
 }
+
+size_t NodeQueueScheduler::determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
+  if (tasks.size() < _min_tasks_count_for_regrouping) {
+    // For small task sets we use a group count equal to the number of workers.
+    return _num_workers;
+  }
+
+  const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID || tasks[0]->node_id() == INVALID_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
+
+  const auto queue_load = _queues[node_id_for_queue_check]->estimate_load();
+
+  const auto fill_level = std::min(queue_load, _regrouping_upper_limit);
+  const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
+  const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
+
+  return static_cast<size_t>(static_cast<float>(_num_workers) * fill_factor);
+}
+
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
   // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
   // concurrently. The current value has been found with a divining rod.
-  //
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
   // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
 
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
 
-  auto num_groups = NUM_GROUPS;
-
-  if (tasks.size() >= _min_tasks_count_for_regrouping) {
-    //std::printf("1\n");
-
-    //const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
-    const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID || tasks[0]->node_id() == INVALID_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
-
-    //std::printf("1a, %u\n", static_cast<NodeID::base_type>(node_id_for_queue_check));
-    //std::printf("1b, %lu\n", static_cast<size_t>(tasks[0]->node_id()));
-    //std::printf("1c, %lu\n", static_cast<size_t>(CURRENT_NODE_ID));
-    const auto cumu_length_queues = 2*_queues[node_id_for_queue_check]->_queues[0].unsafe_size() + _queues[node_id_for_queue_check]->_queues[1].unsafe_size();
-    //std::printf("2\n");
-
-    const auto fill_level = std::min(cumu_length_queues, _regrouping_upper_limit);
-    const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
-    const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
-
-    //std::printf("3\n");
-    num_groups = static_cast<size_t>(static_cast<float>(_num_workers) * fill_factor);
-    //std::printf("num groups: %lu for length: %lu (fill degree is %f)\n", num_groups, cumu_length_queues, fill_factor);
-  }
+  const auto num_groups = determine_group_count(tasks);
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(num_groups);
   for (const auto& task : tasks) {

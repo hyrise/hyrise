@@ -12,8 +12,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 void gather_rewrite_info(
     const std::shared_ptr<JoinNode>& join_node,

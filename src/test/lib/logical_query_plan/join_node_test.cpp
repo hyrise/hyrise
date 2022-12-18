@@ -11,9 +11,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinNodeTest : public BaseTest {
  protected:

@@ -14,10 +14,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/load_table.hpp"
 
-using namespace std::string_literals;           // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace std::string_literals;   // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class LQPSubqueryExpressionTest : public BaseTest {
  public:

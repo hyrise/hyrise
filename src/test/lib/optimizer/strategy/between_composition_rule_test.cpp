@@ -16,9 +16,9 @@
 #include "optimizer/strategy/between_composition_rule.hpp"
 #include "statistics/table_statistics.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class BetweenCompositionTest : public StrategyBaseTest {
  protected:

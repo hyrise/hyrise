@@ -13,9 +13,9 @@
 #include "pqp_subquery_expression.hpp"
 #include "value_expression.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 bool expressions_equal(const std::vector<std::shared_ptr<AbstractExpression>>& expressions_a,
                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions_b) {

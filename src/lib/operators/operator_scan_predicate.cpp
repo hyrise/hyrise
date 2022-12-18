@@ -10,8 +10,8 @@
 
 namespace {
 
-using namespace hyrise;                         // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 std::optional<AllParameterVariant> resolve_all_parameter_variant(const AbstractExpression& expression,
                                                                  const AbstractLQPNode& node) {

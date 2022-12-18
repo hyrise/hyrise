@@ -7,9 +7,9 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "optimizer/join_ordering/join_graph.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinGraphTest : public BaseTest {
  public:

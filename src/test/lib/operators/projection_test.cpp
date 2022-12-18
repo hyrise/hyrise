@@ -17,9 +17,9 @@
 #include "storage/table.hpp"
 #include "types.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 /**
  * Projection mostly forwards its computations to the ExpressionEvaluator, so this the actual expression evaluation is

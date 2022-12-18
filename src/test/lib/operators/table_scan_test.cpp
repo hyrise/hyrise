@@ -29,9 +29,9 @@
 #include "types.hpp"
 #include "utils/assert.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInterface<EncodingType> {
  protected:

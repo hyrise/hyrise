@@ -38,10 +38,10 @@
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-using namespace std::string_literals;           // NOLINT
-
 namespace hyrise {
+
+using namespace std::string_literals;   // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class SQLTranslatorTest : public BaseTest {
  public:
