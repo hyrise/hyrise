@@ -29,8 +29,8 @@ bool ExceptNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 std::shared_ptr<UniqueColumnCombinations> ExceptNode::unique_column_combinations() const {
-  // Because EXCEPT acts as a pure filter for the left input table, all unique constraints from the left input node
-  // remain valid.
+  // Because EXCEPT acts as a pure filter for the left input table, all unique column combinations from the left input
+  // node remain valid.
   return _forward_left_unique_column_combinations();
 }
 
@@ -42,7 +42,7 @@ std::shared_ptr<InclusionDependencies> ExceptNode::inclusion_dependencies() cons
   return std::make_shared<InclusionDependencies>();
 }
 
-std::vector<FunctionalDependency> ExceptNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {
   // The right input node is used for filtering only. It does not contribute any FDs.
   return left_input()->non_trivial_functional_dependencies();
 }

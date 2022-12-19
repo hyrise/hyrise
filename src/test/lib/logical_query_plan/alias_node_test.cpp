@@ -71,21 +71,21 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(b->hash(), expr_b->hash());
 }
 
-TEST_F(AliasNodeTest, UniqueConstraintsEmpty) {
+TEST_F(AliasNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(mock_node->unique_column_combinations()->empty());
   EXPECT_TRUE(alias_node->unique_column_combinations()->empty());
 }
 
-TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
-  // Add constraints to MockNode
+TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
+  // Add constraints to MockNode.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   mock_node->set_key_constraints({key_constraint_a_b, key_constraint_b});
 
-  // Basic check
+  // Basic check.
   const auto& unique_column_combinations = alias_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations->size(), 2);
-  // In-depth check
+  // In-depth check.
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_column_combinations));
 }

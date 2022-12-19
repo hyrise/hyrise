@@ -16,8 +16,8 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * Forwards unique constraints from the left input node that fulfill the following criteria:
-   *  - unique constraint's expressions remain part of the ProjectionNode's output expressions
+   * Forwards unique column combinations from the left input node if the UCC's expressions remain part of the
+   * ProjectionNode's output expressions.
    */
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
@@ -26,7 +26,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
   std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

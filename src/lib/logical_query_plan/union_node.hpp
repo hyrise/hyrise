@@ -26,9 +26,9 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards unique constraints from the left input node in case of SetOperationMode::Positions.
-   *     (unique constraints of both, left and right input node are identical)
-   * (2) Discards all input unique constraints for SetOperationMode::All and
+   * (1) Forwards unique column combinations from the left input node in case of SetOperationMode::Positions.
+   *     (UCCs of both, left and right input node are identical)
+   * (2) Discards all input unique column combinations for SetOperationMode::All and
    * (3) Fails for SetOperationMode::Unique, which is not yet implemented.
    */
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
@@ -38,7 +38,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
   std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
 
   // Implementation is limited to SetOperationMode::Positions only. Passes FDs from the left input node.
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;
 

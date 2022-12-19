@@ -84,17 +84,16 @@ TEST_F(FunctionalDependencyTest, DeflateFDs) {
 
   const auto& deflated_fds = deflate_fds({fd_a_1, fd_a_2, fd_a_2, fd_b_c});
   EXPECT_EQ(deflated_fds.size(), 2);
-  const auto deflated_fds_set = std::unordered_set<FunctionalDependency>(deflated_fds.cbegin(), deflated_fds.cend());
-  EXPECT_TRUE(deflated_fds_set.contains(fd_a));
-  EXPECT_TRUE(deflated_fds_set.contains(fd_b_c));
+  EXPECT_TRUE(deflated_fds.contains(fd_a));
+  EXPECT_TRUE(deflated_fds.contains(fd_b_c));
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsEmpty) {
   const auto fd_a = FunctionalDependency({_a}, {_b, _c});
 
   EXPECT_TRUE(union_fds({}, {}).empty());
-  EXPECT_EQ(union_fds({fd_a}, {}), std::vector<FunctionalDependency>{fd_a});
-  EXPECT_EQ(union_fds({}, {fd_a}), std::vector<FunctionalDependency>{fd_a});
+  EXPECT_EQ(union_fds({fd_a}, {}), FunctionalDependencies{fd_a});
+  EXPECT_EQ(union_fds({}, {fd_a}), FunctionalDependencies{fd_a});
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDs) {
@@ -105,12 +104,11 @@ TEST_F(FunctionalDependencyTest, UnionFDs) {
   const auto fd_b = FunctionalDependency({_b}, {_c});
 
   const auto& fds_unified = union_fds({fd_a_1, fd_a_b, fd_b}, {fd_a_2});
-  const auto& fds_unified_set = std::unordered_set<FunctionalDependency>(fds_unified.begin(), fds_unified.end());
 
-  EXPECT_EQ(fds_unified_set.size(), 3);
-  EXPECT_TRUE(fds_unified_set.contains(fd_a));
-  EXPECT_TRUE(fds_unified_set.contains(fd_b));
-  EXPECT_TRUE(fds_unified_set.contains(fd_a_b));
+  EXPECT_EQ(fds_unified.size(), 3);
+  EXPECT_TRUE(fds_unified.contains(fd_a));
+  EXPECT_TRUE(fds_unified.contains(fd_b));
+  EXPECT_TRUE(fds_unified.contains(fd_a_b));
 }
 
 TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
@@ -120,9 +118,8 @@ TEST_F(FunctionalDependencyTest, UnionFDsRemoveDuplicates) {
   const auto& fds_unified = union_fds({fd_a, fd_b}, {fd_b});
 
   EXPECT_EQ(fds_unified.size(), 2);
-  const auto fds_unified_set = std::unordered_set<FunctionalDependency>(fds_unified.cbegin(), fds_unified.cend());
-  EXPECT_TRUE(fds_unified_set.contains(fd_a));
-  EXPECT_TRUE(fds_unified_set.contains(fd_b));
+  EXPECT_TRUE(fds_unified.contains(fd_a));
+  EXPECT_TRUE(fds_unified.contains(fd_b));
 }
 
 TEST_F(FunctionalDependencyTest, IntersectFDsEmpty) {
@@ -142,10 +139,8 @@ TEST_F(FunctionalDependencyTest, IntersectFDs) {
 
   const auto& intersected_fds = intersect_fds({fd_a, fd_a_b, fd_x}, {fd_a_b, fd_a_2});
   EXPECT_EQ(intersected_fds.size(), 2);
-  const auto intersected_fds_set =
-      std::unordered_set<FunctionalDependency>(intersected_fds.cbegin(), intersected_fds.cend());
-  EXPECT_TRUE(intersected_fds_set.contains(fd_a_b));
-  EXPECT_TRUE(intersected_fds_set.contains(fd_a_2));
+  EXPECT_TRUE(intersected_fds.contains(fd_a_b));
+  EXPECT_TRUE(intersected_fds.contains(fd_a_2));
 }
 
 }  // namespace hyrise

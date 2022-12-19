@@ -37,7 +37,7 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
        * as follows:
        * (1) From all predicates of type Equals, we collect the operand expressions by input node.
        * (2) We determine the input node that should be used for filtering.
-       * (3) We check the input node from (2) for a matching single- or multi-expression unique constraint.
+       * (3) We check the input node from (2) for a matching single- or multi-expression unique column combination.
        *     a) Found match -> Rewrite to semi join
        *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
        */

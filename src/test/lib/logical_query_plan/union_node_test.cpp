@@ -117,9 +117,9 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
   _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b, non_trivial_fd_c});
   EXPECT_EQ(_mock_node1->functional_dependencies().size(), 3);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), non_trivial_fd_c);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(2), trivial_fd_a);
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(non_trivial_fd_b));
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(non_trivial_fd_c));
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(trivial_fd_a));
 
   // Create PredicateNodes & UnionPositionsNode
   const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
@@ -164,14 +164,14 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {
   // Prerequisite: Input nodes have differing FDs
   const auto& expected_fd_a_b = FunctionalDependency({_a, _b}, {_c});
   EXPECT_EQ(projection_node_a->functional_dependencies().size(), 1);
-  EXPECT_EQ(projection_node_a->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_TRUE(projection_node_a->functional_dependencies().contains(non_trivial_fd_b));
   EXPECT_EQ(projection_node_b->functional_dependencies().size(), 2);
-  EXPECT_EQ(projection_node_b->functional_dependencies().at(0), non_trivial_fd_b);
-  EXPECT_EQ(projection_node_b->functional_dependencies().at(1), expected_fd_a_b);
+  EXPECT_TRUE(projection_node_b->functional_dependencies().contains(non_trivial_fd_b));
+  EXPECT_TRUE(projection_node_b->functional_dependencies().contains(expected_fd_a_b));
 
   // Test: We expect both input FD-sets to be intersected. Therefore, only one FD should survive.
   EXPECT_EQ(union_all_node->functional_dependencies().size(), 1);
-  EXPECT_EQ(union_all_node->functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_TRUE(union_all_node->functional_dependencies().contains(non_trivial_fd_b));
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
@@ -182,8 +182,8 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
   _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
   _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
   EXPECT_EQ(_mock_node1->functional_dependencies().size(), 2);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), trivial_fd_a);
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(non_trivial_fd_b));
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(trivial_fd_a));
 
   // Create PredicateNodes & UnionPositionsNode
   const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);
@@ -194,10 +194,10 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositions) {
 
   // Positive Tests
   EXPECT_EQ(union_positions_node->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(union_positions_node->non_trivial_functional_dependencies().at(0), non_trivial_fd_b);
+  EXPECT_TRUE(union_positions_node->non_trivial_functional_dependencies().contains(non_trivial_fd_b));
   EXPECT_EQ(union_positions_node->functional_dependencies().size(), 2);
-  EXPECT_EQ(union_positions_node->functional_dependencies().at(0), non_trivial_fd_b);
-  EXPECT_EQ(union_positions_node->functional_dependencies().at(1), trivial_fd_a);
+  EXPECT_TRUE(union_positions_node->functional_dependencies().contains(non_trivial_fd_b));
+  EXPECT_TRUE(union_positions_node->functional_dependencies().contains(trivial_fd_a));
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
@@ -213,8 +213,8 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
   _mock_node1->set_key_constraints({{{_a->original_column_id}, KeyConstraintType::UNIQUE}});
   _mock_node1->set_non_trivial_functional_dependencies({non_trivial_fd_b});
   EXPECT_EQ(_mock_node1->functional_dependencies().size(), 2);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(0), non_trivial_fd_b);
-  EXPECT_EQ(_mock_node1->functional_dependencies().at(1), trivial_fd_a);
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(non_trivial_fd_b));
+  EXPECT_TRUE(_mock_node1->functional_dependencies().contains(trivial_fd_a));
 
   // Create PredicateNodes & UnionPositionsNode
   const auto& predicate_node_a = PredicateNode::make(greater_than_(_a, 5), _mock_node1);

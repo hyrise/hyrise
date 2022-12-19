@@ -62,9 +62,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   void set_key_constraints(const TableKeyConstraints& key_constraints);
   const TableKeyConstraints& key_constraints() const;
 
-  void set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds);
+  void set_non_trivial_functional_dependencies(const FunctionalDependencies& fds);
   // Returns the specified set of non-trivial FDs.
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   void set_order_dependencies(const OrderDependencies& order_dependencies);
 
@@ -84,7 +84,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   ColumnDefinitions _column_definitions;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::vector<ColumnID> _pruned_column_ids;
-  std::vector<FunctionalDependency> _functional_dependencies;
+  FunctionalDependencies _functional_dependencies;
   TableKeyConstraints _table_key_constraints;
   OrderDependencies _order_dependencies;
   InclusionDependencies _inclusion_dependencies;

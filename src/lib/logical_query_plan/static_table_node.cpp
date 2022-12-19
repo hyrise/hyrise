@@ -58,7 +58,7 @@ std::shared_ptr<UniqueColumnCombinations> StaticTableNode::unique_column_combina
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_column_combinations->emplace_back(column_expressions);
+    unique_column_combinations->emplace(column_expressions);
   }
 
   return unique_column_combinations;

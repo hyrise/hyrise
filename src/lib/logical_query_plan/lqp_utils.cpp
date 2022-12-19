@@ -453,34 +453,34 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
-bool contains_matching_unique_constraint(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
+bool contains_matching_ucc(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
                                          const ExpressionUnorderedSet& expressions) {
-  DebugAssert(!unique_column_combinations->empty(), "Invalid input: Set of unique constraints should not be empty.");
+  DebugAssert(!unique_column_combinations->empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
-  // Look for a unique constraint that is based on a subset of the given expressions
-  for (const auto& unique_constraint : *unique_column_combinations) {
-    if (unique_constraint.expressions.size() <= expressions.size() &&
-        std::all_of(unique_constraint.expressions.cbegin(), unique_constraint.expressions.cend(),
-                    [&expressions](const auto unique_constraint_expression) {
-                      return expressions.contains(unique_constraint_expression);
+  // Look for a unique column combination that is based on a subset of the given expressions.
+  for (const auto& ucc : *unique_column_combinations) {
+    if (ucc.expressions.size() <= expressions.size() &&
+        std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
+                    [&](const auto& ucc_expression) {
+                      return expressions.contains(ucc_expression);
                     })) {
-      // Found a matching unique constraint
+      // Found a matching UCC.
       return true;
     }
   }
-  // Did not find a unique constraint for the given expressions
+  // Did not find a UCC for the given expressions.
   return false;
 }
 
-std::vector<FunctionalDependency> fds_from_unique_column_combinations(
+FunctionalDependencies fds_from_unique_column_combinations(
     const std::shared_ptr<const AbstractLQPNode>& lqp,
     const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
   Assert(!unique_column_combinations->empty(), "Did not expect empty vector of unique constraints");
 
-  auto fds = std::vector<FunctionalDependency>{};
+  auto fds = FunctionalDependencies{};
 
-  // Collect non-nullable output expressions
+  // Collect non-nullable output expressions.
   const auto& output_expressions = lqp->output_expressions();
   auto output_expressions_non_nullable = ExpressionUnorderedSet{};
   for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
@@ -489,18 +489,18 @@ std::vector<FunctionalDependency> fds_from_unique_column_combinations(
     }
   }
 
-  for (const auto& unique_constraint : *unique_column_combinations) {
-    auto determinants = unique_constraint.expressions;
+  for (const auto& ucc : *unique_column_combinations) {
+    auto determinants = ucc.expressions;
 
-    // (1) Verify whether we can create an FD from the given unique constraint (non-nullable determinant expressions)
+    // (1) Verify whether we can create an FD from the given UCC (non-nullable determinant expressions).
     if (!std::all_of(determinants.cbegin(), determinants.cend(),
-                     [&output_expressions_non_nullable](const auto& determinant_expression) {
+                     [&](const auto& determinant_expression) {
                        return output_expressions_non_nullable.contains(determinant_expression);
                      })) {
       continue;
     }
 
-    // (2) Collect the dependent output expressions
+    // (2) Collect the dependent output expressions.
     auto dependents = ExpressionUnorderedSet();
     for (const auto& output_expression : output_expressions) {
       if (determinants.contains(output_expression)) {
@@ -509,7 +509,7 @@ std::vector<FunctionalDependency> fds_from_unique_column_combinations(
       dependents.insert(output_expression);
     }
 
-    // (3) Add FD to output
+    // (3) Add FD to output.
     if (dependents.empty()) {
       continue;
     }
@@ -518,12 +518,12 @@ std::vector<FunctionalDependency> fds_from_unique_column_combinations(
                                return (fd.determinants == determinants) && (fd.dependents == dependents);
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
-    fds.emplace_back(determinants, dependents);
+    fds.emplace(determinants, dependents);
   }
   return fds;
 }
 
-void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds) {
+void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, FunctionalDependencies& fds) {
   if (fds.empty()) {
     return;
   }
@@ -532,17 +532,13 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
   // Adjust FDs: Remove dependents that are not part of the node's output expressions
-  auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
+  const auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
     return !output_expressions_set.contains(fd_dependent_expression);
   };
 
-  for (auto& fd : fds) {
-    std::erase_if(fd.dependents, not_part_of_output_expressions);
-  }
+  auto valid_fds = FunctionalDependencies{fds.size()};
 
-  // Remove invalid or unnecessary FDs
-  fds.erase(std::remove_if(fds.begin(), fds.end(),
-                           [&](auto& fd) {
+  const auto fd_is_invalid = [&](auto& fd) {
                              // If there are no dependents left, we can discard the FD altogether
                              if (fd.dependents.empty()) {
                                return true;
@@ -565,8 +561,49 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::
                                }
                              }
                              return false;
+                           };
+
+
+  // auto bla = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()}
+  for (auto fd : fds) {
+    std::erase_if(fd.dependents, not_part_of_output_expressions);
+    if (fd_is_invalid(fd)) {
+      continue;
+    }
+    valid_fds.emplace(fd);
+
+  }
+
+  fds = std::move(valid_fds);
+  /*
+  // Remove invalid or unnecessary FDs
+  fds.erase(std::remove_if(fds.begin(), fds.end(),
+                           [&](auto& fd) {
+                             // If there are no dependents left, we can discard the FD altogether
+                             if (fd.dependents.empty()) {
+                               return true;
+                             }*/
+
+                             /**
+                              * Remove FDs with determinant expressions that are
+                              *  a) not part of the node's output expressions
+                              *  b) are nullable
+                              */
+                             /*for (const auto& fd_determinant_expression : fd.determinants) {
+                               if (!output_expressions_set.contains(fd_determinant_expression)) {
+                                 return true;
+                               }
+
+                               const auto expression_idx =
+                                   find_expression_idx(*fd_determinant_expression, output_expressions);
+                               if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
+                                 return true;
+                               }
+                             }
+                             return false;
                            }),
             fds.end());
+*/
 
   /**
    * Future Work: Remove redundant FDs. For example:

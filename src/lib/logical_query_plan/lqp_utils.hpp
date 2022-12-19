@@ -244,17 +244,17 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                const std::vector<ColumnID>& column_ids);
 
 /**
- * @return True, if there is unique constraint in the given set of @param unique_column_combinations matching the given
- *         set of expressions. A unique constraint matches if it covers a subset of @param expressions.
+ * @return True, if there is unique column combination in the given set of @param unique_column_combinations matching
+ *         the given set of expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
-bool contains_matching_unique_constraint(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
+bool contains_matching_ucc(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
                                          const ExpressionUnorderedSet& expressions);
 
 /**
  * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of the
  *         given @param lqp node.
  */
-std::vector<FunctionalDependency> fds_from_unique_column_combinations(
+FunctionalDependencies fds_from_unique_column_combinations(
     const std::shared_ptr<const AbstractLQPNode>& lqp,
     const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations);
 
@@ -262,7 +262,7 @@ std::vector<FunctionalDependency> fds_from_unique_column_combinations(
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at
  * the @param lqp node's output expressions.
  */
-void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, std::vector<FunctionalDependency>& fds);
+void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, FunctionalDependencies& fds);
 
 /**
  * Takes the given UnionNode @param union_root_node and traverses the LQP until a common origin node was found.

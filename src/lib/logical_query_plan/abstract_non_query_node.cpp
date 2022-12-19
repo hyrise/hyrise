@@ -26,7 +26,7 @@ std::shared_ptr<InclusionDependencies> AbstractNonQueryNode::inclusion_dependenc
   Fail("Node does not support inclusion depedencies.");
 }
 
-std::vector<FunctionalDependency> AbstractNonQueryNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies AbstractNonQueryNode::non_trivial_functional_dependencies() const {
   Fail("Node does not support functional dependencies.");
 }
 

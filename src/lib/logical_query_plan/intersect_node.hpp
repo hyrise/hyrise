@@ -29,14 +29,14 @@ class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public Abstrac
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  // Forwards unique constraints from the left input node
+  // Forwards unique column combinations from the left input node
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
   std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
 
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;
 

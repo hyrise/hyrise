@@ -40,8 +40,8 @@ std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinat
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
   const auto& output_expressions = this->output_expressions();
 
-  for (const auto& input_unique_constraint : *input_unique_column_combinations) {
-    if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
+  for (const auto& input_ucc : *input_unique_column_combinations) {
+    if (!contains_all_expressions(input_ucc.expressions, output_expressions)) {
       continue;
       /**
        * Future Work:
@@ -51,7 +51,7 @@ std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinat
        * Instead of discarding a unique constraint for 'column', we could create and output a new one for 'column + 1'.
        */
     }
-    unique_column_combinations->emplace_back(input_unique_constraint);
+    unique_column_combinations->emplace(input_ucc);
   }
 
   return unique_column_combinations;
@@ -95,7 +95,7 @@ std::shared_ptr<InclusionDependencies> ProjectionNode::inclusion_dependencies() 
   return inclusion_dependencies;
 }
 
-std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies ProjectionNode::non_trivial_functional_dependencies() const {
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
   // Currently, we remove non-trivial FDs whose expressions are no longer part of the node's output expressions.

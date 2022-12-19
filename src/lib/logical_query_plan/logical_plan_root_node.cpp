@@ -28,7 +28,7 @@ std::shared_ptr<InclusionDependencies> LogicalPlanRootNode::inclusion_dependenci
   Fail("LogicalPlanRootNode is not expected to be queried for inclusion dependencies");
 }
 
-std::vector<FunctionalDependency> LogicalPlanRootNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies LogicalPlanRootNode::non_trivial_functional_dependencies() const {
   Fail("LogicalPlanRootNode is not expected to be queried for functional dependencies.");
 }
 

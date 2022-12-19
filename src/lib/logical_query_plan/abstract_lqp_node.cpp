@@ -293,16 +293,16 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   return contains_matching_unique_constraint(unique_column_combinations, expressions);
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // (1) Gather non-trivial FDs and perform sanity checks
-  auto non_trivial_fds = non_trivial_functional_dependencies();
+FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
+  // (1) Gather non-trivial FDs and perform sanity checks.
+  const auto& non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    auto fds_set = std::unordered_set<FunctionalDependency>{};
+    auto fds = FunctionalDependencies{};
     const auto& output_expressions = this->output_expressions();
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
     for (const auto& fd : non_trivial_fds) {
-      auto [_, inserted] = fds_set.insert(fd);
+      auto [_, inserted] = fds.insert(fd);
       Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
 
       for (const auto& fd_determinant_expression : fd.determinants) {
@@ -319,7 +319,7 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     }
   }
 
-  // (2) Derive trivial FDs from the node's unique constraints
+  // (2) Derive trivial FDs from the node's unique constraints.
   const auto& unique_column_combinations = this->unique_column_combinations();
   // Early exit, if there are no unique constraints
   if (unique_column_combinations->empty()) {
@@ -328,19 +328,19 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
 
   // TODO: FDs from ODs (an OD is kind of an FD + sorting)
 
-  auto trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
+  const auto& trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
 
-  // (3) Merge and return FDs
+  // (3) Merge and return FDs.
   return union_fds(non_trivial_fds, trivial_fds);
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies AbstractLQPNode::non_trivial_functional_dependencies() const {
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->non_trivial_functional_dependencies();
   }
 
-  // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
+  // For instance, StoredTableNode or StaticTableNode cannot provide any non-trivial FDs.
   return {};
 }
 

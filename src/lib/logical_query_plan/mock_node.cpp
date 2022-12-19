@@ -111,13 +111,13 @@ std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations()
       continue;
     }
 
-    // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
+    // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
     const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
-    // Create UniqueColumnCombination
-    unique_column_combinations->emplace_back(column_expressions);
+    // Create UniqueColumnCombination.
+    unique_column_combinations->emplace(column_expressions);
   }
 
   return unique_column_combinations;
@@ -174,11 +174,11 @@ const TableKeyConstraints& MockNode::key_constraints() const {
   return _table_key_constraints;
 }
 
-void MockNode::set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+void MockNode::set_non_trivial_functional_dependencies(const FunctionalDependencies& fds) {
   _functional_dependencies = fds;
 }
 
-std::vector<FunctionalDependency> MockNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {
   return _functional_dependencies;
 }
 

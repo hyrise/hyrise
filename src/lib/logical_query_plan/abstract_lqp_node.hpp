@@ -197,10 +197,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
    *         They are collected from two different sources:
-   *          (1) FDs derived from the node's unique constraints. (trivial FDs)
-   *          (2) FDs provided by the child nodes (non-trivial FDs)
+   *          (1) FDs derived from the node's unique column combinations (trivial FDs).
+   *          (2) FDs provided by the child nodes (non-trivial FDs).
    */
-  std::vector<FunctionalDependency> functional_dependencies() const;
+  FunctionalDependencies functional_dependencies() const;
 
   /**
    * This is a helper method that returns non-trivial FDs valid for the current node.
@@ -214,7 +214,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to discard non-trivial FDs from the input nodes, if necessary.
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
    */
-  virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
+  virtual FunctionalDependencies non_trivial_functional_dependencies() const;
 
   virtual std::shared_ptr<OrderDependencies> order_dependencies() const = 0;
 
@@ -261,8 +261,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * This is a helper method for node types that do not have an effect on the unique constraints from input nodes.
-   * @return All unique constraints from the left input node.
+   * This is a helper method for node types that do not have an effect on the UCCs from input nodes.
+   * @return All unique column combinations from the left input node.
    */
   std::shared_ptr<UniqueColumnCombinations> _forward_left_unique_column_combinations() const;
 

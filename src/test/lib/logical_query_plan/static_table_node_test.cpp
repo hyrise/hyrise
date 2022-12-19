@@ -80,22 +80,22 @@ TEST_F(StaticTableNodeTest, Copy) {
   EXPECT_EQ(*static_table_node, *static_table_node->deep_copy());
 }
 
-TEST_F(StaticTableNodeTest, UniqueConstraintsEmpty) {
+TEST_F(StaticTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());
   EXPECT_TRUE(static_table_node->unique_column_combinations()->empty());
 }
 
-TEST_F(StaticTableNodeTest, UniqueConstraints) {
-  // Prepare two unique constraints
+TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
+  // Prepare two unique constraints.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   dummy_table->add_soft_key_constraint(key_constraint_a);
   dummy_table->add_soft_key_constraint(key_constraint_a_b);
 
-  // Basic check
+  // Basic check.
   const auto& unique_column_combinations = static_table_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations->size(), 2);
-  // In-depth check
+  // In-depth check.
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a, unique_column_combinations));
   EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations));
 }

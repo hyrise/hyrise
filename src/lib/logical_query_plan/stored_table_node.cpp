@@ -139,7 +139,7 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
 std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combinations() const {
   auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
 
-  // We create unique column combinations from selected table key constraints
+  // We create unique column combinations from selected table key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& table_key_constraints = table->soft_key_constraints();
 
@@ -149,13 +149,13 @@ std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combina
       continue;
     }
 
-    // Search for expressions representing the key constraint's ColumnIDs
+    // Search for expressions representing the key constraint's ColumnIDs.
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination
-    unique_column_combinations->emplace_back(column_expressions);
+    unique_column_combinations->emplace(column_expressions);
   }
 
   return unique_column_combinations;

@@ -32,9 +32,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   bool is_column_nullable(const ColumnID column_id) const override;
 
   /**
-   * (1) Forwards left input node's unique constraints for JoinMode::Semi and JoinMode::AntiNullAsTrue/False
-   * (2) Discards all input unique constraints for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins
-   * (3) Forwards selected input unique constraints for Inner and Outer Equi-Joins based on join column uniqueness.
+   * (1) Forwards left input node's unique column combinations for JoinMode::Semi and JoinMode::AntiNullAsTrue/False.
+   * (2) Discards all input UCCs for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins.
+   * (3) Forwards selected input UCCs for Inner and Outer Equi-Joins based on join column uniqueness.
    */
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
@@ -50,9 +50,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * (c) Inner-/Outer-Joins:
    *      - Forwards non-trivial FDs from both input nodes whose determinant expressions stay non-nullable.
    *      - Turns derived, trivial FDs from the left and/or right input node into non-trivial FDs if the underlying
-   *        unique constraints do not survive the join.
+   *        unique column combinations do not survive the join.
    */
-  std::vector<FunctionalDependency> non_trivial_functional_dependencies() const override;
+  FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   const std::vector<std::shared_ptr<AbstractExpression>>& join_predicates() const;
 
@@ -122,7 +122,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    *          (b) the right,
    *          (c) both or
    *          (d) none
-   *         of the given unique constraint sets are returned.
+   *         of the given unique column combinations sets are returned.
    * Please note: This helper function can be called for all joins, except for Semi- and Anti-Join types.
    */
   std::shared_ptr<UniqueColumnCombinations> _output_unique_column_combinations(

@@ -25,7 +25,7 @@ struct UniqueColumnCombination final {
 
 std::ostream& operator<<(std::ostream& stream, const UniqueColumnCombination& ucc);
 
-using UniqueColumnCombinations = std::vector<UniqueColumnCombination>;
+using UniqueColumnCombinations = std::unordered_set<UniqueColumnCombination>;
 
 }  // namespace hyrise
 

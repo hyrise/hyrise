@@ -68,59 +68,59 @@ TEST_F(ProjectionNodeTest, NodeExpressions) {
   EXPECT_EQ(*_projection_node->node_expressions.at(4), *add_(_a, _c));
 }
 
-TEST_F(ProjectionNodeTest, UniqueConstraintsEmpty) {
+TEST_F(ProjectionNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(_mock_node->unique_column_combinations()->empty());
   EXPECT_TRUE(_projection_node->unique_column_combinations()->empty());
 }
 
-TEST_F(ProjectionNodeTest, UniqueConstraintsReorderedColumns) {
-  // Add constraints to MockNode
+TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
+  // Add constraints to MockNode.
   _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
   EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
 
   {
-    // Reorder columns: (a, b, c) -> (c, a, b)
+    // Reorder columns: (a, b, c) -> (c, a, b).
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
-    // Basic check
+    // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations->size(), 2);
-    // In-depth check
+    // In-depth check.
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_column_combinations));
   }
 
   {
-    // Reorder columns: (a, b, c) -> (b, c, a)
+    // Reorder columns: (a, b, c) -> (b, c, a).
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
-    // Basic check
+    // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations->size(), 2);
-    // In-depth check
+    // In-depth check.
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_column_combinations));
   }
 }
 
-TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
-  // Prepare two unique constraints for MockNode
+TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
+  // Prepare two unique constraints for MockNode.
   _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
   EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
 
-  // Test (a, b, c) -> (a, c) - no more constraints valid
+  // Test (a, b, c) -> (a, c) - no more UCCs valid.
   _projection_node = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
   EXPECT_TRUE(_projection_node->unique_column_combinations()->empty());
 
-  // Test (a, b, c) -> (c) - no more constraints valid
+  // Test (a, b, c) -> (c) - no more UCCs valid.
   _projection_node = ProjectionNode::make(expression_vector(_c), _mock_node);
   EXPECT_TRUE(_projection_node->unique_column_combinations()->empty());
 
   {
-    // Test (a, b, c) -> (a, b) - all constraints remain valid
+    // Test (a, b, c) -> (a, b) - all UCCs remain valid.
     _projection_node = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
 
-    // Basic check
+    // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations->size(), 2);
     // In-depth check
@@ -129,13 +129,13 @@ TEST_F(ProjectionNodeTest, UniqueConstraintsRemovedColumns) {
   }
 
   {
-    // Test (a, b, c) -> (b) - unique constraint for b remains valid
+    // Test (a, b, c) -> (b) - UCC for b remains valid.
     _projection_node = ProjectionNode::make(expression_vector(_b), _mock_node);
 
-    // Basic check
+    // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations->size(), 1);
-    // In-depth check
+    // In-depth check.
     EXPECT_TRUE(find_unique_constraint_by_key_constraint(*_key_constraint_b, unique_column_combinations));
   }
 }
@@ -149,22 +149,22 @@ TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
   EXPECT_EQ(_mock_node->functional_dependencies().size(), 3);
 
   // Tests
-  // FDs without dependents are discarded
+  // FDs without dependents are discarded.
   const auto& projection_node_1 = ProjectionNode::make(expression_vector(_a, add_(_b, _c)), _mock_node);
   EXPECT_TRUE(projection_node_1->functional_dependencies().empty());
   const auto& projection_node_2 = ProjectionNode::make(expression_vector(_b, sub_(_b, _c)), _mock_node);
   EXPECT_TRUE(projection_node_2->functional_dependencies().empty());
 
-  // Missing determinants lead to FD removal
+  // Missing determinants lead to FD removal.
   const auto& projection_node_3 = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
   EXPECT_EQ(projection_node_3->functional_dependencies().size(), 1);
-  EXPECT_EQ(projection_node_3->functional_dependencies().at(0), fd_a);
+  EXPECT_TRUE(projection_node_3->functional_dependencies().contains(fd_a));
 
-  // FDs are adjusted if some, but not all dependents are missing
+  // FDs are adjusted if some, but not all dependents are missing.
   const auto& projection_node_4 = ProjectionNode::make(expression_vector(_a, _b), _mock_node);
   EXPECT_EQ(projection_node_4->functional_dependencies().size(), 1);
   const auto expected_fd = FunctionalDependency{{_b}, {_a}};
-  EXPECT_EQ(projection_node_4->functional_dependencies().at(0), expected_fd);
+  EXPECT_TRUE(projection_node_4->functional_dependencies().contains(expected_fd));
 }
 
 TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {

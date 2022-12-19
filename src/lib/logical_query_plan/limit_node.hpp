@@ -15,7 +15,7 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  // Forwards unique constraints from the left input node
+  // Forwards unique column combinations from the left input node.
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
