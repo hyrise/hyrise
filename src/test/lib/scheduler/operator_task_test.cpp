@@ -14,9 +14,9 @@
 #include "operators/union_positions.hpp"
 #include "scheduler/operator_task.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorTaskTest : public BaseTest {
  protected:
