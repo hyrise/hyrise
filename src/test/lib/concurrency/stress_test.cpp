@@ -1,18 +1,18 @@
 #include <future>
+#include <numeric>
 #include <thread>
 
 #include "base_test.hpp"
 
 #include "hyrise.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
+#include "scheduler/task_queue.hpp"
 
 namespace hyrise {
 
 class StressTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     // Set scheduler so that we can execute multiple SQL statements on separate threads.
     Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
   }
@@ -208,6 +208,58 @@ TEST_F(StressTest, TestTransactionInsertsPackedNullValues) {
     EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{1}, row), iterations_per_thread);
     EXPECT_EQ(*verification_table->get_value<int64_t>(ColumnID{2}, row), row % 2 ? 0 : iterations_per_thread);
   }
+}
+
+TEST_F(StressTest, NodeSchedulerStressTest) {
+  if (std::thread::hardware_concurrency() < 2) {
+    GTEST_SKIP();
+  }
+
+  // Create a large number of nodes in a fake topology (many workers will share the same thread).
+  const auto node_count = std::thread::hardware_concurrency() * 8;
+
+  Hyrise::get().topology.use_fake_numa_topology(node_count, 1);
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Just a sufficiently large number to trigger a non-empty queue.
+  const auto job_counts = std::vector<size_t>{node_count << 3u, node_count << 4u, node_count << 3u};
+
+  auto num_finished_jobs = std::atomic_uint32_t{0};
+  volatile auto start_jobs = std::atomic_bool{false};
+
+  auto job_lists = std::vector<std::vector<std::shared_ptr<AbstractTask>>>{};
+  for (const auto job_count : job_counts) {
+    job_lists.push_back(std::vector<std::shared_ptr<AbstractTask>>{});
+    auto& jobs = job_lists.back();
+    jobs.reserve(job_count);
+
+    for (auto task_count = size_t{0}; task_count < job_count; ++task_count) {
+      jobs.push_back(std::make_shared<JobTask>([&]() {
+        while (!start_jobs) {}
+        ++num_finished_jobs;
+      }));
+      jobs.back()->schedule();
+    }
+  }
+
+  // In the default case, tasks are added to node 0 when its load is low. In this test, tasks cannot be processed until
+  // `start_jobs` is set, leading to a high queue load that cannot be processed. New tasks that are scheduled should
+  // thus be assigned to different task queues to distribute the load.
+  auto second_worker = std::next(node_queue_scheduler->workers().cbegin());
+  EXPECT_TRUE(std::any_of(second_worker, node_queue_scheduler->workers().cend(),
+                          [](const auto& worker) { return worker->queue()->estimate_load() > 0; }));
+
+  // Set flag to allow tasks to continue.
+  start_jobs = true;
+  for (const auto& jobs : job_lists) {
+    node_queue_scheduler->wait_for_tasks(jobs);
+  }
+
+  // Three batches of jobs have been concurrently scheduled. Check that the incremented `num_finished_jobs` has the
+  // expected value.
+  const auto job_count_sum = std::accumulate(job_counts.cbegin(), job_counts.cend(), size_t{0});
+  EXPECT_EQ(num_finished_jobs, job_count_sum);
 }
 
 }  // namespace hyrise

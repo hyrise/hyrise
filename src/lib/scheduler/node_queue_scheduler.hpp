@@ -96,13 +96,25 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   const std::vector<std::shared_ptr<TaskQueue>>& queues() const override;
 
+  const std::vector<std::shared_ptr<Worker>>& workers() const;
+
   /**
    * @param task
-   * @param preferred_node_id The Task will be initially added to this node, but might get stolen by other Nodes later
-   * @param priority Determines whether tasks are inserted at the beginning or end of the queue.
+   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
+   *                          to task stealing in NUMA environments.
+   * @param priority
    */
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;
+
+  /**
+   * @param task
+   * @param preferred_node_id
+   * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
+   *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
+   *         with the lowest queue pressure is returned.
+   */
+  NodeID determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, const NodeID preferred_node_id) const;
 
   void wait_for_all_tasks() override;
 
@@ -118,6 +130,9 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<TaskQueue>> _queues;
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
+
+  size_t _queue_count{1};
+  size_t _workers_per_node{2};
 };
 
 }  // namespace hyrise

@@ -14,9 +14,9 @@
 #include "storage/index/group_key/group_key_index.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class StoredTableNodeTest : public BaseTest {
  protected:

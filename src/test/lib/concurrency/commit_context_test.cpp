@@ -19,7 +19,7 @@ class CommitContextTest : public BaseTest {
 TEST_F(CommitContextTest, HasNextReturnsFalse) {
   auto context = std::make_unique<CommitContext>(CommitID{0});
 
-  EXPECT_EQ(context->has_next(), false);
+  EXPECT_FALSE(context->has_next());
 }
 
 TEST_F(CommitContextTest, HasNextReturnsTrueAfterNextHasBeenSet) {
@@ -29,7 +29,7 @@ TEST_F(CommitContextTest, HasNextReturnsTrueAfterNextHasBeenSet) {
 
   EXPECT_TRUE(context->try_set_next(next_context));
 
-  EXPECT_EQ(context->has_next(), true);
+  EXPECT_TRUE(context->has_next());
 }
 
 TEST_F(CommitContextTest, TrySetNextFailsIfNotNullptr) {

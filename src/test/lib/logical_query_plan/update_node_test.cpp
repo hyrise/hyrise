@@ -8,9 +8,9 @@
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/update_node.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class UpdateNodeTest : public BaseTest {
  protected:

@@ -13,13 +13,12 @@
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
 #include "operators/union_positions.hpp"
-
 #include "utils/load_table.hpp"
 
-using namespace std::string_literals;           // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace std::string_literals;   // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 /**
  * Tests for most expression types, excluding Subqueries, since they have no complex behaviour that would warrant their
@@ -392,10 +391,10 @@ TEST_F(ExpressionTest, StaticTableNode) {
     const auto col_b = lqp_column_(static_table_node, ColumnID{1});
     EXPECT_EQ(col_a->as_column_name(), "a");
     EXPECT_EQ(col_a->data_type(), DataType::Int);
-    EXPECT_EQ(col_a->is_nullable_on_lqp(*static_table_node), false);
+    EXPECT_FALSE(col_a->is_nullable_on_lqp(*static_table_node));
     EXPECT_EQ(col_b->as_column_name(), "b");
     EXPECT_EQ(col_b->data_type(), DataType::Float);
-    EXPECT_EQ(col_b->is_nullable_on_lqp(*static_table_node), false);
+    EXPECT_FALSE(col_b->is_nullable_on_lqp(*static_table_node));
   }
 
   {
@@ -403,7 +402,7 @@ TEST_F(ExpressionTest, StaticTableNode) {
     const auto col_a = lqp_column_(static_table_node, ColumnID{0});
     EXPECT_EQ(col_a->as_column_name(), "a");
     EXPECT_EQ(col_a->data_type(), DataType::Int);
-    EXPECT_EQ(col_a->is_nullable_on_lqp(*static_table_node), true);
+    EXPECT_TRUE(col_a->is_nullable_on_lqp(*static_table_node));
   }
 }
 

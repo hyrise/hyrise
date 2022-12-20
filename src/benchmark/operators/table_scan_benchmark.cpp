@@ -8,9 +8,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
                               ColumnID left_column_id, const PredicateCondition predicate_condition,

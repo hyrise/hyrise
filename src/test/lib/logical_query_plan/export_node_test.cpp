@@ -14,7 +14,7 @@ class ExportNodeTest : public BaseTest {
     _mock_node = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
 
-    _export_node = ExportNode::make("table_name", "file_name", FileType::Csv, _mock_node);
+    _export_node = ExportNode::make("file_name", FileType::Csv, _mock_node);
   }
 
   std::shared_ptr<ExportNode> _export_node;
@@ -22,11 +22,11 @@ class ExportNodeTest : public BaseTest {
 };
 
 TEST_F(ExportNodeTest, Description) {
-  EXPECT_EQ(_export_node->description(), "[Export] Name: 'table_name'");
+  EXPECT_EQ(_export_node->description(), "[Export] to 'file_name'");
 }
 
 TEST_F(ExportNodeTest, HashingAndEqualityCheck) {
-  const auto another_export_node = ExportNode::make("table_name", "file_name", FileType::Csv, _mock_node);
+  const auto another_export_node = ExportNode::make("file_name", FileType::Csv, _mock_node);
   EXPECT_EQ(*_export_node, *another_export_node);
 
   EXPECT_EQ(_export_node->hash(), another_export_node->hash());

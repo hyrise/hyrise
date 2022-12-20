@@ -69,7 +69,7 @@ std::optional<float> estimate_null_value_ratio_of_column(const TableStatistics& 
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 std::shared_ptr<AbstractCardinalityEstimator> CardinalityEstimator::new_instance() const {
   return std::make_shared<CardinalityEstimator>();
@@ -707,7 +707,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
 
       } else {
         /**
-         * Estimate ColumnVsValue
+         * Estimate ColumnVsValue / ColumnBetween
          */
         Assert(predicate.value.type() == typeid(AllTypeVariant), "Expected AllTypeVariant");
 
@@ -760,9 +760,8 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_operator_scan_pr
           selectivity = sliced_histogram->total_count() / input_table_statistics->row_count;
         }
 
-        const auto column_statistics = std::make_shared<AttributeStatistics<ColumnDataType>>();
-        column_statistics->set_statistics_object(sliced_statistics_object);
-
+        const auto column_statistics =
+            left_input_column_statistics->sliced(predicate.predicate_condition, value_variant, value2_variant);
         output_column_statistics[left_column_id] = column_statistics;
       }
     }

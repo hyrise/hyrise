@@ -58,8 +58,6 @@ class TPCHBenchmarkItemRunner : public AbstractBenchmarkItemRunner {
   std::atomic_uint32_t _random_seed{0};
 
   std::vector<BenchmarkItemID> _items;
-
-  friend class TPCHTest;
 };
 
 }  // namespace hyrise

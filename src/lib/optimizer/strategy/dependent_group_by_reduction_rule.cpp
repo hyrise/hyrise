@@ -12,10 +12,10 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
-using namespace hyrise;  // NOLINT
+
+using namespace hyrise;                 // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 /**
  * This function reduces the group-by columns of @param aggregate_node for a given functional dependency (@param fd).

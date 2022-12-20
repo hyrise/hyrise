@@ -150,6 +150,7 @@ set(
     lib/optimizer/strategy/subquery_to_join_rule_test.cpp
     lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
+    lib/scheduler/task_queue_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
     lib/server/query_handler_test.cpp
@@ -224,6 +225,7 @@ set(
     lib/utils/meta_tables/meta_mock_table.cpp
     lib/utils/meta_tables/meta_mock_table.hpp
     lib/utils/meta_tables/meta_plugins_table_test.cpp
+    lib/utils/meta_tables/meta_segments_accurate_test.cpp
     lib/utils/meta_tables/meta_settings_table_test.cpp
     lib/utils/meta_tables/meta_system_utilization_table_test.cpp
     lib/utils/meta_tables/meta_table_test.cpp
