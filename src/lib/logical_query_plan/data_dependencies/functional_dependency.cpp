@@ -103,7 +103,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
 
   for (const auto& fd_to_add : fds) {
     // Check if we have seen an FD with the same determinants.
-    auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd){
+    auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd) {
       // Quick check for cardinality.
       const auto& determinants = fd.first;
       if (determinants.size() != fd_to_add.determinants.size()) {
@@ -123,7 +123,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
     if (existing_fd != existing_fds.end()) {
       existing_fd->second.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
-    }  else {
+    } else {
       existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents);
     }
   }
@@ -136,8 +136,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   return deflated_fds;
 }
 
-FunctionalDependencies union_fds(const FunctionalDependencies& fds_a,
-                                 const FunctionalDependencies& fds_b) {
+FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b) {
   if (fds_a.empty()) {
     return fds_b;
   }
@@ -154,8 +153,7 @@ FunctionalDependencies union_fds(const FunctionalDependencies& fds_a,
   return deflate_fds(fds_unified);
 }
 
-FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a,
-                                                const FunctionalDependencies& fds_b) {
+FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b) {
   if (fds_a.empty() || fds_b.empty()) {
     return {};
   }

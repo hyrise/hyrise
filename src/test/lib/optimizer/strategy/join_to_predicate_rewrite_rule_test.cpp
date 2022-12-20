@@ -49,15 +49,10 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
 class JoinToPredicateRewriteRuleJoinModeTest : public JoinToPredicateRewriteRuleTest,
                                                public ::testing::WithParamInterface<JoinMode> {};
 
-auto join_mode_formatter = [](const ::testing::TestParamInfo<JoinMode> info) {
-  return std::string{magic_enum::enum_name(info.param)};
-};
+const auto join_mode_formatter = [](const auto& info) { return std::string{magic_enum::enum_name(info.param)}; };
 
 INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToPredicateRewriteRuleJoinModeTest,
-                         ::testing::Values(JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter,
-                                           JoinMode::Cross, JoinMode::Semi, JoinMode::AntiNullAsTrue,
-                                           JoinMode::AntiNullAsFalse),
-                         join_mode_formatter);
+                         ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), join_mode_formatter);
 
 TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   // The rule should only rewrite inner and semi joins.

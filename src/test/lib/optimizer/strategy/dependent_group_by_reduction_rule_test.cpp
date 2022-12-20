@@ -10,11 +10,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
 
-// TODO: polish (names, comments, etc)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class DependentGroupByReductionRuleTest : public StrategyBaseTest {
  public:
@@ -100,42 +98,47 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleCases) {
   }
 }
 
-// Test that a removable column is removed when a single column UCC is present. Check for the restored column order.
+// Test that a removable column is removed when a unary UCC is present. Check for the restored column order.
 TEST_F(DependentGroupByReductionRuleTest, SingleKeyReduction) {
-  // clang-format off
   {
-    const auto lqp = AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_2)), stored_table_node_a);
-
-    const auto actual_lqp = apply_rule(rule, lqp);
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_2)),
+      stored_table_node_a);
 
     const auto expected_lqp =
     ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_2)),
       AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_2), any_(column_a_1)),
         stored_table_node_a));
+    // clang-format on
 
+    const auto actual_lqp = apply_rule(rule, lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
-    const auto lqp = AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)), stored_table_node_a);  // NOLINT
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)),  // NOLINT(whitespace/line_length)
+      stored_table_node_a);
+
+    const auto expected_lqp =
+    ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0), sum_(column_a_1), sum_(column_a_2)),  // NOLINT(whitespace/line_length)
+      AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
+        stored_table_node_a));
+    // clang-format on
 
     const auto actual_lqp = apply_rule(rule, lqp);
 
-    const auto expected_lqp =
-    ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0), sum_(column_a_1),
-                                                                                                  sum_(column_a_2)),
-      AggregateNode::make(expression_vector(column_a_0),
-                          expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_a_2), any_(column_a_1)),
-        stored_table_node_a));  // NOLINT
-
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
-  // clang-format on
 }
 
 // Test that a non-UCC column is not removed if the full UCC is not present in the group by list.
 TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
   // clang-format off
-  const auto lqp = AggregateNode::make(expression_vector(column_b_0, column_b_2), expression_vector(sum_(column_b_0), sum_(column_b_1), sum_(column_b_2)), stored_table_node_b);  // NOLINT
+  const auto lqp =
+  AggregateNode::make(expression_vector(column_b_0, column_b_2), expression_vector(sum_(column_b_0), sum_(column_b_1), sum_(column_b_2)),  // NOLINT(whitespace/line_length)
+    stored_table_node_b);
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
@@ -147,7 +150,9 @@ TEST_F(DependentGroupByReductionRuleTest, IncompleteKey) {
 // Test that a group by with the full (multi-column) UCC is not altered.
 TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   // clang-format off
-  const auto lqp = AggregateNode::make(expression_vector(column_b_0, column_b_1), expression_vector(sum_(column_b_0), sum_(column_b_1), sum_(column_b_2)), stored_table_node_b);  // NOLINT
+  const auto lqp =
+  AggregateNode::make(expression_vector(column_b_0, column_b_1), expression_vector(sum_(column_b_0), sum_(column_b_1), sum_(column_b_2)),  // NOLINT(whitespace/line_length)
+    stored_table_node_b);
   // clang-format on
 
   const auto actual_lqp = apply_rule(rule, lqp);
@@ -156,17 +161,20 @@ TEST_F(DependentGroupByReductionRuleTest, FullKeyGroupBy) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Test adaption of multi-column but inconsecutive column order primary key columns (table_c with {0,2})
+// Test adaption of multi-column but inconsecutive column order of the primary key columns (table_c with UCC {0,2}).
 TEST_F(DependentGroupByReductionRuleTest, FullInconsecutiveKeyGroupBy) {
   // clang-format off
-  const auto lqp = AggregateNode::make(expression_vector(column_c_0, column_c_1, column_c_2), expression_vector(sum_(column_c_1)), stored_table_node_c);  // NOLINT
-
-  const auto actual_lqp = apply_rule(rule, lqp);
+  const auto lqp =
+  AggregateNode::make(expression_vector(column_c_0, column_c_1, column_c_2), expression_vector(sum_(column_c_1)),
+    stored_table_node_c);
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_c_0, column_c_1, column_c_2, sum_(column_c_1)),
-    AggregateNode::make(expression_vector(column_c_0, column_c_2), expression_vector(sum_(column_c_1), any_(column_c_1)), stored_table_node_c));  // NOLINT
+    AggregateNode::make(expression_vector(column_c_0, column_c_2), expression_vector(sum_(column_c_1), any_(column_c_1)),  // NOLINT(whitespace/line_length)
+      stored_table_node_c));
   // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -177,11 +185,19 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
   // clang-format off
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
-    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2)),  // NOLINT
-      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0), stored_table_node_a, stored_table_node_b)));
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_a_1, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2)),  // NOLINT(whitespace/line_length)
+      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
+        stored_table_node_a,
+        stored_table_node_b)));
+
+  const auto expected_lqp =
+  ProjectionNode::make(expression_vector(add_(column_a_0, 5), add_(column_a_1, 5), sum_(column_b_2)),
+    AggregateNode::make(expression_vector(column_a_0, column_b_0, column_b_2), expression_vector(sum_(column_a_0), sum_(column_a_1), sum_(column_b_2), any_(column_a_1)),  // NOLINT(whitespace/line_length)
+      JoinNode::make(JoinMode::Inner, equals_(column_a_0, column_b_0),
+        stored_table_node_a,
+        stored_table_node_b)));
   // clang-format on
 
-  const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -190,7 +206,9 @@ TEST_F(DependentGroupByReductionRuleTest, JoinSingleKeyPrimaryKey) {
 // Test that the plan stays the same (no alias, no projection) for a table with a primary key but no removable columns.
 TEST_F(DependentGroupByReductionRuleTest, AggregateButNoChanges) {
   // clang-format off
-  const auto lqp = AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0)), stored_table_node_a);
+  const auto lqp =
+  AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0)),
+    stored_table_node_a);
   // clang-format on
 
   const auto expected_lqp = lqp->deep_copy();
@@ -204,14 +222,16 @@ TEST_F(DependentGroupByReductionRuleTest, SimpleAggregateFollowsAdaptedAggregate
   // clang-format off
   const auto lqp =
   AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_1)),
-    AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)), stored_table_node_a));  // NOLINT
-
-  const auto actual_lqp = apply_rule(rule, lqp);
+    AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)),
+      stored_table_node_a));
 
   const auto expected_lqp =
   AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_1)),
-    AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)), stored_table_node_a));  // NOLINT
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)),
+      stored_table_node_a));
   // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -222,15 +242,17 @@ TEST_F(DependentGroupByReductionRuleTest, SortFollowsAggregate) {
   // clang-format off
   const auto lqp =
   SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
-    AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)), stored_table_node_a));  // NOLINT
-
-  const auto actual_lqp = apply_rule(rule, lqp);
+    AggregateNode::make(expression_vector(column_a_0, column_a_1), expression_vector(sum_(column_a_0)),
+      stored_table_node_a));
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_a_0, column_a_1, sum_(column_a_0)),
     SortNode::make(expression_vector(column_a_0), std::vector<SortMode>{SortMode::Ascending},
-      AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)), stored_table_node_a)));  // NOLINT
+      AggregateNode::make(expression_vector(column_a_0), expression_vector(sum_(column_a_0), any_(column_a_1)),
+        stored_table_node_a)));  // NOLINT
   // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
@@ -254,14 +276,17 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
 // Check that we reduce using the shortest constraints (in terms of the number of columns).
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
-  const auto lqp = AggregateNode::make(expression_vector(column_e_0, column_e_1, column_e_2), expression_vector(), stored_table_node_e);
-
-  const auto actual_lqp = apply_rule(rule, lqp);
+  const auto lqp =
+  AggregateNode::make(expression_vector(column_e_0, column_e_1, column_e_2), expression_vector(),
+    stored_table_node_e);
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_e_0, column_e_1, column_e_2),
-    AggregateNode::make(expression_vector(column_e_2), expression_vector(any_(column_e_1), any_(column_e_0)), stored_table_node_e));  // NOLINT
+    AggregateNode::make(expression_vector(column_e_2), expression_vector(any_(column_e_1), any_(column_e_0)),
+      stored_table_node_e));
   // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }

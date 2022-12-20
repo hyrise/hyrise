@@ -9,7 +9,7 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "types.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT
 
@@ -111,12 +111,12 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
   {
     const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations->size(), 1);
-    EXPECT_TRUE(unique_column_combinations.contains({_a}));
+    EXPECT_TRUE(unique_column_combinations->contains(UniqueColumnCombination{{_a}}));
   }
   {
-    const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
+    const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
     EXPECT_EQ(unique_column_combinations->size(), 1);
-    EXPECT_TRUE(unique_column_combinations.contains({_a, _b}));
+    EXPECT_TRUE(unique_column_combinations->contains(UniqueColumnCombination{{_a, _b}}));
   }
 }
 
@@ -139,7 +139,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   // Basic check.
   EXPECT_EQ(unique_column_combinations->size(), 1);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
@@ -164,10 +164,10 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
   // Basic check.
   EXPECT_EQ(unique_column_combinations->size(), 2);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_column_combinations));
-  EXPECT_FALSE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_column_combinations));
-  const auto ucc_group_by = UniqueColumnCombination{_a};
-  EXPECT_TRUE(unique_column_combinations.contains(ucc_group_by));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+  EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
+  const auto ucc_group_by = UniqueColumnCombination{{_a}};
+  EXPECT_TRUE(unique_column_combinations->contains(ucc_group_by));
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
@@ -191,7 +191,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations->size(), 1);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
@@ -214,7 +214,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations->size(), 1);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {

@@ -12,7 +12,7 @@
 #include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 using namespace hyrise::expression_functional;  // NOLINT
 
@@ -300,8 +300,8 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
   // Basic check.
   EXPECT_EQ(unique_column_combinations->size(), 2);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 
   // Check whether StoredTableNode is referenced by the UCC's expressions.
   for (const auto& ucc : *unique_column_combinations) {
@@ -334,7 +334,7 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations->size(), 1);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 }
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {

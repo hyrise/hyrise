@@ -128,10 +128,10 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   union_all_node->set_left_input(predicate_node_a);
   union_all_node->set_right_input(predicate_node_b);
 
-  // We expect all FDs to be forwarded since both input nodes have the same non-trivial FDs & unique constraints.
+  // We expect all FDs to be forwarded since both input nodes have the same non-trivial FDs & UCCs.
   const auto& union_node_fds = union_all_node->functional_dependencies();
   const auto& union_node_non_trivial_fds = union_all_node->non_trivial_functional_dependencies();
-  // Since all unique constraints become discarded, former trivial FDs become non-trivial:
+  // Since all unique constraints are discarded, former trivial FDs become non-trivial:
   EXPECT_EQ(union_node_fds, union_node_non_trivial_fds);
 
   EXPECT_EQ(union_node_fds.size(), 3);
@@ -150,7 +150,7 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {
   /**
    * Create UnionNode
    * Hack: We use an AggregateNode with a pseudo-aggregate ANY(_c) to
-   *        - receive a new unique constraint and also
+   *        - receive a new UCC and also
    *        - a new trivial FD {_a, _b} => {_c}
    */
   const auto& projection_node_a = ProjectionNode::make(expression_vector(_a, _b, _c), _mock_node1);
@@ -230,27 +230,27 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
   EXPECT_THROW(union_positions_node->functional_dependencies(), std::logic_error);
 }
 
-TEST_F(UnionNodeTest, UniqueConstraintsUnionPositions) {
-  // Add two unique constraints to _mock_node1
+TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositions) {
+  // Add two unique constraints to _mock_node1.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints({key_constraint_a_b, key_constraint_b});
   EXPECT_EQ(_mock_node1->unique_column_combinations()->size(), 2);
 
-  // Check whether all unique constraints are forwarded
+  // Check whether all UCCs are forwarded.
   EXPECT_TRUE(_union_node->left_input() == _mock_node1 && _union_node->right_input() == _mock_node1);
   EXPECT_EQ(*_union_node->unique_column_combinations(), *_mock_node1->unique_column_combinations());
 }
 
-TEST_F(UnionNodeTest, UniqueConstraintsUnionPositionsInvalidInput) {
+TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositionsInvalidInput) {
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
 
-  auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
+  const auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
   mock_node1_changed->set_key_constraints({key_constraint_a_b});
 
-  // Input nodes are not allowed to have differing unique constraints
+  // Input nodes are not allowed to have differing UCCs.
   EXPECT_EQ(_mock_node1->unique_column_combinations()->size(), 2);
   EXPECT_EQ(mock_node1_changed->unique_column_combinations()->size(), 1);
   _union_node->set_right_input(mock_node1_changed);

@@ -290,7 +290,7 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
     return false;
   }
 
-  return contains_matching_unique_constraint(unique_column_combinations, expressions);
+  return contains_matching_unique_column_combination(unique_column_combinations, expressions);
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {

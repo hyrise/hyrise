@@ -1,16 +1,14 @@
 #pragma once
 
 #include "../base_test.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
 /**
  * Verifies whether a given table key constraint is represented in a given set of unique column combinations.
  */
-static bool find_ucc_by_key_constraint(
-    const TableKeyConstraint& table_key_constraint,
-    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
+static bool find_ucc_by_key_constraint(const TableKeyConstraint& table_key_constraint,
+                                       const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
   const auto& column_ids =
       std::set<ColumnID>{table_key_constraint.columns().cbegin(), table_key_constraint.columns().cend()};
 
@@ -21,15 +19,15 @@ static bool find_ucc_by_key_constraint(
     }
 
     // In-depth comparison: Column IDs.
-    auto ucct_column_ids = std::set<ColumnID>();
+    auto ucc_column_ids = std::set<ColumnID>();
     for (const auto& expression : ucc.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       if (column_expression) {
-        unique_constraint_column_ids.emplace(column_expression->original_column_id);
+        ucc_column_ids.emplace(column_expression->original_column_id);
       }
     }
 
-    if (unique_constraint_column_ids == column_ids) {
+    if (ucc_column_ids == column_ids) {
       return true;
     }
   }

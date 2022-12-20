@@ -247,8 +247,9 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
  * @return True, if there is unique column combination in the given set of @param unique_column_combinations matching
  *         the given set of expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
-bool contains_matching_ucc(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
-                                         const ExpressionUnorderedSet& expressions);
+bool contains_matching_unique_column_combination(
+    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
+    const ExpressionUnorderedSet& expressions);
 
 /**
  * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of the

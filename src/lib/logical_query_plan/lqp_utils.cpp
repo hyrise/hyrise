@@ -453,8 +453,9 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
-bool contains_matching_ucc(const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
-                                         const ExpressionUnorderedSet& expressions) {
+bool contains_matching_unique_column_combination(
+    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
+    const ExpressionUnorderedSet& expressions) {
   DebugAssert(!unique_column_combinations->empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
@@ -462,9 +463,7 @@ bool contains_matching_ucc(const std::shared_ptr<UniqueColumnCombinations>& uniq
   for (const auto& ucc : *unique_column_combinations) {
     if (ucc.expressions.size() <= expressions.size() &&
         std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
-                    [&](const auto& ucc_expression) {
-                      return expressions.contains(ucc_expression);
-                    })) {
+                    [&](const auto& ucc_expression) { return expressions.contains(ucc_expression); })) {
       // Found a matching UCC.
       return true;
     }
@@ -493,10 +492,9 @@ FunctionalDependencies fds_from_unique_column_combinations(
     auto determinants = ucc.expressions;
 
     // (1) Verify whether we can create an FD from the given UCC (non-nullable determinant expressions).
-    if (!std::all_of(determinants.cbegin(), determinants.cend(),
-                     [&](const auto& determinant_expression) {
-                       return output_expressions_non_nullable.contains(determinant_expression);
-                     })) {
+    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+          return output_expressions_non_nullable.contains(determinant_expression);
+        })) {
       continue;
     }
 
@@ -539,30 +537,28 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
   auto valid_fds = FunctionalDependencies{fds.size()};
 
   const auto fd_is_invalid = [&](auto& fd) {
-                             // If there are no dependents left, we can discard the FD altogether
-                             if (fd.dependents.empty()) {
-                               return true;
-                             }
+    // If there are no dependents left, we can discard the FD altogether
+    if (fd.dependents.empty()) {
+      return true;
+    }
 
-                             /**
+    /**
                               * Remove FDs with determinant expressions that are
                               *  a) not part of the node's output expressions
                               *  b) are nullable
                               */
-                             for (const auto& fd_determinant_expression : fd.determinants) {
-                               if (!output_expressions_set.contains(fd_determinant_expression)) {
-                                 return true;
-                               }
+    for (const auto& fd_determinant_expression : fd.determinants) {
+      if (!output_expressions_set.contains(fd_determinant_expression)) {
+        return true;
+      }
 
-                               const auto expression_idx =
-                                   find_expression_idx(*fd_determinant_expression, output_expressions);
-                               if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
-                                 return true;
-                               }
-                             }
-                             return false;
-                           };
-
+      const auto expression_idx = find_expression_idx(*fd_determinant_expression, output_expressions);
+      if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // auto bla = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()}
   for (auto fd : fds) {
@@ -571,7 +567,6 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
       continue;
     }
     valid_fds.emplace(fd);
-
   }
 
   fds = std::move(valid_fds);
@@ -584,12 +579,12 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
                                return true;
                              }*/
 
-                             /**
+  /**
                               * Remove FDs with determinant expressions that are
                               *  a) not part of the node's output expressions
                               *  b) are nullable
                               */
-                             /*for (const auto& fd_determinant_expression : fd.determinants) {
+  /*for (const auto& fd_determinant_expression : fd.determinants) {
                                if (!output_expressions_set.contains(fd_determinant_expression)) {
                                  return true;
                                }

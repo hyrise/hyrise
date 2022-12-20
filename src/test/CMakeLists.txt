@@ -242,7 +242,7 @@ set(
     plugins/ucc_discovery_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
-    utils/constraint_test_utils.hpp
+    utils/data_dependency_test_utils.hpp
 )
 
 set (

@@ -63,7 +63,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
       stored_table_node));
 
@@ -75,7 +75,7 @@ TEST_F(JoinToSemiJoinRuleTest, InnerJoinToSemiJoin) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -104,7 +104,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), not_equals_(a, column1)),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
       stored_table_node));
 
@@ -116,7 +116,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithSingleEqui) 
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -148,7 +148,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, expression_vector(equals_(a, column0), equals_(a, column1)),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
     stored_table_node));
 
@@ -160,7 +160,7 @@ TEST_F(JoinToSemiJoinRuleTest, MultiPredicateInnerJoinToSemiJoinWithMultiEqui) {
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
@@ -185,12 +185,12 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithNonEqui) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, greater_than_(a, column0),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
@@ -215,12 +215,12 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutUcc) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
@@ -255,12 +255,12 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchInnerJoinWithoutMatchingUcc) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Inner, equals_(a, column0),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
@@ -287,17 +287,16 @@ TEST_F(JoinToSemiJoinRuleTest, DoNotTouchNonInnerJoin) {
   const auto lqp =
   ProjectionNode::make(expression_vector(add_(a, 2)),
     JoinNode::make(JoinMode::Left, equals_(a, column0),
-      ProjectionNode::make(expression_vector(a, add_(b, 1)),
+      ProjectionNode::make(expression_vector(a),
         node_a),
       stored_table_node));
   // clang-format on
 
-  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(InputSide::Right);
+  static_cast<JoinNode&>(*lqp->left_input()).mark_input_side_as_prunable(LQPInputSide::Right);
   const auto expected_lqp = lqp->deep_copy();
   const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
-
 
 }  // namespace hyrise

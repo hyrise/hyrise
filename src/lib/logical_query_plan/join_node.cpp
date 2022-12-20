@@ -77,8 +77,13 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
 }
 
 std::shared_ptr<UniqueColumnCombinations> JoinNode::unique_column_combinations() const {
-  // Semi- and Anti-Joins act as mere filters for input_left(). Thus , existing unique column combinations remain valid.
-  if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+  // We cannot guarantee any UCCs for Cross-Joins.
+  if (join_mode == JoinMode::Cross) {
+    return std::make_shared<UniqueColumnCombinations>();
+  }
+
+  // Semi- and Anti-Joins act as mere filters for input_left(). Thus, existing unique column combinations remain valid.
+  if (is_semi_or_anti_join(join_mode)) {
     return _forward_left_unique_column_combinations();
   }
 
@@ -89,13 +94,13 @@ std::shared_ptr<UniqueColumnCombinations> JoinNode::unique_column_combinations()
 }
 
 std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
-  if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+  if (is_semi_or_anti_join(join_mode)) {
     return _forward_left_order_dependencies();
   }
 
   // ODs are not effected from removing or duplicating tuples, so we simply have to foward left and right ODs without
   // duplicate ODs. We simply achieve deduplication by using sets for ODs.
-  // TODO: Transotove ODs with join columns: table_a INNER JOIN table_b ON table_a.b = table_b.x, OD a |-> b and
+  // TODO: Transitive ODs with join columns: table_a INNER JOIN table_b ON table_a.b = table_b.x, OD a |-> b and
   // OD x |-> y, we can add b |-> y.
   const auto& left_order_dependencies = left_input()->order_dependencies();
   const auto& right_order_dependencies = right_input()->order_dependencies();
@@ -222,10 +227,10 @@ std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combin
   // Check uniqueness of join columns.
   bool left_operand_is_unique =
       !left_unique_column_combinations->empty() &&
-      contains_matching_unique_constraint(left_unique_column_combinations, {join_predicate->left_operand()});
+      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
   bool right_operand_is_unique =
       !right_unique_column_combinations->empty() &&
-      contains_matching_unique_constraint(right_unique_column_combinations, {join_predicate->right_operand()});
+      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.
@@ -254,7 +259,7 @@ FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
    * In the case of Semi- & Anti-Joins, this node acts as a filter for the left input node. The number of output
    * expressions does not change and therefore we should forward non-trivial FDs as follows:
    */
-  if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue || join_mode == JoinMode::AntiNullAsFalse) {
+  if (is_semi_or_anti_join(join_mode)) {
     return left_input()->non_trivial_functional_dependencies();
   }
 
@@ -369,7 +374,7 @@ bool JoinNode::is_semi_reduction() const {
 }
 
 std::optional<LQPInputSide> JoinNode::prunable_input_side() const {
-  if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsFalse || join_mode == JoinMode::AntiNullAsTrue) {
+  if (is_semi_or_anti_join(join_mode)) {
     return LQPInputSide::Right;
   }
   return _prunable_input_side;

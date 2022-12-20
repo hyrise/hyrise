@@ -419,6 +419,31 @@ TEST_F(ColumnPruningRuleTest, DoNotPruneChangeMetaTableInputs) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// TODO: test for marking prunable inputs.
+TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
+  // Join inputs where no expressions are used later in the query plan should be marked as prunable to enable further
+  // optimization, such as Join to Semi-Join rewrite. We skip Semi- and Anti-Joins since their right input is always
+  // prunable.
+  for (const auto join_mode :
+       {JoinMode::Inner, JoinMode::Left, JoinMode::Right, JoinMode::FullOuter, JoinMode::Cross}) {
+    for (const auto prunable_input_side : {LQPInputSide::Left, LQPInputSide::Right}) {
+      const auto join_node =
+          join_mode == JoinMode::Cross ? JoinNode::make(join_mode) : JoinNode::make(join_mode, equals_(a, u));
+      join_node->set_left_input(node_a);
+      join_node->set_right_input(node_b);
+      node_a->set_pruned_column_ids({});
+      node_b->set_pruned_column_ids({});
+
+      // Project columns of prunable input away.
+      const auto projections =
+          prunable_input_side == LQPInputSide::Left ? expression_vector(u, v) : expression_vector(a, b);
+      const auto lqp = ProjectionNode::make(projections, join_node);
+
+      apply_rule(rule, lqp);
+
+      EXPECT_TRUE(join_node->prunable_input_side().has_value()) << "With JoinMode::" << join_mode;
+      EXPECT_EQ(*join_node->prunable_input_side(), prunable_input_side) << "With JoinMode::" << join_mode;
+    }
+  }
+}
 
 }  // namespace hyrise

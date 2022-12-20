@@ -5,7 +5,7 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "storage/constraints/table_key_constraint.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
@@ -86,8 +86,8 @@ TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
   const auto& unique_column_combinations = alias_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations->size(), 2);
   // In-depth check.
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_column_combinations));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
 TEST_F(AliasNodeTest, ForwardOrderDependencies) {

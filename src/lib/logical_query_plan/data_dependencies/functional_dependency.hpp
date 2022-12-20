@@ -66,14 +66,12 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds);
  * @return Unified FDs from the given @param fds_a and @param fds_b vectors. FDs with the same determinant
  *         expressions are merged into single objects by merging their dependent expressions.
  */
-FunctionalDependencies union_fds(const FunctionalDependencies& fds_a,
-                                            const FunctionalDependencies& fds_b);
+FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b);
 
 /**
  * @return Returns FDs that are included in both of the given vectors.
  */
-FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a,
-                                                const FunctionalDependencies& fds_b);
+FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b);
 
 /**
  * Future Work: Transitive FDs

@@ -212,6 +212,8 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
+bool is_semi_or_anti_join(const JoinMode join_mode);
+
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.
