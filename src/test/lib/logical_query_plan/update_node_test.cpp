@@ -67,8 +67,4 @@ TEST_F(UpdateNodeTest, ColumnExpressions) {
   EXPECT_TRUE(_update_node->output_expressions().empty());
 }
 
-TEST_F(UpdateNodeTest, NoOrderDependencies) {
-  EXPECT_THROW(_update_node->order_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

@@ -18,14 +18,6 @@ std::shared_ptr<UniqueColumnCombinations> AbstractNonQueryNode::unique_column_co
   Fail("Node does not support unique column combinations.");
 }
 
-std::shared_ptr<OrderDependencies> AbstractNonQueryNode::order_dependencies() const {
-  Fail("Node does not support order depedencies.");
-}
-
-std::shared_ptr<InclusionDependencies> AbstractNonQueryNode::inclusion_dependencies() const {
-  Fail("Node does not support inclusion depedencies.");
-}
-
 FunctionalDependencies AbstractNonQueryNode::non_trivial_functional_dependencies() const {
   Fail("Node does not support functional dependencies.");
 }

@@ -326,8 +326,6 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     return non_trivial_fds;
   }
 
-  // TODO: FDs from ODs (an OD is kind of an FD + sorting)
-
   const auto& trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
 
   // (3) Merge and return FDs.
@@ -432,37 +430,6 @@ std::shared_ptr<UniqueColumnCombinations> AbstractLQPNode::_forward_left_unique_
     }
   }
   return input_unique_column_combinations;
-}
-
-std::shared_ptr<OrderDependencies> AbstractLQPNode::_forward_left_order_dependencies() const {
-  Assert(left_input(), "Cannot forward order dependencies without an input node.");
-  const auto& input_order_dependencies = left_input()->order_dependencies();
-
-  if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
-    const auto& output_expressions = this->output_expressions();
-    for (const auto& od : *input_order_dependencies) {
-      Assert(contains_all_expressions(od.expressions, output_expressions) &&
-                 contains_all_expressions(od.ordered_expressions, output_expressions),
-             "Forwarding of OD is illegal because node misses output expressions.");
-    }
-  }
-  return input_order_dependencies;
-}
-
-std::shared_ptr<InclusionDependencies> AbstractLQPNode::_forward_left_inclusion_dependencies() const {
-  Assert(left_input(), "Cannot forward inclusion dependencies without an input node.");
-  const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
-
-  if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
-    const auto& output_expressions = this->output_expressions();
-    for (const auto& ind : *input_inclusion_dependencies) {
-      Assert(contains_all_expressions(ind.expressions, output_expressions),
-             "Forwarding of OD is illegal because node misses output expressions.");
-    }
-  }
-  return input_inclusion_dependencies;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

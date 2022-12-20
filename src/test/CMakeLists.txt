@@ -43,8 +43,6 @@ set(
     lib/logical_query_plan/create_table_node_test.cpp
     lib/logical_query_plan/create_view_node_test.cpp
     lib/logical_query_plan/data_dependencies/functional_dependency_test.cpp
-    lib/logical_query_plan/data_dependencies/inclusion_dependency_test.cpp
-    lib/logical_query_plan/data_dependencies/order_dependency_test.cpp
     lib/logical_query_plan/data_dependencies/unique_column_combination_test.cpp
     lib/logical_query_plan/delete_node_test.cpp
     lib/logical_query_plan/drop_table_node_test.cpp
@@ -178,9 +176,7 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
-    lib/storage/constraints/table_inclusion_constraint_test.cpp
     lib/storage/constraints/table_key_constraint_test.cpp
-    lib/storage/constraints/table_order_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
     lib/storage/encoded_segment_test.cpp
     lib/storage/encoded_string_segment_test.cpp

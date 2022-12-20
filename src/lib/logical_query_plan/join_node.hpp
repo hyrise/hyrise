@@ -38,10 +38,6 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    */
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
-  std::shared_ptr<OrderDependencies> order_dependencies() const override;
-
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
-
   /**
    * (a) Semi- & Anti-Joins:
    *      - Forwards left input node's non-trivial FDs

@@ -25,11 +25,6 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   // statements.
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
-  // ODs and INDs (foreign key constraints) cannot be specified for CREATE TABLE statements yet. Thus, we simply return
-  // empty sets.
-  std::shared_ptr<OrderDependencies> order_dependencies() const override;
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
-
   const std::shared_ptr<Table> table;
 
  protected:

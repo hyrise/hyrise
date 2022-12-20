@@ -7,8 +7,6 @@
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
-#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
-#include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 
@@ -188,9 +186,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const = 0;
 
   /**
-   * @return True, if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
+   * @return True if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_ucc(unique_column_combinations(), ...) as it performs additional sanity checks.
+   *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
+   *         sanity checks.
    */
   bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
@@ -215,10 +214,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
    */
   virtual FunctionalDependencies non_trivial_functional_dependencies() const;
-
-  virtual std::shared_ptr<OrderDependencies> order_dependencies() const = 0;
-
-  virtual std::shared_ptr<InclusionDependencies> inclusion_dependencies() const = 0;
 
   /**
    * Perform a deep equality check
@@ -265,10 +260,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return All unique column combinations from the left input node.
    */
   std::shared_ptr<UniqueColumnCombinations> _forward_left_unique_column_combinations() const;
-
-  std::shared_ptr<OrderDependencies> _forward_left_order_dependencies() const;
-
-  std::shared_ptr<InclusionDependencies> _forward_left_inclusion_dependencies() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

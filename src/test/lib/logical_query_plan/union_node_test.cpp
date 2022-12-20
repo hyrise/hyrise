@@ -257,27 +257,4 @@ TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositionsInvalidInput) {
   EXPECT_THROW(_union_node->unique_column_combinations(), std::logic_error);
 }
 
-TEST_F(UnionNodeTest, ForwardOrderDependencies) {
-  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
-  const auto od_u_to_v = OrderDependency{{_u}, {_v}};
-  _mock_node1->set_order_dependencies({od_a_to_b});
-  _mock_node2->set_order_dependencies({od_u_to_v});
-  EXPECT_EQ(_mock_node1->order_dependencies()->size(), 1);
-  EXPECT_EQ(_mock_node2->order_dependencies()->size(), 1);
-
-  // Forward ODs for UnionPositions.
-  {
-    const auto& order_dependencies = _union_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 1);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
-  }
-
-  // Discard ODs for UnionAll.
-  {
-    const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node2);
-    const auto& order_dependencies = union_node->order_dependencies();
-    EXPECT_TRUE(order_dependencies->empty());
-  }
-}
-
 }  // namespace hyrise

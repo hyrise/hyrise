@@ -64,14 +64,6 @@ std::shared_ptr<UniqueColumnCombinations> StaticTableNode::unique_column_combina
   return unique_column_combinations;
 }
 
-std::shared_ptr<OrderDependencies> StaticTableNode::order_dependencies() const {
-  return std::make_shared<OrderDependencies>();
-}
-
-std::shared_ptr<InclusionDependencies> StaticTableNode::inclusion_dependencies() const {
-  return std::make_shared<InclusionDependencies>();
-}
-
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }

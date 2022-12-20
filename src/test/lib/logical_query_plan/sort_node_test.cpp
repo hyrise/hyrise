@@ -75,16 +75,4 @@ TEST_F(SortNodeTest, NodeExpressions) {
   EXPECT_EQ(*_sort_node->node_expressions.at(0), *_a_i);
 }
 
-TEST_F(SortNodeTest, ForwardOrderDependencies) {
-  Hyrise::get().storage_manager.get_table("table_a")->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  const auto od = OrderDependency{{_a_i}, {_a_f}};
-  EXPECT_EQ(_table_node->order_dependencies()->size(), 1);
-  EXPECT_TRUE(_table_node->order_dependencies()->contains(od));
-
-  const auto& order_dependencies = _sort_node->order_dependencies();
-
-  EXPECT_EQ(order_dependencies->size(), 1);
-  EXPECT_TRUE(order_dependencies->contains(od));
-}
-
 }  // namespace hyrise

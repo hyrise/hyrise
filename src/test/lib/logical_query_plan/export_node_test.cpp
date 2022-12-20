@@ -44,8 +44,4 @@ TEST_F(ExportNodeTest, Copy) {
   EXPECT_EQ(*_export_node, *_export_node->deep_copy());
 }
 
-TEST_F(ExportNodeTest, NoOrderDependencies) {
-  EXPECT_THROW(_export_node->order_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

@@ -44,8 +44,4 @@ TEST_F(ChangeMetaTableNodeTest, Copy) {
   EXPECT_EQ(*_change_meta_table_node, *_change_meta_table_node->deep_copy());
 }
 
-TEST_F(ChangeMetaTableNodeTest, NoOrderDependencies) {
-  EXPECT_THROW(_change_meta_table_node->order_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

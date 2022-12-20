@@ -24,10 +24,6 @@ class DummyTableNode : public EnableMakeForLQPNode<DummyTableNode>, public Abstr
 
   std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
 
-  std::shared_ptr<OrderDependencies> order_dependencies() const override;
-
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
-
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
 

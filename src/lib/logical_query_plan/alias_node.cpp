@@ -40,14 +40,6 @@ std::shared_ptr<UniqueColumnCombinations> AliasNode::unique_column_combinations(
   return _forward_left_unique_column_combinations();
 }
 
-std::shared_ptr<OrderDependencies> AliasNode::order_dependencies() const {
-  return _forward_left_order_dependencies();
-}
-
-std::shared_ptr<InclusionDependencies> AliasNode::inclusion_dependencies() const {
-  return _forward_left_inclusion_dependencies();
-}
-
 size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {

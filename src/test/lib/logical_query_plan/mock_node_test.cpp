@@ -136,25 +136,4 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
   }
 }
 
-TEST_F(MockNodeTest, OrderDependencies) {
-  const auto od_a_to_b = OrderDependency{{_mock_node_a->get_column("a")}, {_mock_node_a->get_column("b")}};
-  const auto od_a_to_c = OrderDependency{{_mock_node_a->get_column("a")}, {_mock_node_a->get_column("c")}};
-  _mock_node_a->set_order_dependencies({od_a_to_b, od_a_to_c});
-
-  // Forward ODs.
-  {
-    const auto& order_dependencies = _mock_node_a->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 2);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c));
-  }
-
-  // Discard ODs that involve pruned columns.
-  {
-    _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
-    const auto& order_dependencies = _mock_node_a->order_dependencies();
-    EXPECT_TRUE(order_dependencies->empty());
-  }
-}
-
 }  // namespace hyrise
