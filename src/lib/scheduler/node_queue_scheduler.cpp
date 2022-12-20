@@ -15,23 +15,28 @@
 
 
 namespace {
+  /**
+   * For the grouping of tasks (see _num_groups()), we scale the number of groups according to the current load of the
+   * system. In cases of a single user, we can use a high group count (i.e., allowing parallelism) as the main queue is
+   * usually not congested. In case of multiple clients, we lower the number of groups to limit concurrently processed
+   * tasks (see discussion in #2243).
+   *
+   * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
+   * _workers_per_node).
+   */
   constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
   constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
-
   constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
-  constexpr auto MAX_QUEUE_SIZE_FACTOR = size_t{6};
+  // This factor is used to determine at which queue load we use the maximum number of groups. Arbitrarily high queue
+  // loads should not lead to an arbitrary number of groups, which hampers scheduler progress.
+  constexpr auto UPPER_LIMIT_QUEUE_SIZE_FACTOR = size_t{6};
 }
 
 namespace hyrise {
 
 NodeQueueScheduler::NodeQueueScheduler() {
   _worker_id_allocator = std::make_shared<UidAllocator>();
-
-  std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(0.4f));
-  std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(4.0f));
-  std::printf("####\n####\n####\t\t %lu\n###\n####\n####\n", static_cast<size_t>(8));
-  std::printf("####\n####\n####\t\t %f\n###\n####\n####\n", static_cast<float>(1.0f));
 }
 
 NodeQueueScheduler::~NodeQueueScheduler() {
@@ -45,15 +50,18 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
 
-  _num_workers =Hyrise::get().topology.num_cpus();
-
-  _workers.reserve(Hyrise::get().topology.num_cpus());
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
 
-  // 
+  _num_workers =Hyrise::get().topology.num_cpus();
+  _workers.reserve(_num_workers);
+  _workers_per_node = _num_workers / _queue_count;
+
+  // For tasks lists with less tasks, we do not dynically determine the number of groups to use.
   _min_tasks_count_for_regrouping = std::max(size_t{16}, _num_workers);
-  _regrouping_upper_limit = _num_workers * MAX_QUEUE_SIZE_FACTOR;  // Everything above this limit yields the max value for grouping.
+
+  // Everything above this limit yields the max value for grouping.
+  _regrouping_upper_limit = _num_workers * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
@@ -68,7 +76,6 @@ void NodeQueueScheduler::begin() {
     }
   }
 
-  _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -188,8 +195,10 @@ size_t NodeQueueScheduler::determine_group_count(const std::vector<std::shared_p
     return _num_workers;
   }
 
+  // We check the first task for a node assignment. We assume that the passed tasks are not assigned to different
+  // nodes. If this assumption becomes invalid (e.g., due to work on NUMA optimizations), the current node should be
+  // revisited.
   const auto node_id_for_queue_check = (tasks[0]->node_id() == CURRENT_NODE_ID || tasks[0]->node_id() == INVALID_NODE_ID) ? NodeID{0} : tasks[0]->node_id();
-
   const auto queue_load = _queues[node_id_for_queue_check]->estimate_load();
 
   const auto fill_level = std::min(queue_load, _regrouping_upper_limit);
@@ -202,10 +211,8 @@ size_t NodeQueueScheduler::determine_group_count(const std::vector<std::shared_p
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   // Adds predecessor/successor relationships between tasks so that only NUM_GROUPS tasks can be executed in parallel.
-  // The optimal value of NUM_GROUPS depends on the number of cores and the number of queries being executed
-  // concurrently. The current value has been found with a divining rod.
   // Approach: Skip all tasks that already have predecessors or successors, as adding relationships to these could
-  // introduce cyclic dependencies. Again, this is far from perfect, but better than not grouping the tasks.
+  // introduce cyclic dependencies.
 
   auto round_robin_counter = 0;
   auto common_node_id = std::optional<NodeID>{};
