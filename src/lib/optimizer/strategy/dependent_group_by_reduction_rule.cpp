@@ -14,7 +14,7 @@
 
 namespace {
 
-using namespace hyrise;  // NOLINT(build/namespaces)
+using namespace hyrise;                 // NOLINT(build/namespaces)
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
 /**
