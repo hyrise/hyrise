@@ -76,8 +76,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
     return {};
   }
 
-  auto inflated_fds = std::unordered_set<FunctionalDependency>();
-  inflated_fds.reserve(fds.size());
+  auto inflated_fds = FunctionalDependencies{fds.size()};
 
   for (const auto& fd : fds) {
     if (fd.dependents.size() == 1) {

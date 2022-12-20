@@ -135,11 +135,9 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   EXPECT_EQ(union_node_fds, union_node_non_trivial_fds);
 
   EXPECT_EQ(union_node_fds.size(), 3);
-  const auto& union_node_fds_set =
-      std::unordered_set<FunctionalDependency>(union_node_fds.cbegin(), union_node_fds.cend());
-  EXPECT_TRUE(union_node_fds_set.contains(trivial_fd_a));
-  EXPECT_TRUE(union_node_fds_set.contains(non_trivial_fd_b));
-  EXPECT_TRUE(union_node_fds_set.contains(non_trivial_fd_c));
+  EXPECT_TRUE(union_node_fds.contains(trivial_fd_a));
+  EXPECT_TRUE(union_node_fds.contains(non_trivial_fd_b));
+  EXPECT_TRUE(union_node_fds.contains(non_trivial_fd_c));
 }
 
 TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllIntersect) {

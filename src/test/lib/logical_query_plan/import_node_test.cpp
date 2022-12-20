@@ -40,5 +40,4 @@ TEST_F(ImportNodeTest, Copy) {
   EXPECT_EQ(*_import_node, *_import_node->deep_copy());
 }
 
-
 }  // namespace hyrise

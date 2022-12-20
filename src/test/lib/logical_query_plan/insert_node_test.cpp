@@ -41,5 +41,4 @@ TEST_F(InsertNodeTest, ColumnExpressions) {
   EXPECT_TRUE(_insert_node->output_expressions().empty());
 }
 
-
 }  // namespace hyrise
