@@ -116,8 +116,6 @@ class NodeQueueScheduler : public AbstractScheduler {
    */
   NodeID determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, const NodeID preferred_node_id) const;
 
-  void wait_for_all_tasks() override;
-
   /**
    * @param tasks TODO(Martin): add comment
    * @return the 
@@ -140,7 +138,7 @@ class NodeQueueScheduler : public AbstractScheduler {
   size_t _worker_count{8};
   size_t _regrouping_upper_limit{32};
 
-  size_t _num_queues{1};
+  size_t _queue_count{1};
   size_t _workers_per_node{2};
 };
 

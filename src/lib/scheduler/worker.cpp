@@ -98,7 +98,6 @@ void Worker::_work() {
     if (!work_stealing_successful) {
       {
         std::unique_lock<std::mutex> unique_lock(_queue->lock);
-	//std::printf("(%du sleeps)\n", static_cast<uint32_t>(_id));
         _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
       }
       return;

@@ -24,7 +24,7 @@ namespace {
    * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
    * _workers_per_node).
    */
-  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
+  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.025f;
   constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
   constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
@@ -54,10 +54,10 @@ void NodeQueueScheduler::begin() {
   _queues.reserve(_queue_count);
 
   _worker_count = Hyrise::get().topology.num_cpus();
-  _workers.reserve(_workers_count);
+  _workers.reserve(_worker_count);
   _workers_per_node = _worker_count / _queue_count;
 
-  // For tasks lists with less tasks, we do not dynically determine the number of groups to use.
+  // For task lists with less tasks, we do not dynically determine the number of groups to use.
   _min_tasks_count_for_regrouping = std::max(size_t{16}, _worker_count);
 
   // Everything above this limit yields the max value for grouping.
@@ -76,7 +76,6 @@ void NodeQueueScheduler::begin() {
     }
   }
 
-  _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
