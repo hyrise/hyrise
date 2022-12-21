@@ -15,7 +15,7 @@ enum class TableIndexType { PartialHash };
 /**
  * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the
  * virtual properties is meant to represent the iterator of an empty collection. Therefore it shall not be dereferenced
- * (like and end-iterator), increments do not make a change, and equality comparisons with other instances of this
+ * (like an end iterator), increments do not make a change, and equality comparisons with other instances of this
  * class always result in true.
  */
 class BaseTableIndexIterator {

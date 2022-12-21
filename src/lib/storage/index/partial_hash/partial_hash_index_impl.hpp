@@ -23,15 +23,15 @@ class PartialHashIndexTest;
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexSparseMapIterator : public BaseTableIndexIterator {
+class TableIndexIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexSparseMapIterator(MapIteratorType itr);
+  explicit TableIndexIterator(MapIteratorType itr);
 
   reference operator*() const override;
 
-  TableIndexSparseMapIterator& operator++() override;
+  TableIndexIterator& operator++() override;
 
   bool operator==(const BaseTableIndexIterator& other) const override;
 
@@ -47,15 +47,15 @@ class TableIndexSparseMapIterator : public BaseTableIndexIterator {
 /**
  * Forward iterator that iterates over a std::vector of RowIDs.
  */
-class TableIndexVectorIterator : public BaseTableIndexIterator {
+class TableIndexNullValuesIterator : public BaseTableIndexIterator {
  public:
   using MapIteratorType = typename std::vector<RowID>::const_iterator;
 
-  explicit TableIndexVectorIterator(MapIteratorType itr);
+  explicit TableIndexNullValuesIterator(MapIteratorType itr);
 
   reference operator*() const override;
 
-  TableIndexVectorIterator& operator++() override;
+  TableIndexNullValuesIterator& operator++() override;
 
   bool operator==(const BaseTableIndexIterator& other) const override;
 
