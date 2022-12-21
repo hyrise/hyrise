@@ -100,22 +100,26 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   /**
    * @param task
-   * @param preferred_node_id
-   * @param priority Determines to which queue tasks are added.
+   * @param preferred_node_id determines to which queue tasks are added. Note, the task might still be stolen by other nodes due
+   *                          to task stealing in NUMA environments.
+   * @param priority
    */
   void schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id = CURRENT_NODE_ID,
                 SchedulePriority priority = SchedulePriority::Default) override;
 
   /**
    * @param task
-   * @param preferred_node_id if a node id is passed, the task is added to this node (might get stolen by other nodes
-                              later). when the node is the default of current_node_id and no current node can be
-                              obtained, the node with the lowest queue pressure is chosen.
+   * @param preferred_node_id
+   * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
+   *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
+   *         with the lowest queue pressure is returned.
    */
-  NodeID determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, NodeID preferred_node_id) const;
+  NodeID determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, const NodeID preferred_node_id) const;
+
+  void wait_for_all_tasks() override;
 
   /**
-   * @param tasks TODO:
+   * @param tasks TODO(Martin): add comment
    * @return the 
    */
   size_t determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const;
@@ -133,10 +137,10 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::atomic_bool _active{false};
 
   size_t _min_tasks_count_for_regrouping{8};
-  size_t _num_workers{8};
+  size_t _worker_count{8};
   size_t _regrouping_upper_limit{32};
 
-  size_t _queue_count{1};
+  size_t _num_queues{1};
   size_t _workers_per_node{2};
 };
 

@@ -53,15 +53,15 @@ void NodeQueueScheduler::begin() {
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
 
-  _num_workers =Hyrise::get().topology.num_cpus();
-  _workers.reserve(_num_workers);
-  _workers_per_node = _num_workers / _queue_count;
+  _worker_count = Hyrise::get().topology.num_cpus();
+  _workers.reserve(_workers_count);
+  _workers_per_node = _worker_count / _queue_count;
 
   // For tasks lists with less tasks, we do not dynically determine the number of groups to use.
-  _min_tasks_count_for_regrouping = std::max(size_t{16}, _num_workers);
+  _min_tasks_count_for_regrouping = std::max(size_t{16}, _worker_count);
 
   // Everything above this limit yields the max value for grouping.
-  _regrouping_upper_limit = _num_workers * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
+  _regrouping_upper_limit = _worker_count * UPPER_LIMIT_QUEUE_SIZE_FACTOR;
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
@@ -76,6 +76,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
+  _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -153,7 +154,11 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
 }
 
 NodeID NodeQueueScheduler::determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task,
+<<<<<<< HEAD
                                                        NodeID preferred_node_id) const {
+=======
+                                                       const NodeID preferred_node_id) const {
+>>>>>>> master
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (_queue_count == 1) {
     return NodeID{0};
@@ -192,7 +197,7 @@ NodeID NodeQueueScheduler::determine_queue_id_for_task(const std::shared_ptr<Abs
 size_t NodeQueueScheduler::determine_group_count(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {
   if (tasks.size() < _min_tasks_count_for_regrouping) {
     // For small task sets we use a group count equal to the number of workers.
-    return _num_workers;
+    return _worker_count;
   }
 
   // We check the first task for a node assignment. We assume that the passed tasks are not assigned to different
@@ -205,7 +210,7 @@ size_t NodeQueueScheduler::determine_group_count(const std::vector<std::shared_p
   const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
   const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
 
-  return static_cast<size_t>(static_cast<float>(_num_workers) * fill_factor);
+  return static_cast<size_t>(static_cast<float>(_worker_count) * fill_factor);
 }
 
 
