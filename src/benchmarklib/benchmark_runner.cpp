@@ -145,26 +145,13 @@ void BenchmarkRunner::run() {
 
   // For the Ordered mode, results have already been printed to the console
   if (_config.benchmark_mode == BenchmarkMode::Shuffled && !_config.verify && !_config.enable_visualization) {
-    auto sum_of_mean_query_runtimes = 0.0;
-
     for (const auto& item_id : items) {
       std::cout << "- Results for " << _benchmark_item_runner->item_name(item_id) << std::endl;
       std::cout << "  -> Executed " << _results[item_id].successful_runs.size() << " times" << std::endl;
-      // const auto runtimes_sum = std::reduce(_results[item_id].successful_runs.cbegin(),
-      //                                           _results[item_id].successful_runs.cend(), 0,
-      //                                           [](const auto lhs, const auto rhs) { return lhs.duration + rhs.duration; });
-      const auto runtimes_sum = std::accumulate(_results[item_id].successful_runs.cbegin(),
-                                                _results[item_id].successful_runs.cend(), size_t{0},
-                                                [](const auto& sum, const auto& element) { return sum + element.duration.count(); std::cout << element.duration.count();});
-                                                // [](const auto& lhs, const auto& rhs) {return lhs.duration.count() + rhs.duration.count(); });
-                                                // [](const auto lhs, const auto rhs) { return lhs.duration + rhs.duration; });
-      sum_of_mean_query_runtimes += static_cast<double>(runtimes_sum) / static_cast<double>(_results[item_id].successful_runs.size());
       if (!_results[item_id].unsuccessful_runs.empty()) {
         std::cout << "  -> " << _results[item_id].unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
     }
-    std::cout << "- Summary\n  -> The mean runtime of all benchmark query mean runtimes was "
-              << sum_of_mean_query_runtimes / 1'000'000'000 << " seconds." << std::endl;
   }
 
   // Fail if verification against SQLite was requested and failed
@@ -251,7 +238,6 @@ void BenchmarkRunner::_benchmark_shuffled() {
 }
 
 void BenchmarkRunner::_benchmark_ordered() {
-  auto sum_of_mean_runtimes_in_milliseconds = 0.0;
   for (const auto& item_id : _benchmark_item_runner->items()) {
     _warmup(item_id);
 
@@ -302,7 +288,6 @@ void BenchmarkRunner::_benchmark_ordered() {
       std::cout << "  -> Executed " << result.successful_runs.size() << " times in " << duration_seconds
                 << " seconds (Latency: " << mean_in_milliseconds << " ms/iter, Throughput: " << items_per_second
                 << " iter/s)" << std::endl;
-      sum_of_mean_runtimes_in_milliseconds += mean_in_milliseconds;
       if (!result.unsuccessful_runs.empty()) {
         std::cout << "  -> " << result.unsuccessful_runs.size() << " additional runs failed" << std::endl;
       }
@@ -312,14 +297,6 @@ void BenchmarkRunner::_benchmark_ordered() {
     // into account, too. In light of the significant amount of data added by the snapshots to the JSON file and the
     // unclear advantage of excluding those runs, we only take one snapshot here.
     _snapshot_segment_access_counters(name);
-  }
-
-  if (!_config.verify && !_config.enable_visualization) {
-    const auto sum_of_mean_runtimes_in_seconds = sum_of_mean_runtimes_in_milliseconds / 1'000.0;
-    const auto runs_per_hours = 3600.0 / sum_of_mean_runtimes_in_seconds;
-    std::cout << "- Summary\n"
-              << "  -> Sum of mean query runtimes is " << sum_of_mean_runtimes_in_milliseconds
-              << " seconds (Throughput: " << runs_per_hours << " iter/h)" << std::endl;
   }
 }
 

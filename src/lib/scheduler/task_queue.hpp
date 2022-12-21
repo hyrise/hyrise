@@ -56,9 +56,9 @@ class TaskQueue {
    */
   std::mutex lock;
 
-  std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
  private:
   NodeID _node_id;
+  std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
 };
 
 }  // namespace hyrise
