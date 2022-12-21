@@ -320,10 +320,6 @@ TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
 }
 
 TEST_F(SchedulerTest, DetermineQueueIDForTask) {
-  if (std::thread::hardware_concurrency() < 2) {
-    GTEST_SKIP();
-  }
-
   Hyrise::get().topology.use_fake_numa_topology(2, 1);
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
@@ -336,6 +332,71 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
   EXPECT_EQ(node_queue_scheduler->determine_queue_id_for_task(task, CURRENT_NODE_ID), NodeID{0});
 
   // The distribution of tasks under high load is tested in the concurrency stress tests.
+}
+
+TEST_F(SchedulerTest, NumGroupDetermination) {
+  // Test early out for very small number of tasks.
+  {
+    constexpr auto WORKER_COUNT = size_t{2};
+
+    Hyrise::get().topology.use_fake_numa_topology(WORKER_COUNT, WORKER_COUNT);
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+
+    const auto tasks = std::vector<std::shared_ptr<AbstractTask>>{std::make_shared<JobTask>([&]() {})};
+    EXPECT_EQ(WORKER_COUNT, node_queue_scheduler->determine_group_count(tasks));
+  }
+
+  // Test that minimally sized topology yields valid group counts.
+  {
+    Hyrise::get().topology.use_fake_numa_topology(1, 1);
+    const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+    Hyrise::get().set_scheduler(node_queue_scheduler);
+
+    // Create 64 tasks to avoid early out.
+    constexpr auto TASK_COUNT = size_t{64};
+    auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
+    tasks.reserve(TASK_COUNT);
+    for (auto index = size_t{0}; index < TASK_COUNT; ++index) {
+      tasks.push_back(std::make_shared<JobTask>([&]() {}));
+    }
+    EXPECT_LT(size_t{0}, node_queue_scheduler->determine_group_count(tasks));
+  }
+}
+
+TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
+  Hyrise::get().topology.use_fake_numa_topology(4, 4);
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
+
+  // Create 64 tasks to avoid early out.
+  constexpr auto TASK_COUNT = size_t{64};
+  auto tasks_1 = std::vector<std::shared_ptr<AbstractTask>>{};
+  tasks_1.reserve(TASK_COUNT);
+  for (auto index = size_t{0}; index < TASK_COUNT; ++index) {
+    tasks_1.push_back(std::make_shared<JobTask>([&]() {}));
+  }
+
+  const auto num_groups_without_load =  node_queue_scheduler->determine_group_count(tasks_1);
+
+  // Create load on queue
+  volatile auto block_jobs = std::atomic_bool{true};
+  auto tasks_2 = std::vector<std::shared_ptr<AbstractTask>>{};
+  for (auto task_count = size_t{0}; task_count < TASK_COUNT; ++task_count) {
+    tasks_2.push_back(std::make_shared<JobTask>([&]() {
+      while (block_jobs) {}
+    }));
+    tasks_2.back()->schedule();
+  }
+
+  const auto num_groups_with_load =  node_queue_scheduler->determine_group_count(tasks_2);
+
+  // We should receive a large group count when the queue load is low.
+  EXPECT_GT(num_groups_without_load, num_groups_with_load);
+
+  // Shutdown
+  block_jobs = false;
+  node_queue_scheduler->wait_for_tasks(tasks_2);
 }
 
 }  // namespace hyrise

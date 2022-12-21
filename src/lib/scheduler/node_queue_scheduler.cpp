@@ -24,7 +24,7 @@ namespace {
    * We scale number of groups linearly between (NUM_GROUPS_MIN_FACTOR * _workers_per_node) and (NUM_GROUPS_MAX_FACTOR *
    * _workers_per_node).
    */
-  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.025f;
+  constexpr auto NUM_GROUPS_MIN_FACTOR = 0.1f;
   constexpr auto NUM_GROUPS_MAX_FACTOR = 4.0f;
   constexpr auto NUM_GROUPS_RANGE = NUM_GROUPS_MAX_FACTOR - NUM_GROUPS_MIN_FACTOR;
 
@@ -205,7 +205,7 @@ size_t NodeQueueScheduler::determine_group_count(const std::vector<std::shared_p
   const auto fill_degree = 1.0f - (static_cast<float>(fill_level) / static_cast<float>(_regrouping_upper_limit));
   const auto fill_factor = NUM_GROUPS_MIN_FACTOR + (NUM_GROUPS_RANGE * fill_degree);
 
-  return static_cast<size_t>(static_cast<float>(_worker_count) * fill_factor);
+  return std::max(size_t{2}, static_cast<size_t>(static_cast<float>(_worker_count) * fill_factor));
 }
 
 
