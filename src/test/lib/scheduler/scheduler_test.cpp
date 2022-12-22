@@ -151,7 +151,8 @@ TEST_F(SchedulerTest, Grouping) {
   // NodeQueueScheduler::_group_tasks. Also tests that successor tasks are called immediately after their dependencies
   // finish. Not really a multi-threading test, though.
   Hyrise::get().topology.use_fake_numa_topology(1, 1);
-  Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
+  const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
+  Hyrise::get().set_scheduler(node_queue_scheduler);
 
   auto output = std::vector<size_t>{};
   auto tasks = std::vector<std::shared_ptr<AbstractTask>>{};
@@ -164,16 +165,16 @@ TEST_F(SchedulerTest, Grouping) {
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
   Hyrise::get().scheduler()->finish();
 
-  // We expect NUM_GROUPS chains of tasks to be created. As tasks are added to the chains by calling
-  // AbstractTask::set_predecessor_of, the first task in the input vector ends up being the last task being called. This
-  // results in [40 30 20 10 0 41 31 21 11 1 ...]
-  const auto num_groups = 17;
-  // TODO: use functions to determine NUM_GROUPS
-  EXPECT_EQ(TASK_COUNT % num_groups, 0);
+  // We expect NUM_GROUPS chains of tasks to be created.
+  const auto num_groups = node_queue_scheduler->determine_group_count(tasks);
   auto expected_output = std::vector<size_t>{};
-  for (auto group = 0; group < num_groups; ++group) {
-    for (auto task_id = 0; task_id < TASK_COUNT / num_groups; ++task_id) {
-      expected_output.emplace_back(tasks.size() - (task_id + 1) * num_groups + group);
+  for (auto group_id = size_t{0}; group_id < num_groups; ++group_id) {
+    auto task_id = group_id;
+    while (task_id < TASK_COUNT) {
+      if (task_id % num_groups == group_id) {
+        expected_output.emplace_back(task_id);
+      }
+      task_id += num_groups;
     }
   }
 
@@ -394,7 +395,7 @@ TEST_F(SchedulerTest, NumGroupDeterminationDifferentLoads) {
   // We should receive a large group count when the queue load is low.
   EXPECT_GT(num_groups_without_load, num_groups_with_load);
 
-  // Shutdown
+  // Shutdown. Finish scheduled jobs.
   block_jobs = false;
   node_queue_scheduler->wait_for_tasks(tasks_2);
 }

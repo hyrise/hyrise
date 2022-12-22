@@ -220,7 +220,8 @@ void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<Abstract
   const auto num_groups = determine_group_count(tasks);
 
   std::vector<std::shared_ptr<AbstractTask>> grouped_tasks(num_groups);
-  for (const auto& task : tasks) {
+  for (auto iter = tasks.rbegin(); iter != tasks.rend(); ++iter) {
+    const auto& task = *iter;
     if (!task->predecessors().empty() || !task->successors().empty()) {
       return;
     }
