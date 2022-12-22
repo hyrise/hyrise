@@ -8,8 +8,6 @@
 
 namespace hyrise {
 
-class PartialHashIndexTest;
-
 /**
  * Represents a table index using a hash map where all hashed values are mapped to the RowIDs of their occurrences in
  * the original Chunks. This allows for faster lookup time while index build times are generally increased compared

@@ -3,8 +3,10 @@
 
 namespace hyrise {
 
+// TableIndexNullValuesIterator
+
 template <typename DataType>
-TableIndexIterator<DataType>::TableIndexIterator(MapIteratorType itr) : _map_iterator(itr), _vector_index(0) {}
+TableIndexIterator<DataType>::TableIndexIterator(MapIterator itr) : _map_iterator(itr), _vector_index(0) {}
 
 template <typename DataType>
 const RowID& TableIndexIterator<DataType>::operator*() const {
@@ -39,7 +41,14 @@ std::shared_ptr<BaseTableIndexIterator> TableIndexIterator<DataType>::clone() co
   return std::make_shared<TableIndexIterator<DataType>>(*this);
 }
 
-TableIndexNullValuesIterator::TableIndexNullValuesIterator(MapIteratorType itr) : _map_iterator(itr) {}
+template <typename DataType>
+IteratorWrapper TableIndexIterator<DataType>::wrap(MapIterator itr) {
+  return IteratorWrapper(std::make_shared<TableIndexIterator<DataType>>(itr));
+}
+
+// TableIndexNullValuesIterator
+
+TableIndexNullValuesIterator::TableIndexNullValuesIterator(MapIterator itr) : _map_iterator(itr) {}
 
 const RowID& TableIndexNullValuesIterator::operator*() const {
   return *_map_iterator;
@@ -63,6 +72,12 @@ bool TableIndexNullValuesIterator::operator!=(const BaseTableIndexIterator& othe
 std::shared_ptr<BaseTableIndexIterator> TableIndexNullValuesIterator::clone() const {
   return std::make_shared<TableIndexNullValuesIterator>(*this);
 }
+
+IteratorWrapper TableIndexNullValuesIterator::wrap(MapIterator itr) {
+  return IteratorWrapper(std::make_shared<TableIndexNullValuesIterator>(itr));
+}
+
+// PartialHashIndexImpl
 
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
@@ -148,8 +163,7 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(Iterator(std::make_shared<TableIndexIterator<DataType>>(begin)),
-                        Iterator(std::make_shared<TableIndexIterator<DataType>>(++end)));
+  return std::make_pair(TableIndexIterator<DataType>::wrap(begin), TableIndexIterator<DataType>::wrap(++end));
 }
 
 template <typename DataType>
@@ -161,22 +175,22 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return Iterator(std::make_shared<TableIndexIterator<DataType>>(_map.cbegin()));
+  return TableIndexIterator<DataType>::wrap(_map.cbegin());
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return Iterator(std::make_shared<TableIndexIterator<DataType>>(_map.cend()));
+  return TableIndexIterator<DataType>::wrap(_map.cend());
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return Iterator{std::make_shared<TableIndexNullValuesIterator>(_null_values.cbegin())};
+  return TableIndexNullValuesIterator::wrap(_null_values.cbegin());
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return Iterator{std::make_shared<TableIndexNullValuesIterator>(_null_values.cend())};
+  return TableIndexNullValuesIterator::wrap(_null_values.cend());
 }
 
 template <typename DataType>

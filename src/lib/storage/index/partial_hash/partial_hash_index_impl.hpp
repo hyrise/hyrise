@@ -2,6 +2,7 @@
 
 #include <tsl/sparse_map.h>
 
+#include <memory>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -25,9 +26,9 @@ class PartialHashIndexTest;
 template <typename DataType>
 class TableIndexIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
+  using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexIterator(MapIteratorType itr);
+  explicit TableIndexIterator(MapIterator itr);
 
   reference operator*() const override;
 
@@ -39,8 +40,12 @@ class TableIndexIterator : public BaseTableIndexIterator {
 
   std::shared_ptr<BaseTableIndexIterator> clone() const override;
 
+  // Creates an instance of TableIndexIterator using the passed parameter and wraps that instance in an
+  // IteratorWrapper. Return that wrapper.
+  static IteratorWrapper wrap(MapIterator itr);
+
  private:
-  MapIteratorType _map_iterator;
+  MapIterator _map_iterator;
   size_t _vector_index;
 };
 
@@ -49,9 +54,9 @@ class TableIndexIterator : public BaseTableIndexIterator {
  */
 class TableIndexNullValuesIterator : public BaseTableIndexIterator {
  public:
-  using MapIteratorType = typename std::vector<RowID>::const_iterator;
+  using MapIterator = typename std::vector<RowID>::const_iterator;
 
-  explicit TableIndexNullValuesIterator(MapIteratorType itr);
+  explicit TableIndexNullValuesIterator(MapIterator itr);
 
   reference operator*() const override;
 
@@ -63,8 +68,12 @@ class TableIndexNullValuesIterator : public BaseTableIndexIterator {
 
   std::shared_ptr<BaseTableIndexIterator> clone() const override;
 
+  // Creates an instance of TableIndexNullValuesIterator using the passed parameter and wraps that instance in an
+  // IteratorWrapper. Return that wrapper.
+  static IteratorWrapper wrap(MapIterator itr);
+
  private:
-  MapIteratorType _map_iterator;
+  MapIterator _map_iterator;
 };
 
 /**
@@ -74,8 +83,8 @@ class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
 
  public:
-  using Iterator = AbstractTableIndex::Iterator;
-  using IteratorPair = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
+  using Iterator = IteratorWrapper;
+  using IteratorPair = std::pair<IteratorWrapper, IteratorWrapper>;
 
   virtual ~BasePartialHashIndexImpl() = default;
 
