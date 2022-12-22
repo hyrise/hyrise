@@ -103,7 +103,6 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
   virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const = 0;
 
-  virtual bool is_index_for(const ColumnID column_id) const = 0;
   virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
