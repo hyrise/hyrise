@@ -84,27 +84,27 @@ class BasePartialHashIndexImpl : public Noncopyable {
    *
    * @return The number of added chunks.
    */
-  virtual size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
+  virtual size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) = 0;
 
   /**
    * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
    *
    * @return The number of removed chunks.
    */
-  virtual size_t remove_entries(const std::vector<ChunkID>&);
+  virtual size_t remove_entries(const std::vector<ChunkID>&) = 0;
 
-  virtual Iterator cbegin() const;
-  virtual Iterator cend() const;
-  virtual Iterator null_cbegin() const;
-  virtual Iterator null_cend() const;
+  virtual Iterator cbegin() const = 0;
+  virtual Iterator cend() const = 0;
+  virtual Iterator null_cbegin() const = 0;
+  virtual Iterator null_cend() const = 0;
   virtual size_t estimate_memory_usage() const = 0;
 
-  virtual IteratorPair range_equals(const AllTypeVariant& value) const;
+  virtual IteratorPair range_equals(const AllTypeVariant& value) const = 0;
 
-  virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
+  virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const = 0;
 
-  virtual bool is_index_for(const ColumnID column_id) const;
-  virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
+  virtual bool is_index_for(const ColumnID column_id) const = 0;
+  virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
 /* Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.

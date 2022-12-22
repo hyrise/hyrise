@@ -22,10 +22,6 @@ class PartialHashIndex : public AbstractTableIndex {
  public:
   PartialHashIndex() = delete;
   PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID);
-  // This constructor is only called if a table index is to be created for a table without any chunks. In this case,
-  // the indexed column's data type cannot be retrieved from a segment since no segment exists. Thus, the DataType has
-  // to be provided explicitly.
-  PartialHashIndex(const DataType data_type, const ColumnID);
 
   /**
    * Inserts entries for the given chunks into this index. If index entries already exist for a given chunk, entries
@@ -33,14 +29,14 @@ class PartialHashIndex : public AbstractTableIndex {
    *
    * @return The number of chunks for which index entries were inserted.
    */
-  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&);
+  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) final;
 
   /**
    * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
    *
    * @return The number of removed chunks.
    */
-  size_t remove_entries(const std::vector<ChunkID>&);
+  size_t remove_entries(const std::vector<ChunkID>&) final;
 
  protected:
   Iterator _cbegin() const final;

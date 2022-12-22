@@ -144,6 +144,23 @@ class AbstractTableIndex : private Noncopyable {
     functor(not_equals_range_right.first, not_equals_range_right.second);
   }
 
+  /**
+   * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
+   *
+   * @return The number of added chunks.
+   */
+  virtual size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) = 0;
+
+  /**
+   * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
+   *
+   * @return The number of removed chunks.
+   */
+  virtual size_t remove_entries(const std::vector<ChunkID>&) = 0;
+
+  /**
+   * Checks whether null values are indexed.
+   */
   bool indexed_null_values() const;
 
   TableIndexType type() const;

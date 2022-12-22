@@ -355,7 +355,7 @@ std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
 }
 
 void Table::create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids,
-                               const TableIndexType type, const std::string& name) {
+                               const TableIndexType type) {
   Assert(column_id < _column_definitions.size(),
          "Cannot create index: passed column id is larger than the largest table's column id.");
   Assert(type == TableIndexType::PartialHash, "Currently, only table indexes of type PartialHash can be created.");
@@ -497,22 +497,19 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
   std::shared_ptr<AbstractTableIndex> table_index = nullptr;
   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
 
-  // If no ChunkIDs are passed an empty index is created.
   if (chunk_ids.empty()) {
-    const auto column_data_type = _column_definitions[column_id].data_type;
-    table_index = std::make_shared<PartialHashIndex>(column_data_type, column_id);
-  } else {
-    chunks_to_index.reserve(chunk_ids.size());
-
-    for (const auto& chunk_id : chunk_ids) {
-      const auto& chunk = get_chunk(chunk_id);
-      Assert(chunk, "Requested index on deleted chunk.");
-      Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
-      chunks_to_index.emplace_back(chunk_id, chunk);
-    }
-
-    table_index = std::make_shared<PartialHashIndex>(chunks_to_index, column_id);
+    Fail("Creating a partial hash index with no chunks being indexed is not supported.");
   }
+
+  chunks_to_index.reserve(chunk_ids.size());
+  for (const auto& chunk_id : chunk_ids) {
+    const auto& chunk = get_chunk(chunk_id);
+    Assert(chunk, "Requested index on deleted chunk.");
+    Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
+    chunks_to_index.emplace_back(chunk_id, chunk);
+  }
+
+  table_index = std::make_shared<PartialHashIndex>(chunks_to_index, column_id);
 
   _table_indexes.emplace_back(table_index);
 

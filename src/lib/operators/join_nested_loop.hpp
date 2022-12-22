@@ -7,12 +7,13 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "join_index.hpp"
 #include "multi_predicate_join/multi_predicate_join_evaluator.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
+class JoinIndex;
 
 class JoinNestedLoop : public AbstractJoinOperator {
  public:

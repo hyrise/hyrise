@@ -240,7 +240,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   }
 
   // Check if a table index is irrelevant because of pruning.
-  const auto all_indexed_segments_pruned = [this](const auto& table_index) {
+  const auto all_indexed_segments_pruned = [&](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
     if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), indexed_column_id) !=

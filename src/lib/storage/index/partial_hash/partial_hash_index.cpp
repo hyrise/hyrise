@@ -16,15 +16,6 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   insert_entries(chunks_to_index);
 }
 
-PartialHashIndex::PartialHashIndex(const DataType data_type, const ColumnID column_id)
-    : AbstractTableIndex{TableIndexType::PartialHash}, _column_id(column_id) {
-  resolve_data_type(data_type, [&](const auto column_data_type) {
-    using ColumnDataType = typename decltype(column_data_type)::type;
-    _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(
-        std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{}, _column_id);
-  });
-}
-
 size_t PartialHashIndex::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
   // Prevents multiple threads from indexing the same chunk concurrently.

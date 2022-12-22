@@ -95,22 +95,6 @@ TEST_F(PartialHashIndexTest, IndexCoverage) {
 TEST_F(PartialHashIndexTest, EmptyInitialization) {
   EXPECT_THROW(PartialHashIndex(std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>(), ColumnID{0}),
                std::logic_error);
-  auto empty_index = std::make_shared<PartialHashIndex>(DataType::String, ColumnID{0});
-
-  EXPECT_EQ(cbegin(empty_index), cend(empty_index));
-  EXPECT_EQ(null_cbegin(empty_index), null_cend(empty_index));
-
-  EXPECT_EQ(range_equals(empty_index, "any").first, cend(empty_index));
-  EXPECT_EQ(range_equals(empty_index, "any").second, cend(empty_index));
-
-  EXPECT_TRUE(empty_index->get_indexed_chunk_ids().empty());
-
-  EXPECT_TRUE(empty_index->is_index_for(ColumnID{0}));
-  EXPECT_FALSE(empty_index->is_index_for(ColumnID{1}));
-
-  EXPECT_EQ(cbegin(empty_index), cend(empty_index));
-  EXPECT_TRUE(cbegin(empty_index).operator==(cbegin(empty_index)));
-  EXPECT_FALSE(cbegin(empty_index).operator!=(cbegin(empty_index)));
 }
 
 TEST_F(PartialHashIndexTest, MapInitialization) {
@@ -298,20 +282,6 @@ TEST_F(PartialHashIndexTest, Add) {
   EXPECT_EQ(index->insert_entries(chunks_to_add), 0);
 }
 
-TEST_F(PartialHashIndexTest, InsertIntoEmpty) {
-  auto empty_index = std::make_shared<PartialHashIndex>(DataType::String, ColumnID{0});
-  auto chunks_to_add =
-      std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{0}, table->get_chunk(ChunkID{0}))};
-  EXPECT_EQ(empty_index->insert_entries(chunks_to_add), 1);
-
-  EXPECT_EQ(empty_index->get_indexed_chunk_ids().size(), 1);
-  EXPECT_TRUE(empty_index->get_indexed_chunk_ids().contains(ChunkID{0}));
-
-  EXPECT_EQ(std::distance(cbegin(empty_index), cend(empty_index)), 7);
-  EXPECT_EQ(std::distance(null_cbegin(empty_index), null_cend(empty_index)), 1);
-  EXPECT_EQ(*range_equals(empty_index, "hotel").first, (RowID{ChunkID{0}, ChunkOffset{0}}));
-}
-
 TEST_F(PartialHashIndexTest, Remove) {
   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
 
@@ -321,13 +291,6 @@ TEST_F(PartialHashIndexTest, Remove) {
   EXPECT_EQ(range_equals(index, "hotel").first, cend(index));
 
   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
-}
-
-TEST_F(PartialHashIndexTest, RemoveFromEmpty) {
-  auto empty_index = std::make_shared<PartialHashIndex>(DataType::String, ColumnID{0});
-  EXPECT_EQ(empty_index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
-  EXPECT_EQ(empty_index->get_indexed_chunk_ids().size(), 0);
-  EXPECT_EQ(cbegin(empty_index), cend(empty_index));
 }
 
 TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
@@ -710,9 +673,18 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
 }
 
-// A1, B2, C2, D2
 TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
-  index = std::make_shared<PartialHashIndex>(DataType::String, ColumnID{0});
+  const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
+
+  Segments segments = {dict_segment_string_empty};
+  auto chunk = std::make_shared<Chunk>(segments);
+
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
+  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
 
   auto expected_memory_usage = size_t{0u};
   //   TableIndexType
