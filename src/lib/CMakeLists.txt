@@ -313,6 +313,10 @@ set(
     optimizer/strategy/join_ordering_rule.hpp
     optimizer/strategy/join_predicate_ordering_rule.cpp
     optimizer/strategy/join_predicate_ordering_rule.hpp
+    optimizer/strategy/join_to_predicate_rewrite_rule.cpp
+    optimizer/strategy/join_to_predicate_rewrite_rule.hpp
+    optimizer/strategy/join_to_semi_join_rule.cpp
+    optimizer/strategy/join_to_semi_join_rule.hpp
     optimizer/strategy/null_scan_removal_rule.cpp
     optimizer/strategy/null_scan_removal_rule.hpp
     optimizer/strategy/predicate_merge_rule.cpp
@@ -402,6 +406,8 @@ set(
     statistics/statistics_objects/abstract_histogram.hpp
     statistics/statistics_objects/abstract_statistics_object.cpp
     statistics/statistics_objects/abstract_statistics_object.hpp
+    statistics/statistics_objects/distinct_value_count.cpp
+    statistics/statistics_objects/distinct_value_count.hpp
     statistics/statistics_objects/equal_distinct_count_histogram.cpp
     statistics/statistics_objects/equal_distinct_count_histogram.hpp
     statistics/statistics_objects/generic_histogram.cpp

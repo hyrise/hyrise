@@ -11,6 +11,7 @@ MetaSegmentsTable::MetaSegmentsTable()
                                                {"column_id", DataType::Int, false},
                                                {"column_name", DataType::String, false},
                                                {"column_data_type", DataType::String, false},
+                                               {"distinct_value_count", DataType::Long, true},
                                                {"encoding_type", DataType::String, true},
                                                {"vector_compression_type", DataType::String, true},
                                                {"estimated_size_in_bytes", DataType::Long, false},

@@ -15,9 +15,9 @@
 #include "statistics/table_statistics.hpp"
 #include "storage/table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class OperatorsUpdateTest : public BaseTest {
  public:

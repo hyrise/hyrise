@@ -21,7 +21,7 @@ class EntireChunkPosList : public AbstractPosList {
 
   // Implemented in hpp for performance reasons (to allow inlining)
   RowID operator[](const size_t index) const final {
-    return RowID{_common_chunk_id, static_cast<ChunkOffset>(index)};
+    return RowID{_common_chunk_id, ChunkOffset{static_cast<ChunkOffset::base_type>(index)}};
   }
 
   bool empty() const final;

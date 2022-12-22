@@ -1,5 +1,5 @@
 [![Build Status](https://hyrise-ci.epic-hpi.de/buildStatus/icon?job=Hyrise/hyrise/master)](https://hyrise-ci.epic-hpi.de/blue/organizations/jenkins/hyrise%2Fhyrise/activity/)
-[![Coverage Status](https://hyrise-coverage-badge.herokuapp.com/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
+[![Coverage Status](https://hyrise-ci.epic-hpi.de/job/hyrise/job/hyrise/job/master/lastStableBuild/artifact/coverage_badge.svg)](https://hyrise-ci.epic-hpi.de/job/Hyrise/job/hyrise/job/master/lastStableBuild/Llvm-cov_5fReport/)
 [![CodeFactor](https://www.codefactor.io/repository/github/hyrise/hyrise/badge)](https://www.codefactor.io/repository/github/hyrise/hyrise)
 
 # Welcome to Hyrise
@@ -159,6 +159,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 -   Yannick   Bäumer
 -   Lawrence  Benson
+-   Lukas     Budach
 -   Timo      Djürken
 -   Alexander Dubrawski
 -   Fabian    Dumke
@@ -185,6 +186,7 @@ Contact: firstname.lastname@hpi.de
 -   Marvin    Keller
 -   Mirko     Krause
 -   Eva       Krebs
+-   Henok     Lachmann
 -   Sven      Lehmann
 -   Till      Lehmann
 -   Tom       Lichtenstein

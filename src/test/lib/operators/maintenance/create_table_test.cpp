@@ -16,7 +16,7 @@
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class CreateTableTest : public BaseTest {
  public:

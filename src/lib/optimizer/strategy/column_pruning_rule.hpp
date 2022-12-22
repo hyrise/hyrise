@@ -1,9 +1,6 @@
 #pragma once
 
-#include <unordered_map>
-
 #include "abstract_rule.hpp"
-#include "expression/abstract_expression.hpp"
 
 namespace hyrise {
 

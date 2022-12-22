@@ -66,12 +66,11 @@
 
 #include "SQLParser.h"
 
-using namespace std::string_literals;           // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace std::string_literals;           // NOLINT(build/namespaces)
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},
@@ -1538,12 +1537,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
-  // Get stored table as input (validated if MVCC is enabled)
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
-  auto lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+  auto lqp = std::shared_ptr<AbstractLQPNode>{};
+  const auto table_name = std::string{export_statement.tableName};
 
-  return ExportNode::make(export_statement.tableName, export_statement.filePath,
-                          import_type_to_file_type(export_statement.type), lqp);
+  if (MetaTableManager::is_meta_table_name(table_name)) {
+    lqp = _translate_meta_table(table_name, sql_identifier_resolver);
+  } else {
+    // Get stored table as input (validated if MVCC is enabled)
+    lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+  }
+
+  return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), lqp);
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_validate_if_active(

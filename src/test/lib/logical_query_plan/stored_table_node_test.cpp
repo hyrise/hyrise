@@ -14,15 +14,13 @@
 #include "storage/table_key_constraint.hpp"
 #include "utils/constraint_test_utils.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::reset();
-
     Hyrise::get().storage_manager.add_table("t_a",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
     Hyrise::get().storage_manager.add_table("t_b",

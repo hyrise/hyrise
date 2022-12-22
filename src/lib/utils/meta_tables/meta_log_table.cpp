@@ -28,14 +28,13 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
     // We need this to format the timestamp in a thread-safe way.
     // https://stackoverflow.com/questions/25618702/
     //   why-is-there-no-c11-threadsafe-alternative-to-stdlocaltime-and-stdgmtime
-    std::ostringstream timestamp;
-    auto time = std::chrono::system_clock::to_time_t(entry.timestamp);
+    auto timestamp_stream = std::ostringstream{};
+    auto timestamp = std::chrono::system_clock::to_time_t(entry.timestamp);
+    auto buffer = tm{};
 
-    struct tm buffer {};
-
-    timestamp << std::put_time(localtime_r(&time, &buffer), "%F %T");
+    timestamp_stream << std::put_time(localtime_r(&timestamp, &buffer), "%F %T");
     output_table->append(
-        {timestamp_ns, pmr_string{timestamp.str()}, pmr_string{log_level_to_string.left.at(entry.log_level)},
+        {timestamp_ns, pmr_string{timestamp_stream.str()}, pmr_string{log_level_to_string.left.at(entry.log_level)},
          static_cast<int32_t>(entry.log_level), pmr_string{entry.reporter}, pmr_string{entry.message}});
   }
 

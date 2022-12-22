@@ -5,7 +5,7 @@ build/*
 build-*/*
 *.make
 Makefile*
-coverage
+coverage*
 .vscode
 benchmark.json
 *.sublime-*

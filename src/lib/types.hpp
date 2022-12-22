@@ -152,10 +152,14 @@ constexpr RowID NULL_ROW_ID = RowID{INVALID_CHUNK_ID, INVALID_CHUNK_OFFSET};
 
 constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max()};
 
-// The Scheduler currently supports just these 3 priorities, subject to change.
+// Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so we
+// use a really short one here.
+const size_t SSO_STRING_CAPACITY = pmr_string{"."}.capacity();
+
+// The Scheduler currently supports just these two priorities.
 enum class SchedulePriority {
-  Default = 1,  // Schedule task at the end of the queue
-  High = 0      // Schedule task at the beginning of the queue
+  Default = 1,  // Schedule task of normal priority.
+  High = 0      // Schedule task of high priority, subject to be preferred in scheduling.
 };
 
 enum class PredicateCondition {
