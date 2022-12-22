@@ -2,7 +2,6 @@
 
 #include <tsl/sparse_map.h>
 
-#include <memory>
 #include <unordered_set>
 #include <utility>
 #include <vector>
