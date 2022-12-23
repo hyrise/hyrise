@@ -38,14 +38,6 @@ Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuI
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);
   std::shuffle(_random.begin(), _random.end(), std::default_random_engine{std::random_device{}()});
-
-  if (_id == 0) {
-    _max_sleep = MAX_WORKER_SLEEP_TIME / 512;
-  } else {
-    _max_sleep = MAX_WORKER_SLEEP_TIME;
-  }
-
-  //std::cout << "Worker " << _id << " gets a max sleep time of " << _max_sleep.count() << std::endl;
 }
 
 WorkerID Worker::id() const {
