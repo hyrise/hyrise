@@ -74,7 +74,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   size_t _next_random{};
 
   static constexpr auto MIN_WORKER_SLEEP_TIME = std::chrono::microseconds(50);
-  static constexpr auto MAX_WORKER_SLEEP_TIME = std::chrono::microseconds(8000);
+  static constexpr auto MAX_WORKER_SLEEP_TIME = std::chrono::microseconds(80000);
 
   std::chrono::microseconds _max_sleep{MAX_WORKER_SLEEP_TIME};
   std::chrono::microseconds _sleep_time = MIN_WORKER_SLEEP_TIME;

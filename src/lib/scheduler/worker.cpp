@@ -69,7 +69,7 @@ void Worker::_work() {
   auto task = std::shared_ptr<AbstractTask>{};
   const auto work_begin = std::chrono::steady_clock::now();
 
-  auto spin_counter = int32_t{0};
+  auto spin_counter = uint32_t{0};
   do {
     if (_next_task) {
       task = std::move(_next_task);
@@ -78,6 +78,30 @@ void Worker::_work() {
       task = _queue->pull();
     }
 
+    if (task) {
+      break;
+    }
+
+    if (!task || spin_counter > 10) {
+      // Newer Intel architectures pause for ~140 ns. So no problem with previous exit.
+      // Simple work stealing without explicitly transferring data between nodes.
+      for (const auto& queue : Hyrise::get().scheduler()->queues()) {
+        if (queue == _queue) {
+          continue;
+        }
+
+        task = queue->steal();
+        if (task) {
+          task->set_node_id(_queue->node_id());
+          break;
+         // work_stealing_successful = true;
+        }
+      }
+    }
+
+    // We exit the spinning loop if we have received a task or if we spinned long enough. As recommended by Intel, we
+    // don't spin for a fixed number of pause instructions but rather for a certain time frame as the time paused by
+    // the pause instruction differed a lot between different CPU architectures.
     // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html
     if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{4096}) {
       break;
@@ -90,51 +114,29 @@ void Worker::_work() {
 
     ++spin_counter;
   } while (!task);
-  //std::stringstream s;
-  //s << "(" << spin_counter << ")\n";
-  //std::cout << s.str();
 
   if (!task) {
-    // Simple work stealing without explicitly transferring data between nodes.
-    auto work_stealing_successful = false;
-    for (const auto& queue : Hyrise::get().scheduler()->queues()) {
-      if (queue == _queue) {
-        continue;
-      }
-
-      task = queue->steal();
-      if (task) {
-        task->set_node_id(_queue->node_id());
-        work_stealing_successful = true;
-
-        _unsuccessful_steals = 0;
-
-        break;
-      }
-    }
-
     // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
     // own queue or returns after timer exceeded (whatever occurs first).
-    if (!work_stealing_successful) {
-      if (_unsuccessful_steals > 9) {
-        // Start sleeping only, when we have tried 10x to steal.
-        std::unique_lock<std::mutex> unique_lock(_queue->lock);
-        _queue->new_task.wait_for(unique_lock, _sleep_time);
-        //std::stringstream s;
-        //s << _id << ": sleeping for " << _sleep_time.count() << "\n";
-        //std::cout << s.str() << std::flush;
-        _sleep_time = std::min(_sleep_time + MIN_WORKER_SLEEP_TIME, _max_sleep);
-      }
+    //if (!work_stealing_successful) {
+      // Start sleeping only, when we have tried 10x to steal.
+      std::unique_lock<std::mutex> unique_lock(_queue->lock);
+      _queue->new_task.wait_for(unique_lock, _sleep_time);
+      //std::stringstream s;
+      //s << _id << ": sleeping for " << _sleep_time.count() << "\n";
+      //std::cout << s.str() << std::flush;
+      _sleep_time = std::min(_sleep_time + MIN_WORKER_SLEEP_TIME, _max_sleep);
       // else {
       //   std::stringstream s;
       //   // s << "not yet sleeping: " << _unsuccessful_steals << "\n";
       //   std::cout << s.str() << std::flush;
       // }
-      ++_unsuccessful_steals;
       return;
-    }
+   // }
   }
   _sleep_time = MIN_WORKER_SLEEP_TIME;
+
+  //std::printf("t#%lu-spin%du\n", static_cast<size_t>(_id), spin_counter);
 
   const auto successfully_assigned = task->try_mark_as_assigned_to_worker();
   if (!successfully_assigned) {
