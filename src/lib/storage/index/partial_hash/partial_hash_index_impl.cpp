@@ -3,8 +3,6 @@
 
 namespace hyrise {
 
-// TableIndexNullValuesIterator
-
 template <typename DataType>
 TableIndexIterator<DataType>::TableIndexIterator(MapIterator itr) : _map_iterator(itr), _vector_index(0) {}
 
@@ -46,8 +44,6 @@ IteratorWrapper TableIndexIterator<DataType>::wrap(MapIterator itr) {
   return IteratorWrapper(std::make_shared<TableIndexIterator<DataType>>(itr));
 }
 
-// TableIndexNullValuesIterator
-
 TableIndexNullValuesIterator::TableIndexNullValuesIterator(MapIterator itr) : _map_iterator(itr) {}
 
 const RowID& TableIndexNullValuesIterator::operator*() const {
@@ -76,8 +72,6 @@ std::shared_ptr<BaseTableIndexIterator> TableIndexNullValuesIterator::clone() co
 IteratorWrapper TableIndexNullValuesIterator::wrap(MapIterator itr) {
   return IteratorWrapper(std::make_shared<TableIndexNullValuesIterator>(itr));
 }
-
-// PartialHashIndexImpl
 
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(

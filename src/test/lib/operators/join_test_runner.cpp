@@ -297,10 +297,12 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
         for (const auto& index_side : index_sides) {
           // Calculate index chunk counts, eliminate duplicates by using the unordered set.
           auto& indexed_input = index_side == IndexSide::Left ? configuration.left_input : configuration.right_input;
-          const auto chunk_count = indexed_input.table_size == 0
-                                       ? uint32_t{0}
-                                       : static_cast<uint32_t>(std::ceil(static_cast<float>(indexed_input.table_size) /
-                                                                         static_cast<float>(indexed_input.chunk_size)));
+          if (indexed_input.table_size == 0) {
+            // The PartialHashIndex cannot be created for an empty table.
+            continue;
+          }
+          const auto chunk_count = static_cast<uint32_t>(
+              std::ceil(static_cast<float>(indexed_input.table_size) / static_cast<float>(indexed_input.chunk_size)));
 
           auto indexed_chunk_ranges = std::set<ChunkRange>{};
           for (const auto indexed_share : indexed_segment_shares) {
