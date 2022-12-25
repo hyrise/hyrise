@@ -103,12 +103,11 @@ void Worker::_work() {
     // don't spin for a fixed number of pause instructions but rather for a certain time frame as the time paused by
     // the pause instruction differed a lot between different CPU architectures.
     // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html
-    if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{4096}) {
+    if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{8}) {
       break;
     }
 
-    const auto loop_count = std::min(1024, 1 << spin_counter);
-    for (auto loop_id = int32_t{0}; loop_id < loop_count; ++loop_id) {
+    for (auto loop_id = int32_t{0}; loop_id < 1 << spin_counter; ++loop_id) {
       _mm_pause();
     }
 
@@ -120,12 +119,19 @@ void Worker::_work() {
     // own queue or returns after timer exceeded (whatever occurs first).
     //if (!work_stealing_successful) {
       // Start sleeping only, when we have tried 10x to steal.
-      std::unique_lock<std::mutex> unique_lock(_queue->lock);
-      _queue->new_task.wait_for(unique_lock, _sleep_time);
-      //std::stringstream s;
-      //s << _id << ": sleeping for " << _sleep_time.count() << "\n";
-      //std::cout << s.str() << std::flush;
-      _sleep_time = std::min(_sleep_time + MIN_WORKER_SLEEP_TIME, _max_sleep);
+      //auto all_queues_empty = false;
+      //const auto& queues = Hyrise::get().scheduler()->queues();
+      //do {
+        std::unique_lock<std::mutex> unique_lock(_queue->lock);
+        _queue->new_task.wait_for(unique_lock, _sleep_time);
+        //std::stringstream s;
+        //s << _id << ": sleeping for " << _sleep_time.count() << "\n";
+        //std::cout << s.str() << std::flush;
+        _sleep_time = std::min(_sleep_time + MIN_WORKER_SLEEP_TIME, _max_sleep);
+
+       // all_queues_empty = std::all_of(queues.cbegin(), queues.cend(), [] (const auto& queue) { return queue->estimate_load() == 0; });
+      //} while (all_queues_empty);
+
       // else {
       //   std::stringstream s;
       //   // s << "not yet sleeping: " << _unsuccessful_steals << "\n";
