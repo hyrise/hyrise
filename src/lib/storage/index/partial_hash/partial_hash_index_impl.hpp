@@ -23,7 +23,7 @@ class PartialHashIndexTest;
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexIterator : public BaseTableIndexIterator {
+class TableIndexIterator : public AbstractTableIndexIterator {
  public:
   using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
@@ -33,11 +33,11 @@ class TableIndexIterator : public BaseTableIndexIterator {
 
   TableIndexIterator& operator++() override;
 
-  bool operator==(const BaseTableIndexIterator& other) const override;
+  bool operator==(const AbstractTableIndexIterator& other) const override;
 
-  bool operator!=(const BaseTableIndexIterator& other) const override;
+  bool operator!=(const AbstractTableIndexIterator& other) const override;
 
-  std::shared_ptr<BaseTableIndexIterator> clone() const override;
+  std::shared_ptr<AbstractTableIndexIterator> clone() const override;
 
   // Creates an instance of TableIndexIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
@@ -51,7 +51,7 @@ class TableIndexIterator : public BaseTableIndexIterator {
 /**
  * Forward iterator that iterates over a std::vector of RowIDs.
  */
-class TableIndexNullValuesIterator : public BaseTableIndexIterator {
+class TableIndexNullValuesIterator : public AbstractTableIndexIterator {
  public:
   using MapIterator = typename std::vector<RowID>::const_iterator;
 
@@ -61,11 +61,11 @@ class TableIndexNullValuesIterator : public BaseTableIndexIterator {
 
   TableIndexNullValuesIterator& operator++() override;
 
-  bool operator==(const BaseTableIndexIterator& other) const override;
+  bool operator==(const AbstractTableIndexIterator& other) const override;
 
-  bool operator!=(const BaseTableIndexIterator& other) const override;
+  bool operator!=(const AbstractTableIndexIterator& other) const override;
 
-  std::shared_ptr<BaseTableIndexIterator> clone() const override;
+  std::shared_ptr<AbstractTableIndexIterator> clone() const override;
 
   // Creates an instance of TableIndexNullValuesIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.

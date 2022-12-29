@@ -2,27 +2,27 @@
 
 namespace hyrise {
 
-BaseTableIndexIterator::reference BaseTableIndexIterator::operator*() const {
+AbstractTableIndexIterator::reference AbstractTableIndexIterator::operator*() const {
   Fail("cannot dereference on empty iterator");
 }
 
-BaseTableIndexIterator& BaseTableIndexIterator::operator++() {
+AbstractTableIndexIterator& AbstractTableIndexIterator::operator++() {
   return *this;
 }
 
-bool BaseTableIndexIterator::operator==(const BaseTableIndexIterator& other) const {
+bool AbstractTableIndexIterator::operator==(const AbstractTableIndexIterator& other) const {
   return true;
 }
 
-bool BaseTableIndexIterator::operator!=(const BaseTableIndexIterator& other) const {
+bool AbstractTableIndexIterator::operator!=(const AbstractTableIndexIterator& other) const {
   return false;
 }
 
-std::shared_ptr<BaseTableIndexIterator> BaseTableIndexIterator::clone() const {
-  return std::make_shared<BaseTableIndexIterator>();
+std::shared_ptr<AbstractTableIndexIterator> AbstractTableIndexIterator::clone() const {
+  return std::make_shared<AbstractTableIndexIterator>();
 }
 
-IteratorWrapper::IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr)
+IteratorWrapper::IteratorWrapper(std::shared_ptr<AbstractTableIndexIterator>&& table_index_iterator_ptr)
     : _impl(std::move(table_index_iterator_ptr)) {}
 
 IteratorWrapper::IteratorWrapper(const IteratorWrapper& other) : _impl(other._impl->clone()) {}

@@ -21,21 +21,21 @@ TableIndexIterator<DataType>& TableIndexIterator<DataType>::operator++() {
 }
 
 template <typename DataType>
-bool TableIndexIterator<DataType>::operator==(const BaseTableIndexIterator& other) const {
+bool TableIndexIterator<DataType>::operator==(const AbstractTableIndexIterator& other) const {
   auto other_iterator = dynamic_cast<const TableIndexIterator*>(&other);
   return other_iterator && _map_iterator == other_iterator->_map_iterator &&
          _vector_index == other_iterator->_vector_index;
 }
 
 template <typename DataType>
-bool TableIndexIterator<DataType>::operator!=(const BaseTableIndexIterator& other) const {
+bool TableIndexIterator<DataType>::operator!=(const AbstractTableIndexIterator& other) const {
   auto other_iterator = dynamic_cast<const TableIndexIterator*>(&other);
   return !other_iterator || _map_iterator != other_iterator->_map_iterator ||
          _vector_index != other_iterator->_vector_index;
 }
 
 template <typename DataType>
-std::shared_ptr<BaseTableIndexIterator> TableIndexIterator<DataType>::clone() const {
+std::shared_ptr<AbstractTableIndexIterator> TableIndexIterator<DataType>::clone() const {
   return std::make_shared<TableIndexIterator<DataType>>(*this);
 }
 
@@ -55,17 +55,17 @@ TableIndexNullValuesIterator& TableIndexNullValuesIterator::operator++() {
   return *this;
 }
 
-bool TableIndexNullValuesIterator::operator==(const BaseTableIndexIterator& other) const {
+bool TableIndexNullValuesIterator::operator==(const AbstractTableIndexIterator& other) const {
   const auto* const other_iterator = dynamic_cast<const TableIndexNullValuesIterator*>(&other);
   return other_iterator && _map_iterator == other_iterator->_map_iterator;
 }
 
-bool TableIndexNullValuesIterator::operator!=(const BaseTableIndexIterator& other) const {
+bool TableIndexNullValuesIterator::operator!=(const AbstractTableIndexIterator& other) const {
   const auto* const other_iterator = dynamic_cast<const TableIndexNullValuesIterator*>(&other);
   return !other_iterator || _map_iterator != other_iterator->_map_iterator;
 }
 
-std::shared_ptr<BaseTableIndexIterator> TableIndexNullValuesIterator::clone() const {
+std::shared_ptr<AbstractTableIndexIterator> TableIndexNullValuesIterator::clone() const {
   return std::make_shared<TableIndexNullValuesIterator>(*this);
 }
 

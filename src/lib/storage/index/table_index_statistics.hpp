@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "storage/chunk.hpp"
 #include "storage/index/abstract_table_index.hpp"
 #include "types.hpp"

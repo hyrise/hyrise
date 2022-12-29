@@ -13,12 +13,11 @@ namespace hyrise {
 enum class TableIndexType { PartialHash };
 
 /**
- * Basic forward iterator type for iteration over RowIDs, e.g. for table indexes. The default implementation of the
- * virtual properties is meant to represent the iterator of an empty collection. Therefore it shall not be dereferenced
- * (like an end iterator), increments do not make a change, and equality comparisons with other instances of this
- * class always result in true.
+ * Basic forward iterator type for iteration over RowIDs. The default implementation of the virtual properties is meant
+ * to represent the iterator of an empty collection. Therefore it shall not be dereferenced (like an end iterator),
+ * increments do not make a change, and equality comparisons with other instances of this class always result in true.
  */
-class BaseTableIndexIterator {
+class AbstractTableIndexIterator {
  public:
   using iterator_category = std::forward_iterator_tag;
   using value_type = const RowID;
@@ -26,18 +25,18 @@ class BaseTableIndexIterator {
   using pointer = const RowID*;
   using reference = const RowID&;
 
-  BaseTableIndexIterator(const BaseTableIndexIterator& it) = default;
-  BaseTableIndexIterator() = default;
-  virtual ~BaseTableIndexIterator() = default;
+  AbstractTableIndexIterator(const AbstractTableIndexIterator& it) = default;
+  AbstractTableIndexIterator() = default;
+  virtual ~AbstractTableIndexIterator() = default;
   virtual reference operator*() const;
-  virtual BaseTableIndexIterator& operator++();
-  virtual bool operator==(const BaseTableIndexIterator& other) const;
-  virtual bool operator!=(const BaseTableIndexIterator& other) const;
-  virtual std::shared_ptr<BaseTableIndexIterator> clone() const;
+  virtual AbstractTableIndexIterator& operator++();
+  virtual bool operator==(const AbstractTableIndexIterator& other) const;
+  virtual bool operator!=(const AbstractTableIndexIterator& other) const;
+  virtual std::shared_ptr<AbstractTableIndexIterator> clone() const;
 };
 
 /**
- * Wrapper class that implements an iterator interface and holds a pointer to a BaseTableIndexIterator. This wrapper is
+ * Wrapper class that implements an iterator interface and holds a pointer to a AbstractTableIndexIterator. This wrapper is
  * required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
  * codebase. It also provides copy construction and assignment facilities to easily duplicate other IteratorWrappers
  * including their underlying iterators. This is especially important, because the iterator type is a forward iterator
@@ -52,7 +51,7 @@ class IteratorWrapper {
   using pointer = const RowID*;
   using reference = const RowID&;
 
-  explicit IteratorWrapper(std::shared_ptr<BaseTableIndexIterator>&& table_index_iterator_ptr);
+  explicit IteratorWrapper(std::shared_ptr<AbstractTableIndexIterator>&& table_index_iterator_ptr);
   IteratorWrapper(const IteratorWrapper& other);
   IteratorWrapper& operator=(const IteratorWrapper& other);
   reference operator*() const;
@@ -61,7 +60,7 @@ class IteratorWrapper {
   bool operator!=(const IteratorWrapper& other) const;
 
  private:
-  std::shared_ptr<BaseTableIndexIterator> _impl;
+  std::shared_ptr<AbstractTableIndexIterator> _impl;
 };
 
 /**
