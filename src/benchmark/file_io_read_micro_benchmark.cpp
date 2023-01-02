@@ -484,9 +484,7 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
       aio_error_handling(threads[index], threads[index]->aio_nbytes);
     }
 
-
     state.PauseTiming();
-
     const auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result. Got: " + std::to_string(sum) + " Expected: " + std::to_string(control_sum) + ".");
     state.ResumeTiming();
