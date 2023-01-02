@@ -71,9 +71,9 @@ void read_data_using_aio(const size_t from, const size_t to, int32_t fd, uint32_
 
   Assert(aio_read(&aiocb) == 0, "Read error: " + strerror(errno));
 
-  auto err = aio_error(&aiocb);
   /* Wait until end of transaction */
-  while (err == EINPROGRESS);
+  auto err = int{0};
+  while ((err = aio_error(&aiocb)) == EINPROGRESS);
 
   aio_error_handling(&aiocb, bytes_to_read);
 }
@@ -94,9 +94,9 @@ void read_data_randomly_using_aio(const size_t from, const size_t to, int32_t fd
     aiocb.aio_offset = uint32_t_size * random_indices[index];
     Assert(aio_read(&aiocb) == 0, "Read error: " + strerror(errno));
 
-    auto err = aio_error(&aiocb);
     /* Wait until end of transaction */
-    while (err == EINPROGRESS);
+    auto err = int{0};
+    while ((err = aio_error(&aiocb)) == EINPROGRESS);
 
     aio_error_handling(&aiocb, uint32_t_size);
   }
@@ -419,9 +419,9 @@ void FileIOMicroReadBenchmarkFixture::aio_single_threaded(benchmark::State& stat
 
     Assert(aio_read(&aiocb) == 0, "Read error: " + strerror(errno));
 
-    auto err = aio_error(&aiocb);
     /* Wait until end of transaction */
-    while (err == EINPROGRESS);
+    auto err = int{0};
+    while ((err = aio_error(&aiocb)) == EINPROGRESS);
 
     aio_error_handling(&aiocb, NUMBER_OF_BYTES);
 
@@ -503,9 +503,10 @@ void FileIOMicroReadBenchmarkFixture::aio_random_single_threaded(benchmark::Stat
 
       Assert(aio_read(&aiocb) == 0, "Read error: " + strerror(errno));
 
-      auto err = aio_error(&aiocb);
       /* Wait until end of transaction */
-      while (err == EINPROGRESS);
+      auto err = int{0};
+      while ((err = aio_error(&aiocb)) == EINPROGRESS);
+
       aio_error_handling(&aiocb, uint32_t_size);
     }
 

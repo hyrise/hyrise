@@ -76,8 +76,6 @@ add_executable(
         micro_benchmark_utils.hpp
         file_io_write_micro_benchmark.hpp
         file_io_write_micro_benchmark.cpp
-        file_io_read_micro_benchmark.cpp
-        file_io_read_mmap_benchmark.cpp
 )
 
 target_link_libraries(
