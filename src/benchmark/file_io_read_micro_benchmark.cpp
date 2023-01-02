@@ -439,7 +439,7 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
   auto fd = int32_t{};
   Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
 
-  auto threads = std::vector<std::thread>(thread_count);
+  auto threads = std::vector<aiocb*>(thread_count);
   auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / thread_count));
 
   for (auto _ : state) {
@@ -452,23 +452,43 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
 
     state.ResumeTiming();
 
+    const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
+
     for (auto index = size_t{0}; index < thread_count; ++index) {
       auto from = batch_size * index;
       auto to = from + batch_size;
       if (to >= NUMBER_OF_ELEMENTS) {
         to = NUMBER_OF_ELEMENTS;
       }
-      threads[index] = (std::thread(read_data_using_aio, from, to, fd, read_data_start));
+
+      const auto bytes_to_read = static_cast<ssize_t>(uint32_t_size * (to - from));
+
+      struct aiocb aiocb;
+      memset(&aiocb, 0, sizeof(struct aiocb));
+      aiocb.aio_fildes = fd;
+      aiocb.aio_offset = from * uint32_t_size;
+      aiocb.aio_buf = read_data_start + from;
+      aiocb.aio_nbytes = bytes_to_read;
+      aiocb.aio_lio_opcode = LIO_READ;
+
+      threads.push_back(&aiocb);
+    }
+
+    int return_value = lio_listio(LIO_WAIT, threads.data(), thread_count, NULL);
+
+    if (return_value != 0){
+      fail_and_close_file(fd, "lio_listio failed.", return_value);
     }
 
     for (auto index = size_t{0}; index < thread_count; ++index) {
-      // Explain: Blocks the current thread until the thread identified by *this finishes its execution
-      threads[index].join();
+      aio_error_handling(threads[index], threads[index]->aio_nbytes);
     }
+
+
     state.PauseTiming();
 
     const auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
-    Assert(control_sum == sum, "Sanity check failed: Not the same result");
+    Assert(control_sum == sum, "Sanity check failed: Not the same result. Got: " + std::to_string(sum) + " Expected: " + std::to_string(control_sum) + ".");
     state.ResumeTiming();
   }
 
@@ -660,6 +680,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(bench
 }
 
 // Arguments are file size in MB
+/*
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL_THREADED)
     ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 6, 8, 16, 24, 32, 48}})
     ->UseRealTime();
@@ -672,13 +693,15 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL_TH
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM_THREADED)
     ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 6, 8, 16, 24, 32, 48}})
     ->UseRealTime();
+    */
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_SEQUENTIAL_THREADED)
-    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 6, 8, 16, 24, 32, 48}})
+    ->ArgsProduct({{10}, {2, 4}})
     ->UseRealTime();
+/*
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_RANDOM_THREADED)
     ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 6, 8, 16, 24, 32, 48}})
     ->UseRealTime();
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
-
+*/
 }  // namespace hyrise
