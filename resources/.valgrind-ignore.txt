@@ -79,10 +79,3 @@
    ...
    fun:_ZN7testing8internal20PrintBytesInObjectToEPKhmPSo
 }
-
-{
-   <PR_2448_memcheck>>
-   Memcheck:Value8
-   ...
-   fun:_ZN7testing8internal20PrintBytesInObjectToEPKhmPSo
-}
