@@ -42,12 +42,9 @@ class PartialHashIndex : public AbstractTableIndex {
   IteratorPair _range_equals(const AllTypeVariant& value) const override final;
   std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const override final;
 
-  bool _is_index_for(const ColumnID column_id) const override final;
   std::unordered_set<ChunkID> _get_indexed_chunk_ids() const override final;
-  ColumnID _get_indexed_column_id() const override final;
 
  private:
-  const ColumnID _column_id;
   std::shared_ptr<BasePartialHashIndexImpl> _impl;
 };
 

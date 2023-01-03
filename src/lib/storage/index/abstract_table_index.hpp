@@ -73,7 +73,7 @@ class AbstractTableIndex : private Noncopyable {
   using IteratorPair = std::pair<Iterator, Iterator>;
 
   AbstractTableIndex() = delete;
-  explicit AbstractTableIndex(const TableIndexType type);
+  explicit AbstractTableIndex(const TableIndexType type, const ColumnID column_id);
   AbstractTableIndex(AbstractTableIndex&&) = delete;
   virtual ~AbstractTableIndex() = default;
 
@@ -254,13 +254,12 @@ class AbstractTableIndex : private Noncopyable {
    */
   virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
 
-  virtual bool _is_index_for(const ColumnID column_id) const = 0;
   virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
-  virtual ColumnID _get_indexed_column_id() const = 0;
   virtual size_t _estimate_memory_usage() const = 0;
   mutable std::shared_mutex _data_access_mutex;
 
  private:
   const TableIndexType _type;
+  const ColumnID _column_id;
 };
 }  // namespace hyrise

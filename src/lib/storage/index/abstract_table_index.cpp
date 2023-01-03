@@ -52,7 +52,7 @@ bool IteratorWrapper::operator!=(const IteratorWrapper& other) const {
   return _impl->operator!=(*other._impl);
 }
 
-AbstractTableIndex::AbstractTableIndex(const TableIndexType type) : _type(type) {}
+AbstractTableIndex::AbstractTableIndex(const TableIndexType type, const ColumnID column_id) : _type(type), _column_id{column_id} {}
 
 bool AbstractTableIndex::indexed_null_values() const {
   return _null_cbegin() != _null_cend();
@@ -65,12 +65,13 @@ TableIndexType AbstractTableIndex::type() const {
 size_t AbstractTableIndex::estimate_memory_usage() const {
   auto bytes = size_t{0u};
   bytes += sizeof(_type);
+  bytes += sizeof(_column_id);
   bytes += _estimate_memory_usage();
   return bytes;
 }
 
 bool AbstractTableIndex::is_index_for(const ColumnID column_id) const {
-  return _is_index_for(column_id);
+  return column_id == _column_id;
 }
 
 std::unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
@@ -78,7 +79,7 @@ std::unordered_set<ChunkID> AbstractTableIndex::get_indexed_chunk_ids() const {
 }
 
 ColumnID AbstractTableIndex::get_indexed_column_id() const {
-  return _get_indexed_column_id();
+  return _column_id;
 }
 
 }  // namespace hyrise
