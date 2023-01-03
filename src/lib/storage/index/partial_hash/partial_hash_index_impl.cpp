@@ -14,7 +14,7 @@ const RowID& TableIndexMapIterator<DataType>::operator*() const {
 template <typename DataType>
 TableIndexMapIterator<DataType>& TableIndexMapIterator<DataType>::operator++() {
   if (++_vector_index >= _map_iterator->second.size()) {
-    _map_iterator++;
+    ++_map_iterator;
     _vector_index = 0;
   }
   return *this;
@@ -51,7 +51,7 @@ const RowID& TableIndexVectorIterator::operator*() const {
 }
 
 TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
-  _vector_iterator++;
+  ++_vector_iterator;
   return *this;
 }
 

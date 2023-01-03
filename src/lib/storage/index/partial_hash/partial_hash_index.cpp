@@ -11,7 +11,6 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
                       using ColumnDataType = typename decltype(column_data_type)::type;
                       _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, _column_id);
                     });
-  insert_entries(chunks_to_index);
 }
 
 size_t PartialHashIndex::insert_entries(
