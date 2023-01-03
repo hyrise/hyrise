@@ -4,7 +4,7 @@
 namespace hyrise {
 
 template <typename DataType>
-TableIndexMapIterator<DataType>::TableIndexMapIterator(MapIterator itr) : _map_iterator(itr), _vector_index(0) {}
+TableIndexMapIterator<DataType>::TableIndexMapIterator(MapIterator it) : _map_iterator(it), _vector_index(0) {}
 
 template <typename DataType>
 const RowID& TableIndexMapIterator<DataType>::operator*() const {
@@ -40,11 +40,11 @@ std::shared_ptr<AbstractTableIndexIterator> TableIndexMapIterator<DataType>::clo
 }
 
 template <typename DataType>
-IteratorWrapper TableIndexMapIterator<DataType>::wrap(MapIterator itr) {
-  return IteratorWrapper(std::make_shared<TableIndexMapIterator<DataType>>(itr));
+IteratorWrapper TableIndexMapIterator<DataType>::wrap(MapIterator it) {
+  return IteratorWrapper(std::make_shared<TableIndexMapIterator<DataType>>(it));
 }
 
-TableIndexVectorIterator::TableIndexVectorIterator(VectorIterator itr) : _vector_iterator(itr) {}
+TableIndexVectorIterator::TableIndexVectorIterator(VectorIterator it) : _vector_iterator(it) {}
 
 const RowID& TableIndexVectorIterator::operator*() const {
   return *_vector_iterator;
@@ -69,8 +69,8 @@ std::shared_ptr<AbstractTableIndexIterator> TableIndexVectorIterator::clone() co
   return std::make_shared<TableIndexVectorIterator>(*this);
 }
 
-IteratorWrapper TableIndexVectorIterator::wrap(VectorIterator itr) {
-  return IteratorWrapper(std::make_shared<TableIndexVectorIterator>(itr));
+IteratorWrapper TableIndexVectorIterator::wrap(VectorIterator it) {
+  return IteratorWrapper(std::make_shared<TableIndexVectorIterator>(it));
 }
 
 template <typename DataType>

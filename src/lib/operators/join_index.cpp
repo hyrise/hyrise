@@ -389,7 +389,7 @@ void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator pro
     };
 
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
-    // If the probe side value is null or at least one null value exists in the indexed join segment, the probe value
+    // If the probe side value is null or at least one null value exists in the indexed join segments, the probe value
     // has a match.
     if (_mode == JoinMode::AntiNullAsTrue) {
       if (probe_side_position.is_null() || table_index->indexed_null_values()) {

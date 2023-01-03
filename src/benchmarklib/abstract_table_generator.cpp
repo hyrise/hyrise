@@ -345,16 +345,13 @@ void AbstractTableGenerator::_create_chunk_indexes(
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
-    for (const auto& index_columns : indexes) {
+    for (const auto& index_column_names : indexes) {
       auto column_ids = std::vector<ColumnID>{};
 
-      for (const auto& index_column : index_columns) {
-        column_ids.emplace_back(table->column_id_by_name(index_column));
-      }
-
       std::cout << "-  Creating index on " << table_name << " [ ";
-      for (const auto& index_column : index_columns) {
-        std::cout << index_column << " ";
+      for (const auto& column_name : index_column_names) {
+        std::cout << column_name << " ";
+        column_ids.emplace_back(table->column_id_by_name(column_name));
       }
       std::cout << "] " << std::flush;
       Timer per_index_timer;
@@ -386,15 +383,15 @@ void AbstractTableGenerator::_create_table_indexes(
 
     auto chunk_ids = std::vector<ChunkID>(table->chunk_count());
     std::iota(chunk_ids.begin(), chunk_ids.end(), ChunkID{0});
-    for (const auto& index_columns : indexes) {
-      Assert(index_columns.size() == 1, "Multi-column indexes are currently not supported.");
+    for (const auto& index_column_names : indexes) {
+      Assert(index_column_names.size() == 1, "Multi-column indexes are currently not supported.");
 
-      for (const auto& index_column : index_columns) {
-        std::cout << "-  Creating an index on table " << table_name << " (" << index_column << ") covering "
+      for (const auto& column_name : index_column_names) {
+        std::cout << "-  Creating an index on table " << table_name << " (" << column_name << ") covering "
                   << chunk_ids.size() << " (all finalized) chunks]" << std::flush;
 
         Timer per_table_index_timer;
-        table->create_table_index(table->column_id_by_name(index_column), chunk_ids, TableIndexType::PartialHash);
+        table->create_table_index(table->column_id_by_name(column_name), chunk_ids, TableIndexType::PartialHash);
 
         std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
       }

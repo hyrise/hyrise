@@ -26,7 +26,7 @@ class TableIndexMapIterator : public AbstractTableIndexIterator {
  public:
   using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexMapIterator(MapIterator itr);
+  explicit TableIndexMapIterator(MapIterator it);
 
   reference operator*() const final;
 
@@ -40,7 +40,7 @@ class TableIndexMapIterator : public AbstractTableIndexIterator {
 
   // Creates an instance of TableIndexMapIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
-  static IteratorWrapper wrap(MapIterator itr);
+  static IteratorWrapper wrap(MapIterator it);
 
  private:
   MapIterator _map_iterator;
@@ -54,7 +54,7 @@ class TableIndexVectorIterator : public AbstractTableIndexIterator {
  public:
   using VectorIterator = typename std::vector<RowID>::const_iterator;
 
-  explicit TableIndexVectorIterator(VectorIterator itr);
+  explicit TableIndexVectorIterator(VectorIterator it);
 
   reference operator*() const final;
 
@@ -68,7 +68,7 @@ class TableIndexVectorIterator : public AbstractTableIndexIterator {
 
   // Creates an instance of TableIndexVectorIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
-  static IteratorWrapper wrap(VectorIterator itr);
+  static IteratorWrapper wrap(VectorIterator it);
 
  private:
   VectorIterator _vector_iterator;
