@@ -13,7 +13,6 @@
 
 namespace hyrise {
 
-class AbstractSegment;
 class PartialHashIndexTest;
 
 /**
@@ -23,23 +22,23 @@ class PartialHashIndexTest;
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexIterator : public AbstractTableIndexIterator {
+class TableIndexMapIterator : public AbstractTableIndexIterator {
  public:
   using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexIterator(MapIterator itr);
+  explicit TableIndexMapIterator(MapIterator itr);
 
-  reference operator*() const override;
+  reference operator*() const override final;
 
-  TableIndexIterator& operator++() override;
+  TableIndexMapIterator& operator++() override final;
 
-  bool operator==(const AbstractTableIndexIterator& other) const override;
+  bool operator==(const AbstractTableIndexIterator& other) const override final;
 
-  bool operator!=(const AbstractTableIndexIterator& other) const override;
+  bool operator!=(const AbstractTableIndexIterator& other) const override final;
 
-  std::shared_ptr<AbstractTableIndexIterator> clone() const override;
+  std::shared_ptr<AbstractTableIndexIterator> clone() const override final;
 
-  // Creates an instance of TableIndexIterator using the passed parameter and wraps that instance in an
+  // Creates an instance of TableIndexMapIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
   static IteratorWrapper wrap(MapIterator itr);
 
@@ -51,28 +50,28 @@ class TableIndexIterator : public AbstractTableIndexIterator {
 /**
  * Forward iterator that iterates over a std::vector of RowIDs.
  */
-class TableIndexNullValuesIterator : public AbstractTableIndexIterator {
+class TableIndexVectorIterator : public AbstractTableIndexIterator {
  public:
-  using MapIterator = typename std::vector<RowID>::const_iterator;
+  using VectorIterator = typename std::vector<RowID>::const_iterator;
 
-  explicit TableIndexNullValuesIterator(MapIterator itr);
+  explicit TableIndexVectorIterator(VectorIterator itr);
 
-  reference operator*() const override;
+  reference operator*() const override final;
 
-  TableIndexNullValuesIterator& operator++() override;
+  TableIndexVectorIterator& operator++() override final;
 
-  bool operator==(const AbstractTableIndexIterator& other) const override;
+  bool operator==(const AbstractTableIndexIterator& other) const override final;
 
-  bool operator!=(const AbstractTableIndexIterator& other) const override;
+  bool operator!=(const AbstractTableIndexIterator& other) const override final;
 
-  std::shared_ptr<AbstractTableIndexIterator> clone() const override;
+  std::shared_ptr<AbstractTableIndexIterator> clone() const override final;
 
-  // Creates an instance of TableIndexNullValuesIterator using the passed parameter and wraps that instance in an
+  // Creates an instance of TableIndexVectorIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
-  static IteratorWrapper wrap(MapIterator itr);
+  static IteratorWrapper wrap(VectorIterator itr);
 
  private:
-  MapIterator _map_iterator;
+  VectorIterator _vector_iterator;
 };
 
 /**
@@ -128,19 +127,19 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) override;
-  size_t remove_entries(const std::vector<ChunkID>&) override;
+  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) override final;
+  size_t remove_entries(const std::vector<ChunkID>&) override final;
 
-  Iterator cbegin() const override;
-  Iterator cend() const override;
-  Iterator null_cbegin() const override;
-  Iterator null_cend() const override;
-  size_t estimate_memory_usage() const override;
+  Iterator cbegin() const override final;
+  Iterator cend() const override final;
+  Iterator null_cbegin() const override final;
+  Iterator null_cend() const override final;
+  size_t estimate_memory_usage() const override final;
 
-  IteratorPair range_equals(const AllTypeVariant& value) const override;
-  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override;
+  IteratorPair range_equals(const AllTypeVariant& value) const override final;
+  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const override final;
 
-  std::unordered_set<ChunkID> get_indexed_chunk_ids() const override;
+  std::unordered_set<ChunkID> get_indexed_chunk_ids() const override final;
 
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _map;

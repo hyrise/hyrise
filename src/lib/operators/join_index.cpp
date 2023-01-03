@@ -235,14 +235,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       total_indexed_chunk_ids.insert(indexed_chunk_ids.begin(), indexed_chunk_ids.end());
 
       _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-        _data_join_two_segments_using_table_index(probe_iter, probe_end, probe_chunk_id, table_index);
+        _data_join_probe_segment_with_indexed_segments(probe_iter, probe_end, probe_chunk_id, table_index);
       });
 
       index_joining_duration += timer.lap();
       ++join_index_performance_data.chunks_scanned_with_index;
 
-      // If the chunk was indexed in one of the table indexes, there is no need to join it again. Otherwise, perform
-      // a NestedLoopJoin on the not-indexed chunk.
+      // If the chunk was indexed in the table index, there is no need to join it again. Otherwise, perform a
+      // NestedLoopJoin on the not-indexed chunk.
       auto total_indexed_iter = total_indexed_chunk_ids.begin();
       for (auto index_side_chunk_id = ChunkID{0}; index_side_chunk_id < chunk_count_index_input_table;
            ++index_side_chunk_id) {
@@ -376,10 +376,9 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   join_index_performance_data.chunks_scanned_without_index++;
 }
 
-// Join loop that joins two segments of two columns using an iterator for the probe side,
-// and a table index for the index side.
+// Join loop that joins a segment of the probe table using iterators with the indexed segments of a table index.
 template <typename ProbeIterator>
-void JoinIndex::_data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                           const ChunkID probe_chunk_id,
                                                           const std::shared_ptr<AbstractTableIndex>& table_index) {
   for (; probe_iter != probe_end; ++probe_iter) {

@@ -1,8 +1,6 @@
 #pragma once
 
-#include <memory>
 #include <unordered_set>
-#include <utility>
 #include <vector>
 
 #include "all_type_variant.hpp"
@@ -65,8 +63,9 @@ class IteratorWrapper {
 
 /**
  * This is a superclass for all table indexes. It allows indexing segments of multiple chunks of a table column. It is
- * assumed that all table index types support equality lookup queries (equals and not-equals queries). The
- * IteratorWrapper type is used as the return type for all lookup types.
+ * assumed that all table index types support equality lookup queries (equals and not-equals queries). Index lookup is
+ * done by passing a generic function object to any of the index's access methods. This function object is then called
+ * with the requested IteratorWrappers.
  */
 class AbstractTableIndex : private Noncopyable {
  public:
@@ -159,13 +158,23 @@ class AbstractTableIndex : private Noncopyable {
 
   /**
    * Checks whether null values are indexed.
+   *
+   * @return true if null values are indexed, false otherwise.
    */
   bool indexed_null_values() const;
 
+
+  /**
+   * Returns the type of the index at had.
+   *
+   * @return The index type.
+   */
   TableIndexType type() const;
 
   /**
    * Returns the estimated memory usage of this Index in bytes.
+   *
+   * @return The estimated memory usage in bytes.
    */
   size_t estimate_memory_usage() const;
 
@@ -195,6 +204,7 @@ class AbstractTableIndex : private Noncopyable {
    * Returns an Iterator to the position of the first indexed non-NULL element.
    * Iterating from cbegin() to cend() will result in a position list.
    * Calls _cbegin() of the derived class.
+   *
    * @return An Iterator on the position of first non-NULL element of the Index.
    */
   virtual Iterator _cbegin() const = 0;
@@ -203,6 +213,7 @@ class AbstractTableIndex : private Noncopyable {
    * Returns an Iterator past the position of the last indexed non-NULL element.
    * Iterating from cbegin() to cend() will result in a position list.
    * Calls _cend() of the derived class.
+   *
    * @return An Iterator on the end of the non-NULL elements (one after the last element).
    */
   virtual Iterator _cend() const = 0;
@@ -224,9 +235,8 @@ class AbstractTableIndex : private Noncopyable {
   virtual Iterator _null_cend() const = 0;
 
   /**
-   * Searches for all positions of the entry within the table index.
+   * Searches for all positions of the entry within the table index. Calls _equals() of the derived class.
    *
-   * Calls _equals() of the derived class.
    * @param value used to query the index.
    * @return A pair of Iterators containing the start and end iterator for the stored RowIDs of the element inside the
    * table index.
@@ -234,15 +244,16 @@ class AbstractTableIndex : private Noncopyable {
   virtual IteratorPair _range_equals(const AllTypeVariant& value) const = 0;
 
   /**
-   * Searches for all positions that do not equal to the entry in the table index.
+   * Searches for all positions that do not equal to the entry in the table index. Calls _not_equals() of the derived
+   * class.
    *
-   * Calls _not_equals() of the derived class.
    * @param value used to query the index.
    * @return A pair of IteratorPairs containing two iterator ranges: the range from the beginning of the map until the
    * first occurence of a value equals to the searched entry and the range from the end of the value until the end of
    * the map.
    */
   virtual std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const = 0;
+
   virtual bool _is_index_for(const ColumnID column_id) const = 0;
   virtual std::unordered_set<ChunkID> _get_indexed_chunk_ids() const = 0;
   virtual ColumnID _get_indexed_column_id() const = 0;

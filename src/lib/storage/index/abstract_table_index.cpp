@@ -3,7 +3,7 @@
 namespace hyrise {
 
 AbstractTableIndexIterator::reference AbstractTableIndexIterator::operator*() const {
-  Fail("cannot dereference on empty iterator");
+  Fail("Cannot dereference on empty iterator.");
 }
 
 AbstractTableIndexIterator& AbstractTableIndexIterator::operator++() {

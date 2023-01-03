@@ -79,7 +79,7 @@ class JoinIndex : public AbstractJoinOperator {
                                                  const std::shared_ptr<AbstractChunkIndex>& chunk_index);
 
   template <typename ProbeIterator>
-  void _data_join_two_segments_using_table_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+  void _data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                  const ChunkID probe_chunk_id,
                                                  const std::shared_ptr<AbstractTableIndex>& table_index);
 

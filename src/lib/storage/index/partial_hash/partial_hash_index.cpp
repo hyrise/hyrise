@@ -1,7 +1,5 @@
 #include "partial_hash_index.hpp"
 
-#include "storage/segment_iterate.hpp"
-
 namespace hyrise {
 
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
