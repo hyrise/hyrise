@@ -52,7 +52,8 @@ bool IteratorWrapper::operator!=(const IteratorWrapper& other) const {
   return _impl->operator!=(*other._impl);
 }
 
-AbstractTableIndex::AbstractTableIndex(const TableIndexType type, const ColumnID column_id) : _type(type), _column_id{column_id} {}
+AbstractTableIndex::AbstractTableIndex(const TableIndexType type, const ColumnID column_id)
+  :_type(type), _column_id{column_id} {}
 
 bool AbstractTableIndex::indexed_null_values() const {
   return _null_cbegin() != _null_cend();

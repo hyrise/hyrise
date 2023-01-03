@@ -23,26 +23,26 @@ class PartialHashIndex : public AbstractTableIndex {
    *
    * @return The number of chunks for which index entries were inserted.
    */
-  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) override final;
+  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&) final;
 
   /**
    * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
    *
    * @return The number of removed chunks.
    */
-  size_t remove_entries(const std::vector<ChunkID>&) override final;
+  size_t remove_entries(const std::vector<ChunkID>&) final;
 
  protected:
-  Iterator _cbegin() const override final;
-  Iterator _cend() const override final;
-  Iterator _null_cbegin() const override final;
-  Iterator _null_cend() const override final;
-  size_t _estimate_memory_usage() const override final;
+  Iterator _cbegin() const final;
+  Iterator _cend() const final;
+  Iterator _null_cbegin() const final;
+  Iterator _null_cend() const final;
+  size_t _estimate_memory_usage() const final;
 
-  IteratorPair _range_equals(const AllTypeVariant& value) const override final;
-  std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const override final;
+  IteratorPair _range_equals(const AllTypeVariant& value) const final;
+  std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const final;
 
-  std::unordered_set<ChunkID> _get_indexed_chunk_ids() const override final;
+  std::unordered_set<ChunkID> _get_indexed_chunk_ids() const final;
 
  private:
   std::shared_ptr<BasePartialHashIndexImpl> _impl;
