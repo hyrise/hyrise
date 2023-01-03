@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "storage/chunk.hpp"
 #include "types.hpp"
 
 namespace hyrise {
