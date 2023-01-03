@@ -91,6 +91,7 @@ void read_data_randomly_using_aio(const size_t from, const size_t to, int32_t fd
   //  incl possible duplicates
   for (auto index = from; index < to; ++index) {
     aiocb.aio_buf = read_data_start + index;
+    std::cout << aiocb.aio_buf << std::endl;
     aiocb.aio_offset = uint32_t_size * random_indices[index];
     Assert(aio_read(&aiocb) == 0, "Read error: " + strerror(errno));
 
@@ -436,19 +437,21 @@ void FileIOMicroReadBenchmarkFixture::aio_single_threaded(benchmark::State& stat
 }
 
 void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state, uint16_t thread_count) {
-  auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  auto filedescriptors = std::vector<int32_t>(thread_count);
+  for (auto index = size_t{0}; index < thread_count; ++index) {
+    auto fd = int32_t{};
+    Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+    filedescriptors[index] = fd;
+  }
 
   auto threads = std::vector<aiocb*>(thread_count);
+  auto buffers = std::vector<std::vector<uint32_t>>(thread_count);
   auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / thread_count));
 
   for (auto _ : state) {
     state.PauseTiming();
 
     micro_benchmark_clear_disk_cache();
-    auto read_data = std::vector<uint32_t>{};
-    read_data.resize(NUMBER_OF_ELEMENTS);
-    auto* read_data_start = std::data(read_data);
 
     state.ResumeTiming();
 
@@ -461,23 +464,26 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
         to = NUMBER_OF_ELEMENTS;
       }
 
-      const auto bytes_to_read = static_cast<ssize_t>(uint32_t_size * (to - from));
+      auto vec = std::vector<uint32_t>(batch_size);
+      buffers[index] = vec;
 
       struct aiocb aiocb;
       memset(&aiocb, 0, sizeof(struct aiocb));
-      aiocb.aio_fildes = fd;
+      aiocb.aio_fildes = filedescriptors[index];
       aiocb.aio_offset = from * uint32_t_size;
-      aiocb.aio_buf = read_data_start + from;
-      aiocb.aio_nbytes = bytes_to_read;
+      auto* ptr = std::data(buffers[index]);
+      aiocb.aio_buf = ptr;
+      aiocb.aio_nbytes = uint32_t_size * (to - from);
       aiocb.aio_lio_opcode = LIO_READ;
+      threads[index] = &aiocb;
 
-      threads.push_back(&aiocb);
+      std::cout << "Number: " << NUMBER_OF_ELEMENTS << " Batchsize: " << batch_size << " Offset: " <<  aiocb.aio_offset << " Buf: " << aiocb.aio_buf << " Nbytes: " << aiocb.aio_nbytes << std::endl;
     }
 
-    int return_value = lio_listio(LIO_WAIT, threads.data(), thread_count, NULL);
+    auto return_value = lio_listio(LIO_WAIT, threads.data(), thread_count, NULL);
 
     if (return_value != 0){
-      fail_and_close_file(fd, "lio_listio failed.", return_value);
+      //fail_and_close_file(fd, "lio_listio failed.", return_value);
     }
 
     for (auto index = size_t{0}; index < thread_count; ++index) {
@@ -485,12 +491,21 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
     }
 
     state.PauseTiming();
+    auto read_data = std::vector<uint32_t>{};
+    read_data.resize(NUMBER_OF_ELEMENTS);
+
+    for (auto index = size_t{0}; index < thread_count; ++index) {
+      std::cout << "Size: " << buffers[index].size() << std::endl;
+      read_data.insert(read_data.end(), buffers[index].begin(), buffers[index].end());
+    }
     const auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result. Got: " + std::to_string(sum) + " Expected: " + std::to_string(control_sum) + ".");
     state.ResumeTiming();
   }
 
-  close(fd);
+  for (auto index = size_t{0}; index < thread_count; ++index) {
+    close(filedescriptors[index]);
+  }
 }
 
 void FileIOMicroReadBenchmarkFixture::aio_random_single_threaded(benchmark::State& state) {
