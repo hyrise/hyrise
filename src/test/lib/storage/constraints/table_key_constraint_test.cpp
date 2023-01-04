@@ -142,6 +142,9 @@ TEST_F(TableKeyConstraintTest, Less) {
   EXPECT_FALSE(key_constraint_a < key_constraint_a_reordered);
 
   EXPECT_TRUE(primary_key_constraint_a < key_constraint_a);
+  EXPECT_TRUE(primary_key_constraint_a < key_constraint_a_reordered);
+  EXPECT_TRUE(primary_key_constraint_a < key_constraint_b);
+  EXPECT_TRUE(primary_key_constraint_a < key_constraint_c);
 
   EXPECT_TRUE(key_constraint_a < key_constraint_b);
 

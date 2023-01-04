@@ -311,13 +311,13 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   AggregateNode::make(expression_vector(a, b, c, d), expression_vector(sum_(e)),
     mock_node);
 
-  const auto actual_lqp = apply_rule(rule, lqp);
-
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(a, b, c, d, sum_(e)),
     AggregateNode::make(expression_vector(a, c), expression_vector(sum_(e), any_(b), any_(d)),
       mock_node));
   // clang-format on
+
+  const auto actual_lqp = apply_rule(rule, lqp);
 
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
