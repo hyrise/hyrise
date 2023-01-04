@@ -62,10 +62,8 @@ class JoinNodeTest : public BaseTest {
 
 class JoinNodeMultiJoinModeTest : public JoinNodeTest, public ::testing::WithParamInterface<JoinMode> {};
 
-const auto join_mode_formatter = [](const auto& info) { return std::string{magic_enum::enum_name(info.param)}; };
-
 INSTANTIATE_TEST_SUITE_P(JoinNodeMultiJoinModeTestInstance, JoinNodeMultiJoinModeTest,
-                         ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), join_mode_formatter);
+                         ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
 
 TEST_F(JoinNodeTest, Description) {
   EXPECT_EQ(_cross_join_node->description(), "[Join] Mode: Cross");
