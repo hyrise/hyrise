@@ -27,7 +27,7 @@ bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const s
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -199,50 +199,6 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
          _pruned_column_ids == stored_table_node._pruned_column_ids;
-}
-
-std::shared_ptr<const StoredTableNode> StoredTableNode::_get_or_find_referenced_node(
-    const std::string& table_name) const {
-  // Lookup referenced StoredTableNode from cache
-  auto referenced_node = std::shared_ptr<const StoredTableNode>{};
-  const auto& stored_table_node_it = _ind_stored_table_node_cache.find(table_name);
-  if (stored_table_node_it != _ind_stored_table_node_cache.cend()) {
-    // The node might still be a nullptr if the table is not part of the current LQP.
-    referenced_node = stored_table_node_it->second.lock();
-    return referenced_node;
-  }
-
-  // Lookup failed. Actually search for node.
-  auto root_node = std::shared_ptr<const AbstractLQPNode>{};
-  visit_lqp_upwards(shared_from_this(), [&](const auto& node) {
-    if (node->output_count() == 0) {
-      Assert(!root_node, "LQP has multiple root nodes");
-      root_node = node;
-    }
-
-    return LQPUpwardVisitation::VisitOutputs;
-  });
-
-  Assert(root_node, "LQP has no root node");
-  visit_lqp(root_node, [&](const auto& node) {
-    if (referenced_node) {
-      return LQPVisitation::DoNotVisitInputs;
-    }
-
-    if (node->type == LQPNodeType::StoredTable) {
-      const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(node);
-      if (stored_table_node->table_name == table_name) {
-        referenced_node = stored_table_node;
-      }
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-
-  // referenced_node might be a nullptr if a StoredTableNode of the requested table is not present in the LQP. However,
-  // we do not want to search for it again.
-  _ind_stored_table_node_cache[table_name] = referenced_node;
-  return referenced_node;
 }
 
 }  // namespace hyrise
