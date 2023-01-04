@@ -391,11 +391,9 @@ void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator pro
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
     // If the probe side value is null or at least one null value exists in the indexed join segments, the probe value
     // has a match.
-    if (_mode == JoinMode::AntiNullAsTrue) {
-      if (probe_side_position.is_null() || table_index->indexed_null_values()) {
-        table_index->access_values_with_iterators(append_matches);
-        table_index->access_null_values_with_iterators(append_matches);
-      }
+    if (_mode == JoinMode::AntiNullAsTrue && (probe_side_position.is_null() || table_index->indexed_null_values())) {
+      table_index->access_values_with_iterators(append_matches);
+      table_index->access_null_values_with_iterators(append_matches);
     } else {
       if (!probe_side_position.is_null()) {
         switch (_adjusted_primary_predicate.predicate_condition) {
@@ -408,7 +406,7 @@ void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator pro
             break;
           }
           default: {
-            Fail("Unsupported comparison type encountered");
+            Fail("Unsupported comparison type encountered.");
           }
         }
       }

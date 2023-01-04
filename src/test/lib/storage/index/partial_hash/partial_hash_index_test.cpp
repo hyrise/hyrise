@@ -260,6 +260,39 @@ TEST_F(PartialHashIndexTest, NullValues) {
   EXPECT_EQ(size, 2);
 }
 
+TEST_F(PartialHashIndexTest, IndexedNullValues) {
+  auto table_column_definitions = TableColumnDefinitions{};
+  table_column_definitions.emplace_back("column_1", DataType::String, true);
+
+  auto new_values1 = pmr_vector<pmr_string>{"hotel", "delta", "gamma", "delta", "apple", "charlie", "charlie", "inbox"};
+  auto new_null_values_1 = {false, false, false, false, false, false, false, false};
+  auto new_values2 = pmr_vector<pmr_string>{"hello", "delta", "funny", "names", "nullptr", "paper", "clock", "inbox"};
+  auto new_null_values_2 = {false, false, false, false, true, false, false, false};
+
+  auto new_segment1 = std::make_shared<ValueSegment<pmr_string>>(std::move(new_values1), std::move(new_null_values_1));
+  auto new_segment2 = std::make_shared<ValueSegment<pmr_string>>(std::move(new_values2), std::move(new_null_values_2));
+
+  // The first segment contains no null values, the second one does.
+  const auto new_segments1 = Segments{new_segment1};
+  const auto new_segments2 = Segments{new_segment2};
+
+  auto new_table = std::make_shared<Table>(table_column_definitions, TableType::Data);
+  new_table->append_chunk(new_segments1);
+  new_table->append_chunk(new_segments2);
+
+  auto chunks_to_index0 = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+  auto chunks_to_index1 = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+
+  chunks_to_index0.push_back(std::make_pair(ChunkID{0}, new_table->get_chunk(ChunkID{0})));
+  chunks_to_index1.push_back(std::make_pair(ChunkID{1}, new_table->get_chunk(ChunkID{1})));
+
+  auto new_index = std::make_shared<PartialHashIndex>(chunks_to_index0, ColumnID{0});
+  EXPECT_FALSE(new_index->indexed_null_values());
+
+  new_index->insert_entries(chunks_to_index1);
+  EXPECT_TRUE(new_index->indexed_null_values());
+}
+
 TEST_F(PartialHashIndexTest, Add) {
   pmr_vector<pmr_string> values = {"new1", "new2", "new3", "new4", "nullptr", "new6", "new7", "new8"};
   pmr_vector<bool> null_values = {false, false, false, false, true, false, false, false};
