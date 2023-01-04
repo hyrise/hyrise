@@ -239,7 +239,6 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       });
 
       index_joining_duration += timer.lap();
-      ++join_index_performance_data.chunks_scanned_with_index;
 
       // If the chunk was indexed in the table index, there is no need to join it again. Otherwise, perform a
       // NestedLoopJoin on the not-indexed chunk.
@@ -248,6 +247,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
            ++index_side_chunk_id) {
         if (*total_indexed_iter == index_side_chunk_id && total_indexed_iter != total_indexed_chunk_ids.end()) {
           ++total_indexed_iter;
+          ++join_index_performance_data.chunks_scanned_with_index;
         } else {
           _fallback_nested_loop(index_side_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
                                 secondary_predicate_evaluator);
