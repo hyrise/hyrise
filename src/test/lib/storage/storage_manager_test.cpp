@@ -89,12 +89,12 @@ TEST_F(StorageManagerTest, DropTable) {
 
 TEST_F(StorageManagerTest, DoesNotHaveTable) {
   auto& sm = Hyrise::get().storage_manager;
-  EXPECT_EQ(sm.has_table("third_table"), false);
+  EXPECT_FALSE(sm.has_table("third_table"));
 }
 
 TEST_F(StorageManagerTest, HasTable) {
   auto& sm = Hyrise::get().storage_manager;
-  EXPECT_EQ(sm.has_table("first_table"), true);
+  EXPECT_TRUE(sm.has_table("first_table"));
 }
 
 TEST_F(StorageManagerTest, AddViewTwice) {
@@ -136,12 +136,12 @@ TEST_F(StorageManagerTest, ResetView) {
 
 TEST_F(StorageManagerTest, DoesNotHaveView) {
   auto& sm = Hyrise::get().storage_manager;
-  EXPECT_EQ(sm.has_view("third_view"), false);
+  EXPECT_FALSE(sm.has_view("third_view"));
 }
 
 TEST_F(StorageManagerTest, HasView) {
   auto& sm = Hyrise::get().storage_manager;
-  EXPECT_EQ(sm.has_view("first_view"), true);
+  EXPECT_TRUE(sm.has_view("first_view"));
 }
 
 TEST_F(StorageManagerTest, ListViewNames) {
@@ -224,12 +224,12 @@ TEST_F(StorageManagerTest, DropPreparedPlan) {
 
 TEST_F(StorageManagerTest, DoesNotHavePreparedPlan) {
   auto& sm = Hyrise::get().storage_manager;
-  EXPECT_EQ(sm.has_prepared_plan("third_prepared_plan"), false);
+  EXPECT_FALSE(sm.has_prepared_plan("third_prepared_plan"));
 }
 
 TEST_F(StorageManagerTest, HasPreparedPlan) {
   auto& sm = Hyrise::get().storage_manager;
-  EXPECT_EQ(sm.has_prepared_plan("first_prepared_plan"), true);
+  EXPECT_TRUE(sm.has_prepared_plan("first_prepared_plan"));
 }
 
 }  // namespace hyrise

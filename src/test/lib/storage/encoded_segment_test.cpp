@@ -614,12 +614,12 @@ TEST_F(EncodedSegmentTest, RunLengthEncodingNullValues) {
   EXPECT_EQ(run_length_segment->values()->at(14), 97);  // no value 96 in values()
 
   // Check that successive NULL runs are merged to single position
-  EXPECT_EQ(run_length_segment->null_values()->at(2), false);
-  EXPECT_EQ(run_length_segment->null_values()->at(3), true);  // NULLs of values 3/4 are merged into single run
-  EXPECT_EQ(run_length_segment->null_values()->at(4), false);
-  EXPECT_EQ(run_length_segment->null_values()->at(12), false);
-  EXPECT_EQ(run_length_segment->null_values()->at(13), true);
-  EXPECT_EQ(run_length_segment->null_values()->at(14), false);
+  EXPECT_FALSE(run_length_segment->null_values()->at(2));
+  EXPECT_TRUE(run_length_segment->null_values()->at(3));  // NULLs of values 3/4 are merged into single run
+  EXPECT_FALSE(run_length_segment->null_values()->at(4));
+  EXPECT_FALSE(run_length_segment->null_values()->at(12));
+  EXPECT_TRUE(run_length_segment->null_values()->at(13));
+  EXPECT_FALSE(run_length_segment->null_values()->at(14));
 }
 
 // Testing the internal data structures of Run Length-encoded segments for runs and NULL values where NULL values are
@@ -706,10 +706,10 @@ TEST_F(EncodedSegmentTest, FrameOfReference) {
   EXPECT_TRUE(for_segment->null_values());
   EXPECT_EQ(for_segment->null_values()->size(), row_count);
 
-  EXPECT_EQ((*for_segment->null_values())[0], false);
-  EXPECT_EQ((*for_segment->null_values())[1], true);
-  EXPECT_EQ((*for_segment->null_values())[7], true);
-  EXPECT_EQ((*for_segment->null_values())[16], false);
+  EXPECT_FALSE((*for_segment->null_values())[0]);
+  EXPECT_TRUE((*for_segment->null_values())[1]);
+  EXPECT_TRUE((*for_segment->null_values())[7]);
+  EXPECT_FALSE((*for_segment->null_values())[16]);
 
   // Block minium should be the smallest value: 0
   EXPECT_EQ(for_segment->block_minima().front(), minimum);

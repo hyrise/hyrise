@@ -11,9 +11,9 @@
 
 #include "join_graph_edge.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 std::optional<JoinGraph> JoinGraphBuilder::operator()(const std::shared_ptr<AbstractLQPNode>& lqp) {
   // No need to create a join graph consisting of just one vertex and no predicates

@@ -148,6 +148,7 @@ set(
     lib/optimizer/strategy/subquery_to_join_rule_test.cpp
     lib/scheduler/operator_task_test.cpp
     lib/scheduler/scheduler_test.cpp
+    lib/scheduler/task_queue_test.cpp
     lib/server/mock_socket.hpp
     lib/server/postgres_protocol_handler_test.cpp
     lib/server/query_handler_test.cpp

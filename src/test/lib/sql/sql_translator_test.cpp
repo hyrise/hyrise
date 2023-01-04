@@ -38,10 +38,10 @@
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-using namespace std::string_literals;           // NOLINT
-
 namespace hyrise {
+
+using namespace std::string_literals;   // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class SQLTranslatorTest : public BaseTest {
  public:
@@ -1915,7 +1915,7 @@ TEST_F(SQLTranslatorTest, ShowTables) {
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -1933,7 +1933,7 @@ TEST_F(SQLTranslatorTest, ShowColumns) {
     static_table_node);
   // clang-format on
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -1944,7 +1944,7 @@ TEST_F(SQLTranslatorTest, SelectMetaTable) {
   const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
   const auto expected_lqp = StaticTableNode::make(meta_table);
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -1968,42 +1968,42 @@ TEST_F(SQLTranslatorTest, SelectMetaTableSubquery) {
   // clang-format on
   const auto expected_lqp = ProjectionNode::make(expression_vector(table_name_column), expected_subquery_lqp);
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableTwoSubqueries) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper("SELECT * from meta_tables, (SELECT 1) as subquery");
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableInClauseNotCacheable) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM int_float WHERE a in (SELECT column_count FROM " + MetaTableManager::META_PREFIX + "tables)");
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableOuterWithInClauseNotCacheable) {
   const auto [actual_lqp, translation_info] = sql_to_lqp_helper(
       "SELECT * FROM " + MetaTableManager::META_PREFIX + "tables WHERE column_count in (SELECT * FROM int_float2)");
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableExistsClauseNotCacheable) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT 1 WHERE EXISTS (SELECT * FROM " + MetaTableManager::META_PREFIX + "tables)");
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableOuterExistsClauseNotCacheable) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT * FROM  " + MetaTableManager::META_PREFIX + "tables WHERE EXISTS (SELECT 1)");
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
 }
 
 TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
@@ -2023,7 +2023,22 @@ TEST_F(SQLTranslatorTest, SelectMetaTableMultipleAccess) {
   const auto table_2 = std::static_pointer_cast<StaticTableNode>(actual_lqp->right_input())->table;
   EXPECT_EQ(table_1, table_2);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
+}
+
+TEST_F(SQLTranslatorTest, ExportMetaTable) {
+  const auto meta_table_name = MetaTableManager::META_PREFIX + "tables";
+  const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY " + meta_table_name + " TO 'foo.csv'");
+
+  const auto meta_table = Hyrise::get().meta_table_manager.generate_table("tables");
+  // clang-format off
+  const auto expected_lqp =
+  ExportNode::make("foo.csv", FileType::Auto,
+    StaticTableNode::make(meta_table));
+  // clang-format on
+
+  EXPECT_FALSE(translation_info.cacheable);
+  EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
 TEST_F(SQLTranslatorTest, DMLOnImmutableMetatables) {
@@ -2122,7 +2137,7 @@ TEST_F(SQLTranslatorTest, InsertValuesToMetaTable) {
       DummyTableNode::make()));
   // clang-format on
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -2172,7 +2187,7 @@ TEST_F(SQLTranslatorTest, DeleteFromMetaTable) {
     DummyTableNode::make());
   // clang-format on
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -2262,7 +2277,7 @@ TEST_F(SQLTranslatorTest, UpdateMetaTable) {
       row_subquery_lqp));
   // clang-format on
 
-  EXPECT_EQ(translation_info.cacheable, false);
+  EXPECT_FALSE(translation_info.cacheable);
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
@@ -3004,34 +3019,34 @@ TEST_F(SQLTranslatorTest, CopyStatementExport) {
   // clang-format off
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl';");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Auto, stored_table_node_int_float); // NOLINT
+    const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Auto, stored_table_node_int_float); // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl';", UseMvcc::Yes);
     const auto expected_lqp =
-    ExportNode::make("int_float", "a_file.tbl", FileType::Auto,
+    ExportNode::make("a_file.tbl", FileType::Auto,
       ValidateNode::make(stored_table_node_int_float));
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT TBL;");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Tbl, stored_table_node_int_float);
+    const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Tbl, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT CSV;");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Csv, stored_table_node_int_float);
+    const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Csv, stored_table_node_int_float);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT BINARY;");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
+    const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   {
     const auto [actual_lqp, translation_info] = sql_to_lqp_helper("COPY int_float TO 'a_file.tbl' WITH FORMAT BIN;");
-    const auto expected_lqp = ExportNode::make("int_float", "a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
+    const auto expected_lqp = ExportNode::make("a_file.tbl", FileType::Binary, stored_table_node_int_float);  // NOLINT
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
   // clang-format on

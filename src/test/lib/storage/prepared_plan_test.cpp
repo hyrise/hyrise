@@ -10,9 +10,9 @@
 #include "logical_query_plan/projection_node.hpp"
 #include "storage/prepared_plan.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class PreparedPlanTest : public BaseTest {
  public:

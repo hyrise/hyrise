@@ -6,9 +6,9 @@
 #include "storage/materialize.hpp"
 #include "storage/table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class MaterializeTest : public EncodingTest {
  public:
@@ -112,8 +112,8 @@ TEST_P(MaterializeTest, MaterializeValuesAndNulls) {
       *_data_table_with_nulls->get_chunk(ChunkID(1))->get_segment(ColumnID(0)));
 
   ASSERT_EQ(values_and_nulls.size(), 2u);
-  EXPECT_EQ(values_and_nulls[0].first, true);
-  EXPECT_EQ(values_and_nulls[1].first, false);
+  EXPECT_TRUE(values_and_nulls[0].first);
+  EXPECT_FALSE(values_and_nulls[1].first);
   EXPECT_EQ(values_and_nulls[1].second, 1234);
 }
 
@@ -124,12 +124,12 @@ TEST_P(MaterializeTest, MaterializeValuesAndNullsTwoSegments) {
   materialize_values_and_nulls(*_data_table_with_nulls->get_chunk(ChunkID(1))->get_segment(ColumnID(0)),
                                values_and_nulls);
   ASSERT_EQ(values_and_nulls.size(), 4u);
-  EXPECT_EQ(values_and_nulls[0].first, false);
+  EXPECT_FALSE(values_and_nulls[0].first);
   EXPECT_EQ(values_and_nulls[0].second, 12345);
-  EXPECT_EQ(values_and_nulls[1].first, false);
+  EXPECT_FALSE(values_and_nulls[1].first);
   EXPECT_EQ(values_and_nulls[1].second, 123);
-  EXPECT_EQ(values_and_nulls[2].first, true);
-  EXPECT_EQ(values_and_nulls[3].first, false);
+  EXPECT_TRUE(values_and_nulls[2].first);
+  EXPECT_FALSE(values_and_nulls[3].first);
   EXPECT_EQ(values_and_nulls[3].second, 1234);
 }
 

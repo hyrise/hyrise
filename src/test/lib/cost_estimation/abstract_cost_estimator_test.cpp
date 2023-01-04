@@ -8,11 +8,10 @@
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 using MockCosts = std::unordered_map<std::shared_ptr<AbstractLQPNode>, Cost>;
 

@@ -5,9 +5,9 @@
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/union_node.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 std::string PredicateMergeRule::name() const {
   static const auto name = std::string{"PredicateMergeRule"};
