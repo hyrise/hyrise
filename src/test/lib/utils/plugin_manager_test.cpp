@@ -108,7 +108,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
   EXPECT_TRUE(sm.has_table("TableOfTestPlugin_0"));
 
   // The PluginManager adds log messages when user executable functions are called
-  EXPECT_EQ(lm.log_entries().size(), 1);
+  ASSERT_EQ(lm.log_entries().size(), 1);
   {
     const auto& entry = lm.log_entries()[0];
     EXPECT_EQ(entry.reporter, "PluginManager");
@@ -121,7 +121,7 @@ TEST_F(PluginManagerTest, CallUserExecutableFunctions) {
   pm.exec_user_function("hyriseSecondTestPlugin", "OurFreelyChoosableFunctionName");
   // The second test plugin creates the below table when the called function is executed
   EXPECT_TRUE(sm.has_table("TableOfSecondTestPlugin"));
-  EXPECT_EQ(lm.log_entries().size(), 2);
+  ASSERT_EQ(lm.log_entries().size(), 2);
   {
     const auto& entry = lm.log_entries()[1];
     EXPECT_EQ(entry.reporter, "PluginManager");
@@ -184,13 +184,13 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
 
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
 
-  pm.exec_pre_benchmark_hook("hyriseTestPlugin", benchmark_item_runner);
+  pm.exec_pre_benchmark_hook("hyriseTestPlugin", *benchmark_item_runner);
   // The test plugin creates the below table when the hook is executed and adds a row for each benchmark item.
   EXPECT_TRUE(sm.has_table("BenchmarkItems"));
   EXPECT_EQ(sm.get_table("BenchmarkItems")->row_count(), 22);
 
   // The PluginManager adds log messages when benchmark hooks are called.
-  EXPECT_EQ(lm.log_entries().size(), 1);
+  ASSERT_EQ(lm.log_entries().size(), 1);
   {
     const auto& entry = lm.log_entries()[0];
     EXPECT_EQ(entry.reporter, "PluginManager");
@@ -203,7 +203,7 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
   EXPECT_FALSE(sm.has_table("BenchmarkItems"));
 
   // The PluginManager adds log messages when benchmark hooks are called.
-  EXPECT_EQ(lm.log_entries().size(), 2);
+  ASSERT_EQ(lm.log_entries().size(), 2);
   {
     const auto& entry = lm.log_entries()[1];
     EXPECT_EQ(entry.reporter, "PluginManager");
@@ -219,19 +219,19 @@ TEST_F(PluginManagerTest, CallNotExistingBenchmarkHooks) {
       ClusteringConfiguration::None);
 
   // Call non-existing plugin (with non-existing hooks).
-  EXPECT_THROW(pm.exec_pre_benchmark_hook("hyriseUnknownPlugin", benchmark_item_runner), std::logic_error);
+  EXPECT_THROW(pm.exec_pre_benchmark_hook("hyriseUnknownPlugin", *benchmark_item_runner), std::logic_error);
   EXPECT_THROW(pm.exec_post_benchmark_hook("hyriseUnknownPlugin"), std::logic_error);
 
   // Call existing, loaded plugin without hooks.
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
-  EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseSecondTestPlugin", benchmark_item_runner), std::logic_error);
+  EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseSecondTestPlugin", *benchmark_item_runner), std::logic_error);
   EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseSecondTestPlugin"), std::logic_error);
   pm.unload_plugin("hyriseSecondTestPlugin");
 
   // Call hooks exposed by plugin but plugin has been unloaded before.
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.unload_plugin("hyriseTestPlugin");
-  EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseTestPlugin", benchmark_item_runner), std::logic_error);
+  EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseTestPlugin", *benchmark_item_runner), std::logic_error);
   EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseTestPlugin"), std::logic_error);
 }
 

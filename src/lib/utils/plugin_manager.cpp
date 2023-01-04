@@ -92,7 +92,7 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
 void PluginManager::exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name) {
   Assert(_user_executable_functions.contains({plugin_name, function_name}),
-         "There is no " + function_name + " defined for plugin " + plugin_name + ".");
+         "There is no " + function_name + " defined for plugin `" + plugin_name + ".");
 
   const auto user_executable_function = _user_executable_functions[{plugin_name, function_name}];
   user_executable_function();
@@ -105,9 +105,9 @@ void PluginManager::exec_user_function(const PluginName& plugin_name, const Plug
 }
 
 void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
-                                            const std::unique_ptr<AbstractBenchmarkItemRunner>& benchmark_item_runner) {
+                                            AbstractBenchmarkItemRunner& benchmark_item_runner) {
   Assert(_pre_benchmark_hooks.contains({plugin_name}),
-         "There is no pre-benchmark hook defined for plugin " + plugin_name + ".");
+         "There is no pre-benchmark hook defined for plugin `" + plugin_name + "`.");
 
   const auto pre_benchmark_hook = _pre_benchmark_hooks[plugin_name];
   pre_benchmark_hook(benchmark_item_runner);
@@ -119,7 +119,7 @@ void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
 
 void PluginManager::exec_post_benchmark_hook(const PluginName& plugin_name) {
   Assert(_post_benchmark_hooks.contains({plugin_name}),
-         "There is no post-benchmark hook defined for plugin " + plugin_name + ".");
+         "There is no post-benchmark hook defined for plugin `" + plugin_name + "`.");
 
   const auto post_benchmark_hook = _post_benchmark_hooks[plugin_name];
   post_benchmark_hook();

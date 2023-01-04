@@ -79,7 +79,7 @@ BenchmarkRunner::BenchmarkRunner(const BenchmarkConfig& config,
     _loaded_plugins.reserve(_config.plugins.size());
     for (const auto& plugin : _config.plugins) {
       const auto& plugin_name = plugin_name_from_path(plugin);
-      std::cout << "- Load plugin" << plugin_name << std::endl;
+      std::cout << "- Load plugin " << plugin_name << " from " << plugin << std::endl;
       Hyrise::get().plugin_manager.load_plugin(plugin);
       _loaded_plugins.emplace_back(plugin_name);
     }
@@ -137,8 +137,8 @@ void BenchmarkRunner::run() {
       continue;
     }
 
-    std::cout << "- Run pre-benchmark hook for " << plugin << std::endl;
-    Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, _benchmark_item_runner);
+    std::cout << "- Run pre-benchmark hook of " << plugin << std::endl;
+    Hyrise::get().plugin_manager.exec_pre_benchmark_hook(plugin, *_benchmark_item_runner);
   }
 
   switch (_config.benchmark_mode) {
@@ -157,7 +157,7 @@ void BenchmarkRunner::run() {
       continue;
     }
 
-    std::cout << "- Run post-benchmark hook for " << plugin << std::endl;
+    std::cout << "- Run post-benchmark hook of " << plugin << std::endl;
     Hyrise::get().plugin_manager.exec_post_benchmark_hook(plugin);
   }
 

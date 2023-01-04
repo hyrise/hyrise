@@ -38,11 +38,11 @@ void TestPlugin::a_static_user_executable_function() {
 }
 
 std::optional<PreBenchmarkHook> TestPlugin::pre_benchmark_hook() {
-  return [&](const auto& benchmark_item_runner) {
+  return [&](auto& benchmark_item_runner) {
     const auto column_definitions = TableColumnDefinitions{{"item_id", DataType::Int, false}};
     const auto table = std::make_shared<Table>(column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-    for (const auto item_id : benchmark_item_runner->items()) {
+    for (const auto item_id : benchmark_item_runner.items()) {
       table->append({static_cast<int32_t>(item_id)});
     }
     storage_manager.add_table("BenchmarkItems", table);
@@ -53,6 +53,6 @@ std::optional<PostBenchmarkHook> TestPlugin::post_benchmark_hook() {
   return [&]() { storage_manager.drop_table("BenchmarkItems"); };
 }
 
-EXPORT_PLUGIN(TestPlugin)
+EXPORT_PLUGIN(TestPlugin);
 
 }  // namespace hyrise

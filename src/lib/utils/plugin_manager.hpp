@@ -40,8 +40,7 @@ class PluginManager : public Noncopyable {
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
   void exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name);
-  void exec_pre_benchmark_hook(const PluginName& plugin_name,
-                               const std::unique_ptr<AbstractBenchmarkItemRunner>& benchmark_item_runner);
+  void exec_pre_benchmark_hook(const PluginName& plugin_name, AbstractBenchmarkItemRunner& benchmark_item_runner);
   void exec_post_benchmark_hook(const PluginName& plugin_name);
 
   std::vector<PluginName> loaded_plugins() const;
