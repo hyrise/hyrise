@@ -58,9 +58,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class LQPTranslatorTest : public BaseTest {
  public:
@@ -1112,7 +1112,7 @@ TEST_F(LQPTranslatorTest, CreatePreparedPlan) {
 TEST_F(LQPTranslatorTest, Export) {
   // clang-format off
   const auto lqp =
-  ExportNode::make("a_table", "a_file.tbl", FileType::Auto,
+  ExportNode::make("a_file.tbl", FileType::Auto,
     ValidateNode::make(int_float_node));
   // clang-format on
 

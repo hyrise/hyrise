@@ -48,13 +48,7 @@ class OperatorsExportTest : public BaseTest {
 class OperatorsExportMultiFileTypeTest : public OperatorsExportTest, public ::testing::WithParamInterface<FileType> {};
 
 auto export_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
-  auto stream = std::stringstream{};
-  stream << info.param;
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
+  return std::string{magic_enum::enum_name(info.param)};
 };
 
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsExportMultiFileTypeTest,
@@ -97,6 +91,16 @@ TEST_P(OperatorsExportMultiFileTypeTest, ExportWithoutFileType) {
 
   EXPECT_TRUE(file_exists(filename));
   EXPECT_TRUE(compare_files(reference_filename, filename));
+}
+
+TEST_P(OperatorsExportMultiFileTypeTest, NameAndDescription) {
+  const auto exporter = std::make_shared<Export>(nullptr, "a/file/path", GetParam());
+  const auto file_type = GetParam() == FileType::Binary ? "binary" : "csv";
+  EXPECT_EQ(exporter->name(), "Export");
+  EXPECT_EQ(exporter->description(DescriptionMode::SingleLine),
+            std::string{"Export to 'a/file/path' ("} + file_type + ")");
+  EXPECT_EQ(exporter->description(DescriptionMode::MultiLine),
+            std::string{"Export\nto 'a/file/path'\n("} + file_type + ")");
 }
 
 TEST_F(OperatorsExportTest, NonsensePath) {

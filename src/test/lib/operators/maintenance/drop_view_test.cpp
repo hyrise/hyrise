@@ -39,7 +39,7 @@ TEST_F(DropViewTest, DeepCopy) {
   EXPECT_NE(dv->get_output(), nullptr);
 
   const auto copy = dv->deep_copy();
-  EXPECT_EQ(copy->executed(), false);
+  EXPECT_FALSE(copy->executed());
 }
 
 TEST_F(DropViewTest, Execute) {

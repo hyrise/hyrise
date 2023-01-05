@@ -7,9 +7,9 @@
 #include "optimizer/strategy/null_scan_removal_rule.hpp"
 #include "strategy_base_test.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class NullScanRemovalRuleTest : public StrategyBaseTest {
  public:

@@ -10,9 +10,9 @@
 #include "logical_query_plan/union_node.hpp"
 #include "optimizer/join_ordering/join_graph_builder.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinGraphBuilderTest : public BaseTest {
  public:

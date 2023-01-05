@@ -21,9 +21,9 @@
 #include "tpch/tpch_table_generator.hpp"
 #include "types.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class TableWrapper;
 

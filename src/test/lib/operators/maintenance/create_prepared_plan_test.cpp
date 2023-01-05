@@ -36,7 +36,7 @@ ParameterIDs: []
 
 TEST_F(CreatePreparedPlanTest, DeepCopy) {
   const auto copy = std::dynamic_pointer_cast<CreatePreparedPlan>(create_prepared_plan->deep_copy());
-  EXPECT_EQ(copy->executed(), false);
+  EXPECT_FALSE(copy->executed());
 }
 
 TEST_F(CreatePreparedPlanTest, Execute) {
