@@ -40,7 +40,7 @@ class TableIndexMapIterator : public AbstractTableIndexIterator {
 
   // Creates an instance of TableIndexMapIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
-  static IteratorWrapper wrap(MapIterator it);
+  static IteratorWrapper create_wrapper(MapIterator it);
 
  private:
   MapIterator _map_iterator;
@@ -68,7 +68,7 @@ class TableIndexVectorIterator : public AbstractTableIndexIterator {
 
   // Creates an instance of TableIndexVectorIterator using the passed parameter and wraps that instance in an
   // IteratorWrapper. Return that wrapper.
-  static IteratorWrapper wrap(VectorIterator it);
+  static IteratorWrapper create_wrapper(VectorIterator it);
 
  private:
   VectorIterator _vector_iterator;
