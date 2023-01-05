@@ -82,7 +82,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
  public:
   using Iterator = IteratorWrapper;
-  using IteratorPair = std::pair<IteratorWrapper, IteratorWrapper>;
+  using IteratorPair = std::pair<Iterator, Iterator>;
 
   virtual ~BasePartialHashIndexImpl() = default;
 

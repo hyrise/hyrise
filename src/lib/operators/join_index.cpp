@@ -396,21 +396,22 @@ void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator pro
       table_index->access_null_values_with_iterators(append_matches);
       continue;
     }
-    if (!probe_side_position.is_null()) {
-      switch (_adjusted_primary_predicate.predicate_condition) {
-        case PredicateCondition::Equals: {
-          table_index->range_equals_with_iterators(append_matches, probe_side_position.value());
-          break;
-        }
-        case PredicateCondition::NotEquals: {
-          table_index->range_not_equals_with_iterators(append_matches, probe_side_position.value());
-          break;
-        }
-        default: {
-          Fail("Unsupported comparison type encountered.");
-        }
-      }
+    if (probe_side_position.is_null()) {
+      continue;
     }
+    switch (_adjusted_primary_predicate.predicate_condition) {
+      case PredicateCondition::Equals: {
+        table_index->range_equals_with_iterators(append_matches, probe_side_position.value());
+        break;
+      }
+      case PredicateCondition::NotEquals: {
+        table_index->range_not_equals_with_iterators(append_matches, probe_side_position.value());
+        break;
+      }
+      default: {
+        Fail("Unsupported comparison type encountered.");
+      }
+    }   
   }
 }
 
