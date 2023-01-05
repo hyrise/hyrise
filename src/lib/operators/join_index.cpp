@@ -411,7 +411,7 @@ void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator pro
       default: {
         Fail("Unsupported comparison type encountered.");
       }
-    }   
+    }
   }
 }
 
