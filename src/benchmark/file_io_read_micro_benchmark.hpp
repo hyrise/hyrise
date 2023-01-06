@@ -36,6 +36,7 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   uint32_t NUMBER_OF_BYTES = uint32_t{0};
   uint32_t NUMBER_OF_ELEMENTS = uint32_t{0};
   std::vector<uint32_t> numbers = std::vector<uint32_t>{};
+  bool threads_ready_to_executed = false;
   void read_non_atomic_multi_threaded(benchmark::State& state, uint16_t thread_count);
   void read_non_atomic_single_threaded(benchmark::State& state);
   void read_non_atomic_random_multi_threaded(benchmark::State& state, uint16_t thread_count);
