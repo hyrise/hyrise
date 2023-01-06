@@ -1,6 +1,8 @@
 #include "file_io_read_micro_benchmark.hpp"
 
+#ifdef __linux__
 #include <umap/umap.h>
+#endif
 
 namespace {
 
@@ -37,13 +39,21 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
 
     auto* map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
 
+
     if (mapping_type == MMAP) {
       map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
-    } else if (mapping_type == UMAP) {
+    }
+#ifdef __APPLE__
+    else {
+      Fail("Error: Mapping type invalid or not supported.");
+    }
+#else
+    else if (mapping_type == UMAP) {
       map = reinterpret_cast<int32_t*>(umap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
     } else {
       Fail("Error: Invalid mapping type.");
     }
+#endif
 
     Assert((map != MAP_FAILED), fail_and_close_file(fd, "Mapping Failed: ", errno));
 
@@ -67,11 +77,17 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
     // Remove memory mapping after job is done.
     if (mapping_type == MMAP) {
       Assert((munmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
-    } else /* if (mapping_type == UMAP) */ {
-      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
-    } 
+    }
+#ifdef __APPLE__
+    else {
+      Fail("Error: Mapping type not supported.");
+    }
+#else
+    else /* if (mapping_type == UMAP) */ {
+      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));;
+    }
+#endif
   }
-
   close(fd);
 }
 
@@ -95,11 +111,18 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
 
     if (mapping_type == MMAP) {
       map = reinterpret_cast<int32_t*>(mmap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
-    } else if (mapping_type == UMAP) {
+    }
+#ifdef __APPLE__
+    else {
+      Fail("Error: Mapping type invalid or not supported.");
+    }
+#else
+    else if (mapping_type == UMAP) {
       map = reinterpret_cast<int32_t*>(umap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
     } else {
       Fail("Error: Invalid mapping type.");
     }
+#endif
 
     Assert((map != MAP_FAILED), fail_and_close_file(fd, "Mapping Failed: ", errno));
 
@@ -149,9 +172,16 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
     // Remove memory mapping after job is done.
     if (mapping_type == MMAP) {
       Assert((munmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
-    } else /* if (mapping_type == UMAP) */ {
-      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
-    } 
+    }
+#ifdef __APPLE__
+    else {
+      Fail("Error: Mapping type not supported.");
+    }
+#else
+    else /* if (mapping_type == UMAP) */ {
+      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));;
+    }
+#endif
     state.ResumeTiming();
   }
 
@@ -226,6 +256,7 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RAN
     ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 24, 32, 48}})
     ->UseRealTime();
 
+#ifdef __linux__
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)
     ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
     ->UseRealTime();
@@ -233,5 +264,5 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SE
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RANDOM)
     ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
     ->UseRealTime();
-
+#endif
 }  // namespace hyrise
