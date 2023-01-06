@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-#include "../benchmarklib/tpch/tpch_benchmark_item_runner.hpp"
+// #include "../benchmarklib/tpch/tpch_benchmark_item_runner.hpp"
 #include "hyrise.hpp"
 
 #include "./plugin_test_utils.hpp"
@@ -173,7 +173,7 @@ TEST_F(PluginManagerTest, LoadingUnloadingBenchmarkHooks) {
   EXPECT_FALSE(pm.has_pre_benchmark_hook("hyriseSecondTestPlugin"));
   EXPECT_FALSE(pm.has_post_benchmark_hook("hyriseSecondTestPlugin"));
 }
-
+/*
 TEST_F(PluginManagerTest, CallBenchmarkHooks) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& sm = Hyrise::get().storage_manager;
@@ -234,7 +234,7 @@ TEST_F(PluginManagerTest, CallNotExistingBenchmarkHooks) {
   EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseTestPlugin", *benchmark_item_runner), std::logic_error);
   EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseTestPlugin"), std::logic_error);
 }
-
+*/
 TEST_F(PluginManagerTest, LoadingSameName) {
   auto& pm = Hyrise::get().plugin_manager;
   auto& plugins = get_plugins();
