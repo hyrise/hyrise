@@ -35,10 +35,10 @@ class AbstractTableIndexIterator {
 };
 
 /**
- * Wrapper class that implements an iterator interface and holds a pointer to a AbstractTableIndexIterator. This wrapper is
+ * Wrapper class that implements an iterator interface and holds a pointer to an AbstractTableIndexIterator. This wrapper is
  * required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
- * codebase. It also provides copy construction and assignment facilities to easily duplicate other IteratorWrappers
- * including their underlying iterators. This is especially important, because the iterator type is a forward iterator
+ * codebase. It also provides copy construction and assignment facilities to easily duplicate other IteratorWrappers,
+ * including their underlying iterators. This is especially important because the iterator type is a forward iterator
  * instead of a random access iterator, so if an iterator instance has to be retained before a manipulating call, e.g.,
  * when calling it on std::distance, a copy has to be made beforehand.
  */

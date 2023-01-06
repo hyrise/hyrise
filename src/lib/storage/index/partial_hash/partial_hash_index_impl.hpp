@@ -17,7 +17,7 @@ class PartialHashIndexTest;
 
 /**
  * Forward iterator that iterates over a tsl::sparse_map that maps a DataType to a vector of RowIDs. The
- * iteration process is as if the map would have been flattened and then been iterated.
+ * iteration process is as if the map would have been flattened and then iterated.
  *
  * @tparam DataType The key type of the underlying map.
  */
@@ -38,8 +38,8 @@ class TableIndexMapIterator : public AbstractTableIndexIterator {
 
   std::shared_ptr<AbstractTableIndexIterator> clone() const final;
 
-  // Creates an instance of TableIndexMapIterator using the passed parameter and wraps that instance in an
-  // IteratorWrapper. Return that wrapper.
+  // Creates and returns an IteratorWrapper wrapping an instance of TableIndexMapIterator initialized using the
+  // passed parameter.
   static IteratorWrapper create_wrapper(MapIterator it);
 
  private:
@@ -66,8 +66,8 @@ class TableIndexVectorIterator : public AbstractTableIndexIterator {
 
   std::shared_ptr<AbstractTableIndexIterator> clone() const final;
 
-  // Creates an instance of TableIndexVectorIterator using the passed parameter and wraps that instance in an
-  // IteratorWrapper. Return that wrapper.
+  // Creates and returns an IteratorWrapper wrapping an instance of TableIndexVectorIterator initialized using the
+  // passed parameter.
   static IteratorWrapper create_wrapper(VectorIterator it);
 
  private:
