@@ -397,6 +397,18 @@ void FileIOMicroReadBenchmarkFixture::pread_atomic_random_multi_threaded(benchma
   close(fd);
 }
 
+struct aiocb createAIORequest(int const fd, off_t const offset, volatile void * buffer, size_t const bytes, int const aio_lio_opcode) {
+  auto request = aiocb{};
+
+  request.aio_fildes = fd;
+  request.aio_offset = offset;
+  request.aio_buf = buffer;
+  request.aio_nbytes = bytes;
+  request.aio_lio_opcode = aio_lio_opcode;
+
+  return request;
+}
+
 void FileIOMicroReadBenchmarkFixture::aio_single_threaded(benchmark::State& state) {
   auto fd = int32_t{};
   Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
@@ -409,25 +421,18 @@ void FileIOMicroReadBenchmarkFixture::aio_single_threaded(benchmark::State& stat
     read_data.resize(NUMBER_OF_ELEMENTS);
     state.ResumeTiming();
 
-    struct aiocb aiocb;
+    auto aio_request = aiocb{};
+    aio_request = createAIORequest(fd, 0, std::data(read_data), NUMBER_OF_BYTES, LIO_READ);
+    Assert(aio_read(&aio_request) == 0, "Read error: " + strerror(errno));
 
-    memset(&aiocb, 0, sizeof(struct aiocb));
-    aiocb.aio_fildes = fd;
-    aiocb.aio_offset = 0;
-    aiocb.aio_buf = std::data(read_data);
-    aiocb.aio_nbytes = NUMBER_OF_BYTES;
-    aiocb.aio_lio_opcode = LIO_READ;
+    //suspend this thread until the async I/O request has completed
+    const struct aiocb * aio_list[1]; //aio_suspend expects a list of async I/O requests
+    aio_list[0] = &aio_request;
+    aio_suspend(aio_list,1,NULL);
 
-    Assert(aio_read(&aiocb) == 0, "Read error: " + strerror(errno));
-
-    /* Wait until end of transaction */
-    auto err = int{0};
-    while ((err = aio_error(&aiocb)) == EINPROGRESS);
-
-    aio_error_handling(&aiocb, NUMBER_OF_BYTES);
+    aio_error_handling(&aio_request, NUMBER_OF_BYTES);
 
     state.PauseTiming();
-
     const auto sum = std::accumulate(read_data.begin(), read_data.end(), uint64_t{0});
     Assert(control_sum == sum, "Sanity check failed: Not the same result");
     state.ResumeTiming();
@@ -454,8 +459,6 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
     micro_benchmark_clear_disk_cache();
 
     state.ResumeTiming();
-
-    const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
 
     for (auto index = size_t{0}; index < thread_count; ++index) {
       auto from = batch_size * index;
@@ -708,7 +711,7 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM_THREAD
     ->UseRealTime();
     */
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_SEQUENTIAL_THREADED)
-    ->ArgsProduct({{10}, {2, 4}})
+    ->ArgsProduct({{10}, {1, 2, 4}})
     ->UseRealTime();
 /*
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_RANDOM_THREADED)
