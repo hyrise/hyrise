@@ -494,7 +494,6 @@ void FileIOMicroReadBenchmarkFixture::aio_random_single_threaded(benchmark::Stat
   auto fd = int32_t{};
   Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
 
-  NUMBER_OF_ELEMENTS = 17;
   for (auto _ : state) {
     state.PauseTiming();
     micro_benchmark_clear_disk_cache();
@@ -695,12 +694,12 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM_THREAD
     ->UseRealTime();
     */
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_SEQUENTIAL_THREADED)
-    ->ArgsProduct({{10}, {32}})
+    ->ArgsProduct({{10}, {64}})
     ->UseRealTime();
 
-//BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_RANDOM_THREADED)
-//    ->ArgsProduct({{10}, {1}})
-//    ->UseRealTime();
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_RANDOM_THREADED)
+    ->ArgsProduct({{10}, {1}})
+    ->UseRealTime();
 /*
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(10)->Arg(100)->Arg(1000);
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(10)->Arg(100)->Arg(1000);
