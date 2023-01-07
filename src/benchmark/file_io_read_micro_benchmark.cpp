@@ -502,8 +502,8 @@ void FileIOMicroReadBenchmarkFixture::aio_random_single_threaded(benchmark::Stat
     read_data.resize(NUMBER_OF_ELEMENTS);
 
     // init aio to only use one thread (not part of POSIX API, only defined in GNU-C libary)
-//    aioinit_t init_data = {0};
-//    init_data.aio_threads = 1;
+    static struct aioinit init_data = {0};
+    init_data.aio_threads = 1;
 
     state.ResumeTiming();
 
