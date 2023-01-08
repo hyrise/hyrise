@@ -204,12 +204,12 @@ BENCHMARK_DEFINE_F(FileIOWriteMmapBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDO
 
 // Arguments are file size in MB
 BENCHMARK_REGISTER_F(FileIOWriteMmapBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE)
-    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
     ->UseRealTime();
 BENCHMARK_REGISTER_F(FileIOWriteMmapBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUENTIAL)
-    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
     ->UseRealTime();
 BENCHMARK_REGISTER_F(FileIOWriteMmapBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RANDOM)
-    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
     ->UseRealTime();
 }  // namespace hyrise
