@@ -420,12 +420,14 @@ void FileIOMicroReadBenchmarkFixture::aio_single_threaded(benchmark::State& stat
     state.ResumeTiming();
 
     static struct aiocb requests[1];
+    static const struct aiocb * aio_list[1]; //aio_suspend expects a list of async I/O requests
+
     create_aio_request(requests[0], fd, 0, std::data(read_data), NUMBER_OF_BYTES, LIO_READ);
+    aio_list[0] = &requests[0];
+
     Assert(aio_read(&requests[0]) == 0, "Read error: " + strerror(errno));
 
     //suspend this thread until the async I/O request has completed
-    static const struct aiocb * aio_list[1]; //aio_suspend expects a list of async I/O requests
-    aio_list[0] = &requests[0];
     aio_suspend(aio_list,1,NULL);
 
     aio_error_handling(&requests[0], NUMBER_OF_BYTES);
@@ -489,6 +491,9 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
 void FileIOMicroReadBenchmarkFixture::aio_random_single_threaded(benchmark::State& state) {
   /*
    * Random async reading works by sending each random read as single async I/O request.
+   * As aio can only handle a certain number of concurrent aio requests we have a fixed
+   * max number of async I/O requests and only start a new request once a previous request
+   * has finished.
    * For comparability the number of threads that can be used are being limited.
    */
   auto fd = int32_t{};
@@ -502,31 +507,47 @@ void FileIOMicroReadBenchmarkFixture::aio_random_single_threaded(benchmark::Stat
     read_data.resize(NUMBER_OF_ELEMENTS);
 
     // init aio to only use one thread (not part of POSIX API, only defined in GNU-C libary)
-    static struct aioinit init_data;
-    init_data.aio_threads = 1;
-    aio_init(&init_data);
+//    static struct aioinit init_data;
+//    init_data.aio_threads = 1;
+//    aio_init(&init_data);
 
     state.ResumeTiming();
+    const auto batch_size = uint32_t{16};
 
-    auto aio = std::vector<aiocb>(NUMBER_OF_ELEMENTS);
-    auto aio_list = std::vector<aiocb*>(NUMBER_OF_ELEMENTS);
+    auto aio = std::vector<aiocb>(batch_size);
+    auto aio_list = std::vector<aiocb*>(batch_size);
 
     auto read_data_ptr = std::data(read_data);
 
-    for (auto index = size_t{0}; index < NUMBER_OF_ELEMENTS; ++index) {
-      auto from = random_indices[index];
-      create_aio_request(aio[index], fd, from * uint32_t_size, read_data_ptr + index, uint32_t_size, LIO_READ);
-      aio_list[index] = &aio[index];
+    for (auto request_index = size_t{0}; request_index < batch_size; request_index++) {
+      auto from = random_indices[request_index];
+      create_aio_request(aio[request_index], fd, from * uint32_t_size, read_data_ptr + request_index,
+                         uint32_t_size, LIO_READ);
+      aio_list[request_index] = &aio[request_index];
     }
 
-    auto return_value = lio_listio(LIO_WAIT, std::data(aio_list), NUMBER_OF_ELEMENTS, 0);
+    auto num_started_requests = uint32_t{batch_size};
+    auto num_completed_requests = uint32_t{0};
+    while (num_completed_requests < NUMBER_OF_ELEMENTS) {
+      auto return_value = lio_listio(LIO_WAIT, std::data(aio_list), batch_size, 0);
 
-    if (return_value != 0){
-      fail_and_close_file(fd, "Asynchronous read using lio_listio failed.", return_value);
-    }
+      if (return_value != 0){
+        fail_and_close_file(fd, "Asynchronous read using aio failed.", return_value);
+      }
 
-    for (auto index = size_t{0}; index < NUMBER_OF_ELEMENTS; ++index) {
-      aio_error_handling(aio_list[index], aio_list[index]->aio_nbytes);
+      for (auto request_index = size_t{0}; request_index < batch_size; ++request_index) {
+        aio_error_handling(aio_list[request_index], aio_list[request_index]->aio_nbytes);
+        num_completed_requests++;
+
+        if (num_completed_requests <= (NUMBER_OF_ELEMENTS - batch_size)) {
+          auto from = random_indices[num_started_requests];
+          create_aio_request(aio[request_index], fd, from * uint32_t_size, read_data_ptr + (num_started_requests),
+                             uint32_t_size, LIO_READ);
+          aio_list[request_index] = &aio[request_index];
+          num_started_requests++;
+        }
+      }
+
     }
 
     state.PauseTiming();
@@ -547,6 +568,10 @@ void FileIOMicroReadBenchmarkFixture::aio_random_multi_threaded(benchmark::State
 
   auto threads = std::vector<std::thread>(thread_count);
   auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / thread_count));
+
+  //  static struct aioinit init_data;
+//    init_data.aio_threads = thread_count;
+//    aio_init(&init_data);
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -694,9 +719,9 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM_THREAD
     ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 6, 8, 16, 24, 32, 48}})
     ->UseRealTime();
     */
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_SEQUENTIAL_THREADED)
-    ->ArgsProduct({{10}, {64}})
-    ->UseRealTime();
+//BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_SEQUENTIAL_THREADED)
+//    ->ArgsProduct({{10}, {1}})
+//    ->UseRealTime();
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_RANDOM_THREADED)
     ->ArgsProduct({{10}, {1}})
