@@ -131,7 +131,7 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionAllSimple) {
   // We expect all FDs to be forwarded since both input nodes have the same non-trivial FDs & UCCs.
   const auto& union_node_fds = union_all_node->functional_dependencies();
   const auto& union_node_non_trivial_fds = union_all_node->non_trivial_functional_dependencies();
-  // Since all unique constraints are discarded, former trivial FDs become non-trivial:
+  // Since all UCCs are discarded, former trivial FDs become non-trivial.
   EXPECT_EQ(union_node_fds, union_node_non_trivial_fds);
 
   EXPECT_EQ(union_node_fds.size(), 3);
@@ -229,7 +229,7 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
 }
 
 TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositions) {
-  // Add two unique constraints to _mock_node1.
+  // Add two UCCs to _mock_node1.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints({key_constraint_a_b, key_constraint_b});

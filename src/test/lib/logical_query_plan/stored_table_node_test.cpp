@@ -218,8 +218,6 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
 
   EXPECT_EQ(fds.size(), 2);
-  // Funtional dependencies are built from the table's unique constraints. These constraints are stored in a set, and
-  // their order is not relevant. Thus, we only ensure that both expected FDs are generated.
   EXPECT_TRUE(fds.contains(fd1_expected));
   EXPECT_TRUE(fds.contains(fd2_expected));
 }
@@ -315,7 +313,7 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  // Prepare unique constraints.
+  // Prepare unique UCCs.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
@@ -326,7 +324,7 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   EXPECT_EQ(table_key_constraints.size(), 3);
   EXPECT_EQ(_stored_table_node->unique_column_combinations()->size(), 3);
 
-  // Prune column a, which should remove two unique constraints.
+  // Prune column a, which should remove two UCCs.
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // Basic check.

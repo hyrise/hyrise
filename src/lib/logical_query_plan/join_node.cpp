@@ -187,7 +187,7 @@ FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->functional_dependencies();
   } else {
-    // No unique constraints are discarded. We only have to forward non-trivial FDs.
+    // No UCCs are discarded. We only have to forward non-trivial FDs.
     DebugAssert(output_unique_column_combinations->size() ==
                     (left_unique_column_combinations->size() + right_unique_column_combinations->size()),
                 "Unexpected number of unique constraints.");

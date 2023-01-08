@@ -48,7 +48,7 @@ std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinat
        * Our implementation does not exploit all opportunities yet.
        * As the next step, we could check for derived output expressions that preserve uniqueness, for example,
        * the expression 'column + 1'.
-       * Instead of discarding a unique constraint for 'column', we could create and output a new one for 'column + 1'.
+       * Instead of discarding a UCC for 'column', we could create and output a new one for 'column + 1'.
        */
     }
     unique_column_combinations->emplace(input_ucc);

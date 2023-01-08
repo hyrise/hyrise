@@ -104,7 +104,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
 }
 
 TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
-  // Prepare two unique constraints for MockNode.
+  // Prepare two UCCs for MockNode.
   _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
   EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
 

@@ -474,7 +474,7 @@ bool contains_matching_unique_column_combination(
 FunctionalDependencies fds_from_unique_column_combinations(
     const std::shared_ptr<const AbstractLQPNode>& lqp,
     const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
-  Assert(!unique_column_combinations->empty(), "Did not expect empty vector of unique constraints");
+  Assert(!unique_column_combinations->empty(), "Did not expect empty vector of UCCs.");
 
   auto fds = FunctionalDependencies{};
 

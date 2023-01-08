@@ -202,8 +202,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   FunctionalDependencies functional_dependencies() const;
 
   /**
-   * This is a helper method that returns non-trivial FDs valid for the current node.
-   * We consider FDs as non-trivial if we cannot derive them from the current node's unique constraints.
+   * This is a helper method that returns non-trivial FDs valid for the current node. We consider FDs as non-trivial if
+   *  we cannot derive them from the current node's unique column combinations.
    *
    * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
    * an empty vector.

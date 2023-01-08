@@ -273,7 +273,7 @@ TEST_F(DependentGroupByReductionRuleTest, NoAdaptionForNullableColumns) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-// Check that we reduce using the shortest constraints (in terms of the number of columns).
+// Check that we reduce using the shortest UCCs (in terms of the number of columns).
 TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
   // clang-format off
   const auto lqp =

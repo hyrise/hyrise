@@ -319,9 +319,9 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     }
   }
 
-  // (2) Derive trivial FDs from the node's unique constraints.
+  // (2) Derive trivial FDs from the node's unique column combinations.
   const auto& unique_column_combinations = this->unique_column_combinations();
-  // Early exit, if there are no unique constraints
+  // Early exit if there are no UCCs.
   if (unique_column_combinations->empty()) {
     return non_trivial_fds;
   }

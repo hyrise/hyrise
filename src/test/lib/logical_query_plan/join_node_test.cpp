@@ -384,9 +384,8 @@ TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialBothAnd
 
 TEST_F(JoinNodeTest, FunctionalDependenciesDeriveNone) {
   /**
-   * Set unique constraints for both join columns of an Inner Join, so that unique constraints from both sides become
-   * forwarded. Consequently, we do not expect non-trivial FDs from the left or right input node's unique constraints
-   * to be derived.
+   * Set UCCs for both join columns of an Inner Join, so that UCCs from both sides are forwarded. Consequently, we do
+   * not expect non-trivial FDs from the left or right input nodes' UCCs to be derived.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
@@ -420,9 +419,9 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveNone) {
 
 TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   /**
-   * We set a unique constraint for the left, but not for the right join column of the Inner Join. Consequently, unique
-   * constraints of the left input node become discarded whereas the unique constraints of the right input node survive.
-   * Therefore, we have to check whether left input node's trivial FDs become forwarded as non-trivial ones.
+   * We set a UCC for the left, but not for the right join column of the Inner Join. Consequently, UCCs of the left
+   * input node are discarded, whereas the UCCs of the right input node survive. Therefore, we have to check whether
+   * left input node's trivial FDs are forwarded as non-trivial ones.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
@@ -451,12 +450,12 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
   _mock_node_a->set_key_constraints({key_constraint_a_b, key_constraint_c});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
 
-  // The following FD is trivial since it can be derived from a unique constraint (PRIMARY KEY across a & b).
-  // However, we define it as non-trivial anyway, to verify the conflict resolution when merging FDs later on.
+  // The following FD is trivial since it can be derived from a UCC (PRIMARY KEY across a & b). However, we define it
+  // as non-trivial anyway, to verify the conflict resolution when merging FDs later on.
   const auto fd_a_b = FunctionalDependency{{_t_a_a, _t_a_b}, {_t_a_c}};
   _mock_node_a->set_non_trivial_functional_dependencies({fd_a_b});
 
-  // Define an Inner Join, so that all unique constraints survive
+  // Define an Inner Join, so that all UCCs survive.
   // clang-format off
   const auto& join_node =
   JoinNode::make(JoinMode::Inner, equals_(_t_a_c, _t_b_x),
@@ -639,8 +638,8 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {
-  // Currently, we do not support unique constraint forwarding for Non-Equi- or Theta-Joins. Semi-, cross-, and
-  // Anti-Joins only support Equi-Joins.
+  // Currently, we do not support UCC forwarding for Non-Equi- or Theta-Joins. Semi-, cross-, and Anti-Joins only
+  // support Equi-Joins.
   const auto join_mode = GetParam();
   if (join_mode == JoinMode::Cross || is_semi_or_anti_join(join_mode)) {
     GTEST_SKIP();

@@ -171,7 +171,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
-  // Prepare single unique constraint.
+  // Prepare single UCC.
   const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 1);
@@ -195,7 +195,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
-  // Prepare single unique constraint.
+  // Prepare single UCC.
   const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_key_constraint});
   EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 1);
@@ -247,7 +247,7 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
-  // The group-by columns form a new candidate key / unique constraint from which we should derive a trivial FD.
+  // The group-by columns form a new candidate key / UCC from which we should derive a trivial FD.
   _mock_node->set_key_constraints({});
   _mock_node->set_non_trivial_functional_dependencies({});
 

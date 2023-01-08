@@ -110,7 +110,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinations) {
 }
 
 TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
-  // Prepare unique constraints.
+  // Prepare UCCs.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};

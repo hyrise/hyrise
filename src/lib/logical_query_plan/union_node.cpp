@@ -69,8 +69,8 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::All: {
       /**
-       * With UnionAll, unique constraints from both input nodes become discarded. To preserve trivial FDs, we
-       * request all available FDs from both input nodes.
+       * With UnionAll, UCCs from both input nodes become are. To preserve trivial FDs, we request all available FDs
+       * from both input nodes.
        */
       const auto& fds_left = left_input()->functional_dependencies();
       const auto& fds_right = right_input()->functional_dependencies();

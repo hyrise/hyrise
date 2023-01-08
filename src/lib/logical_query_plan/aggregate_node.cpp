@@ -119,7 +119,7 @@ std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinati
    *     => The UCC for {b, d} can be reformulated as { MAX(b), d }
    *
    *     Furthermore, for AggregateNodes without group by columns, where only one row is generated, all columns are
-   *     unique. We are not yet sure if this should be modeled as a unique constraint.
+   *     unique. We are not yet sure if this should be modeled as a UCCs.
    */
 
   // Check each UCC for applicability.
@@ -141,7 +141,7 @@ std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinati
     std::copy_n(node_expressions.begin(), group_by_columns_count,
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
-    // Make sure that we do not add an already existing or a superset unique constraint.
+    // Make sure that we do not add an already existing or a superset UCC.
     if (unique_column_combinations->empty() ||
         !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
       unique_column_combinations->emplace(group_by_columns);
