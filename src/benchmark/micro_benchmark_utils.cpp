@@ -63,4 +63,11 @@ std::string fail_and_close_file(int32_t fd, std::string message, int error_num) 
   close(fd);
   return message + std::strerror(error_num);
 }
+
+std::string fail_and_close_files(std::vector<int32_t> filedescriptors, std::string message, int error_num) {
+  for (auto index = size_t{0}; index < filedescriptors.size(); ++index) {
+    close(filedescriptors[index]);
+  }
+  return message + std::strerror(error_num);
+}
 }  // namespace hyrise

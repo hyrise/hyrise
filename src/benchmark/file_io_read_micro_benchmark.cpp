@@ -442,8 +442,12 @@ void FileIOMicroReadBenchmarkFixture::aio_single_threaded(benchmark::State& stat
 }
 
 void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state, uint16_t aio_request_count) {
-  auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  auto filedescriptors = std::vector<int32_t>(aio_request_count);
+  for (auto index = size_t{0}; index < aio_request_count; ++index) {
+    auto fd = int32_t{};
+    Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+    filedescriptors[index] = fd;
+  }
 
   auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / aio_request_count));
 
@@ -465,14 +469,14 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
       if (to >= NUMBER_OF_ELEMENTS) {
         to = NUMBER_OF_ELEMENTS;
       }
-      create_aio_request(aio[index], fd, from * uint32_t_size, read_data_ptr + from, (to - from) * uint32_t_size, LIO_READ);
+      create_aio_request(aio[index], filedescriptors[index], from * uint32_t_size, read_data_ptr + from, (to - from) * uint32_t_size, LIO_READ);
       aio_list[index] = &aio[index];
     }
 
     auto return_value = lio_listio(LIO_WAIT, std::data(aio_list), aio_request_count, 0);
 
-    if (return_value != 0){
-      fail_and_close_file(fd, "Asynchronous read using lio_listio failed.", return_value);
+    if(return_value != 0){
+      fail_and_close_files(filedescriptors, "Asynchronous read using lio_listio failed.", return_value);
     }
 
     for (auto index = size_t{0}; index < aio_request_count; ++index) {
@@ -485,11 +489,14 @@ void FileIOMicroReadBenchmarkFixture::aio_multi_threaded(benchmark::State& state
     state.ResumeTiming();
   }
 
-  close(fd);
+  for (auto index = size_t{0}; index < aio_request_count; ++index) {
+    close(filedescriptors[index]);
+  }
+
 }
 
 
-void FileIOMicroReadBenchmarkFixture::aio_random_read(benchmark::State& state, uint16_t thread_count) {
+void FileIOMicroReadBenchmarkFixture::aio_random_read(benchmark::State& state, uint16_t aio_request_count) {
   /*
     * Random async reading works by sending each random read as single async I/O request.
     * As aio can only handle a certain number of concurrent aio requests we have a fixed
@@ -501,13 +508,17 @@ void FileIOMicroReadBenchmarkFixture::aio_random_read(benchmark::State& state, u
     * For comparability the number of threads that can be used are being limited.
     */
 
-  auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  auto filedescriptors = std::vector<int32_t>(aio_request_count);
+  for (auto index = size_t{0}; index < aio_request_count; ++index) {
+    auto fd = int32_t{};
+    Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+    filedescriptors[index] = fd;
+  }
 
   // init aio to only use one thread (not part of POSIX API, only defined in GNU-C libary)
 #ifdef __linux__
   static struct aioinit init_data;
-    init_data.aio_threads = thread_count;
+    init_data.aio_threads = aio_request_count;
     aio_init(&init_data);
 #endif
 
@@ -530,13 +541,13 @@ void FileIOMicroReadBenchmarkFixture::aio_random_read(benchmark::State& state, u
       auto to = (batch_index + batch_size < NUMBER_OF_ELEMENTS) ? (batch_index + batch_size) : NUMBER_OF_ELEMENTS;
       for (auto request_index = batch_index; request_index < to; ++request_index) {
         auto from = random_indices[request_index];
-        create_aio_request(aio[request_index % batch_size], fd, from * uint32_t_size, read_data_ptr + request_index, uint32_t_size, LIO_READ);
+        create_aio_request(aio[request_index % batch_size], filedescriptors[request_index], from * uint32_t_size, read_data_ptr + request_index, uint32_t_size, LIO_READ);
         aio_list[request_index % batch_size] = &aio[request_index % batch_size];
       }
       auto return_value = lio_listio(LIO_WAIT, std::data(aio_list), batch_size, 0);
 
       if (return_value != 0){
-        fail_and_close_file(fd, "Asynchronous read using aio failed.", return_value);
+        fail_and_close_files(filedescriptors, "Asynchronous read using lio_listio failed.", return_value);
       }
       for (auto request_index = size_t{0}; request_index < batch_size; ++request_index){
         aio_error_handling(aio_list[request_index], aio_list[request_index]->aio_nbytes);
@@ -550,7 +561,9 @@ void FileIOMicroReadBenchmarkFixture::aio_random_read(benchmark::State& state, u
     state.ResumeTiming();
   }
 
-  close(fd);
+  for (auto index = size_t{0}; index < aio_request_count; ++index) {
+    close(filedescriptors[index]);
+  }
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL_THREADED)(benchmark::State& state) {
@@ -648,6 +661,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)(bench
 }
 
 // Arguments are file size in MB
+/*
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, READ_NON_ATOMIC_SEQUENTIAL_THREADED)
     ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
     ->UseRealTime();
@@ -660,6 +674,7 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_SEQUENTIAL_TH
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, PREAD_ATOMIC_RANDOM_THREADED)
     ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
     ->UseRealTime();
+    */
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_SEQUENTIAL_THREADED)
     ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
@@ -669,7 +684,8 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, AIO_RANDOM_THREADED)
     ->ArgsProduct({{1000}, {1, 2, 4, 8, 16, 32, 64}})
     ->UseRealTime();
 
+/*
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_SEQUENTIAL)->Arg(1000)->UseRealTime();
-BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(1000)->UseRealTime();
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, IN_MEMORY_READ_RANDOM)->Arg(1000)->UseRealTime();*/
 
 }  // namespace hyrise
