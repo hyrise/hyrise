@@ -60,7 +60,29 @@ jobs:
         run: |
             cd ${{github.workspace}}/hyrise/cmake-build-debug-clang
             ./hyriseTest
-            
+
+  build-mac-clang:
+    runs-on: macos-latest
+
+    steps:
+      - name: Clone Repository
+        run: git clone --recursive https://github.com/hyrise-mp-22-23/hyrise.git hyrise && cd hyrise
+
+      - name: Install Dependencies
+        run: brew install llvm autoconf boost cmake coreutils dos2unix graphviz libpq ncurses parallel pkg-config postgresql readline sqlite3 tbb && brew install ninja
+
+      - name: Run Make with clang
+        run: |
+            cd ${{github.workspace}}/hyrise/
+            mkdir cmake-build-debug-clang && cd cmake-build-debug-clang
+            cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_C_COMPILER="/usr/local/opt/llvm/bin/clang" -DCMAKE_CXX_COMPILER="/usr/local/opt/llvm/bin/clang++" -GNinja ..
+            ninja
+
+      - name: Run Unit Tests with clang
+        run: |
+            cd ${{github.workspace}}/hyrise/cmake-build-debug-clang
+            ./hyriseTest
+
   passive-aggressive-comments:
     runs-on: ubuntu-latest
     permissions: 
