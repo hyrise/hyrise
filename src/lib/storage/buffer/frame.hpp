@@ -6,10 +6,10 @@
 namespace hyrise {
 
 struct Frame {
-  PageID PageID;
-  Page data;
+  PageID page_id;
   std::atomic_bool dirty;
   std::atomic_uint32_t pin_count;
+  Page data;
 };
 
 }  // namespace hyrise

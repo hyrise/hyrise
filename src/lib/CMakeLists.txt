@@ -448,9 +448,7 @@ set(
     storage/buffer/clock_replacement_strategy.hpp
     storage/buffer/ssd_region.cpp
     storage/buffer/ssd_region.hpp
-    storage/buffer/frame.cpp
     storage/buffer/frame.hpp
-    storage/buffer/page.cpp
     storage/buffer/page.hpp
     storage/buffer/volatile_region.cpp
     storage/buffer/volatile_region.hpp

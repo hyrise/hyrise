@@ -122,3 +122,31 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
+
+# Configure hyriseBenchmarkBufferManager
+add_executable(
+    hyriseBenchmarkBufferManager
+
+    micro_benchmark_basic_fixture.cpp
+    micro_benchmark_basic_fixture.hpp
+    micro_benchmark_main.cpp
+    micro_benchmark_utils.cpp
+    micro_benchmark_utils.hpp
+
+    storage/buffer/ssd_region_benchmark.cpp
+    storage/buffer/volatile_region_benchmark.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkBufferManager
+    PRIVATE
+
+    hyrise
+    hyriseBenchmarkLib
+)
+
+target_link_libraries_system(
+    hyriseBenchmarkBufferManager
+
+    benchmark::benchmark
+)

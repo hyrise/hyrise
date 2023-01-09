@@ -14,7 +14,7 @@ Hyrise::Hyrise() {
   boost::container::pmr::get_default_resource();
 
   storage_manager = StorageManager{};
-  buffer_manager = BufferManager{};
+  // TODO: buffer_manager = BufferManager{};
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};

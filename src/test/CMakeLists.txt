@@ -174,6 +174,7 @@ set(
     lib/storage/any_segment_iterable_test.cpp
     lib/storage/buffer/buffer_manager_test.cpp
     lib/storage/buffer/clock_replacement_strategy_test.cpp
+    lib/storage/buffer/ssd_region_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
