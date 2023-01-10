@@ -30,7 +30,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
                                                                          const int map_mode_flag,
                                                                          const int access_order) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  Assert(((fd = open(filename, O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -57,7 +57,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
     }
 #endif
 
-    Assert((map != MAP_FAILED), fail_and_close_file(fd, "Mapping Failed: ", errno));
+    Assert((map != MAP_FAILED), close_file_and_return_error_message(fd, "Mapping Failed: ", errno));
 
     auto sum = uint64_t{0};
     if (access_order == RANDOM) {
@@ -81,7 +81,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
 
     // Remove memory mapping after job is done.
     if (mapping_type == MMAP) {
-      Assert((munmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
+      Assert((munmap(map, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Unmapping failed: ", errno));
     }
 #ifdef __APPLE__
     else {
@@ -89,7 +89,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
     }
 #else
     else /* if (mapping_type == UMAP) */ {
-      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
+      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Unmapping failed: ", errno));
     }
 #endif
   }
@@ -101,7 +101,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
                                                                         const uint16_t thread_count,
                                                                         const int access_order) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  Assert(((fd = open(filename, O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
 
   auto threads = std::vector<std::thread>(thread_count);
   const auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / thread_count));
@@ -132,7 +132,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
     }
 #endif
 
-    Assert((map != MAP_FAILED), fail_and_close_file(fd, "Mapping Failed: ", errno));
+    Assert((map != MAP_FAILED), close_file_and_return_error_message(fd, "Mapping Failed: ", errno));
 
     if (access_order == RANDOM) {
       state.PauseTiming();
@@ -179,7 +179,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
 
     // Remove memory mapping after job is done.
     if (mapping_type == MMAP) {
-      Assert((munmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
+      Assert((munmap(map, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Unmapping failed: ", errno));
     }
 #ifdef __APPLE__
     else {
@@ -187,7 +187,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
     }
 #else
     else /* if (mapping_type == UMAP) */ {
-      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Unmapping failed: ", errno));
+      Assert((uunmap(map, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Unmapping failed: ", errno));
     }
 #endif
     state.ResumeTiming();

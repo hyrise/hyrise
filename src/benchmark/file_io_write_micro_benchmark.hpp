@@ -45,7 +45,7 @@ class FileIOWriteMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
 
 void FileIOWriteMicroBenchmarkFixture::sanity_check() {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), fail_and_close_file(fd, "Open error:", errno));
+  Assert(((fd = open(filename, O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error:", errno));
 
   const auto file_size = lseek(fd, 0, SEEK_END);
   Assert(file_size == NUMBER_OF_BYTES, "Sanity check failed: Actual size of " + std::to_string(file_size) +

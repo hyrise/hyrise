@@ -13,14 +13,14 @@ void write_data_using_write(const size_t from, const size_t to, int32_t fd, uint
   const auto bytes_to_write = static_cast<ssize_t>(uint32_t_size * (to - from));
   lseek(fd, from * uint32_t_size, SEEK_SET);
   Assert((write(fd, data_to_write_start + from, bytes_to_write) == bytes_to_write),
-         fail_and_close_file(fd, "Write error: ", errno));
+         close_file_and_return_error_message(fd, "Write error: ", errno));
 }
 
 void write_data_using_pwrite(const size_t from, const size_t to, int32_t fd, uint32_t* data_to_write_start) {
   const auto uint32_t_size = ssize_t{sizeof(uint32_t)};
   const auto bytes_to_write = static_cast<ssize_t>(uint32_t_size * (to - from));
   Assert((pwrite(fd, data_to_write_start + from, bytes_to_write, from * uint32_t_size) == bytes_to_write),
-         fail_and_close_file(fd, "Write error: ", errno));
+         close_file_and_return_error_message(fd, "Write error: ", errno));
 }
 
 void write_data_using_aio(const size_t from, const size_t to, int32_t fd, uint32_t* data_to_write_start) {
@@ -46,7 +46,7 @@ void write_data_using_aio(const size_t from, const size_t to, int32_t fd, uint32
 
 void FileIOWriteMicroBenchmarkFixture::write_non_atomic_single_threaded(benchmark::State& state) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_WRONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  Assert(((fd = open(filename, O_WRONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -55,7 +55,7 @@ void FileIOWriteMicroBenchmarkFixture::write_non_atomic_single_threaded(benchmar
 
     lseek(fd, 0, SEEK_SET);
     Assert((write(fd, std::data(data_to_write), NUMBER_OF_BYTES) == NUMBER_OF_BYTES),
-           fail_and_close_file(fd, "Write error: ", errno));
+           close_file_and_return_error_message(fd, "Write error: ", errno));
 
     state.PauseTiming();
     sanity_check();
@@ -69,7 +69,7 @@ void FileIOWriteMicroBenchmarkFixture::write_non_atomic_multi_threaded(benchmark
   auto filedescriptors = std::vector<int32_t>(thread_count);
   for (auto index = size_t{0}; index < thread_count; ++index) {
     auto fd = int32_t{};
-    Assert(((fd = open(filename, O_WRONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+    Assert(((fd = open(filename, O_WRONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
     filedescriptors[index] = fd;
   }
 
@@ -109,7 +109,7 @@ void FileIOWriteMicroBenchmarkFixture::write_non_atomic_multi_threaded(benchmark
 
 void FileIOWriteMicroBenchmarkFixture::pwrite_atomic_single_threaded(benchmark::State& state) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_WRONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+  Assert(((fd = open(filename, O_WRONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -134,7 +134,7 @@ void FileIOWriteMicroBenchmarkFixture::pwrite_atomic_multi_threaded(benchmark::S
   auto filedescriptors = std::vector<int32_t>(thread_count);
   for (auto index = size_t{0}; index < thread_count; ++index) {
     auto fd = int32_t{};
-    Assert(((fd = open(filename, O_WRONLY)) >= 0), fail_and_close_file(fd, "Open error: ", errno));
+    Assert(((fd = open(filename, O_WRONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
     filedescriptors[index] = fd;
   }
 

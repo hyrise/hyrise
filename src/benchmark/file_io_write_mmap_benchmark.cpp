@@ -32,10 +32,10 @@ class FileIOWriteMmapBenchmarkFixture : public FileIOWriteMicroBenchmarkFixture 
 void FileIOWriteMmapBenchmarkFixture::mmap_write_single_threaded(benchmark::State& state, const int mmap_mode_flag,
                                                                  const int data_access_mode, const ssize_t file_size) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDWR)) >= 0), fail_and_close_file(fd, "Open error:", errno));
+  Assert(((fd = open(filename, O_RDWR)) >= 0), close_file_and_return_error_message(fd, "Open error:", errno));
 
   //set output file size to avoid mapping errors
-  Assert((ftruncate(fd, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Ftruncate error:", errno));
+  Assert((ftruncate(fd, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Ftruncate error:", errno));
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -108,10 +108,10 @@ void FileIOWriteMmapBenchmarkFixture::mmap_write_multi_threaded(benchmark::State
                                                                 const int data_access_mode, const ssize_t file_size,
                                                                 uint16_t thread_count) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDWR)) >= 0), fail_and_close_file(fd, "Open error:", errno));
+  Assert(((fd = open(filename, O_RDWR)) >= 0), close_file_and_return_error_message(fd, "Open error:", errno));
 
   //set output file size to avoid mapping errors
-  Assert((ftruncate(fd, NUMBER_OF_BYTES) == 0), fail_and_close_file(fd, "Ftruncate error:", errno));
+  Assert((ftruncate(fd, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Ftruncate error:", errno));
 
   auto threads = std::vector<std::thread>(thread_count);
   auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / thread_count));
