@@ -26,9 +26,11 @@ void micro_benchmark_clear_disk_cache() {
   // TODO(phoenix): better documentation of which caches we are clearing
   sync();
 #ifdef __APPLE__
-  system("purge");
+  auto return_val =  system("purge");
+  (void) return_val;
 #else
-  system("echo 3 > /proc/sys/vm/drop_caches");
+  auto return_val = system("echo 3 > /proc/sys/vm/drop_caches");
+  (void) return_val;
 #endif
 }
 
