@@ -103,11 +103,12 @@ void Worker::_work() {
     // don't spin for a fixed number of pause instructions but rather for a certain time frame as the time paused by
     // the pause instruction differed a lot between different CPU architectures.
     // https://www.intel.com/content/www/us/en/developer/articles/technical/a-common-construct-to-avoid-the-contention-of-threads-architecture-agnostic-spin-wait-loops.html
-    if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{8}) {
+    if (std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::steady_clock::now() - work_begin) > std::chrono::microseconds{2048}) {
       break;
     }
 
-    for (auto loop_id = int32_t{0}; loop_id < 1 << spin_counter; ++loop_id) {
+    const auto loop_count = std::max(1024, 1 << spin_counter);
+    for (auto loop_id = int32_t{0}; loop_id < loop_count; ++loop_id) {
       _mm_pause();
     }
 
