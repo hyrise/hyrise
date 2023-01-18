@@ -40,11 +40,6 @@ std::shared_ptr<AbstractTableIndexIterator> TableIndexIterator<DataType>::clone(
 }
 
 template <typename DataType>
-IteratorWrapper TableIndexIterator<DataType>::create_wrapper(MapIterator it) {
-  return IteratorWrapper(std::make_shared<TableIndexIterator<DataType>>(it));
-}
-
-template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id)
     : BasePartialHashIndexImpl() {
@@ -131,8 +126,7 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(TableIndexIterator<DataType>::create_wrapper(begin),
-                        TableIndexIterator<DataType>::create_wrapper(++end));
+  return std::make_pair(begin, ++end);
 }
 
 template <typename DataType>
@@ -143,23 +137,26 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 }
 
 template <typename DataType>
-typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return TableIndexIterator<DataType>::create_wrapper(_map.cbegin());
+TableIndexIterator<DataType> PartialHashIndexImpl<DataType>::cbegin() const {
+  auto it = TableIndexIterator<DataType>(_map.cbegin());
+  (void)it;
+
+  return it;
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return TableIndexIterator<DataType>::create_wrapper(_map.cend());
+  return _map.cend();
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return TableIndexIterator<DataType>::create_wrapper(_null_values.cbegin());
+  return _null_values.cbegin();
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return TableIndexIterator<DataType>::create_wrapper(_null_values.cend());
+  return _null_values.cend();
 }
 
 template <typename DataType>
