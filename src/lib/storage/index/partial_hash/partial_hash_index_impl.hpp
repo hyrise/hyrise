@@ -22,15 +22,15 @@ class PartialHashIndexTest;
  * @tparam DataType The key type of the underlying map.
  */
 template <typename DataType>
-class TableIndexMapIterator : public AbstractTableIndexIterator {
+class TableIndexIterator : public AbstractTableIndexIterator {
  public:
   using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
-  explicit TableIndexMapIterator(MapIterator it);
+  explicit TableIndexIterator(MapIterator it);
 
   reference operator*() const final;
 
-  TableIndexMapIterator& operator++() final;
+  TableIndexIterator& operator++() final;
 
   bool operator==(const AbstractTableIndexIterator& other) const final;
 
@@ -38,40 +38,13 @@ class TableIndexMapIterator : public AbstractTableIndexIterator {
 
   std::shared_ptr<AbstractTableIndexIterator> clone() const final;
 
-  // Creates and returns an IteratorWrapper wrapping an instance of TableIndexMapIterator initialized using the
+  // Creates and returns an IteratorWrapper wrapping an instance of TableIndexIterator initialized using the
   // passed parameter.
   static IteratorWrapper create_wrapper(MapIterator it);
 
  private:
   MapIterator _map_iterator;
   size_t _vector_index;
-};
-
-/**
- * Forward iterator that iterates over a std::vector of RowIDs.
- */
-class TableIndexVectorIterator : public AbstractTableIndexIterator {
- public:
-  using VectorIterator = typename std::vector<RowID>::const_iterator;
-
-  explicit TableIndexVectorIterator(VectorIterator it);
-
-  reference operator*() const final;
-
-  TableIndexVectorIterator& operator++() final;
-
-  bool operator==(const AbstractTableIndexIterator& other) const final;
-
-  bool operator!=(const AbstractTableIndexIterator& other) const final;
-
-  std::shared_ptr<AbstractTableIndexIterator> clone() const final;
-
-  // Creates and returns an IteratorWrapper wrapping an instance of TableIndexVectorIterator initialized using the
-  // passed parameter.
-  static IteratorWrapper create_wrapper(VectorIterator it);
-
- private:
-  VectorIterator _vector_iterator;
 };
 
 /**
@@ -143,7 +116,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
 
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _map;
-  std::vector<RowID> _null_values;
+  tsl::sparse_map<DataType, std::vector<RowID>> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };
 

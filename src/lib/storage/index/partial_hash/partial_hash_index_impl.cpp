@@ -4,15 +4,15 @@
 namespace hyrise {
 
 template <typename DataType>
-TableIndexMapIterator<DataType>::TableIndexMapIterator(MapIterator it) : _map_iterator(it), _vector_index(0) {}
+TableIndexIterator<DataType>::TableIndexIterator(MapIterator it) : _map_iterator(it), _vector_index(0) {}
 
 template <typename DataType>
-const RowID& TableIndexMapIterator<DataType>::operator*() const {
+const RowID& TableIndexIterator<DataType>::operator*() const {
   return _map_iterator->second[_vector_index];
 }
 
 template <typename DataType>
-TableIndexMapIterator<DataType>& TableIndexMapIterator<DataType>::operator++() {
+TableIndexIterator<DataType>& TableIndexIterator<DataType>::operator++() {
   if (++_vector_index >= _map_iterator->second.size()) {
     ++_map_iterator;
     _vector_index = 0;
@@ -21,56 +21,27 @@ TableIndexMapIterator<DataType>& TableIndexMapIterator<DataType>::operator++() {
 }
 
 template <typename DataType>
-bool TableIndexMapIterator<DataType>::operator==(const AbstractTableIndexIterator& other) const {
-  auto other_iterator = dynamic_cast<const TableIndexMapIterator*>(&other);
+bool TableIndexIterator<DataType>::operator==(const AbstractTableIndexIterator& other) const {
+  auto other_iterator = dynamic_cast<const TableIndexIterator*>(&other);
   return other_iterator && _map_iterator == other_iterator->_map_iterator &&
          _vector_index == other_iterator->_vector_index;
 }
 
 template <typename DataType>
-bool TableIndexMapIterator<DataType>::operator!=(const AbstractTableIndexIterator& other) const {
-  auto other_iterator = dynamic_cast<const TableIndexMapIterator*>(&other);
+bool TableIndexIterator<DataType>::operator!=(const AbstractTableIndexIterator& other) const {
+  auto other_iterator = dynamic_cast<const TableIndexIterator*>(&other);
   return !other_iterator || _map_iterator != other_iterator->_map_iterator ||
          _vector_index != other_iterator->_vector_index;
 }
 
 template <typename DataType>
-std::shared_ptr<AbstractTableIndexIterator> TableIndexMapIterator<DataType>::clone() const {
-  return std::make_shared<TableIndexMapIterator<DataType>>(*this);
+std::shared_ptr<AbstractTableIndexIterator> TableIndexIterator<DataType>::clone() const {
+  return std::make_shared<TableIndexIterator<DataType>>(*this);
 }
 
 template <typename DataType>
-IteratorWrapper TableIndexMapIterator<DataType>::create_wrapper(MapIterator it) {
-  return IteratorWrapper(std::make_shared<TableIndexMapIterator<DataType>>(it));
-}
-
-TableIndexVectorIterator::TableIndexVectorIterator(VectorIterator it) : _vector_iterator(it) {}
-
-const RowID& TableIndexVectorIterator::operator*() const {
-  return *_vector_iterator;
-}
-
-TableIndexVectorIterator& TableIndexVectorIterator::operator++() {
-  ++_vector_iterator;
-  return *this;
-}
-
-bool TableIndexVectorIterator::operator==(const AbstractTableIndexIterator& other) const {
-  const auto* const other_iterator = dynamic_cast<const TableIndexVectorIterator*>(&other);
-  return other_iterator && _vector_iterator == other_iterator->_vector_iterator;
-}
-
-bool TableIndexVectorIterator::operator!=(const AbstractTableIndexIterator& other) const {
-  const auto* const other_iterator = dynamic_cast<const TableIndexVectorIterator*>(&other);
-  return !other_iterator || _vector_iterator != other_iterator->_vector_iterator;
-}
-
-std::shared_ptr<AbstractTableIndexIterator> TableIndexVectorIterator::clone() const {
-  return std::make_shared<TableIndexVectorIterator>(*this);
-}
-
-IteratorWrapper TableIndexVectorIterator::create_wrapper(VectorIterator it) {
-  return IteratorWrapper(std::make_shared<TableIndexVectorIterator>(it));
+IteratorWrapper TableIndexIterator<DataType>::create_wrapper(MapIterator it) {
+  return IteratorWrapper(std::make_shared<TableIndexIterator<DataType>>(it));
 }
 
 template <typename DataType>
@@ -99,7 +70,10 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       const auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
-        _null_values.emplace_back(row_id);
+        if (!_null_values.contains(DataType{})) {
+          _null_values[DataType{}] = std::vector<RowID>();
+        }
+        _null_values[DataType{}].push_back(row_id);
       } else {
         _map[position.value()].emplace_back(row_id);
       }
@@ -141,7 +115,7 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
     map_iter = row_ids.empty() ? _map.erase(map_iter) : ++map_iter;
   }
 
-  auto& nulls = _null_values;
+  auto& nulls = _null_values[DataType{}];
 
   nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
 
@@ -157,8 +131,8 @@ typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataT
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(TableIndexMapIterator<DataType>::create_wrapper(begin),
-                        TableIndexMapIterator<DataType>::create_wrapper(++end));
+  return std::make_pair(TableIndexIterator<DataType>::create_wrapper(begin),
+                        TableIndexIterator<DataType>::create_wrapper(++end));
 }
 
 template <typename DataType>
@@ -170,22 +144,22 @@ PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) co
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return TableIndexMapIterator<DataType>::create_wrapper(_map.cbegin());
+  return TableIndexIterator<DataType>::create_wrapper(_map.cbegin());
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return TableIndexMapIterator<DataType>::create_wrapper(_map.cend());
+  return TableIndexIterator<DataType>::create_wrapper(_map.cend());
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return TableIndexVectorIterator::create_wrapper(_null_values.cbegin());
+  return TableIndexIterator<DataType>::create_wrapper(_null_values.cbegin());
 }
 
 template <typename DataType>
 typename PartialHashIndexImpl<DataType>::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return TableIndexVectorIterator::create_wrapper(_null_values.cend());
+  return TableIndexIterator<DataType>::create_wrapper(_null_values.cend());
 }
 
 template <typename DataType>
