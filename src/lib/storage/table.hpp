@@ -12,6 +12,7 @@
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
