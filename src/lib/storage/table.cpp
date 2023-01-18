@@ -29,7 +29,7 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc,
-             const pmr_vector<std::shared_ptr<AbstractTableIndex>>& table_indexes)
+             const pmr_vector<std::shared_ptr<PartialHashIndex>>& table_indexes)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
@@ -43,7 +43,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
              std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
-             pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes)
+             pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
             use_mvcc, table_indexes) {
   _chunks = {chunks.begin(), chunks.end()};
@@ -457,12 +457,12 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   _value_clustered_by = value_clustered_by;
 }
 
-pmr_vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes() const {
+pmr_vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes() const {
   return _table_indexes;
 }
 
-std::vector<std::shared_ptr<AbstractTableIndex>> Table::get_table_indexes(const ColumnID column_id) const {
-  auto result = std::vector<std::shared_ptr<AbstractTableIndex>>();
+std::vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes(const ColumnID column_id) const {
+  auto result = std::vector<std::shared_ptr<PartialHashIndex>>();
   std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(column_id); });
   return result;
@@ -492,7 +492,7 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
 }
 
 void Table::_create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
-  std::shared_ptr<AbstractTableIndex> table_index = nullptr;
+  std::shared_ptr<PartialHashIndex> table_index = nullptr;
   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
 
   if (chunk_ids.empty()) {

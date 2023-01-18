@@ -8,6 +8,7 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
@@ -16,7 +17,6 @@ namespace hyrise {
 class MultiPredicateJoinEvaluator;
 
 using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
-using TableIndexRange = std::pair<AbstractTableIndex::Iterator, AbstractTableIndex::Iterator>;
 
 /**
    * This operator joins two tables using one column of each table.
@@ -81,7 +81,7 @@ class JoinIndex : public AbstractJoinOperator {
   template <typename ProbeIterator>
   void _data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                  const ChunkID probe_chunk_id,
-                                                 const std::shared_ptr<AbstractTableIndex>& table_index);
+                                                 const std::shared_ptr<PartialHashIndex>& table_index);
 
   template <typename ProbeIterator>
   void _reference_join_two_segments_using_chunk_index(
@@ -97,9 +97,9 @@ class JoinIndex : public AbstractJoinOperator {
                                    const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
                                    const ChunkID probe_chunk_id, const ChunkID index_chunk_id);
 
-  void _append_matches_table_index(const AbstractTableIndex::Iterator& range_begin,
-                                   const AbstractTableIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                   const ChunkID probe_chunk_id);
+  // void _append_matches_table_index(const PartialHashIndex::Iterator& range_begin,
+  //                                  const PartialHashIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
+  //                                  const ChunkID probe_chunk_id);
 
   void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                     const RowIDPosList& index_table_matches);

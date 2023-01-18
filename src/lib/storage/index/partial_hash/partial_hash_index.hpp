@@ -34,6 +34,20 @@ class PartialHashIndex {
    */
   size_t remove_entries(const std::vector<ChunkID>&);
 
+  /**
+   * Checks whether null values are indexed.
+   *
+   * @return true if null values are indexed, false otherwise.
+   */
+  bool indexed_null_values() const;
+
+  /**
+   * Checks whether the given column id is covered by the index.
+   *
+   * @return true if the given column is covered by the index.
+   */
+  bool is_index_for(const ColumnID column_id) const;
+
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
 
   /**
@@ -58,11 +72,11 @@ class PartialHashIndex {
 
   size_t _estimate_memory_usage() const;
 
-  template <typename DataType>
-  std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>> _range_equals(const AllTypeVariant& value) const;
+  // template <typename DataType>
+  // std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>> _range_equals(const AllTypeVariant& value) const;
 
-  template <typename DataType>
-  std::pair<std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>, std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>> _range_not_equals(const AllTypeVariant& value) const;
+  // template <typename DataType>
+  // std::pair<std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>, std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>> _range_not_equals(const AllTypeVariant& value) const;
 
   mutable std::shared_mutex _data_access_mutex;
 

@@ -37,11 +37,11 @@ class Table : private Noncopyable {
   // Chunk::DEFAULT_SIZE is used. It must not be set for reference tables.
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         const std::optional<ChunkOffset> target_chunk_size = std::nullopt, const UseMvcc use_mvcc = UseMvcc::No,
-        pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes = {});
+        pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   Table(const TableColumnDefinitions& column_definitions, const TableType type,
         std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc = UseMvcc::No,
-        pmr_vector<std::shared_ptr<AbstractTableIndex>> const& table_indexes = {});
+        pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes = {});
 
   /**
    * @defgroup Getter and convenience functions for the column definitions
@@ -189,7 +189,7 @@ class Table : private Noncopyable {
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
 
   /**
-   * Creates a subclass of AbstractTableIndex on a set of chunks of a specific column and adds the index to the
+   * Creates a subclass of PartialHashIndex on a set of chunks of a specific column and adds the index to the
    * table's index statistics. Table indexes can only be created on a set of immutable chunks.
    */
   void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const TableIndexType type);
@@ -207,12 +207,12 @@ class Table : private Noncopyable {
   /**
    * Returns all table indexes created for this table.
    */
-  pmr_vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes() const;
+  pmr_vector<std::shared_ptr<PartialHashIndex>> get_table_indexes() const;
 
   /**
    * Returns all table indexes created for this table that index a specific ColumnID.
    */
-  std::vector<std::shared_ptr<AbstractTableIndex>> get_table_indexes(const ColumnID column_id) const;
+  std::vector<std::shared_ptr<PartialHashIndex>> get_table_indexes(const ColumnID column_id) const;
 
   /**
    * For debugging purposes, makes an estimation about the memory used by this Table (including Chunk and Segments)
@@ -262,7 +262,7 @@ class Table : private Noncopyable {
   std::unique_ptr<std::mutex> _append_mutex;
   std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
-  pmr_vector<std::shared_ptr<AbstractTableIndex>> _table_indexes;
+  pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;
 
   // For tables with _type==Reference, the row count will not vary. As such, there is no need to iterate over all
   // chunks more than once.

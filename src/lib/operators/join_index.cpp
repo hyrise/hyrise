@@ -380,12 +380,46 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
 template <typename ProbeIterator>
 void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                           const ChunkID probe_chunk_id,
-                                                          const std::shared_ptr<AbstractTableIndex>& table_index) {
+                                                          const std::shared_ptr<PartialHashIndex>& table_index) {
   for (; probe_iter != probe_end; ++probe_iter) {
     const auto probe_side_position = *probe_iter;
 
-    auto append_matches = [&probe_side_position, &probe_chunk_id, this](auto index_begin, auto index_end) {
-      _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
+  auto append_matches_table_index = [&](const auto& range_begin,
+                                            const auto& range_end,
+                                            const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id) {
+  const auto index_matches_count = std::distance(range_begin, range_end);
+
+  if (index_matches_count == 0) {
+    return;
+  }
+
+  const auto is_semi_or_anti_join =
+      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+
+  // Remember the matches for non-inner joins.
+  if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
+    _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
+  }
+
+  if (!is_semi_or_anti_join) {
+    // We replicate the probe side value for each index side value.
+    std::fill_n(std::back_inserter(*_probe_pos_list), index_matches_count, RowID{probe_chunk_id, probe_chunk_offset});
+
+    std::copy(range_begin, range_end, std::back_inserter(*_index_pos_list));
+  }
+
+  if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
+      (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter ||
+      (is_semi_or_anti_join && _index_side == IndexSide::Left)) {
+    std::for_each(range_begin, range_end, [this](RowID index_row_id) {
+      _index_matches[index_row_id.chunk_id][index_row_id.chunk_offset] = true;
+    });
+  }
+};
+
+    auto append_matches = [&probe_side_position, &probe_chunk_id, &append_matches_table_index, this](auto index_begin, auto index_end) {
+      append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
     };
 
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
@@ -565,39 +599,39 @@ void JoinIndex::_append_matches_chunk_index(const AbstractChunkIndex::Iterator& 
   }
 }
 
-void JoinIndex::_append_matches_table_index(const AbstractTableIndex::Iterator& range_begin,
-                                            const AbstractTableIndex::Iterator& range_end,
-                                            const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id) {
-  const auto index_matches_count = std::distance(range_begin, range_end);
+// void JoinIndex::_append_matches_table_index(const PartialHashIndex::Iterator& range_begin,
+//                                             const PartialHashIndex::Iterator& range_end,
+//                                             const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id) {
+//   const auto index_matches_count = std::distance(range_begin, range_end);
 
-  if (index_matches_count == 0) {
-    return;
-  }
+//   if (index_matches_count == 0) {
+//     return;
+//   }
 
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+//   const auto is_semi_or_anti_join =
+//       _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
 
-  // Remember the matches for non-inner joins.
-  if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
-      (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
-    _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
-  }
+//   // Remember the matches for non-inner joins.
+//   if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
+//       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
+//     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
+//   }
 
-  if (!is_semi_or_anti_join) {
-    // We replicate the probe side value for each index side value.
-    std::fill_n(std::back_inserter(*_probe_pos_list), index_matches_count, RowID{probe_chunk_id, probe_chunk_offset});
+//   if (!is_semi_or_anti_join) {
+//     // We replicate the probe side value for each index side value.
+//     std::fill_n(std::back_inserter(*_probe_pos_list), index_matches_count, RowID{probe_chunk_id, probe_chunk_offset});
 
-    std::copy(range_begin, range_end, std::back_inserter(*_index_pos_list));
-  }
+//     std::copy(range_begin, range_end, std::back_inserter(*_index_pos_list));
+//   }
 
-  if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
-      (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter ||
-      (is_semi_or_anti_join && _index_side == IndexSide::Left)) {
-    std::for_each(range_begin, range_end, [this](RowID index_row_id) {
-      _index_matches[index_row_id.chunk_id][index_row_id.chunk_offset] = true;
-    });
-  }
-}
+//   if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
+//       (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter ||
+//       (is_semi_or_anti_join && _index_side == IndexSide::Left)) {
+//     std::for_each(range_begin, range_end, [this](RowID index_row_id) {
+//       _index_matches[index_row_id.chunk_id][index_row_id.chunk_offset] = true;
+//     });
+//   }
+// }
 
 void JoinIndex::_append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                              const RowIDPosList& index_table_matches) {

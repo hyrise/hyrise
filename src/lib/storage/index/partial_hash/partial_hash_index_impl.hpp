@@ -33,15 +33,19 @@ class TableIndexIterator {
 
   explicit TableIndexIterator(MapIterator it);
 
+  TableIndexIterator(const TableIndexIterator<DataType>& other);
+
   reference operator*() const;
+
+  TableIndexIterator& operator=(const TableIndexIterator& other);
 
   TableIndexIterator& operator++();
 
-  bool operator==(const AbstractTableIndexIterator& other) const;
+  bool operator==(const TableIndexIterator<DataType>& other) const;
 
-  bool operator!=(const AbstractTableIndexIterator& other) const;
+  bool operator!=(const TableIndexIterator<DataType>& other) const;
 
-  std::shared_ptr<AbstractTableIndexIterator> clone() const;
+  std::shared_ptr<TableIndexIterator<DataType>> clone() const;
 
  private:
   MapIterator _map_iterator;
@@ -55,10 +59,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
 
  public:
-  using Iterator = TableIndexIterator<DataType>;
-  using IteratorPair = std::pair<Iterator, Iterator>;
-
-  virtual ~BasePartialHashIndexImpl() = default;
+    virtual ~BasePartialHashIndexImpl() = default;
 
   /**
    * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
@@ -73,6 +74,8 @@ class BasePartialHashIndexImpl : public Noncopyable {
    * @return The number of removed chunks.
    */
   virtual size_t remove_entries(const std::vector<ChunkID>&) = 0;
+
+  virtual bool indexed_null_values() const = 0;
 
   // virtual Iterator cbegin() const = 0;
   // virtual Iterator cend() const = 0;
@@ -98,16 +101,21 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   friend PartialHashIndexTest;
 
  public:
+  using Iterator = TableIndexIterator<DataType>;
+  using IteratorPair = std::pair<Iterator, Iterator>;
+
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
   size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
   size_t remove_entries(const std::vector<ChunkID>&);
 
+  bool indexed_null_values() const;
+
   TableIndexIterator<DataType> cbegin() const;
-  Iterator cend() const;
-  Iterator null_cbegin() const;
-  Iterator null_cend() const;
+  TableIndexIterator<DataType> cend() const;
+  TableIndexIterator<DataType> null_cbegin() const;
+  TableIndexIterator<DataType> null_cend() const;
   size_t estimate_memory_usage() const;
 
   IteratorPair range_equals(const AllTypeVariant& value) const;

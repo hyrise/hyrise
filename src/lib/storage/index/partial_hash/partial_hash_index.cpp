@@ -27,16 +27,20 @@ size_t PartialHashIndex::remove_entries(const std::vector<ChunkID>& chunks_to_re
   return _impl->remove_entries(chunks_to_remove);
 }
 
-template <typename DataType>
-std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>> PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
-  return _impl->range_equals(value);
+bool PartialHashIndex::indexed_null_values() const {
+  return _impl->indexed_null_values();
 }
 
-template <typename DataType>
-std::pair<std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>, std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>> PartialHashIndex::_range_not_equals(
-    const AllTypeVariant& value) const {
-  return _impl->range_not_equals(value);
-}
+// template <typename DataType>
+// std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>> PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
+//   return _impl->range_equals(value);
+// }
+
+// template <typename DataType>
+// std::pair<std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>, std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>> PartialHashIndex::_range_not_equals(
+//     const AllTypeVariant& value) const {
+//   return _impl->range_not_equals(value);
+// }
 
 // template <typename DataType>
 //   TableIndexIterator<DataType> PartialHashIndex::_cbegin() const {
@@ -63,6 +67,10 @@ size_t PartialHashIndex::_estimate_memory_usage() const {
   bytes += sizeof(_impl);
   bytes += _impl->estimate_memory_usage();
   return bytes;
+}
+
+bool PartialHashIndex::is_index_for(const ColumnID column_id) const {
+  return column_id == _column_id;
 }
 
 std::unordered_set<ChunkID> PartialHashIndex::get_indexed_chunk_ids() const {
