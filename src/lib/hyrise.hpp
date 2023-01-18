@@ -42,7 +42,7 @@ class Hyrise : public Singleton<Hyrise> {
   // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
   // could not work without the StorageManager still in place.
   StorageManager storage_manager;
-  // BufferManager buffer_manager;
+  BufferManager buffer_manager;
   PluginManager plugin_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;

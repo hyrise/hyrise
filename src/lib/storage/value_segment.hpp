@@ -78,6 +78,8 @@ class ValueSegment : public BaseValueSegment {
   // Copies a ValueSegment using a new allocator. This is useful for placing the ValueSegment on a new NUMA node.
   std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
 
+  AbstractSegment* copy_to_managed_memory_using_allocator(const PolymorphicAllocator<size_t>& alloc) const;
+
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 
  protected:

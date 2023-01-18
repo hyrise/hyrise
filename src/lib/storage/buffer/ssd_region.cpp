@@ -2,8 +2,23 @@
 #include "page.hpp"
 
 namespace hyrise {
-SSDRegion::SSDRegion(const std::string_view file_name)
-    : _fd_stream(open_file_descriptor(file_name)), _backing_file(_fd_stream.get()), _backing_file_name(file_name) {}
+
+static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::path& file_name) {
+  if(std::filesystem::is_regular_file(file_name)) {
+    return SSDRegion::DeviceType::REGULAR_FILE;
+  } else if (std::filesystem::is_block_file(file_name)) {
+    return SSDRegion::DeviceType::REGULAR_FILE;
+  } else {
+    Fail("The backing file has to be either a regular file or a block device");
+  }
+}
+
+SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes = 1 << 31)
+    : _fd_stream(open_file_descriptor(file_name)), _backing_file(_fd_stream.get()), _backing_file_name(file_name), _device_type(find_device_type_or_fail(file_name)) {
+  if(_device_type == DeviceType::REGULAR_FILE) {
+    std::filesystem::resize_file(file_name, initial_num_bytes);
+  }
+}
 
 SSDRegion::~SSDRegion() {
   if (!std::filesystem::remove(_backing_file_name)) {
@@ -11,10 +26,16 @@ SSDRegion::~SSDRegion() {
   }
 }
 
-// TODO: Preallocate size of SSDRegion to reduce read e.g with fallocate on Linux
+SSDRegion::DeviceType SSDRegion::get_device_type() const {
+  return _device_type;
+}
 
 std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>> SSDRegion::open_file_descriptor(
-    const std::string_view file_name) {
+    const std::filesystem::path& file_name) {
+  if (!std::filesystem::exists(file_name)) {
+    Fail("Backing file does not exist");
+  };
+
 #ifdef __APPLE__
   int flags = O_RDWR | O_SYNC | O_CREAT;
 #elif __linux__
@@ -37,8 +58,6 @@ std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descripto
 
   return fpstream;
 }
-
-// TODO: Remove backing file
 
 void SSDRegion::write_page(const PageID page_id, Page& source) {
   const off_t page_pos = page_id * PAGE_SIZE;

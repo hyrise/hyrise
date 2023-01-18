@@ -24,14 +24,14 @@ class BufferManager : public Noncopyable {
    * @param page_id 
    * @return std::unique_ptr<Page> 
    */
-  std::unique_ptr<Page> get_page(const PageID page_id);
+  Page* get_page(const PageID page_id);
 
   /**
    * @brief 
    * 
    * @return std::pair<PageID, std::unique_ptr<Page>> 
    */
-  std::pair<PageID, std::unique_ptr<Page>> new_page();
+  PageID new_page();
 
   /**
    * @brief Pin a page marks a page unavailable for replacement. It needs to be unpinned before it can be replaced.
@@ -42,7 +42,7 @@ class BufferManager : public Noncopyable {
 
   /**
    * @brief Unpinning a page marks a page available for replacement. This acts as a soft-release without flushing
-   * the page back to disk.
+   * the page back to disk. Calls callback if the pin count is redced to zero.
    * 
    * @param page_id 
    */

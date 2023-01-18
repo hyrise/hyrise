@@ -4,7 +4,7 @@ namespace hyrise {
 VolatileRegion::VolatileRegion(size_t num_bytes) : _num_bytes(num_bytes) {
   _data = std::make_unique<std::byte[]>(num_bytes);
   Assert(_data.get() != nullptr, "Could not properly allocate data for volatile region.");
-  for(FrameID frame_id{0}; frame_id < capacity(); frame_id++) {
+  for (FrameID frame_id{0}; frame_id < capacity(); frame_id++) {
     _free_frames.push_front(frame_id);
   }
   _num_free_frames = capacity();
@@ -12,7 +12,7 @@ VolatileRegion::VolatileRegion(size_t num_bytes) : _num_bytes(num_bytes) {
 }
 
 Frame* VolatileRegion::allocate() {
-  if (_free_frames.empty()) {
+  if (_num_free_frames <= 0) {
     return nullptr;
   }
   const auto frame_id = _free_frames.front();
@@ -27,7 +27,8 @@ Frame* VolatileRegion::get(FrameID frame_id) {
 }
 
 void VolatileRegion::deallocate(Frame* frame) {
-  Assert(_data.get() <= reinterpret_cast<std::byte*>(frame), "Deallocated frame has to be in the volatile memory region");
+  Assert(_data.get() <= reinterpret_cast<std::byte*>(frame),
+         "Deallocated frame has to be in the volatile memory region");
   Assert(reinterpret_cast<std::byte*>(frame) <= _data.get() + _num_bytes,
          "Dellocated frame has to be in the volatile memory region");  // TODO: Might not be the exact boundary
   const auto frame_id = static_cast<FrameID>((reinterpret_cast<std::byte*>(frame) - _data.get()) / sizeof(Frame));

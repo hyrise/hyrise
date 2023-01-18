@@ -3,6 +3,7 @@
 #include <numeric>
 #include <random>
 #include <vector>
+#include <filesystem>
 
 #include "benchmark/benchmark.h"
 #include "micro_benchmark_utils.hpp"
@@ -12,10 +13,18 @@
 
 namespace hyrise {
 
+static std::filesystem::path ssd_region_path() {
+  if(const char* path = std::getenv("SSD_REGION_PATH")) {
+    return path;
+  } else {
+    return "./.hyrise_test_data";
+  }
+}
+
 static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion("./test1.data");  // TODO: proper filepath, make
+  auto ssd_region = SSDRegion(ssd_region_path() / "read_single.data");  
   auto outputPage = Page();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -31,7 +40,7 @@ static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
 static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion("./test1.data");  // TODO: proper filepath, make
+  auto ssd_region = SSDRegion(ssd_region_path() / "read_serial.data");  
   auto outputPage = Page();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -47,7 +56,7 @@ static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
 static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion("./test1.data");  // TODO: proper filepath, make
+  auto ssd_region = SSDRegion(ssd_region_path() / "read_random.data");  
   auto outputPage = Page();
   const auto num_pages = state.range(0);
 
@@ -69,7 +78,7 @@ static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
 static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion("./test1.data");  // TODO: proper filepath, make
+  auto ssd_region = SSDRegion(ssd_region_path() / "write_single.data");  
   auto outputPage = Page();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -85,7 +94,7 @@ static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
 static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion("./test1.data");  // TODO: proper filepath, make
+  auto ssd_region = SSDRegion(ssd_region_path() / "write_serial.data");  
   auto outputPage = Page();
   const auto num_pages = state.range(0);
   for (auto _ : state) {

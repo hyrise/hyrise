@@ -225,7 +225,7 @@ enum class SetOperationMode { Unique, All, Positions };
 // values, both for ascending and descending sorts. See sort.cpp for details.
 enum class SortMode { Ascending, Descending };
 
-enum class TableType { References, Data };
+enum class TableType { References, Data, BufferManagedData };
 
 enum class DescriptionMode { SingleLine, MultiLine };
 

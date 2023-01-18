@@ -14,12 +14,12 @@ BufferManager::BufferManager(std::unique_ptr<VolatileRegion> volatile_region, st
   _clock_replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 
-std::unique_ptr<Page> BufferManager::get_page(const PageID page_id) {
+Page* BufferManager::get_page(const PageID page_id) {
   Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
   const auto frame_in_page_table_it = _page_table.find(page_id);
   if (frame_in_page_table_it != _page_table.end()) {
-    return std::unique_ptr<Page>(&frame_in_page_table_it->second->data);
+    return &frame_in_page_table_it->second->data;
   }
   // The PageID was not found in the page table. We first need to see if we can allocate a new frame in the
   // volatile region. If not, we need to go through the clock replacment mechanism.
@@ -40,10 +40,10 @@ std::unique_ptr<Page> BufferManager::get_page(const PageID page_id) {
   allocated_frame->pin_count = 1;
   _ssd_region->read_page(page_id, allocated_frame->data);
 
-  return std::unique_ptr<Page>(&allocated_frame->data);
+  return &allocated_frame->data;
 }
 
-std::pair<PageID, std::unique_ptr<Page>> BufferManager::new_page() {
+PageID BufferManager::new_page() {
   auto allocated_frame = _volatile_region->allocate();
   if (!allocated_frame) {
     const auto victim_frame_id = _clock_replacement_strategy->find_victim();
@@ -58,11 +58,13 @@ std::pair<PageID, std::unique_ptr<Page>> BufferManager::new_page() {
   allocated_frame->page_id = _num_pages;
   allocated_frame->dirty = false;
   allocated_frame->pin_count = 1;
-  // TODO: Zero out the page
+
+  _page_table[allocated_frame->page_id] = allocated_frame;
+  // TODO: Zero out the page, add to _page_table
 
   _num_pages++;
 
-  return std::make_pair(allocated_frame->page_id, std::unique_ptr<Page>(&allocated_frame->data));
+  return allocated_frame->page_id;
 }
 
 void BufferManager::unpin_page(const PageID page_id) {

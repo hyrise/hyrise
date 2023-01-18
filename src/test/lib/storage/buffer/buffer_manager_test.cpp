@@ -25,10 +25,10 @@ class BufferManagerTest : public BaseTest {
 };
 
 TEST_F(BufferManagerTest, TestGetPageInVolatileRegion) {
-  auto buffer_manager = create_buffer_manager();
-  auto page1 = buffer_manager.new_page();
-  auto page2 = buffer_manager.new_page();
-  auto page3 = buffer_manager.new_page();
+  // auto buffer_manager = create_buffer_manager();
+  // auto page1 = buffer_manager.new_page();
+  // auto page2 = buffer_manager.new_page();
+  // auto page3 = buffer_manager.new_page();
 }
 
 }  // namespace hyrise

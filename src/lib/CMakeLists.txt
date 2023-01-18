@@ -442,6 +442,8 @@ set(
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
+    storage/buffer/buffer_managed_segment.cpp
+    storage/buffer/buffer_managed_segment.hpp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
     storage/buffer/clock_replacement_strategy.cpp
