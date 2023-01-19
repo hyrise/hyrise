@@ -264,7 +264,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     const auto& subquery_result_table = subquery_pqp->get_output();
     const auto row_count = subquery_result_table->row_count();
     Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
-           "Uncorrelated subqueries may only return a single value.");
+           "Uncorrelated subqueries may return at most one single value.");
 
     if (row_count == 1) {
       const auto chunk = subquery_result_table->get_chunk(ChunkID{0});

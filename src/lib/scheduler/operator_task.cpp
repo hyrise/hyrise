@@ -40,8 +40,8 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   }
 
   for (const auto& subquery : op->uncorrelated_subqueries()) {
-    if (auto subqery_root = add_operator_tasks_recursively(subquery, tasks)) {
-      subqery_root->set_as_predecessor_of(task);
+    if (auto subquery_root = add_operator_tasks_recursively(subquery, tasks)) {
+      subquery_root->set_as_predecessor_of(task);
     }
   }
 

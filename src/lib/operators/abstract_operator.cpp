@@ -26,8 +26,10 @@ AbstractOperator::AbstractOperator(const OperatorType type, const std::shared_pt
                                    const std::shared_ptr<const AbstractOperator>& right,
                                    std::unique_ptr<AbstractOperatorPerformanceData> init_performance_data)
     : performance_data(std::move(init_performance_data)), _type(type), _left_input(left), _right_input(right) {
-  // Tell input operators that we want to consume their output. Operators with uncorrelated subqueries have to call
-  // _search_and_register_subqueries for desired expressions to register as a consumer of the subqueries.
+  // This operator informs all input operators that it wants to consume their output (so it is not deleted until this
+  // operator eventually executes). Operators that use expressions that might contain uncorrelated subqueries have to
+  // call `_search_and_register_subqueries` to also register as a consumer of these subqueries (see, e.g., the
+  // constructors of TableScan or Projection).
   if (_left_input) {
     mutable_left_input()->register_consumer();
   }
@@ -380,8 +382,9 @@ void AbstractOperator::_on_cleanup() {}
 
 void AbstractOperator::_search_and_register_subqueries(const std::shared_ptr<AbstractExpression>& expression) {
   /**
-   * Register as a consumer for all uncorrelated subqueries. In contrast, we do not register for correlated subqueries,
-   * which cannot be reused by design. They are fully owned and managed by the ExpressionEvaluator.
+   * Register this operator as a consumer of all uncorrelated subqueries found in `expression` or any of its input
+   * expressions. In contrast, we do not register as a consumer of correlated subqueries, which cannot be reused by
+   * design. They are fully owned and managed by the ExpressionEvaluator.
    */
   auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
   for (const auto& subquery_expression : pqp_subquery_expressions) {
