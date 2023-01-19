@@ -30,7 +30,7 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
   for (const auto& expression : expressions) {
-    _search_and_register_subqueries(expression);
+    _search_and_register_uncorrelated_subqueries(expression);
   }
 }
 

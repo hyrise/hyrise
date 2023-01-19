@@ -248,7 +248,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // Operators that might rely on uncorrelated subqueries should use this method in order to let AbstractOperator
   // register and deregister as a consumer of the subqueries and ensure their tasks are scheduled.
-  void _search_and_register_subqueries(const std::shared_ptr<AbstractExpression>& expression);
+  void _search_and_register_uncorrelated_subqueries(const std::shared_ptr<AbstractExpression>& expression);
 
   const OperatorType _type;
 

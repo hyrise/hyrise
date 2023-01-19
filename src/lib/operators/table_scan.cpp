@@ -48,7 +48,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operat
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
-  _search_and_register_subqueries(predicate);
+  _search_and_register_uncorrelated_subqueries(predicate);
 }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const {
