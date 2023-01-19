@@ -37,7 +37,7 @@ class FlattenedMapIterator : public BaseIteratorImpl {
 
   // Creates and returns an BaseIterator wrapping an instance of FlattenedMapIterator initialized using the passed
   // parameter.
-  static BaseIterator iterator_wrapper(MapIterator it);
+  static BaseIterator base_iterator(MapIterator it);
 
  private:
   MapIterator _map_iterator;

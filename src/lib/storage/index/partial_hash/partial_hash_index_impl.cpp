@@ -96,8 +96,8 @@ IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& 
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(FlattenedMapIterator<DataType>::iterator_wrapper(begin),
-                        FlattenedMapIterator<DataType>::iterator_wrapper(++end));
+  return std::make_pair(FlattenedMapIterator<DataType>::base_iterator(begin),
+                        FlattenedMapIterator<DataType>::base_iterator(++end));
 }
 
 template <typename DataType>
@@ -109,22 +109,22 @@ std::pair<IteratorPair, IteratorPair> PartialHashIndexImpl<DataType>::range_not_
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return FlattenedMapIterator<DataType>::iterator_wrapper(_map.cbegin());
+  return FlattenedMapIterator<DataType>::base_iterator(_map.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return FlattenedMapIterator<DataType>::iterator_wrapper(_map.cend());
+  return FlattenedMapIterator<DataType>::base_iterator(_map.cend());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return FlattenedMapIterator<DataType>::iterator_wrapper(_null_values.cbegin());
+  return FlattenedMapIterator<DataType>::base_iterator(_null_values.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return FlattenedMapIterator<DataType>::iterator_wrapper(_null_values.cend());
+  return FlattenedMapIterator<DataType>::base_iterator(_null_values.cend());
 }
 
 template <typename DataType>

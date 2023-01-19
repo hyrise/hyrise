@@ -6,26 +6,10 @@ namespace hyrise {
 template <typename DataType>
 FlattenedMapIterator<DataType>::FlattenedMapIterator(MapIterator it) : _map_iterator(it), _vector_index(0) {}
 
-// template <typename DataType>
-// FlattenedMapIterator<DataType>::FlattenedMapIterator(const FlattenedMapIterator<DataType>& other) {
-//    _map_iterator = other._map_iterator;
-//    _vector_index = other._vector_index;
-//  }
-
 template <typename DataType>
 const RowID& FlattenedMapIterator<DataType>::operator*() const {
   return _map_iterator->second[_vector_index];
 }
-
-// template <typename DataType>
-// FlattenedMapIterator<DataType>& FlattenedMapIterator<DataType>::operator=(const FlattenedMapIterator<DataType>& other) {
-//   if (&other != this) {
-//      _map_iterator = other._map_iterator;
-//      _vector_index = other._vector_index;
-//   }
-
-//   return *this;
-// }
 
 template <typename DataType>
 FlattenedMapIterator<DataType>& FlattenedMapIterator<DataType>::operator++() {
@@ -56,7 +40,7 @@ std::shared_ptr<BaseIteratorImpl> FlattenedMapIterator<DataType>::clone() const 
 }
 
 template <typename DataType>
-BaseIterator FlattenedMapIterator<DataType>::iterator_wrapper(MapIterator it) {
+BaseIterator FlattenedMapIterator<DataType>::base_iterator(MapIterator it) {
   return BaseIterator(std::make_shared<FlattenedMapIterator<DataType>>(it));
 }
 
