@@ -192,7 +192,7 @@ class Table : private Noncopyable {
    * Creates a subclass of PartialHashIndex on a set of chunks of a specific column and adds the index to the
    * table's index statistics. Table indexes can only be created on a set of immutable chunks.
    */
-  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids, const TableIndexType type);
+  void create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids);
 
   template <typename Index>
   void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");

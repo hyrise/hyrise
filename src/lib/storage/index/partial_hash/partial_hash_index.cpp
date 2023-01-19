@@ -5,7 +5,8 @@
 namespace hyrise {
 
 PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index,
-                                   const ColumnID column_id) : _column_id{column_id} {
+                                   const ColumnID column_id)
+    : _column_id{column_id} {
   Assert(!chunks_to_index.empty(), "PartialHashIndex requires chunks_to_index not to be empty.");
   resolve_data_type(chunks_to_index.front().second->get_segment(column_id)->data_type(),
                     [&](const auto column_data_type) {
@@ -31,36 +32,29 @@ bool PartialHashIndex::indexed_null_values() const {
   return _impl->indexed_null_values();
 }
 
-// template <typename DataType>
-// std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>> PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
-//   return _impl->range_equals(value);
-// }
+IteratorPair PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
+  return _impl->range_equals(value);
+}
 
-// template <typename DataType>
-// std::pair<std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>, std::pair<TableIndexIterator<DataType>, TableIndexIterator<DataType>>> PartialHashIndex::_range_not_equals(
-//     const AllTypeVariant& value) const {
-//   return _impl->range_not_equals(value);
-// }
+std::pair<IteratorPair, IteratorPair> PartialHashIndex::_range_not_equals(const AllTypeVariant& value) const {
+  return _impl->range_not_equals(value);
+}
 
-// template <typename DataType>
-//   TableIndexIterator<DataType> PartialHashIndex::_cbegin() const {
-//   return _impl->cbegin();
-// }
+Iterator PartialHashIndex::_cbegin() const {
+  return _impl->cbegin();
+}
 
-// template <typename DataType>
-// TableIndexIterator<DataType> PartialHashIndex::_cend() const {
-//   return _impl->cend();
-// }
+Iterator PartialHashIndex::_cend() const {
+  return _impl->cend();
+}
 
-// template <typename DataType>
-// TableIndexIterator<DataType> PartialHashIndex::_null_cbegin() const {
-//   return _impl->null_cbegin();
-// }
+Iterator PartialHashIndex::_null_cbegin() const {
+  return _impl->null_cbegin();
+}
 
-// template <typename DataType>
-// TableIndexIterator<DataType> PartialHashIndex::_null_cend() const {
-//   return _impl->null_cend();
-// }
+Iterator PartialHashIndex::_null_cend() const {
+  return _impl->null_cend();
+}
 
 size_t PartialHashIndex::_estimate_memory_usage() const {
   auto bytes = size_t{0u};

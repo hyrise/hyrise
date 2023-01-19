@@ -1,59 +1,9 @@
 #include "partial_hash_index_impl.hpp"
+
+#include "flattened_map_iterator.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace hyrise {
-
-template <typename DataType>
-TableIndexIterator<DataType>::TableIndexIterator(MapIterator it) : _map_iterator(it), _vector_index(0) {}
-
-template <typename DataType>
-TableIndexIterator<DataType>::TableIndexIterator(const TableIndexIterator<DataType>& other) {
-   _map_iterator = other._map_iterator;
-   _vector_index = other._vector_index;
- }
-
-template <typename DataType>
-const RowID& TableIndexIterator<DataType>::operator*() const {
-  return _map_iterator->second[_vector_index];
-}
-
-template <typename DataType>
-TableIndexIterator<DataType>& TableIndexIterator<DataType>::operator=(const TableIndexIterator<DataType>& other) {
-  if (&other != this) {
-     _map_iterator = other._map_iterator;
-     _vector_index = other._vector_index;
-  }
-
-  return *this;
-}
-
-template <typename DataType>
-TableIndexIterator<DataType>& TableIndexIterator<DataType>::operator++() {
-  if (++_vector_index >= _map_iterator->second.size()) {
-    ++_map_iterator;
-    _vector_index = 0;
-  }
-  return *this;
-}
-
-template <typename DataType>
-bool TableIndexIterator<DataType>::operator==(const TableIndexIterator<DataType>& other) const {
-  auto other_iterator = dynamic_cast<const TableIndexIterator*>(&other);
-  return other_iterator && _map_iterator == other_iterator->_map_iterator &&
-         _vector_index == other_iterator->_vector_index;
-}
-
-template <typename DataType>
-bool TableIndexIterator<DataType>::operator!=(const TableIndexIterator<DataType>& other) const {
-  auto other_iterator = dynamic_cast<const TableIndexIterator*>(&other);
-  return !other_iterator || _map_iterator != other_iterator->_map_iterator ||
-         _vector_index != other_iterator->_vector_index;
-}
-
-template <typename DataType>
-std::shared_ptr<TableIndexIterator<DataType>> TableIndexIterator<DataType>::clone() const {
-  return std::make_shared<TableIndexIterator<DataType>>(*this);
-}
 
 template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
@@ -139,42 +89,42 @@ bool PartialHashIndexImpl<DataType>::indexed_null_values() const {
 }
 
 template <typename DataType>
-typename PartialHashIndexImpl<DataType>::IteratorPair PartialHashIndexImpl<DataType>::range_equals(
-    const AllTypeVariant& value) const {
+IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& value) const {
   const auto begin = _map.find(boost::get<DataType>(value));
   if (begin == _map.end()) {
     const auto end_iter = cend();
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(TableIndexIterator<DataType>(begin), TableIndexIterator<DataType>(++end));
+  return std::make_pair(FlattenedMapIterator<DataType>::iterator_wrapper(begin),
+                        FlattenedMapIterator<DataType>::iterator_wrapper(++end));
 }
 
 template <typename DataType>
-std::pair<typename PartialHashIndexImpl<DataType>::IteratorPair, typename PartialHashIndexImpl<DataType>::IteratorPair>
-PartialHashIndexImpl<DataType>::range_not_equals(const AllTypeVariant& value) const {
+std::pair<IteratorPair, IteratorPair> PartialHashIndexImpl<DataType>::range_not_equals(
+    const AllTypeVariant& value) const {
   const auto range_eq = range_equals(value);
   return std::make_pair(std::make_pair(cbegin(), range_eq.first), std::make_pair(range_eq.second, cend()));
 }
 
 template <typename DataType>
-TableIndexIterator<DataType> PartialHashIndexImpl<DataType>::cbegin() const {
-  return TableIndexIterator<DataType>(_map.cbegin());
+Iterator PartialHashIndexImpl<DataType>::cbegin() const {
+  return FlattenedMapIterator<DataType>::iterator_wrapper(_map.cbegin());
 }
 
 template <typename DataType>
-TableIndexIterator<DataType> PartialHashIndexImpl<DataType>::cend() const {
-  return TableIndexIterator<DataType>(_map.cend());
+Iterator PartialHashIndexImpl<DataType>::cend() const {
+  return FlattenedMapIterator<DataType>::iterator_wrapper(_map.cend());
 }
 
 template <typename DataType>
-TableIndexIterator<DataType> PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return TableIndexIterator<DataType>(_null_values.cbegin());
+Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
+  return FlattenedMapIterator<DataType>::iterator_wrapper(_null_values.cbegin());
 }
 
 template <typename DataType>
-TableIndexIterator<DataType> PartialHashIndexImpl<DataType>::null_cend() const {
-  return TableIndexIterator<DataType>(_null_values.cend());
+Iterator PartialHashIndexImpl<DataType>::null_cend() const {
+  return FlattenedMapIterator<DataType>::iterator_wrapper(_null_values.cend());
 }
 
 template <typename DataType>

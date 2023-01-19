@@ -697,7 +697,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           chunk_ids.push_back(chunk_id);
         }
         for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-          data_table->create_table_index(column_id, chunk_ids, TableIndexType::PartialHash);
+          data_table->create_table_index(column_id, chunk_ids);
         }
       }
 
@@ -888,9 +888,10 @@ TEST_P(JoinTestRunner, TestJoin) {
     }
 
     // If a table index is used, but the join is not supported by table indexes, no chunks are joined via index.
-    if (indexed_input.index_scope == IndexScope::Table && !(indexed_input.table_type == InputTableType::Data &&
-        (configuration.predicate_condition == PredicateCondition::Equals ||
-        configuration.predicate_condition == PredicateCondition::NotEquals))) {
+    if (indexed_input.index_scope == IndexScope::Table &&
+        !(indexed_input.table_type == InputTableType::Data &&
+          (configuration.predicate_condition == PredicateCondition::Equals ||
+           configuration.predicate_condition == PredicateCondition::NotEquals))) {
       indexed_used_count = 0;
     }
 

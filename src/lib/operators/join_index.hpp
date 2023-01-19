@@ -80,8 +80,8 @@ class JoinIndex : public AbstractJoinOperator {
 
   template <typename ProbeIterator>
   void _data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                 const ChunkID probe_chunk_id,
-                                                 const std::shared_ptr<PartialHashIndex>& table_index);
+                                                      const ChunkID probe_chunk_id,
+                                                      const std::shared_ptr<PartialHashIndex>& table_index);
 
   template <typename ProbeIterator>
   void _reference_join_two_segments_using_chunk_index(

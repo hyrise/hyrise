@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "hyrise.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
 
 namespace hyrise {

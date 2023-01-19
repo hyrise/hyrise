@@ -7,50 +7,16 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
+#include "base_iterator.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
+using Iterator = BaseIterator;
+using IteratorPair = std::pair<Iterator, Iterator>;
+
 class PartialHashIndexTest;
-
-/**
- * Forward iterator that iterates over a tsl::sparse_map that maps a DataType to a vector of RowIDs. The
- * iteration process is as if the map would have been flattened and then iterated.
- *
- * @tparam DataType The key type of the underlying map.
- */
-template <typename DataType>
-class TableIndexIterator {
- public:
-  using iterator_category = std::forward_iterator_tag;
-  using value_type = const RowID;
-  using difference_type = std::ptrdiff_t;
-  using pointer = const RowID*;
-  using reference = const RowID&;
-
-  using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
-
-  explicit TableIndexIterator(MapIterator it);
-
-  TableIndexIterator(const TableIndexIterator<DataType>& other);
-
-  reference operator*() const;
-
-  TableIndexIterator& operator=(const TableIndexIterator& other);
-
-  TableIndexIterator& operator++();
-
-  bool operator==(const TableIndexIterator<DataType>& other) const;
-
-  bool operator!=(const TableIndexIterator<DataType>& other) const;
-
-  std::shared_ptr<TableIndexIterator<DataType>> clone() const;
-
- private:
-  MapIterator _map_iterator;
-  size_t _vector_index;
-};
 
 /**
  * Base class that holds a PartialHashIndexImpl object with the correct resolved datatype.
@@ -59,7 +25,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
 
  public:
-    virtual ~BasePartialHashIndexImpl() = default;
+  virtual ~BasePartialHashIndexImpl() = default;
 
   /**
    * Adds the given chunks to this index. If a chunk is already indexed, it is not indexed again.
@@ -77,15 +43,15 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
   virtual bool indexed_null_values() const = 0;
 
-  // virtual Iterator cbegin() const = 0;
-  // virtual Iterator cend() const = 0;
-  // virtual Iterator null_cbegin() const = 0;
-  // virtual Iterator null_cend() const = 0;
+  virtual Iterator cbegin() const = 0;
+  virtual Iterator cend() const = 0;
+  virtual Iterator null_cbegin() const = 0;
+  virtual Iterator null_cend() const = 0;
   virtual size_t estimate_memory_usage() const = 0;
 
-  // virtual IteratorPair range_equals(const AllTypeVariant& value) const = 0;
+  virtual IteratorPair range_equals(const AllTypeVariant& value) const = 0;
 
-  // virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const = 0;
+  virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const = 0;
 
   virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
@@ -101,27 +67,24 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   friend PartialHashIndexTest;
 
  public:
-  using Iterator = TableIndexIterator<DataType>;
-  using IteratorPair = std::pair<Iterator, Iterator>;
-
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
-  size_t remove_entries(const std::vector<ChunkID>&);
+  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) final;
+  size_t remove_entries(const std::vector<ChunkID>&) final;
 
-  bool indexed_null_values() const;
+  bool indexed_null_values() const final;
 
-  TableIndexIterator<DataType> cbegin() const;
-  TableIndexIterator<DataType> cend() const;
-  TableIndexIterator<DataType> null_cbegin() const;
-  TableIndexIterator<DataType> null_cend() const;
-  size_t estimate_memory_usage() const;
+  Iterator cbegin() const final;
+  Iterator cend() const final;
+  Iterator null_cbegin() const final;
+  Iterator null_cend() const final;
+  size_t estimate_memory_usage() const final;
 
-  IteratorPair range_equals(const AllTypeVariant& value) const;
-  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const;
+  IteratorPair range_equals(const AllTypeVariant& value) const final;
+  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const final;
 
-  std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
+  std::unordered_set<ChunkID> get_indexed_chunk_ids() const final;
 
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _map;
