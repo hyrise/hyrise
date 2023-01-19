@@ -66,12 +66,11 @@
 
 #include "SQLParser.h"
 
-using namespace std::string_literals;           // NOLINT
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace std::string_literals;           // NOLINT(build/namespaces)
+using namespace hyrise;                         // NOLINT(build/namespaces)
+using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
 const std::unordered_map<hsql::OperatorType, ArithmeticOperator> hsql_arithmetic_operators = {
     {hsql::kOpPlus, ArithmeticOperator::Addition},           {hsql::kOpMinus, ArithmeticOperator::Subtraction},

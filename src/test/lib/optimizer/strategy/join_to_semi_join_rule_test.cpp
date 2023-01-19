@@ -17,9 +17,9 @@
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_semi_join_rule.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinToSemiJoinRuleTest : public StrategyBaseTest {
  public:

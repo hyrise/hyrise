@@ -26,7 +26,7 @@ class TaskQueue {
 
   NodeID node_id() const;
 
-  void push(const std::shared_ptr<AbstractTask>& task, uint32_t priority);
+  void push(const std::shared_ptr<AbstractTask>& task, const SchedulePriority priority);
 
   /**
    * Returns a Tasks that is ready to be executed and removes it from the queue
@@ -37,6 +37,14 @@ class TaskQueue {
    * Returns a Tasks that is ready to be executed and removes it from one of the stealable queues
    */
   std::shared_ptr<AbstractTask> steal();
+
+  /**
+   * Returns an estimated load for the task queue (i.e., all queues of the TaskQueue instance). The load is "estimated"
+   * as the used TBB queue does not guarantee that `unsafe_size()` returns the correct size at a given point in time.
+   * The priority queues are weighted, i.e., a task in the high priority queue leads to a larger load than a task in the
+   * default priority queue.
+   */
+  size_t estimate_load();
 
   /**
    * Notifies one worker as soon as a new task gets pushed into the queue

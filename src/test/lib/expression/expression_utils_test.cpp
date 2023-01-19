@@ -10,9 +10,9 @@
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class ExpressionUtilsTest : public BaseTest {
  public:

@@ -8,9 +8,9 @@
 #include "statistics/cardinality_estimator.hpp"
 #include "storage/table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class InExpressionRewriteRuleTest : public StrategyBaseTest {
   void SetUp() override {
