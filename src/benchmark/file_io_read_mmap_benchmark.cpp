@@ -30,7 +30,8 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
                                                                          const int map_mode_flag,
                                                                          const int access_order) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
+  Assert(((fd = open(filename.c_str(), O_RDONLY)) >= 0),
+         close_file_and_return_error_message(fd, "Open error: ", errno));
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -101,7 +102,8 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
                                                                         const uint16_t thread_count,
                                                                         const int access_order) {
   auto fd = int32_t{};
-  Assert(((fd = open(filename, O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
+  Assert(((fd = open(filename.c_str(), O_RDONLY)) >= 0),
+         close_file_and_return_error_message(fd, "Open error: ", errno));
 
   auto threads = std::vector<std::thread>(thread_count);
   const auto batch_size = static_cast<uint64_t>(std::ceil(static_cast<float>(NUMBER_OF_ELEMENTS) / thread_count));
