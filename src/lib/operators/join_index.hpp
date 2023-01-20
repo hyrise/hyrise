@@ -97,9 +97,9 @@ class JoinIndex : public AbstractJoinOperator {
                                    const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
                                    const ChunkID probe_chunk_id, const ChunkID index_chunk_id);
 
-  // void _append_matches_table_index(const PartialHashIndex::Iterator& range_begin,
-  //                                  const PartialHashIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-  //                                  const ChunkID probe_chunk_id);
+  void _append_matches_table_index(const BaseIterator& range_begin,
+                                   const BaseIterator& range_end, const ChunkOffset probe_chunk_offset,
+                                   const ChunkID probe_chunk_id);
 
   void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                     const RowIDPosList& index_table_matches);
