@@ -76,9 +76,10 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
     map_iter = row_ids.empty() ? _map.erase(map_iter) : ++map_iter;
   }
 
-  auto& nulls = _null_values[DataType{}];
-
-  nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
+  if (_null_values.contains(DataType{})) {
+    auto& nulls = _null_values[DataType{}];
+    nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
+  }
 
   return size_before - _indexed_chunk_ids.size();
 }
@@ -141,7 +142,11 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
   bytes += sizeof(_null_values);  // NOLINT
-  bytes += sizeof(RowID) * _null_values.size();
+
+  if (_null_values.contains(DataType{})) {
+    bytes += sizeof(std::vector<RowID>);
+    bytes += sizeof(RowID) * std::distance(null_cbegin(), null_cend());
+  }
 
   return bytes;
 }

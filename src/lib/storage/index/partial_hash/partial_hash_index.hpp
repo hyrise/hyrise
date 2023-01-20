@@ -120,6 +120,8 @@ class PartialHashIndex {
    */
   ColumnID get_indexed_column_id() const;
 
+  size_t estimate_memory_usage() const;
+
  protected:
   Iterator _cbegin() const;
 
@@ -129,7 +131,6 @@ class PartialHashIndex {
 
   Iterator _null_cend() const;
 
-  size_t _estimate_memory_usage() const;
 
   IteratorPair _range_equals(const AllTypeVariant& value) const;
 

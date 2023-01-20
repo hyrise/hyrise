@@ -542,203 +542,213 @@ TEST_F(PartialHashIndexTest, NotEqualsValueNotFound) {
 */
 
 // A2, B2, C1, D1
-// TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
-//   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
-//   auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
+TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
+  auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
+  auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
 
-//   Segments segments = {segment};
-//   auto chunk = std::make_shared<Chunk>(segments);
+  Segments segments = {segment};
+  auto chunk = std::make_shared<Chunk>(segments);
 
-//   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-//   chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
 
-//   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-//   auto expected_memory_usage = size_t{0u};
-//   //   TableIndexType
-//   expected_memory_usage += sizeof(TableIndexType);
-//   // + indexed ColumnID
-//   expected_memory_usage += sizeof(ColumnID);
-//   // + pointer to BaseParialHashIndexImpl
-//   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
-//   // +  ChunkIDs set
-//   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
-//   // +  number of indexed chunks * ChunkID
-//   expected_memory_usage += 1 * sizeof(ChunkID);
-//   // + map size
-//   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
-//   // + number of different non-NULL values * key size
-//   expected_memory_usage += 9 * sizeof(pmr_string);
-//   // + number of different non-NULL values * vector size
-//   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
-//   // + number of non-NULL values * RowID
-//   expected_memory_usage += 11 * sizeof(RowID);
-//   // + vector size NULL values (index NULL positions)
-//   expected_memory_usage += sizeof(std::vector<RowID>);
-//   // + number of NULL values * RowID
-//   expected_memory_usage += 0 * sizeof(RowID);
+  auto expected_memory_usage = size_t{0u};
+  // + indexed ColumnID
+  expected_memory_usage += sizeof(ColumnID);
+  // + data access mutex
+  expected_memory_usage += sizeof(std::shared_mutex);
+  // + pointer to BaseParialHashIndexImpl
+  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  // +  ChunkIDs set
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  // +  number of indexed chunks * ChunkID
+  expected_memory_usage += 1 * sizeof(ChunkID);
+  // + map size
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + number of different non-NULL values * key size
+  expected_memory_usage += 9 * sizeof(pmr_string);
+  // + number of different non-NULL values * vector size
+  expected_memory_usage += 9 * sizeof(std::vector<RowID>);
+  // + number of non-NULL values * RowID
+  expected_memory_usage += 11 * sizeof(RowID);
+  // + vector size NULL values (index NULL positions)
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + vector size when NULL values are indexed
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
+  // + number of NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
 
-//   EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
-// }
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
+}
 
-// // A2, B1, C2, D1
-// TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
-//   const auto& dict_segment_string_nulls =
-//       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
+// A2, B1, C2, D1
+TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
+  const auto& dict_segment_string_nulls =
+      create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
 
-//   Segments segments = {dict_segment_string_nulls};
-//   auto chunk = std::make_shared<Chunk>(segments);
+  Segments segments = {dict_segment_string_nulls};
+  auto chunk = std::make_shared<Chunk>(segments);
 
-//   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-//   chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
 
-//   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-//   auto expected_memory_usage = size_t{0u};
-//   //   TableIndexType
-//   expected_memory_usage += sizeof(TableIndexType);
-//   // + indexed ColumnID
-//   expected_memory_usage += sizeof(ColumnID);
-//   // + pointer to BaseParialHashIndexImpl
-//   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
-//   // +  ChunkIDs set
-//   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
-//   // +  number of indexed chunks * ChunkID
-//   expected_memory_usage += 1 * sizeof(ChunkID);
-//   // + map size
-//   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
-//   // + number of different non-NULL values * key size
-//   expected_memory_usage += 0 * sizeof(pmr_string);
-//   // + number of different non-NULL values * vector size
-//   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
-//   // + number of non-NULL values * RowID
-//   expected_memory_usage += 0 * sizeof(RowID);
-//   // + vector size NULL values (index NULL positions)
-//   expected_memory_usage += sizeof(std::vector<RowID>);
-//   // + number of NULL values * RowID
-//   expected_memory_usage += 2 * sizeof(RowID);
+  auto expected_memory_usage = size_t{0u};
+  // + indexed ColumnID
+  expected_memory_usage += sizeof(ColumnID);
+  // + data access mutex
+  expected_memory_usage += sizeof(std::shared_mutex);
+  // + pointer to BaseParialHashIndexImpl
+  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  // +  ChunkIDs set
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  // +  number of indexed chunks * ChunkID
+  expected_memory_usage += 1 * sizeof(ChunkID);
+  // + map size
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + number of different non-NULL values * key size
+  expected_memory_usage += 0 * sizeof(pmr_string);
+  // + number of different non-NULL values * vector size
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
+  // + number of non-NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
+  // + vector size NULL values (index NULL positions)
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + vector size when NULL values are indexed
+  expected_memory_usage += 1 * sizeof(std::vector<RowID>);
+  // + number of NULL values * RowID
+  expected_memory_usage += 2 * sizeof(RowID);
 
-//   EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
-// }
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
+}
 
-// // A2, B1, C1, D1
-// TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
-//   const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
-//       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
-//                          "b", "z", "x", std::nullopt});
+// A2, B1, C1, D1
+TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
+  const auto& dict_segment_string_mixed = create_dict_segment_by_type<pmr_string>(
+      DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
+                         "b", "z", "x", std::nullopt});
 
-//   Segments segments = {dict_segment_string_mixed};
-//   auto chunk = std::make_shared<Chunk>(segments);
+  Segments segments = {dict_segment_string_mixed};
+  auto chunk = std::make_shared<Chunk>(segments);
 
-//   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-//   chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
 
-//   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-//   auto expected_memory_usage = size_t{0u};
-//   //   TableIndexType
-//   expected_memory_usage += sizeof(TableIndexType);
-//   // + indexed ColumnID
-//   expected_memory_usage += sizeof(ColumnID);
-//   // + pointer to BaseParialHashIndexImpl
-//   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
-//   // +  ChunkIDs set
-//   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
-//   // +  number of indexed chunks * ChunkID
-//   expected_memory_usage += 1 * sizeof(ChunkID);
-//   // + map size
-//   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
-//   // + number of different non-NULL values * key size
-//   expected_memory_usage += 9 * sizeof(pmr_string);
-//   // + number of different non-NULL values * vector size
-//   expected_memory_usage += 9 * sizeof(std::vector<RowID>);
-//   // + number of non-NULL values * RowID
-//   expected_memory_usage += 11 * sizeof(RowID);
-//   // + vector size NULL values (index NULL positions)
-//   expected_memory_usage += sizeof(std::vector<RowID>);
-//   // + number of NULL values * RowID
-//   expected_memory_usage += 5 * sizeof(RowID);
+  auto expected_memory_usage = size_t{0u};
+  // + indexed ColumnID
+  expected_memory_usage += sizeof(ColumnID);
+  // + data access mutex
+  expected_memory_usage += sizeof(std::shared_mutex);
+  // + pointer to BaseParialHashIndexImpl
+  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  // +  ChunkIDs set
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  // +  number of indexed chunks * ChunkID
+  expected_memory_usage += 1 * sizeof(ChunkID);
+  // + map size
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + number of different non-NULL values * key size
+  expected_memory_usage += 9 * sizeof(pmr_string);
+  // + number of different non-NULL values * vector size
+  expected_memory_usage += 9 * sizeof(std::vector<RowID>);
+  // + number of non-NULL values * RowID
+  expected_memory_usage += 11 * sizeof(RowID);
+  // + vector size NULL values (index NULL positions)
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + vector size when NULL values are indexed
+  expected_memory_usage += 1 * sizeof(std::vector<RowID>);
+  // + number of NULL values * RowID
+  expected_memory_usage += 5 * sizeof(RowID);
 
-//   EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
-// }
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
+}
 
-// // A1, B2, C2, D1
-// TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
-//   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
+// A1, B2, C2, D1
+TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
+  const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
-//   Segments segments = {dict_segment_string_empty};
-//   auto chunk = std::make_shared<Chunk>(segments);
+  Segments segments = {dict_segment_string_empty};
+  auto chunk = std::make_shared<Chunk>(segments);
 
-//   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-//   chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
 
-//   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-//   auto expected_memory_usage = size_t{0u};
-//   //   TableIndexType
-//   expected_memory_usage += sizeof(TableIndexType);
-//   // + indexed ColumnID
-//   expected_memory_usage += sizeof(ColumnID);
-//   // + pointer to BaseParialHashIndexImpl
-//   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
-//   // +  ChunkIDs set
-//   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
-//   // +  number of indexed chunks * ChunkID
-//   expected_memory_usage += 1 * sizeof(ChunkID);
-//   // + map size
-//   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
-//   // + number of different non-NULL values * key size
-//   expected_memory_usage += 0 * sizeof(pmr_string);
-//   // + number of different non-NULL values * vector size
-//   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
-//   // + number of non-NULL values * RowID
-//   expected_memory_usage += 0 * sizeof(RowID);
-//   // + vector size NULL values (index NULL positions)
-//   expected_memory_usage += sizeof(std::vector<RowID>);
-//   // + number of NULL values * RowID
-//   expected_memory_usage += 0 * sizeof(RowID);
+  auto expected_memory_usage = size_t{0u};
+  // + indexed ColumnID
+  expected_memory_usage += sizeof(ColumnID);
+  // + data access mutex
+  expected_memory_usage += sizeof(std::shared_mutex);
+  // + pointer to BaseParialHashIndexImpl
+  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  // +  ChunkIDs set
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  // +  number of indexed chunks * ChunkID
+  expected_memory_usage += 1 * sizeof(ChunkID);
+  // + map size
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + number of different non-NULL values * key size
+  expected_memory_usage += 0 * sizeof(pmr_string);
+  // + number of different non-NULL values * vector size
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
+  // + number of non-NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
+  // + vector size NULL values (index NULL positions)
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + vector size when NULL values are indexed
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
+  // + number of NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
 
-//   EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
-// }
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
+}
 
-// TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
-//   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
+TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
+  const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
-//   Segments segments = {dict_segment_string_empty};
-//   auto chunk = std::make_shared<Chunk>(segments);
+  Segments segments = {dict_segment_string_empty};
+  auto chunk = std::make_shared<Chunk>(segments);
 
-//   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-//   chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
 
-//   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
-//   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
-//   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
+  index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
+  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
+  EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
 
-//   auto expected_memory_usage = size_t{0u};
-//   //   TableIndexType
-//   expected_memory_usage += sizeof(TableIndexType);
-//   // + indexed ColumnID
-//   expected_memory_usage += sizeof(ColumnID);
-//   // + pointer to BaseParialHashIndexImpl
-//   expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
-//   // +  ChunkIDs set
-//   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
-//   // +  number of indexed chunks * ChunkID
-//   expected_memory_usage += 0 * sizeof(ChunkID);
-//   // + map size
-//   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
-//   // + number of different non-NULL values * key size
-//   expected_memory_usage += 0 * sizeof(pmr_string);
-//   // + number of different non-NULL values * vector size
-//   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
-//   // + number of non-NULL values * RowID
-//   expected_memory_usage += 0 * sizeof(RowID);
-//   // + vector size NULL values (index NULL positions)
-//   expected_memory_usage += sizeof(std::vector<RowID>);
-//   // + number of NULL values * RowID
-//   expected_memory_usage += 0 * sizeof(RowID);
+  auto expected_memory_usage = size_t{0u};
+  // + indexed ColumnID
+  expected_memory_usage += sizeof(ColumnID);
+  // + data access mutex
+  expected_memory_usage += sizeof(std::shared_mutex);
+  // + pointer to BaseParialHashIndexImpl
+  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  // +  ChunkIDs set
+  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  // +  number of indexed chunks * ChunkID
+  expected_memory_usage += 0 * sizeof(ChunkID);
+  // + map size
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + number of different non-NULL values * key size
+  expected_memory_usage += 0 * sizeof(pmr_string);
+  // + number of different non-NULL values * vector size
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
+  // + number of non-NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
+  // + vector size NULL values (index NULL positions)
+  expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
+  // + vector size when NULL values are indexed
+  expected_memory_usage += 0 * sizeof(std::vector<RowID>);
+  // + number of NULL values * RowID
+  expected_memory_usage += 0 * sizeof(RowID);
 
-//   EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
-// }
+  EXPECT_EQ(index->estimate_memory_usage(), expected_memory_usage);
+}
 
 }  // namespace hyrise
