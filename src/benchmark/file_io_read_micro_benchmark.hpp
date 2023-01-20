@@ -56,10 +56,12 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void aio_multi_threaded(benchmark::State& state, uint16_t thread_count);
   void aio_random_single_threaded(benchmark::State& state);
   void aio_random_multi_threaded(benchmark::State& state, uint16_t thread_count);
-  void memory_mapped_read_single_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag,
-                                          const int access_order);
-  void memory_mapped_read_multi_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag,
-                                         const uint16_t thread_count, const int access_order);
+  void memory_mapped_read_single_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag, const int access_order);
+  #ifdef __linux__
+  void memory_mapped_read_user_space(benchmark::State& state, const uint16_t thread_count, const int access_order);
+  #endif
+  void memory_mapped_read_multi_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag, const uint16_t thread_count, const int access_order);
+
 
   // enums for mmap benchmarks
   enum MAPPING_TYPE { MMAP, UMAP };

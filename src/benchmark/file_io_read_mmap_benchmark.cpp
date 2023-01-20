@@ -52,6 +52,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
     }
 #else
     else if (mapping_type == UMAP) {
+      setenv("UMAP_LOG_LEVEL", std::string("ERROR").c_str(), 1);
       map = reinterpret_cast<int32_t*>(umap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
     } else {
       Fail("Error: Invalid mapping type.");
@@ -97,6 +98,58 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
   close(fd);
 }
 
+#ifdef __linux__
+void FileIOMicroReadBenchmarkFixture::memory_mapped_read_user_space(benchmark::State& state, const uint16_t thread_count,
+  const int access_order) {
+  // Set number of threads used by UMAP.                          
+  setenv("UMAP_PAGE_FILLERS", std::to_string(thread_count).c_str(), 1);
+  setenv("UMAP_PAGE_EVICTORS", std::to_string(thread_count).c_str(), 1);
+  setenv("UMAP_LOG_LEVEL", std::string("ERROR").c_str(), 1);
+
+  auto fd = int32_t{};
+  Assert(((fd = open(filename.c_str(), O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
+
+  for (auto _ : state) {
+    state.PauseTiming();
+    micro_benchmark_clear_disk_cache();
+    state.ResumeTiming();
+
+    // Getting the mapping to memory.
+    const auto OFFSET = off_t{0};
+
+    auto* map = reinterpret_cast<int32_t*>(umap(NULL, NUMBER_OF_BYTES, PROT_READ, PRIVATE, fd, OFFSET));
+
+
+    Assert((map != MAP_FAILED), close_file_and_return_error_message(fd, "Mapping Failed: ", errno));
+
+    auto sum = uint64_t{0};
+    if (access_order == RANDOM) {
+      madvise(map, NUMBER_OF_BYTES, MADV_RANDOM);
+      state.PauseTiming();
+      const auto random_indexes = generate_random_indexes(NUMBER_OF_ELEMENTS);
+      state.ResumeTiming();
+      for (auto index = size_t{0}; index < NUMBER_OF_ELEMENTS; ++index) {
+        sum += map[random_indexes[index]];
+      }
+    } else /* if (access_order == SEQUENTIAL) */ {
+      madvise(map, NUMBER_OF_BYTES, MADV_SEQUENTIAL);
+      for (auto index = size_t{0}; index < NUMBER_OF_ELEMENTS; ++index) {
+        sum += map[index];
+      }
+    }
+
+    state.PauseTiming();
+    Assert(control_sum == sum, "Sanity check failed: Not the same result");
+    state.ResumeTiming();
+
+    // Remove memory mapping after job is done.
+    Assert((uunmap(map, NUMBER_OF_BYTES) == 0), close_file_and_return_error_message(fd, "Unmapping failed: ", errno));
+  }
+
+  close(fd);
+}
+#endif
+
 void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmark::State& state, const int mapping_type,
                                                                         const int map_mode_flag,
                                                                         const uint16_t thread_count,
@@ -128,6 +181,7 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_multi_threaded(benchmar
     }
 #else
     else if (mapping_type == UMAP) {
+      setenv("UMAP_LOG_LEVEL", std::string("ERROR").c_str(), 1);
       map = reinterpret_cast<int32_t*>(umap(NULL, NUMBER_OF_BYTES, PROT_READ, map_mode_flag, fd, OFFSET));
     } else {
       Fail("Error: Invalid mapping type.");
@@ -234,7 +288,27 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_SEQUE
   }
 }
 
+#ifdef __linux__
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RANDOM)(benchmark::State& state) {
+  const auto thread_count = static_cast<uint16_t>(state.range(1));
+  memory_mapped_read_user_space(state, thread_count, RANDOM);
+}
+
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)(benchmark::State& state) {
+  const auto thread_count = static_cast<uint16_t>(state.range(1));
+  memory_mapped_read_user_space(state, thread_count, SEQUENTIAL);
+}
+
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RANDOM_OLD)(benchmark::State& state) {
+  const auto thread_count = static_cast<uint16_t>(state.range(1));
+  if (thread_count == 1) {
+     memory_mapped_read_single_threaded(state, UMAP, PRIVATE, RANDOM);
+   } else {
+     memory_mapped_read_multi_threaded(state, UMAP, PRIVATE, thread_count, RANDOM);
+   }
+}
+
+BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL_OLD)(benchmark::State& state) {
   const auto thread_count = static_cast<uint16_t>(state.range(1));
   if (thread_count == 1) {
     memory_mapped_read_single_threaded(state, UMAP, PRIVATE, RANDOM);
@@ -242,15 +316,7 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RAND
     memory_mapped_read_multi_threaded(state, UMAP, PRIVATE, thread_count, RANDOM);
   }
 }
-
-BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)(benchmark::State& state) {
-  const auto thread_count = static_cast<uint16_t>(state.range(1));
-  if (thread_count == 1) {
-    memory_mapped_read_single_threaded(state, UMAP, PRIVATE, SEQUENTIAL);
-  } else {
-    memory_mapped_read_multi_threaded(state, UMAP, PRIVATE, thread_count, SEQUENTIAL);
-  }
-}
+#endif
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)
     ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32, 48}})
@@ -268,11 +334,19 @@ BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, MMAP_ATOMIC_MAP_SHARED_RAN
 
 #ifdef __linux__
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL)
-    ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
     ->UseRealTime();
 
 BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RANDOM)
-    ->ArgsProduct({{100}, {1, 2, 4, 8, 16, 32}})
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
+    ->UseRealTime();
+
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL_OLD)
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
+    ->UseRealTime();
+
+BENCHMARK_REGISTER_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RANDOM_OLD)
+    ->ArgsProduct({{10, 100, 1000}, {1, 2, 4, 8, 16, 32}})
     ->UseRealTime();
 #endif
 }  // namespace hyrise
