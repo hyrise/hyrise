@@ -10,8 +10,8 @@ namespace hyrise {
  *   {Left} => {Right}
  *
  * Example A:
- * Think of a table with three columns: CourseAssignment(Semester, CourseID, Lecturer). The primary key is defined
- * across the first two columns, which leads to the following FD:
+ * Think of a table with three columns: CourseLecturerAssignment(Semester, CourseID, Lecturer). The primary key is
+ * defined across the first two columns, which leads to the following FD:
  *   {Semester, CourseID} => {Lecturer}
  *
  * Example B:

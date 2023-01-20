@@ -441,8 +441,7 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
     }
 
     const auto original_column_id = column_expression->original_column_id;
-    if (std::any_of(column_ids.cbegin(), column_ids.cend(),
-                    [&](const auto column_id) { return column_id == original_column_id; }) &&
+    if (std::find(column_ids.cbegin(), column_ids.cend(), original_column_id) != column_ids.cend() &&
         *column_expression->original_node.lock() == lqp_node) {
       [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
       DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
@@ -528,24 +527,22 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
   const auto& output_expressions = lqp->output_expressions();
   const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
-  // Adjust FDs: Remove dependents that are not part of the node's output expressions
+  // Adjust FDs: Remove dependents that are not part of the node's output expressions.
   const auto not_part_of_output_expressions = [&output_expressions_set](const auto& fd_dependent_expression) {
     return !output_expressions_set.contains(fd_dependent_expression);
   };
 
-  auto valid_fds = FunctionalDependencies{fds.size()};
-
   const auto fd_is_invalid = [&](auto& fd) {
-    // If there are no dependents left, we can discard the FD altogether
+    // If there are no dependents left, we can discard the FD altogether.
     if (fd.dependents.empty()) {
       return true;
     }
 
     /**
-                              * Remove FDs with determinant expressions that are
-                              *  a) not part of the node's output expressions
-                              *  b) are nullable
-                              */
+    * Remove FDs with determinant expressions that are
+    *  a) not part of the node's output expressions
+    *  b) nullable
+    */
     for (const auto& fd_determinant_expression : fd.determinants) {
       if (!output_expressions_set.contains(fd_determinant_expression)) {
         return true;
@@ -559,7 +556,7 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
     return false;
   };
 
-  // auto bla = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()}
+  auto valid_fds = FunctionalDependencies{fds.size()};
   for (auto fd : fds) {
     std::erase_if(fd.dependents, not_part_of_output_expressions);
     if (fd_is_invalid(fd)) {
@@ -569,35 +566,6 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
   }
 
   fds = std::move(valid_fds);
-  /*
-  // Remove invalid or unnecessary FDs
-  fds.erase(std::remove_if(fds.begin(), fds.end(),
-                           [&](auto& fd) {
-                             // If there are no dependents left, we can discard the FD altogether
-                             if (fd.dependents.empty()) {
-                               return true;
-                             }*/
-
-  /**
-                              * Remove FDs with determinant expressions that are
-                              *  a) not part of the node's output expressions
-                              *  b) are nullable
-                              */
-  /*for (const auto& fd_determinant_expression : fd.determinants) {
-                               if (!output_expressions_set.contains(fd_determinant_expression)) {
-                                 return true;
-                               }
-
-                               const auto expression_idx =
-                                   find_expression_idx(*fd_determinant_expression, output_expressions);
-                               if (expression_idx && lqp->is_column_nullable(*expression_idx)) {
-                                 return true;
-                               }
-                             }
-                             return false;
-                           }),
-            fds.end());
-*/
 
   /**
    * Future Work: Remove redundant FDs. For example:

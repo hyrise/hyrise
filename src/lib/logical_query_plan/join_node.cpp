@@ -127,10 +127,10 @@ std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combin
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.
-    auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>(
+    const auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>(
         left_unique_column_combinations->begin(), left_unique_column_combinations->end());
-    std::copy(right_unique_column_combinations->begin(), right_unique_column_combinations->end(),
-              std::inserter(*unique_column_combinations, std::next(unique_column_combinations->begin())));
+    unique_column_combinations->insert(right_unique_column_combinations->cbegin(),
+                                       right_unique_column_combinations->cend());
     return unique_column_combinations;
   }
 
