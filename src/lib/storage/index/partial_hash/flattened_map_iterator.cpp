@@ -1,6 +1,9 @@
 #include "flattened_map_iterator.hpp"
 #include "base_iterator.hpp"
 
+#include "resolve_type.hpp"
+#include "types.hpp"
+
 namespace hyrise {
 
 template <typename DataType>

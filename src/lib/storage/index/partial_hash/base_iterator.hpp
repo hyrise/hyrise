@@ -1,8 +1,8 @@
 #pragma once
 
-namespace hyrise {
-
 #include "types.hpp"
+
+namespace hyrise {
 
 // Non-templated base class for the FlattenedMapIterator.
 class BaseIteratorImpl {
