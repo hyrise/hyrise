@@ -2,7 +2,6 @@
 #include "base_iterator.hpp"
 
 #include "resolve_type.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
