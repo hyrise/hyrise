@@ -62,7 +62,7 @@ ARTNode4::ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& ch
 
 AbstractChunkIndex::Iterator ARTNode4::_delegate_to_child(
     const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-    const std::function<Iterator(size_t, size_t)>& function) const {
+    const std::function<std::vector<ChunkOffset>::const_iterator(size_t, size_t)>& function) const {
   const auto partial_key = key[depth];
   for (auto partial_key_id = uint8_t{0}; partial_key_id < 4; ++partial_key_id) {
     if (_partial_keys[partial_key_id] < partial_key) {
@@ -156,7 +156,7 @@ ARTNode16::ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& 
 
 AbstractChunkIndex::Iterator ARTNode16::_delegate_to_child(
     const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-    const std::function<Iterator(std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>&
+    const std::function<std::vector<ChunkOffset>::const_iterator(std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>&
         function) const {
   auto partial_key = key[depth];
   const auto* const partial_key_iterator = std::lower_bound(_partial_keys.begin(), _partial_keys.end(), partial_key);
@@ -265,7 +265,7 @@ ARTNode48::ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNod
 
 AbstractChunkIndex::Iterator ARTNode48::_delegate_to_child(
     const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-    const std::function<Iterator(uint8_t, size_t)>& function) const {
+    const std::function<std::vector<ChunkOffset>::const_iterator(uint8_t, size_t)>& function) const {
   const auto partial_key = key[depth];
   if (_index_to_child[partial_key] != INVALID_INDEX) {
     // case0
@@ -351,7 +351,7 @@ ARTNode256::ARTNode256(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTN
 
 AbstractChunkIndex::Iterator ARTNode256::_delegate_to_child(
     const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-    const std::function<Iterator(uint8_t, size_t)>& function) const {
+    const std::function<std::vector<ChunkOffset>::const_iterator(uint8_t, size_t)>& function) const {
   const auto partial_key = key[depth];
   if (_children[partial_key]) {
     // case0

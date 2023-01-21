@@ -116,9 +116,9 @@ std::shared_ptr<ARTNode> AdaptiveRadixTreeIndex::_bulk_insert(
   if (std::all_of(values.begin(), values.end(), [&values](const std::pair<BinaryComparable, ChunkOffset>& pair) {
         return values.front().first == pair.first;
       })) {
-    // copy the Iterator in the _chunk_offsets - vector --> this is the lower_bound of the leaf
+    // copy the std::vector<ChunkOffset>::const_iterator in the _chunk_offsets - vector --> this is the lower_bound of the leaf
     auto lower = it;
-    // insert the ChunkOffsets into the vector and push the Iterator further
+    // insert the ChunkOffsets into the vector and push the std::vector<ChunkOffset>::const_iterator further
     auto old_capacity = _chunk_offsets.capacity();
     for (const auto& pair : values) {
       _chunk_offsets.emplace_back(pair.second);
