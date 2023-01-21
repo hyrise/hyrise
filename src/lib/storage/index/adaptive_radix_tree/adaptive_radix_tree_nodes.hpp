@@ -28,8 +28,10 @@ class ARTNode : private Noncopyable {
 
   virtual ~ARTNode() = default;
 
-  virtual std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const = 0;
-  virtual std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const = 0;
+  virtual std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                               size_t depth) const = 0;
+  virtual std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                               size_t depth) const = 0;
   virtual std::vector<ChunkOffset>::const_iterator begin() const = 0;
   virtual std::vector<ChunkOffset>::const_iterator end() const = 0;
 };
@@ -50,8 +52,10 @@ class ARTNode4 final : public ARTNode {
  public:
   explicit ARTNode4(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
-  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
-  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 
@@ -61,8 +65,9 @@ class ARTNode4 final : public ARTNode {
    * children
    * is the same, only the method called on the matching child differs
    */
-  AbstractChunkIndex::Iterator _delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                              const std::function<std::vector<ChunkOffset>::const_iterator(size_t, size_t)>& function) const;
+  AbstractChunkIndex::Iterator _delegate_to_child(
+      const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+      const std::function<std::vector<ChunkOffset>::const_iterator(size_t, size_t)>& function) const;
   std::array<uint8_t, 4> _partial_keys{};
   std::array<std::shared_ptr<ARTNode>, 4> _children{};
 };
@@ -83,16 +88,18 @@ class ARTNode16 final : public ARTNode {
  public:
   explicit ARTNode16(std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
-  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
-  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 
  private:
   std::vector<ChunkOffset>::const_iterator _delegate_to_child(
       const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-      const std::function<std::vector<ChunkOffset>::const_iterator(std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>&
-          function) const;
+      const std::function<std::vector<ChunkOffset>::const_iterator(
+          std::iterator_traits<std::array<uint8_t, 16>::iterator>::difference_type, size_t)>& function) const;
   std::array<uint8_t, 16> _partial_keys{};
   std::array<std::shared_ptr<ARTNode>, 16> _children{};
 };
@@ -114,14 +121,17 @@ class ARTNode48 final : public ARTNode {
  public:
   explicit ARTNode48(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
-  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
-  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 
  private:
-  std::vector<ChunkOffset>::const_iterator _delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                              const std::function<std::vector<ChunkOffset>::const_iterator(uint8_t, size_t)>& function) const;
+  std::vector<ChunkOffset>::const_iterator _delegate_to_child(
+      const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+      const std::function<std::vector<ChunkOffset>::const_iterator(uint8_t, size_t)>& function) const;
 
   std::array<uint8_t, 256> _index_to_child{};
   std::array<std::shared_ptr<ARTNode>, 48> _children{};
@@ -136,14 +146,17 @@ class ARTNode256 final : public ARTNode {
  public:
   explicit ARTNode256(const std::vector<std::pair<uint8_t, std::shared_ptr<ARTNode>>>& children);
 
-  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
-  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
+  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& key,
+                                                       size_t depth) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 
  private:
-  std::vector<ChunkOffset>::const_iterator _delegate_to_child(const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
-                              const std::function<std::vector<ChunkOffset>::const_iterator(uint8_t, size_t)>& function) const;
+  std::vector<ChunkOffset>::const_iterator _delegate_to_child(
+      const AdaptiveRadixTreeIndex::BinaryComparable& key, size_t depth,
+      const std::function<std::vector<ChunkOffset>::const_iterator(uint8_t, size_t)>& function) const;
 
   std::array<std::shared_ptr<ARTNode>, 256> _children{};
 };
@@ -180,8 +193,10 @@ class Leaf final : public ARTNode {
  public:
   explicit Leaf(std::vector<ChunkOffset>::const_iterator& lower, std::vector<ChunkOffset>::const_iterator& upper);
 
-  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/, size_t) const override;
-  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/, size_t) const override;
+  std::vector<ChunkOffset>::const_iterator lower_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/,
+                                                       size_t) const override;
+  std::vector<ChunkOffset>::const_iterator upper_bound(const AdaptiveRadixTreeIndex::BinaryComparable& /*key*/,
+                                                       size_t) const override;
   std::vector<ChunkOffset>::const_iterator begin() const override;
   std::vector<ChunkOffset>::const_iterator end() const override;
 

@@ -131,7 +131,6 @@ class PartialHashIndex {
 
   Iterator _null_cend() const;
 
-
   IteratorPair _range_equals(const AllTypeVariant& value) const;
 
   std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const;

@@ -388,7 +388,6 @@ void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator pro
       _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
     };
 
-
     // AntiNullAsTrue is the only join mode in which comparisons with null-values are evaluated as "true".
     // If the probe side value is null or at least one null value exists in the indexed join segments, the probe value
     // has a match.
@@ -566,8 +565,7 @@ void JoinIndex::_append_matches_chunk_index(const AbstractChunkIndex::Iterator& 
   }
 }
 
-void JoinIndex::_append_matches_table_index(const BaseIterator& range_begin,
-                                            const BaseIterator& range_end,
+void JoinIndex::_append_matches_table_index(const BaseIterator& range_begin, const BaseIterator& range_end,
                                             const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id) {
   const auto index_matches_count = std::distance(range_begin, range_end);
 
