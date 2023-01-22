@@ -1,6 +1,6 @@
 #include "partial_hash_index_impl.hpp"
 
-#include "flattened_map_iterator.hpp"
+#include "flat_map_iterator_impl.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace hyrise {
@@ -97,8 +97,8 @@ IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& 
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(FlattenedMapIterator<DataType>::base_iterator(begin),
-                        FlattenedMapIterator<DataType>::base_iterator(++end));
+  return std::make_pair(FlatMapIteratorImpl<DataType>::flat_map_iterator(begin),
+                        FlatMapIteratorImpl<DataType>::flat_map_iterator(++end));
 }
 
 template <typename DataType>
@@ -110,22 +110,22 @@ std::pair<IteratorPair, IteratorPair> PartialHashIndexImpl<DataType>::range_not_
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return FlattenedMapIterator<DataType>::base_iterator(_map.cbegin());
+  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_map.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return FlattenedMapIterator<DataType>::base_iterator(_map.cend());
+  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_map.cend());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return FlattenedMapIterator<DataType>::base_iterator(_null_values.cbegin());
+  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_null_values.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return FlattenedMapIterator<DataType>::base_iterator(_null_values.cend());
+  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_null_values.cend());
 }
 
 template <typename DataType>

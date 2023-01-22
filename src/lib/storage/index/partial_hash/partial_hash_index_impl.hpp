@@ -7,13 +7,13 @@
 #include <vector>
 
 #include "all_type_variant.hpp"
-#include "base_iterator.hpp"
+#include "flat_map_iterator.hpp"
 #include "storage/chunk.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
-using Iterator = BaseIterator;
+using Iterator = FlatMapIterator;
 using IteratorPair = std::pair<Iterator, Iterator>;
 
 class PartialHashIndexTest;

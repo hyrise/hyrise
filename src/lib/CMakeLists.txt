@@ -487,10 +487,10 @@ set(
     storage/index/chunk_index_statistics.hpp
     storage/index/table_index_statistics.cpp
     storage/index/table_index_statistics.hpp
-    storage/index/partial_hash/base_iterator.cpp
-    storage/index/partial_hash/base_iterator.hpp
-    storage/index/partial_hash/flattened_map_iterator.cpp
-    storage/index/partial_hash/flattened_map_iterator.hpp
+    storage/index/partial_hash/flat_map_iterator.cpp
+    storage/index/partial_hash/flat_map_iterator.hpp
+    storage/index/partial_hash/flat_map_iterator_impl.cpp
+    storage/index/partial_hash/flat_map_iterator_impl.hpp
     storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index.cpp
     storage/index/partial_hash/partial_hash_index.hpp

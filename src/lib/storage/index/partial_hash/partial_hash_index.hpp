@@ -1,6 +1,6 @@
 #pragma once
 
-#include "base_iterator.hpp"
+#include "flat_map_iterator.hpp"
 #include "partial_hash_index_impl.hpp"
 
 namespace hyrise {
