@@ -66,8 +66,16 @@ std::vector<uint32_t> generate_random_positive_numbers(uint32_t size) {
   return numbers;
 }
 
-std::string close_file_and_return_error_message(int32_t fd, std::string message, int error_num) {
+std::string close_file_and_return_error_message(int32_t fd, std::string message, const int error_num) {
   close(fd);
   return message + std::strerror(error_num);
 }
+
+std::string close_files_and_return_error_message(std::vector<int32_t> filedescriptors, std::string message, const int error_num) {
+  for (auto index = size_t{0}; index < filedescriptors.size(); ++index) {
+    close(filedescriptors[index]);
+  }
+  return message + std::strerror(error_num);
+}
+
 }  // namespace hyrise

@@ -52,10 +52,11 @@ class FileIOMicroReadBenchmarkFixture : public MicroBenchmarkBasicFixture {
   void pread_atomic_single_threaded(benchmark::State& state);
   void pread_atomic_random_multi_threaded(benchmark::State& state, uint16_t thread_count);
   void pread_atomic_random_single_threaded(benchmark::State& state);
-  void aio_single_threaded(benchmark::State& state);
-  void aio_multi_threaded(benchmark::State& state, uint16_t thread_count);
-  void aio_random_single_threaded(benchmark::State& state);
-  void aio_random_multi_threaded(benchmark::State& state, uint16_t thread_count);
+#ifdef __linux__
+  void libaio_sequential_read_single_threaded(benchmark::State& state);
+  void libaio_sequential_read_multi_threaded(benchmark::State& state, uint16_t aio_request_count);
+  void libaio_random_read(benchmark::State& state, uint16_t aio_request_count);
+#endif
   void memory_mapped_read_single_threaded(benchmark::State& state, const int mapping_type, const int map_mode_flag, const int access_order);
   #ifdef __linux__
   void memory_mapped_read_user_space(benchmark::State& state, const uint16_t thread_count, const int access_order);
