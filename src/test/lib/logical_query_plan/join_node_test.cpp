@@ -497,7 +497,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
  * The following four tests check the forwarding of UCCs given the uniqueness of the input nodes' join columns. See the
  * table for a brief overview of the test cases:
  *
- *                      |                               Join columns of left input is unique
+ *                      |                              Join column of left input is unique
  *                      |                      Yes                      |                      No
  * ---------------------+-----------------------------------------------+-----------------------------------------------
  * Join column of   Yes | UniqueColumnCombinationsBothJoinColumnsUnique | UniqueColumnCombinationsRightJoinColumnUnique
