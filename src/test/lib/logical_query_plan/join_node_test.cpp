@@ -499,9 +499,9 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
  *
  *                      |                               Join columns of left input is unique
  *                      |                      Yes                      |                      No
- * ---------------------------------------------------------------------------------------------------------------------
+ * ---------------------+-----------------------------------------------+-----------------------------------------------
  * Join column of   Yes | UniqueColumnCombinationsBothJoinColumnsUnique | UniqueColumnCombinationsRightJoinColumnUnique
- * right input    ------------------------------------------------------------------------------------------------------
+ * right input    ------+-----------------------------------------------+-----------------------------------------------
  * is unique        No  | UniqueColumnCombinationsLeftJoinColumnUnique  | UniqueColumnCombinationsNoJoinColumnUnique
  *
  */
