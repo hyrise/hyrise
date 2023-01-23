@@ -13,6 +13,7 @@ class AbstractTableConstraint {
  public:
   explicit AbstractTableConstraint(std::vector<ColumnID> columns);
 
+  AbstractTableConstraint() = delete;
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
   AbstractTableConstraint& operator=(const AbstractTableConstraint&) = default;
@@ -38,9 +39,6 @@ class AbstractTableConstraint {
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
   std::vector<ColumnID> _columns;
-
- private:
-  AbstractTableConstraint() = delete;
 };
 
 }  // namespace hyrise

@@ -493,6 +493,18 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
   EXPECT_EQ(fds_unified, join_node->functional_dependencies());
 }
 
+/**
+ * The following four tests check the forwarding of UCCs given the uniqueness of the input nodes' join columns. See the
+ * table for a brief overview of the test cases:
+ *
+ *                      |                               Join columns of left input is unique
+ *                      |                      Yes                      |                      No
+ * ---------------------------------------------------------------------------------------------------------------------
+ * Join column of   Yes | UniqueColumnCombinationsBothJoinColumnsUnique | UniqueColumnCombinationsRightJoinColumnUnique
+ * right input    ------------------------------------------------------------------------------------------------------
+ * is unique        No  | UniqueColumnCombinationsLeftJoinColumnUnique  | UniqueColumnCombinationsNoJoinColumnUnique
+ *
+ */
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNoJoinColumnUnique) {
   const auto join_mode = GetParam();
   auto join_node = std::shared_ptr<JoinNode>{};
@@ -620,21 +632,21 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
   if (join_mode == JoinMode::Cross) {
     EXPECT_TRUE(join_unique_column_combinations->empty());
     return;
-
-    // For all other joins, UCCs of the left input should be forwarded.
-    EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a, join_unique_column_combinations));
-    EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
-
-    if (is_semi_or_anti_join(join_mode)) {
-      EXPECT_EQ(join_unique_column_combinations->size(), 2);
-      return;
-    }
-
-    // Inner- and outer joins should also forward the right input's UCCs.
-    EXPECT_EQ(join_unique_column_combinations->size(), 4);
-    EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_x, join_unique_column_combinations));
-    EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_y, join_unique_column_combinations));
   }
+
+  // For all other join modes, UCCs of the left input should be forwarded.
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a, join_unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
+
+  if (is_semi_or_anti_join(join_mode)) {
+    EXPECT_EQ(join_unique_column_combinations->size(), 2);
+    return;
+  }
+
+  // Inner and outer joins should also forward the right input's UCCs.
+  EXPECT_EQ(join_unique_column_combinations->size(), 4);
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_x, join_unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_y, join_unique_column_combinations));
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {

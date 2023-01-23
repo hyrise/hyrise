@@ -17,9 +17,8 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
-  return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& current_column_id) {
-    return std::any_of(search_columns.cbegin(), search_columns.cend(),
-                       [&](const auto column_id) { return column_id == current_column_id; });
+  return std::any_of(search_columns.cbegin(), search_columns.cend(), [&](const auto& search_column_id) {
+    return std::find(columns.cbegin(), columns.cend(), search_column_id) != columns.cend();
   });
 }
 

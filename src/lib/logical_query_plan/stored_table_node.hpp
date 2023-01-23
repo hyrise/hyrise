@@ -61,7 +61,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
   std::vector<ChunkID> _pruned_chunk_ids;
   std::vector<ColumnID> _pruned_column_ids;
-  mutable std::unordered_map<std::string, std::weak_ptr<const StoredTableNode>> _ind_stored_table_node_cache;
 };
 
 }  // namespace hyrise

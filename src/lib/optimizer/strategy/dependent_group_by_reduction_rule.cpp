@@ -126,8 +126,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         return left_determinant_size < right_determinant_size;
       }
 
-      // The FDs are expected to be equally useful for the rewrite. However, we have to decide on a semantics here to
-      // make the order independent of the position of the FDs in the original set (which might differ due to standard
+      // The FDs are expected to be equally useful for the rewrite. However, we have to decide on semantics here to make
+      // the order independent of the position of the FDs in the original set (which might differ due to standard
       // library implementation details). Thus, we compare the ColumnIDs of the determinants.
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
