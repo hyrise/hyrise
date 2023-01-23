@@ -518,7 +518,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNoJoinColumnUnique) {
     EXPECT_EQ(join_unique_column_combinations->size(), 1);
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
   } else {
-    // Not unique join columns might lead to row-/value-duplication in the opposite relation. No UCCs remain valid.
+    // Not unique join columns might lead to row/value duplication in the opposite relation. No UCCs remain valid.
     EXPECT_TRUE(join_unique_column_combinations->empty());
   }
 }
@@ -559,7 +559,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsLeftJoinColumnUnique) 
     case JoinMode::Left:
     case JoinMode::Right:
     case JoinMode::FullOuter:
-      // UCCs of the right input should be forwarded. Since our current UCCimplementation is compatible with NULL
+      // UCCs of the right input should be forwarded. Since our current UCC implementation is compatible with NULL
       // values, outer joins are handled like inner joins.
       EXPECT_EQ(join_unique_column_combinations->size(), 1);
       EXPECT_EQ(*join_unique_column_combinations, *_mock_node_b->unique_column_combinations());
@@ -621,7 +621,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
     EXPECT_TRUE(join_unique_column_combinations->empty());
     return;
 
-    // For all other joins, UCCs of the left input should be forwarded.
+    // For all other join modes, UCCs of the left input should be forwarded.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a, join_unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
 
@@ -638,7 +638,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {
-  // Currently, we do not support UCC forwarding for Non-Equi- or Theta-Joins. Semi-, cross-, and Anti-Joins only
+  // Currently, we do not support UCC forwarding for Non-Equi- or Theta-Joins. Semi-, Cross-, and Anti-Joins only
   // support Equi-Joins.
   const auto join_mode = GetParam();
   if (join_mode == JoinMode::Cross || is_semi_or_anti_join(join_mode)) {
