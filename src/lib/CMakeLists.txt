@@ -491,7 +491,6 @@ set(
     storage/index/partial_hash/flat_map_iterator.hpp
     storage/index/partial_hash/flat_map_iterator_impl.cpp
     storage/index/partial_hash/flat_map_iterator_impl.hpp
-    storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index.cpp
     storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index_impl.cpp
