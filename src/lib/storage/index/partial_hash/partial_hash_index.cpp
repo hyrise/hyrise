@@ -11,7 +11,7 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   resolve_data_type(chunks_to_index.front().second->get_segment(column_id)->data_type(),
                     [&](const auto column_data_type) {
                       using ColumnDataType = typename decltype(column_data_type)::type;
-                      _impl = std::make_shared<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id);
+                      _impl = std::make_unique<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id);
                     });
 }
 

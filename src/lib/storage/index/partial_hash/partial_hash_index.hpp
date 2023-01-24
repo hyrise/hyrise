@@ -137,7 +137,7 @@ class PartialHashIndex {
 
  private:
   const ColumnID _column_id;
-  std::shared_ptr<BasePartialHashIndexImpl> _impl;
+  std::unique_ptr<BasePartialHashIndexImpl> _impl;
 };
 
 }  // namespace hyrise

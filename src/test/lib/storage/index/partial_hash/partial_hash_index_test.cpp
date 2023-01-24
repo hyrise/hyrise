@@ -35,7 +35,7 @@ class PartialHashIndexTest : public BaseTest {
     chunks_to_index.push_back(std::make_pair(ChunkID{1}, table->get_chunk(ChunkID{1})));
 
     index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
-    index_map = &(std::dynamic_pointer_cast<PartialHashIndexImpl<pmr_string>>(index->_impl)->_map);
+    index_map = &(dynamic_cast<PartialHashIndexImpl<pmr_string>*>(index->_impl.get())->_map);
   }
 
   pmr_vector<pmr_string> values1;
@@ -560,7 +560,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // + data access mutex
   expected_memory_usage += sizeof(std::shared_mutex);
   // + pointer to BaseParialHashIndexImpl
-  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
@@ -602,7 +602,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // + data access mutex
   expected_memory_usage += sizeof(std::shared_mutex);
   // + pointer to BaseParialHashIndexImpl
-  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
@@ -645,7 +645,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // + data access mutex
   expected_memory_usage += sizeof(std::shared_mutex);
   // + pointer to BaseParialHashIndexImpl
-  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
@@ -686,7 +686,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // + data access mutex
   expected_memory_usage += sizeof(std::shared_mutex);
   // + pointer to BaseParialHashIndexImpl
-  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
@@ -728,7 +728,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // + data access mutex
   expected_memory_usage += sizeof(std::shared_mutex);
   // + pointer to BaseParialHashIndexImpl
-  expected_memory_usage += sizeof(std::shared_ptr<BasePartialHashIndexImpl>);
+  expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
   expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
