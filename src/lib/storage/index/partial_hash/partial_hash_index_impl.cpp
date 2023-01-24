@@ -97,8 +97,7 @@ IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& 
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(FlatMapIteratorImpl<DataType>::flat_map_iterator(begin),
-                        FlatMapIteratorImpl<DataType>::flat_map_iterator(++end));
+  return std::make_pair(create_iterator(begin), create_iterator(++end));
 }
 
 template <typename DataType>
@@ -110,22 +109,22 @@ std::pair<IteratorPair, IteratorPair> PartialHashIndexImpl<DataType>::range_not_
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_map.cbegin());
+  return create_iterator(_map.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_map.cend());
+  return create_iterator(_map.cend());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_null_values.cbegin());
+  return create_iterator(_null_values.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return FlatMapIteratorImpl<DataType>::flat_map_iterator(_null_values.cend());
+  return create_iterator(_null_values.cend());
 }
 
 template <typename DataType>
@@ -155,6 +154,11 @@ template <typename DataType>
 std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
   return _indexed_chunk_ids;
 }
+
+template <typename DataType>
+Iterator PartialHashIndexImpl<DataType>::create_iterator(const MapIterator it) const {
+  return Iterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
+}  
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(PartialHashIndexImpl);
 

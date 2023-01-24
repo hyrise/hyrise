@@ -41,11 +41,6 @@ std::unique_ptr<BaseFlatMapIteratorImpl> FlatMapIteratorImpl<DataType>::clone() 
   return std::make_unique<FlatMapIteratorImpl<DataType>>(*this);
 }
 
-template <typename DataType>
-FlatMapIterator FlatMapIteratorImpl<DataType>::flat_map_iterator(MapIterator it) {
-  return FlatMapIterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
-}
-
 EXPLICITLY_INSTANTIATE_DATA_TYPES(FlatMapIteratorImpl);
 
 }  // namespace hyrise

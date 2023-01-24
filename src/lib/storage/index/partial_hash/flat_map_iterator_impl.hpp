@@ -35,10 +35,6 @@ class FlatMapIteratorImpl : public BaseFlatMapIteratorImpl {
 
   std::unique_ptr<BaseFlatMapIteratorImpl> clone() const final;
 
-  // Creates and returns an FlatMapIterator wrapping an instance of FlatMapIteratorImpl initialized using the passed
-  // parameter.
-  static FlatMapIterator flat_map_iterator(MapIterator it);
-
  private:
   MapIterator _map_iterator;
   size_t _vector_index;

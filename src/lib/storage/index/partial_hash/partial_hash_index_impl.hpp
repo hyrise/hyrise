@@ -65,6 +65,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
 template <typename DataType>
 class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   friend PartialHashIndexTest;
+  using MapIterator = typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator;
 
  public:
   PartialHashIndexImpl() = delete;
@@ -87,6 +88,10 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const final;
 
  private:
+  // Creates and returns an FlatMapIterator wrapping an instance of FlatMapIteratorImpl initialized using the passed
+  // parameter.
+  Iterator create_iterator(const MapIterator it) const;
+
   tsl::sparse_map<DataType, std::vector<RowID>> _map;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_values;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
