@@ -5,7 +5,7 @@ namespace hyrise {
 
 BufferManager::BufferManager() : _num_pages(0) {
   _ssd_region = std::make_unique<SSDRegion>("/tmp/hyrise.data");
-  _volatile_region = std::make_unique<VolatileRegion>(1 << 9);  // 1 GB
+  _volatile_region = std::make_unique<VolatileRegion>(1 << 15);
   _clock_replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 

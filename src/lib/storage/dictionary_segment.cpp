@@ -59,16 +59,6 @@ std::shared_ptr<AbstractSegment> DictionarySegment<T>::copy_using_allocator(
 }
 
 template <typename T>
-AbstractSegment* DictionarySegment<T>::copy_to_managed_memory_using_allocator(
-    const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
-  auto new_dictionary = std::make_shared<pmr_vector<T>>(*_dictionary, alloc); // TODO: Required custom vector alloc method
-  auto copy = alloc.new_object<DictionarySegment<T>>(std::move(new_dictionary), std::move(new_attribute_vector));
-  copy->access_counter = access_counter;
-  return copy;
-}
-
-template <typename T>
 size_t DictionarySegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
   const auto common_elements_size = sizeof(*this) + _attribute_vector->data_size();
 

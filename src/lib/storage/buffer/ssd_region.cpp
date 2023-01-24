@@ -13,7 +13,7 @@ static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::pat
   }
 }
 
-SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes = 1 << 31)
+SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes)
     : _fd_stream(open_file_descriptor(file_name)), _backing_file(_fd_stream.get()), _backing_file_name(file_name), _device_type(find_device_type_or_fail(file_name)) {
   if(_device_type == DeviceType::REGULAR_FILE) {
     std::filesystem::resize_file(file_name, initial_num_bytes);
@@ -21,9 +21,10 @@ SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t init
 }
 
 SSDRegion::~SSDRegion() {
-  if (!std::filesystem::remove(_backing_file_name)) {
-    Fail("Failed to remove backing file: " + std::string(_backing_file_name));
-  }
+  // TODO:
+  // if (!std::filesystem::remove(_backing_file_name)) {
+  //   Fail("Failed to remove backing file: " + std::string(_backing_file_name));
+  // }
 }
 
 SSDRegion::DeviceType SSDRegion::get_device_type() const {
@@ -32,10 +33,6 @@ SSDRegion::DeviceType SSDRegion::get_device_type() const {
 
 std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>> SSDRegion::open_file_descriptor(
     const std::filesystem::path& file_name) {
-  if (!std::filesystem::exists(file_name)) {
-    Fail("Backing file does not exist");
-  };
-
 #ifdef __APPLE__
   int flags = O_RDWR | O_SYNC | O_CREAT;
 #elif __linux__
@@ -55,6 +52,10 @@ std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descripto
     Fail("Error while setting F_NOCACHE on __APPLE__: " + strerror(errno));
   }
 #endif
+
+  // if (!std::filesystem::exists(file_name)) {
+  //   Fail("Backing file does not exist");
+  // }
 
   return fpstream;
 }
