@@ -498,11 +498,12 @@ TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
  * table for a brief overview of the test cases:
  *
  *                      |                              Join column of left input is unique
+ *                      +-----------------------------------------------+-----------------------------------------------
  *                      |                      Yes                      |                      No
  * ---------------------+-----------------------------------------------+-----------------------------------------------
- * Join column of   Yes | UniqueColumnCombinationsBothJoinColumnsUnique | UniqueColumnCombinationsRightJoinColumnUnique
- * right input    ------+-----------------------------------------------+-----------------------------------------------
- * is unique        No  | UniqueColumnCombinationsLeftJoinColumnUnique  | UniqueColumnCombinationsNoJoinColumnUnique
+ * Join column of | Yes | UniqueColumnCombinationsBothJoinColumnsUnique | UniqueColumnCombinationsRightJoinColumnUnique
+ * right input is +-----+-----------------------------------------------+-----------------------------------------------
+ * unique         | No  | UniqueColumnCombinationsLeftJoinColumnUnique  | UniqueColumnCombinationsNoJoinColumnUnique
  *
  */
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNoJoinColumnUnique) {

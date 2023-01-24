@@ -99,13 +99,15 @@ std::string MockNode::description(const DescriptionMode mode) const {
 
 std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations() const {
   const auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
-  const auto pruned_column_ids = std::unordered_set<ColumnID>{_pruned_column_ids.cbegin(), _pruned_column_ids.cend()};
+  const auto contains = [](const auto& column_ids, const auto search_column_id) {
+    return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
+  };
 
   for (const auto& table_key_constraint : _table_key_constraints) {
     // Discard key constraints that involve pruned column id(s).
     const auto& key_constraint_column_ids = table_key_constraint.columns();
     if (std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(),
-                    [&](const auto column_id) { return pruned_column_ids.contains(column_id); })) {
+                    [&](const auto column_id) { return contains(_pruned_column_ids, column_id); })) {
       continue;
     }
 
