@@ -114,8 +114,6 @@ class PartialHashIndex {
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
 
   /**
-   * Returns the ColumnID covered by the index.
-   *
    * @return The ColumnID covered by the index.
    */
   ColumnID get_indexed_column_id() const;

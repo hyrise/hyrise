@@ -33,7 +33,7 @@ class FlatMapIteratorImpl : public BaseFlatMapIteratorImpl {
 
   bool operator!=(const BaseFlatMapIteratorImpl& other) const final;
 
-  std::shared_ptr<BaseFlatMapIteratorImpl> clone() const final;
+  std::unique_ptr<BaseFlatMapIteratorImpl> clone() const final;
 
   // Creates and returns an FlatMapIterator wrapping an instance of FlatMapIteratorImpl initialized using the passed
   // parameter.

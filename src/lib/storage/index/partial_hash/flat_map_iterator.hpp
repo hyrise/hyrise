@@ -20,7 +20,7 @@ class BaseFlatMapIteratorImpl {
   virtual BaseFlatMapIteratorImpl& operator++() = 0;
   virtual bool operator==(const BaseFlatMapIteratorImpl& other) const = 0;
   virtual bool operator!=(const BaseFlatMapIteratorImpl& other) const = 0;
-  virtual std::shared_ptr<BaseFlatMapIteratorImpl> clone() const = 0;
+  virtual std::unique_ptr<BaseFlatMapIteratorImpl> clone() const = 0;
 };
 
 /**
@@ -39,7 +39,7 @@ class FlatMapIterator {
   using pointer = const RowID*;
   using reference = const RowID&;
 
-  explicit FlatMapIterator(std::shared_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
+  explicit FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
   FlatMapIterator(const FlatMapIterator& other);
   FlatMapIterator& operator=(const FlatMapIterator& other);
   reference operator*() const;
@@ -48,7 +48,7 @@ class FlatMapIterator {
   bool operator!=(const FlatMapIterator& other) const;
 
  private:
-  std::shared_ptr<BaseFlatMapIteratorImpl> _impl;
+  std::unique_ptr<BaseFlatMapIteratorImpl> _impl;
 };
 
 }  // namespace hyrise

@@ -37,13 +37,13 @@ bool FlatMapIteratorImpl<DataType>::operator!=(const BaseFlatMapIteratorImpl& ot
 }
 
 template <typename DataType>
-std::shared_ptr<BaseFlatMapIteratorImpl> FlatMapIteratorImpl<DataType>::clone() const {
-  return std::make_shared<FlatMapIteratorImpl<DataType>>(*this);
+std::unique_ptr<BaseFlatMapIteratorImpl> FlatMapIteratorImpl<DataType>::clone() const {
+  return std::make_unique<FlatMapIteratorImpl<DataType>>(*this);
 }
 
 template <typename DataType>
 FlatMapIterator FlatMapIteratorImpl<DataType>::flat_map_iterator(MapIterator it) {
-  return FlatMapIterator(std::make_shared<FlatMapIteratorImpl<DataType>>(it));
+  return FlatMapIterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(FlatMapIteratorImpl);

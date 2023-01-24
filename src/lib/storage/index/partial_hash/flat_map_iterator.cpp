@@ -2,7 +2,7 @@
 
 namespace hyrise {
 
-FlatMapIterator::FlatMapIterator(std::shared_ptr<BaseFlatMapIteratorImpl>&& index_iterator)
+FlatMapIterator::FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator)
   : _impl(std::move(index_iterator)) {}
 
 FlatMapIterator::FlatMapIterator(const FlatMapIterator& other) : _impl(other._impl->clone()) {}
