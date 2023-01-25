@@ -137,7 +137,7 @@ class PartialHashIndex {
    * Concurrent index modifications or simultaneous access and modification would lead to data races. To prevent this,
    * we first tried to use concurrently safe data structures (namely tbb::concurrent_hash_map, tbb::concurrent_vector,
    * tbb::concurrent_unordered_map and folly::AtomicHashMap). These have either complicated the implementation, did not
-   * bring needed features, or degraded performance to an unacceptable degree. Nevertheless data races sill occurred.
+   * bring needed features, or degraded performance to an unacceptable degree. Nevertheless, data races sill occurred.
    * Using a std::shared mutex for locking was easy to implement and brought the desired effect.
    */
   mutable std::shared_mutex _data_access_mutex;

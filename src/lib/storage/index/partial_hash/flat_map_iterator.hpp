@@ -8,16 +8,36 @@
  * to its templated implementation PartialHashIndexImpl. Since the index access is done through its iterators (more
  * precisely, through its access methods that also work with iterators), a non-templated iterator is also needed.
  *
- * Several attempts were made to achieve this, e.g. passing the iterator to the index as a template, keeping the
- * templated iterators inside the IndexImpl and access them via the index's access methods. However, these attempts
- * were not only very ugly, it was also not possible to archive the desirend effect because templatization and class
- * polymorphism do not got well together.
  *
- * In the end we decided to use the pImpl idiom also for the iterators: Since FlatMapIteratorImpl is a class template,
- * we use BaseFlatMapIteratorImpl as a non-templated base class for the FlatMapIteratorImpl. We implemented
- * the FlatMapIterator holding a pointer to a BaseFlatMapIteratorImpl instance. Using a BaseFlatMapIteratorImpl pointer
- * rather than a FlatMapIteratorImpl, FlatMapIterator itself does not have to be templated. The PartialHashIndex's
- * iterator functions then return (pairs of) FlatMapIterators so that PartialHashIndex can be non-templated.
+ * The following design attempts were discarded:
+ *
+ * Iterator as a template parameter: Using templated iterators as a template decreased the code quality significantly.
+ * Also, static & compile-time polymorphism do not go well together because virtual functions can not be templated.
+ *
+ * Returning BaseFlatMapIteratorImpl pointers rather than FlatMapIterator instances: Since the methods of the
+ * FlatMapIteratorImpl must be accessed, it would be necessary to cast the pointers to every time the index is
+ * accessed.
+ *
+ *
+ * We use the pImpl idiom to implement the FlatMapIterator as a non-templated class. Since FlatMapIteratorImpl is a
+ * class template, we use BaseFlatMapIteratorImpl as a non-templated base class for the FlatMapIteratorImpl so that
+ * FlatMapIterator can hold a pointer to a non-templated BaseFlatMapIteratorImpl instance. The PartialHashIndex's
+ * iterator functions return (pairs of) FlatMapIterators so that PartialHashIndex itself can be non-templated.
+ *
+ *
+ *       +-----------------+              +-------------------------+ 
+ *       | FlatMapIterator |              | BaseFlatMapIteratorImpl |
+ *       |                 | ------------>|                         |
+ *       | (not templated) |  unique_ptr  |     (not templated)     |
+ *       +-----------------+              +-------------------------+
+ *                                                     |
+ *                                                     | inheritance
+ *                                                     v
+ *                                          +---------------------+ 
+ *                                          | FlatMapIteratorImpl |
+ *                                          |                     |
+ *                                          |   (class template)  |
+ *                                          +---------------------+  
  */
 
 namespace hyrise {
