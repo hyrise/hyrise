@@ -85,7 +85,7 @@ TEST_F(ColumnPruningRuleTest, NoUnion) {
 
 TEST_F(ColumnPruningRuleTest, WithUnion) {
   for (auto union_mode : {SetOperationMode::Positions, SetOperationMode::All}) {
-    SCOPED_TRACE(std::string{"union_mode: "} + set_operation_mode_to_string.left.at(union_mode));
+    SCOPED_TRACE(std::string{"union_mode: "} + std::string{magic_enum::enum_name(union_mode)});
 
     auto lqp = std::shared_ptr<AbstractLQPNode>{};
 

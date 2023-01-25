@@ -272,12 +272,6 @@ class Noncopyable {
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
 
-extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<SortMode, std::string> sort_mode_to_string;
-extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
-extern const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string;
-extern const boost::bimap<TableType, std::string> table_type_to_string;
-
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
 std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);
 std::ostream& operator<<(std::ostream& stream, JoinMode join_mode);

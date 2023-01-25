@@ -173,6 +173,7 @@ TEST_F(PluginManagerTest, LoadingUnloadingBenchmarkHooks) {
   EXPECT_FALSE(pm.has_pre_benchmark_hook("hyriseSecondTestPlugin"));
   EXPECT_FALSE(pm.has_post_benchmark_hook("hyriseSecondTestPlugin"));
 }
+
 /*
 TEST_F(PluginManagerTest, CallBenchmarkHooks) {
   auto& pm = Hyrise::get().plugin_manager;

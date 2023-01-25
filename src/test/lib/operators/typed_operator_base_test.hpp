@@ -20,7 +20,8 @@ class TypedOperatorBaseTest
     const auto& [data_type, encoding, sort_mode, nullable] = info.param;
 
     return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
-           (sort_mode ? sort_mode_to_string.left.at(*sort_mode) : "Unsorted") + (nullable ? "" : "Not") + "Nullable";
+           (sort_mode ? std::string{magic_enum::enum_name(*sort_mode)} : "Unsorted") + (nullable ? "" : "Not") +
+           "Nullable";
   }
 };
 
@@ -37,8 +38,7 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
         continue;
       }
 
-      for (auto sorted_by_it = sort_mode_to_string.begin(); sorted_by_it != sort_mode_to_string.end(); ++sorted_by_it) {
-        const auto& sort_mode = sorted_by_it->left;
+      for (const auto sort_mode : magic_enum::enum_values<SortMode>()) {
         pairs.emplace_back(data_type, encoding, sort_mode, true);
         pairs.emplace_back(data_type, encoding, sort_mode, false);
       }

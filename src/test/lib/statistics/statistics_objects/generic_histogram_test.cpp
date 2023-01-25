@@ -43,7 +43,7 @@ class GenericHistogramTest : public BaseTest {
  public:
   std::string predicate_to_string(const Predicate& predicate) {
     std::ostringstream stream;
-    stream << predicate_condition_to_string.left.at(predicate.predicate_condition) << " " << predicate.value;
+    stream << predicate.predicate_condition << " " << predicate.value;
     if (predicate.value2) {
       stream << " " << *predicate.value2;
     }

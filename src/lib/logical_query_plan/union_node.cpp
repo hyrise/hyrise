@@ -15,7 +15,7 @@ UnionNode::UnionNode(const SetOperationMode init_set_operation_mode)
     : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(init_set_operation_mode) {}
 
 std::string UnionNode::description(const DescriptionMode mode) const {
-  return "[UnionNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
+  return "[UnionNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> UnionNode::output_expressions() const {
