@@ -37,7 +37,9 @@
  *
  * Returning BaseFlatMapIteratorImpl pointers rather than FlatMapIterator instances: Since the methods of the
  * FlatMapIteratorImpl must be accessed, it would be necessary to cast the pointers every time the index is accessed.
- *
+ * If the BaseFlatMapIteratorImpl pointer is not casted to FlatMapIteratorImpl, only the methods of the Base instance
+ * are called when accessing the index (which is now impossible since they are pure virtual, previously they were
+ * implemented but did not do anything).
  */
 
 namespace hyrise {
