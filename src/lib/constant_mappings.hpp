@@ -1,17 +1,6 @@
 #pragma once
 
-#include <string>
-#include <unordered_map>
-
-#include <boost/bimap.hpp>
-
-#include "sql/Expr.h"
-#include "sql/SelectStatement.h"
-
 #include "all_type_variant.hpp"
-#include "expression/function_expression.hpp"
-#include "import_export/file_type.hpp"
-#include "storage/encoding_type.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -19,13 +8,8 @@ namespace hyrise {
 enum class EncodingType : uint8_t;
 enum class VectorCompressionType : uint8_t;
 enum class AggregateFunction;
-enum class ExpressionType;
-enum class FileType;
-
-extern const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string;
-extern const boost::bimap<FunctionType, std::string> function_type_to_string;
-extern const boost::bimap<DataType, std::string> data_type_to_string;
-extern const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string;
+enum class FunctionType;
+enum class CompressedVectorType : uint8_t;
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
 std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);

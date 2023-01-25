@@ -1,14 +1,14 @@
 #include "types.hpp"
 
-#include <magic_enum.hpp>
+#include <unordered_map>
 
-#include "utils/make_bimap.hpp"
+#include <magic_enum.hpp>
 
 namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-const auto predicate_condition_to_string = make_bimap<PredicateCondition, std::string>({
+static const auto predicate_condition_to_string = std::unordered_map<PredicateCondition, std::string>({
     {PredicateCondition::Equals, "="},
     {PredicateCondition::NotEquals, "!="},
     {PredicateCondition::LessThan, "<"},
@@ -165,7 +165,7 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 }
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
-  return stream << predicate_condition_to_string.left.at(predicate_condition);
+  return stream << predicate_condition_to_string.at(predicate_condition);
 }
 
 std::ostream& operator<<(std::ostream& stream, SortMode sort_mode) {

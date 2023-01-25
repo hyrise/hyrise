@@ -21,9 +21,11 @@
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
 #include <boost/variant.hpp>
+#include <boost/hana/fwd/fold.hpp>
 
 #include "null_value.hpp"
 #include "types.hpp"
+#include "utils/make_bimap.hpp"
 
 namespace hyrise {
 
@@ -86,6 +88,12 @@ using AllTypeVariant = detail::AllTypeVariant;
 inline bool variant_is_null(const AllTypeVariant& variant) {
   return (variant.which() == 0);
 }
+
+const boost::bimap<DataType, std::string> data_type_to_string =
+    hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
+      map.insert({hana::first(pair), std::string{hana::second(pair)}});
+      return map;
+    });
 
 bool is_floating_point_data_type(const DataType data_type);
 
