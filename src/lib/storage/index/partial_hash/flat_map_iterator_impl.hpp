@@ -2,6 +2,8 @@
 
 #include <tsl/sparse_map.h>
 
+#include "types.hpp"
+
 namespace hyrise {
 
 class BaseFlatMapIteratorImpl {
