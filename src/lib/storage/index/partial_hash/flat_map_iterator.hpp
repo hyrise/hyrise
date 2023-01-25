@@ -2,6 +2,24 @@
 
 #include "types.hpp"
 
+/**
+ * The choice of the concrete iterator implementation was subject to long discussion. The PartialHashIndex uses the
+ * pointer to implementation (pImpl) idom, that means  i.e. a non-templated class PartialHashIndex holds an opaque
+ * pointer to its templated implementation PartialHashIndexImpl. Since the index access is done through its iterators
+ * (more precisely through its access methods that also work with iterators), a non-templated iterator was also needed.
+ *
+ * Several attempts were made to achieve this, e.g. passing the iterator to the index as a template, keeping the
+ * templated iterators inside the IndexImpl and access them via the index's access methods. However, these attempts
+ * were not only very ugly, it was also not possible to archive the desirend effect because templatization and class
+ * polymorphism do not got well together.
+ *
+ * In the end we decided to use the pImpl idom also for the iterators: Since FlatMapIteratorImpl is a class template,
+ * we use BaseFlatMapIteratorImpl as a non-templated base class for the FlatMapIteratorImpl. We implemented
+ * the FlatMapIterator holding a pointer to a BaseFlatMapIteratorImpl instance. Using a BaseFlatMapIteratorImpl pointer
+ * rather than a FlatMapIteratorImpl, FlatMapIterator itself does not have to be templated. The PartialHashIndex's
+ * iterator functions then return (pairs of) FlatMapIterators so that PartialHashIndex can be non-templated.
+ */
+
 namespace hyrise {
 
 // Non-templated base class for the FlatMapIteratorImpl.
