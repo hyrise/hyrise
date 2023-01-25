@@ -1,5 +1,4 @@
 #include "flat_map_iterator_impl.hpp"
-#include "flat_map_iterator.hpp"
 
 #include "resolve_type.hpp"
 

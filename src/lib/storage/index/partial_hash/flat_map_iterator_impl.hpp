@@ -2,9 +2,25 @@
 
 #include <tsl/sparse_map.h>
 
-#include "flat_map_iterator.hpp"
-
 namespace hyrise {
+
+class BaseFlatMapIteratorImpl {
+ public:
+  using iterator_category = std::forward_iterator_tag;
+  using value_type = const RowID;
+  using difference_type = std::ptrdiff_t;
+  using pointer = const RowID*;
+  using reference = const RowID&;
+
+  BaseFlatMapIteratorImpl(const BaseFlatMapIteratorImpl& it) = default;
+  BaseFlatMapIteratorImpl() = default;
+  virtual ~BaseFlatMapIteratorImpl() = default;
+  virtual reference operator*() const = 0;
+  virtual BaseFlatMapIteratorImpl& operator++() = 0;
+  virtual bool operator==(const BaseFlatMapIteratorImpl& other) const = 0;
+  virtual bool operator!=(const BaseFlatMapIteratorImpl& other) const = 0;
+  virtual std::unique_ptr<BaseFlatMapIteratorImpl> clone() const = 0;
+};
 
 /**
  * Forward iterator that iterates over a tsl::sparse_map that maps a DataType to a vector of RowIDs. The

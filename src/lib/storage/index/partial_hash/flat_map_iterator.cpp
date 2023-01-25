@@ -1,9 +1,11 @@
 #include "flat_map_iterator.hpp"
 
+#include "flat_map_iterator_impl.hpp"
+
 namespace hyrise {
 
 FlatMapIterator::FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator)
-  : _impl(std::move(index_iterator)) {}
+    : _impl(std::move(index_iterator)) {}
 
 FlatMapIterator::FlatMapIterator(const FlatMapIterator& other) : _impl(other._impl->clone()) {}
 
