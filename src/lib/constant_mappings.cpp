@@ -4,6 +4,7 @@
 
 #include <boost/bimap.hpp>
 #include <boost/hana/fold.hpp>
+#include <magic_enum.hpp>
 
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
@@ -33,21 +34,6 @@ const boost::bimap<DataType, std::string> data_type_to_string =
       return map;
     });
 
-const boost::bimap<EncodingType, std::string> encoding_type_to_string = make_bimap<EncodingType, std::string>({
-    {EncodingType::Dictionary, "Dictionary"},
-    {EncodingType::RunLength, "RunLength"},
-    {EncodingType::FixedStringDictionary, "FixedStringDictionary"},
-    {EncodingType::FrameOfReference, "FrameOfReference"},
-    {EncodingType::LZ4, "LZ4"},
-    {EncodingType::Unencoded, "Unencoded"},
-});
-
-const boost::bimap<FileType, std::string> file_type_to_string = make_bimap<FileType, std::string>(
-    {{FileType::Tbl, "Tbl"}, {FileType::Csv, "Csv"}, {FileType::Binary, "Binary"}, {FileType::Auto, "Auto"}});
-
-const boost::bimap<LogLevel, std::string> log_level_to_string = make_bimap<LogLevel, std::string>(
-    {{LogLevel::Debug, "Debug"}, {LogLevel::Info, "Info"}, {LogLevel::Warning, "Warning"}});
-
 const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
     make_bimap<VectorCompressionType, std::string>({
         {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},
@@ -67,15 +53,7 @@ std::ostream& operator<<(std::ostream& stream, const DataType data_type) {
 }
 
 std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type) {
-  return stream << encoding_type_to_string.left.at(encoding_type);
-}
-
-std::ostream& operator<<(std::ostream& stream, const FileType file_type) {
-  return stream << file_type_to_string.left.at(file_type);
-}
-
-std::ostream& operator<<(std::ostream& stream, const LogLevel log_level) {
-  return stream << log_level_to_string.left.at(log_level);
+  return stream << magic_enum::enum_name(encoding_type);
 }
 
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type) {

@@ -73,7 +73,7 @@ inline auto sqlite_testrunner_formatter = [](const ::testing::TestParamInfo<SQLi
   const auto& encoding_type = std::get<1>(info.param);
 
   return std::string{"Line"} + std::to_string(query_pair.first) + "With" +
-         encoding_type_to_string.left.at(encoding_type);
+         std::string{magic_enum::enum_name(encoding_type)};
 };
 
 }  // namespace hyrise

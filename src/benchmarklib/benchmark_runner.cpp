@@ -7,10 +7,9 @@
 #include <boost/accumulators/accumulators.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/statistics/stats.hpp>
-
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
-#include "cxxopts.hpp"
+#include <cxxopts.hpp>
 
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
@@ -502,8 +501,11 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
   cxxopts::Options cli_options{benchmark_name};
 
   // Create a comma separated strings with the encoding and compression options
-  const auto get_first = boost::adaptors::transformed([](auto it) { return it.first; });
-  const auto encoding_strings_option = boost::algorithm::join(encoding_type_to_string.right | get_first, ", ");
+  const auto encoding_strings_option =
+      boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
+                                 boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
+                             ", ");
+  const auto get_first = boost::adaptors::transformed([](const auto it) { return it.first; });
   const auto compression_strings_option =
       boost::algorithm::join(vector_compression_type_to_string.right | get_first, ", ");
 
@@ -523,7 +525,7 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("w,warmup", "Number of seconds that each item is run for warm up. Warming up also caches the query plans", cxxopts::value<uint64_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
     ("o,output", "JSON file to output results to, don't specify for stdout", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
-    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
+    ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + std::string{encoding_strings_option}, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
     ("p,plugins", "Specify plugins to be loaded and execute their pre-/post-benchmark hooks (comma-separated paths to shared libraries w/o whitespaces)", cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
     ("indexes", "Create indexes (where defined by benchmark)", cxxopts::value<bool>()->default_value("false"))

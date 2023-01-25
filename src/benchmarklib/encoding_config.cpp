@@ -1,5 +1,7 @@
 #include "encoding_config.hpp"
 
+#include <magic_enum.hpp>
+
 #include "constant_mappings.hpp"
 
 namespace hyrise {
@@ -29,9 +31,9 @@ SegmentEncodingSpec EncodingConfig::encoding_spec_from_strings(const std::string
 }
 
 EncodingType EncodingConfig::encoding_string_to_type(const std::string& encoding_str) {
-  const auto type = encoding_type_to_string.right.find(encoding_str);
-  Assert(type != encoding_type_to_string.right.end(), "Invalid encoding type: '" + encoding_str + "'");
-  return type->second;
+  const auto type = magic_enum::enum_cast<EncodingType>(encoding_str);
+  Assert(type, "Invalid encoding type: '" + encoding_str + "'");
+  return *type;
 }
 
 std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(const std::string& compression_str) {
@@ -48,7 +50,7 @@ std::optional<VectorCompressionType> EncodingConfig::compression_string_to_type(
 nlohmann::json EncodingConfig::to_json() const {
   const auto encoding_spec_to_string_map = [](const SegmentEncodingSpec& spec) {
     nlohmann::json mapping{};
-    mapping["encoding"] = encoding_type_to_string.left.at(spec.encoding_type);
+    mapping["encoding"] = std::string{magic_enum::enum_name(spec.encoding_type)};
     if (spec.vector_compression_type) {
       mapping["compression"] = vector_compression_type_to_string.left.at(spec.vector_compression_type.value());
     }

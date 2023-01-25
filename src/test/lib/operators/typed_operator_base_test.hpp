@@ -19,7 +19,7 @@ class TypedOperatorBaseTest
   static std::string format(testing::TestParamInfo<ParamType> info) {
     const auto& [data_type, encoding, sort_mode, nullable] = info.param;
 
-    return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
+    return data_type_to_string.left.at(data_type) + std::string{magic_enum::enum_name(encoding)} +
            (sort_mode ? std::string{magic_enum::enum_name(*sort_mode)} : "Unsorted") + (nullable ? "" : "Not") +
            "Nullable";
   }
@@ -31,9 +31,7 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
   hana::for_each(data_type_pairs, [&](auto pair) {
     const auto& data_type = hana::first(pair);
 
-    for (auto encoding_it = encoding_type_to_string.begin(); encoding_it != encoding_type_to_string.end();
-         ++encoding_it) {
-      const auto& encoding = encoding_it->left;
+    for (const auto encoding : magic_enum::enum_values<EncodingType>()) {
       if (!encoding_supports_data_type(encoding, data_type)) {
         continue;
       }

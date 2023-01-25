@@ -174,7 +174,7 @@ TEST_P(SQLiteTestRunner, CompareToSQLite) {
   const auto& [line, sql] = query_pair;
 
   SCOPED_TRACE("Query '" + sql + "' from line " + std::to_string(line) + " with encoding " +
-               encoding_type_to_string.left.at(encoding_type));
+               std::string{magic_enum::enum_name(encoding_type)});
 
   auto sql_pipeline = SQLPipelineBuilder{sql}.create_pipeline();
 
