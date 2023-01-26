@@ -15,11 +15,14 @@ class BufferPoolAllocator {
   using pointer = BufferManagedPtr<T>;
   using const_pointer = const BufferManagedPtr<T>;
   using void_pointer = BufferManagedPtr<void>;
-  using difference_type = typename BufferManagedPtr<T>::difference_type;
+  using difference_type = typename pointer::difference_type;
 
   // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
   // TODO: Get default resource should use singleton
-  BufferPoolAllocator(BufferPoolResource* resource) : _resource(resource) {}
+
+  BufferPoolAllocator() = default;
+
+  explicit BufferPoolAllocator(BufferPoolResource* resource) : _resource(resource) {}
 
   template <class U>
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
@@ -33,20 +36,23 @@ class BufferPoolAllocator {
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
-    return _resource == other.resource();
+    return _resource == other.resource(); // TODO
   }
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _resource != other.resource();
+    return _resource != other.resource(); // TODO
   }
 
   [[nodiscard]] constexpr pointer allocate(std::size_t n) {
-    return static_cast<pointer>(_resource->allocate(n));
+    // If n == 1, its a normal object, if n > 1, 
+    // its an array like for a vecor
+    // TODO: How about alignment or done by memory resource?
+    return static_cast<pointer>(_resource->allocate(sizeof(value_type) * n));
   }
 
-  constexpr void deallocate(pointer const ptr, size_t n) const noexcept {
-    //_resource->deallocate(ptr, n);
+  constexpr void deallocate(pointer const ptr, std::size_t n) const noexcept {
+    _resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n);
   }
 
   BufferPoolResource* resource() const noexcept {

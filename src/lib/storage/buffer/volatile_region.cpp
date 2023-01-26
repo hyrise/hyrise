@@ -8,6 +8,7 @@ VolatileRegion::VolatileRegion(size_t num_bytes) : _num_bytes(num_bytes) {
     _free_frames.push_front(frame_id);
   }
   _num_free_frames = capacity();
+  // TODO: This could conflict with aligner, maybe store the Frame somewhere else
   Assert(_num_free_frames > 0, "There should be at least one free frame in the volatile region while setting up.");
 }
 
@@ -24,6 +25,15 @@ Frame* VolatileRegion::allocate() {
 Frame* VolatileRegion::get(FrameID frame_id) {
   Assert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
   return reinterpret_cast<Frame*>(_data.get() + frame_id * sizeof(Frame));
+}
+
+Frame* VolatileRegion::get(void* ptr) {
+  // TODO: Betweeen byte start and end, this will be much easier as soon as pages are continiues
+  DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
+  DebugAssert(ptr < _data.get() + capacity() * sizeof(Frame), "Pointer is out of range of region");
+  const auto offset = static_cast<std::byte*>(ptr) - _data.get();
+  const auto frame_offset = offset - (offset % sizeof(Frame));
+  return reinterpret_cast<Frame*>(_data.get() + frame_offset);
 }
 
 void VolatileRegion::deallocate(Frame* frame) {

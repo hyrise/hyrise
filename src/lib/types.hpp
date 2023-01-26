@@ -13,9 +13,12 @@
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/string.hpp>
+#include <boost/container/vector.hpp>
 #include <boost/operators.hpp>
 #include <boost/version.hpp>
 
+#include "storage/buffer/buffer_pool_allocator.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
 
@@ -43,8 +46,6 @@ STRONG_TYPEDEF(uint32_t, CpuID);
 STRONG_TYPEDEF(uint32_t, WorkerID);
 STRONG_TYPEDEF(uint32_t, TaskID);
 STRONG_TYPEDEF(uint32_t, ChunkOffset);
-STRONG_TYPEDEF(uint32_t, PageID);
-STRONG_TYPEDEF(uint32_t, FrameID);
 
 // When changing the following two strong typedefs to 64-bit types, please be aware that both are used with
 // std::atomics and not all platforms that Hyrise runs on support atomic 64-bit instructions. Any Intel and AMD CPU
@@ -76,7 +77,8 @@ using Cost = float;
 //
 // TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
-using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+// using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
+using PolymorphicAllocator = BufferPoolAllocator<T>;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -84,7 +86,7 @@ using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
 // AllTypeVariant). This way, they can be compared to the pmr_string stored in the table. Strings that are built, e.g.,
 // for debugging, do not need to use PMR. This might sound complicated, but since the Hyrise data type registered in
 // all_type_variant.hpp is pmr_string, the compiler will complain if you use std::string when you should use pmr_string.
-using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
+using pmr_string = boost::container::basic_string<char, std::char_traits<char>, PolymorphicAllocator<char>>;
 
 // A vector that gets its memory from a memory resource. It is is not necessary to replace each and every std::vector
 // with this. It only makes sense to use this if you also supply a memory resource. Otherwise, default memory will be
@@ -96,7 +98,7 @@ using pmr_string = std::basic_string<char, std::char_traits<char>, PolymorphicAl
 //   pmr_vector<int> a, b{alloc};
 //   a = b;  // a does NOT use alloc, neither for its current values, nor for future allocations (#623).
 template <typename T>
-using pmr_vector = std::vector<T, PolymorphicAllocator<T>>;
+using pmr_vector = boost::container::vector<T, PolymorphicAllocator<T>>;
 
 template <typename T>
 using pmr_ring_buffer = boost::circular_buffer<T, PolymorphicAllocator<T>>;
@@ -138,8 +140,6 @@ constexpr TaskID INVALID_TASK_ID{std::numeric_limits<TaskID::base_type>::max()};
 constexpr CpuID INVALID_CPU_ID{std::numeric_limits<CpuID::base_type>::max()};
 constexpr WorkerID INVALID_WORKER_ID{std::numeric_limits<WorkerID::base_type>::max()};
 constexpr ColumnID INVALID_COLUMN_ID{std::numeric_limits<ColumnID::base_type>::max()};
-constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
-constexpr FrameID INVALID_FRAME_ID{std::numeric_limits<FrameID::base_type>::max()};
 
 // TransactionID = 0 means "not set" in the MVCC data. This is the case if the row has (a) just been reserved, but not
 // yet filled with content, (b) been inserted, committed and not marked for deletion, or (c) inserted but deleted in
@@ -303,4 +303,5 @@ struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicA
     return std::hash<std::string_view>{}(string.c_str());
   }
 };
+
 }  // namespace std

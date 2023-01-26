@@ -1,7 +1,8 @@
 #pragma once
 #include <atomic>
 #include "storage/buffer/page.hpp"
-#include "types.hpp"
+#include "storage/buffer/types.hpp"
+
 
 namespace hyrise {
 

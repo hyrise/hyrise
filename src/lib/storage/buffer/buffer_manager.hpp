@@ -4,8 +4,8 @@
 #include "storage/buffer/clock_replacement_strategy.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/ssd_region.hpp"
+#include "storage/buffer/types.hpp"
 #include "storage/buffer/volatile_region.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -14,7 +14,7 @@ namespace hyrise {
  * 
  * TODO: Ensure concurrent access via latches or other lock-free mechanims
  */
-class BufferManager : public Noncopyable {
+class BufferManager {
  public:
   BufferManager(std::unique_ptr<VolatileRegion> volatile_region, std::unique_ptr<SSDRegion> ssd_region);
 
@@ -61,6 +61,15 @@ class BufferManager : public Noncopyable {
    * @param page_id 
    */
   void remove_page(const PageID page_id);
+
+  /**
+   * @brief Get the page id and offset from ptr object. PageID is on its max 
+   * if the page there was no page found
+   * 
+   * @param ptr 
+   * @return std::pair<PageID, PageOffset> 
+   */
+  std::pair<PageID, PageOffset> get_page_id_and_offset_from_ptr(void* ptr);
 
  protected:
   friend class Hyrise;

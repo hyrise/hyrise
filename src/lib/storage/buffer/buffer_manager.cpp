@@ -109,9 +109,9 @@ void BufferManager::flush_page(const PageID page_id) {
   }
 
   const auto frame = frame_in_page_table_it->second;
-  if (frame->dirty) {
-    _ssd_region->write_page(frame->page_id, frame->data);
-  }
+  // if (frame->dirty) { // TODO: Remove force and move to unpin
+  _ssd_region->write_page(page_id, frame->data);
+  // }
 };
 
 void BufferManager::remove_page(const PageID page_id) {
@@ -130,5 +130,10 @@ void BufferManager::remove_page(const PageID page_id) {
 
   _page_table.erase(page_id);
 }
+
+std::pair<PageID, PageOffset> BufferManager::get_page_id_and_offset_from_ptr(void* ptr) {
+  return std::make_pair<PageID, PageOffset>(PageID{0}, PageOffset{0}); // TODO
+};
+
 
 }  // namespace hyrise

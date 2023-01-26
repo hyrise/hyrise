@@ -146,21 +146,6 @@ std::shared_ptr<AbstractSegment> ValueSegment<T>::copy_using_allocator(
   return copy;
 }
 
-// template <typename T>
-// AbstractSegment* ValueSegment<T>::copy_to_managed_memory_using_allocator(
-//     const PolymorphicAllocator<size_t>& alloc) const {
-//   // pmr_vector<T> new_values(_values, alloc);  // NOLINT(cppcoreguidelines-slicing)
-//   // AbstractSegment *copy;
-//   // if (is_nullable()) {
-//   //   pmr_vector<bool> new_null_values(*_null_values, alloc);  // NOLINT(cppcoreguidelines-slicing) (see above)
-//   //   copy = alloc.new_object<ValueSegment<T>>(std::move(new_values), std::move(new_null_values));
-//   // } else {
-//   //   copy = alloc.new_object<ValueSegment<T>>(std::move(new_values));
-//   // }
-//   // copy->access_counter = access_counter;
-//   return &this;
-// }
-
 template <typename T>
 size_t ValueSegment<T>::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto null_value_vector_size = size_t{0};

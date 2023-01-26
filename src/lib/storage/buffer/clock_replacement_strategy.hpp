@@ -4,7 +4,7 @@
 #include <memory>
 #include <unordered_set>
 #include "frame.hpp"
-#include "types.hpp"
+#include "storage/buffer/types.hpp"
 
 namespace hyrise {
 
@@ -13,7 +13,7 @@ namespace hyrise {
  * for replacement in a FIFO-like fashion. Frames can be pinned to avoid replacement.
  * 
  */
-class ClockReplacementStrategy : public Noncopyable {
+class ClockReplacementStrategy  {
  public:
   ClockReplacementStrategy(const size_t num_frames);
 

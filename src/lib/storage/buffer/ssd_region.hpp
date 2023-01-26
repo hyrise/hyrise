@@ -6,11 +6,11 @@
 #include <boost/iostreams/stream.hpp>
 #include <filesystem>
 #include "storage/buffer/page.hpp"
-#include "types.hpp"
+#include "storage/buffer/types.hpp"
 
 namespace hyrise {
 
-class SSDRegion : private Noncopyable {
+class SSDRegion  {
  public:
   enum class DeviceType { BLOCK, REGULAR_FILE };
 
