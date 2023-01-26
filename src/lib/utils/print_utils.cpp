@@ -7,6 +7,7 @@
 #include <magic_enum.hpp>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
+#include "storage/encoding_type.hpp"
 #include "storage/table.hpp"
 
 namespace {
