@@ -134,22 +134,23 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
     Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
     const auto& ucc_candidates = _identify_ucc_candidates();
+    SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
 
     // For semi joins, the plugin should only look at the right join input.
     const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 2;
-    EXPECT_EQ(ucc_candidates.size(), expected_candidate_count) << "for JoinMode::" << join_mode;
+    EXPECT_EQ(ucc_candidates.size(), expected_candidate_count);
 
     const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
     const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
     const auto join_column_B_candidate = UccCandidate{_table_name_B, _join_columnB->original_column_id};
     const auto predicate_column_B_candidate = UccCandidate{_table_name_B, _predicate_column_B->original_column_id};
 
-    EXPECT_TRUE(ucc_candidates.contains(join_column_B_candidate)) << "for JoinMode::" << join_mode;
-    EXPECT_TRUE(ucc_candidates.contains(predicate_column_B_candidate)) << "for JoinMode::" << join_mode;
+    EXPECT_TRUE(ucc_candidates.contains(join_column_B_candidate));
+    EXPECT_TRUE(ucc_candidates.contains(predicate_column_B_candidate));
 
     if (join_mode != JoinMode::Semi) {
-      EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate)) << "for JoinMode::" << join_mode;
-      EXPECT_TRUE(ucc_candidates.contains(predicate_column_A_candidate)) << "for JoinMode::" << join_mode;
+      EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate));
+      EXPECT_TRUE(ucc_candidates.contains(predicate_column_A_candidate));
     }
   }
 }

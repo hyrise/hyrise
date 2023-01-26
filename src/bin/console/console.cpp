@@ -18,7 +18,6 @@
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
@@ -47,6 +46,7 @@
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/print_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -417,10 +417,7 @@ int Console::_exit(const std::string& /*args*/) {
 
 int Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
-  encoding_options +=
-      boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
-                                 boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
-                             ", ");
+  encoding_options += all_encoding_options();
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
   // and replaces the following space(s) with a new line. `(?: +|$)` is a non-capturing group that matches either
   // a non-zero number of spaces or the end of the line.
@@ -573,11 +570,7 @@ int Console::_load_table(const std::string& args) {
 
   const auto encoding_type = magic_enum::enum_cast<EncodingType>(encoding);
   if (!encoding_type) {
-    const auto encoding_options =
-        boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
-                                   boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
-                               ", ");
-    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + encoding_options + "\n");
+    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + all_encoding_options() + "\n");
     return ReturnCode::Error;
   }
 

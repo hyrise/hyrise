@@ -2,6 +2,8 @@
 
 #include <unordered_map>
 
+#include <boost/algorithm/string/join.hpp>
+#include <boost/range/adaptors.hpp>
 #include <magic_enum.hpp>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -121,5 +123,11 @@ template void print_directed_acyclic_graph<const AbstractOperator>(
     const std::shared_ptr<const AbstractOperator>& node,
     const NodeGetChildrenFn<const AbstractOperator>& get_children_fn,
     const NodePrintFn<const AbstractOperator>& print_node_fn, std::ostream& stream);
+
+std::string all_encoding_options() {
+  return boost::algorithm::join(magic_enum::enum_names<EncodingType>() |
+                                    boost::adaptors::transformed([](const auto it) { return std::string{it}; }),
+                                ", ");
+}
 
 }  // namespace hyrise
