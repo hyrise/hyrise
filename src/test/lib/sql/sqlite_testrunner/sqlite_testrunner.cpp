@@ -1,7 +1,5 @@
 #include "sqlite_testrunner.hpp"
 
-#include "constant_mappings.hpp"
-
 namespace hyrise {
 
 void SQLiteTestRunner::SetUpTestCase() {

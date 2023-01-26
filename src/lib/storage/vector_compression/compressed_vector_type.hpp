@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <optional>
 
 #include <boost/version.hpp>
 #if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
@@ -12,6 +13,7 @@
 #include <boost/hana/pair.hpp>
 #include <boost/hana/value.hpp>
 
+#include "utils/assert.hpp"
 #include "utils/enum_constant.hpp"
 
 namespace hyrise {
@@ -32,6 +34,8 @@ enum class CompressedVectorType : uint8_t {
   FixedWidthInteger2Byte,
   FixedWidthInteger4Byte,  // uncompressed
 };
+
+std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type);
 
 template <typename T>
 class FixedWidthIntegerVector;

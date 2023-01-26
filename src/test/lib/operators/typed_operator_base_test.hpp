@@ -5,7 +5,6 @@
 #include <boost/hana/for_each.hpp>
 
 #include "base_test.hpp"
-#include "constant_mappings.hpp"
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 
@@ -18,10 +17,12 @@ class TypedOperatorBaseTest
  public:
   static std::string format(testing::TestParamInfo<ParamType> info) {
     const auto& [data_type, encoding, sort_mode, nullable] = info.param;
+    auto output = std::stringstream{};
 
-    return data_type_to_string.left.at(data_type) + std::string{magic_enum::enum_name(encoding)} +
-           (sort_mode ? std::string{magic_enum::enum_name(*sort_mode)} : "Unsorted") + (nullable ? "" : "Not") +
-           "Nullable";
+    output << data_type << encoding << (sort_mode ? magic_enum::enum_name(*sort_mode) : "Unsorted")
+           << (nullable ? "" : "Not") << "Nullable";
+
+    return output.str();
   }
 };
 

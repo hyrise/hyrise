@@ -10,6 +10,7 @@
 #endif
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
+#include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>
 #include <boost/hana/prepend.hpp>
 #include <boost/hana/transform.hpp>
@@ -21,7 +22,6 @@
 #include <boost/preprocessor/seq/size.hpp>
 #include <boost/preprocessor/seq/transform.hpp>
 #include <boost/variant.hpp>
-#include <boost/hana/fwd/fold.hpp>
 
 #include "null_value.hpp"
 #include "types.hpp"
@@ -94,6 +94,8 @@ const boost::bimap<DataType, std::string> data_type_to_string =
       map.insert({hana::first(pair), std::string{hana::second(pair)}});
       return map;
     });
+
+std::ostream& operator<<(std::ostream& stream, const DataType data_type);
 
 bool is_floating_point_data_type(const DataType data_type);
 

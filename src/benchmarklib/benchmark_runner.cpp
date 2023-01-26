@@ -12,7 +12,6 @@
 #include <cxxopts.hpp>
 
 #include "benchmark_config.hpp"
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
 #include "sql/sql_pipeline_builder.hpp"

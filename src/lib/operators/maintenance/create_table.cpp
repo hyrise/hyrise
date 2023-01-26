@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "operators/insert.hpp"
 #include "storage/table.hpp"

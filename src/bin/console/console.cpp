@@ -22,7 +22,6 @@
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

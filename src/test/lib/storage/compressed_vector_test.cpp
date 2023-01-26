@@ -8,7 +8,6 @@
 #include "storage/vector_compression/resolve_compressed_vector_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 
-#include "constant_mappings.hpp"
 #include "types.hpp"
 
 namespace hyrise {

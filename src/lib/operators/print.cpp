@@ -9,7 +9,6 @@
 
 #include <boost/lexical_cast.hpp>
 
-#include "constant_mappings.hpp"
 #include "operators/table_wrapper.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/abstract_encoded_segment.hpp"

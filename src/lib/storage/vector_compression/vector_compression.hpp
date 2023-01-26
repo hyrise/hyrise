@@ -24,6 +24,8 @@ const boost::bimap<VectorCompressionType, std::string> vector_compression_type_t
         {VectorCompressionType::BitPacking, "Bit-packing"},
     });
 
+std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
+
 /**
  * @brief Meta information about an uncompressed vector
  *

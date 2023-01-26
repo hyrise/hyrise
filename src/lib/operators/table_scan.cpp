@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "constant_mappings.hpp"
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/correlated_parameter_expression.hpp"

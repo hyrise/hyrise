@@ -2,8 +2,6 @@
 
 #include <magic_enum.hpp>
 
-#include "constant_mappings.hpp"
-
 namespace hyrise {
 
 EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}

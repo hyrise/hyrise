@@ -1,8 +1,7 @@
 #include "encoding_type.hpp"
 
 #include <boost/hana/for_each.hpp>
-
-#include "constant_mappings.hpp"
+#include <magic_enum.hpp>
 
 namespace hyrise {
 
@@ -27,6 +26,10 @@ bool encoding_supports_data_type(EncodingType encoding_type, DataType data_type)
   return result;
 }
 
+std::ostream& operator<<(std::ostream& stream, const EncodingType encoding_type) {
+  return stream << magic_enum::enum_name(encoding_type);
+}
+
 std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) {
   stream << spec.encoding_type;
   if (spec.vector_compression_type) {
@@ -34,5 +37,4 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec) 
   }
   return stream;
 }
-
 }  // namespace hyrise

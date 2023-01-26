@@ -4,31 +4,6 @@
 
 #include <magic_enum.hpp>
 
-namespace {
-
-using namespace hyrise;  // NOLINT(build/namespaces)
-
-static const auto predicate_condition_to_string = std::unordered_map<PredicateCondition, std::string>({
-    {PredicateCondition::Equals, "="},
-    {PredicateCondition::NotEquals, "!="},
-    {PredicateCondition::LessThan, "<"},
-    {PredicateCondition::LessThanEquals, "<="},
-    {PredicateCondition::GreaterThan, ">"},
-    {PredicateCondition::GreaterThanEquals, ">="},
-    {PredicateCondition::BetweenInclusive, "BETWEEN INCLUSIVE"},
-    {PredicateCondition::BetweenLowerExclusive, "BETWEEN LOWER EXCLUSIVE"},
-    {PredicateCondition::BetweenUpperExclusive, "BETWEEN UPPER EXCLUSIVE"},
-    {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
-    {PredicateCondition::Like, "LIKE"},
-    {PredicateCondition::NotLike, "NOT LIKE"},
-    {PredicateCondition::In, "IN"},
-    {PredicateCondition::NotIn, "NOT IN"},
-    {PredicateCondition::IsNull, "IS NULL"},
-    {PredicateCondition::IsNotNull, "IS NOT NULL"},
-});
-
-}  // namespace
-
 namespace hyrise {
 
 bool is_binary_predicate_condition(const PredicateCondition predicate_condition) {
@@ -165,6 +140,25 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 }
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
+  static const auto predicate_condition_to_string = std::unordered_map<PredicateCondition, std::string>({
+      {PredicateCondition::Equals, "="},
+      {PredicateCondition::NotEquals, "!="},
+      {PredicateCondition::LessThan, "<"},
+      {PredicateCondition::LessThanEquals, "<="},
+      {PredicateCondition::GreaterThan, ">"},
+      {PredicateCondition::GreaterThanEquals, ">="},
+      {PredicateCondition::BetweenInclusive, "BETWEEN INCLUSIVE"},
+      {PredicateCondition::BetweenLowerExclusive, "BETWEEN LOWER EXCLUSIVE"},
+      {PredicateCondition::BetweenUpperExclusive, "BETWEEN UPPER EXCLUSIVE"},
+      {PredicateCondition::BetweenExclusive, "BETWEEN EXCLUSIVE"},
+      {PredicateCondition::Like, "LIKE"},
+      {PredicateCondition::NotLike, "NOT LIKE"},
+      {PredicateCondition::In, "IN"},
+      {PredicateCondition::NotIn, "NOT IN"},
+      {PredicateCondition::IsNull, "IS NULL"},
+      {PredicateCondition::IsNotNull, "IS NOT NULL"},
+  });
+
   return stream << predicate_condition_to_string.at(predicate_condition);
 }
 

@@ -25,6 +25,8 @@ const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string 
         {AggregateFunction::Any, "ANY"},
     });
 
+std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
+
 class AggregateExpression : public AbstractExpression {
  public:
   AggregateExpression(const AggregateFunction init_aggregate_function,
