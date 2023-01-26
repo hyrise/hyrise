@@ -387,7 +387,10 @@ void AbstractOperator::_search_and_register_uncorrelated_subqueries(
    * expressions. In contrast, we do not register as a consumer of correlated subqueries, which cannot be reused by
    * design. They are fully owned and managed by the ExpressionEvaluator.
    */
-  auto pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+  const auto& pqp_subquery_expressions = find_pqp_subquery_expressions(expression);
+  const auto total_subuery_count = _uncorrelated_subquery_expressions.size() + pqp_subquery_expressions.size();
+  _uncorrelated_subquery_expressions.reserve(total_subuery_count);
+
   for (const auto& subquery_expression : pqp_subquery_expressions) {
     if (subquery_expression->is_correlated()) {
       continue;
@@ -399,7 +402,7 @@ void AbstractOperator::_search_and_register_uncorrelated_subqueries(
      *    deregister after execution.
      */
     subquery_expression->pqp->register_consumer();
-    _uncorrelated_subquery_expressions.push_back(subquery_expression);
+    _uncorrelated_subquery_expressions.emplace_back(subquery_expression);
   }
 }
 
