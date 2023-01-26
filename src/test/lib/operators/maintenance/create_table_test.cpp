@@ -80,6 +80,8 @@ TEST_F(CreateTableTest, Execute) {
   create_table->execute();
   context->commit();
 
+  EXPECT_TRUE(create_table->executed());
+  EXPECT_FALSE(create_table->get_output());
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
 
   const auto table = Hyrise::get().storage_manager.get_table("t");
@@ -98,6 +100,8 @@ TEST_F(CreateTableTest, SoftKeyConstraints) {
   create_table->execute();
   context->commit();
 
+  EXPECT_TRUE(create_table->executed());
+  EXPECT_FALSE(create_table->get_output());
   EXPECT_TRUE(Hyrise::get().storage_manager.has_table("t"));
 
   const auto table = Hyrise::get().storage_manager.get_table("t");
