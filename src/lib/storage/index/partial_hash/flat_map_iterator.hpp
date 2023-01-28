@@ -35,11 +35,12 @@
  * Iterator as a template parameter: Using templated iterators as a template decreased the code quality significantly.
  * Also, static and dynamic polymorphism do not go well together because virtual functions cannot be templated.
  *
- * Returning BaseFlatMapIteratorImpl pointers rather than FlatMapIterator instances: Since the methods of the
- * FlatMapIteratorImpl must be accessed, it would be necessary to cast the pointers every time the index is accessed.
- * If the BaseFlatMapIteratorImpl pointer is not casted to FlatMapIteratorImpl, only the methods of the Base instance
- * are called when accessing the index (which is now impossible since they are pure virtual, previously they were
- * implemented but did not do anything).
+ * Returning BaseFlatMapIteratorImpl pointers rather than FlatMapIterator instances: This solution attempt has also led
+ * to a decreased code quality due to the ongoing need to dereference every pointer. Moreover, to make the iterators
+ * work with algorithms (e.g. std::distance) it was necessary to cast the pointers from BaseFlatMapIteratorImpl to
+ * FlatMapIteratorImpl. This is important because the iterator type is a forward iterator instead of a random access
+ * iterator, so if an iterator instance has to be retained before a manipulating call a copy has to be made beforehand.
+ * Because (copy) constructors can not be virtual, runtime polymorphism does not work in this situation.
  */
 
 namespace hyrise {
