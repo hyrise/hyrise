@@ -40,7 +40,7 @@
  * work with algorithms (e.g. std::distance) it was necessary to cast the pointers from BaseFlatMapIteratorImpl to
  * FlatMapIteratorImpl. This is important because the iterator type is a forward iterator instead of a random access
  * iterator, so if an iterator instance has to be retained before a manipulating call, a copy has to be made beforehand.
- * Because (copy) constructors can not be virtual, runtime polymorphism does not work in this situation.
+ * Because (copy) constructors cannot be virtual, runtime polymorphism does not work in this situation.
  */
 
 namespace hyrise {
