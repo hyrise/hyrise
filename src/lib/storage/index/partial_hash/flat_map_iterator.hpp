@@ -6,8 +6,9 @@
 /**
  * The choice of the concrete iterator implementation was subject to a long discussion (see PR 2448). The
  * PartialHashIndex uses the pointer to implementation (pImpl) idiom, i.e., the non-templated PartialHashIndex instance
- * holds an opaque pointer to its templated implementation PartialHashIndexImpl. Since the index access is done through
- * its iterators (more precisely, through its access methods that also work with iterators), a non-templated iterator is
+ * holds an opaque pointer to its templated implementation PartialHashIndexImpl. The template parameter is supposed to
+ * be the data type of the indexed column. Since the positions (i.e., RowIDs) stored in the index are accessed via
+ * iterators (more precisely, via its access methods that also work with iterators), a non-templated iterator is
  * also needed.
  *
  * We use the pImpl idiom to implement the FlatMapIterator as a non-templated class. Since FlatMapIteratorImpl is a
@@ -49,9 +50,9 @@ namespace hyrise {
  * FlatMapIterator that implements an iterator interface and holds a pointer to an BaseIteratorImpl. This class
  * is required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
  * codebase. It also provides copy construction and assignment facilities to easily duplicate other FlatMapIterators,
- * including their underlying implementation FlatMapIteratorImpl. This is important because the iterators is a forward
- * iterator, thus not a random access iterator. When using a forward iterator with functions such as std::distance, a
- * copy of the iterator must be created before the manipulation.
+ * including their underlying implementation FlatMapIteratorImpl. This is important because the iterator is a forward
+ * iterator, not a random access iterator. When using a forward iterator with functions such as std::distance, a copy
+ * of the iterator must be created before the manipulation.
  */
 class FlatMapIterator {
  public:

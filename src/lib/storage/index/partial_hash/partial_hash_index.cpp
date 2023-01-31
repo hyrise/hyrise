@@ -18,13 +18,13 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
 size_t PartialHashIndex::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
   // Prevents multiple threads from indexing the same chunk concurrently.
-  auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
+  const auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
   return _impl->insert_entries(chunks_to_index, _column_id);
 }
 
 size_t PartialHashIndex::remove_entries(const std::vector<ChunkID>& chunks_to_remove) {
   // Prevents multiple threads from removing the same chunk concurrently.
-  auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
+  const auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
   return _impl->remove_entries(chunks_to_remove);
 }
 

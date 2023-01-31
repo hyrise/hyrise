@@ -16,7 +16,7 @@ namespace hyrise {
 class PartialHashIndexTest;
 
 /**
- * Base class that holds a PartialHashIndexImpl object with the correct resolved datatype.
+ * Base class that holds a PartialHashIndexImpl object with the correctly resolved datatype.
  */
 class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
@@ -57,7 +57,8 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
-/* Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
+/** 
+ * Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
  * Chunks can be added via `insert_entries()`.
  *
  * We did not perform a comprehensive experimental evaluation of different hash maps for concurrent workloads
@@ -91,7 +92,7 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
  private:
   // Creates and returns an FlatMapIterator holding an instance of FlatMapIteratorImpl initialized using the passed
   // MapIterator.
-  BasePartialHashIndexImpl::Iterator _create_iterator(const MapIterator it) const;
+  BasePartialHashIndexImpl::Iterator _create_iterator(const MapIterator& it) const;
 
   tsl::sparse_map<DataType, std::vector<RowID>> _positions;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;

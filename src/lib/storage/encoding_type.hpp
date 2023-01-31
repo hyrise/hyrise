@@ -16,6 +16,7 @@
 #include <boost/hana/type.hpp>
 
 #include "all_type_variant.hpp"
+#include "magic_enum.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -24,11 +25,6 @@ namespace hyrise {
 namespace hana = boost::hana;
 
 enum class EncodingType : uint8_t { Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4 };
-
-inline static std::vector<EncodingType> encoding_type_enum_values{
-    EncodingType::Unencoded,        EncodingType::Dictionary,
-    EncodingType::RunLength,        EncodingType::FixedStringDictionary,
-    EncodingType::FrameOfReference, EncodingType::LZ4};
 
 /**
  * @brief Maps each encoding type to its supported data types
@@ -82,8 +78,6 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr std::array encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
-                                           EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                           EncodingType::RunLength,        EncodingType::LZ4};
+inline constexpr auto encoding_types = magic_enum::enum_values<EncodingType>();
 
 }  // namespace hyrise
