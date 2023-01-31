@@ -89,7 +89,8 @@ bool PartialHashIndexImpl<DataType>::indexed_null_values() const {
 }
 
 template <typename DataType>
-IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& value) const {
+BasePartialHashIndexImpl::IteratorRange PartialHashIndexImpl<DataType>::range_equals(
+    const AllTypeVariant& value) const {
   const auto begin = _positions.find(boost::get<DataType>(value));
   if (begin == _positions.end()) {
     const auto end_iter = cend();
@@ -100,29 +101,29 @@ IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& 
 }
 
 template <typename DataType>
-std::pair<IteratorPair, IteratorPair> PartialHashIndexImpl<DataType>::range_not_equals(
+BasePartialHashIndexImpl::IteratorRangePair PartialHashIndexImpl<DataType>::range_not_equals(
     const AllTypeVariant& value) const {
   const auto range_eq = range_equals(value);
   return std::make_pair(std::make_pair(cbegin(), range_eq.first), std::make_pair(range_eq.second, cend()));
 }
 
 template <typename DataType>
-Iterator PartialHashIndexImpl<DataType>::cbegin() const {
+BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
   return _create_iterator(_positions.cbegin());
 }
 
 template <typename DataType>
-Iterator PartialHashIndexImpl<DataType>::cend() const {
+BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::cend() const {
   return _create_iterator(_positions.cend());
 }
 
 template <typename DataType>
-Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
+BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
   return _create_iterator(_null_positions.cbegin());
 }
 
 template <typename DataType>
-Iterator PartialHashIndexImpl<DataType>::null_cend() const {
+BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
   return _create_iterator(_null_positions.cend());
 }
 
@@ -155,7 +156,7 @@ std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_id
 }
 
 template <typename DataType>
-Iterator PartialHashIndexImpl<DataType>::_create_iterator(const MapIterator it) const {
+BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::_create_iterator(const MapIterator it) const {
   return Iterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
 }
 

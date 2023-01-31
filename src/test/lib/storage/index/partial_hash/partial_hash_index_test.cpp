@@ -52,28 +52,29 @@ class PartialHashIndexTest : public BaseTest {
   tsl::sparse_map<pmr_string, std::vector<RowID>>* index_map = nullptr;
 
   // Utility functions to access an index's protected functions.
-  Iterator cbegin(std::shared_ptr<PartialHashIndex> index) const {
+  PartialHashIndex::Iterator cbegin(std::shared_ptr<PartialHashIndex> index) const {
     return index->_cbegin();
   }
 
-  Iterator cend(std::shared_ptr<PartialHashIndex> index) const {
+  PartialHashIndex::Iterator cend(std::shared_ptr<PartialHashIndex> index) const {
     return index->_cend();
   }
 
-  Iterator null_cbegin(std::shared_ptr<PartialHashIndex> index) const {
+  PartialHashIndex::Iterator null_cbegin(std::shared_ptr<PartialHashIndex> index) const {
     return index->_null_cbegin();
   }
 
-  Iterator null_cend(std::shared_ptr<PartialHashIndex> index) const {
+  PartialHashIndex::Iterator null_cend(std::shared_ptr<PartialHashIndex> index) const {
     return index->_null_cend();
   }
 
-  IteratorPair range_equals(std::shared_ptr<PartialHashIndex> index, const AllTypeVariant& value) const {
+  PartialHashIndex::IteratorRange range_equals(std::shared_ptr<PartialHashIndex> index,
+                                               const AllTypeVariant& value) const {
     return index->_range_equals(value);
   }
 
-  std::pair<IteratorPair, IteratorPair> range_not_equals(std::shared_ptr<PartialHashIndex> index,
-                                                         const AllTypeVariant& value) const {
+  PartialHashIndex::IteratorRangePair range_not_equals(std::shared_ptr<PartialHashIndex> index,
+                                                       const AllTypeVariant& value) const {
     return index->_range_not_equals(value);
   }
 };

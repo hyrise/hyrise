@@ -14,6 +14,10 @@ class PartialHashIndex {
   friend PartialHashIndexTest;
 
  public:
+  using Iterator = BasePartialHashIndexImpl::Iterator;
+  using IteratorRange = BasePartialHashIndexImpl::IteratorRange;
+  using IteratorRangePair = BasePartialHashIndexImpl::IteratorRangePair;
+
   PartialHashIndex() = delete;
   PartialHashIndex(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID);
 
@@ -66,7 +70,7 @@ class PartialHashIndex {
   }
 
   /**
-   * Searches for all positions that do not equal to the entry in the table index and acquires a pair of IteratorPairs
+   * Searches for all positions that do not equal to the entry in the table index and acquires a pair of IteratorRanges
    * containing two iterator ranges: the range from the beginning of the map until the first occurence of a value
    * equals to the searched entry and the range from the end of the value until the end of the map. After this, the
    * functor is called twice, each time with one of the pairs.
@@ -129,9 +133,9 @@ class PartialHashIndex {
 
   Iterator _null_cend() const;
 
-  IteratorPair _range_equals(const AllTypeVariant& value) const;
+  IteratorRange _range_equals(const AllTypeVariant& value) const;
 
-  std::pair<IteratorPair, IteratorPair> _range_not_equals(const AllTypeVariant& value) const;
+  IteratorRangePair _range_not_equals(const AllTypeVariant& value) const;
 
   /**
    * Concurrent index modifications or simultaneous access and modification would lead to data races. To prevent this,

@@ -32,27 +32,27 @@ bool PartialHashIndex::indexed_null_values() const {
   return _impl->indexed_null_values();
 }
 
-IteratorPair PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
+PartialHashIndex::IteratorRange PartialHashIndex::_range_equals(const AllTypeVariant& value) const {
   return _impl->range_equals(value);
 }
 
-std::pair<IteratorPair, IteratorPair> PartialHashIndex::_range_not_equals(const AllTypeVariant& value) const {
+PartialHashIndex::IteratorRangePair PartialHashIndex::_range_not_equals(const AllTypeVariant& value) const {
   return _impl->range_not_equals(value);
 }
 
-Iterator PartialHashIndex::_cbegin() const {
+PartialHashIndex::Iterator PartialHashIndex::_cbegin() const {
   return _impl->cbegin();
 }
 
-Iterator PartialHashIndex::_cend() const {
+PartialHashIndex::Iterator PartialHashIndex::_cend() const {
   return _impl->cend();
 }
 
-Iterator PartialHashIndex::_null_cbegin() const {
+PartialHashIndex::Iterator PartialHashIndex::_null_cbegin() const {
   return _impl->null_cbegin();
 }
 
-Iterator PartialHashIndex::_null_cend() const {
+PartialHashIndex::Iterator PartialHashIndex::_null_cend() const {
   return _impl->null_cend();
 }
 

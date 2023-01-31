@@ -13,9 +13,6 @@
 
 namespace hyrise {
 
-using Iterator = FlatMapIterator;
-using IteratorPair = std::pair<Iterator, Iterator>;
-
 class PartialHashIndexTest;
 
 /**
@@ -25,6 +22,10 @@ class BasePartialHashIndexImpl : public Noncopyable {
   friend PartialHashIndexTest;
 
  public:
+  using Iterator = FlatMapIterator;
+  using IteratorRange = std::pair<Iterator, Iterator>;
+  using IteratorRangePair = std::pair<IteratorRange, IteratorRange>;
+
   virtual ~BasePartialHashIndexImpl() = default;
 
   /**
@@ -49,9 +50,9 @@ class BasePartialHashIndexImpl : public Noncopyable {
   virtual Iterator null_cend() const = 0;
   virtual size_t estimate_memory_usage() const = 0;
 
-  virtual IteratorPair range_equals(const AllTypeVariant& value) const = 0;
+  virtual IteratorRange range_equals(const AllTypeVariant& value) const = 0;
 
-  virtual std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const = 0;
+  virtual IteratorRangePair range_not_equals(const AllTypeVariant& value) const = 0;
 
   virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
@@ -76,21 +77,21 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
 
   bool indexed_null_values() const final;
 
-  Iterator cbegin() const final;
-  Iterator cend() const final;
-  Iterator null_cbegin() const final;
-  Iterator null_cend() const final;
+  BasePartialHashIndexImpl::Iterator cbegin() const final;
+  BasePartialHashIndexImpl::Iterator cend() const final;
+  BasePartialHashIndexImpl::Iterator null_cbegin() const final;
+  BasePartialHashIndexImpl::Iterator null_cend() const final;
   size_t estimate_memory_usage() const final;
 
-  IteratorPair range_equals(const AllTypeVariant& value) const final;
-  std::pair<IteratorPair, IteratorPair> range_not_equals(const AllTypeVariant& value) const final;
+  BasePartialHashIndexImpl::IteratorRange range_equals(const AllTypeVariant& value) const final;
+  BasePartialHashIndexImpl::IteratorRangePair range_not_equals(const AllTypeVariant& value) const final;
 
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const final;
 
  private:
   // Creates and returns an FlatMapIterator holding an instance of FlatMapIteratorImpl initialized using the passed
   // MapIterator.
-  Iterator _create_iterator(const MapIterator it) const;
+  BasePartialHashIndexImpl::Iterator _create_iterator(const MapIterator it) const;
 
   tsl::sparse_map<DataType, std::vector<RowID>> _positions;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;
