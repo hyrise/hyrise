@@ -1,6 +1,6 @@
 #include "encoding_config.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 namespace hyrise {
 

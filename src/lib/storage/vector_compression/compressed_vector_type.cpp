@@ -1,28 +1,11 @@
 #include "compressed_vector_type.hpp"
 
+#include "magic_enum.hpp"
+
 namespace hyrise {
 
 std::ostream& operator<<(std::ostream& stream, const CompressedVectorType compressed_vector_type) {
-  switch (compressed_vector_type) {
-    case CompressedVectorType::FixedWidthInteger4Byte: {
-      stream << "FixedWidthInteger4Byte";
-      break;
-    }
-    case CompressedVectorType::FixedWidthInteger2Byte: {
-      stream << "FixedWidthInteger2Byte";
-      break;
-    }
-    case CompressedVectorType::FixedWidthInteger1Byte: {
-      stream << "FixedWidthInteger1Byte";
-      break;
-    }
-    case CompressedVectorType::BitPacking: {
-      stream << "BitPacking";
-      break;
-    }
-    default:
-      break;
-  }
+  stream << magic_enum::enum_name(compressed_vector_type);
   return stream;
 }
 

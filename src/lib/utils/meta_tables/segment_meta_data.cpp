@@ -1,6 +1,6 @@
 #include "segment_meta_data.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "hyrise.hpp"
 #include "resolve_type.hpp"

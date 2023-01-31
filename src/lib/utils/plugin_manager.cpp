@@ -92,40 +92,40 @@ void PluginManager::load_plugin(const std::filesystem::path& path) {
 
 void PluginManager::exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name) {
   Assert(_user_executable_functions.contains({plugin_name, function_name}),
-         "There is no " + function_name + " defined for plugin `" + plugin_name + ".");
+         "There is no function '" + function_name + "' defined for plugin '" + plugin_name + "'.");
 
-  const auto user_executable_function = _user_executable_functions[{plugin_name, function_name}];
+  const auto& user_executable_function = _user_executable_functions[{plugin_name, function_name}];
   user_executable_function();
 
   auto& log_manager = Hyrise::get().log_manager;
   log_manager.add_message(
       "PluginManager",
-      "Called user executable function `" + function_name + "` provided by plugin `" + plugin_name + "`.",
+      "Called user executable function '" + function_name + "' provided by plugin '" + plugin_name + "'.",
       LogLevel::Info);
 }
 
 void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
                                             AbstractBenchmarkItemRunner& benchmark_item_runner) {
   Assert(_pre_benchmark_hooks.contains({plugin_name}),
-         "There is no pre-benchmark hook defined for plugin `" + plugin_name + "`.");
+         "There is no pre-benchmark hook defined for plugin '" + plugin_name + "'.");
 
-  const auto pre_benchmark_hook = _pre_benchmark_hooks[plugin_name];
+  const auto& pre_benchmark_hook = _pre_benchmark_hooks[plugin_name];
   pre_benchmark_hook(benchmark_item_runner);
 
   auto& log_manager = Hyrise::get().log_manager;
-  log_manager.add_message("PluginManager", "Called pre-benchmark hook provided by plugin `" + plugin_name + "`.",
+  log_manager.add_message("PluginManager", "Called pre-benchmark hook provided by plugin '" + plugin_name + "'.",
                           LogLevel::Info);
 }
 
 void PluginManager::exec_post_benchmark_hook(const PluginName& plugin_name) {
   Assert(_post_benchmark_hooks.contains({plugin_name}),
-         "There is no post-benchmark hook defined for plugin `" + plugin_name + "`.");
+         "There is no post-benchmark hook defined for plugin '" + plugin_name + "'.");
 
-  const auto post_benchmark_hook = _post_benchmark_hooks[plugin_name];
+  const auto& post_benchmark_hook = _post_benchmark_hooks[plugin_name];
   post_benchmark_hook();
 
   auto& log_manager = Hyrise::get().log_manager;
-  log_manager.add_message("PluginManager", "Called post-benchmark hook provided by plugin `" + plugin_name + "`.",
+  log_manager.add_message("PluginManager", "Called post-benchmark hook provided by plugin '" + plugin_name + "'.",
                           LogLevel::Info);
 }
 
@@ -140,7 +140,7 @@ bool PluginManager::has_post_benchmark_hook(const PluginName& plugin_name) const
 void PluginManager::unload_plugin(const PluginName& plugin_name) {
   auto plugin_iter = _plugins.find(plugin_name);
   Assert(plugin_iter != _plugins.cend(),
-         "Unloading plugin failed: A plugin with name " + plugin_name + " does not exist.");
+         "Unloading plugin failed: A plugin with name '" + plugin_name + "' does not exist.");
 
   _unload_and_erase_plugin(plugin_iter);
 }

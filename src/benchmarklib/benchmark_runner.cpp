@@ -9,7 +9,7 @@
 #include <boost/accumulators/statistics/stats.hpp>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/range/adaptors.hpp>
-#include <cxxopts.hpp>
+#include "cxxopts.hpp"
 
 #include "benchmark_config.hpp"
 #include "hyrise.hpp"

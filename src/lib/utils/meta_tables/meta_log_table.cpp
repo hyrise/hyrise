@@ -1,6 +1,6 @@
 #include "meta_log_table.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "hyrise.hpp"
 #include "utils/assert.hpp"

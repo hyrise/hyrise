@@ -2,7 +2,7 @@
 
 #include <unordered_map>
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 namespace hyrise {
 
