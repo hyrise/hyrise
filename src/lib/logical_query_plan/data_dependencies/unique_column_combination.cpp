@@ -20,7 +20,7 @@ bool UniqueColumnCombination::operator!=(const UniqueColumnCombination& rhs) con
 }
 
 size_t UniqueColumnCombination::hash() const {
-  size_t hash = 0;
+  auto hash = size_t{0};
   for (const auto& expression : expressions) {
     // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
     hash = hash ^ expression->hash();

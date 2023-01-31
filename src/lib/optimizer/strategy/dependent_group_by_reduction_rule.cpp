@@ -107,12 +107,11 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     const auto get_column_ids = [&](const auto& determinants) {
       auto column_ids = std::vector<ColumnID>{};
       column_ids.reserve(determinants.size());
-      std::transform(determinants.cbegin(), determinants.cend(), std::back_inserter(column_ids),
-                     [&](const auto& expression) {
-                       const auto column_id = find_expression_idx(*expression, initial_aggregate_output_expressions);
-                       Assert(column_id, "Could not find column " + expression->as_column_name());
-                       return *column_id;
-                     });
+      for (const auto& expression : determinants) {
+        const auto column_id = find_expression_idx(*expression, initial_aggregate_output_expressions);
+        Assert(column_id, "Could not find column " + expression->as_column_name());
+        column_ids.emplace_back(*column_id);
+      }
       std::sort(column_ids.begin(), column_ids.end());
       return column_ids;
     };
@@ -131,8 +130,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       // library implementation details). Thus, we compare the ColumnIDs of the determinants.
       const auto& left_column_ids = get_column_ids(fd_left.determinants);
       const auto& right_column_ids = get_column_ids(fd_right.determinants);
-      return std::lexicographical_compare(left_column_ids.cbegin(), left_column_ids.cend(), right_column_ids.cbegin(),
-                                          right_column_ids.cend());
+      return left_column_ids < right_column_ids;
     });
 
     // --- Main: Reduction phase ---

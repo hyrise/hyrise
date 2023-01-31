@@ -177,11 +177,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
       tooltip_stream << " <none>\n";
     }
 
-    auto trivial_fd_idx = 0;
+    auto trivial_fd_idx = 1;
     for (const auto& fd : trivial_fds) {
-      ++trivial_fd_idx;
       tooltip_stream << " (" << trivial_fd_idx << ") ";
       tooltip_stream << fd << "\n";
+      ++trivial_fd_idx;
     }
 
     // Edge Tooltip: Non-trivial FDs
@@ -192,11 +192,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
       tooltip_stream << " <none>";
     }
 
-    auto fd_idx = 0;
+    auto fd_idx = 1;
     for (const auto& fd : fds) {
-      ++fd_idx;
       tooltip_stream << " (" << fd_idx << ") ";
       tooltip_stream << fd << "\n";
+      ++fd_idx;
     }
   }
 

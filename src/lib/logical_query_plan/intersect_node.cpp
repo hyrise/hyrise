@@ -40,7 +40,7 @@ std::shared_ptr<UniqueColumnCombinations> IntersectNode::unique_column_combinati
 }
 
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {
-  Fail("Merging of FDs should be implemented.");
+  Fail("Merging of FDs is not implemented.");
 }
 
 size_t IntersectNode::_on_shallow_hash() const {
