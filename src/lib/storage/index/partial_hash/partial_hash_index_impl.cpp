@@ -1,6 +1,5 @@
 #include "partial_hash_index_impl.hpp"
 
-#include "flat_map_iterator_impl.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace hyrise {
