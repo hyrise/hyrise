@@ -355,8 +355,10 @@ std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
 }
 
 void Table::create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
-  Assert(column_id < _column_definitions.size(),
-         "Cannot create index: Passed column id is larger than the largest table's column id.");
+  const auto max_column_id = _column_definitions.size();
+  Assert(column_id <= max_column_id, "Cannot create index: Passed column id " + std::to_string(column_id) +
+                                         " is out of range. Maximum column id is " + std::to_string(max_column_id) +
+                                         ".");
   _create_partial_hash_index(column_id, chunk_ids);
 }
 

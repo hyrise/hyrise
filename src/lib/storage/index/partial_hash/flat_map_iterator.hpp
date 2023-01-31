@@ -49,9 +49,9 @@ namespace hyrise {
  * FlatMapIterator that implements an iterator interface and holds a pointer to an BasteIteratorImpl. This class
  * is required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
  * codebase. It also provides copy construction and assignment facilities to easily duplicate other FlatMapIterators,
- * including their underlying implementation FlatMapIteratorImpl. This is especially important because the iterators
- * type is a forward iterator instead of a random access iterator, so if an iterator instance has to be retained before
- * a manipulating call, e.g., when calling it on std::distance, a copy has to be made beforehand.
+ * including their underlying implementation FlatMapIteratorImpl. This is important because the iterators is a forward
+ * iterator, thus not a random access iterator. When using a forward iterator with functions such as std::distance, a
+ * copy of the iterator must be created before the manipulation.
  */
 class FlatMapIterator {
  public:

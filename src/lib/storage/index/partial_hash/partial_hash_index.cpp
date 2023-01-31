@@ -11,7 +11,7 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
   resolve_data_type(chunks_to_index.front().second->get_segment(column_id)->data_type(),
                     [&](const auto column_data_type) {
                       using ColumnDataType = typename decltype(column_data_type)::type;
-                      _impl = std::make_unique<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, column_id);
+                      _impl = std::make_unique<PartialHashIndexImpl<ColumnDataType>>(chunks_to_index, _column_id);
                     });
 }
 
@@ -19,7 +19,7 @@ size_t PartialHashIndex::insert_entries(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
   // Prevents multiple threads from indexing the same chunk concurrently.
   auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
-  return _impl->insert_entries(chunks_to_index, get_indexed_column_id());
+  return _impl->insert_entries(chunks_to_index, _column_id);
 }
 
 size_t PartialHashIndex::remove_entries(const std::vector<ChunkID>& chunks_to_remove) {

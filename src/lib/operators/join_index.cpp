@@ -224,7 +224,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
       auto total_indexed_chunk_ids = std::set<ChunkID>{};
 
       // We do not take multiple table indexes created for the same column into account. For now, we only use the first
-      // available table index. Theoretically, multiple table index storing index entries for different chunk subsets,
+      // available table index. Theoretically, multiple table indexes storing index entries for different chunk subsets,
       // e.g., ChunkIDs{1,3} and ChunkIDs{0,2,7}, can be used in combination.
       if (table_indexes.size() > 1) {
         PerformanceWarning("There are multiple table indexes available, but only the first one is used.");
@@ -376,7 +376,7 @@ void JoinIndex::_fallback_nested_loop(const ChunkID index_chunk_id, const bool t
   join_index_performance_data.chunks_scanned_without_index++;
 }
 
-// Join loop that joins a segment of the probe table using iterators with the indexed segments of a table index.
+// Join loop that joins a segment of the probe table using iterators with the indexed segments of a PartialHashIndex.
 template <typename ProbeIterator>
 void JoinIndex::_data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                                const ChunkID probe_chunk_id,

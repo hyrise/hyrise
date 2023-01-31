@@ -92,8 +92,8 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   // MapIterator.
   Iterator _create_iterator(const MapIterator it) const;
 
-  tsl::sparse_map<DataType, std::vector<RowID>> _map;
-  tsl::sparse_map<DataType, std::vector<RowID>> _null_values;
+  tsl::sparse_map<DataType, std::vector<RowID>> _positions;
+  tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
 };
 

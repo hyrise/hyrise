@@ -35,7 +35,7 @@ class PartialHashIndexTest : public BaseTest {
     chunks_to_index.push_back(std::make_pair(ChunkID{1}, table->get_chunk(ChunkID{1})));
 
     index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
-    index_map = &(dynamic_cast<PartialHashIndexImpl<pmr_string>*>(index->_impl.get())->_map);
+    index_map = &(dynamic_cast<PartialHashIndexImpl<pmr_string>*>(index->_impl.get())->_positions);
   }
 
   pmr_vector<pmr_string> values1;

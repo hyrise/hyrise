@@ -31,12 +31,12 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
       const auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
-        if (!_null_values.contains(DataType{})) {
-          _null_values[DataType{}] = std::vector<RowID>();
+        if (!_null_positions.contains(DataType{})) {
+          _null_positions[DataType{}] = std::vector<RowID>();
         }
-        _null_values[DataType{}].push_back(row_id);
+        _null_positions[DataType{}].push_back(row_id);
       } else {
-        _map[position.value()].emplace_back(row_id);
+        _positions[position.value()].emplace_back(row_id);
       }
     });
   }
@@ -66,18 +66,18 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
   };
 
   // Iterate over all values stored in the index.
-  auto map_iter = _map.begin();
-  while (map_iter != _map.end()) {
-    auto& row_ids = _map.at(map_iter->first);
+  auto map_iter = _positions.begin();
+  while (map_iter != _positions.end()) {
+    auto& row_ids = _positions.at(map_iter->first);
 
     // Remove every RowID entry of the value that references one of the chunks.
     row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_unindex), row_ids.end());
 
-    map_iter = row_ids.empty() ? _map.erase(map_iter) : ++map_iter;
+    map_iter = row_ids.empty() ? _positions.erase(map_iter) : ++map_iter;
   }
 
-  if (_null_values.contains(DataType{})) {
-    auto& nulls = _null_values[DataType{}];
+  if (_null_positions.contains(DataType{})) {
+    auto& nulls = _null_positions[DataType{}];
     nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
   }
 
@@ -91,8 +91,8 @@ bool PartialHashIndexImpl<DataType>::indexed_null_values() const {
 
 template <typename DataType>
 IteratorPair PartialHashIndexImpl<DataType>::range_equals(const AllTypeVariant& value) const {
-  const auto begin = _map.find(boost::get<DataType>(value));
-  if (begin == _map.end()) {
+  const auto begin = _positions.find(boost::get<DataType>(value));
+  if (begin == _positions.end()) {
     const auto end_iter = cend();
     return std::make_pair(end_iter, end_iter);
   }
@@ -109,22 +109,22 @@ std::pair<IteratorPair, IteratorPair> PartialHashIndexImpl<DataType>::range_not_
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return _create_iterator(_map.cbegin());
+  return _create_iterator(_positions.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return _create_iterator(_map.cend());
+  return _create_iterator(_positions.cend());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return _create_iterator(_null_values.cbegin());
+  return _create_iterator(_null_positions.cbegin());
 }
 
 template <typename DataType>
 Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return _create_iterator(_null_values.cend());
+  return _create_iterator(_null_positions.cend());
 }
 
 template <typename DataType>
@@ -134,15 +134,15 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(_indexed_chunk_ids);  // NOLINT - Linter complains size() should be used, which would be wrong.
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
-  bytes += sizeof(_map);
-  bytes += sizeof(DataType) * _map.size();
+  bytes += sizeof(_positions);
+  bytes += sizeof(DataType) * _positions.size();
 
-  bytes += sizeof(std::vector<RowID>) * _map.size();
+  bytes += sizeof(std::vector<RowID>) * _positions.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
-  bytes += sizeof(_null_values);  // NOLINT
+  bytes += sizeof(_null_positions);  // NOLINT
 
-  if (_null_values.contains(DataType{})) {
+  if (_null_positions.contains(DataType{})) {
     bytes += sizeof(std::vector<RowID>);
     bytes += sizeof(RowID) * std::distance(null_cbegin(), null_cend());
   }
