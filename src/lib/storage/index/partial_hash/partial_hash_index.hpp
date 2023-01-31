@@ -39,7 +39,7 @@ class PartialHashIndex {
   */
   template <typename Functor>
   void access_values_with_iterators(const Functor& functor) const {
-    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    const auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
     functor(_cbegin(), _cend());
   }
 
@@ -50,7 +50,7 @@ class PartialHashIndex {
   */
   template <typename Functor>
   void access_null_values_with_iterators(const Functor& functor) const {
-    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    const auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
     functor(_null_cbegin(), _null_cend());
   }
 
@@ -64,7 +64,7 @@ class PartialHashIndex {
   */
   template <typename Functor>
   void range_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
-    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    const auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
     const auto& [index_begin, index_end] = _range_equals(value);
     functor(index_begin, index_end);
   }
@@ -80,8 +80,8 @@ class PartialHashIndex {
   */
   template <typename Functor>
   void range_not_equals_with_iterators(const Functor& functor, const AllTypeVariant& value) const {
-    auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
-    const auto [not_equals_range_left, not_equals_range_right] = _range_not_equals(value);
+    const auto lock = std::shared_lock<std::shared_mutex>(_data_access_mutex);
+    const auto& [not_equals_range_left, not_equals_range_right] = _range_not_equals(value);
     functor(not_equals_range_left.first, not_equals_range_left.second);
     functor(not_equals_range_right.first, not_equals_range_right.second);
   }
