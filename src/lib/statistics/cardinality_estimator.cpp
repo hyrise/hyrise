@@ -419,32 +419,100 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
   //               That implies estimating a selectivity of 1 for such predicates
   if (!operator_scan_predicates) {
-    const auto binary_predicate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate);
-
-    // Predicates with an equals condition and an uncorrelated subquery as argument are a filter comparable to a
-    // semi-join with a table containing a single row.
-    if (binary_predicate_expression && binary_predicate_expression->predicate_condition == PredicateCondition::Equals) {
-      auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->left_operand());
-      auto column_expression = binary_predicate_expression->right_operand();
-      if (!subquery_expression) {
-        subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(binary_predicate_expression->right_operand());
-        column_expression = binary_predicate_expression->left_operand();
-      }
-
-      if (subquery_expression && !subquery_expression->is_correlated()) {
-        const auto& subquery_output_expressions = subquery_expression->lqp->output_expressions();
-        Assert(subquery_output_expressions.size() == 1, "Uncorrelated subquery must return a single value.");
-        const auto column_id = predicate_node.left_input()->get_column_id(*column_expression);
-        const auto& subquery_statistics = estimate_statistics(subquery_expression->lqp);
-        return estimate_semi_join(column_id, ColumnID{0}, *input_table_statistics, *subquery_statistics);
-      }
+    // We might not have resolved the predicate because it contains subqueries. Unfortunately, we do not know the
+    // values of predicates on uncorrelated subquery results before query execution. However, if the predicate has an
+    // equals or between condition, it acts as a filter comparable to a semi-join with the join key of the subquery
+    // result.
+    const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
+    if (!predicate_expression) {
+      return input_table_statistics;
     }
 
-    return input_table_statistics;
+    const auto& arguments = predicate_expression->arguments;
+    auto subquery_statistics = std::shared_ptr<TableStatistics>{};
+    auto subquery_column_id = ColumnID{0};
+    auto column_expression = std::shared_ptr<AbstractExpression>{};
+    const auto predicate_condition = predicate_expression->predicate_condition;
+
+    // Case (i): Binary predicate with column = <subquery>. Equivalent to a semi-join with a table containing one row.
+    // We can get the statistics directly from the LQPSubqueryExpression.
+    if (predicate_condition == PredicateCondition::Equals) {
+      auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[0]);
+      column_expression = arguments[1];
+
+      if (!subquery_expression) {
+        subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[1]);
+        column_expression = arguments[0];
+      }
+
+      if (!subquery_expression || subquery_expression->is_correlated()) {
+        return input_table_statistics;
+      }
+
+      subquery_statistics = estimate_statistics(subquery_expression->lqp);
+    }
+
+    // Case (ii): Between predicate with column BETWEEN min(<subquery) AND max(<subquery>). Equivalent to a semi-join
+    // with the referenced table, where the min/max aggregates preserve the domain of the subquery result. However,
+    // we have to ensure that we have a min/max aggregate for the lower/upper bound on the same column.
+    if (predicate_condition == PredicateCondition::BetweenInclusive) {
+      column_expression = arguments[0];
+      const auto& lower_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[1]);
+      const auto& upper_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[2]);
+      if (!lower_bound_subquery || !upper_bound_subquery || lower_bound_subquery->is_correlated() ||
+          upper_bound_subquery->is_correlated()) {
+        return input_table_statistics;
+      }
+
+      const auto& lower_bound_lqp = lower_bound_subquery->lqp;
+      const auto& upper_bound_lqp = upper_bound_subquery->lqp;
+      if (lower_bound_lqp->type != LQPNodeType::Aggregate || upper_bound_lqp->type != LQPNodeType::Aggregate) {
+        return input_table_statistics;
+      }
+
+      const auto& lower_bound_aggregate = static_cast<AggregateNode&>(*lower_bound_lqp);
+      const auto& upper_bound_aggregate = static_cast<AggregateNode&>(*upper_bound_lqp);
+
+      const auto get_aggregate_expression = [](const auto& aggregate_node) {
+        const auto& node_expressions = aggregate_node.node_expressions;
+        if (node_expressions.size() > 1 || aggregate_node.aggregate_expressions_begin_idx != 0) {
+          return std::shared_ptr<AggregateExpression>{};
+        }
+
+        return std::static_pointer_cast<AggregateExpression>(node_expressions.front());
+      };
+
+      const auto& lower_bound_aggregate_expression = get_aggregate_expression(lower_bound_aggregate);
+      const auto& upper_bound_aggregate_expression = get_aggregate_expression(upper_bound_aggregate);
+
+      if (!lower_bound_aggregate_expression || !upper_bound_aggregate_expression) {
+        return input_table_statistics;
+      }
+
+      // Check that aggregate functions are as expected, are performed on the same column, and the AggregatNodes have
+      // the same input.
+      const auto subquery_origin_node = lower_bound_aggregate.left_input();
+      if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
+          upper_bound_aggregate_expression->aggregate_function != AggregateFunction::Max ||
+          *lower_bound_aggregate_expression->argument() != *lower_bound_aggregate_expression->argument() ||
+          *subquery_origin_node != *upper_bound_aggregate.left_input()) {
+        return input_table_statistics;
+      }
+
+      subquery_statistics = estimate_statistics(subquery_origin_node);
+      subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->argument());
+    }
+
+    if (!subquery_statistics) {
+      return input_table_statistics;
+    }
+
+    const auto column_id = predicate_node.left_input()->get_column_id(*column_expression);
+    return estimate_semi_join(column_id, subquery_column_id, *input_table_statistics, *subquery_statistics);
   }
 
+  // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
   auto output_table_statistics = input_table_statistics;
-
   for (const auto& operator_scan_predicate : *operator_scan_predicates) {
     output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
   }

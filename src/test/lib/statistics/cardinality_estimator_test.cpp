@@ -913,4 +913,6 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
   EXPECT_EQ(estimator.estimate_cardinality(DummyTableNode::make()), 0.0f);
 }
 
+// TODO test subquery estimation
+
 }  // namespace hyrise

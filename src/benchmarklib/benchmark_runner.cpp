@@ -630,7 +630,8 @@ void BenchmarkRunner::_mine_dependencies() {
     Assert(_currently_running_clients == 0, "All runs must be finished at this point");
   }
   _results = std::vector<BenchmarkItemResult>{*std::max_element(items.begin(), items.end()) + 1u};
-  const auto plugin_path = std::string{"./cmake-build-release/lib/libhyriseUccDiscoveryPlugin"} + DYNAMIC_LIBRARY_SUFFIX;
+  const auto plugin_path =
+      std::string{"./cmake-build-release/lib/libhyriseUccDiscoveryPlugin"} + DYNAMIC_LIBRARY_SUFFIX;
   std::cout << "- Load UccDiscoveryPlugin from " << plugin_path << std::endl;
   Hyrise::get().plugin_manager.load_plugin(plugin_path);
   Hyrise::get().plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs");
