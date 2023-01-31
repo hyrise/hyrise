@@ -1,6 +1,6 @@
 #pragma once
 
-#include <boost/interprocess/offset_ptr.hpp>
+#include <boost/container/pmr/memory_resource.hpp>
 #include "buffer_pool_resource.hpp"
 
 namespace hyrise {
@@ -13,9 +13,10 @@ class BufferPoolAllocator {
  public:
   using value_type = T;
   using pointer = BufferManagedPtr<T>;
-  using const_pointer = const BufferManagedPtr<T>;
+  using const_pointer = BufferManagedPtr<const T>;  // TODO: This should be const or removed
   using void_pointer = BufferManagedPtr<void>;
   using difference_type = typename pointer::difference_type;
+  // TODO: using is_always_equal = std::true_type;
 
   // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
   // TODO: Get default resource should use singleton
@@ -24,10 +25,18 @@ class BufferPoolAllocator {
 
   explicit BufferPoolAllocator(BufferPoolResource* resource) : _resource(resource) {}
 
+  // FIXME: This does not work
+  BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _resource(nullptr) {}
+
   template <class U>
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
     _resource = other.resource();
   }
+
+  // BufferPoolAllocator& operator=(const BufferPoolAllocator& other) noexcept {
+  //   _resource = other.resource();
+  //   return *this;
+  // }
 
   template <class U>
   struct rebind {
@@ -36,16 +45,16 @@ class BufferPoolAllocator {
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
-    return _resource == other.resource(); // TODO
+    return _resource == other.resource();  // TODO
   }
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _resource != other.resource(); // TODO
+    return _resource != other.resource();  // TODO
   }
 
   [[nodiscard]] constexpr pointer allocate(std::size_t n) {
-    // If n == 1, its a normal object, if n > 1, 
+    // If n == 1, its a normal object, if n > 1,
     // its an array like for a vecor
     // TODO: How about alignment or done by memory resource?
     return static_cast<pointer>(_resource->allocate(sizeof(value_type) * n));
@@ -57,6 +66,24 @@ class BufferPoolAllocator {
 
   BufferPoolResource* resource() const noexcept {
     return _resource;
+  }
+
+  BufferPoolAllocator select_on_container_copy_construction() const noexcept {
+    return BufferPoolAllocator();
+  }
+
+  template <typename U, class... Args>
+  void construct(U* ptr, Args&&... args) {
+    Fail("TODO");
+    // TODO
+    // new_allocator<U> na;
+    // dtl::dispatch_uses_allocator
+    //    (na, *this, p, boost::forward<Args>(args)...);
+  }
+
+  template <class U>
+  void destroy(U* p) {
+    //TODO
   }
 
   // Construct, destroy etc

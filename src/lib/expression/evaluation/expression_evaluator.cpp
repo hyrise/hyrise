@@ -730,7 +730,10 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
   const auto subquery_result_table_count = static_cast<ChunkOffset>(subquery_result_tables.size());
-  pmr_vector<ExpressionEvaluator::Bool> result_values(subquery_result_table_count);
+
+  // static_cast is required to avoid issues with ambiguous constructors
+  pmr_vector<ExpressionEvaluator::Bool> result_values(
+      static_cast<typename pmr_vector<ExpressionEvaluator::Bool>::size_type>(subquery_result_table_count));
 
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
@@ -903,7 +906,8 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
   const auto subquery_results = _prune_tables_to_expression_results<Result>(subquery_result_tables);
 
   const auto subquery_result_count = static_cast<ChunkOffset>(subquery_results.size());
-  auto result_values = pmr_vector<Result>(subquery_result_count);
+
+  auto result_values = pmr_vector<Result>(static_cast<typename pmr_vector<Result>::size_type>(subquery_result_count));
   auto result_nulls = pmr_vector<bool>{};
 
   // Materialize values
@@ -1289,7 +1293,9 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     using RightDataType = typename std::decay_t<decltype(right)>::Type;
 
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
-      const auto result_row_count = _result_size(left.size(), right.size());
+      // static_cast is required to avoid issues with ambiguous constructors
+      const auto result_row_count =
+          static_cast<typename pmr_vector<bool>::size_type>(_result_size(left.size(), right.size()));
 
       pmr_vector<bool> nulls(result_row_count);
       pmr_vector<Result> values(result_row_count);
@@ -1470,7 +1476,9 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
   const auto starts = evaluate_expression_to_result<int32_t>(*arguments[1]);
   const auto lengths = evaluate_expression_to_result<int32_t>(*arguments[2]);
 
-  const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
+  // static_cast is required to avoid issues with ambiguous constructors
+  const auto row_count = static_cast<typename pmr_vector<pmr_string>::size_type>(
+      _result_size(strings->size(), starts->size(), lengths->size()));
 
   pmr_vector<pmr_string> result_values(row_count);
   pmr_vector<bool> result_nulls(row_count);

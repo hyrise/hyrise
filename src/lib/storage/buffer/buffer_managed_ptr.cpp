@@ -9,9 +9,6 @@ template <typename PointedType>  // TODO: Fix empty init
 BufferManagedPtr<PointedType>::BufferManagedPtr(pointer ptr) : _page_id(INVALID_PAGE_ID), _offset(0) {}
 
 template <typename PointedType>
-BufferManagedPtr<PointedType>::BufferManagedPtr(std::nullptr_t) : _page_id(INVALID_PAGE_ID), _offset(0) {}
-
-template <typename PointedType>
 template <class T>
 BufferManagedPtr<PointedType>::BufferManagedPtr(T* ptr) {
   const auto [page_id, offset] = Hyrise::get().buffer_manager.get_page_id_and_offset_from_ptr(ptr);

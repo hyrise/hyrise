@@ -20,7 +20,7 @@ std::shared_ptr<Table> MetaTablesTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& [table_name, table] : Hyrise::get().storage_manager.tables()) {
-    output_table->append({pmr_string{table_name}, static_cast<int32_t>(table->column_count()),
+    output_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(table->column_count()),
                           static_cast<int64_t>(table->row_count()), static_cast<int32_t>(table->chunk_count()),
                           static_cast<int64_t>(table->target_chunk_size())});
   }

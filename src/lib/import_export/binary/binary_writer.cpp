@@ -21,7 +21,7 @@ using namespace hyrise;  // NOLINT
 
 // Writes the content of the vector to the ofstream
 template <typename T, typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values);
+void export_values(std::ofstream& ofstream, const boost::container::vector<T, Alloc>& values);
 
 /* Writes the given strings to the ofstream. First an array of string lengths is written. After that the strings are
  * written without any gaps between them.
@@ -59,7 +59,7 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
 }
 
 template <typename T, typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values) {
+void export_values(std::ofstream& ofstream, const boost::container::vector<T, Alloc>& values) {
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
@@ -74,12 +74,12 @@ void export_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values
 }
 
 // specialized implementation for bool values
-template <typename Alloc>
-void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& values) {
-  // Cast to fixed-size format used in binary file
-  const auto writable_bools = pmr_vector<BoolAsByteType>(values.begin(), values.end());
-  export_values(ofstream, writable_bools);
-}
+// template <typename Alloc>
+// void export_values(std::ofstream& ofstream, const std::vector<bool, Alloc>& values) {
+//   // Cast to fixed-size format used in binary file
+//   const auto writable_bools = pmr_vector<BoolAsByteType>(values.begin(), values.end());
+//   export_values(ofstream, writable_bools);
+// }
 
 // Writes a shallow copy of the given value to the ofstream
 template <typename T>
@@ -89,7 +89,7 @@ void export_value(std::ofstream& ofstream, const T& value) {
 
 void export_compact_vector(std::ofstream& ofstream, const pmr_compact_vector& values) {
   export_value(ofstream, static_cast<uint8_t>(values.bits()));
-  ofstream.write(reinterpret_cast<const char*>(values.get()), static_cast<int64_t>(values.bytes()));
+  ofstream.write(reinterpret_cast<const char*>(values.get().get()), static_cast<int64_t>(values.bytes()));
 }
 
 }  // namespace
@@ -114,14 +114,15 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  pmr_vector<pmr_string> column_types(table.column_count());
-  pmr_vector<pmr_string> column_names(table.column_count());
-  pmr_vector<bool> columns_are_nullable(table.column_count());
+  pmr_vector<pmr_string> column_types(static_cast<typename pmr_vector<pmr_string>::size_type>(table.column_count()));
+  pmr_vector<pmr_string> column_names(static_cast<typename pmr_vector<pmr_string>::size_type>(table.column_count()));
+  pmr_vector<bool> columns_are_nullable(static_cast<typename pmr_vector<pmr_string>::size_type>(table.column_count()));
 
   // Transform column types and copy column names in order to write them to the file.
   for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
-    column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
-    column_names[column_id] = table.column_name(column_id);
+    column_types[column_id] = pmr_string(data_type_to_string.left.at(table.column_data_type(column_id)).begin(),
+                                         data_type_to_string.left.at(table.column_data_type(column_id)).end());
+    column_names[column_id] = pmr_string(table.column_name(column_id).begin(), table.column_name(column_id).end());
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
   }
   export_values(ofstream, column_types);
@@ -175,8 +176,9 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
   resolve_data_type(reference_segment.data_type(), [&](auto type) {
     using SegmentDataType = typename decltype(type)::type;
 
-    auto values = pmr_vector<SegmentDataType>(reference_segment.size());
-    auto null_values = pmr_vector<bool>(reference_segment.size());
+    auto values = pmr_vector<SegmentDataType>(
+        static_cast<typename pmr_vector<SegmentDataType>::size_type>(reference_segment.size()));
+    auto null_values = pmr_vector<bool>(static_cast<typename pmr_vector<bool>::size_type>(reference_segment.size()));
     auto current_position = size_t{0};
 
     segment_iterate<SegmentDataType>(reference_segment, [&](const auto& position) {

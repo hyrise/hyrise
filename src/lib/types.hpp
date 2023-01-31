@@ -12,7 +12,9 @@
 
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
+#include <boost/container/scoped_allocator.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+
 #include <boost/container/string.hpp>
 #include <boost/container/vector.hpp>
 #include <boost/operators.hpp>
@@ -78,7 +80,7 @@ using Cost = float;
 // TODO(anyone): replace this with std::pmr once libc++ supports PMR.
 template <typename T>
 // using PolymorphicAllocator = boost::container::pmr::polymorphic_allocator<T>;
-using PolymorphicAllocator = BufferPoolAllocator<T>;
+using PolymorphicAllocator = boost::container::scoped_allocator_adaptor<BufferPoolAllocator<T>>;
 
 // The string type that is used internally to store data. It's hard to draw the line between this and std::string or
 // give advice when to use what. Generally, everything that is user-supplied data (mostly, data stored in a table) is a
@@ -297,9 +299,9 @@ namespace std {
 // `using pmr_string = std::string` above. If we had `pmr_string` here, we would try to redefine an existing hash
 // function.
 template <>
-struct hash<std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
+struct hash<boost::container::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
   size_t operator()(
-      const std::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
+      const boost::container::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
     return std::hash<std::string_view>{}(string.c_str());
   }
 };

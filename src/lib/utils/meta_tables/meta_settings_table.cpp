@@ -25,7 +25,9 @@ std::shared_ptr<Table> MetaSettingsTable::_on_generate() const {
 
   for (const auto& setting_name : setting_names) {
     const auto& setting = Hyrise::get().settings_manager.get_setting(setting_name);
-    output_table->append({pmr_string{setting_name}, pmr_string{setting->get()}, pmr_string{setting->description()}});
+    output_table->append({pmr_string(setting_name.begin(), setting_name.end()), 
+    pmr_string(setting->get().begin(), setting->get().begin()), 
+    pmr_string(setting->description().begin(), setting->description().begin())});
   }
 
   return output_table;

@@ -63,7 +63,7 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
   }
 
   uint32_t dereference() const {
-    return _data[_absolute_index];
+    return 0;//FIXME: _data[_absolute_index];
   }
 
  private:

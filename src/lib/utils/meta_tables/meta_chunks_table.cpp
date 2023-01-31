@@ -30,7 +30,7 @@ std::shared_ptr<Table> MetaChunksTable::_on_generate() const {
       const auto cleanup_commit_id = chunk->get_cleanup_commit_id()
                                          ? AllTypeVariant{static_cast<int64_t>(*chunk->get_cleanup_commit_id())}
                                          : NULL_VALUE;
-      output_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int64_t>(chunk->size()),
+      output_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(chunk_id), static_cast<int64_t>(chunk->size()),
                             static_cast<int64_t>(chunk->invalid_row_count()), cleanup_commit_id});
     }
   }

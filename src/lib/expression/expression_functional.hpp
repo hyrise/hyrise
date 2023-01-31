@@ -63,11 +63,13 @@ namespace expression_functional {
 /**
  * @defgroup Turn expression-like things (Values, Expressions themselves) into expressions
  *
- * Mostly used internally in this file
+ * Mostly used internally in this file. The overloaded function receiving a shared pointer used an additional
+ * template to avoid ambiguity for the cost of generating several functions for each passed expression subclass.
  *
  * @{
  */
-std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<AbstractExpression>& expression);
+template <typename T>
+std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<T>& expression);
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 /** @} */
 

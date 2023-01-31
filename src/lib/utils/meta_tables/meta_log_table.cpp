@@ -35,8 +35,11 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
 
     timestamp << std::put_time(localtime_r(&time, &buffer), "%F %T");
     output_table->append(
-        {timestamp_ns, pmr_string{timestamp.str()}, pmr_string{log_level_to_string.left.at(entry.log_level)},
-         static_cast<int32_t>(entry.log_level), pmr_string{entry.reporter}, pmr_string{entry.message}});
+        {timestamp_ns, pmr_string(timestamp.str().begin(), timestamp.str().end()), 
+          pmr_string(log_level_to_string.left.at(entry.log_level).begin(), log_level_to_string.left.at(entry.log_level).end()),
+          static_cast<int32_t>(entry.log_level), 
+          pmr_string(entry.reporter.begin(), entry.reporter.end()), 
+          pmr_string(entry.message.begin(), entry.message.end())});
   }
 
   return output_table;

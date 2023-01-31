@@ -202,7 +202,8 @@ PreparedStatementDetails PostgresProtocolHandler<SocketType>::read_bind_packet()
   std::vector<AllTypeVariant> parameter_values;
   for (auto parameter_value = 0; parameter_value < num_parameter_values; ++parameter_value) {
     const auto parameter_value_length = _read_buffer.template get_value<int32_t>();
-    parameter_values.emplace_back(pmr_string{_read_buffer.get_string(parameter_value_length, HasNullTerminator::No)});
+    const auto read_buffer_result = _read_buffer.get_string(parameter_value_length, HasNullTerminator::No);
+    parameter_values.emplace_back(pmr_string(read_buffer_result.begin(), read_buffer_result.end()));
   }
 
   const auto num_result_column_format_codes = _read_buffer.template get_value<int16_t>();

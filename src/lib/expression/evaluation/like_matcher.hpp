@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/algorithm/searching/boyer_moore.hpp>
 #include <experimental/functional>
 #include <optional>
 #include <regex>
@@ -21,11 +22,7 @@ namespace hyrise {
  */
 class LikeMatcher {
   // A faster search algorithm than the typical byte-wise search if we can reuse the searcher
-#ifdef __GLIBCXX__
-  using Searcher = std::boyer_moore_searcher<pmr_string::const_iterator>;
-#else
-  using Searcher = std::experimental::boyer_moore_searcher<pmr_string::const_iterator>;
-#endif
+  using Searcher = boost::algorithm::boyer_moore<pmr_string::const_iterator>;  // TODO: const iterator
 
  public:
   /**
@@ -118,7 +115,7 @@ class LikeMatcher {
       });
 
     } else if (std::holds_alternative<ContainsPattern>(_pattern_variant)) {
-      const auto& contains_str = std::get<ContainsPattern>(_pattern_variant).string;
+      auto& contains_str = std::get<ContainsPattern>(_pattern_variant).string;
       // It's really hard to store the searcher in the pattern as it only holds iterators into the string that easily
       // get invalidated when the pattern is passed around.
       const auto searcher = Searcher{contains_str.begin(), contains_str.end()};

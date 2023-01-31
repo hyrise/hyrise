@@ -1655,7 +1655,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
 
     case hsql::kExprLiteralString:
       AssertInput(expr.name, "No value given for string literal");
-      return value_(pmr_string{name});
+      return value_(pmr_string(name.begin(), name.end()));
 
     case hsql::kExprLiteralInt:
       if (static_cast<int32_t>(expr.ival) == expr.ival) {
@@ -1671,7 +1671,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
       if (name.size() == 10) {
         const auto timestamp = string_to_timestamp(name);
         if (timestamp) {
-          return value_(pmr_string{name});
+          return value_(pmr_string(name.begin(), name.end()));
         }
       }
       FailInput("'" + name + "' is not a valid ISO 8601 extended date");
@@ -1825,7 +1825,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           const auto duration = arithmetic_operator == ArithmeticOperator::Addition ? interval_expression.duration
                                                                                     : -interval_expression.duration;
           const auto end_date = date_interval(start_timestamp->date(), duration, interval_expression.unit);
-          return value_(pmr_string{date_to_string(end_date)});
+          const auto date_string = date_to_string(end_date);
+          return value_(pmr_string(date_string.begin(), date_string.end()));
         }
         return std::make_shared<ArithmeticExpression>(arithmetic_operator, left, right);
       }
@@ -1936,7 +1937,8 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_translate_hsql_expr(
           // Parsing valid timestamps is also possible for at first glance invalid strings (see
           // utils/date_time_utils.hpp for details). To always obtain a semantically meaningful result, we retrieve the
           // created timestamp's string representation.
-          return value_(pmr_string{timestamp_to_string(*date_time)});
+          const auto timestamp_string = timestamp_to_string(*date_time);
+          return value_(pmr_string(timestamp_string.begin(), timestamp_string.end()));
         }
       }
 

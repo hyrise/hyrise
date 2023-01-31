@@ -25,7 +25,7 @@ std::shared_ptr<Table> MetaPluginsTable::_on_generate() const {
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
   for (const auto& plugin : Hyrise::get().plugin_manager.loaded_plugins()) {
-    output_table->append({pmr_string{plugin}});
+    output_table->append({pmr_string(plugin.begin(), plugin.end())});
   }
 
   return output_table;

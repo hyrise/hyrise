@@ -1,6 +1,7 @@
 #include "ucc_discovery_plugin.hpp"
 
 #include <boost/container_hash/hash.hpp>
+#include <boost/unordered_set.hpp>
 
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
@@ -172,7 +173,7 @@ template <typename ColumnDataType>
 bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
-  auto distinct_values = std::unordered_set<ColumnDataType>{};
+  auto distinct_values = boost::unordered_set<ColumnDataType>{};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto source_chunk = table->get_chunk(chunk_id);

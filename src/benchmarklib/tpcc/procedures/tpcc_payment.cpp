@@ -30,7 +30,8 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
   std::uniform_int_distribution<> customer_selection_method_dist{1, 10};
   select_customer_by_name = customer_selection_method_dist(_random_engine) <= 6;
   if (select_customer_by_name) {
-    customer = pmr_string{_tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999))};
+    const auto last_name = _tpcc_random_generator.last_name(_tpcc_random_generator.nurand(255, 0, 999));
+    customer = pmr_string(last_name.begin(), last_name.end());
   } else {
     customer = static_cast<int32_t>(_tpcc_random_generator.nurand(1023, 1, 3000));
   }

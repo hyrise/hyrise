@@ -47,7 +47,9 @@ template <typename T>
 class CsvConverter : public BaseCsvConverter {
  public:
   explicit CsvConverter(ChunkOffset size, const ParseConfig& config = {}, bool is_nullable = false)
-      : _parsed_values(size), _null_values(size, false), _is_nullable(is_nullable), _config(config) {}
+      : _parsed_values(static_cast<typename pmr_vector<T>::size_type>(size)), 
+      _null_values(static_cast<typename pmr_vector<bool>::size_type>(size), false), 
+      _is_nullable(is_nullable), _config(config) {}
 
   void insert(std::string& value, ChunkOffset position) override {
     if (_is_nullable && value.length() == 0) {
@@ -148,7 +150,8 @@ inline std::function<double(const std::string&)> CsvConverter<double>::_get_conv
 
 template <>
 inline std::function<pmr_string(const std::string&)> CsvConverter<pmr_string>::_get_conversion_function() {
-  return [](const std::string& str) { return pmr_string{str}; };
+  return [](const std::string& str) { return pmr_string(str.begin(), str.end()); };
 }
+
 
 }  // namespace hyrise

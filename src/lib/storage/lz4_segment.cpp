@@ -417,7 +417,8 @@ std::pair<pmr_string, size_t> LZ4Segment<pmr_string>::decompress(const ChunkOffs
     // After the first iteration, this is set to 0 since only the first block's start offset can't be equal to zero.
     block_start_offset = 0;
   }
-  return std::pair{pmr_string{result_stringstream.str()}, new_cached_block_index};
+  const auto block_string = result_stringstream.str();
+  return std::pair{pmr_string(block_string.begin(), block_string.end()), new_cached_block_index};
 }
 
 template <typename T>

@@ -144,7 +144,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   Assert(input_pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
   // Vector of segments for each chunk
-  auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count, Segments(column_count));
+  auto output_segments_by_chunk =
+      std::vector<Segments>(output_chunk_count, Segments(static_cast<typename Segments::size_type>(column_count)));
 
   if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
     // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.

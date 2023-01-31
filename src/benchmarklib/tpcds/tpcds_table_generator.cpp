@@ -35,6 +35,7 @@ extern "C" {
 #include <tpcds-kit/tools/w_web_sales.h>
 #include <tpcds-kit/tools/w_web_site.h>
 }
+#include <boost/lexical_cast.hpp>
 
 #include "benchmark_config.hpp"
 #include "table_builder.hpp"
@@ -409,7 +410,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_call_center(ds_key_t max_ro
         resolve_string(CC_DIVISION_NAME, call_center.cc_division_name),
         resolve_integer(CC_COMPANY, call_center.cc_company),
         resolve_string(CC_COMPANY_NAME, call_center.cc_company_name),
-        resolve_string(CC_ADDRESS, pmr_string{std::to_string(call_center.cc_address.street_num)}),
+        resolve_string(CC_ADDRESS, pmr_string{boost::lexical_cast<pmr_string>(call_center.cc_address.street_num)}),
         resolve_street_name(CC_ADDRESS, call_center.cc_address),
         resolve_string(CC_ADDRESS, call_center.cc_address.street_type),
         resolve_string(CC_ADDRESS, call_center.cc_address.suite_num),
@@ -574,7 +575,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_customer_address(ds_key_t m
 
     customer_address_builder.append_row(
         customer_address.ca_addr_sk, customer_address.ca_addr_id,
-        resolve_string(CA_ADDRESS_STREET_NUM, pmr_string{std::to_string(customer_address.ca_address.street_num)}),
+        resolve_string(CA_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(customer_address.ca_address.street_num)),
         resolve_street_name(CA_ADDRESS_STREET_NAME1, customer_address.ca_address),
         resolve_string(CA_ADDRESS_STREET_TYPE, customer_address.ca_address.street_type),
         resolve_string(CA_ADDRESS_SUITE_NUM, customer_address.ca_address.suite_num),
@@ -655,8 +656,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_date_dim(ds_key_t max_rows)
 
   for (auto date_index = ds_key_t{0}; date_index < date_count; ++date_index) {
     const auto date = call_dbgen_mk<W_DATE_TBL, &mk_w_date, DATE>(date_first + date_index);
-
-    auto quarter_name = pmr_string{std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy)};
+    const auto quarter_string = std::to_string(date.d_year) + "Q" + std::to_string(date.d_qoy);
+    auto quarter_name = pmr_string(quarter_string.begin(), quarter_string.end());
 
     date_builder.append_row(
         date.d_date_sk, date.d_date_id,
@@ -866,7 +867,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_store(ds_key_t max_rows) co
         resolve_string(W_STORE_MARKET_MANAGER, store.market_manager),
         resolve_key(W_STORE_DIVISION_ID, store.division_id), resolve_string(W_STORE_DIVISION_NAME, store.division_name),
         resolve_key(W_STORE_COMPANY_ID, store.company_id), resolve_string(W_STORE_COMPANY_NAME, store.company_name),
-        resolve_string(W_STORE_ADDRESS_STREET_NUM, pmr_string{std::to_string(store.address.street_num)}),
+        resolve_string(W_STORE_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(store.address.street_num)),
         resolve_street_name(W_STORE_ADDRESS_STREET_NAME1, store.address),
         resolve_string(W_STORE_ADDRESS_STREET_TYPE, store.address.street_type),
         resolve_string(W_STORE_ADDRESS_SUITE_NUM, store.address.suite_num),
@@ -1000,7 +1001,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_warehouse(ds_key_t max_rows
 
         resolve_string(W_WAREHOUSE_NAME, warehouse.w_warehouse_name),
         resolve_integer(W_WAREHOUSE_SQ_FT, warehouse.w_warehouse_sq_ft),
-        resolve_string(W_ADDRESS_STREET_NUM, pmr_string{std::to_string(warehouse.w_address.street_num)}),
+        resolve_string(W_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(warehouse.w_address.street_num)),
         resolve_street_name(W_ADDRESS_STREET_NAME1, warehouse.w_address),
         resolve_string(W_ADDRESS_STREET_TYPE, warehouse.w_address.street_type),
         resolve_string(W_ADDRESS_SUITE_NUM, warehouse.w_address.suite_num),
@@ -1167,7 +1168,7 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
         resolve_string(WEB_MARKET_MANAGER, web_site.web_market_manager),
         resolve_integer(WEB_COMPANY_ID, web_site.web_company_id),
         resolve_string(WEB_COMPANY_NAME, web_site.web_company_name),
-        resolve_string(WEB_ADDRESS_STREET_NUM, pmr_string{std::to_string(web_site.web_address.street_num)}),
+        resolve_string(WEB_ADDRESS_STREET_NUM, boost::lexical_cast<pmr_string>(web_site.web_address.street_num)),
         resolve_street_name(WEB_ADDRESS_STREET_NAME1, web_site.web_address),
         resolve_string(WEB_ADDRESS_STREET_TYPE, web_site.web_address.street_type),
         resolve_string(WEB_ADDRESS_SUITE_NUM, web_site.web_address.suite_num),

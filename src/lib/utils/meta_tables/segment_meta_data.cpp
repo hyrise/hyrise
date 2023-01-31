@@ -23,18 +23,18 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto& segment = chunk->get_segment(column_id);
 
-        const auto data_type = pmr_string{data_type_to_string.left.at(table->column_data_type(column_id))};
+        const auto data_type = pmr_string(data_type_to_string.left.at(table->column_data_type(column_id)).begin(), data_type_to_string.left.at(table->column_data_type(column_id)).end());
 
         const auto estimated_size = segment->memory_usage(mode);
         auto encoding = NULL_VALUE;
         auto vector_compression = NULL_VALUE;
         if (const auto& encoded_segment = std::dynamic_pointer_cast<AbstractEncodedSegment>(segment)) {
-          encoding = pmr_string{encoding_type_to_string.left.at(encoded_segment->encoding_type())};
+          encoding = pmr_string(encoding_type_to_string.left.at(encoded_segment->encoding_type()).begin(), encoding_type_to_string.left.at(encoded_segment->encoding_type()).end());
 
           if (encoded_segment->compressed_vector_type()) {
             std::stringstream sstream;
             sstream << *encoded_segment->compressed_vector_type();
-            vector_compression = pmr_string{sstream.str()};
+            vector_compression = pmr_string(sstream.str().begin(), sstream.str().end());
           }
         }
 
@@ -42,8 +42,8 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
 
         if (mode == MemoryUsageCalculationMode::Full) {
           const auto distinct_value_count = static_cast<int64_t>(get_distinct_value_count(segment));
-          meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, distinct_value_count, encoding,
+          meta_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
+                              pmr_string(table->column_name(column_id).begin(), table->column_name(column_id).end()), data_type, distinct_value_count, encoding,
                               vector_compression, static_cast<int64_t>(estimated_size),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
@@ -51,8 +51,8 @@ void gather_segment_meta_data(const std::shared_ptr<Table>& meta_table, const Me
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Random]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Dictionary])});
         } else {
-          meta_table->append({pmr_string{table_name}, static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
-                              pmr_string{table->column_name(column_id)}, data_type, encoding, vector_compression,
+          meta_table->append({pmr_string(table_name.begin(), table_name.end()), static_cast<int32_t>(chunk_id), static_cast<int32_t>(column_id),
+                              pmr_string(table->column_name(column_id).begin(), table->column_name(column_id).end()), data_type, encoding, vector_compression,
                               static_cast<int64_t>(estimated_size),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Point]),
                               static_cast<int64_t>(access_counter[SegmentAccessCounter::AccessType::Sequential]),
