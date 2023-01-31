@@ -46,7 +46,7 @@
 namespace hyrise {
 
 /**
- * FlatMapIterator that implements an iterator interface and holds a pointer to an BasteIteratorImpl. This class
+ * FlatMapIterator that implements an iterator interface and holds a pointer to an BaseIteratorImpl. This class
  * is required to allow runtime polymorphism without the need to directly pass pointers to iterators throughout the
  * codebase. It also provides copy construction and assignment facilities to easily duplicate other FlatMapIterators,
  * including their underlying implementation FlatMapIteratorImpl. This is important because the iterators is a forward
