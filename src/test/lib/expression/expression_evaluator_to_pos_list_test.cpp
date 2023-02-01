@@ -199,17 +199,21 @@ TEST_F(ExpressionEvaluatorToPosListTest, ExistsCorrelated) {
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *not_exists_(subquery),
                               {ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
   EXPECT_TRUE(test_expression(table_b, ChunkID{1}, *not_exists_(subquery), {ChunkOffset{0}, ChunkOffset{2}}));
+
+  // Correlated subqueries cannot be reused and should be deep copied before execution.
+  EXPECT_FALSE(table_scan->executed());
 }
 
 TEST_F(ExpressionEvaluatorToPosListTest, ExistsUncorrelated) {
   const auto table_wrapper_all = std::make_shared<TableWrapper>(Projection::dummy_table());
-  table_wrapper_all->never_clear_output();
   const auto subquery_returning_all = pqp_subquery_(table_wrapper_all, DataType::Int, false);
 
   const auto empty_table =
       std::make_shared<Table>(TableColumnDefinitions{{"a", DataType::Int, false}}, TableType::Data);
   const auto table_wrapper_empty = std::make_shared<TableWrapper>(empty_table);
   const auto subquery_returning_none = pqp_subquery_(table_wrapper_empty, DataType::Int, false);
+
+  execute_all({table_wrapper_all, table_wrapper_empty});
 
   EXPECT_TRUE(test_expression(table_b, ChunkID{0}, *exists_(subquery_returning_all),
                               {ChunkOffset{0}, ChunkOffset{1}, ChunkOffset{2}, ChunkOffset{3}}));
