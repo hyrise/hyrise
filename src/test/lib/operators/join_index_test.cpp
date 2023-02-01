@@ -75,12 +75,6 @@ class OperatorsJoinIndexTest : public BaseTest {
 
     for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); ++chunk_id) {
       const auto chunk = table->get_chunk(chunk_id);
-
-      std::vector<ColumnID> columns{1};
-      for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); ++column_id) {
-        columns[0] = column_id;
-        chunk->create_index<GroupKeyIndex>(columns);
-      }
     }
 
     return std::make_shared<TableWrapper>(table);

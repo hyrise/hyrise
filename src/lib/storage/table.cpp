@@ -354,22 +354,6 @@ std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
   return _chunk_indexes_statistics;
 }
 
-template <typename Index>
-void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
-  static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
-                "'Index' template argument is not an AbstractChunkIndex.");
-
-  const auto chunk_index_type = get_chunk_index_type_of<Index>();
-
-  const auto chunk_count = _chunks.size();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = get_chunk(chunk_id);
-    chunk->create_index<Index>(column_ids);
-  }
-  ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
-  _chunk_indexes_statistics.emplace_back(indexes_statistics);
-}
-
 const TableKeyConstraints& Table::soft_key_constraints() const {
   return _table_key_constraints;
 }
@@ -507,12 +491,5 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
   auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index};
   _table_indexes_statistics.emplace_back(table_indexes_statistics);
 }
-
-template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,
-                                                       const std::string& name);
-template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vector<ColumnID>& column_ids,
-                                                                const std::string& name);
-template void Table::create_chunk_index<AdaptiveRadixTreeIndex>(const std::vector<ColumnID>& column_ids,
-                                                                const std::string& name);
 
 }  // namespace hyrise

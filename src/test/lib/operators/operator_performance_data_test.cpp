@@ -13,7 +13,6 @@
 #include "operators/join_index.hpp"
 #include "operators/table_scan.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 
 namespace hyrise {
 
@@ -254,10 +253,6 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
     EXPECT_EQ(perf.chunks_scanned_without_index, 2);
     EXPECT_TRUE(perf.right_input_is_index_side);
   }
-
-  // Add group-key index (required dictionary encoding) to table
-  ChunkEncoder::encode_all_chunks(table);
-  table->create_chunk_index<GroupKeyIndex>({ColumnID{0}});
 
   {
     auto join = std::make_shared<JoinIndex>(

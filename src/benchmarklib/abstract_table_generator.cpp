@@ -304,15 +304,6 @@ void AbstractTableGenerator::generate_and_store() {
   }
 
   /**
-   * Create chunk indexes if requested by the user.
-   */
-  if (_benchmark_config->chunk_indexes) {
-    _create_chunk_indexes(table_info_by_name);
-  } else {
-    std::cout << "- No chunk indexes created as --chunk_indexes was not specified or set to false" << std::endl;
-  }
-
-  /**
    * Create table indexes if requested by the user.
    */
   if (_benchmark_config->table_indexes) {
@@ -331,42 +322,6 @@ std::shared_ptr<BenchmarkConfig> AbstractTableGenerator::create_benchmark_config
   auto config = BenchmarkConfig::get_default_config();
   config.chunk_size = chunk_size;
   return std::make_shared<BenchmarkConfig>(config);
-}
-
-void AbstractTableGenerator::_create_chunk_indexes(
-    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
-  Timer timer;
-  std::cout << "- Creating chunk indexes" << std::endl;
-  const auto& indexes_by_table = _indexes_by_table();
-  if (indexes_by_table.empty()) {
-    std::cout << "-  No indexes defined by benchmark" << std::endl;
-    return;
-  }
-  for (const auto& [table_name, indexes] : indexes_by_table) {
-    const auto& table = table_info_by_name[table_name].table;
-
-    for (const auto& index_column_names : indexes) {
-      auto column_ids = std::vector<ColumnID>{};
-
-      std::cout << "-  Creating index on " << table_name << " [ ";
-      for (const auto& column_name : index_column_names) {
-        std::cout << column_name << " ";
-        column_ids.emplace_back(table->column_id_by_name(column_name));
-      }
-      std::cout << "] " << std::flush;
-      Timer per_index_timer;
-
-      if (column_ids.size() == 1) {
-        table->create_chunk_index<GroupKeyIndex>(column_ids);
-      } else {
-        table->create_chunk_index<CompositeGroupKeyIndex>(column_ids);
-      }
-
-      std::cout << "(" << per_index_timer.lap_formatted() << ")" << std::endl;
-    }
-  }
-  metrics.chunk_index_duration = timer.lap();
-  std::cout << "- Creating chunk indexes done (" << format_duration(metrics.chunk_index_duration) << ")" << std::endl;
 }
 
 void AbstractTableGenerator::_create_table_indexes(

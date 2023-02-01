@@ -38,7 +38,7 @@ using ColumnIDs = std::vector<ColumnID>;
 
 enum class InputSide { Left, Right };
 
-enum class IndexScope { Table, Chunk, None };
+enum class IndexScope { Table, None };
 
 // Join operators might build internal PosLists that they have to de-reference when assembling the output Table if the
 // input itself is already a reference Table.
@@ -218,7 +218,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     const auto input_table_types =
         std::vector{InputTableType::Data, InputTableType::IndividualPosLists, InputTableType::SharedPosList};
 
-    const auto index_scopes = std::vector{IndexScope::Chunk, IndexScope::Table};
+    const auto index_scopes = std::vector{IndexScope::Table};
 
     // Vectors of pruned ColumnIDs with which the tests should be performed.
     const auto column_pruning_configurations = std::vector<ColumnIDs>{{}, {ColumnID{0}, ColumnID{2}, ColumnID{4}}};
@@ -679,18 +679,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
        * To sufficiently test IndexJoins, indexes have to be created. Therefore, if index_side is set in the
        * configuration, indexes for the data table are created. The index scope is either chunk based or table based.
        */
-      if (index_scope == IndexScope::Chunk) {
-        // The index type is either GroupKeyIndex for dictionary segments or BTreeIndex for non-dictionary segments.
-        for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {
-          for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-            if (encoding_type == EncodingType::Dictionary) {
-              data_table->get_chunk(chunk_id)->create_index<GroupKeyIndex>(std::vector<ColumnID>{column_id});
-            } else {
-              data_table->get_chunk(chunk_id)->create_index<BTreeIndex>(std::vector<ColumnID>{column_id});
-            }
-          }
-        }
-      } else if (index_scope == IndexScope::Table) {
+      if (index_scope == IndexScope::Table) {
         // Creates a PartialHashIndex on the defined chunk range of every column of the index side.
         auto chunk_ids = std::vector<ChunkID>{indexed_chunk_range.second - indexed_chunk_range.first};
         for (auto chunk_id = indexed_chunk_range.first; chunk_id < indexed_chunk_range.second; ++chunk_id) {

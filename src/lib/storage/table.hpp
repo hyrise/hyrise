@@ -194,9 +194,6 @@ class Table : private Noncopyable {
    */
   void create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids);
 
-  template <typename Index>
-  void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
-
   /**
    * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
    * We call them "soft" key constraints to draw attention to that.

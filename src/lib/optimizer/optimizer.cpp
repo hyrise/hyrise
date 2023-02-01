@@ -14,7 +14,6 @@
 #include "strategy/dependent_group_by_reduction_rule.hpp"
 #include "strategy/expression_reduction_rule.hpp"
 #include "strategy/in_expression_rewrite_rule.hpp"
-#include "strategy/index_scan_rule.hpp"
 #include "strategy/join_ordering_rule.hpp"
 #include "strategy/join_predicate_ordering_rule.hpp"
 #include "strategy/join_to_predicate_rewrite_rule.hpp"
@@ -101,8 +100,6 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
   // hinder other optimizations that stop at joins. For example, the join ordering currently does not know about semi
   // joins and would not recognize such a rewritten predicate.
   optimizer->add_rule(std::make_unique<InExpressionRewriteRule>());
-
-  optimizer->add_rule(std::make_unique<IndexScanRule>());
 
   optimizer->add_rule(std::make_unique<PredicateMergeRule>());
 

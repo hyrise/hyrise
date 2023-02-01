@@ -53,7 +53,6 @@
 #include "operators/union_all.hpp"
 #include "operators/union_positions.hpp"
 #include "storage/chunk_encoder.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/prepared_plan.hpp"
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
@@ -458,8 +457,6 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);
@@ -498,8 +495,6 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   auto index_column_ids = std::vector{ColumnID{1}};
   auto index_chunk_ids = std::vector{ChunkID{0}, ChunkID{2}};
   auto pruned_chunk_ids = std::vector{ChunkID{0}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   stored_table_node->set_pruned_chunk_ids(pruned_chunk_ids);
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
@@ -543,8 +538,6 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(between_inclusive_(stored_table_node->get_column("b"), 42, 1337));
   predicate_node->set_left_input(stored_table_node);
@@ -582,8 +575,6 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScanFailsWhenNotApplicable) {
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   std::vector<ColumnID> index_column_ids = {ColumnID{1}};
   std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);

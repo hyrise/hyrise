@@ -96,27 +96,6 @@ class Chunk : private Noncopyable {
   std::shared_ptr<AbstractChunkIndex> get_index(const ChunkIndexType index_type,
                                                 const std::vector<ColumnID>& column_ids) const;
 
-  template <typename Index>
-  std::shared_ptr<AbstractChunkIndex> create_index(
-      const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index) {
-    if constexpr (HYRISE_DEBUG) {
-      for (auto segment : segments_to_index) {
-        const auto segment_it = std::find(_segments.cbegin(), _segments.cend(), segment);
-        Assert(segment_it != _segments.cend(), "All segments must be part of the chunk.");
-      }
-    }
-
-    auto index = std::make_shared<Index>(segments_to_index);
-    _indexes.emplace_back(index);
-    return index;
-  }
-
-  template <typename Index>
-  std::shared_ptr<AbstractChunkIndex> create_index(const std::vector<ColumnID>& column_ids) {
-    const auto segments = _get_segments_for_ids(column_ids);
-    return create_index<Index>(segments);
-  }
-
   void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
