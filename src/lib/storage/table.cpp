@@ -354,14 +354,6 @@ std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
   return _chunk_indexes_statistics;
 }
 
-void Table::create_table_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
-  const auto max_column_id = _column_definitions.size();
-  Assert(column_id <= max_column_id, "Cannot create index: Passed column id " + std::to_string(column_id) +
-                                         " is out of range. Maximum column id is " + std::to_string(max_column_id) +
-                                         ".");
-  _create_partial_hash_index(column_id, chunk_ids);
-}
-
 template <typename Index>
 void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
   static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
@@ -492,7 +484,7 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   return bytes;
 }
 
-void Table::_create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
+void Table::create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
   std::shared_ptr<PartialHashIndex> table_index = nullptr;
   std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
 

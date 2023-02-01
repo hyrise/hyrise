@@ -697,7 +697,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
           chunk_ids.push_back(chunk_id);
         }
         for (auto column_id = ColumnID{0}; column_id < data_table->column_count(); ++column_id) {
-          data_table->create_table_index(column_id, chunk_ids);
+          data_table->create_partial_hash_index(column_id, chunk_ids);
         }
       }
 

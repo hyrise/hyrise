@@ -391,7 +391,7 @@ void AbstractTableGenerator::_create_table_indexes(
                   << chunk_ids.size() << " (all finalized) chunks]" << std::flush;
 
         Timer per_table_index_timer;
-        table->create_table_index(table->column_id_by_name(column_name), chunk_ids);
+        table->create_partial_hash_index(table->column_id_by_name(column_name), chunk_ids);
 
         std::cout << "(" << per_table_index_timer.lap_formatted() << ")" << std::endl;
       }
