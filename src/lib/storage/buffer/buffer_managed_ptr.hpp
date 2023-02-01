@@ -2,8 +2,11 @@
 
 #include <cstddef>
 #include "storage/buffer/types.hpp"
+#include "storage/buffer/buffer_manager.hpp"
 
 namespace hyrise {
+
+BufferManager& get_buffer_manager(); // TODO: inline
 
 template <typename PointedType>
 class BufferManagedPtr {
@@ -11,7 +14,7 @@ class BufferManagedPtr {
   using pointer = PointedType*;
   using reference = typename add_reference<PointedType>::type;
   using element_type = PointedType;
-  using value_type = std::remove_cv_t<PointedType>;
+  using value_type = std::remove_cv_t<PointedType>; // TODO: is std::remove_cv_t a good idea?
   using difference_type = std::ptrdiff_t;  // TODO: Remove page offfset
   using iterator_category = std::random_access_iterator_tag;
   // TODO: This does not compile when unordered map/set iteratorsare used
@@ -27,16 +30,19 @@ class BufferManagedPtr {
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
   // A lot of things are copied form offset_ptr
 
-  BufferManagedPtr(pointer ptr = 0);
+  BufferManagedPtr(pointer ptr = 0) : _page_id(INVALID_PAGE_ID), _offset(0) {}
 
   BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {}
 
   template <class U>
   BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {}
 
-  // TODO
   template <class T>
-  BufferManagedPtr(T* ptr);
+  BufferManagedPtr(T* ptr) {
+  const auto [page_id, offset] = get_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
+  _page_id = page_id;
+  _offset = offset;  // TODO: Maybe this should be +1
+}
 
   explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {}
 
@@ -86,7 +92,6 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator=(const BufferManagedPtr& ptr) {
-    // pointer p(pt.get());  (void)p; this->set_offset(p);
     _page_id = ptr.get_page_id();
     _offset = ptr.get_offset();
     return *this;
@@ -97,7 +102,9 @@ class BufferManagedPtr {
   }
 
   template <class T2>
-  BufferManagedPtr& operator=(const BufferManagedPtr<T2>& pt) {  //TODO: Maybe add chech "if_convertible"
+  BufferManagedPtr& operator=(const BufferManagedPtr<T2>& ptr) {
+     _page_id = ptr.get_page_id();
+    _offset = ptr.get_offset();
     return *this;
   }
 
@@ -122,16 +129,17 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator++(void) noexcept {
-    // TODO: Increment
+    _offset++;
     return *this;
   }
 
   BufferManagedPtr operator++ (int) noexcept {
+    // TODO
       *this;
    }
 
   BufferManagedPtr& operator--(void) noexcept {
-    // TODO: decrement
+    _offset--;
     return *this;
   }
 
@@ -139,7 +147,13 @@ class BufferManagedPtr {
   friend bool operator<(pointer &pt1, const BufferManagedPtr &pt2) noexcept {  return pt1 < pt2.get();  }
   friend bool operator<(const BufferManagedPtr &pt1, pointer pt2) noexcept { return pt1.get() < pt2; }
 
-  void* get_pointer() const;
+  void* get_pointer() const {
+    if (_page_id == INVALID_PAGE_ID) {
+      return nullptr;
+    } 
+    const auto page = get_buffer_manager().get_page(_page_id);
+    return page->data.data() + _offset;
+  }
 
  private:
   PageID _page_id;  // TODO: Make const
@@ -177,15 +191,6 @@ inline void swap(BufferManagedPtr<T>& pt, BufferManagedPtr<T>& pt2) {
   pt = pt2;
   pt2 = ptr;
 }
-
-template <class PointedType, class... Args>
-BufferManagedPtr<PointedType> allocate_buffer_managed(Args&&... args) {
-  // TODO
-  return BufferManagedPtr<PointedType>();
-}
-
-// TODO: Remove later when integrated
-extern template class BufferManagedPtr<int>;
 
 }  // namespace hyrise
 

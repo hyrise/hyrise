@@ -11,7 +11,7 @@ static_assert(PAGE_SIZE % 512 == 0, "PAGE_SIZE needs to be a multiple of 512 for
  * O_DIRECT is often used in databases when they implement their own caching/buffer management like in our case.
  */
 struct alignas(512) Page {
-  std::array<std::byte, PAGE_SIZE> data;  // TODO: Make it a span?
+  std::array<std::byte, PAGE_SIZE> data;
 };
 
 }  // namespace hyrise

@@ -26,7 +26,8 @@ std::optional<AllTypeVariant> lossless_variant_cast(const AllTypeVariant& varian
     resolve_data_type(target_data_type, [&](auto target_data_type_t) {
       using TargetDataType = typename decltype(target_data_type_t)::type;
       if (const auto losslessly_casted_value  = lossless_cast<TargetDataType>(source)) {
-        result = *losslessly_casted_value; // FIXME: Don't ask, but only this work well for Mac 
+        // Manually checking the optional is required on Mac to work
+        result = *losslessly_casted_value;  
       }
     });
   }, variant);

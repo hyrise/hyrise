@@ -13,10 +13,9 @@ class BufferPoolAllocator {
  public:
   using value_type = T;
   using pointer = BufferManagedPtr<T>;
-  using const_pointer = BufferManagedPtr<const T>;  // TODO: This should be const or removed
+  using const_pointer = BufferManagedPtr<const T>;
   using void_pointer = BufferManagedPtr<void>;
   using difference_type = typename pointer::difference_type;
-  // TODO: using is_always_equal = std::true_type;
 
   // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
   // TODO: Get default resource should use singleton
@@ -32,11 +31,6 @@ class BufferPoolAllocator {
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
     _resource = other.resource();
   }
-
-  // BufferPoolAllocator& operator=(const BufferPoolAllocator& other) noexcept {
-  //   _resource = other.resource();
-  //   return *this;
-  // }
 
   template <class U>
   struct rebind {

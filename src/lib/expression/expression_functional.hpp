@@ -69,7 +69,10 @@ namespace expression_functional {
  * @{
  */
 template <typename T>
-std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<T>& expression);
+std::shared_ptr<AbstractExpression> to_expression(const std::shared_ptr<T>& expression) {
+  return expression;
+}
+
 std::shared_ptr<ValueExpression> to_expression(const AllTypeVariant& value);
 /** @} */
 

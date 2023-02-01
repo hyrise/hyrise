@@ -12,7 +12,7 @@ namespace hyrise {
 constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
 constexpr FrameID INVALID_FRAME_ID{std::numeric_limits<FrameID::base_type>::max()};
 
-// Copied from boost::interporcess, because #include <boost/type_traits/add_reference.hpp> was not enough
+// Copied from boost::interprocess, because #include <boost/type_traits/add_reference.hpp> was not enough
 // I guess, because of "typedef nat &type" that can be used as reference dummy type
 struct nat {};
 
