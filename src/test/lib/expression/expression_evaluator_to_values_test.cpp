@@ -24,9 +24,9 @@
 #include "storage/table.hpp"
 #include "utils/load_table.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class ExpressionEvaluatorToValuesTest : public BaseTest {
  public:
@@ -571,7 +571,7 @@ TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelated) {
 }
 
 TEST_F(ExpressionEvaluatorToValuesTest, InSubqueryUncorrelatedNotPrecalculated) {
-  // Make sure the expression evaluator complains if an uncorelated subquery was not executed before.
+  // Make sure the expression evaluator complains if an uncorrelated subquery was not executed before.
   const auto table_wrapper = std::make_shared<TableWrapper>(table_a);
   table_wrapper->execute();
   const auto table_scan = std::make_shared<TableScan>(table_wrapper, equals_(a, 3));

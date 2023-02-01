@@ -29,14 +29,21 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   }
 
   if (auto left = op->mutable_left_input()) {
-    if (auto left_subtree_root = add_operator_tasks_recursively(left, tasks)) {
-      left_subtree_root->set_as_predecessor_of(task);
-    }
+    const auto& left_subtree_root = add_operator_tasks_recursively(left, tasks);
+    left_subtree_root->set_as_predecessor_of(task);
   }
+
   if (auto right = op->mutable_right_input()) {
-    if (auto right_subtree_root = add_operator_tasks_recursively(right, tasks)) {
-      right_subtree_root->set_as_predecessor_of(task);
-    }
+    const auto& right_subtree_root = add_operator_tasks_recursively(right, tasks);
+    right_subtree_root->set_as_predecessor_of(task);
+  }
+
+  for (const auto& subquery : op->uncorrelated_subqueries()) {
+    // The `subquery_root` is the operator referenced by any PQPSubqueryExpression required by the operator (e.g., a
+    // subquery providing the value for a TableScan operator). By recursing into these uncorrelated subqueries as well,
+    // we ensure that uncorrelated subqueries are correctly scheduled in the same way as regular input operators.
+    const auto& subquery_root = add_operator_tasks_recursively(subquery, tasks);
+    subquery_root->set_as_predecessor_of(task);
   }
 
   for (const auto& subquery : op->uncorrelated_subqueries()) {

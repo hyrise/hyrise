@@ -11,9 +11,9 @@
 #include "statistics/join_graph_statistics_cache.hpp"
 #include "statistics/table_statistics.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class JoinGraphStatisticsCacheTest : public BaseTest {
  public:

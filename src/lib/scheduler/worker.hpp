@@ -42,6 +42,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   // so that they are worked on as soon as possible by either this or another worker.
   void execute_next(const std::shared_ptr<AbstractTask>& task);
 
+  // Returns the number of tasks the worker has processed. This method is used as part of the scheduler shutdown. Be
+  // cautious when using this method in any other context (see comments in #2526).
   uint64_t num_finished_tasks() const;
 
   void operator=(const Worker&) = delete;

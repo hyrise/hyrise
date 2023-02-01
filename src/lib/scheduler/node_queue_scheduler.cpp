@@ -31,7 +31,8 @@ void NodeQueueScheduler::begin() {
   DebugAssert(!_active, "Scheduler is already active");
 
   _workers.reserve(Hyrise::get().topology.num_cpus());
-  _queues.reserve(Hyrise::get().topology.nodes().size());
+  _queue_count = Hyrise::get().topology.nodes().size();
+  _queues.reserve(_queue_count);
 
   for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
     auto queue = std::make_shared<TaskQueue>(node_id);
@@ -46,6 +47,7 @@ void NodeQueueScheduler::begin() {
     }
   }
 
+  _workers_per_node = _workers.size() / _queue_count;
   _active = true;
 
   for (auto& worker : _workers) {
@@ -97,6 +99,10 @@ const std::vector<std::shared_ptr<TaskQueue>>& NodeQueueScheduler::queues() cons
   return _queues;
 }
 
+const std::vector<std::shared_ptr<Worker>>& NodeQueueScheduler::workers() const {
+  return _workers;
+}
+
 void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID preferred_node_id,
                                   SchedulePriority priority) {
   /**
@@ -112,22 +118,47 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     return;
   }
 
-  // Lookup node id for current worker.
-  if (preferred_node_id == CURRENT_NODE_ID) {
-    auto worker = Worker::get_this_thread_worker();
-    if (worker) {
-      preferred_node_id = worker->queue()->node_id();
-    } else {
-      // TODO(all): Actually, this should be ANY_NODE_ID, LIGHT_LOAD_NODE or something
-      preferred_node_id = NodeID{0};
+  const auto node_id_for_queue = determine_queue_id_for_task(task, preferred_node_id);
+  DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
+              "Node ID is not within range of available nodes.");
+  _queues[node_id_for_queue]->push(task, priority);
+}
+
+NodeID NodeQueueScheduler::determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task,
+                                                       const NodeID preferred_node_id) const {
+  // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
+  if (_queue_count == 1) {
+    return NodeID{0};
+  }
+
+  if (preferred_node_id != CURRENT_NODE_ID) {
+    return preferred_node_id;
+  }
+
+  // If the current node is requested, try to obtain node from current worker.
+  const auto& worker = Worker::get_this_thread_worker();
+  if (worker) {
+    return worker->queue()->node_id();
+  }
+
+  // Initial min values with Node 0.
+  auto min_load_queue_id = NodeID{0};
+  auto min_load = _queues[0]->estimate_load();
+
+  // When the current load of node 0 is small, do not check other queues.
+  if (min_load < _workers_per_node) {
+    return NodeID{0};
+  }
+
+  for (auto queue_id = NodeID{1}; queue_id < _queue_count; ++queue_id) {
+    const auto queue_load = _queues[queue_id]->estimate_load();
+    if (queue_load < min_load) {
+      min_load_queue_id = queue_id;
+      min_load = queue_load;
     }
   }
 
-  DebugAssert(!(static_cast<size_t>(preferred_node_id) >= _queues.size()),
-              "preferred_node_id is not within range of available nodes");
-
-  auto queue = _queues[preferred_node_id];
-  queue->push(task, static_cast<uint32_t>(priority));
+  return min_load_queue_id;
 }
 
 void NodeQueueScheduler::_group_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks) const {

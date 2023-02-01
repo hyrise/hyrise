@@ -48,7 +48,7 @@ TableScan::TableScan(const std::shared_ptr<const AbstractOperator>& input_operat
                      const std::shared_ptr<AbstractExpression>& predicate)
     : AbstractReadOnlyOperator{OperatorType::TableScan, input_operator, nullptr, std::make_unique<PerformanceData>()},
       _predicate(predicate) {
-  _search_and_register_subqueries(predicate);
+  _search_and_register_uncorrelated_subqueries(predicate);
 }
 
 const std::shared_ptr<AbstractExpression>& TableScan::predicate() const {
@@ -264,7 +264,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
     const auto& subquery_result_table = subquery_pqp->get_output();
     const auto row_count = subquery_result_table->row_count();
     Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
-           "Uncorrelated subqueries may only return a single value.");
+           "Uncorrelated subqueries may return at most one single value.");
 
     if (row_count == 1) {
       const auto chunk = subquery_result_table->get_chunk(ChunkID{0});

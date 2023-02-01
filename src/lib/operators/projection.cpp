@@ -30,7 +30,7 @@ Projection::Projection(const std::shared_ptr<const AbstractOperator>& input_oper
                                std::make_unique<OperatorPerformanceData<OperatorSteps>>()),
       expressions(init_expressions) {
   for (const auto& expression : expressions) {
-    _search_and_register_subqueries(expression);
+    _search_and_register_uncorrelated_subqueries(expression);
   }
 }
 
@@ -94,10 +94,6 @@ std::shared_ptr<const Table> Projection::_on_execute() {
     return expression->type == ExpressionType::PQPColumn;
   });
   const auto output_table_type = forwards_any_columns ? input_table.type() : TableType::Data;
-
-  auto forwarding_cost = std::chrono::nanoseconds{};
-  auto expression_evaluator_cost = std::chrono::nanoseconds{};
-
   const auto chunk_count = input_table.chunk_count();
 
   // Perform the actual projection on a per-chunk level. `output_segments_by_chunk` will contain both forwarded and
@@ -114,6 +110,9 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // NULLability information is either forwarded or collected during the execution of the ExpressionEvaluator. The
   // vector stores atomic bool values. This allows parallel write operation per thread.
   auto column_is_nullable = std::vector<std::atomic_bool>(expressions.size());
+
+  auto forwarding_cost = std::chrono::nanoseconds{};
+  auto expression_evaluator_cost = std::chrono::nanoseconds{};
 
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table.get_chunk(chunk_id);

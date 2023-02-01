@@ -10,9 +10,9 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "optimizer/strategy/dependent_group_by_reduction_rule.hpp"
 
-using namespace hyrise::expression_functional;  // NOLINT
-
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class DependentGroupByReductionRuleTest : public StrategyBaseTest {
  public:
