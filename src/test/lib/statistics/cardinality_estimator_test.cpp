@@ -973,13 +973,26 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
     node_a);
   // clang-format on
 
-  // Ensure we do consider the wrong aggregate functions and forward the input estimates.
+  // Ensure we do not consider the wrong aggregate functions and forward the input estimates.
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(max_c_y), lqp_subquery_(max_c_y)), node_a);
-
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y), lqp_subquery_(min_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
+  // Aggregate functions must be performed on the same column.
+  const auto min_c_x = AggregateNode::make(expression_vector(), expression_vector(min_(c_x)), subquery);
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_x), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // There must not be another operator in between aggregate and origin node.
+  // clang-format off
+  const auto min_c_y_filtered =
+  AggregateNode::make(expression_vector(), expression_vector(min_(c_y)),
+    PredicateNode::make(not_equals_(c_x, value_(1)),
+      subquery));
+  // clang-format on
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_filtered), lqp_subquery_(max_c_y)), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
   // Ensure that other predicate conditions still lead to forwarding the input estimates.

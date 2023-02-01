@@ -494,7 +494,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       const auto subquery_origin_node = lower_bound_aggregate.left_input();
       if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
           upper_bound_aggregate_expression->aggregate_function != AggregateFunction::Max ||
-          *lower_bound_aggregate_expression->argument() != *lower_bound_aggregate_expression->argument() ||
+          *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
           *subquery_origin_node != *upper_bound_aggregate.left_input()) {
         return input_table_statistics;
       }
