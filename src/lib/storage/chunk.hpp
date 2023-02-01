@@ -13,7 +13,6 @@
 #include <boost/container/pmr/memory_resource.hpp>
 
 #include "all_type_variant.hpp"
-#include "index/chunk_index_type.hpp"
 #include "mvcc_data.hpp"
 #include "table_column_definition.hpp"
 #include "types.hpp"
@@ -21,12 +20,10 @@
 
 namespace hyrise {
 
-class AbstractChunkIndex;
 class AbstractSegment;
 class BaseAttributeStatistics;
 
 using Segments = pmr_vector<std::shared_ptr<AbstractSegment>>;
-using Indexes = pmr_vector<std::shared_ptr<AbstractChunkIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**
@@ -53,7 +50,7 @@ class Chunk : private Noncopyable {
   static constexpr auto DEFAULT_SIZE = ChunkOffset{65'535};
 
   Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data = nullptr,
-        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt, Indexes indexes = {});
+        const std::optional<PolymorphicAllocator<Chunk>>& alloc = std::nullopt);
 
   // Returns whether new rows can be appended to this Chunk. Chunks are set immutable during finalize().
   bool is_mutable() const;
@@ -86,17 +83,6 @@ class Chunk : private Noncopyable {
   bool has_mvcc_data() const;
 
   std::shared_ptr<MvccData> mvcc_data() const;
-
-  std::vector<std::shared_ptr<AbstractChunkIndex>> get_indexes(
-      const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
-  std::vector<std::shared_ptr<AbstractChunkIndex>> get_indexes(const std::vector<ColumnID>& column_ids) const;
-
-  std::shared_ptr<AbstractChunkIndex> get_index(
-      const ChunkIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const;
-  std::shared_ptr<AbstractChunkIndex> get_index(const ChunkIndexType index_type,
-                                                const std::vector<ColumnID>& column_ids) const;
-
-  void remove_index(const std::shared_ptr<AbstractChunkIndex>& index);
 
   void migrate(boost::container::pmr::memory_resource* memory_source);
 
@@ -173,7 +159,6 @@ class Chunk : private Noncopyable {
   PolymorphicAllocator<Chunk> _alloc;
   Segments _segments;
   std::shared_ptr<MvccData> _mvcc_data;
-  Indexes _indexes;
   std::optional<ChunkPruningStatistics> _pruning_statistics;
   bool _is_mutable = true;
   std::vector<SortColumnDefinition> _sorted_by;

@@ -172,40 +172,10 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
              "Non-empty index input table (reference table) has to have only reference segments.");
       auto index_data_table = reference_segment->referenced_table();
       const std::vector<ColumnID> index_data_table_column_ids{reference_segment->referenced_column_id()};
-      const auto& reference_segment_pos_list = reference_segment->pos_list();
 
-      if (reference_segment_pos_list->references_single_chunk()) {
-        const auto index_data_table_chunk = index_data_table->get_chunk((*reference_segment_pos_list)[0].chunk_id);
-        Assert(index_data_table_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-        const auto& indexes = index_data_table_chunk->get_indexes(index_data_table_column_ids);
-
-        if (!indexes.empty()) {
-          // We assume the first index to be efficient for our join
-          // as we do not want to spend time on evaluating the best index inside of this join loop
-
-          if (indexes.size() > 1) {
-            PerformanceWarning("There are multiple indexes available, but only the first one is used.");
-          }
-
-          const auto& chunk_index = indexes.front();
-
-          _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-            _reference_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id,
-                                                           chunk_index, reference_segment_pos_list);
-          });
-
-          index_joining_duration += timer.lap();
-          join_index_performance_data.chunks_scanned_with_index++;
-        } else {
-          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
-          nested_loop_joining_duration += timer.lap();
-        }
-      } else {
-        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                              secondary_predicate_evaluator);
-        nested_loop_joining_duration += timer.lap();
-      }
+      _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                            secondary_predicate_evaluator);
+      nested_loop_joining_duration += timer.lap();
     }
   } else {  // DATA JOIN since only inner joins are supported for a reference table on the index side
     // Here we prefer to use table indexes if the join supports them. If no table index exists or other predicates than
@@ -255,39 +225,8 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         }
       }
     } else {
-      // chunk-based index join
-      const auto chunk_count_index_input_table = _index_input_table->chunk_count();
-      for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
-        const auto index_chunk = _index_input_table->get_chunk(index_chunk_id);
-        Assert(index_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
-
-        const auto& indexes =
-            index_chunk->get_indexes(std::vector<ColumnID>{_adjusted_primary_predicate.column_ids.second});
-        if (!indexes.empty()) {
-          // We assume the first index to be efficient for our join as we do not want to spend time on evaluating the
-          // best index inside of this join loop.
-
-          if (indexes.size() > 1) {
-            PerformanceWarning("There are multiple indexes available, but only the first one is used.");
-          }
-
-          const auto& chunk_index = indexes.front();
-
-          _scan_probe_side_input([&](auto probe_iter, const auto probe_end, const auto probe_chunk_id) {
-            _data_join_two_segments_using_chunk_index(probe_iter, probe_end, probe_chunk_id, index_chunk_id,
-                                                      chunk_index);
-          });
-
-          index_joining_duration += timer.lap();
-          join_index_performance_data.chunks_scanned_with_index++;
-        } else {
-          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
-                                secondary_predicate_evaluator);
-          nested_loop_joining_duration += timer.lap();
-        }
-      }
+      Fail("No Chunk Index Join anymore.");
     }
-    _append_matches_non_inner(is_semi_or_anti_join);
   }
 
   // write output chunks

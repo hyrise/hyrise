@@ -20,6 +20,7 @@
 
 namespace hyrise {
 
+class PartialHashIndex;
 class TableStatistics;
 
 /**

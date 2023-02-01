@@ -10,7 +10,6 @@
 #include <vector>
 
 #include "abstract_segment.hpp"
-#include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
@@ -19,8 +18,8 @@
 namespace hyrise {
 
 Chunk::Chunk(Segments segments, const std::shared_ptr<MvccData>& mvcc_data,
-             const std::optional<PolymorphicAllocator<Chunk>>& alloc, Indexes indexes)
-    : _segments(std::move(segments)), _mvcc_data(mvcc_data), _indexes(std::move(indexes)) {
+             const std::optional<PolymorphicAllocator<Chunk>>& alloc)
+    : _segments(std::move(segments)), _mvcc_data(mvcc_data) {
   DebugAssert(!_segments.empty(),
               "Chunks without Segments are not legal, as the row count of such a Chunk cannot be determined");
 
@@ -97,59 +96,6 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
   return _mvcc_data;
 }
 
-std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
-    const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-  auto result = std::vector<std::shared_ptr<AbstractChunkIndex>>();
-  std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
-               [&](const auto& index) { return index->is_index_for(segments); });
-  return result;
-}
-
-void Chunk::finalize() {
-  Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
-  _is_mutable = false;
-
-  // Only perform the max_begin_cid check if it hasn't already been set.
-  if (has_mvcc_data() && !_mvcc_data->max_begin_cid) {
-    const auto chunk_size = size();
-    Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
-    _mvcc_data->max_begin_cid = CommitID{0};
-    for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
-      _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
-    }
-
-    Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
-           "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
-           "finalized before all transactions committed/rolled back.");
-  }
-}
-
-std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
-  auto segments = _get_segments_for_ids(column_ids);
-  return get_indexes(segments);
-}
-
-std::shared_ptr<AbstractChunkIndex> Chunk::get_index(
-    const ChunkIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-  auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
-    return index->is_index_for(segments) && index->type() == index_type;
-  });
-
-  return (index_it == _indexes.cend()) ? nullptr : *index_it;
-}
-
-std::shared_ptr<AbstractChunkIndex> Chunk::get_index(const ChunkIndexType index_type,
-                                                     const std::vector<ColumnID>& column_ids) const {
-  auto segments = _get_segments_for_ids(column_ids);
-  return get_index(index_type, segments);
-}
-
-void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
-  auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
-  DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
-  _indexes.erase(it);
-}
-
 bool Chunk::references_exactly_one_table() const {
   if (column_count() == 0) {
     return false;
@@ -181,11 +127,6 @@ bool Chunk::references_exactly_one_table() const {
 }
 
 void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
-  // Migrating chunks with indexes is not implemented yet.
-  if (!_indexes.empty()) {
-    Fail("Cannot migrate Chunk with Indexes.");
-  }
-
   _alloc = PolymorphicAllocator<size_t>(memory_source);
   Segments new_segments(_alloc);
   for (const auto& segment : _segments) {
@@ -204,8 +145,6 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
   for (const auto& segment : _segments) {
     bytes += segment->memory_usage(mode);
   }
-
-  // TODO(anybody) Index memory usage missing
 
   if (_mvcc_data) {
     bytes += _mvcc_data->memory_usage();
