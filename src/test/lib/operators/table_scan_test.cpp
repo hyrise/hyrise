@@ -117,7 +117,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     table_column_definitions.emplace_back("a", DataType::Int, false);
     table_column_definitions.emplace_back("b", DataType::Int, false);
 
-    std::shared_ptr<Table> table = std::make_shared<Table>(table_column_definitions, TableType::References);
+    const auto table = std::make_shared<Table>(table_column_definitions, TableType::References);
 
     const auto test_table_part_compressed = _int_int_partly_compressed->get_output();
 
@@ -148,8 +148,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     TableColumnDefinitions table_column_definitions;
     table_column_definitions.emplace_back("a", DataType::Int, false);
 
-    std::shared_ptr<Table> table =
-        std::make_shared<Table>(table_column_definitions, TableType::Data, ChunkOffset{100'000});
+    const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, ChunkOffset{100'000});
 
     for (int i = 0; i <= num_entries; i++) {
       table->append({i});
@@ -268,7 +267,7 @@ INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                          table_scan_test_formatter);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", ChunkOffset{2});
+  const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", ChunkOffset{2});
 
   auto scan_1 = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan_1->execute();
@@ -289,8 +288,7 @@ TEST_P(OperatorsTableScanTest, EmptyResultScan) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScan) {
-  std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
+  const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_float_op(), ColumnID{0}, PredicateCondition::GreaterThanEquals, 1234);
   scan->execute();
@@ -299,8 +297,7 @@ TEST_P(OperatorsTableScanTest, SingleScan) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
-  std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/int_sorted_filtered.tbl", ChunkOffset{1});
+  const auto expected_result = load_table("resources/test_data/tbl/int_sorted_filtered.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 2);
   scan->execute();
@@ -309,7 +306,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEquals) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqualNull) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", ChunkOffset{1});
+  const auto expected_result = load_table("resources/test_data/tbl/int_empty_nullable.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_only_null_op(), ColumnID{0}, PredicateCondition::Equals, 2);
   scan->execute();
@@ -318,7 +315,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllElementsEqual
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllPredicateValueLarger) {
-  std::shared_ptr<Table> expected_result = load_table("resources/test_data/tbl/int_empty.tbl", ChunkOffset{1});
+  const auto expected_result = load_table("resources/test_data/tbl/int_empty.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::Equals, 6);
   scan->execute();
@@ -327,8 +324,7 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentEqualsAllPredicateValu
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentNotEquals) {
-  std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/int_sorted_filtered2.tbl", ChunkOffset{1});
+  const auto expected_result = load_table("resources/test_data/tbl/int_sorted_filtered2.tbl", ChunkOffset{1});
 
   auto scan = create_table_scan(get_int_sorted_op(), ColumnID{0}, PredicateCondition::NotEquals, 2);
   scan->execute();
@@ -337,64 +333,54 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentNotEquals) {
 }
 
 TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
-  std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
+  const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
-  const auto subquery_pqp =
-      std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
-                              to_expression(int64_t{1}));
-  subquery_pqp->never_clear_output();
-  {
-    auto scan = std::make_shared<TableScan>(get_int_float_op(),
-                                            greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                                 pqp_subquery_(subquery_pqp, DataType::Int, false)));
-    EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
-  }
-  {
-    auto scan = std::make_shared<TableScan>(get_int_float_op(),
-                                            greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                                 pqp_subquery_(subquery_pqp, DataType::Int, false)));
-    scan->execute();
-    EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
-  }
+  const auto subquery_pqp = std::make_shared<Limit>(
+      std::make_shared<Projection>(get_int_string_op(), expression_vector(value_(1234))), value_(1));
+  execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
+
+  const auto scan = std::make_shared<TableScan>(
+      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+  EXPECT_TRUE(dynamic_cast<ColumnVsValueTableScanImpl*>(scan->create_impl().get()));
+  scan->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
 TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
-  std::shared_ptr<Table> expected_result =
-      load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
+  auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
-  const auto subquery_pqp =
-      std::make_shared<Limit>(std::make_shared<Projection>(get_int_string_op(), expression_vector(to_expression(1234))),
-                              to_expression(int64_t{1}));
-  subquery_pqp->never_clear_output();
-  {
-    auto scan = std::make_shared<TableScan>(
-        get_int_float_op(),
-        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
-    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
-  }
-  {
-    auto scan = std::make_shared<TableScan>(
-        get_int_float_op(),
-        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
-    EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
-  }
-  {
-    auto scan = std::make_shared<TableScan>(
-        get_int_float_op(),
-        between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                           pqp_subquery_(subquery_pqp, DataType::Int, false), to_expression(int{12345})));
-    scan->execute();
-    EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
-  }
+  const auto subquery_pqp = std::make_shared<Limit>(
+      std::make_shared<Projection>(get_int_string_op(), expression_vector(value_(1234))), value_(1));
+  execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
+
+  const auto scan = std::make_shared<TableScan>(
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+  EXPECT_TRUE(dynamic_cast<ColumnBetweenTableScanImpl*>(scan->create_impl().get()));
+  scan->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithEmptySubquery) {
+  const auto expected_result = Table::create_dummy_table(get_int_float_op()->table->column_definitions());
+  const auto dummy_table = Table::create_dummy_table({{"dummy", DataType::Int, false}});
+
+  const auto subquery_pqp = std::make_shared<TableWrapper>(dummy_table);
+  subquery_pqp->execute();
+
+  const auto scan = std::make_shared<TableScan>(
+      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+  EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(scan->create_impl().get()));
+  scan->execute();
+  EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {
-  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
+  // We do not need to check for a non existing value, because that happens automatically when we scan the second chunk.
 
-  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  auto tests = std::map<PredicateCondition, std::vector<AllTypeVariant>>{};
   tests[PredicateCondition::Equals] = {106, 106};
   tests[PredicateCondition::NotEquals] = {100, 102, 104, 108, 110, 112, 100, 102, 104, 108, 110, 112};
   tests[PredicateCondition::LessThan] = {100, 102, 104, 100, 102, 104};
@@ -1172,7 +1158,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagDataSegments) {
 TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
   const auto table = get_int_sorted_op()->table;
 
-  std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
+  const auto ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
   pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
@@ -1220,7 +1206,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagReferenceSegments) {
 TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
   const auto table = get_int_sorted_op()->table;
 
-  std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
+  const auto ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
   pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
@@ -1270,7 +1256,7 @@ TEST_P(OperatorsTableScanTest, SortedFlagSingleChunkNotGuaranteed) {
 TEST_P(OperatorsTableScanTest, SortedFlagMultipleChunksReferenced) {
   const auto table = get_int_sorted_op()->table;
 
-  std::shared_ptr<Table> ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
+  const auto ref_table = std::make_shared<Table>(table->column_definitions(), TableType::References);
 
   auto pos_list_1 = std::make_shared<RowIDPosList>();
   pos_list_1->emplace_back(RowID{ChunkID{0}, ChunkOffset{1}});
