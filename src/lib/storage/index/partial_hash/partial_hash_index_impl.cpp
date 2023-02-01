@@ -95,7 +95,7 @@ BasePartialHashIndexImpl::IteratorRange PartialHashIndexImpl<DataType>::range_eq
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(_create_iterator(begin), _create_iterator(++end));
+  return std::make_pair(BasePartialHashIndexImpl::Iterator::from_map_iterator(begin), BasePartialHashIndexImpl::Iterator::from_map_iterator(++end));
 }
 
 template <typename DataType>
@@ -107,22 +107,22 @@ BasePartialHashIndexImpl::IteratorRangePair PartialHashIndexImpl<DataType>::rang
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return _create_iterator(_positions.cbegin());
+  return BasePartialHashIndexImpl::Iterator::from_map_iterator(_positions.cbegin());
 }
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return _create_iterator(_positions.cend());
+  return BasePartialHashIndexImpl::Iterator::from_map_iterator(_positions.cend());
 }
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return _create_iterator(_null_positions.cbegin());
+  return BasePartialHashIndexImpl::Iterator::from_map_iterator(_null_positions.cbegin());
 }
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return _create_iterator(_null_positions.cend());
+  return BasePartialHashIndexImpl::Iterator::from_map_iterator(_null_positions.cend());
 }
 
 template <typename DataType>
@@ -151,11 +151,6 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
 template <typename DataType>
 std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
   return _indexed_chunk_ids;
-}
-
-template <typename DataType>
-BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::_create_iterator(const MapIterator& it) const {
-  return Iterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
 }
 
 EXPLICITLY_INSTANTIATE_DATA_TYPES(PartialHashIndexImpl);

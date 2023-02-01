@@ -69,6 +69,9 @@ class FlatMapIterator {
   FlatMapIterator& operator++();
   bool operator==(const FlatMapIterator& other) const;
   bool operator!=(const FlatMapIterator& other) const;
+  
+  template <typename DataType>
+  static FlatMapIterator from_map_iterator(const tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
 
  private:
   std::unique_ptr<BaseFlatMapIteratorImpl> _impl;

@@ -34,4 +34,11 @@ bool FlatMapIterator::operator!=(const FlatMapIterator& other) const {
   return _impl->operator!=(*other._impl);
 }
 
+template <typename DataType>
+FlatMapIterator FlatMapIterator::from_map_iterator(const tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it) {
+  return FlatMapIterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
+}
+
+EXPLICITLY_INSTANTIATE_DATA_TYPES_FUNCTION(FlatMapIterator FlatMapIterator::create_iterator<type>(const tsl::sparse_map<type, std::vector<RowID>>::const_iterator& it))
+
 }  // namespace hyrise
