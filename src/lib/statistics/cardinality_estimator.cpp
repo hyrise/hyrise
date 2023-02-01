@@ -423,10 +423,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     // values of predicates on uncorrelated subquery results before query execution. However, if the predicate has an
     // equals or between condition, it acts as a filter comparable to a semi-join with the join key of the subquery
     // result.
-    /*const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
-    if (!predicate_expression) {*/
+    const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
+    if (!predicate_expression) {
       return input_table_statistics;
-    /* }
+    }
 
     const auto& arguments = predicate_expression->arguments;
     auto subquery_statistics = std::shared_ptr<TableStatistics>{};
@@ -508,7 +508,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     }
 
     const auto column_id = predicate_node.left_input()->get_column_id(*column_expression);
-    return estimate_semi_join(column_id, subquery_column_id, *input_table_statistics, *subquery_statistics);*/
+    return estimate_semi_join(column_id, subquery_column_id, *input_table_statistics, *subquery_statistics);
   }
 
   // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
