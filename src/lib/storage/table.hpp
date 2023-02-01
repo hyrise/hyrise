@@ -11,7 +11,6 @@
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
-#include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
 #include "table_key_constraint.hpp"
@@ -186,8 +185,6 @@ class Table : private Noncopyable {
   void set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics);
   /** @} */
 
-  std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
-
   /**
    * Creates a PartialHashIndex on a set of chunks of a specific column and adds the index to the
    * table's index statistics. Table indexes can only be created on a set of immutable chunks.
@@ -251,7 +248,6 @@ class Table : private Noncopyable {
   std::vector<ColumnID> _value_clustered_by;
   std::shared_ptr<TableStatistics> _table_statistics;
   std::unique_ptr<std::mutex> _append_mutex;
-  std::vector<ChunkIndexStatistics> _chunk_indexes_statistics;
   std::vector<TableIndexStatistics> _table_indexes_statistics;
   pmr_vector<std::shared_ptr<PartialHashIndex>> _table_indexes;
 

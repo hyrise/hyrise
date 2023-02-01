@@ -12,9 +12,6 @@
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
@@ -348,10 +345,6 @@ std::shared_ptr<TableStatistics> Table::table_statistics() const {
 
 void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_statistics) {
   _table_statistics = table_statistics;
-}
-
-std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
-  return _chunk_indexes_statistics;
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
