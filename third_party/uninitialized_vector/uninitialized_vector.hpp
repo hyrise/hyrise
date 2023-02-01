@@ -84,13 +84,13 @@ class uninitialized_vector : private Alloc {
   /// Constant reference to element type
   typedef const Tp& const_reference;
   /// Pointer to element type
-  typedef Tp* pointer;
+  typedef typename std::allocator_traits<Alloc>::pointer pointer;
   /// Pointer to constant element type
-  typedef const Tp* const_pointer;
+  typedef const typename std::allocator_traits<Alloc>::pointer const_pointer;
   /// Iterator type
-  typedef Tp* iterator;
+  typedef typename std::allocator_traits<Alloc>::pointer iterator;
   /// Iterator type of constant elements
-  typedef const Tp* const_iterator;
+  typedef const typename std::allocator_traits<Alloc>::pointer  const_iterator; // TODO: custom iterator would be better to not always check the buffer, but keep it pinned 
   /// Reverse iterator type
   typedef std::reverse_iterator<iterator> reverse_iterator;
   /// Reverse iterator of constant elements
@@ -134,7 +134,7 @@ class uninitialized_vector : private Alloc {
 	 */
   uninitialized_vector(size_t n, const value_type& val, const allocator_type& allocator = Alloc())
       : Alloc(allocator), _begin(allocate(n)), _end(_begin + n), _endOfStorage(_end) {
-    std::uninitialized_fill_n<Tp*, size_t>(_begin, n, val);
+    std::uninitialized_fill_n<pointer, size_t>(_begin, n, val);
   }
 
   /** @brief Construct a vector by copying elements from a range.
@@ -404,10 +404,10 @@ class uninitialized_vector : private Alloc {
   const Tp& back() const noexcept { return *(_end - 1); }
 
   /** @brief Get pointer to internal storage. */
-  Tp* data() noexcept { return _begin; }
+  pointer data() noexcept { return _begin; }
 
   /** @brief Get constant pointer to internal storage. */
-  const Tp* data() const noexcept { return _begin; }
+  const pointer data() const noexcept { return _begin; }
 
   /** @brief Assign this container to be equal to the given range.
 	 * @details The container will be resized to fit the length of the given
@@ -433,7 +433,7 @@ class uninitialized_vector : private Alloc {
       _endOfStorage = _begin + n;
     }
     _end = _begin + n;
-    std::uninitialized_fill_n<Tp*, size_t>(_begin, n, val);
+    std::uninitialized_fill_n<pointer, size_t>(_begin, n, val);
   }
 
   /** @brief Assign this container to an initializer list.
@@ -521,7 +521,7 @@ class uninitialized_vector : private Alloc {
       memmove(const_cast<iterator>(position) + n, position, (_end - position) * sizeof(Tp));
       _end += n;
     }
-    std::uninitialized_fill_n<Tp*, size_t>(const_cast<iterator>(position), n, val);
+    std::uninitialized_fill_n<pointer, size_t>(const_cast<iterator>(position), n, val);
     return const_cast<iterator>(position);
   }
 
@@ -716,7 +716,7 @@ class uninitialized_vector : private Alloc {
     if (capacity() - size() < n) {
       enlarge(enlarge_size(n));
     }
-    std::uninitialized_fill_n<Tp*, size_t>(_end, n, val);
+    std::uninitialized_fill_n<pointer, size_t>(_end, n, val);
     _end += n;
   }
 
@@ -745,6 +745,7 @@ class uninitialized_vector : private Alloc {
   void push_back_uninitialized(size_t n) { resize(size() + n); }
 
  private:
+
   pointer allocate(size_t n) { return Alloc::allocate(n); }
 
   void deallocate() noexcept { deallocate(_begin, capacity()); }
@@ -763,7 +764,7 @@ class uninitialized_vector : private Alloc {
     _begin = allocate(n);
     _end = _begin + n;
     _endOfStorage = _end;
-    std::uninitialized_fill_n<Tp*, size_t>(_begin, n, val);
+    std::uninitialized_fill_n<pointer, size_t>(_begin, n, val);
   }
 
   template <typename InputIterator>
@@ -772,7 +773,7 @@ class uninitialized_vector : private Alloc {
     _begin = allocate(n);
     _end = _begin + n;
     _endOfStorage = _begin + n;
-    Tp* destIter = _begin;
+    pointer destIter = _begin;
     while (first != last) {
       *destIter = *first;
       ++destIter;
@@ -796,7 +797,7 @@ class uninitialized_vector : private Alloc {
       _endOfStorage = _begin + n;
     }
     _end = _begin + n;
-    std::uninitialized_fill_n<Tp*, size_t>(_begin, n, val);
+    std::uninitialized_fill_n<pointer, size_t>(_begin, n, val);
   }
 
   template <typename InputIterator>
@@ -809,7 +810,7 @@ class uninitialized_vector : private Alloc {
       _endOfStorage = _begin + n;
     }
     _end = _begin + n;
-    Tp* destIter = _begin;
+    pointer destIter = _begin;
     while (first != last) {
       *destIter = *first;
       ++destIter;
@@ -833,7 +834,7 @@ class uninitialized_vector : private Alloc {
       memmove(const_cast<iterator>(position) + n, position, (_end - position) * sizeof(Tp));
       _end += n;
     }
-    std::uninitialized_fill_n<Tp*, size_t>(const_cast<iterator>(position), n, val);
+    std::uninitialized_fill_n<pointer, size_t>(const_cast<iterator>(position), n, val);
     return const_cast<iterator>(position);
   }
 
@@ -849,7 +850,7 @@ class uninitialized_vector : private Alloc {
       memmove(const_cast<iterator>(position) + n, position, (_end - position) * sizeof(Tp));
       _end += n;
     }
-    Tp* destIter = const_cast<iterator>(position);
+    pointer destIter = const_cast<iterator>(position);
     while (first != last) {
       *destIter = *first;
       ++destIter;
@@ -1003,7 +1004,7 @@ class uninitialized_vector : private Alloc {
     if (capacity() - size() < size_t(n)) {
       enlarge(enlarge_size(n));
     }
-    std::uninitialized_fill_n<Tp*, size_t>(_end, n, val);
+    std::uninitialized_fill_n<pointer, size_t>(_end, n, val);
     _end += n;
   }
 

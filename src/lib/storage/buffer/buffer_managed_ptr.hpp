@@ -1,12 +1,13 @@
 #pragma once
 
 #include <cstddef>
-#include "storage/buffer/types.hpp"
 #include "storage/buffer/buffer_manager.hpp"
+#include "storage/buffer/types.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
-BufferManager& get_buffer_manager(); // TODO: inline
+BufferManager& get_buffer_manager();  // TODO: inline
 
 template <typename PointedType>
 class BufferManagedPtr {
@@ -14,14 +15,15 @@ class BufferManagedPtr {
   using pointer = PointedType*;
   using reference = typename add_reference<PointedType>::type;
   using element_type = PointedType;
-  using value_type = std::remove_cv_t<PointedType>; // TODO: is std::remove_cv_t a good idea?
-  using difference_type = std::ptrdiff_t;  // TODO: Remove page offfset
+  using value_type = std::remove_cv_t<PointedType>;  // TODO: is std::remove_cv_t a good idea?
+  using difference_type = std::ptrdiff_t;            // TODO: Remove page offfset
   using iterator_category = std::random_access_iterator_tag;
+
   // TODO: This does not compile when unordered map/set iteratorsare used
   // using iterator_category = std::contiguous_iterator_tag;
   // it seems like boost iterator_enable_if_tag does not it up
   // using iterator_concept = std::random_access_iterator_tag;  // TODO: contiguous_iterator_tag
-
+  // TODO: introduce custom iterator type, that keeps the pointer/page in mem all the time, but works with raw pointer
   // Check offset pointer for alignment
   // Offset type it not difference type
   // TODO: Offset = 0 should be invalid, check other type for that when transforming into pinter and back
@@ -39,10 +41,10 @@ class BufferManagedPtr {
 
   template <class T>
   BufferManagedPtr(T* ptr) {
-  const auto [page_id, offset] = get_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
-  _page_id = page_id;
-  _offset = offset;  // TODO: Maybe this should be +1
-}
+    const auto [page_id, offset] = get_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
+    _page_id = page_id;
+    _offset = offset;  // TODO: Maybe this should be +1
+  }
 
   explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {}
 
@@ -82,12 +84,12 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator+=(difference_type offset) noexcept {
-    // this->inc_offset(offset * difference_type(sizeof(PointedType)));
+    _offset += offset * difference_type(sizeof(PointedType));
     return *this;
   }
 
-   BufferManagedPtr& operator-=(difference_type offset) noexcept {
-    // this->inc_offset(offset * difference_type(sizeof(PointedType)));
+  BufferManagedPtr& operator-=(difference_type offset) noexcept {
+    _offset -= offset * difference_type(sizeof(PointedType));
     return *this;
   }
 
@@ -97,19 +99,20 @@ class BufferManagedPtr {
     return *this;
   }
 
-  BufferManagedPtr& operator=(pointer from) {  // TODO
+  BufferManagedPtr& operator=(pointer from) {
+    Fail("TODO");
     return *this;
   }
 
   template <class T2>
   BufferManagedPtr& operator=(const BufferManagedPtr<T2>& ptr) {
-     _page_id = ptr.get_page_id();
+    _page_id = ptr.get_page_id();
     _offset = ptr.get_offset();
     return *this;
   }
 
   explicit operator bool() const noexcept {
-    return this->_page_id == INVALID_PAGE_ID || this->_offset == 0;
+    return this->_page_id != INVALID_PAGE_ID;  //TODO || this->_offset == 0;
   }
 
   pointer get() const {
@@ -129,28 +132,36 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator++(void) noexcept {
-    _offset++;
+    _offset += difference_type(sizeof(PointedType));
     return *this;
   }
 
-  BufferManagedPtr operator++ (int) noexcept {
-    // TODO
-      *this;
-   }
+  BufferManagedPtr operator++(int) noexcept {
+    _offset += difference_type(sizeof(PointedType));
+    *this;
+  }
 
   BufferManagedPtr& operator--(void) noexcept {
-    _offset--;
+    _offset -= difference_type(sizeof(PointedType));
     return *this;
   }
 
-  friend bool operator<(const BufferManagedPtr &pt1, const BufferManagedPtr &pt2) noexcept {  return pt1.get() < pt2.get();  }
-  friend bool operator<(pointer &pt1, const BufferManagedPtr &pt2) noexcept {  return pt1 < pt2.get();  }
-  friend bool operator<(const BufferManagedPtr &pt1, pointer pt2) noexcept { return pt1.get() < pt2; }
+  friend bool operator<(const BufferManagedPtr& pt1, const BufferManagedPtr& pt2) noexcept {
+    return pt1.get() < pt2.get();
+  }
+
+  friend bool operator<(pointer& pt1, const BufferManagedPtr& pt2) noexcept {
+    return pt1 < pt2.get();
+  }
+
+  friend bool operator<(const BufferManagedPtr& pt1, pointer pt2) noexcept {
+    return pt1.get() < pt2;
+  }
 
   void* get_pointer() const {
     if (_page_id == INVALID_PAGE_ID) {
       return nullptr;
-    } 
+    }
     const auto page = get_buffer_manager().get_page(_page_id);
     return page->data.data() + _offset;
   }

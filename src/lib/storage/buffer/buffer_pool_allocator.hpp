@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/container/pmr/memory_resource.hpp>
+#include <boost/move/utility.hpp>
 #include "buffer_pool_resource.hpp"
 
 namespace hyrise {
@@ -47,7 +48,7 @@ class BufferPoolAllocator {
     return _resource != other.resource();  // TODO
   }
 
-  [[nodiscard]] constexpr pointer allocate(std::size_t n) {
+  [[nodiscard]] pointer allocate(std::size_t n) {
     // If n == 1, its a normal object, if n > 1,
     // its an array like for a vecor
     // TODO: How about alignment or done by memory resource?
@@ -66,18 +67,17 @@ class BufferPoolAllocator {
     return BufferPoolAllocator();
   }
 
-  template <typename U, class... Args>
-  void construct(U* ptr, Args&&... args) {
-    Fail("TODO");
-    // TODO
-    // new_allocator<U> na;
-    // dtl::dispatch_uses_allocator
-    //    (na, *this, p, boost::forward<Args>(args)...);
+  // TODO: LIke interprocess, use pointer class directly instead of T*
+  template <typename U, class Args>
+  void construct(const BufferManagedPtr<U>& ptr, BOOST_FWD_REF(Args) args) {
+    ::new ((void*)ptr.operator->()) U(boost::forward<Args>(args));
   }
 
+  // TODO: Add construct_at
+
   template <class U>
-  void destroy(U* p) {
-    //TODO
+  void destroy(U* ptr) {
+    ptr->~U();
   }
 
   // Construct, destroy etc
