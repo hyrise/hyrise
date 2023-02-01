@@ -129,7 +129,7 @@ template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   auto bytes = size_t{0u};
 
-  bytes += sizeof(_indexed_chunk_ids);  // NOLINT - Linter complains size() should be used, which would be wrong.
+  bytes += sizeof(_indexed_chunk_ids);
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_positions);
@@ -138,7 +138,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(std::vector<RowID>) * _positions.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
 
-  bytes += sizeof(_null_positions);  // NOLINT
+  bytes += sizeof(_null_positions);
 
   if (_null_positions.contains(DataType{})) {
     bytes += sizeof(std::vector<RowID>);
