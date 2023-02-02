@@ -90,10 +90,6 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   std::unordered_set<ChunkID> get_indexed_chunk_ids() const final;
 
  private:
-  // Creates and returns an FlatMapIterator holding an instance of FlatMapIteratorImpl initialized using the passed
-  // MapIterator.
-  BasePartialHashIndexImpl::Iterator _create_iterator(const MapIterator& it) const;
-
   tsl::sparse_map<DataType, std::vector<RowID>> _positions;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;
   std::unordered_set<ChunkID> _indexed_chunk_ids = {};
