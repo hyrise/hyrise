@@ -95,7 +95,7 @@ BasePartialHashIndexImpl::IteratorRange PartialHashIndexImpl<DataType>::range_eq
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(CreateFlatMapIterator<DataType>::from_map_iterator(begin), CreateFlatMapIterator<DataType>::from_map_iterator(++end));
+  return std::make_pair(Iterator::create_iterator<DataType>(begin), Iterator::create_iterator<DataType>(++end));
 }
 
 template <typename DataType>
@@ -107,22 +107,22 @@ BasePartialHashIndexImpl::IteratorRangePair PartialHashIndexImpl<DataType>::rang
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::cbegin() const {
-  return CreateFlatMapIterator<DataType>::from_map_iterator(_positions.cbegin());
+  return Iterator::create_iterator<DataType>(_positions.cbegin());
 }
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::cend() const {
-  return CreateFlatMapIterator<DataType>::from_map_iterator(_positions.cend());
+  return Iterator::create_iterator<DataType>(_positions.cend());
 }
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cbegin() const {
-  return CreateFlatMapIterator<DataType>::from_map_iterator(_null_positions.cbegin());
+  return Iterator::create_iterator<DataType>(_null_positions.cbegin());
 }
 
 template <typename DataType>
 BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cend() const {
-  return CreateFlatMapIterator<DataType>::from_map_iterator(_null_positions.cend());
+  return Iterator::create_iterator<DataType>(_null_positions.cend());
 }
 
 template <typename DataType>
