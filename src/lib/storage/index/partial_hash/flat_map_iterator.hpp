@@ -81,7 +81,7 @@ class CreateFlatMapIterator {
  public:
   // Creates and returns an FlatMapIterator holding an instance of FlatMapIteratorImpl initialized using the passed
   // MapIterator.
-  static FlatMapIterator from_map_iterator(const tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
+  static FlatMapIterator from_map_iterator(const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
 };
 
 }  // namespace hyrise
