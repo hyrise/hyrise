@@ -8,6 +8,8 @@
 
 namespace hyrise {
 
+  // TODO: Add sort with custom iterator
+
 template <typename VectorType>
 static void BM_vector_sort(benchmark::State& state) {
   auto count = static_cast<size_t>(state.range(0));

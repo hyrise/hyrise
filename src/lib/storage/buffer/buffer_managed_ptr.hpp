@@ -7,7 +7,12 @@
 
 namespace hyrise {
 
-BufferManager& get_buffer_manager();  // TODO: inline
+/**
+ * @brief Helper function to get the BufferManager singleton. This avoids issues with circular dependencies as the implementation in the .cpp file.
+ * 
+ * @return BufferManager& 
+ */
+BufferManager& get_buffer_manager(); 
 
 template <typename PointedType>
 class BufferManagedPtr {
@@ -146,16 +151,16 @@ class BufferManagedPtr {
     return *this;
   }
 
-  friend bool operator<(const BufferManagedPtr& pt1, const BufferManagedPtr& pt2) noexcept {
-    return pt1.get() < pt2.get();
+  friend bool operator<(const BufferManagedPtr& ptr1, const BufferManagedPtr& ptr2) noexcept {
+    return ptr1.get() < ptr2.get();
   }
 
-  friend bool operator<(pointer& pt1, const BufferManagedPtr& pt2) noexcept {
-    return pt1 < pt2.get();
+  friend bool operator<(pointer& ptr1, const BufferManagedPtr& ptr2) noexcept {
+    return ptr1 < ptr2.get();
   }
 
-  friend bool operator<(const BufferManagedPtr& pt1, pointer pt2) noexcept {
-    return pt1.get() < pt2;
+  friend bool operator<(const BufferManagedPtr& ptr1, pointer ptr2) noexcept {
+    return ptr1.get() < ptr2;
   }
 
   void* get_pointer() const {
@@ -187,25 +192,26 @@ inline BufferManagedPtr<T> operator+(std::ptrdiff_t diff, const BufferManagedPtr
 }
 
 template <class T, class T2>
-inline std::ptrdiff_t operator-(const BufferManagedPtr<T>& pt, const BufferManagedPtr<T2>& pt2) {
-  return pt.get() - pt2.get();
+inline std::ptrdiff_t operator-(const BufferManagedPtr<T>& pt, const BufferManagedPtr<T2>& ptr2) {
+  return pt.get() - ptr2.get();
 }
 
 template <class T1, class T2>
-inline bool operator<=(const BufferManagedPtr<T1>& pt1, const BufferManagedPtr<T2>& pt2) {
-  return pt1.get() <= pt2.get();
+inline bool operator<=(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2) {
+  return ptr1.get() <= ptr2.get();
 }
 
 template <class T>
-inline void swap(BufferManagedPtr<T>& pt, BufferManagedPtr<T>& pt2) {
-  typename BufferManagedPtr<T>::value_type* ptr = pt.get();
-  pt = pt2;
-  pt2 = ptr;
+inline void swap(BufferManagedPtr<T>& ptr1, BufferManagedPtr<T>& ptr2) {
+  typename BufferManagedPtr<T>::value_type* ptr = ptr1.get();
+  ptr1 = ptr2;
+  ptr2 = ptr;
 }
 
 }  // namespace hyrise
 
 namespace std {
+  
 template <class T>
 struct hash<hyrise::BufferManagedPtr<T>> {
   size_t operator()(const hyrise::BufferManagedPtr<T>& ptr) const noexcept {
@@ -214,4 +220,5 @@ struct hash<hyrise::BufferManagedPtr<T>> {
     return boost::hash_combine(page_id_hash, offset_hash);
   }
 };
+
 }  // namespace std

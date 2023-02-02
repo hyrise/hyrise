@@ -11,6 +11,8 @@ namespace hyrise {
 
 class Hyrise;
 
+// TODO: MOve this into buffer manager
+
 //https://stackoverflow.com/questions/38010544/polymorphic-allocator-when-and-why-should-i-use-it
 // http://www.club.cc.cmu.edu/~ajo/disseminate/2018-05-07-slides.pdf
 //http://www.club.cc.cmu.edu/~ajo/disseminate/2018-05-07-slides.pdf

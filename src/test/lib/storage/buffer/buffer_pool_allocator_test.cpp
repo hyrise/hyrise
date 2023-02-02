@@ -29,13 +29,6 @@ TEST_F(BufferPoolAllocatorTest, TestAllocateVector) {
   EXPECT_EQ(raw_data[2], 3);
   EXPECT_EQ(raw_data[3], 4);
   EXPECT_EQ(raw_data[4], 5);
-
-//   int curr = 1;
-//   for (auto it = data.begin(); it != data.end(); it++, curr++) {
-//     EXPECT_EQ(*it, curr);
-//   }
-
-  Hyrise::get().buffer_manager.flush_page(PageID{0});
 }
 
 }  // namespace hyrise

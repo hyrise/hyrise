@@ -6,7 +6,6 @@
 // Declare types here to avoid problems with circular dependency
 STRONG_TYPEDEF(uint32_t, PageID);
 STRONG_TYPEDEF(uint32_t, FrameID);
-STRONG_TYPEDEF(int32_t, PageOffset);
 
 namespace hyrise {
 constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};

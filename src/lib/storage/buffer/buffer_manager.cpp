@@ -131,8 +131,8 @@ void BufferManager::remove_page(const PageID page_id) {
   _page_table.erase(page_id);
 }
 
-std::pair<PageID, PageOffset> BufferManager::get_page_id_and_offset_from_ptr(void* ptr) {
-  return std::make_pair<PageID, PageOffset>(PageID{0}, PageOffset{0}); // TODO
+std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr(void* ptr) {
+  return std::make_pair<PageID, std::ptrdiff_t>(PageID{0}, std::ptrdiff_t{0}); // TODO
 };
 
 
