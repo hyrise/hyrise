@@ -72,7 +72,8 @@ class FlatMapIterator {
   // Creates and returns an FlatMapIterator holding an instance of FlatMapIteratorImpl initialized using the passed
   // MapIterator.
   template <typename DataType>
-  static FlatMapIterator create_iterator(const tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
+  static FlatMapIterator create_iterator(
+      const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
 
  private:
   explicit FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
