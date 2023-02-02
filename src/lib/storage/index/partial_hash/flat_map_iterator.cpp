@@ -41,9 +41,9 @@ FlatMapIterator FlatMapIterator::create_iterator(
 }
 
 template FlatMapIterator FlatMapIterator::create_iterator<int32_t>(
-    const tsl::sparse_map<int, std::vector<RowID>>::const_iterator& it);
+    const tsl::sparse_map<int32_t, std::vector<RowID>>::const_iterator& it);
 template FlatMapIterator FlatMapIterator::create_iterator<int64_t>(
-    const tsl::sparse_map<long, std::vector<RowID>>::const_iterator& it);
+    const tsl::sparse_map<int64_t, std::vector<RowID>>::const_iterator& it);
 template FlatMapIterator FlatMapIterator::create_iterator<float>(
     const tsl::sparse_map<float, std::vector<RowID>>::const_iterator& it);
 template FlatMapIterator FlatMapIterator::create_iterator<double>(
