@@ -12,7 +12,7 @@ namespace hyrise {
  * 
  * @return BufferManager& 
  */
-BufferManager& get_buffer_manager(); 
+BufferManager& get_buffer_manager();
 
 template <typename PointedType>
 class BufferManagedPtr {
@@ -37,21 +37,40 @@ class BufferManagedPtr {
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
   // A lot of things are copied form offset_ptr
 
-  BufferManagedPtr(pointer ptr = 0) : _page_id(INVALID_PAGE_ID), _offset(0) {}
+  BufferManagedPtr(pointer ptr = 0) : _page_id(INVALID_PAGE_ID), _offset(0) {
+    if(ptr) {
+      const auto [page_id, offset] =
+          get_buffer_manager().get_page_id_and_offset_from_ptr(reinterpret_cast<const void*>(ptr));
+      _page_id = page_id;
+      _offset = offset;
+      get_buffer_manager().pin_page(_page_id);
+    }
+  }
 
-  BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {}
+  BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {
+    get_buffer_manager().pin_page(_page_id);
+  }
 
   template <class U>
-  BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {}
+  BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {
+    get_buffer_manager().pin_page(_page_id);
+  }
 
   template <class T>
   BufferManagedPtr(T* ptr) {
     const auto [page_id, offset] = get_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
     _page_id = page_id;
-    _offset = offset;  // TODO: Maybe this should be +1
+    _offset = offset;
+    get_buffer_manager().pin_page(_page_id);
   }
 
-  explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {}
+  explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {
+    get_buffer_manager().pin_page(_page_id);
+  }
+
+  ~BufferManagedPtr() {
+    get_buffer_manager().unpin_page(_page_id);
+  }
 
   pointer operator->() const {
     return get();
@@ -105,7 +124,7 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator=(pointer from) {
-    Fail("TODO");
+    // TODO: _offset = reinterpret_cast<difference_type>
     return *this;
   }
 
@@ -125,7 +144,7 @@ class BufferManagedPtr {
   }
 
   static BufferManagedPtr pointer_to(reference r) {
-    return BufferManagedPtr(&r);
+    return BufferManagedPtr(std::addressof(r));
   }
 
   friend bool operator==(const BufferManagedPtr& ptr1, const BufferManagedPtr& ptr2) noexcept {
@@ -142,8 +161,9 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr operator++(int) noexcept {
-    _offset += difference_type(sizeof(PointedType));
-    *this;
+    const auto temp = BufferManagedPtr(*this);
+    ++*this;
+    return temp;
   }
 
   BufferManagedPtr& operator--(void) noexcept {
@@ -167,6 +187,7 @@ class BufferManagedPtr {
     if (_page_id == INVALID_PAGE_ID) {
       return nullptr;
     }
+    // TODO: If pinned, this is not needed
     const auto page = get_buffer_manager().get_page(_page_id);
     return page->data.data() + _offset;
   }
@@ -211,7 +232,7 @@ inline void swap(BufferManagedPtr<T>& ptr1, BufferManagedPtr<T>& ptr2) {
 }  // namespace hyrise
 
 namespace std {
-  
+
 template <class T>
 struct hash<hyrise::BufferManagedPtr<T>> {
   size_t operator()(const hyrise::BufferManagedPtr<T>& ptr) const noexcept {

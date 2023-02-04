@@ -15,15 +15,15 @@ class BufferManagedPtrTest : public BaseTest {
 };
 
 TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
-    using PtrConstInt = BufferManagedPtr<const int32_t>;
+    // using PtrConstInt = BufferManagedPtr<const int32_t>;
 }
 
 TEST_F(BufferManagedPtrTest, TestArithmetic) {
     using PtrInt = BufferManagedPtr<int32_t>;
 
-    auto postIncrementPtr = PtrInt(PageID{0}, 4);
-    ++postIncrementPtr;
-    EXPECT_EQ(postIncrementPtr.get_offset(), 8);
+    auto preIncrementPtr = PtrInt(PageID{0}, 4);
+    ++preIncrementPtr;
+    EXPECT_EQ(preIncrementPtr.get_offset(), 8);
 
     auto postIncrementPtr = PtrInt(PageID{0}, 4);
     postIncrementPtr++;

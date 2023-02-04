@@ -41,8 +41,9 @@ class SegmentsUsingAllocatorsTest : public BaseTestWithParam<std::tuple<DataType
 
       const auto convert_value = [](const auto int_value) {
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          return pmr_string{std::string{"HereIsAReallyLongStringToGuaranteeThatWeNeedExternalMemory"} +
-                            std::to_string(int_value)};
+          const auto long_string = std::string{"HereIsAReallyLongStringToGuaranteeThatWeNeedExternalMemory"} +
+                            std::to_string(int_value);
+          return pmr_string(long_string.begin(), long_string.end());
         } else {
           return int_value;
         }

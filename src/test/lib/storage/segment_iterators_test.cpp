@@ -115,7 +115,8 @@ TEST_P(SegmentIteratorsTest, LegacyForwardIteratorCompatible) {
 
     auto search_value = ColumnDataType{};
     if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
-      search_value = pmr_string{std::to_string(103)};
+      const auto number_string = std::to_string(103);
+      search_value = pmr_string(number_string.begin(), number_string.end());
     } else {
       search_value = ColumnDataType{103};
     }

@@ -7,6 +7,7 @@
 
 #include "gtest/gtest.h"
 
+#include <boost/variant.hpp>
 #include "cache/gdfs_cache.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -105,3 +106,10 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::LZ4},
     SegmentEncodingSpec{EncodingType::RunLength}};
 }  // namespace hyrise
+
+namespace boost {
+  template<typename T>
+  void PrintTo(const variant<T>& bar, std::ostream* os){
+
+  };
+}

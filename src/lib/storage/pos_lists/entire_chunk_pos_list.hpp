@@ -32,6 +32,8 @@ class EntireChunkPosList : public AbstractPosList {
   PosListIterator<EntireChunkPosList, RowID> end() const;
   PosListIterator<EntireChunkPosList, RowID> cbegin() const;
   PosListIterator<EntireChunkPosList, RowID> cend() const;
+  
+  friend bool operator==(const EntireChunkPosList& lhs, const EntireChunkPosList& rhs);
 
  private:
   const ChunkID _common_chunk_id;
@@ -40,6 +42,12 @@ class EntireChunkPosList : public AbstractPosList {
   // (MVCC correctness).  To do that, we store the size of the chunk when constructing an object. The end() methods
   // can then use this to give a correct end iterator, even if new values were added to the chunk in between.
   const ChunkOffset _common_chunk_size;
+
 };
+
+inline bool operator==(const EntireChunkPosList& lhs, const EntireChunkPosList& rhs) {
+  PerformanceWarning("Using slow PosList comparison.");
+  return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+}
 
 }  // namespace hyrise

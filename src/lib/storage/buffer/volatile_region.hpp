@@ -19,8 +19,10 @@ class VolatileRegion {
  public:
   VolatileRegion(size_t num_bytes);
 
-  Frame* get(void* ptr);
-  Frame* get(FrameID frame_id);
+  // TODO: Inline
+  FrameID get_frame_id_from_ptr(const void* ptr) const;
+  Frame* get_frame_from_ptr(const void* ptr) const;
+  Frame* get_frame_from_frame_id(const FrameID frame_id) const;
 
   Frame* allocate();
   void deallocate(Frame* frame);

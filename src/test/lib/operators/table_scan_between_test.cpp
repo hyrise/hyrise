@@ -62,7 +62,8 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
           data_table->append({NullValue{}, i + number_of_nulls});
         } else {
           if constexpr (std::is_same_v<pmr_string, Type>) {
-            data_table->append({pmr_string{std::to_string(double_value)}, i + number_of_nulls});
+            const auto double_string = std::to_string(double_value);
+            data_table->append({pmr_string(double_string.begin(), double_string.end()), i + number_of_nulls});
           } else {
             data_table->append({static_cast<Type>(double_value), i + number_of_nulls});
           }
@@ -122,8 +123,10 @@ class TableScanBetweenTest : public TypedOperatorBaseTest {
         // Float-with-String comparison not supported. We have to manually convert all floats to Strings if we're
         // scanning on a String column.
         if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
-          left_casted = pmr_string{std::to_string(boost::get<double>(left))};
-          right_casted = pmr_string{std::to_string(boost::get<double>(right))};
+          const auto left_string = std::to_string(boost::get<double>(left));
+          left_casted = pmr_string(left_string.begin(), left_string.end());
+          const auto right_string = std::to_string(boost::get<double>(right));
+          right_casted = pmr_string(right_string.begin(), right_string.end());
         } else {
           left_casted = static_cast<ColumnDataType>(boost::get<double>(left));
           right_casted = static_cast<ColumnDataType>(boost::get<double>(right));

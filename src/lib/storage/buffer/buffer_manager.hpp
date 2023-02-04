@@ -69,7 +69,7 @@ class BufferManager {
    * @param ptr 
    * @return std::pair<PageID, PageOffset> 
    */
-  std::pair<PageID, PageOffset> get_page_id_and_offset_from_ptr(void* ptr);
+  std::pair<PageID, std::ptrdiff_t> get_page_id_and_offset_from_ptr(const void* ptr);
 
  protected:
   friend class Hyrise;

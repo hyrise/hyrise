@@ -22,18 +22,23 @@ Frame* VolatileRegion::allocate() {
   return reinterpret_cast<Frame*>(_data.get() + frame_id * sizeof(Frame));
 };
 
-Frame* VolatileRegion::get(FrameID frame_id) {
-  Assert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
+FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
+  DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
+  DebugAssert(ptr < _data.get() + capacity() * sizeof(Frame), "Pointer is out of range of region");
+  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _data.get();
+  return FrameID{offset / sizeof(Frame)};
+}
+
+Frame* VolatileRegion::get_frame_from_frame_id(const FrameID frame_id) const {
+  DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
   return reinterpret_cast<Frame*>(_data.get() + frame_id * sizeof(Frame));
 }
 
-Frame* VolatileRegion::get(void* ptr) {
-  // TODO: Betweeen byte start and end, this will be much easier as soon as pages are continiues
+Frame* VolatileRegion::get_frame_from_ptr(const void* ptr) const {
   DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
   DebugAssert(ptr < _data.get() + capacity() * sizeof(Frame), "Pointer is out of range of region");
-  const auto offset = static_cast<std::byte*>(ptr) - _data.get();
-  const auto frame_offset = offset - (offset % sizeof(Frame));
-  return reinterpret_cast<Frame*>(_data.get() + frame_offset);
+  const auto frame_id = get_frame_id_from_ptr(ptr);
+  return get_frame_from_frame_id(frame_id);
 }
 
 void VolatileRegion::deallocate(Frame* frame) {

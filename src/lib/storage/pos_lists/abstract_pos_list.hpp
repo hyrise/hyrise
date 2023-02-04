@@ -76,12 +76,12 @@ class AbstractPosList : private Noncopyable {
 
   virtual size_t memory_usage(const MemoryUsageCalculationMode) const = 0;
 
-  friend bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs);
+  // friend bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs);
 };
 
-inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
-  PerformanceWarning("Using slow PosList comparison.");
-  return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
-}
+// inline bool operator==(const AbstractPosList& lhs, const AbstractPosList& rhs) {
+//   PerformanceWarning("Using slow PosList comparison.");
+//   return std::equal(lhs.cbegin(), lhs.cend(), rhs.cbegin(), rhs.cend());
+// }
 
 }  // namespace hyrise
