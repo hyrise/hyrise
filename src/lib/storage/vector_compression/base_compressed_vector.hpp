@@ -44,6 +44,8 @@ class BaseCompressedVector : private Noncopyable {
 
   virtual std::unique_ptr<BaseVectorDecompressor> create_base_decompressor() const = 0;
 
+  virtual void* data_pointer() const = 0;
+
   virtual std::unique_ptr<const BaseCompressedVector> copy_using_allocator(
       const PolymorphicAllocator<size_t>& alloc) const = 0;
 };
@@ -115,6 +117,10 @@ class CompressedVector : public BaseCompressedVector {
 
   size_t data_size() const final {
     return _self().on_data_size();
+  }
+
+  void* data_pointer() const final{
+    return (void*) &(_self().data());
   }
 
   CompressedVectorType type() const final {

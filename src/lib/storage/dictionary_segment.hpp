@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <string>
+#include <span>
 
 #include "base_dictionary_segment.hpp"
 #include "storage/vector_compression/base_compressed_vector.hpp"
@@ -85,6 +86,10 @@ class DictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
  protected:
+  const std::shared_ptr<std::span<T>> _dictionary_span;
+  const std::shared_ptr<std::span<T>> _attribute_vector_span;
+
+ private:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
