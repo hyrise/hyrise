@@ -136,12 +136,9 @@ void AbstractOperator::execute() {
       const auto& lqp_expressions = lqp_node->output_expressions();
       if (!_output) {
         Assert(lqp_expressions.empty(), "Operator did not produce a result, but the LQP expects it to");
-      } else if (std::dynamic_pointer_cast<const AbstractNonQueryNode>(lqp_node) ||
-                 std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
-        // AbstractNonQueryNodes do not have any consumable output_expressions, but the corresponding operators return
-        // 'OK' for better compatibility with the console and the server. We do not assert anything here.
-        // Similarly, DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not
-        // need to be tested.
+      } else if (std::dynamic_pointer_cast<const DummyTableNode>(lqp_node)) {
+        // DummyTableNodes do not produce expressions that are used in the remainder of the LQP and do not need to be
+        // tested.
       } else {
         // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
@@ -160,8 +157,8 @@ void AbstractOperator::execute() {
       }
     }
 
-    // Verify that nullability of columns and segments match for ValueSegments
-    // Only ValueSegments have an individual is_nullable attribute
+    // Verify that nullability of columns and segments match for ValueSegments. Only ValueSegments have an individual
+    // `is_nullable` attribute.
     if (_output && _output->type() == TableType::Data) {
       for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
         for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
