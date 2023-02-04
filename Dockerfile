@@ -42,6 +42,12 @@ RUN apt-get update \
     software-properties-common \
     sudo \
     valgrind \
+    perf \
+    ccache \
+    linux-tools-common \
+    linux-tools-generic \
+    bpftrace \
+    ninja-build \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
