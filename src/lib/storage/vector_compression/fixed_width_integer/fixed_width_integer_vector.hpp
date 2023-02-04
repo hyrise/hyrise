@@ -31,6 +31,10 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
     return _data;
   }
 
+  void* data_pointer() const {
+    return (void*) _data.data();
+  }
+
  public:
   size_t on_size() const {
     return _data.size();

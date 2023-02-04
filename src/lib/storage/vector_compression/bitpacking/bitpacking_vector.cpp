@@ -11,6 +11,10 @@ const pmr_compact_vector& BitPackingVector::data() const {
   return _data;
 }
 
+void* BitPackingVector::data_pointer() const {
+  return (void*) _data.get();
+}
+
 size_t BitPackingVector::on_size() const {
   return _data.size();
 }

@@ -76,12 +76,7 @@ int main() {
     std::cout << value << std::endl;
   }
   auto attribute_vector = dictionary_segment->attribute_vector();
-  auto data_pointer = attribute_vector->data_pointer();
-  auto data = (pmr_vector<uint8_t>*) data_pointer;
-  std::cout << data->size() << std::endl;
-  auto data_vector = (uint8_t*) data->data();
-  std::cout << data_vector[0] << std::endl;
-  auto attribute_span = std::span{(uint8_t*) ((pmr_vector<uint8_t>*) dictionary_segment->attribute_vector()->data_pointer())->data(), dictionary_segment->attribute_vector()->data_size()};
+  auto attribute_span = std::span{(uint8_t*) dictionary_segment->attribute_vector()->data_pointer(), dictionary_segment->attribute_vector()->data_size()};
   for (auto value : attribute_span) {
     std::cout << (uint32_t) value << std::endl;
   }

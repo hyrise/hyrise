@@ -119,10 +119,6 @@ class CompressedVector : public BaseCompressedVector {
     return _self().on_data_size();
   }
 
-  void* data_pointer() const final{
-    return (void*) &(_self().data());
-  }
-
   CompressedVectorType type() const final {
     return get_compressed_vector_type<Derived>();
   }

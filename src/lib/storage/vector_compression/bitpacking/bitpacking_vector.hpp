@@ -22,6 +22,7 @@ class BitPackingVector : public CompressedVector<BitPackingVector> {
   explicit BitPackingVector(pmr_compact_vector data);
 
   const pmr_compact_vector& data() const;
+  void* data_pointer() const override;
 
   size_t on_size() const;
   size_t on_data_size() const;
