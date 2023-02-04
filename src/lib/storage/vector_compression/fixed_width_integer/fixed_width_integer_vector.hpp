@@ -31,7 +31,7 @@ class FixedWidthIntegerVector : public CompressedVector<FixedWidthIntegerVector<
     return _data;
   }
 
-  void* data_pointer() const {
+  void* data_pointer() const override{
     return (void*) _data.data();
   }
 

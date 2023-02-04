@@ -71,14 +71,48 @@ int main() {
 
   auto dict_chunk = create_dictionary_segment_chunk(100, 1);
   auto dictionary_segment = dict_chunk[0];
+
   auto dictionary_span = std::span{dictionary_segment->dictionary()->data(), dictionary_segment->dictionary()->size()};
-  for (auto value : dictionary_span) {
+  for (auto value: dictionary_span) {
     std::cout << value << std::endl;
   }
+
   auto attribute_vector = dictionary_segment->attribute_vector();
-  auto attribute_span = std::span{(uint8_t*) dictionary_segment->attribute_vector()->data_pointer(), dictionary_segment->attribute_vector()->data_size()};
-  for (auto value : attribute_span) {
-    std::cout << (uint32_t) value << std::endl;
+  auto compressed_vector_type = dictionary_segment->compressed_vector_type().value();
+
+
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedWidthInteger1Byte: {
+      auto attribute_span = std::span{
+        (uint8_t *) (dynamic_cast<const FixedWidthIntegerVector<uint8_t> &>(*attribute_vector).data()).data(),
+        attribute_vector->data_size()};
+      for (auto value : attribute_span) {
+        std::cout << (uint32_t) value << std::endl;
+      }
+      break;
+    }
+    case CompressedVectorType::FixedWidthInteger2Byte: {
+      auto attribute_span = std::span{
+        (uint16_t *) (dynamic_cast<const FixedWidthIntegerVector<uint16_t> &>(*attribute_vector).data()).data(),
+        attribute_vector->data_size()};
+      break;
+    }
+    case CompressedVectorType::FixedWidthInteger4Byte: {
+      auto attribute_span = std::span{
+        (uint32_t *) (dynamic_cast<const FixedWidthIntegerVector<uint32_t> &>(*attribute_vector).data()).data(),
+        attribute_vector->data_size()};
+      break;
+    }
+    case CompressedVectorType::BitPacking: {
+      auto attribute_span = std::span{
+        (uint32_t *) (dynamic_cast<const BitPackingVector &>(*attribute_vector).data()).get(),
+        attribute_vector->data_size()};
+      break;
+    }
+    default:
+    Fail("Any other type should have been caught before.");
   }
+
   return 0;
+
 }
