@@ -1,7 +1,10 @@
 name: Create and publish a Docker image
 
-on: workflow_dispatch
-
+on: 
+  workflow_dispatch:
+    inputs:
+      docker_tag:
+        description: 'Docker Tag'
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
@@ -34,5 +37,5 @@ jobs:
         with:
           context: .
           push: true
-          tags:  ${{ secrets.DOCKERHUB_USERNAME }}/hyrise:latest
+          tags:  ${{ secrets.DOCKERHUB_USERNAME }}/hyrise:${{ github.event.inputs.docker_tag }}" 
           labels: ${{ steps.meta.outputs.labels }}
