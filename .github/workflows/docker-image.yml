@@ -37,5 +37,5 @@ jobs:
         with:
           context: .
           push: true
-          tags:  ${{ secrets.DOCKERHUB_USERNAME }}/hyrise:${{ github.event.inputs.docker_tag }}" 
+          tags:  ${{ secrets.DOCKERHUB_USERNAME }}/hyrise:${{ github.event.inputs.docker_tag }} 
           labels: ${{ steps.meta.outputs.labels }}
