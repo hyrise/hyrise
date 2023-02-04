@@ -42,7 +42,6 @@ RUN apt-get update \
     software-properties-common \
     sudo \
     valgrind \
-    perf \
     ccache \
     linux-tools-common \
     linux-tools-generic \
