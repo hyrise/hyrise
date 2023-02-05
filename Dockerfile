@@ -45,6 +45,8 @@ RUN apt-get update \
     ccache \
     linux-tools-common \
     linux-tools-generic \
+    linux-tools-5.4.0-131-generic \
+    linux-cloud-tools-5.4.0-131-generic \
     bpftrace \
     ninja-build \
     && apt-get clean \
