@@ -46,6 +46,7 @@ RUN apt-get update \
     linux-tools-common \
     linux-tools-generic \
     linux-cloud-tools-generic \
+    linux-tools-`uname -r` \
     bpftrace \
     ninja-build \
     && apt-get clean \
