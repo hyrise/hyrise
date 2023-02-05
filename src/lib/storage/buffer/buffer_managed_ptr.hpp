@@ -69,6 +69,9 @@ class BufferManagedPtr {
   }
 
   ~BufferManagedPtr() {
+    if(_page_id == INVALID_PAGE_ID) {
+      return;
+    }
     get_buffer_manager().unpin_page(_page_id);
   }
 
