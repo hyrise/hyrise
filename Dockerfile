@@ -48,6 +48,7 @@ RUN apt-get update \
     linux-cloud-tools-generic \
     linux-tools-`uname -r` \
     bpftrace \
+    lldb \
     ninja-build \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
