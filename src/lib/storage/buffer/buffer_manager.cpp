@@ -1,12 +1,21 @@
 #include "buffer_manager.hpp"
+#include <cstdlib>
 #include <utility>
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
 BufferManager::BufferManager() : _num_pages(0) {
-  _ssd_region = std::make_unique<SSDRegion>("/tmp/hyrise.data");
-  _volatile_region = std::make_unique<VolatileRegion>(1073741824);  // 1GB
+  if (const auto ssd_region_path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
+    _ssd_region = std::make_unique<SSDRegion>(ssd_region_path);
+  } else {
+    Fail("HYRISE_BUFFER_MANAGER_PATH not found in environment");
+  }
+  if (const auto volatile_capacity = std::getenv("HYRISE_BUFFER_MANAGER_VOLATILE_CAPACITY")) {
+    _volatile_region = std::make_unique<VolatileRegion>(boost::lexical_cast<size_t>(volatile_capacity));
+  } else {
+    Fail("HYRISE_BUFFER_MANAGER_VOLATILE_CAPACITY not found in environment");
+  }
   _clock_replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 
