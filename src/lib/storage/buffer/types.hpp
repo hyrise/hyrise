@@ -34,4 +34,5 @@ template <>
 struct add_reference<const void> {
   typedef const nat& type;
 };
+
 }  // namespace hyrise

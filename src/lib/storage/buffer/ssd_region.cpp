@@ -4,7 +4,7 @@
 namespace hyrise {
 
 static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::path& file_name) {
-  if(std::filesystem::is_regular_file(file_name)) {
+  if (std::filesystem::is_regular_file(file_name)) {
     return SSDRegion::DeviceType::REGULAR_FILE;
   } else if (std::filesystem::is_block_file(file_name)) {
     return SSDRegion::DeviceType::REGULAR_FILE;
@@ -14,17 +14,19 @@ static SSDRegion::DeviceType find_device_type_or_fail(const std::filesystem::pat
 }
 
 SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes)
-    : _fd_stream(open_file_descriptor(file_name)), _backing_file(_fd_stream.get()), _backing_file_name(file_name), _device_type(find_device_type_or_fail(file_name)) {
-  if(_device_type == DeviceType::REGULAR_FILE) {
+    : _fd_stream(open_file_descriptor(file_name)),
+      _backing_file(_fd_stream.get()),
+      _backing_file_name(file_name),
+      _device_type(find_device_type_or_fail(file_name)) {
+  if (_device_type == DeviceType::REGULAR_FILE) {
     std::filesystem::resize_file(file_name, initial_num_bytes);
   }
 }
 
 SSDRegion::~SSDRegion() {
-  // TODO:
-  // if (!std::filesystem::remove(_backing_file_name)) {
-  //   Fail("Failed to remove backing file: " + std::string(_backing_file_name));
-  // }
+  if(_device_type == eviceType::REGULAR_FILE) {
+std::filesystem::remove(_backing_file_name);  
+  }
 }
 
 SSDRegion::DeviceType SSDRegion::get_device_type() const {
@@ -36,11 +38,11 @@ std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descripto
 #ifdef __APPLE__
   int flags = O_RDWR | O_SYNC | O_CREAT;
 #elif __linux__
-  int flags = O_RDWR | O_DIRECT | O_SYNC | O_CREAT;
+  int flags = O_RDWR | O_CREAT;
 #endif
   int fd = open(std::string(file_name).c_str(), flags, 0666);
   if (fd < 0) {
-    Fail("Error while opening backing file: " + strerror(errno));
+    Fail("Error while opening backing file at " + std::string(file_name) + ": "+ strerror(errno));
   }
   auto fpstream = std::make_unique<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>>(
       fd, boost::iostreams::close_handle);

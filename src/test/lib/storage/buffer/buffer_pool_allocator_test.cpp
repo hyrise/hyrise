@@ -12,8 +12,7 @@ class BufferPoolAllocatorTest : public BaseTest {};
 
 TEST_F(BufferPoolAllocatorTest, TestAllocateVector) {
   // BufferPoolResource uses the global Hyrise Buffer Manager
-  auto memory_resource = BufferPoolResource();
-  auto allocator = BufferPoolAllocator<size_t>(&memory_resource);
+  auto allocator = BufferPoolAllocator<size_t>();
 
   auto data = boost::container::vector<int, BufferPoolAllocator<int>>{5, allocator};
   data[0] = 1;

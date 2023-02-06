@@ -2,15 +2,16 @@
 
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/move/utility.hpp>
-#include "buffer_pool_resource.hpp"
+#include "storage/buffer/buffer_manager.hpp"
 #include "utils/assert.hpp"
+#include "storage/buffer/buffer_managed_ptr.hpp"
 
 namespace hyrise {
-template <class T>
 
 // Interface is taken from here: https://www.modernescpp.com/index.php/memory-management-with-std-allocator
 // https://en.cppreference.com/w/cpp/named_req/Allocator
 // https://theboostcpplibraries.com/boost.pool
+template <class T>
 class BufferPoolAllocator {
  public:
   using value_type = T;
@@ -20,18 +21,19 @@ class BufferPoolAllocator {
   using difference_type = typename pointer::difference_type;
 
   // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
-  // TODO: This should use the global singleton 
-  BufferPoolAllocator() = default;
+  BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
 
-  explicit BufferPoolAllocator(BufferPoolResource* resource) : _resource(resource) {}
+  };
 
-  BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _resource(nullptr) {
+  explicit BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
+
+  explicit BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _buffer_manager(nullptr) {
     Fail("The current BufferPoolAllocator cannot take a boost memory_resource");
   }
 
   template <class U>
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
-    _resource = other.resource();
+    _buffer_manager = other.buffer_manager();
   }
 
   template <class U>
@@ -41,24 +43,24 @@ class BufferPoolAllocator {
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
-    return _resource == other.resource();
+    return _buffer_manager == other.buffer_manager();
   }
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _resource != other.resource();
+    return _buffer_manager != other.buffer_manager();
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
-    return static_cast<pointer>(_resource->allocate(sizeof(value_type) * n, alignof(T)));
+    return static_cast<pointer>(_buffer_manager->allocate(sizeof(value_type) * n, alignof(T)));
   }
 
   constexpr void deallocate(pointer const ptr, std::size_t n) const noexcept {
-    _resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n,  alignof(T));
+    _buffer_manager->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }
 
-  BufferPoolResource* resource() const noexcept {
-    return _resource;
+  BufferManager* buffer_manager() const noexcept {
+    return _buffer_manager;
   }
 
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
@@ -76,6 +78,6 @@ class BufferPoolAllocator {
   }
 
  private:
-  BufferPoolResource* _resource;
+  BufferManager* _buffer_manager;
 };
 }  // namespace hyrise

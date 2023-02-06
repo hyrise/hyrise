@@ -7,13 +7,6 @@
 
 namespace hyrise {
 
-/**
- * @brief Helper function to get the BufferManager singleton. This avoids issues with circular dependencies as the implementation in the .cpp file.
- * 
- * @return BufferManager& 
- */
-BufferManager& get_buffer_manager();
-
 template <typename PointedType>
 class BufferManagedPtr {
  public:
@@ -38,41 +31,42 @@ class BufferManagedPtr {
   // A lot of things are copied form offset_ptr
 
   BufferManagedPtr(pointer ptr = 0) : _page_id(INVALID_PAGE_ID), _offset(0) {
-    if(ptr) {
+    // TODO: This function totally breaks right now
+    if (ptr) {
       const auto [page_id, offset] =
-          get_buffer_manager().get_page_id_and_offset_from_ptr(reinterpret_cast<const void*>(ptr));
+          BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(reinterpret_cast<const void*>(ptr));
       _page_id = page_id;
       _offset = offset;
-      get_buffer_manager().pin_page(_page_id);
+      BufferManager::get_global_buffer_manager().pin_page(_page_id);
     }
   }
 
   BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {
-    get_buffer_manager().pin_page(_page_id);
+    BufferManager::get_global_buffer_manager().pin_page(_page_id);
   }
 
   template <class U>
   BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {
-    get_buffer_manager().pin_page(_page_id);
+    BufferManager::get_global_buffer_manager().pin_page(_page_id);
   }
 
   template <class T>
   BufferManagedPtr(T* ptr) {
-    const auto [page_id, offset] = get_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
+    const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
     _page_id = page_id;
     _offset = offset;
-    get_buffer_manager().pin_page(_page_id);
+    BufferManager::get_global_buffer_manager().pin_page(_page_id);
   }
 
   explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {
-    get_buffer_manager().pin_page(_page_id);
+    BufferManager::get_global_buffer_manager().pin_page(_page_id);
   }
 
   ~BufferManagedPtr() {
-    if(_page_id == INVALID_PAGE_ID) {
+    if (_page_id == INVALID_PAGE_ID) {
       return;
     }
-    get_buffer_manager().unpin_page(_page_id);
+    BufferManager::get_global_buffer_manager().unpin_page(_page_id);
   }
 
   pointer operator->() const {
@@ -191,7 +185,7 @@ class BufferManagedPtr {
       return nullptr;
     }
     // TODO: If pinned, this is not needed
-    const auto page = get_buffer_manager().get_page(_page_id);
+    const auto page = BufferManager::get_global_buffer_manager().get_page(_page_id);
     return page->data.data() + _offset;
   }
 

@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <utility>
+#include "storage/buffer/buffer_managed_ptr.hpp"
 #include "storage/buffer/clock_replacement_strategy.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/ssd_region.hpp"
@@ -71,11 +72,27 @@ class BufferManager {
    */
   std::pair<PageID, std::ptrdiff_t> get_page_id_and_offset_from_ptr(const void* ptr);
 
+  /**
+   * Allocates pages to fullfil allocation request of the given bytes and alignment 
+  */
+  BufferManagedPtr<void> allocate(std::size_t bytes, std::size_t align = alignof(std::max_align_t));
+
+  void deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
+
+  /**
+   * @brief Helper function to get the BufferManager singleton. This avoids issues with circular dependencies as the implementation in the .cpp file.
+   * 
+   * @return BufferManager& 
+   */
+  static BufferManager& get_global_buffer_manager();
+
  protected:
   friend class Hyrise;
 
  private:
   BufferManager();
+
+  Frame* allocate_frame();
 
   size_t _num_pages;
 
@@ -91,4 +108,6 @@ class BufferManager {
   // The replacement strategy used then the page table is full and the to be evicted frame needs to be selected
   std::unique_ptr<ClockReplacementStrategy> _clock_replacement_strategy;
 };
+
+
 }  // namespace hyrise
