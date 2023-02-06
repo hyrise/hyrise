@@ -49,6 +49,8 @@ RUN apt-get update \
     linux-tools-`uname -r` \
     bpftrace \
     lldb \
+    fio \
+    openssh-client \
     ninja-build \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
