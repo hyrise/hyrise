@@ -50,6 +50,7 @@ RUN apt-get update \
     bpftrace \
     lldb \
     fio \
+    strace \
     openssh-client \
     ninja-build \
     && apt-get clean \
