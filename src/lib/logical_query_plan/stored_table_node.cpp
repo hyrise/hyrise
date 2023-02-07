@@ -216,8 +216,8 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   return order_dependencies;
 }
 
-std::shared_ptr<InclusionDependencies> StoredTableNode::inclusion_dependencies() const {
-  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+InclusionDependencies StoredTableNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
 
   // We create inclusion dependencies from table inclusion constraints
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
@@ -253,7 +253,7 @@ std::shared_ptr<InclusionDependencies> StoredTableNode::inclusion_dependencies()
                                                                referenced_stored_table_node->output_expressions());
 
     // Create InclusionDependency
-    inclusion_dependencies->emplace(column_expressions, included_column_expressions);
+    inclusion_dependencies.emplace(column_expressions, included_column_expressions);
   }
 
   return inclusion_dependencies;

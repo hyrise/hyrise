@@ -179,18 +179,18 @@ OrderDependencies AggregateNode::order_dependencies() const {
   return order_dependencies;
 }
 
-std::shared_ptr<InclusionDependencies> AggregateNode::inclusion_dependencies() const {
-  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+InclusionDependencies AggregateNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
 
   // Similarly to UCCs and ODs, forward INDs if all expressions are part of the GROUP-BY expressions.
   const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
   const auto& output_expressions = this->output_expressions();
 
-  for (const auto& input_inclusion_dependency : *input_inclusion_dependencies) {
+  for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
     if (!contains_all_expressions(input_inclusion_dependency.expressions, output_expressions)) {
       continue;
     }
-    inclusion_dependencies->emplace(input_inclusion_dependency);
+    inclusion_dependencies.emplace(input_inclusion_dependency);
   }
 
   return inclusion_dependencies;

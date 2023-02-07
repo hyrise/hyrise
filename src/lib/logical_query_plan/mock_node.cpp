@@ -145,15 +145,15 @@ void MockNode::set_inclusion_dependencies(const InclusionDependencies& inclusion
   _inclusion_dependencies = inclusion_dependencies;
 }
 
-std::shared_ptr<InclusionDependencies> MockNode::inclusion_dependencies() const {
-  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+InclusionDependencies MockNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
   const auto& output_expressions = this->output_expressions();
   for (const auto& ind : _inclusion_dependencies) {
     if (contains_all_expressions(ind.expressions, output_expressions)) {
       continue;
     }
 
-    inclusion_dependencies->emplace(ind);
+    inclusion_dependencies.emplace(ind);
   }
   return inclusion_dependencies;
 }

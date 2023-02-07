@@ -25,7 +25,7 @@ class ExceptNode : public EnableMakeForLQPNode<ExceptNode>, public AbstractLQPNo
 
   OrderDependencies order_dependencies() const override;
 
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const override;
 
   // Passes FDs from the left input node.
   FunctionalDependencies non_trivial_functional_dependencies() const override;

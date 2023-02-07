@@ -18,7 +18,7 @@ OrderDependencies ValidateNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-std::shared_ptr<InclusionDependencies> ValidateNode::inclusion_dependencies() const {
+InclusionDependencies ValidateNode::inclusion_dependencies() const {
   return _forward_left_inclusion_dependencies();
 }
 

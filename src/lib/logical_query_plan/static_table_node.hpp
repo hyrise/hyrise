@@ -28,7 +28,7 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   // ODs and INDs (foreign key constraints) cannot be specified for CREATE TABLE statements yet. Thus, we simply return
   // empty sets.
   OrderDependencies order_dependencies() const override;
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const override;
 
   const std::shared_ptr<Table> table;
 

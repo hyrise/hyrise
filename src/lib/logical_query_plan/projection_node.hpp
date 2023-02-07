@@ -23,7 +23,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
 
   OrderDependencies order_dependencies() const override;
 
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
   FunctionalDependencies non_trivial_functional_dependencies() const override;

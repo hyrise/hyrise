@@ -22,7 +22,7 @@ OrderDependencies AbstractNonQueryNode::order_dependencies() const {
   Fail("Node does not support order depedencies.");
 }
 
-std::shared_ptr<InclusionDependencies> AbstractNonQueryNode::inclusion_dependencies() const {
+InclusionDependencies AbstractNonQueryNode::inclusion_dependencies() const {
   Fail("Node does not support inclusion depedencies.");
 }
 

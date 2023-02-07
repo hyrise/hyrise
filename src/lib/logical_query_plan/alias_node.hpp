@@ -24,7 +24,7 @@ class AliasNode : public EnableMakeForLQPNode<AliasNode>, public AbstractLQPNode
 
   OrderDependencies order_dependencies() const override;
 
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const override;
 
   const std::vector<std::string> aliases;
 

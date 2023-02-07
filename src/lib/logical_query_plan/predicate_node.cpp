@@ -37,8 +37,8 @@ OrderDependencies PredicateNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-std::shared_ptr<InclusionDependencies> PredicateNode::inclusion_dependencies() const {
-  const auto inclusion_dependencies = std::make_shared<InclusionDependencies>();
+InclusionDependencies PredicateNode::inclusion_dependencies() const {
+  auto inclusion_dependencies = InclusionDependencies{};
   const auto& is_null_expression = std::dynamic_pointer_cast<IsNullExpression>(predicate());
 
   // Only forward INDs where there is an IS NOT NULL scan on the expressions.
@@ -47,7 +47,7 @@ std::shared_ptr<InclusionDependencies> PredicateNode::inclusion_dependencies() c
     const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
     const auto& operand = is_null_expression->operand();
 
-    for (const auto& input_inclusion_dependency : *input_inclusion_dependencies) {
+    for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
       if (input_inclusion_dependency.expressions.size() > 1) {
         continue;
       }
@@ -56,7 +56,7 @@ std::shared_ptr<InclusionDependencies> PredicateNode::inclusion_dependencies() c
         continue;
       }
 
-      inclusion_dependencies->emplace(input_inclusion_dependency);
+      inclusion_dependencies.emplace(input_inclusion_dependency);
     }
   }
 

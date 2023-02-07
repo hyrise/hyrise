@@ -42,7 +42,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   OrderDependencies order_dependencies() const override;
 
   // Returns stored INDs and pays respect to pruned columns. Pruned columns of the referenced node are not considered.
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.

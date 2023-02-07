@@ -34,7 +34,7 @@ class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public Abstrac
 
   OrderDependencies order_dependencies() const override;
 
-  std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
+  InclusionDependencies inclusion_dependencies() const override;
 
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 

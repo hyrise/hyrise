@@ -43,8 +43,8 @@ OrderDependencies IntersectNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-std::shared_ptr<InclusionDependencies> IntersectNode::inclusion_dependencies() const {
-  return std::make_shared<InclusionDependencies>();
+InclusionDependencies IntersectNode::inclusion_dependencies() const {
+  return InclusionDependencies{};
 }
 
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {

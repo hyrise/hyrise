@@ -44,7 +44,7 @@ OrderDependencies AliasNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-std::shared_ptr<InclusionDependencies> AliasNode::inclusion_dependencies() const {
+InclusionDependencies AliasNode::inclusion_dependencies() const {
   return _forward_left_inclusion_dependencies();
 }
 

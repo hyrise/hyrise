@@ -68,8 +68,8 @@ OrderDependencies StaticTableNode::order_dependencies() const {
   return OrderDependencies{};
 }
 
-std::shared_ptr<InclusionDependencies> StaticTableNode::inclusion_dependencies() const {
-  return std::make_shared<InclusionDependencies>();
+InclusionDependencies StaticTableNode::inclusion_dependencies() const {
+  return InclusionDependencies{};
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {

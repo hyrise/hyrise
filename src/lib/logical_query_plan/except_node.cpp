@@ -38,8 +38,8 @@ OrderDependencies ExceptNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-std::shared_ptr<InclusionDependencies> ExceptNode::inclusion_dependencies() const {
-  return std::make_shared<InclusionDependencies>();
+InclusionDependencies ExceptNode::inclusion_dependencies() const {
+  return InclusionDependencies{};
 }
 
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {

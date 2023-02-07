@@ -32,8 +32,8 @@ OrderDependencies DummyTableNode::order_dependencies() const {
   return OrderDependencies{};
 }
 
-std::shared_ptr<InclusionDependencies> DummyTableNode::inclusion_dependencies() const {
-  return std::make_shared<InclusionDependencies>();
+InclusionDependencies DummyTableNode::inclusion_dependencies() const {
+  return InclusionDependencies{};
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

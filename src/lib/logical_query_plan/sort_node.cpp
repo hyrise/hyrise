@@ -44,7 +44,7 @@ OrderDependencies SortNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-std::shared_ptr<InclusionDependencies> SortNode::inclusion_dependencies() const {
+InclusionDependencies SortNode::inclusion_dependencies() const {
   return _forward_left_inclusion_dependencies();
 }
 
