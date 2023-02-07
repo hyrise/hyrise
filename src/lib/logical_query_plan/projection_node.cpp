@@ -32,15 +32,15 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinations() const {
-  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
-  unique_column_combinations->reserve(node_expressions.size());
+UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
+  unique_column_combinations.reserve(node_expressions.size());
 
   // Forward unique column combinations, if applicable
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
   const auto& output_expressions = this->output_expressions();
 
-  for (const auto& input_ucc : *input_unique_column_combinations) {
+  for (const auto& input_ucc : input_unique_column_combinations) {
     if (!contains_all_expressions(input_ucc.expressions, output_expressions)) {
       continue;
       /**
@@ -51,7 +51,7 @@ std::shared_ptr<UniqueColumnCombinations> ProjectionNode::unique_column_combinat
        * Instead of discarding a UCC for 'column', we could create and output a new one for 'column + 1'.
        */
     }
-    unique_column_combinations->emplace(input_ucc);
+    unique_column_combinations.emplace(input_ucc);
   }
 
   return unique_column_combinations;

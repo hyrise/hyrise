@@ -31,7 +31,7 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
    *     expressions.
    * (2) Creates a new unique column combination from the group-by expressions if not already existing.
    */
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
   FunctionalDependencies non_trivial_functional_dependencies() const override;

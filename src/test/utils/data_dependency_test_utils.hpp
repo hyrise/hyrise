@@ -8,11 +8,11 @@ namespace hyrise {
  * Verifies whether a given table key constraint is represented in a given set of unique column combinations.
  */
 static bool find_ucc_by_key_constraint(const TableKeyConstraint& table_key_constraint,
-                                       const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
+                                       const UniqueColumnCombinations& unique_column_combinations) {
   const auto& column_ids =
       std::set<ColumnID>{table_key_constraint.columns().cbegin(), table_key_constraint.columns().cend()};
 
-  for (const auto& ucc : *unique_column_combinations) {
+  for (const auto& ucc : unique_column_combinations) {
     // Basic comparison: Column count.
     if (column_ids.size() != ucc.expressions.size()) {
       continue;

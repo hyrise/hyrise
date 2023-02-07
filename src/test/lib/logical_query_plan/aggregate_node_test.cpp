@@ -98,7 +98,7 @@ TEST_F(AggregateNodeTest, Copy) {
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
-  EXPECT_TRUE(_mock_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(_mock_node->unique_column_combinations().empty());
 
   const auto aggregate1 = sum_(add_(_a, _b));
   const auto aggregate2 = sum_(add_(_a, _c));
@@ -110,13 +110,13 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
   // Check whether AggregateNode adds a new UCC for its group-by column(s).
   {
     const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 1);
-    EXPECT_TRUE(unique_column_combinations->contains(UniqueColumnCombination{{_a}}));
+    EXPECT_EQ(unique_column_combinations.size(), 1);
+    EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
   }
   {
     const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 1);
-    EXPECT_TRUE(unique_column_combinations->contains(UniqueColumnCombination{{_a, _b}}));
+    EXPECT_EQ(unique_column_combinations.size(), 1);
+    EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a, _b}}));
   }
 }
 
@@ -124,7 +124,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
-  EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
   const auto aggregate_c = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate_c), _mock_node);
@@ -137,7 +137,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
    */
 
   // Basic check.
-  EXPECT_EQ(unique_column_combinations->size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
@@ -146,7 +146,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
   const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
-  EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
   const auto aggregate_b = any_(_b);
   const auto aggregate_c = sum_(_c);
@@ -162,19 +162,19 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
    */
 
   // Basic check.
-  EXPECT_EQ(unique_column_combinations->size(), 2);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
   EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
   const auto ucc_group_by = UniqueColumnCombination{{_a}};
-  EXPECT_TRUE(unique_column_combinations->contains(ucc_group_by));
+  EXPECT_TRUE(unique_column_combinations.contains(ucc_group_by));
 }
 
 TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
   // Prepare single UCC.
   const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_key_constraint});
-  EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 1);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
   const auto aggregate1 = sum_(_b);
   const auto aggregate2 = sum_(_c);
@@ -189,7 +189,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
 
   // Basic check.
   const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations->size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
 }
@@ -198,7 +198,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
   // Prepare single UCC.
   const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_key_constraint});
-  EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 1);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
   const auto aggregate = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate), _mock_node);
@@ -212,7 +212,7 @@ TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
 
   // Basic check.
   const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations->size(), 1);
+  EXPECT_EQ(unique_column_combinations.size(), 1);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
 }

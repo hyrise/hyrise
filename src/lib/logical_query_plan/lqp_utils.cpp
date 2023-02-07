@@ -451,14 +451,13 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
   return column_expressions;
 }
 
-bool contains_matching_unique_column_combination(
-    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations,
-    const ExpressionUnorderedSet& expressions) {
-  DebugAssert(!unique_column_combinations->empty(), "Invalid input: Set of UCCs should not be empty.");
+bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
+                                                 const ExpressionUnorderedSet& expressions) {
+  DebugAssert(!unique_column_combinations.empty(), "Invalid input: Set of UCCs should not be empty.");
   DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
 
   // Look for a unique column combination that is based on a subset of the given expressions.
-  for (const auto& ucc : *unique_column_combinations) {
+  for (const auto& ucc : unique_column_combinations) {
     if (ucc.expressions.size() <= expressions.size() &&
         std::all_of(ucc.expressions.cbegin(), ucc.expressions.cend(),
                     [&](const auto& ucc_expression) { return expressions.contains(ucc_expression); })) {
@@ -470,10 +469,9 @@ bool contains_matching_unique_column_combination(
   return false;
 }
 
-FunctionalDependencies fds_from_unique_column_combinations(
-    const std::shared_ptr<const AbstractLQPNode>& lqp,
-    const std::shared_ptr<UniqueColumnCombinations>& unique_column_combinations) {
-  Assert(!unique_column_combinations->empty(), "Did not expect empty vector of UCCs.");
+FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                           const UniqueColumnCombinations& unique_column_combinations) {
+  Assert(!unique_column_combinations.empty(), "Did not expect empty vector of UCCs.");
 
   auto fds = FunctionalDependencies{};
 
@@ -486,7 +484,7 @@ FunctionalDependencies fds_from_unique_column_combinations(
     }
   }
 
-  for (const auto& ucc : *unique_column_combinations) {
+  for (const auto& ucc : unique_column_combinations) {
     auto determinants = ucc.expressions;
 
     // (1) Verify whether we can create an FD from the given UCC (non-nullable determinant expressions).

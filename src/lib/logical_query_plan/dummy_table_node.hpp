@@ -22,7 +22,7 @@ class DummyTableNode : public EnableMakeForLQPNode<DummyTableNode>, public Abstr
 
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

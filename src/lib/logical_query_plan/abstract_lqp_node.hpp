@@ -183,7 +183,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return Unique column combinations (UCCs) valid for the current LQP. See unique_column_combination.hpp for more
    *         documentation.
    */
-  virtual std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const = 0;
+  virtual UniqueColumnCombinations unique_column_combinations() const = 0;
 
   /**
    * @return True if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
@@ -259,7 +259,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method for node types that do not have an effect on the UCCs from input nodes.
    * @return All unique column combinations from the left input node.
    */
-  std::shared_ptr<UniqueColumnCombinations> _forward_left_unique_column_combinations() const;
+  UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

@@ -29,7 +29,7 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<UniqueColumnCombinations> PredicateNode::unique_column_combinations() const {
+UniqueColumnCombinations PredicateNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 

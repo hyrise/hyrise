@@ -155,20 +155,20 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
     const auto& unique_column_combinations = source_node->unique_column_combinations();
     tooltip_stream << "\n"
                    << "Unique Column Combinations: \n";
-    if (unique_column_combinations->empty()) {
+    if (unique_column_combinations.empty()) {
       tooltip_stream << " <none>\n";
     }
 
-    auto ucc_idx = 0;
-    for (const auto& ucc : *unique_column_combinations) {
-      ++ucc_idx;
+    auto ucc_idx = 1;
+    for (const auto& ucc : unique_column_combinations) {
       tooltip_stream << " (" << ucc_idx << ") ";
       tooltip_stream << ucc << "\n";
+      ++ucc_idx;
     }
 
     // Edge Tooltip: Trivial FDs.
     auto trivial_fds = FunctionalDependencies();
-    if (!unique_column_combinations->empty()) {
+    if (!unique_column_combinations.empty()) {
       trivial_fds = fds_from_unique_column_combinations(source_node, unique_column_combinations);
     }
     tooltip_stream << "\n"

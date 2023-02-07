@@ -97,8 +97,8 @@ std::string MockNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations() const {
-  const auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
+UniqueColumnCombinations MockNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
   const auto contains = [](const auto& column_ids, const auto search_column_id) {
     return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
   };
@@ -117,7 +117,7 @@ std::shared_ptr<UniqueColumnCombinations> MockNode::unique_column_combinations()
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination.
-    unique_column_combinations->emplace(column_expressions);
+    unique_column_combinations.emplace(column_expressions);
   }
 
   return unique_column_combinations;

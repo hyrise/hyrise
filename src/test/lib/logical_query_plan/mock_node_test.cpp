@@ -92,15 +92,15 @@ TEST_F(MockNodeTest, UniqueColumnCombinations) {
   const auto table_key_constraints = TableKeyConstraints{key_constraint_a_b, key_constraint_c};
   _mock_node_a->set_key_constraints(table_key_constraints);
 
-  EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
 
   const auto& unique_column_combinations = _mock_node_a->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations->size(), 2);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 
   // Check whether MockNode is referenced by the UCC's expressions.
-  for (const auto& ucc : *unique_column_combinations) {
+  for (const auto& ucc : unique_column_combinations) {
     for (const auto& expression : ucc.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
@@ -119,7 +119,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
 
   {
     const auto& unique_column_combinations = _mock_node_a->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 3);
+    EXPECT_EQ(unique_column_combinations.size(), 3);
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
@@ -129,7 +129,7 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
     _mock_node_a->set_pruned_column_ids({ColumnID{0}});
 
     const auto& unique_column_combinations = _mock_node_a->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 1);
+    EXPECT_EQ(unique_column_combinations.size(), 1);
     EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
     EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));

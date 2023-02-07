@@ -23,7 +23,7 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
 
   // Generates UCCs from table's soft key constraints. We use these soft key constraints for storing table key
   // constraints with CREATE TABLE statements.
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   const std::shared_ptr<Table> table;
 

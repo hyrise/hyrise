@@ -241,8 +241,8 @@ TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialLeft) {
   const auto fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b}};
   _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
   _mock_node_b->set_non_trivial_functional_dependencies({});
-  EXPECT_TRUE(_mock_node_a->unique_column_combinations()->empty());
-  EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
+  EXPECT_TRUE(_mock_node_a->unique_column_combinations().empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
 
   if (join_mode == JoinMode::Right || join_mode == JoinMode::FullOuter) {
     EXPECT_TRUE(join_node->non_trivial_functional_dependencies().empty());
@@ -265,8 +265,8 @@ TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialRight) 
   const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
   _mock_node_a->set_non_trivial_functional_dependencies({});
   _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-  EXPECT_TRUE(_mock_node_a->unique_column_combinations()->empty());
-  EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
+  EXPECT_TRUE(_mock_node_a->unique_column_combinations().empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
 
   switch (join_mode) {
     case JoinMode::Left:
@@ -298,8 +298,8 @@ TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialBoth) {
   const auto fd_x = FunctionalDependency{{_t_b_x}, {_t_b_y}};
   _mock_node_a->set_non_trivial_functional_dependencies({fd_a});
   _mock_node_b->set_non_trivial_functional_dependencies({fd_x});
-  EXPECT_TRUE(_mock_node_a->unique_column_combinations()->empty());
-  EXPECT_TRUE(_mock_node_b->unique_column_combinations()->empty());
+  EXPECT_TRUE(_mock_node_a->unique_column_combinations().empty());
+  EXPECT_TRUE(_mock_node_b->unique_column_combinations().empty());
 
   switch (join_mode) {
     case JoinMode::FullOuter:
@@ -356,8 +356,8 @@ TEST_P(JoinNodeMultiJoinModeTest, FunctionalDependenciesForwardNonTrivialBothAnd
     case JoinMode::AntiNullAsFalse:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
       EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(fd_a));
-      EXPECT_EQ(join_node->unique_column_combinations()->size(), 1);
-      EXPECT_EQ(*join_node->unique_column_combinations(), *_mock_node_a->unique_column_combinations());
+      EXPECT_EQ(join_node->unique_column_combinations().size(), 1);
+      EXPECT_EQ(join_node->unique_column_combinations(), _mock_node_a->unique_column_combinations());
       break;
     case JoinMode::Left:
       EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 2);
@@ -528,11 +528,11 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNoJoinColumnUnique) {
   const auto& join_unique_column_combinations = join_node->unique_column_combinations();
   if (is_semi_or_anti_join(join_mode)) {
     // Semi- and Anti-Joins act as filters for the left input and preserve its unique column combinations.
-    EXPECT_EQ(join_unique_column_combinations->size(), 1);
+    EXPECT_EQ(join_unique_column_combinations.size(), 1);
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
   } else {
     // Not unique join columns might lead to row/value duplication in the opposite relation. No UCCs remain valid.
-    EXPECT_TRUE(join_unique_column_combinations->empty());
+    EXPECT_TRUE(join_unique_column_combinations.empty());
   }
 }
 
@@ -559,14 +559,14 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsLeftJoinColumnUnique) 
   switch (join_mode) {
     case JoinMode::Cross:
       // Cross joins should never forward UCCs.
-      EXPECT_TRUE(join_unique_column_combinations->empty());
+      EXPECT_TRUE(join_unique_column_combinations.empty());
       break;
     case JoinMode::Semi:
     case JoinMode::AntiNullAsTrue:
     case JoinMode::AntiNullAsFalse:
       // Semi- and Anti-Joins act as filters for the left input and preserve its unique column combinations.
-      EXPECT_EQ(join_unique_column_combinations->size(), 2);
-      EXPECT_EQ(*join_unique_column_combinations, *_mock_node_a->unique_column_combinations());
+      EXPECT_EQ(join_unique_column_combinations.size(), 2);
+      EXPECT_EQ(join_unique_column_combinations, _mock_node_a->unique_column_combinations());
       break;
     case JoinMode::Inner:
     case JoinMode::Left:
@@ -574,8 +574,8 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsLeftJoinColumnUnique) 
     case JoinMode::FullOuter:
       // UCCs of the right input should be forwarded. Since our current UCC implementation is compatible with NULL
       // values, outer joins are handled like inner joins.
-      EXPECT_EQ(join_unique_column_combinations->size(), 1);
-      EXPECT_EQ(*join_unique_column_combinations, *_mock_node_b->unique_column_combinations());
+      EXPECT_EQ(join_unique_column_combinations.size(), 1);
+      EXPECT_EQ(join_unique_column_combinations, _mock_node_b->unique_column_combinations());
       break;
   }
 }
@@ -602,12 +602,12 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsRightJoinColumnUnique)
   const auto& join_unique_column_combinations = join_node->unique_column_combinations();
   if (join_mode == JoinMode::Cross) {
     // Cross joins should never forward UCCs.
-    EXPECT_TRUE(join_unique_column_combinations->empty());
+    EXPECT_TRUE(join_unique_column_combinations.empty());
     return;
   }
   // UCCs of the left input should be forwarded.
-  EXPECT_EQ(join_unique_column_combinations->size(), 1);
-  EXPECT_EQ(*join_unique_column_combinations, *_mock_node_a->unique_column_combinations());
+  EXPECT_EQ(join_unique_column_combinations.size(), 1);
+  EXPECT_EQ(join_unique_column_combinations, _mock_node_a->unique_column_combinations());
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique) {
@@ -631,7 +631,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
 
   const auto& join_unique_column_combinations = join_node->unique_column_combinations();
   if (join_mode == JoinMode::Cross) {
-    EXPECT_TRUE(join_unique_column_combinations->empty());
+    EXPECT_TRUE(join_unique_column_combinations.empty());
     return;
   }
 
@@ -640,12 +640,12 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsBothJoinColumnsUnique)
   EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b_c, join_unique_column_combinations));
 
   if (is_semi_or_anti_join(join_mode)) {
-    EXPECT_EQ(join_unique_column_combinations->size(), 2);
+    EXPECT_EQ(join_unique_column_combinations.size(), 2);
     return;
   }
 
   // Inner and outer joins should also forward the right input's UCCs.
-  EXPECT_EQ(join_unique_column_combinations->size(), 4);
+  EXPECT_EQ(join_unique_column_combinations.size(), 4);
   EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_x, join_unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_y, join_unique_column_combinations));
 }
@@ -667,7 +667,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsNonEquiJoin) {
     _mock_node_b);
   // clang-format on
 
-  EXPECT_TRUE(theta_join_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(theta_join_node->unique_column_combinations().empty());
 }
 
 TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
@@ -687,9 +687,9 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
   // clang-format on
 
   if (is_semi_or_anti_join(join_mode)) {
-    EXPECT_EQ(*join_node->unique_column_combinations(), *_mock_node_a->unique_column_combinations());
+    EXPECT_EQ(join_node->unique_column_combinations(), _mock_node_a->unique_column_combinations());
   } else {
-    EXPECT_TRUE(join_node->unique_column_combinations()->empty());
+    EXPECT_TRUE(join_node->unique_column_combinations().empty());
   }
 }
 

@@ -286,7 +286,7 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
               "The given expressions are not a subset of the LQP's output expressions.");
 
   const auto& unique_column_combinations = this->unique_column_combinations();
-  if (unique_column_combinations->empty()) {
+  if (unique_column_combinations.empty()) {
     return false;
   }
 
@@ -322,7 +322,7 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
   // (2) Derive trivial FDs from the node's unique column combinations.
   const auto& unique_column_combinations = this->unique_column_combinations();
   // Early exit if there are no UCCs.
-  if (unique_column_combinations->empty()) {
+  if (unique_column_combinations.empty()) {
     return non_trivial_fds;
   }
 
@@ -418,13 +418,13 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-std::shared_ptr<UniqueColumnCombinations> AbstractLQPNode::_forward_left_unique_column_combinations() const {
+UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinations() const {
   Assert(left_input(), "Cannot forward unique column combinations without an input node.");
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
-    for (const auto& ucc : *input_unique_column_combinations) {
+    for (const auto& ucc : input_unique_column_combinations) {
       Assert(has_output_expressions(ucc.expressions),
              "Forwarding of UCC is illegal because node misses output expressions.");
     }
