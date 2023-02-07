@@ -9,8 +9,6 @@
 #include "operators/table_wrapper.hpp"
 #include "scheduler/job_task.hpp"
 #include "scheduler/node_queue_scheduler.hpp"
-#include "storage/index/group_key/composite_group_key_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/format_duration.hpp"

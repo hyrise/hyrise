@@ -8,7 +8,6 @@
 #include "operators/get_table.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {

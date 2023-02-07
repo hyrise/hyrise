@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "abstract_join_operator.hpp"
-#include "storage/index/abstract_chunk_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
@@ -15,8 +14,6 @@
 namespace hyrise {
 
 class MultiPredicateJoinEvaluator;
-
-using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
 
 /**
    * This operator joins two tables using one column of each table.
@@ -73,29 +70,11 @@ class JoinIndex : public AbstractJoinOperator {
                              const bool track_index_matches, const bool is_semi_or_anti_join,
                              MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
 
-  template <typename ProbeIterator>
-  void _data_join_two_segments_using_chunk_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                 const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                 const std::shared_ptr<AbstractChunkIndex>& chunk_index);
 
   template <typename ProbeIterator>
   void _data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
                                                       const ChunkID probe_chunk_id,
                                                       const std::shared_ptr<PartialHashIndex>& table_index);
-
-  template <typename ProbeIterator>
-  void _reference_join_two_segments_using_chunk_index(
-      ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-      const std::shared_ptr<AbstractChunkIndex>& chunk_index,
-      const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
-
-  template <typename SegmentPosition>
-  std::vector<ChunkIndexRange> _chunk_index_ranges_for_value(
-      const SegmentPosition probe_side_position, const std::shared_ptr<AbstractChunkIndex>& chunk_index) const;
-
-  void _append_matches_chunk_index(const AbstractChunkIndex::Iterator& range_begin,
-                                   const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                   const ChunkID probe_chunk_id, const ChunkID index_chunk_id);
 
   void _append_matches_table_index(const PartialHashIndex::Iterator& range_begin,
                                    const PartialHashIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,

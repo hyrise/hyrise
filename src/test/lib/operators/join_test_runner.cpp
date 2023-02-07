@@ -14,8 +14,6 @@
 #include "operators/join_verification.hpp"
 #include "operators/print.hpp"
 #include "operators/table_wrapper.hpp"
-#include "storage/index/b_tree/b_tree_index.hpp"
-#include "storage/index/group_key/group_key_index.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/storage_manager.hpp"
 #include "utils/column_pruning_utils.hpp"

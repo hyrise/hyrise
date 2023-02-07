@@ -244,4 +244,23 @@ void Chunk::set_cleanup_commit_id(const CommitID cleanup_commit_id) {
   _cleanup_commit_id.store(cleanup_commit_id);
 }
 
+void Chunk::finalize() {
+   Assert(is_mutable(), "Only mutable chunks can be finalized. Chunks cannot be finalized twice.");
+   _is_mutable = false;
+
+   // Only perform the max_begin_cid check if it hasn't already been set.
+   if (has_mvcc_data() && !_mvcc_data->max_begin_cid) {
+     const auto chunk_size = size();
+     Assert(chunk_size > 0, "finalize() should not be called on an empty chunk");
+     _mvcc_data->max_begin_cid = CommitID{0};
+     for (auto chunk_offset = ChunkOffset{0}; chunk_offset < chunk_size; ++chunk_offset) {
+       _mvcc_data->max_begin_cid = std::max(*_mvcc_data->max_begin_cid, _mvcc_data->get_begin_cid(chunk_offset));
+     }
+
+     Assert(_mvcc_data->max_begin_cid != MvccData::MAX_COMMIT_ID,
+            "max_begin_cid should not be MAX_COMMIT_ID when finalizing a chunk. This probably means the chunk was "
+            "finalized before all transactions committed/rolled back.");
+   }
+ }
+
 }  // namespace hyrise

@@ -174,95 +174,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node(
     case ScanType::TableScan:
       return _translate_predicate_node_to_table_scan(predicate_node, input_operator);
     case ScanType::IndexScan:
-      return _translate_predicate_node_to_index_scan(predicate_node, input_operator);
+      Fail("IndexScan needs to be reimplemented for TableIndex.");
   }
 
   Fail("Invalid enum value");
-}
-
-std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_index_scan(
-    const std::shared_ptr<PredicateNode>& node, const std::shared_ptr<AbstractOperator>& input_operator) const {
-  /**
-   * Not using OperatorScanPredicate, since it splits up BETWEEN into two scans for some cases that TableScan cannot handle
-   */
-
-  auto column_id = ColumnID{0};
-  auto value_variant = AllTypeVariant{NullValue{}};
-  auto value2_variant = std::optional<AllTypeVariant>{};
-
-  // Currently, we will only use IndexScans if the PredicateNode directly follows a StoredTableNode.
-  // Our IndexScan implementation does not work on reference segments yet.
-  Assert(node->left_input()->type == LQPNodeType::StoredTable, "IndexScan must follow a StoredTableNode.");
-
-  const auto predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(node->predicate());
-  Assert(predicate, "Expected predicate");
-  Assert(!predicate->arguments.empty(), "Expected arguments");
-
-  column_id = node->left_input()->get_column_id(*predicate->arguments[0]);
-  if (predicate->arguments.size() > 1) {
-    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[1]);
-    // This is necessary because we currently support single column indexes only
-    Assert(value_expression, "Expected value as second argument for IndexScan");
-    value_variant = value_expression->value;
-  }
-  if (predicate->arguments.size() > 2) {
-    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[2]);
-    // This is necessary because we currently support single column indexes only
-    Assert(value_expression, "Expected value as third argument for IndexScan");
-    value2_variant = value_expression->value;
-  }
-
-  const std::vector<ColumnID> column_ids = {column_id};
-  const std::vector<AllTypeVariant> right_values = {value_variant};
-  std::vector<AllTypeVariant> right_values2 = {};
-  if (value2_variant) {
-    right_values2.emplace_back(*value2_variant);
-  }
-
-  const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
-  const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-
-  DebugAssert(std::is_sorted(pruned_chunk_ids.cbegin(), pruned_chunk_ids.cend()),
-              "Expected sorted vector of ColumnIDs");
-
-  const auto table_name = stored_table_node->table_name;
-  const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  std::vector<ChunkID> indexed_chunks;
-
-  auto pruned_table_chunk_id = ChunkID{0};
-  auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
-
-  // Create a vector of chunk ids that have a GroupKey index and are not pruned.
-  const auto chunk_count = table->chunk_count();
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // Check if chunk is pruned
-    if (pruned_chunk_ids_iter != pruned_chunk_ids.cend() && chunk_id == *pruned_chunk_ids_iter) {
-      ++pruned_chunk_ids_iter;
-      continue;
-    }
-    // Check if chunk has GroupKey index
-    const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && chunk->get_index(ChunkIndexType::GroupKey, column_ids)) {
-      indexed_chunks.emplace_back(pruned_table_chunk_id);
-    }
-    ++pruned_table_chunk_id;
-  }
-
-  // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
-  // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, ChunkIndexType::GroupKey, column_ids,
-                                                predicate->predicate_condition, right_values, right_values2);
-
-  const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
-
-  index_scan->included_chunk_ids = indexed_chunks;
-  table_scan->excluded_chunk_ids = indexed_chunks;
-
-  // set lqp node
-  index_scan->lqp_node = node;
-  table_scan->lqp_node = node;
-
-  return std::make_shared<UnionAll>(index_scan, table_scan);
 }
 
 std::shared_ptr<TableScan> LQPTranslator::_translate_predicate_node_to_table_scan(

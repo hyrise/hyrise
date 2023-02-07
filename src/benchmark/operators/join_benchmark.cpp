@@ -8,7 +8,6 @@
 #include "operators/join_sort_merge.hpp"
 #include "operators/table_wrapper.hpp"
 #include "storage/chunk.hpp"
-#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
 #include "synthetic_table_generator.hpp"
 #include "types.hpp"
 

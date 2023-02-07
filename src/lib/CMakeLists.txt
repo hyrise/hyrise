@@ -459,30 +459,6 @@ set(
     storage/frame_of_reference_segment.hpp
     storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
-    storage/index/abstract_chunk_index.cpp
-    storage/index/abstract_chunk_index.hpp
-    storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
-    storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
-    storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
-    storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.hpp
-    storage/index/b_tree/b_tree_index.cpp
-    storage/index/b_tree/b_tree_index.hpp
-    storage/index/b_tree/b_tree_index_impl.cpp
-    storage/index/b_tree/b_tree_index_impl.hpp
-    storage/index/group_key/composite_group_key_index.cpp
-    storage/index/group_key/composite_group_key_index.hpp
-    storage/index/group_key/group_key_index.cpp
-    storage/index/group_key/group_key_index.hpp
-    storage/index/group_key/variable_length_key.cpp
-    storage/index/group_key/variable_length_key.hpp
-    storage/index/group_key/variable_length_key_base.cpp
-    storage/index/group_key/variable_length_key_base.hpp
-    storage/index/group_key/variable_length_key_proxy.cpp
-    storage/index/group_key/variable_length_key_proxy.hpp
-    storage/index/group_key/variable_length_key_store.cpp
-    storage/index/group_key/variable_length_key_store.hpp
-    storage/index/chunk_index_statistics.cpp
-    storage/index/chunk_index_statistics.hpp
     storage/index/table_index_statistics.cpp
     storage/index/table_index_statistics.hpp
     storage/index/partial_hash/flat_map_iterator.cpp
@@ -493,7 +469,6 @@ set(
     storage/index/partial_hash/partial_hash_index.hpp
     storage/index/partial_hash/partial_hash_index_impl.cpp
     storage/index/partial_hash/partial_hash_index_impl.hpp
-    storage/index/chunk_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp
