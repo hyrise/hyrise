@@ -8,6 +8,7 @@
 #if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
 #include "utils/boost_curry_override.hpp"  // NOLINT
 #endif
+#include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/fold.hpp>
@@ -25,7 +26,6 @@
 
 #include "null_value.hpp"
 #include "types.hpp"
-#include "utils/make_bimap.hpp"
 
 namespace hyrise {
 
@@ -89,7 +89,7 @@ inline bool variant_is_null(const AllTypeVariant& variant) {
   return (variant.which() == 0);
 }
 
-const boost::bimap<DataType, std::string> data_type_to_string =
+const auto data_type_to_string =
     hana::fold(data_type_enum_string_pairs, boost::bimap<DataType, std::string>{}, [](auto map, auto pair) {
       map.insert({hana::first(pair), std::string{hana::second(pair)}});
       return map;

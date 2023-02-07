@@ -1,8 +1,6 @@
 #include <fstream>
 #include <set>
 
-#include "nlohmann/json.hpp"
-
 #include "base_test.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
@@ -14,7 +12,6 @@
 #include "storage/index/b_tree/b_tree_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
 #include "utils/load_table.hpp"
-#include "utils/make_bimap.hpp"
 
 /**
  * This file contains the main tests for Hyrise's join operators.

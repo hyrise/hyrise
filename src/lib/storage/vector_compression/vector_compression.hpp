@@ -18,11 +18,10 @@ namespace hyrise {
  */
 enum class VectorCompressionType : uint8_t { FixedWidthInteger, BitPacking };
 
-const boost::bimap<VectorCompressionType, std::string> vector_compression_type_to_string =
-    make_bimap<VectorCompressionType, std::string>({
-        {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},
-        {VectorCompressionType::BitPacking, "Bit-packing"},
-    });
+const auto vector_compression_type_to_string = make_bimap<VectorCompressionType, std::string>({
+    {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},
+    {VectorCompressionType::BitPacking, "Bit-packing"},
+});
 
 std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
 

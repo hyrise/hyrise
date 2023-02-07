@@ -13,17 +13,16 @@ namespace hyrise {
  */
 enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct, StandardDeviationSample, Any };
 
-const boost::bimap<AggregateFunction, std::string> aggregate_function_to_string =
-    make_bimap<AggregateFunction, std::string>({
-        {AggregateFunction::Min, "MIN"},
-        {AggregateFunction::Max, "MAX"},
-        {AggregateFunction::Sum, "SUM"},
-        {AggregateFunction::Avg, "AVG"},
-        {AggregateFunction::Count, "COUNT"},
-        {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
-        {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
-        {AggregateFunction::Any, "ANY"},
-    });
+const auto aggregate_function_to_string = make_bimap<AggregateFunction, std::string>({
+    {AggregateFunction::Min, "MIN"},
+    {AggregateFunction::Max, "MAX"},
+    {AggregateFunction::Sum, "SUM"},
+    {AggregateFunction::Avg, "AVG"},
+    {AggregateFunction::Count, "COUNT"},
+    {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
+    {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
+    {AggregateFunction::Any, "ANY"},
+});
 
 std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
 
