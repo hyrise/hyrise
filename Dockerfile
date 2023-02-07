@@ -43,6 +43,7 @@ RUN apt-get update \
     sudo \
     valgrind \
     ccache \
+    linux-tools \
     linux-tools-common \
     linux-tools-generic \
     linux-cloud-tools-generic \
@@ -50,6 +51,7 @@ RUN apt-get update \
     bpftrace \
     lldb \
     fio \
+    strace \
     openssh-client \
     ninja-build \
     && apt-get clean \
