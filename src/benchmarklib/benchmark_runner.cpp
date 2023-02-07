@@ -474,7 +474,7 @@ nlohmann::json BenchmarkRunner::_create_report() const {
     table_size += table->memory_usage(MemoryUsageCalculationMode::Full);
   }
 
-  const auto summary = nlohmann::json{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
+  auto summary = nlohmann::json{{"table_size_in_bytes", table_size}, {"total_duration", total_duration.count()}};
 
   // To get timestamps relative to the benchmark start, we substract the benchmark start timepoint.
   // We have to use system_clock here, as the LogManager uses it to provide human-readable timestamps.
