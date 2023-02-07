@@ -76,8 +76,7 @@ FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
     return {};
   }
 
-  auto inflated_fds = std::unordered_set<FunctionalDependency>();
-  inflated_fds.reserve(fds.size());
+  auto inflated_fds = FunctionalDependencies{fds.size()};
 
   for (const auto& fd : fds) {
     if (fd.dependents.size() == 1) {
@@ -97,7 +96,7 @@ FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
     return {};
   }
 
-  // We cannot use a set here, as we want to add dependents to existing FDs and objects in sets are immutable.
+  // We cannot use a set here as we want to add dependents to existing FDs and objects in sets are immutable.
   auto existing_fds = std::vector<std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>>{};
   existing_fds.reserve(fds.size());
 

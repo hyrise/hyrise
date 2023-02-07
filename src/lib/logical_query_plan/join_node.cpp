@@ -76,10 +76,10 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
   return output_expressions;
 }
 
-std::shared_ptr<UniqueColumnCombinations> JoinNode::unique_column_combinations() const {
+UniqueColumnCombinations JoinNode::unique_column_combinations() const {
   // We cannot guarantee any UCCs for Cross-Joins.
   if (join_mode == JoinMode::Cross) {
-    return std::make_shared<UniqueColumnCombinations>();
+    return UniqueColumnCombinations{};
   }
 
   // Semi- and Anti-Joins act as mere filters for input_left(). Thus, existing unique column combinations remain valid.
@@ -200,18 +200,18 @@ std::shared_ptr<InclusionDependencies> JoinNode::inclusion_dependencies() const 
   return std::make_shared<InclusionDependencies>();
 }
 
-std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combinations(
-    const std::shared_ptr<UniqueColumnCombinations>& left_unique_column_combinations,
-    const std::shared_ptr<UniqueColumnCombinations>& right_unique_column_combinations) const {
-  if (left_unique_column_combinations->empty() && right_unique_column_combinations->empty()) {
+UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
+    const UniqueColumnCombinations& left_unique_column_combinations,
+    const UniqueColumnCombinations& right_unique_column_combinations) const {
+  if (left_unique_column_combinations.empty() && right_unique_column_combinations.empty()) {
     // Early exit.
-    return std::make_shared<UniqueColumnCombinations>();
+    return UniqueColumnCombinations{};
   }
 
   const auto predicates = join_predicates();
   if (predicates.empty() || predicates.size() > 1) {
     // No guarantees implemented yet for Cross Joins and multi-predicate joins.
-    return std::make_shared<UniqueColumnCombinations>();
+    return UniqueColumnCombinations{};
   }
 
   DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
@@ -221,23 +221,23 @@ std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combin
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
     // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join).
-    return std::make_shared<UniqueColumnCombinations>();
+    return UniqueColumnCombinations{};
   }
 
   // Check uniqueness of join columns.
   bool left_operand_is_unique =
-      !left_unique_column_combinations->empty() &&
+      !left_unique_column_combinations.empty() &&
       contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
   bool right_operand_is_unique =
-      !right_unique_column_combinations->empty() &&
+      !right_unique_column_combinations.empty() &&
       contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
 
   if (left_operand_is_unique && right_operand_is_unique) {
     // Due to the one-to-one relationship, the UCCs of both sides remain valid.
-    auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>(
-        left_unique_column_combinations->begin(), left_unique_column_combinations->end());
-    std::copy(right_unique_column_combinations->begin(), right_unique_column_combinations->end(),
-              std::inserter(*unique_column_combinations, std::next(unique_column_combinations->begin())));
+    auto unique_column_combinations =
+        UniqueColumnCombinations{left_unique_column_combinations.begin(), left_unique_column_combinations.end()};
+    unique_column_combinations.insert(right_unique_column_combinations.cbegin(),
+                                      right_unique_column_combinations.cend());
     return unique_column_combinations;
   }
 
@@ -251,7 +251,7 @@ std::shared_ptr<UniqueColumnCombinations> JoinNode::_output_unique_column_combin
     return left_unique_column_combinations;
   }
 
-  return std::make_shared<UniqueColumnCombinations>();
+  return UniqueColumnCombinations{};
 }
 
 FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
@@ -271,32 +271,32 @@ FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
   auto fds_left = FunctionalDependencies{};
   auto fds_right = FunctionalDependencies{};
 
-  const auto left_unique_column_combinations = left_input()->unique_column_combinations();
-  const auto right_unique_column_combinations = right_input()->unique_column_combinations();
+  const auto& left_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto& right_unique_column_combinations = right_input()->unique_column_combinations();
   const auto& output_unique_column_combinations =
       _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 
-  if (output_unique_column_combinations->empty() && !left_unique_column_combinations->empty() &&
-      !right_unique_column_combinations->empty()) {
+  if (output_unique_column_combinations.empty() && !left_unique_column_combinations.empty() &&
+      !right_unique_column_combinations.empty()) {
     // Left and right UCCs are discarded, so we have to manually forward all FDs from the input nodes.
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->functional_dependencies();
-  } else if ((output_unique_column_combinations->empty() ||
+  } else if ((output_unique_column_combinations.empty() ||
               output_unique_column_combinations == right_unique_column_combinations) &&
-             !left_unique_column_combinations->empty()) {
+             !left_unique_column_combinations.empty()) {
     // Left UCCs are discarded, so we have to manually forward all FDs of the left input node.
     fds_left = left_input()->functional_dependencies();
     fds_right = right_input()->non_trivial_functional_dependencies();
-  } else if ((output_unique_column_combinations->empty() ||
+  } else if ((output_unique_column_combinations.empty() ||
               output_unique_column_combinations == left_unique_column_combinations) &&
-             !right_unique_column_combinations->empty()) {
+             !right_unique_column_combinations.empty()) {
     // Right UCCs are discarded, so we have to manually forward all FDs of the right input node.
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->functional_dependencies();
   } else {
-    // No unique constraints are discarded. We only have to forward non-trivial FDs.
-    DebugAssert(output_unique_column_combinations->size() ==
-                    (left_unique_column_combinations->size() + right_unique_column_combinations->size()),
+    // No UCCs are discarded. We only have to forward non-trivial FDs.
+    DebugAssert(output_unique_column_combinations.size() ==
+                    (left_unique_column_combinations.size() + right_unique_column_combinations.size()),
                 "Unexpected number of unique constraints.");
     fds_left = left_input()->non_trivial_functional_dependencies();
     fds_right = right_input()->non_trivial_functional_dependencies();

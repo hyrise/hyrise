@@ -36,7 +36,7 @@ std::vector<std::shared_ptr<AbstractExpression>> AliasNode::output_expressions()
   return node_expressions;
 }
 
-std::shared_ptr<UniqueColumnCombinations> AliasNode::unique_column_combinations() const {
+UniqueColumnCombinations AliasNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 

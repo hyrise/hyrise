@@ -16,7 +16,7 @@ std::shared_ptr<AbstractLQPNode> LogicalPlanRootNode::_on_shallow_copy(LQPNodeMa
   return make();
 }
 
-std::shared_ptr<UniqueColumnCombinations> LogicalPlanRootNode::unique_column_combinations() const {
+UniqueColumnCombinations LogicalPlanRootNode::unique_column_combinations() const {
   Fail("LogicalPlanRootNode is not expected to be queried for unique column combinations.");
 }
 

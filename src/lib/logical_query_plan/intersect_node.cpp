@@ -28,7 +28,7 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<UniqueColumnCombinations> IntersectNode::unique_column_combinations() const {
+UniqueColumnCombinations IntersectNode::unique_column_combinations() const {
   /**
    * Because INTERSECT acts as a pure filter for both input tables, all unique column combinations remain valid.
    *
@@ -48,7 +48,7 @@ std::shared_ptr<InclusionDependencies> IntersectNode::inclusion_dependencies() c
 }
 
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {
-  Fail("Merging of FDs should be implemented.");
+  Fail("Merging of FDs is not implemented.");
 }
 
 size_t IntersectNode::_on_shallow_hash() const {

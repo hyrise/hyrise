@@ -96,7 +96,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 
     const auto& soft_key_constraints = table->soft_key_constraints();
 
-    // Skip already discovered unique constraints.
+    // Skip already discovered UCCs.
     if (std::any_of(soft_key_constraints.cbegin(), soft_key_constraints.cend(),
                     [&column_id](const auto& key_constraint) {
                       const auto& columns = key_constraint.columns();
@@ -124,7 +124,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
         return;
       }
 
-      // We save UCC constraints directly inside the table so they can be forwarded to nodes in a query plan.
+      // We save UCCs directly inside the table so they can be forwarded to nodes in a query plan.
       message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
       Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
       table->add_soft_key_constraint(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE));
@@ -213,7 +213,7 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
       });
     }
 
-    // If not all elements have been inserted, there must be a duplicate, so the UCC constraint is violated.
+    // If not all elements have been inserted, there must be a duplicate, so the UCC is violated.
     if (distinct_values.size() != expected_distinct_value_count) {
       return false;
     }

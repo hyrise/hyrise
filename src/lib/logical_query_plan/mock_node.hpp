@@ -35,8 +35,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  // Generates UCCs from table's key constraints and pays respect to pruned columns.
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  // Generates UCCs from table's key constraints and drops UCCs that include pruned columns.
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   // Returns stored ODs and pays respect to pruned columns.
   std::shared_ptr<OrderDependencies> order_dependencies() const override;

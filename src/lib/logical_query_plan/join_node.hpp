@@ -36,7 +36,7 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    * (2) Discards all input UCCs for Cross Joins, Multi-Predicate Joins and Non-Equi-Joins.
    * (3) Forwards selected input UCCs for Inner and Outer Equi-Joins based on join column uniqueness.
    */
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 
@@ -125,9 +125,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
    *         of the given unique column combinations sets are returned.
    * Please note: This helper function can be called for all joins, except for Semi- and Anti-Join types.
    */
-  std::shared_ptr<UniqueColumnCombinations> _output_unique_column_combinations(
-      const std::shared_ptr<UniqueColumnCombinations>& left_unique_column_combinations,
-      const std::shared_ptr<UniqueColumnCombinations>& right_unique_column_combinations) const;
+  UniqueColumnCombinations _output_unique_column_combinations(
+      const UniqueColumnCombinations& left_unique_column_combinations,
+      const UniqueColumnCombinations& right_unique_column_combinations) const;
 
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

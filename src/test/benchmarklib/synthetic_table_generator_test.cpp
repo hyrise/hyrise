@@ -91,20 +91,8 @@ TEST_P(SyntheticTableGeneratorDataTypeTests, IntegerTable) {
 }
 
 auto formatter = [](const testing::TestParamInfo<Params> info) {
-  auto stream = std::stringstream{};
-  switch (std::get<1>(info.param).distribution_type) {
-    case DataDistributionType::Uniform:
-      stream << "Uniform";
-      break;
-    case DataDistributionType::Pareto:
-      stream << "Pareto";
-      break;
-    case DataDistributionType::NormalSkewed:
-      stream << "Skewed";
-  }
-
-  stream << "_" << data_type_to_string.left.at(std::get<0>(info.param));
-  return stream.str();
+  return std::string{magic_enum::enum_name(std::get<1>(info.param).distribution_type)} + "_" +
+         data_type_to_string.left.at(std::get<0>(info.param));
 };
 
 // For the skewed distribution, we use a location of 1,000 to move the distribution far into the positive number range.

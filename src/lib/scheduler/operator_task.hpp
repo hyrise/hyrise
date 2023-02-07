@@ -23,6 +23,12 @@ class OperatorTask : public AbstractTask {
    * Creates tasks recursively from the given operator @param op and sets task dependencies automatically.
    * @returns a pair, consisting of a vector of unordered tasks and a pointer to the root operator task that would
    *          otherwise be hidden inside the vector.
+   * Note: Creating tasks is not thread-safe and concurrently creating tasks from the same (sub-)PQP is discouraged. We
+   *       used to create tasks for uncorrelated subqueries ad-hoc and likely concurrently in the past, but this caused
+   *       either segfaults or deadlocks (see #2520). Thus, we only create (i) almost all tasks at once for each
+   *       SQLPipelineStatement and (ii) tasks for correlated subqueries ad-hoc in the ExpressionEvaluator (which have
+   *       to use a deep copy for each instance anyway, see
+   *       ExpressionEvaluator::_evaluate_subquery_expression_for_row).
    */
   static std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>> make_tasks_from_operator(
       const std::shared_ptr<AbstractOperator>& op);

@@ -19,7 +19,7 @@ class ProjectionNode : public EnableMakeForLQPNode<ProjectionNode>, public Abstr
    * Forwards unique column combinations from the left input node if the UCC's expressions remain part of the
    * ProjectionNode's output expressions.
    */
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 

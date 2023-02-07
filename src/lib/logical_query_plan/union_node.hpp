@@ -31,7 +31,7 @@ class UnionNode : public EnableMakeForLQPNode<UnionNode>, public AbstractLQPNode
    * (2) Discards all input unique column combinations for SetOperationMode::All and
    * (3) Fails for SetOperationMode::Unique, which is not yet implemented.
    */
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 

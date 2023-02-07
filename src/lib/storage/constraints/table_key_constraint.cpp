@@ -25,8 +25,8 @@ bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constra
 
 bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   // PRIMARY_KEY constraints are "smaller" than UNIQUE constraints. Thus, they are listed first when printing them.
-  if (_key_type < rhs.key_type()) {
-    return true;
+  if (_key_type != rhs.key_type()) {
+    return _key_type < rhs.key_type();
   }
 
   // As the columns were originally stored in a std::set, iteration is sorted and the result is not ambiguous.

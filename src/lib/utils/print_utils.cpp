@@ -77,8 +77,8 @@ namespace hyrise {
 template <typename Node>
 void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeGetChildrenFn<Node>& get_children_fn,
                                   const NodePrintFn<Node>& print_node_fn, std::ostream& stream) {
-  std::vector<bool> levels;
-  std::unordered_map<std::shared_ptr<Node>, size_t> id_by_node;
+  auto levels = std::vector<bool>{};
+  auto id_by_node = std::unordered_map<std::shared_ptr<Node>, size_t>{};
   auto id_counter = size_t{0};
 
   print_directed_acyclic_graph_impl<Node>(node, get_children_fn, print_node_fn, stream, levels, id_by_node, id_counter);
@@ -92,12 +92,12 @@ void print_table_key_constraints(const std::shared_ptr<const Table>& table, std:
     return;
   }
 
-  const auto& last_constraint = *(--table_key_constraints.cend());
+  const auto& last_constraint = *std::prev(table_key_constraints.cend());
   for (const auto& constraint : table_key_constraints) {
     stream << magic_enum::enum_name(constraint.key_type()) << "(";
     const auto& columns = constraint.columns();
     Assert(!columns.empty(), "Did not expect useless constraint");
-    const auto& last_column = *(--columns.cend());
+    const auto& last_column = *std::prev(columns.cend());
     for (auto column : columns) {
       stream << table->column_name(column);
       if (column != last_column) {

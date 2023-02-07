@@ -24,8 +24,8 @@ bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
   Fail("DummyTable does not output any columns");
 }
 
-std::shared_ptr<UniqueColumnCombinations> DummyTableNode::unique_column_combinations() const {
-  return std::make_shared<UniqueColumnCombinations>();
+UniqueColumnCombinations DummyTableNode::unique_column_combinations() const {
+  return UniqueColumnCombinations{};
 }
 
 std::shared_ptr<OrderDependencies> DummyTableNode::order_dependencies() const {

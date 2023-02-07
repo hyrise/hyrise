@@ -20,7 +20,7 @@ std::string LimitNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<UniqueColumnCombinations> LimitNode::unique_column_combinations() const {
+UniqueColumnCombinations LimitNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 

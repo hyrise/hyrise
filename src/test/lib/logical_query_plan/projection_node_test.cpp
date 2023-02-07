@@ -69,22 +69,21 @@ TEST_F(ProjectionNodeTest, NodeExpressions) {
 }
 
 TEST_F(ProjectionNodeTest, UniqueColumnCombinationsEmpty) {
-  EXPECT_TRUE(_mock_node->unique_column_combinations()->empty());
-  EXPECT_TRUE(_projection_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(_mock_node->unique_column_combinations().empty());
+  EXPECT_TRUE(_projection_node->unique_column_combinations().empty());
 }
 
 TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
   // Add constraints to MockNode.
   _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
-  EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
-
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
   {
     // Reorder columns: (a, b, c) -> (c, a, b).
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
 
     // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 2);
+    EXPECT_EQ(unique_column_combinations.size(), 2);
     // In-depth check.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b, unique_column_combinations));
@@ -96,7 +95,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
 
     // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 2);
+    EXPECT_EQ(unique_column_combinations.size(), 2);
     // In-depth check.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b, unique_column_combinations));
@@ -104,17 +103,17 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
 }
 
 TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
-  // Prepare two unique constraints for MockNode.
+  // Prepare two UCCs for MockNode.
   _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
-  EXPECT_EQ(_mock_node->unique_column_combinations()->size(), 2);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
   // Test (a, b, c) -> (a, c) - no more UCCs valid.
   _projection_node = ProjectionNode::make(expression_vector(_a, _c), _mock_node);
-  EXPECT_TRUE(_projection_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(_projection_node->unique_column_combinations().empty());
 
   // Test (a, b, c) -> (c) - no more UCCs valid.
   _projection_node = ProjectionNode::make(expression_vector(_c), _mock_node);
-  EXPECT_TRUE(_projection_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(_projection_node->unique_column_combinations().empty());
 
   {
     // Test (a, b, c) -> (a, b) - all UCCs remain valid.
@@ -122,7 +121,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
 
     // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 2);
+    EXPECT_EQ(unique_column_combinations.size(), 2);
     // In-depth check
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_a_b_pk, unique_column_combinations));
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b, unique_column_combinations));
@@ -134,7 +133,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsRemovedColumns) {
 
     // Basic check.
     const auto& unique_column_combinations = _projection_node->unique_column_combinations();
-    EXPECT_EQ(unique_column_combinations->size(), 1);
+    EXPECT_EQ(unique_column_combinations.size(), 1);
     // In-depth check.
     EXPECT_TRUE(find_ucc_by_key_constraint(*_key_constraint_b, unique_column_combinations));
   }

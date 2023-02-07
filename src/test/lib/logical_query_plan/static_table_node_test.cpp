@@ -82,7 +82,7 @@ TEST_F(StaticTableNodeTest, Copy) {
 
 TEST_F(StaticTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(dummy_table->soft_key_constraints().empty());
-  EXPECT_TRUE(static_table_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(static_table_node->unique_column_combinations().empty());
 }
 
 TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
@@ -94,7 +94,7 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
 
   // Basic check.
   const auto& unique_column_combinations = static_table_node->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations->size(), 2);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));

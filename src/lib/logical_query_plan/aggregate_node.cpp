@@ -94,9 +94,8 @@ bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinations() const {
-  const auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
-
+UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
   /**
    * (1) Forward unique column combinations from child nodes if all expressions belong to the group-by section.
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
@@ -119,19 +118,20 @@ std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinati
    *     => The UCC for {b, d} can be reformulated as { MAX(b), d }
    *
    *     Furthermore, for AggregateNodes without group by columns, where only one row is generated, all columns are
-   *     unique. We are not yet sure if this should be modeled as a unique constraint.
+   *     unique. We are not yet sure if this should be modeled as a UCCs.
    */
 
   // Check each UCC for applicability.
   const auto& output_expressions = this->output_expressions();
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
-  for (const auto& input_unique_constraint : *input_unique_column_combinations) {
+
+  for (const auto& input_unique_constraint : input_unique_column_combinations) {
     if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
     }
 
     // Forward UCC.
-    unique_column_combinations->emplace(input_unique_constraint);
+    unique_column_combinations.emplace(input_unique_constraint);
   }
 
   // (2) Create a new UCC from the group-by column(s), which form a candidate key for the output relation.
@@ -141,10 +141,10 @@ std::shared_ptr<UniqueColumnCombinations> AggregateNode::unique_column_combinati
     std::copy_n(node_expressions.begin(), group_by_columns_count,
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
-    // Make sure that we do not add an already existing or a superset unique constraint.
-    if (unique_column_combinations->empty() ||
+    // Make sure that we do not add an already existing or a superset UCC.
+    if (unique_column_combinations.empty() ||
         !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
-      unique_column_combinations->emplace(group_by_columns);
+      unique_column_combinations.emplace(group_by_columns);
     }
   }
 

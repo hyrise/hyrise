@@ -185,12 +185,13 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * @return Unique column combinations (UCCs) valid for the current LQP. See unique_column_combination.hpp for more
    *         documentation.
    */
-  virtual std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const = 0;
+  virtual UniqueColumnCombinations unique_column_combinations() const = 0;
 
   /**
-   * @return True, if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
+   * @return True if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
    *         the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_ucc(unique_column_combinations(), ...) as it performs additional sanity checks.
+   *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
+   *         sanity checks.
    */
   bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
@@ -203,8 +204,8 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   FunctionalDependencies functional_dependencies() const;
 
   /**
-   * This is a helper method that returns non-trivial FDs valid for the current node.
-   * We consider FDs as non-trivial if we cannot derive them from the current node's unique constraints.
+   * This is a helper method that returns non-trivial FDs valid for the current node. We consider FDs as non-trivial if
+   *  we cannot derive them from the current node's unique column combinations.
    *
    * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
    * an empty vector.
@@ -264,7 +265,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    * This is a helper method for node types that do not have an effect on the UCCs from input nodes.
    * @return All unique column combinations from the left input node.
    */
-  std::shared_ptr<UniqueColumnCombinations> _forward_left_unique_column_combinations() const;
+  UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
   std::shared_ptr<OrderDependencies> _forward_left_order_dependencies() const;
 

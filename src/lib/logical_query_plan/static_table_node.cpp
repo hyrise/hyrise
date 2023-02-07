@@ -49,16 +49,16 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   return *_output_expressions;
 }
 
-std::shared_ptr<UniqueColumnCombinations> StaticTableNode::unique_column_combinations() const {
+UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints
-  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
+  auto unique_column_combinations = UniqueColumnCombinations{};
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_column_combinations->emplace(column_expressions);
+    unique_column_combinations.emplace(column_expressions);
   }
 
   return unique_column_combinations;

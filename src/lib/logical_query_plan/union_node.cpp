@@ -35,7 +35,7 @@ bool UnionNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<UniqueColumnCombinations> UnionNode::unique_column_combinations() const {
+UniqueColumnCombinations UnionNode::unique_column_combinations() const {
   switch (set_operation_mode) {
     case SetOperationMode::Positions: {
       /**
@@ -47,7 +47,7 @@ std::shared_ptr<UniqueColumnCombinations> UnionNode::unique_column_combinations(
        * true in the future. We assert this behaviour so that we are aware if this ever changes.
        */
       const auto& left_unique_column_combinations = _forward_left_unique_column_combinations();
-      Assert(*left_unique_column_combinations == *right_input()->unique_column_combinations(),
+      Assert(left_unique_column_combinations == right_input()->unique_column_combinations(),
              "Input tables should have the same unique column combinations.");
       return left_unique_column_combinations;
     }
@@ -57,7 +57,7 @@ std::shared_ptr<UniqueColumnCombinations> UnionNode::unique_column_combinations(
        * child nodes, we would have to ensure that both input tables are completely distinct in terms of rows.
        * Currently, there is no strategy. Thus, we discard all unique column combinations.
        */
-      return std::make_shared<UniqueColumnCombinations>();
+      return UniqueColumnCombinations{};
     }
     case SetOperationMode::Unique:
       Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
@@ -75,9 +75,9 @@ std::shared_ptr<OrderDependencies> UnionNode::order_dependencies() const {
     }
     case SetOperationMode::All: {
       /**
-       * With UnionAll, two tables become merged. The resulting table might contain duplicates.
-       * To forward constraints from child nodes, we would have to ensure that both input tables are completely
-       * distinct in terms of rows. Currently, there is no strategy. Therefore, we discard all unique constraints.
+       * With UnionAll, two tables become merged. The resulting table might contain duplicates. To forward UCCs from
+       * child nodes, we would have to ensure that both input tables are completely distinct in terms of rows.
+       * Currently, there is no strategy. Thus, we discard all unique column combinations.
        */
       return std::make_shared<OrderDependencies>();
     }
@@ -113,8 +113,8 @@ FunctionalDependencies UnionNode::non_trivial_functional_dependencies() const {
   switch (set_operation_mode) {
     case SetOperationMode::All: {
       /**
-       * With UnionAll, unique constraints from both input nodes become discarded. To preserve trivial FDs, we
-       * request all available FDs from both input nodes.
+       * With UnionAll, UCCs from both input nodes are discarded. To preserve trivial FDs, we request all available FDs
+       * from both input nodes.
        */
       const auto& fds_left = left_input()->functional_dependencies();
       const auto& fds_right = right_input()->functional_dependencies();

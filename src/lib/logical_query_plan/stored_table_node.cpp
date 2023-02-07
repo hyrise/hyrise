@@ -17,9 +17,8 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
-  return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& current_column_id) {
-    return std::any_of(search_columns.cbegin(), search_columns.cend(),
-                       [&](const auto column_id) { return column_id == current_column_id; });
+  return std::any_of(search_columns.cbegin(), search_columns.cend(), [&](const auto& search_column_id) {
+    return std::find(columns.cbegin(), columns.cend(), search_column_id) != columns.cend();
   });
 }
 
@@ -48,7 +47,7 @@ std::vector<std::shared_ptr<AbstractExpression>> find_expressions(
 
 namespace hyrise {
 
-using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 StoredTableNode::StoredTableNode(const std::string& init_table_name)
     : AbstractLQPNode(LQPNodeType::StoredTable), table_name(init_table_name) {}
@@ -136,8 +135,8 @@ bool StoredTableNode::is_column_nullable(const ColumnID column_id) const {
   return table->column_is_nullable(column_id);
 }
 
-std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combinations() const {
-  auto unique_column_combinations = std::make_shared<UniqueColumnCombinations>();
+UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
 
   // We create unique column combinations from selected table key constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
@@ -155,7 +154,7 @@ std::shared_ptr<UniqueColumnCombinations> StoredTableNode::unique_column_combina
                 "Unexpected count of column expressions.");
 
     // Create UniqueColumnCombination
-    unique_column_combinations->emplace(column_expressions);
+    unique_column_combinations.emplace(column_expressions);
   }
 
   return unique_column_combinations;

@@ -10,7 +10,7 @@ std::string ValidateNode::description(const DescriptionMode mode) const {
   return "[Validate]";
 }
 
-std::shared_ptr<UniqueColumnCombinations> ValidateNode::unique_column_combinations() const {
+UniqueColumnCombinations ValidateNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 

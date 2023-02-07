@@ -30,7 +30,7 @@ class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public Abstrac
   bool is_column_nullable(const ColumnID column_id) const override;
 
   // Forwards unique column combinations from the left input node
-  std::shared_ptr<UniqueColumnCombinations> unique_column_combinations() const override;
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   std::shared_ptr<OrderDependencies> order_dependencies() const override;
 

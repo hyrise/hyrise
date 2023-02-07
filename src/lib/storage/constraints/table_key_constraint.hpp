@@ -1,5 +1,7 @@
 #pragma once
 
+#include <unordered_set>
+
 #include "abstract_table_constraint.hpp"
 
 namespace hyrise {
@@ -7,8 +9,8 @@ namespace hyrise {
 enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
 /**
- * Container class to define uniqueness constraints for tables.
- * As defined by SQL, two types of keys are supported: PRIMARY KEY and UNIQUE keys.
+ * Container class to define uniqueness constraints for tables. As defined by SQL, two types of keys are supported:
+ * PRIMARY KEY and UNIQUE keys.
  */
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:

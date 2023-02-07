@@ -72,8 +72,8 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
 }
 
 TEST_F(AliasNodeTest, UniqueColumnCombinationsEmpty) {
-  EXPECT_TRUE(mock_node->unique_column_combinations()->empty());
-  EXPECT_TRUE(alias_node->unique_column_combinations()->empty());
+  EXPECT_TRUE(mock_node->unique_column_combinations().empty());
+  EXPECT_TRUE(alias_node->unique_column_combinations().empty());
 }
 
 TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
@@ -84,7 +84,7 @@ TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
 
   // Basic check.
   const auto& unique_column_combinations = alias_node->unique_column_combinations();
-  EXPECT_EQ(unique_column_combinations->size(), 2);
+  EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));

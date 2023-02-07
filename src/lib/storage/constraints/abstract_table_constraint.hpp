@@ -13,6 +13,7 @@ class AbstractTableConstraint {
  public:
   explicit AbstractTableConstraint(std::vector<ColumnID> columns);
 
+  AbstractTableConstraint() = delete;
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
   AbstractTableConstraint& operator=(const AbstractTableConstraint&) = default;
@@ -20,9 +21,8 @@ class AbstractTableConstraint {
 
   virtual ~AbstractTableConstraint() = default;
 
-  // Some data dependencies have set semantics for columns, others have list semantics. A list is generally applicable,
-  // and a constraint is responsible for handling columns accordingly when it has set semantics in its own
-  // (see table_key_constraint.hpp).
+  // Data dependencies might have either set or list semanticss. A list is generally applicable, and a constraint is
+  // responsible for handling columns accordingly when it uses certain semantics see table_key_constraint.hpp).
   const std::vector<ColumnID>& columns() const;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
@@ -38,9 +38,6 @@ class AbstractTableConstraint {
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
   std::vector<ColumnID> _columns;
-
- private:
-  AbstractTableConstraint() = delete;
 };
 
 }  // namespace hyrise

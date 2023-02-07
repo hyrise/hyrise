@@ -95,7 +95,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
 
     // Gather group-by columns
     const auto fetch_group_by_columns = [&aggregate_node]() {
-      ExpressionUnorderedSet group_by_columns(aggregate_node.aggregate_expressions_begin_idx + 1);
+      auto group_by_columns = ExpressionUnorderedSet{aggregate_node.aggregate_expressions_begin_idx + 1};
       auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
       std::copy(node_expressions_iter, node_expressions_iter + aggregate_node.aggregate_expressions_begin_idx,
                 std::inserter(group_by_columns, group_by_columns.end()));
@@ -103,10 +103,34 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     };
     auto group_by_columns = fetch_group_by_columns();
 
+    // Get a sorted list of ColumnIDs from an FD's set of determinants.
+    const auto get_column_ids = [&](const auto& determinants) {
+      auto column_ids = std::vector<ColumnID>{};
+      column_ids.reserve(determinants.size());
+      for (const auto& expression : determinants) {
+        const auto column_id = find_expression_idx(*expression, initial_aggregate_output_expressions);
+        Assert(column_id, "Could not find column " + expression->as_column_name());
+        column_ids.emplace_back(*column_id);
+      }
+      std::sort(column_ids.begin(), column_ids.end());
+      return column_ids;
+    };
+
     // Sort the FDs by their left set's column count in hope that the shortest will later form the group-by clause.
     auto ordered_fds = std::vector<FunctionalDependency>{fds.cbegin(), fds.cend()};
-    std::sort(ordered_fds.begin(), ordered_fds.end(), [](const auto& fd_left, const auto& fd_right) {
-      return fd_left.determinants.size() < fd_right.determinants.size();
+    std::sort(ordered_fds.begin(), ordered_fds.end(), [&](const auto& fd_left, const auto& fd_right) {
+      const auto left_determinant_size = fd_left.determinants.size();
+      const auto right_determinant_size = fd_right.determinants.size();
+      if (left_determinant_size != right_determinant_size) {
+        return left_determinant_size < right_determinant_size;
+      }
+
+      // The FDs are expected to be equally useful for the rewrite. However, we have to decide on semantics here to make
+      // the order independent of the position of the FDs in the original set (which might differ due to standard
+      // library implementation details). Thus, we compare the ColumnIDs of the determinants.
+      const auto& left_column_ids = get_column_ids(fd_left.determinants);
+      const auto& right_column_ids = get_column_ids(fd_right.determinants);
+      return left_column_ids < right_column_ids;
     });
 
     // --- Main: Reduction phase ---
