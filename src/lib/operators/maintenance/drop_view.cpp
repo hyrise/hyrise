@@ -32,7 +32,7 @@ std::shared_ptr<const Table> DropView::_on_execute() {
     Hyrise::get().storage_manager.drop_view(view_name);
   }
 
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
+  return nullptr;
 }
 
 }  // namespace hyrise

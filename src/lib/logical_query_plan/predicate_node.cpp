@@ -8,6 +8,7 @@
 #include "expression/between_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/is_null_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/value_expression.hpp"
 #include "operators/operator_scan_predicate.hpp"
@@ -27,8 +28,8 @@ std::string PredicateNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> PredicateNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+UniqueColumnCombinations PredicateNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 std::shared_ptr<AbstractExpression> PredicateNode::predicate() const {

@@ -11,9 +11,9 @@
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
-#include "table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -201,8 +201,8 @@ class Table : private Noncopyable {
   }
 
   /**
-   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" key constraints to draw attention to that.
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" constraints to draw attention to that.
    */
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;

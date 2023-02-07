@@ -74,16 +74,9 @@ class CompressedVectorTest : public BaseTestWithParam<VectorCompressionType> {
   }
 };
 
-auto compressed_vector_test_formatter = [](const ::testing::TestParamInfo<VectorCompressionType> info) {
-  const auto type = info.param;
-  auto string = vector_compression_type_to_string.left.at(type);
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(VectorCompressionTypes, CompressedVectorTest,
                          ::testing::Values(VectorCompressionType::FixedWidthInteger, VectorCompressionType::BitPacking),
-                         compressed_vector_test_formatter);
+                         enum_formatter<VectorCompressionType>);
 
 TEST_P(CompressedVectorTest, DecodeIncreasingSequenceUsingIterators) {
   const auto sequence = this->generate_sequence(4'200, 8u);

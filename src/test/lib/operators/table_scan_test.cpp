@@ -257,14 +257,10 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
   std::shared_ptr<TableWrapper> _int_int_partly_compressed;
 };
 
-auto table_scan_test_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
-  return std::to_string(static_cast<uint32_t>(info.param));
-};
-
 INSTANTIATE_TEST_SUITE_P(EncodingTypes, OperatorsTableScanTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::FrameOfReference),
-                         table_scan_test_formatter);
+                         enum_formatter<EncodingType>);
 
 TEST_P(OperatorsTableScanTest, DoubleScan) {
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered.tbl", ChunkOffset{2});

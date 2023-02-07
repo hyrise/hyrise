@@ -14,19 +14,19 @@ bool FunctionalDependency::operator==(const FunctionalDependency& other) const {
   // Cannot use unordered_set::operator== because it ignores the custom equality function.
   // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
 
-  // Quick check for cardinality
+  // Quick check for cardinality.
   if (determinants.size() != other.determinants.size() || dependents.size() != other.dependents.size()) {
     return false;
   }
 
-  // Compare determinants
+  // Compare determinants.
   for (const auto& expression : other.determinants) {
     if (!determinants.contains(expression)) {
       return false;
     }
   }
 
-  // Compare dependants
+  // Compare dependants.
   for (const auto& expression : other.dependents) {
     if (!dependents.contains(expression)) {
       return false;
@@ -71,13 +71,12 @@ std::ostream& operator<<(std::ostream& stream, const FunctionalDependency& expre
   return stream;
 }
 
-std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<FunctionalDependency>& fds) {
+FunctionalDependencies inflate_fds(const FunctionalDependencies& fds) {
   if (fds.empty()) {
     return {};
   }
 
-  auto inflated_fds = std::unordered_set<FunctionalDependency>();
-  inflated_fds.reserve(fds.size());
+  auto inflated_fds = FunctionalDependencies{fds.size()};
 
   for (const auto& fd : fds) {
     if (fd.dependents.size() == 1) {
@@ -92,27 +91,27 @@ std::unordered_set<FunctionalDependency> inflate_fds(const std::vector<Functiona
   return inflated_fds;
 }
 
-std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDependency>& fds) {
+FunctionalDependencies deflate_fds(const FunctionalDependencies& fds) {
   if (fds.empty()) {
     return {};
   }
 
-  auto deflated_fds = std::vector<FunctionalDependency>();
-  deflated_fds.reserve(fds.size());
+  // We cannot use a set here as we want to add dependents to existing FDs and objects in sets are immutable.
+  auto existing_fds = std::vector<std::pair<ExpressionUnorderedSet, ExpressionUnorderedSet>>{};
+  existing_fds.reserve(fds.size());
 
   for (const auto& fd_to_add : fds) {
-    auto existing_fd = std::find_if(deflated_fds.begin(), deflated_fds.end(), [&fd_to_add](auto& fd) {
-      // Cannot use unordered_set::operator== because it ignores the custom equality function.
-      // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
-
-      // Quick check for cardinality
-      if (fd.determinants.size() != fd_to_add.determinants.size()) {
+    // Check if we have seen an FD with the same determinants.
+    auto existing_fd = std::find_if(existing_fds.begin(), existing_fds.end(), [&](const auto& fd) {
+      // Quick check for cardinality.
+      const auto& determinants = fd.first;
+      if (determinants.size() != fd_to_add.determinants.size()) {
         return false;
       }
 
-      // Compare determinants
+      // Compare determinants.
       for (const auto& expression : fd_to_add.determinants) {
-        if (!fd.determinants.contains(expression)) {
+        if (!determinants.contains(expression)) {
           return false;
         }
       }
@@ -120,26 +119,23 @@ std::vector<FunctionalDependency> deflate_fds(const std::vector<FunctionalDepend
       return true;
     });
 
-    if (existing_fd == deflated_fds.end()) {
-      deflated_fds.push_back(fd_to_add);
+    // If we have found an FD with same determinants, add the dependents. Otherwise, add a new FD.
+    if (existing_fd != existing_fds.end()) {
+      existing_fd->second.insert(fd_to_add.dependents.cbegin(), fd_to_add.dependents.cend());
     } else {
-      // An FD with the same determinant expressions already exists. Therefore, we only have to add to the dependent
-      // expressions set
-      existing_fd->dependents.insert(fd_to_add.dependents.begin(), fd_to_add.dependents.end());
+      existing_fds.emplace_back(fd_to_add.determinants, fd_to_add.dependents);
     }
+  }
+
+  auto deflated_fds = FunctionalDependencies(fds.size());
+  for (const auto& [determinants, dependents] : existing_fds) {
+    deflated_fds.emplace(determinants, dependents);
   }
 
   return deflated_fds;
 }
 
-std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependency>& fds_a,
-                                            const std::vector<FunctionalDependency>& fds_b) {
-  if constexpr (HYRISE_DEBUG) {
-    auto fds_a_set = std::unordered_set<FunctionalDependency>(fds_a.begin(), fds_a.end());
-    auto fds_b_set = std::unordered_set<FunctionalDependency>(fds_b.begin(), fds_b.end());
-    Assert(fds_a.size() == fds_a_set.size() && fds_b.size() == fds_b_set.size(),
-           "Did not expect input vector to contain multiple FDs with the same determinant expressions");
-  }
+FunctionalDependencies union_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b) {
   if (fds_a.empty()) {
     return fds_b;
   }
@@ -148,17 +144,15 @@ std::vector<FunctionalDependency> union_fds(const std::vector<FunctionalDependen
     return fds_a;
   }
 
-  auto fds_unified = std::vector<FunctionalDependency>();
+  auto fds_unified = FunctionalDependencies{fds_a.cbegin(), fds_a.cend()};
   fds_unified.reserve(fds_a.size() + fds_b.size());
-  fds_unified.insert(fds_unified.end(), fds_a.begin(), fds_a.end());
-  fds_unified.insert(fds_unified.end(), fds_b.begin(), fds_b.end());
+  fds_unified.insert(fds_b.begin(), fds_b.end());
 
   // To get rid of potential duplicates, we call deflate before returning.
   return deflate_fds(fds_unified);
 }
 
-std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDependency>& fds_a,
-                                                const std::vector<FunctionalDependency>& fds_b) {
+FunctionalDependencies intersect_fds(const FunctionalDependencies& fds_a, const FunctionalDependencies& fds_b) {
   if (fds_a.empty() || fds_b.empty()) {
     return {};
   }
@@ -166,12 +160,12 @@ std::vector<FunctionalDependency> intersect_fds(const std::vector<FunctionalDepe
   const auto& inflated_fds_a = inflate_fds(fds_a);
   const auto& inflated_fds_b = inflate_fds(fds_b);
 
-  auto intersected_fds = std::vector<FunctionalDependency>();
+  auto intersected_fds = FunctionalDependencies();
   intersected_fds.reserve(fds_a.size());
 
   for (const auto& fd : inflated_fds_a) {
     if (inflated_fds_b.contains(fd)) {
-      intersected_fds.push_back(fd);
+      intersected_fds.emplace(fd);
     }
   }
 

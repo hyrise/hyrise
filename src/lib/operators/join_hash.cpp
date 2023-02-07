@@ -164,7 +164,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
   // For other join modes, we need to check which side has been chosen as the probe side (see variable
   // `build_hash_table_for_right_input` for more details).
   auto output_column_order = OutputColumnOrder{};
-  if (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse) {
+  if (is_semi_or_anti_join(_mode)) {
     output_column_order = OutputColumnOrder::RightOnly;
   } else if (build_hash_table_for_right_input) {
     output_column_order = OutputColumnOrder::RightFirstLeftSecond;
@@ -437,8 +437,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    probe step.
      */
     Timer timer_hash_map_building;
-    if (_secondary_predicates.empty() &&
-        (_mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsTrue || _mode == JoinMode::AntiNullAsFalse)) {
+    if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
     } else {

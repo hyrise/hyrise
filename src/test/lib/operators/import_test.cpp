@@ -24,15 +24,8 @@ class OperatorsImportTest : public BaseTest {
 
 class OperatorsImportMultiFileTypeTest : public OperatorsImportTest, public ::testing::WithParamInterface<FileType> {};
 
-auto import_test_formatter = [](const ::testing::TestParamInfo<FileType> info) {
-  auto string = std::string{magic_enum::enum_name(info.param)};
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(FileTypes, OperatorsImportMultiFileTypeTest,
-                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), import_test_formatter);
+                         ::testing::Values(FileType::Csv, FileType::Tbl, FileType::Binary), enum_formatter<FileType>);
 
 TEST_P(OperatorsImportMultiFileTypeTest, ImportWithFileType) {
   auto expected_table =

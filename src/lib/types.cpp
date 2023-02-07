@@ -139,6 +139,10 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
   Fail("Unexpected PredicateCondition");
 }
 
+bool is_semi_or_anti_join(const JoinMode join_mode) {
+  return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsFalse || join_mode == JoinMode::AntiNullAsTrue;
+}
+
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition) {
   static const auto predicate_condition_to_string = std::unordered_map<PredicateCondition, std::string>({
       {PredicateCondition::Equals, "="},

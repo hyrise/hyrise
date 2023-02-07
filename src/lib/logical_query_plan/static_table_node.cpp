@@ -48,19 +48,19 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   return *_output_expressions;
 }
 
-std::shared_ptr<LQPUniqueConstraints> StaticTableNode::unique_constraints() const {
+UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   // Generate from table key constraints
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+  auto unique_column_combinations = UniqueColumnCombinations{};
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
-    unique_constraints->emplace_back(column_expressions);
+    unique_column_combinations.emplace(column_expressions);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
@@ -72,11 +72,13 @@ size_t StaticTableNode::_on_shallow_hash() const {
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
-  for (const auto& table_key_constraint : table->soft_key_constraints()) {
-    boost::hash_combine(hash, table_key_constraint.hash());
+  const auto& soft_key_constraints = table->soft_key_constraints();
+  for (const auto& table_key_constraint : soft_key_constraints) {
+    // To make the hash independent of the expressions' order, we have to use a commutative operator like XOR.
+    hash = hash ^ table_key_constraint.hash();
   }
 
-  return hash;
+  return boost::hash_value(hash - soft_key_constraints.size());
 }
 
 std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
