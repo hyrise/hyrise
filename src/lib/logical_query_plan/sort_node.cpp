@@ -40,7 +40,7 @@ UniqueColumnCombinations SortNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
-std::shared_ptr<OrderDependencies> SortNode::order_dependencies() const {
+OrderDependencies SortNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 

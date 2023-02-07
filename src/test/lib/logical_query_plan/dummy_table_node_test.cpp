@@ -41,7 +41,7 @@ TEST_F(DummyTableNodeTest, NodeExpressions) {
 }
 
 TEST_F(DummyTableNodeTest, NoOrderDependencies) {
-  EXPECT_TRUE(_dummy_table_node->order_dependencies()->empty());
+  EXPECT_TRUE(_dummy_table_node->order_dependencies().empty());
 }
 
 }  // namespace hyrise

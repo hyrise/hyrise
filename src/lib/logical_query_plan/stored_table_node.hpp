@@ -46,7 +46,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   // Generates unique column combinations from a table's key constraints. Drops UCCs that include pruned columns.
   UniqueColumnCombinations unique_column_combinations() const override;
 
-  std::shared_ptr<OrderDependencies> order_dependencies() const override;
+  OrderDependencies order_dependencies() const override;
 
   std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;
 

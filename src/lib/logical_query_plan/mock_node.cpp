@@ -127,8 +127,8 @@ void MockNode::set_order_dependencies(const OrderDependencies& order_dependencie
   _order_dependencies = order_dependencies;
 }
 
-std::shared_ptr<OrderDependencies> MockNode::order_dependencies() const {
-  const auto order_dependencies = std::make_shared<OrderDependencies>();
+OrderDependencies MockNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
   const auto& output_expressions = this->output_expressions();
   for (const auto& od : _order_dependencies) {
     if (!(contains_all_expressions(od.expressions, output_expressions) &&
@@ -136,7 +136,7 @@ std::shared_ptr<OrderDependencies> MockNode::order_dependencies() const {
       continue;
     }
 
-    order_dependencies->emplace(od);
+    order_dependencies.emplace(od);
   }
   return order_dependencies;
 }

@@ -101,7 +101,7 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
 }
 
 TEST_F(StaticTableNodeTest, NoOrderDependencies) {
-  EXPECT_TRUE(static_table_node->order_dependencies()->empty());
+  EXPECT_TRUE(static_table_node->order_dependencies().empty());
 }
 
 }  // namespace hyrise

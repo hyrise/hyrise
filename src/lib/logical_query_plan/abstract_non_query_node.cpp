@@ -18,7 +18,7 @@ UniqueColumnCombinations AbstractNonQueryNode::unique_column_combinations() cons
   Fail("Node does not support unique column combinations.");
 }
 
-std::shared_ptr<OrderDependencies> AbstractNonQueryNode::order_dependencies() const {
+OrderDependencies AbstractNonQueryNode::order_dependencies() const {
   Fail("Node does not support order depedencies.");
 }
 

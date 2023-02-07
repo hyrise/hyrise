@@ -267,7 +267,7 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
   const auto od_a_to_b_c = OrderDependency{{_a}, {_b, _c}};
   const auto od_a_b_to_c = OrderDependency{{_a, _b}, {_c}};
   _mock_node->set_order_dependencies({od_a_to_b, od_a_to_b_c, od_a_b_to_c});
-  EXPECT_EQ(_mock_node->order_dependencies()->size(), 3);
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 3);
 
   const auto aggregate_a = sum_(_a);
   const auto aggregate_b = min_(_b);
@@ -278,25 +278,25 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
     const auto& aggregate_node =
         AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node);
     const auto& order_dependencies = aggregate_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 3);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b_c));
-    EXPECT_TRUE(order_dependencies->contains(od_a_b_to_c));
+    EXPECT_EQ(order_dependencies.size(), 3);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b_c));
+    EXPECT_TRUE(order_dependencies.contains(od_a_b_to_c));
   }
   {
     // All columns are aggregated, no ODs remain valid.
     const auto& aggregate_node =
         AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b), min_(_c)), _mock_node);
     const auto& order_dependencies = aggregate_node->order_dependencies();
-    EXPECT_TRUE(order_dependencies->empty());
+    EXPECT_TRUE(order_dependencies.empty());
   }
   {
     // c is aggregated, a is the group key, b has an ANY aggregate. Only the first OD remains valid.
     const auto& aggregate_node =
         AggregateNode::make(expression_vector(_a), expression_vector(any_(_b), avg_(_c)), _mock_node);
     const auto& order_dependencies = aggregate_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 1);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
   }
 }
 

@@ -432,14 +432,14 @@ UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinatio
   return input_unique_column_combinations;
 }
 
-std::shared_ptr<OrderDependencies> AbstractLQPNode::_forward_left_order_dependencies() const {
+OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
   Assert(left_input(), "Cannot forward order dependencies without an input node.");
   const auto& input_order_dependencies = left_input()->order_dependencies();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
     const auto& output_expressions = this->output_expressions();
-    for (const auto& od : *input_order_dependencies) {
+    for (const auto& od : input_order_dependencies) {
       Assert(contains_all_expressions(od.expressions, output_expressions) &&
                  contains_all_expressions(od.ordered_expressions, output_expressions),
              "Forwarding of OD is illegal because node misses output expressions.");

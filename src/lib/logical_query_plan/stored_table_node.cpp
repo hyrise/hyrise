@@ -160,8 +160,8 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
-std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
-  const auto order_dependencies = std::make_shared<OrderDependencies>();
+OrderDependencies StoredTableNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
 
   // We create order dependencies from table order constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
@@ -181,16 +181,16 @@ std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
         find_expressions(table_order_constraint.ordered_columns(), output_expressions);
 
     // Create OrderDependency.
-    order_dependencies->emplace(column_expressions, ordered_column_expressions);
+    order_dependencies.emplace(column_expressions, ordered_column_expressions);
   }
 
   // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
   auto transitive_ods = std::vector<OrderDependency>{};
   do {
     transitive_ods = std::vector<OrderDependency>{};
-    for (const auto& od : *order_dependencies) {
+    for (const auto& od : order_dependencies) {
       const auto& ordered_expressions = od.ordered_expressions;
-      for (const auto& candidate_od : *order_dependencies) {
+      for (const auto& candidate_od : order_dependencies) {
         const auto& candidate_expressions = candidate_od.expressions;
         if (ordered_expressions.size() != candidate_expressions.size() ||
             !contains_all_expressions(ordered_expressions, candidate_expressions)) {
@@ -199,7 +199,7 @@ std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
 
         const auto& transitive_od = OrderDependency(od.expressions, candidate_od.ordered_expressions);
         // Skip if OD is already known or OD has column on both sides.
-        if (order_dependencies->contains(transitive_od) ||
+        if (order_dependencies.contains(transitive_od) ||
             std::any_of(
                 transitive_od.expressions.cbegin(), transitive_od.expressions.cend(), [&](const auto& expression) {
                   return contains_all_expressions(expression_vector(expression), candidate_od.ordered_expressions);
@@ -210,7 +210,7 @@ std::shared_ptr<OrderDependencies> StoredTableNode::order_dependencies() const {
         transitive_ods.emplace_back(transitive_od);
       }
     }
-    order_dependencies->insert(transitive_ods.cbegin(), transitive_ods.cend());
+    order_dependencies.insert(transitive_ods.cbegin(), transitive_ods.cend());
   } while (!transitive_ods.empty());
 
   return order_dependencies;

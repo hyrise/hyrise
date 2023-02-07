@@ -74,19 +74,19 @@ TEST_F(IntersectNodeTest, ForwardOrderDependencies) {
   const auto od_a_to_b = OrderDependency{{_a}, {_b}};
   const auto od_a_to_c = OrderDependency{{_a}, {_c}};
   _mock_node1->set_order_dependencies({od_a_to_b, od_a_to_c});
-  EXPECT_EQ(_mock_node1->order_dependencies()->size(), 2);
+  EXPECT_EQ(_mock_node1->order_dependencies().size(), 2);
 
   const auto od_u_to_v = OrderDependency{{_mock_node2->get_column("u")}, {_mock_node2->get_column("v")}};
   _mock_node2->set_order_dependencies({od_u_to_v});
-  EXPECT_EQ(_mock_node2->order_dependencies()->size(), 1);
+  EXPECT_EQ(_mock_node2->order_dependencies().size(), 1);
 
   _intersect_node->set_right_input(_mock_node2);
 
   const auto& order_dependencies = _intersect_node->order_dependencies();
-  EXPECT_EQ(order_dependencies->size(), 2);
-  EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
-  EXPECT_TRUE(order_dependencies->contains(od_a_to_c));
-  EXPECT_FALSE(order_dependencies->contains(od_u_to_v));
+  EXPECT_EQ(order_dependencies.size(), 2);
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  EXPECT_FALSE(order_dependencies.contains(od_u_to_v));
 }
 
 }  // namespace hyrise

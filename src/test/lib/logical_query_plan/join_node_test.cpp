@@ -698,32 +698,32 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
   const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
   _mock_node_a->set_order_dependencies({od_a_to_c});
   _mock_node_b->set_order_dependencies({od_y_to_x});
-  EXPECT_EQ(_mock_node_a->order_dependencies()->size(), 1);
-  EXPECT_EQ(_mock_node_b->order_dependencies()->size(), 1);
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
 
   // Semi and anti joins should forward ODs from left input.
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 1) << "With join mode " << magic_enum::enum_name(join_mode);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c)) << "With join mode " << magic_enum::enum_name(join_mode);
+    EXPECT_EQ(order_dependencies.size(), 1) << "With join mode " << magic_enum::enum_name(join_mode);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c)) << "With join mode " << magic_enum::enum_name(join_mode);
   }
 
   // Outer joins should forward ODs from left and right input.
   for (const auto join_mode : {JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 2) << "With join mode " << magic_enum::enum_name(join_mode);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c)) << "With join mode " << magic_enum::enum_name(join_mode);
-    EXPECT_TRUE(order_dependencies->contains(od_y_to_x)) << "With join mode " << magic_enum::enum_name(join_mode);
+    EXPECT_EQ(order_dependencies.size(), 2) << "With join mode " << magic_enum::enum_name(join_mode);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c)) << "With join mode " << magic_enum::enum_name(join_mode);
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x)) << "With join mode " << magic_enum::enum_name(join_mode);
   }
 
   // Cross joins should also forward ODs from left and right input.
   {
     const auto& order_dependencies = _cross_join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 2);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c));
-    EXPECT_TRUE(order_dependencies->contains(od_y_to_x));
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
   }
 
   // Inner joins forward ODs from left and right input. If the join predicates are equals predicates and the join
@@ -732,11 +732,11 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
   // columns form ODs.
   {
     const auto& order_dependencies = _inner_join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 4);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c));
-    EXPECT_TRUE(order_dependencies->contains(od_y_to_x));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
+    EXPECT_EQ(order_dependencies.size(), 4);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
   }
 
   // Case (ii): No equi join.
@@ -744,9 +744,9 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
     const auto inner_join_node =
         JoinNode::make(JoinMode::Inner, less_than_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = inner_join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 2);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c));
-    EXPECT_TRUE(order_dependencies->contains(od_y_to_x));
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
   }
 
   // Case (iii): OD from left input leads to new ODs with columns from the right input.
@@ -756,14 +756,14 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
     _mock_node_b->set_order_dependencies({od_y_to_x});
 
     const auto& order_dependencies = _inner_join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 6);
-    EXPECT_TRUE(order_dependencies->contains(od_b_to_a));
-    EXPECT_TRUE(order_dependencies->contains(od_y_to_x));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
+    EXPECT_EQ(order_dependencies.size(), 6);
+    EXPECT_TRUE(order_dependencies.contains(od_b_to_a));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
 
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_a_b}, {_t_b_y}}));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_a_b}, {_t_b_x}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_b}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_b}, {_t_b_x}}));
   }
 
   // Case (iv): OD from right input leads to new ODs with columns from the left input.
@@ -774,14 +774,14 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
     _mock_node_b->set_order_dependencies({od_x_to_y});
 
     const auto& order_dependencies = _inner_join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 6);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
-    EXPECT_TRUE(order_dependencies->contains(od_x_to_y));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
+    EXPECT_EQ(order_dependencies.size(), 6);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_x_to_y));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_a}, {_t_b_y}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_a}}));
 
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_b_x}, {_t_a_a}}));
-    EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_t_b_x}, {_t_a_b}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_x}, {_t_a_a}}));
+    EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_x}, {_t_a_b}}));
   }
 }
 

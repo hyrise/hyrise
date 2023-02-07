@@ -217,7 +217,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   virtual FunctionalDependencies non_trivial_functional_dependencies() const;
 
-  virtual std::shared_ptr<OrderDependencies> order_dependencies() const = 0;
+  virtual OrderDependencies order_dependencies() const = 0;
 
   virtual std::shared_ptr<InclusionDependencies> inclusion_dependencies() const = 0;
 
@@ -267,7 +267,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    */
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
-  std::shared_ptr<OrderDependencies> _forward_left_order_dependencies() const;
+  OrderDependencies _forward_left_order_dependencies() const;
 
   std::shared_ptr<InclusionDependencies> _forward_left_inclusion_dependencies() const;
 

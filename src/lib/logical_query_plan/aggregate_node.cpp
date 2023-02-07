@@ -161,19 +161,19 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
-std::shared_ptr<OrderDependencies> AggregateNode::order_dependencies() const {
-  const auto order_dependencies = std::make_shared<OrderDependencies>();
+OrderDependencies AggregateNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
 
   // Similarly to UCCs, forward ODs if all expressions are part of the GROUP-BY expressions.
   const auto& input_order_dependencies = left_input()->order_dependencies();
   const auto& output_expressions = this->output_expressions();
 
-  for (const auto& input_order_dependency : *input_order_dependencies) {
+  for (const auto& input_order_dependency : input_order_dependencies) {
     if (!(contains_all_expressions(input_order_dependency.expressions, output_expressions) &&
           contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
       continue;
     }
-    order_dependencies->emplace(input_order_dependency);
+    order_dependencies.emplace(input_order_dependency);
   }
 
   return order_dependencies;

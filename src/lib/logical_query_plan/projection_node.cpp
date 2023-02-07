@@ -57,21 +57,21 @@ UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
-std::shared_ptr<OrderDependencies> ProjectionNode::order_dependencies() const {
-  auto order_dependencies = std::make_shared<OrderDependencies>();
-  order_dependencies->reserve(node_expressions.size());
+OrderDependencies ProjectionNode::order_dependencies() const {
+  auto order_dependencies = OrderDependencies{};
+  order_dependencies.reserve(node_expressions.size());
 
   // Forward order dependencies, if applicable
   const auto& input_order_dependencies = left_input()->order_dependencies();
   const auto& output_expressions = this->output_expressions();
 
-  for (const auto& input_order_dependency : *input_order_dependencies) {
+  for (const auto& input_order_dependency : input_order_dependencies) {
     // As is the case for UCCs, we have opportunities for creating ODs from different projections in the future.
     if (!(contains_all_expressions(input_order_dependency.expressions, output_expressions) &&
           contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
       continue;
     }
-    order_dependencies->emplace(input_order_dependency);
+    order_dependencies.emplace(input_order_dependency);
   }
 
   return order_dependencies;

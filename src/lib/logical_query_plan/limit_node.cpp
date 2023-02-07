@@ -24,7 +24,7 @@ UniqueColumnCombinations LimitNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
-std::shared_ptr<OrderDependencies> LimitNode::order_dependencies() const {
+OrderDependencies LimitNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 

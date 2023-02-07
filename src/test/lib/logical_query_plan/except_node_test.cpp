@@ -73,11 +73,11 @@ TEST_F(ExceptNodeTest, NodeExpressions) {
 TEST_F(ExceptNodeTest, ForwardOrderDependencies) {
   const auto od = OrderDependency{{_a}, {_b}};
   _mock_node1->set_order_dependencies({od});
-  EXPECT_EQ(_mock_node1->order_dependencies()->size(), 1);
+  EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
 
   const auto& order_dependencies = _except_node->order_dependencies();
-  EXPECT_EQ(order_dependencies->size(), 1);
-  EXPECT_TRUE(order_dependencies->contains(od));
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

@@ -366,9 +366,9 @@ TEST_F(StoredTableNodeTest, OrderDependenciesSimple) {
   EXPECT_EQ(table->soft_order_constraints().size(), 2);
 
   const auto& order_dependencies = _stored_table_node->order_dependencies();
-  EXPECT_EQ(order_dependencies->size(), 2);
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_b}}));
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_c}}));
+  EXPECT_EQ(order_dependencies.size(), 2);
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_a}, {_b}}));
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_a}, {_c}}));
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesPrunedColumns) {
@@ -380,7 +380,7 @@ TEST_F(StoredTableNodeTest, OrderDependenciesPrunedColumns) {
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
   const auto& order_dependencies = _stored_table_node->order_dependencies();
-  EXPECT_TRUE(order_dependencies->empty());
+  EXPECT_TRUE(order_dependencies.empty());
 }
 
 TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
@@ -393,16 +393,16 @@ TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
   EXPECT_EQ(table->soft_order_constraints().size(), 3);
 
   const auto& order_dependencies = _stored_table_node->order_dependencies();
-  EXPECT_EQ(order_dependencies->size(), 6);
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_b}}));
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_b}, {_c}}));
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_c}, {_a}}));
+  EXPECT_EQ(order_dependencies.size(), 6);
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_a}, {_b}}));
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_b}, {_c}}));
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_c}, {_a}}));
   // Created from [a] |-> [b] and [b] |-> [c].
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_a}, {_c}}));
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_a}, {_c}}));
   // Created from [c] |-> [a] and [a] |-> [b].
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_c}, {_b}}));
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_c}, {_b}}));
   // Created from [b] |-> [c] and [c] |-> [a].
-  EXPECT_TRUE(order_dependencies->contains(OrderDependency{{_b}, {_a}}));
+  EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_b}, {_a}}));
 }
 
 }  // namespace hyrise

@@ -28,8 +28,8 @@ UniqueColumnCombinations DummyTableNode::unique_column_combinations() const {
   return UniqueColumnCombinations{};
 }
 
-std::shared_ptr<OrderDependencies> DummyTableNode::order_dependencies() const {
-  return std::make_shared<OrderDependencies>();
+OrderDependencies DummyTableNode::order_dependencies() const {
+  return OrderDependencies{};
 }
 
 std::shared_ptr<InclusionDependencies> DummyTableNode::inclusion_dependencies() const {

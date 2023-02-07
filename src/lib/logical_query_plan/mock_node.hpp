@@ -39,7 +39,7 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   UniqueColumnCombinations unique_column_combinations() const override;
 
   // Returns stored ODs and pays respect to pruned columns.
-  std::shared_ptr<OrderDependencies> order_dependencies() const override;
+  OrderDependencies order_dependencies() const override;
 
   // Returns stored INDs and pays respect to pruned columns. Pruned columns of the referenced node are not considered.
   std::shared_ptr<InclusionDependencies> inclusion_dependencies() const override;

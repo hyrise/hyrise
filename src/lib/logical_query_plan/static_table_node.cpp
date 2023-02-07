@@ -64,8 +64,8 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
-std::shared_ptr<OrderDependencies> StaticTableNode::order_dependencies() const {
-  return std::make_shared<OrderDependencies>();
+OrderDependencies StaticTableNode::order_dependencies() const {
+  return OrderDependencies{};
 }
 
 std::shared_ptr<InclusionDependencies> StaticTableNode::inclusion_dependencies() const {

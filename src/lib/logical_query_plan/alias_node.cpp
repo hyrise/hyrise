@@ -40,7 +40,7 @@ UniqueColumnCombinations AliasNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
-std::shared_ptr<OrderDependencies> AliasNode::order_dependencies() const {
+OrderDependencies AliasNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 

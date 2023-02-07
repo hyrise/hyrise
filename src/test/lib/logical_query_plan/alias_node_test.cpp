@@ -93,11 +93,11 @@ TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
 TEST_F(AliasNodeTest, ForwardOrderDependencies) {
   const auto od = OrderDependency{{a}, {b}};
   mock_node->set_order_dependencies({od});
-  EXPECT_EQ(mock_node->order_dependencies()->size(), 1);
+  EXPECT_EQ(mock_node->order_dependencies().size(), 1);
 
   const auto& order_dependencies = alias_node->order_dependencies();
-  EXPECT_EQ(order_dependencies->size(), 1);
-  EXPECT_TRUE(order_dependencies->contains(od));
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise

@@ -144,16 +144,16 @@ TEST_F(MockNodeTest, OrderDependencies) {
   // Forward ODs.
   {
     const auto& order_dependencies = _mock_node_a->order_dependencies();
-    EXPECT_EQ(order_dependencies->size(), 2);
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_b));
-    EXPECT_TRUE(order_dependencies->contains(od_a_to_c));
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
   }
 
   // Discard ODs that involve pruned columns.
   {
     _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
     const auto& order_dependencies = _mock_node_a->order_dependencies();
-    EXPECT_TRUE(order_dependencies->empty());
+    EXPECT_TRUE(order_dependencies.empty());
   }
 }
 

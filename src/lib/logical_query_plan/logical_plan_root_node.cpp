@@ -20,7 +20,7 @@ UniqueColumnCombinations LogicalPlanRootNode::unique_column_combinations() const
   Fail("LogicalPlanRootNode is not expected to be queried for unique column combinations.");
 }
 
-std::shared_ptr<OrderDependencies> LogicalPlanRootNode::order_dependencies() const {
+OrderDependencies LogicalPlanRootNode::order_dependencies() const {
   Fail("LogicalPlanRootNode is not expected to be queried for order depedencies.");
 }
 

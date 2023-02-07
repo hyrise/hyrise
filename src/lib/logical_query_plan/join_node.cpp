@@ -93,7 +93,7 @@ UniqueColumnCombinations JoinNode::unique_column_combinations() const {
   return _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 }
 
-std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
+OrderDependencies JoinNode::order_dependencies() const {
   if (is_semi_or_anti_join(join_mode)) {
     return _forward_left_order_dependencies();
   }
@@ -104,9 +104,8 @@ std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
   // OD x |-> y, we can add b |-> y.
   const auto& left_order_dependencies = left_input()->order_dependencies();
   const auto& right_order_dependencies = right_input()->order_dependencies();
-  auto order_dependencies =
-      std::make_shared<OrderDependencies>(left_order_dependencies->cbegin(), left_order_dependencies->cend());
-  order_dependencies->insert(right_order_dependencies->cbegin(), right_order_dependencies->cend());
+  auto order_dependencies = OrderDependencies{left_order_dependencies.cbegin(), left_order_dependencies.cend()};
+  order_dependencies.insert(right_order_dependencies.cbegin(), right_order_dependencies.cend());
 
   if (join_mode != JoinMode::Inner) {
     return order_dependencies;
@@ -149,7 +148,7 @@ std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
   const auto find_matching_ods = [](const auto& input_ods, const auto& input_predicates) {
     auto matching_ods_expressions = std::vector<OrderDependency>{};
     auto matching_ods_ordered_expressions = std::vector<OrderDependency>{};
-    for (const auto& od : *input_ods) {
+    for (const auto& od : input_ods) {
       if (od.expressions.size() == input_predicates.size() &&
           contains_all_expressions(od.expressions, input_predicates)) {
         matching_ods_expressions.emplace_back(od);
@@ -167,16 +166,15 @@ std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
   const auto& [ods_right_expressions, ods_right_ordered_expressions] =
       find_matching_ods(right_order_dependencies, right_input_predicates);
 
-  const auto reconstruct_ods = [&](const auto& ods_expressions, const auto& ods_ordered_expressions,
-                                   const auto& result_ods) {
+  const auto reconstruct_ods = [&](const auto& ods_expressions, const auto& ods_ordered_expressions, auto& result_ods) {
     for (const auto& od_expressions : ods_expressions) {
       for (const auto& od_ordered_expressions : ods_ordered_expressions) {
-        result_ods->emplace(od_expressions.expressions, od_ordered_expressions.ordered_expressions);
+        result_ods.emplace(od_expressions.expressions, od_ordered_expressions.ordered_expressions);
       }
     }
 
     if (!(ods_expressions.empty() || ods_ordered_expressions.empty())) {
-      result_ods->emplace(ods_expressions.front().expressions, ods_ordered_expressions.front().expressions);
+      result_ods.emplace(ods_expressions.front().expressions, ods_ordered_expressions.front().expressions);
     }
   };
 
@@ -186,8 +184,8 @@ std::shared_ptr<OrderDependencies> JoinNode::order_dependencies() const {
   // TODO(anyone): Join columns also form ODs for multi-predicate equi inner joins. However, we would have to add all
   // permutations of the join predicates.
   if (left_input_predicates.size() == 1 && right_input_predicates.size() == 1) {
-    order_dependencies->emplace(left_input_predicates, right_input_predicates);
-    order_dependencies->emplace(right_input_predicates, left_input_predicates);
+    order_dependencies.emplace(left_input_predicates, right_input_predicates);
+    order_dependencies.emplace(right_input_predicates, left_input_predicates);
   }
 
   return order_dependencies;

@@ -41,12 +41,12 @@ TEST_F(ValidateNodeTest, ForwardOrderDependencies) {
   const auto b = mock_node->get_column("b");
   const auto od = OrderDependency{{a}, {b}};
   mock_node->set_order_dependencies({od});
-  EXPECT_EQ(mock_node->order_dependencies()->size(), 1);
+  EXPECT_EQ(mock_node->order_dependencies().size(), 1);
 
   _validate_node->set_left_input(mock_node);
   const auto& order_dependencies = _validate_node->order_dependencies();
-  EXPECT_EQ(order_dependencies->size(), 1);
-  EXPECT_TRUE(order_dependencies->contains(od));
+  EXPECT_EQ(order_dependencies.size(), 1);
+  EXPECT_TRUE(order_dependencies.contains(od));
 }
 
 }  // namespace hyrise
