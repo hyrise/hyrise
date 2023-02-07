@@ -1,7 +1,5 @@
 #pragma once
 
-#include <set>
-
 #include "types.hpp"
 
 namespace hyrise {
@@ -13,8 +11,9 @@ namespace hyrise {
  */
 class AbstractTableConstraint {
  public:
-  explicit AbstractTableConstraint(std::set<ColumnID> init_columns);
+  explicit AbstractTableConstraint(std::vector<ColumnID> columns);
 
+  AbstractTableConstraint() = delete;
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
   AbstractTableConstraint& operator=(const AbstractTableConstraint&) = default;
@@ -22,7 +21,9 @@ class AbstractTableConstraint {
 
   virtual ~AbstractTableConstraint() = default;
 
-  const std::set<ColumnID>& columns() const;
+  // Data dependencies might have either set or list semanticss. A list is generally applicable, and a constraint is
+  // responsible for handling columns accordingly when it uses certain semantics see table_key_constraint.hpp).
+  const std::vector<ColumnID>& columns() const;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
   bool operator!=(const AbstractTableConstraint& rhs) const;
@@ -36,12 +37,7 @@ class AbstractTableConstraint {
    */
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
 
- private:
-  /**
-   * Usually, we prefer unordered_set because it ensures lookups in O(1). However, std::set guarantees a well-defined
-   * order when iterating it. We use this property for hashing table constraints.
-   */
-  std::set<ColumnID> _columns;
+  std::vector<ColumnID> _columns;
 };
 
 }  // namespace hyrise

@@ -24,8 +24,8 @@ bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
   Fail("DummyTable does not output any columns");
 }
 
-std::shared_ptr<LQPUniqueConstraints> DummyTableNode::unique_constraints() const {
-  return std::make_shared<LQPUniqueConstraints>();
+UniqueColumnCombinations DummyTableNode::unique_column_combinations() const {
+  return UniqueColumnCombinations{};
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

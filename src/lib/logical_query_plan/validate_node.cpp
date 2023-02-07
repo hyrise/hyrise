@@ -10,8 +10,8 @@ std::string ValidateNode::description(const DescriptionMode mode) const {
   return "[Validate]";
 }
 
-std::shared_ptr<LQPUniqueConstraints> ValidateNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+UniqueColumnCombinations ValidateNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 std::shared_ptr<AbstractLQPNode> ValidateNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {

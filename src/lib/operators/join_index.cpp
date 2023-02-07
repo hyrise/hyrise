@@ -101,17 +101,16 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
   _index_matches.resize(_index_input_table->chunk_count());
   _probe_matches.resize(_probe_input_table->chunk_count());
 
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+  const auto semi_or_anti_join = is_semi_or_anti_join(_mode);
 
   const auto track_probe_matches = _mode == JoinMode::FullOuter ||
                                    (_mode == JoinMode::Left && _index_side == IndexSide::Right) ||
                                    (_mode == JoinMode::Right && _index_side == IndexSide::Left) ||
-                                   (is_semi_or_anti_join && _index_side == IndexSide::Right);
+                                   (semi_or_anti_join && _index_side == IndexSide::Right);
   const auto track_index_matches = _mode == JoinMode::FullOuter ||
                                    (_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
                                    (_mode == JoinMode::Right && _index_side == IndexSide::Right) ||
-                                   (is_semi_or_anti_join && _index_side == IndexSide::Left);
+                                   (semi_or_anti_join && _index_side == IndexSide::Left);
 
   if (track_probe_matches) {
     const auto chunk_count = _probe_input_table->chunk_count();
@@ -191,12 +190,12 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
           index_joining_duration += timer.lap();
           join_index_performance_data.chunks_scanned_with_index++;
         } else {
-          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+          _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, semi_or_anti_join,
                                 secondary_predicate_evaluator);
           nested_loop_joining_duration += timer.lap();
         }
       } else {
-        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, semi_or_anti_join,
                               secondary_predicate_evaluator);
         nested_loop_joining_duration += timer.lap();
       }
@@ -230,17 +229,17 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         index_joining_duration += timer.lap();
         join_index_performance_data.chunks_scanned_with_index++;
       } else {
-        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, semi_or_anti_join,
                               secondary_predicate_evaluator);
         nested_loop_joining_duration += timer.lap();
       }
     }
 
-    _append_matches_non_inner(is_semi_or_anti_join);
+    _append_matches_non_inner(semi_or_anti_join);
   }
 
-  // write output chunks
-  Segments output_segments;
+  // Write output chunks.
+  auto output_segments = Segments{};
 
   if (_index_side == IndexSide::Left) {
     _write_output_segments(output_segments, _index_input_table, _index_pos_list);
@@ -248,7 +247,7 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
     _write_output_segments(output_segments, _probe_input_table, _probe_pos_list);
   }
 
-  if (!is_semi_or_anti_join) {
+  if (!semi_or_anti_join) {
     if (_index_side == IndexSide::Left) {
       _write_output_segments(output_segments, _probe_input_table, _probe_pos_list);
     } else {
@@ -431,16 +430,15 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
     return;
   }
 
-  const auto is_semi_or_anti_join =
-      _mode == JoinMode::Semi || _mode == JoinMode::AntiNullAsFalse || _mode == JoinMode::AntiNullAsTrue;
+  const auto semi_or_anti_join = is_semi_or_anti_join(_mode);
 
   // Remember the matches for non-inner joins
-  if (((is_semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
+  if (((semi_or_anti_join || _mode == JoinMode::Left) && _index_side == IndexSide::Right) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Left) || _mode == JoinMode::FullOuter) {
     _probe_matches[probe_chunk_id][probe_chunk_offset] = true;
   }
 
-  if (!is_semi_or_anti_join) {
+  if (!semi_or_anti_join) {
     // we replicate the probe side value for each index side value
     std::fill_n(std::back_inserter(*_probe_pos_list), num_index_matches, RowID{probe_chunk_id, probe_chunk_offset});
 
@@ -452,7 +450,7 @@ void JoinIndex::_append_matches(const AbstractIndex::Iterator& range_begin, cons
 
   if ((_mode == JoinMode::Left && _index_side == IndexSide::Left) ||
       (_mode == JoinMode::Right && _index_side == IndexSide::Right) || _mode == JoinMode::FullOuter ||
-      (is_semi_or_anti_join && _index_side == IndexSide::Left)) {
+      (semi_or_anti_join && _index_side == IndexSide::Left)) {
     std::for_each(range_begin, range_end, [this, index_chunk_id](ChunkOffset index_chunk_offset) {
       _index_matches[index_chunk_id][index_chunk_offset] = true;
     });

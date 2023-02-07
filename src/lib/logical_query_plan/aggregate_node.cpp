@@ -94,11 +94,11 @@ bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
+UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
 
   /**
-   * (1) Forward unique constraints from child nodes if all expressions belong to the group-by section.
+   * (1) Forward unique column combinations from child nodes if all expressions belong to the group-by section.
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
    *     However, ANY() is a pseudo aggregate function that does not change any values.
    *     (cf. DependentGroupByReductionRule)
@@ -106,61 +106,62 @@ std::shared_ptr<LQPUniqueConstraints> AggregateNode::unique_constraints() const 
    *
    *     Future Work:
    *     Some aggregation functions maintain the uniqueness of their input expressions. For example, if {a} is unique,
-   *     so is MAX(a), independently of the group by columns. We could create these new constraints as shown in the
-   *     following example:
+   *     so is MAX(a), independently of the group by columns. We could create these new UCCs as shown in the following
+   *     example:
    *
-   *     Consider a StoredTableNode with the column expressions {a, b, c, d} and two unique constraints:
-   *       - LQPUniqueConstraint for {a, c}.
-   *       - LQPUniqueConstraint for {b, d}.
+   *     Consider a StoredTableNode with the column expressions {a, b, c, d} and two unique column combinations:
+   *       - UCC for {a, c}.
+   *       - UCC for {b, d}.
    *     An AggregateNode which follows defines the following:
    *       - COUNT(a), MAX(b)
    *       - Group By {c, d}
-   *     => The unique constraint for {a, c} has to be discarded because of the COUNT(a) aggregate.
-   *     => The unique constraint for {b, d} can be reformulated as { MAX(b), d }
+   *     => The UCC for {a, c} has to be discarded because of the COUNT(a) aggregate.
+   *     => The UCC for {b, d} can be reformulated as { MAX(b), d }
    *
    *     Furthermore, for AggregateNodes without group by columns, where only one row is generated, all columns are
-   *     unique. We are not yet sure if this should be modeled as a unique constraint.
+   *     unique. We are not yet sure if this should be modeled as a UCCs.
    */
 
-  // Check each constraint for applicability
-  const auto& input_unique_constraints = left_input()->unique_constraints();
-  for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) {
+  // Check each UCC for applicability.
+  const auto& output_expressions = this->output_expressions();
+  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  for (const auto& input_unique_constraint : input_unique_column_combinations) {
+    if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
     }
 
-    // Forward constraint
-    unique_constraints->emplace_back(input_unique_constraint);
+    // Forward UCC.
+    unique_column_combinations.emplace(input_unique_constraint);
   }
 
-  // (2) Create a new unique constraint from the group-by column(s), which form a candidate key for the output relation.
+  // (2) Create a new UCC from the group-by column(s), which form a candidate key for the output relation.
   const auto group_by_columns_count = aggregate_expressions_begin_idx;
   if (group_by_columns_count > 0) {
-    ExpressionUnorderedSet group_by_columns(group_by_columns_count);
+    auto group_by_columns = ExpressionUnorderedSet{group_by_columns_count};
     std::copy_n(node_expressions.begin(), group_by_columns_count,
                 std::inserter(group_by_columns, group_by_columns.begin()));
 
-    // Make sure, we do not add an already existing or a superset unique constraint.
-    if (unique_constraints->empty() || !contains_matching_unique_constraint(unique_constraints, group_by_columns)) {
-      unique_constraints->emplace_back(group_by_columns);
+    // Make sure that we do not add an already existing or a superset UCC.
+    if (unique_column_combinations.empty() ||
+        !contains_matching_unique_column_combination(unique_column_combinations, group_by_columns)) {
+      unique_column_combinations.emplace(group_by_columns);
     }
   }
 
   /**
    * Future Work:
    * Under some circumstances, the DependentGroupByReductionRule reduces the number of group-by columns. Consequently,
-   * we might be able to create shorter unique constraints after the optimizer rule has been run.
-   * (shorter unique constraints are always preferred)
-   * However, it would be great if this function could return the shortest unique constraints possible,
-   * without having to rely on the execution of the optimizer rule.
-   * Fortunately, we can shorten unique constraints ourselves by looking at the available functional dependencies.
+   * we might be able to create shorter unique column combinations after the optimizer rule has been run (shorter UCCs
+   * are always preferred). However, it would be great if this function could return the shortest UCCs possible, without
+   * having to rely on the execution of the optimizer rule. Fortunately, we can shorten UCCs ourselves by looking at the
+   * available functional dependencies.
    * See the following discussion: https://github.com/hyrise/hyrise/pull/2156#discussion_r453220838.
    */
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
-std::vector<FunctionalDependency> AggregateNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies AggregateNode::non_trivial_functional_dependencies() const {
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
   // In AggregateNode, some expressions get wrapped inside of AggregateExpressions. Therefore, we have to discard

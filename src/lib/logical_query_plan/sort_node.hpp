@@ -18,8 +18,8 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
 
   std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
 
-  // Forwards unique constraints from the left input node
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  // Forwards unique column combinations from the left input node.
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   const std::vector<SortMode> sort_modes;
 
