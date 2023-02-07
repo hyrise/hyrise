@@ -19,13 +19,11 @@ class VolatileRegion {
  public:
   VolatileRegion(size_t num_bytes);
 
-  // TODO: Inline
   FrameID get_frame_id_from_ptr(const void* ptr) const;
-  Frame* get_frame_from_ptr(const void* ptr) const;
-  Frame* get_frame_from_frame_id(const FrameID frame_id) const;
+  Page* get_page(const FrameID frame_id) const;
 
-  Frame* allocate();
-  void deallocate(Frame* frame);
+  std::pair<FrameID, Page*> allocate();
+  void deallocate(FrameID frame_id);
 
   size_t capacity() const;
   size_t size() const;

@@ -33,8 +33,8 @@ class BufferManagedPtr {
   BufferManagedPtr(pointer ptr = 0) : _page_id(INVALID_PAGE_ID), _offset(0) {
     // TODO: This function totally breaks right now
     if (ptr) {
-      const auto [page_id, offset] =
-          BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(reinterpret_cast<const void*>(ptr));
+      const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
+          reinterpret_cast<const void*>(ptr));
       _page_id = page_id;
       _offset = offset;
       BufferManager::get_global_buffer_manager().pin_page(_page_id);

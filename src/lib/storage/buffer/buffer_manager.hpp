@@ -1,14 +1,17 @@
 #pragma once
 #include <memory>
 #include <utility>
-#include "storage/buffer/buffer_managed_ptr.hpp"
 #include "storage/buffer/clock_replacement_strategy.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/types.hpp"
 #include "storage/buffer/volatile_region.hpp"
+#include "storage/buffer/metrics.hpp"
 
 namespace hyrise {
+
+template <typename PointedType>
+class BufferManagedPtr;
 
 /**
  * @brief 
@@ -77,6 +80,9 @@ class BufferManager {
   */
   BufferManagedPtr<void> allocate(std::size_t bytes, std::size_t align = alignof(std::max_align_t));
 
+  /**
+   * Deallocates a pointer and frees the pages.
+  */
   void deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
 
   /**
@@ -94,6 +100,11 @@ class BufferManager {
 
   Frame* allocate_frame();
 
+  Frame* find_in_page_table(const PageID page_id);
+
+  void read_page(const PageID page_id, Page& destination);
+  void write_page(const PageID page_id, Page& source);
+
   size_t _num_pages;
 
   // Memory Region for pages on SSD
@@ -105,9 +116,14 @@ class BufferManager {
   // Page Table that contains frames (= pages) which are currently in the buffer pool
   std::unordered_map<PageID, Frame*> _page_table;
 
-  // The replacement strategy used then the page table is full and the to be evicted frame needs to be selected
-  std::unique_ptr<ClockReplacementStrategy> _clock_replacement_strategy;
-};
+  // Metadata storage of frames
+  std::vector<Frame> _frames;
 
+  // The replacement strategy used then the page table is full and the to be evicted frame needs to be selected
+  std::unique_ptr<ClockReplacementStrategy> _replacement_strategy;
+
+  // Metrics of buffer manager
+  BufferManagerMetrics _metrics{};
+};
 
 }  // namespace hyrise

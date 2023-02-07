@@ -9,19 +9,14 @@ namespace hyrise {
 
 class ClockReplacementStrategyTest : public BaseTest {};
 
-TEST_F(ClockReplacementStrategyTest, TestReplacement) {
-  auto replacement_strategy = ClockReplacementStrategy(3);
-  replacement_strategy.pin(FrameID{2});
-  replacement_strategy.pin(FrameID{4});
-  replacement_strategy.pin(FrameID{5});
-  replacement_strategy.pin(FrameID{2});
-  replacement_strategy.pin(FrameID{6});
-  replacement_strategy.pin(FrameID{5});
-  replacement_strategy.pin(FrameID{4});
-  replacement_strategy.pin(FrameID{1});
-  replacement_strategy.pin(FrameID{3});
-  replacement_strategy.pin(FrameID{2});
-  //https://www.youtube.com/watch?v=JQ4KRPuP-LY
+TEST_F(ClockReplacementStrategyTest, TestReplacementSimple) {
+  // TODO: Test if moving in frame access?
+  auto strategy = ClockReplacementStrategy(3);
+  strategy.record_frame_access(FrameID{0});
+  strategy.record_frame_access(FrameID{1});
+  strategy.record_frame_access(FrameID{2});
+
+  EXPECT_EQ(strategy.find_victim(), FrameID{1};
 }
 
 }  // namespace hyrise

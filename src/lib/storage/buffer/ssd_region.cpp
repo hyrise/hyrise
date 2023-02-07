@@ -24,8 +24,8 @@ SSDRegion::SSDRegion(const std::filesystem::path& file_name, const uint64_t init
 }
 
 SSDRegion::~SSDRegion() {
-  if(_device_type == eviceType::REGULAR_FILE) {
-std::filesystem::remove(_backing_file_name);  
+  if (_device_type == DeviceType::REGULAR_FILE) {
+    std::filesystem::remove(_backing_file_name);
   }
 }
 
@@ -38,11 +38,11 @@ std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descripto
 #ifdef __APPLE__
   int flags = O_RDWR | O_SYNC | O_CREAT;
 #elif __linux__
-  int flags = O_RDWR | O_CREAT;
+  int flags = O_RDWR | O_CREAT;  // TODO: O_DIRECT | O_SYNC |
 #endif
   int fd = open(std::string(file_name).c_str(), flags, 0666);
   if (fd < 0) {
-    Fail("Error while opening backing file at " + std::string(file_name) + ": "+ strerror(errno));
+    Fail("Error while opening backing file at " + std::string(file_name) + ": " + strerror(errno));
   }
   auto fpstream = std::make_unique<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>>(
       fd, boost::iostreams::close_handle);

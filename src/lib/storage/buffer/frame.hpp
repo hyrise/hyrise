@@ -10,7 +10,7 @@ struct Frame {
   PageID page_id;
   std::atomic_bool dirty;
   std::atomic_uint32_t pin_count;
-  Page data;
+  Page *data;
 };
 
 }  // namespace hyrise

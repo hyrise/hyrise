@@ -1,8 +1,9 @@
 #include "buffer_manager.hpp"
 #include <cstdlib>
 #include <utility>
-#include "utils/assert.hpp"
 #include "hyrise.hpp"
+#include "storage/buffer/buffer_managed_ptr.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
@@ -17,49 +18,78 @@ BufferManager::BufferManager() : _num_pages(0) {
   } else {
     Fail("HYRISE_BUFFER_MANAGER_VOLATILE_CAPACITY not found in environment");
   }
-  _clock_replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
+  _metrics.num_frames = _volatile_region->capacity();
+  _frames.resize(_volatile_region->capacity());
+  _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 
 BufferManager::BufferManager(std::unique_ptr<VolatileRegion> volatile_region, std::unique_ptr<SSDRegion> ssd_region)
     : _num_pages(0), _ssd_region(std::move(ssd_region)), _volatile_region(std::move(volatile_region)) {
-  _clock_replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
+  _metrics.num_frames = volatile_region->capacity();
+  _frames.resize(_volatile_region->capacity());
+  _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 
 Frame* BufferManager::allocate_frame() {
-  // The PageID was not found in the page table. We first need to see if we can allocate a new frame in the
-  // volatile region. If not, we need to go through the clock replacment mechanism.
-  auto allocated_frame = _volatile_region->allocate();
-  if (!allocated_frame) {
-    const auto victim_frame_id = _clock_replacement_strategy->find_victim();
+  auto [frame_id, allocated_page] = _volatile_region->allocate();
+  if (frame_id == INVALID_PAGE_ID) {
+    const auto victim_frame_id = _replacement_strategy->find_victim();
     Assert(victim_frame_id != INVALID_FRAME_ID, "Returned invalid frame id");
-    auto victim_frame = _volatile_region->get_frame_from_frame_id(victim_frame_id);
+    auto victim_page = _volatile_region->get_page(victim_frame_id);
     DebugAssert(victim_frame->pin_count == 0, "The victim frame cannot be unpinned");
 
-    if (victim_frame->dirty) {
-      _ssd_region->write_page(victim_frame->page_id, victim_frame->data);
+    if (_frames[victim_frame_id].dirty) {
+      write_page(_frames[victim_frame_id].page_id, *victim_page->data);
     }
-    allocated_frame = victim_frame;
+    frame_id = victim_frame_id;
+    allocated_page = victim_page;
   }
-  // TODO: _clock_replacement_strategy->record_frame_access(frame_id);
 
-  return allocated_frame;
+  auto frame = &_frames[frame_id];
+  frame->page = allocated_page;
+
+  return frame;
 }
 
-Page* BufferManager::get_page(const PageID page_id) {
-  Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
+Frame* BufferManager::find_in_page_table(const PageID page_id) {
+  DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
   const auto frame_in_page_table_it = _page_table.find(page_id);
   if (frame_in_page_table_it != _page_table.end()) {
-    return &frame_in_page_table_it->second->data;
+    _metrics.page_table_hits++;
+    return frame;
+  }
+  _metrics.page_table_misses++;
+  return nullptr;
+}
+
+PageID BufferManager::read_page(const PageID page_id, Page& destination) {
+  _ssd_region->read_page(page_id, destination);
+  _metrics.bytes_read += PAGE_SIZE;
+}
+
+PageID BufferManager::write_page(const PageID page_id, Page& source) {
+ _ssd_region->write_page(page_id, destination);
+ _metrics.bytes_written += PAGE_SIZE;
+}
+
+
+Page* BufferManager::get_page(const PageID page_id) {
+  if (const auto frame = find_in_page_table(page_id)) {
+    return frame->data;
   }
 
   auto allocated_frame = allocate_frame();
 
+  allocated_frame->pin_count = 0;
   allocated_frame->page_id = page_id;
   allocated_frame->dirty = false;
-  _ssd_region->read_page(page_id, allocated_frame->data);
 
-  return &allocated_frame->data;
+  // TODO: Clock
+
+  read_page(page_id, *allocated_frame->data);
+
+  return allocated_frame->data;
 }
 
 PageID BufferManager::new_page() {
@@ -69,8 +99,9 @@ PageID BufferManager::new_page() {
   allocated_frame->dirty = false;
   allocated_frame->pin_count = 1;
 
-  _page_table[allocated_frame->page_id] = allocated_frame;
+  // TODO: Clock
 
+  _page_table[allocated_frame->page_id] = allocated_frame;
   _num_pages++;
 
   return allocated_frame->page_id;
@@ -79,63 +110,58 @@ PageID BufferManager::new_page() {
 void BufferManager::unpin_page(const PageID page_id) {
   Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
-  const auto frame_in_page_table_it = _page_table.find(page_id);
-  if (frame_in_page_table_it == _page_table.end()) {
+  const auto frame = find_in_page_table(page_id);
+  if (frame == nullptr) {
     return;
   }
-
-  const auto frame = frame_in_page_table_it->second;
-  // TODO: Maybe inefficient, restructure?
-  auto frame_id = _volatile_region->get_frame_id_from_ptr(static_cast<void*>(frame));
 
   frame->pin_count--;
 
   if (frame->pin_count == 0) {
-    _clock_replacement_strategy->unpin(frame_id);
+    // TODO: Maybe inefficient, restructure?
+    auto frame_id = _volatile_region->get_frame_id_from_ptr(reinterpret_cast<void*>(frame));
+    _replacement_strategy->unpin(frame_id);
   }
 }
 
 void BufferManager::pin_page(const PageID page_id) {
-  Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
-
-  const auto frame_in_page_table_it = _page_table.find(page_id);
-  if (frame_in_page_table_it == _page_table.end()) {
+  const auto frame = find_in_page_table(page_id);
+  if (frame == nullptr) {
     return;
   }
 
-  const auto frame = frame_in_page_table_it->second;
-  // TODO: Maybe inefficient, restructure?
-  auto frame_id = _volatile_region->get_frame_id_from_ptr(static_cast<void*>(frame));
-
   frame->pin_count++;
-  _clock_replacement_strategy->pin(frame_id);
+
+  // TODO: Maybe inefficient, restructure?
+  auto frame_id = _volatile_region->get_frame_id_from_ptr(reinterpret_cast<void*>(frame));
+  _replacement_strategy->pin(frame_id);
 }
 
 void BufferManager::flush_page(const PageID page_id) {
-  Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
-
-  const auto frame_in_page_table_it = _page_table.find(page_id);
-  if (frame_in_page_table_it == _page_table.end()) {
+  const auto frame = find_in_page_table(page_id);
+  if (frame == nullptr) {
     return;
   }
 
-  const auto frame = frame_in_page_table_it->second;
-  // if (frame->dirty) { // TODO: Remove force and move to unpin
-  _ssd_region->write_page(page_id, frame->data);
-  // }
+  if (frame->dirty) {
+    write_page(page_id, *frame->data);
+    frame->dirty = false;
+  }
 };
 
 void BufferManager::remove_page(const PageID page_id) {
-  Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
-  // TODO: What happens with removed page?
-
-  const auto frame_in_page_table_it = _page_table.find(page_id);
-  if (frame_in_page_table_it == _page_table.end()) {
+  const auto frame = find_in_page_table(page_id);
+  if (frame == nullptr) {
     return;
   }
 
-  const auto frame = frame_in_page_table_it->second;
-  _volatile_region->deallocate(frame);
+  auto frame_id = _volatile_region->get_frame_id_from_ptr(reinterpret_cast<void*>(frame));
+  _volatile_region->deallocate(frame_id);
+
+  if (frame->dirty) {
+    write_page(page_id, *frame->data);
+    frame->dirty = false;
+  }
   // TODO: Remove from clock
   // TODO: Remove from disk
 
@@ -143,7 +169,8 @@ void BufferManager::remove_page(const PageID page_id) {
 }
 
 std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr(const void* ptr) {
-  auto frame = _volatile_region->get_frame_from_ptr(ptr);
+  auto frame_id = _volatile_region->get_frame_id_from_ptr(ptr);
+  auto frame = _frames[frame_id];
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - frame->data.data.data();
   return std::make_pair(frame->page_id, std::ptrdiff_t{offset});
 };
@@ -152,6 +179,7 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
   Assert(bytes <= PAGE_SIZE, "Cannot allocate more than a Page currently");
   // TODO: Do Alignment with aligner, https://www.boost.org/doc/libs/1_62_0/doc/html/align.html
   const auto page_id = new_page();
+  metrics.allocations_in_bytes.push_back(bytes);
   return BufferManagedPtr<void>(page_id, 0);  // TODO: Use easier constrcutor without offset, no! alignment
 }
 

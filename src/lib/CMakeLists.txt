@@ -443,6 +443,7 @@ set(
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
     storage/buffer/buffer_managed_ptr.hpp
+    storage/buffer/metrics.hpp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
     storage/buffer/buffer_pool_allocator.hpp

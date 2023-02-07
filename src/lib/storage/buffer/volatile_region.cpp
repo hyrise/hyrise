@@ -12,14 +12,15 @@ VolatileRegion::VolatileRegion(size_t num_bytes) : _num_bytes(num_bytes) {
   Assert(_num_free_frames > 0, "There should be at least one free frame in the volatile region while setting up.");
 }
 
-Frame* VolatileRegion::allocate() {
+std::pair<FrameID, Page*> VolatileRegion::allocate() {
   if (_num_free_frames <= 0) {
-    return nullptr;
+    return std::make_pair(INVALID_FRAME_ID, nullptr);
   }
   const auto frame_id = _free_frames.front();
   _free_frames.pop_front();
   _num_free_frames--;
-  return reinterpret_cast<Frame*>(_data.get() + frame_id * sizeof(Frame));
+  const auto page = reinterpret_cast<Page*>(_data.get() + frame_id * sizeof(Page);
+  return std::make_pair(frame_id, page);
 };
 
 FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
@@ -29,30 +30,20 @@ FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
   return FrameID{offset / sizeof(Frame)};
 }
 
-Frame* VolatileRegion::get_frame_from_frame_id(const FrameID frame_id) const {
+Page* VolatileRegion::get_page(const FrameID frame_id) const {
   DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
-  return reinterpret_cast<Frame*>(_data.get() + frame_id * sizeof(Frame));
+  return reinterpret_cast<Page*>(_data.get() + frame_id * sizeof(Page));
 }
 
-Frame* VolatileRegion::get_frame_from_ptr(const void* ptr) const {
-  DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
-  DebugAssert(ptr < _data.get() + capacity() * sizeof(Frame), "Pointer is out of range of region");
-  const auto frame_id = get_frame_id_from_ptr(ptr);
-  return get_frame_from_frame_id(frame_id);
-}
-
-void VolatileRegion::deallocate(Frame* frame) {
-  Assert(_data.get() <= reinterpret_cast<std::byte*>(frame),
-         "Deallocated frame has to be in the volatile memory region");
-  Assert(reinterpret_cast<std::byte*>(frame) <= _data.get() + _num_bytes,
-         "Dellocated frame has to be in the volatile memory region");  // TODO: Might not be the exact boundary
-  const auto frame_id = static_cast<FrameID>((reinterpret_cast<std::byte*>(frame) - _data.get()) / sizeof(Frame));
+void VolatileRegion::deallocate(FrameID frame_id) {
+  DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
+  // const auto frame_id = static_cast<FrameID>((reinterpret_cast<std::byte*>(frame) - _data.get()) / sizeof(Frame));
   _free_frames.push_front(frame_id);
   _num_free_frames++;
 };
 
 size_t VolatileRegion::capacity() const {
-  return _num_bytes / sizeof(Frame);
+  return _num_bytes / sizeof(Page);
 }
 
 size_t VolatileRegion::size() const {

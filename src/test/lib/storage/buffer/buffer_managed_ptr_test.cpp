@@ -8,9 +8,6 @@
 
 namespace hyrise {
 class BufferManagedPtrTest : public BaseTest {
-  BufferManager& get_global_buffer_manager() {
-    return Hyrise::get().buffer_manager;
-  }
 };
 
 TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
