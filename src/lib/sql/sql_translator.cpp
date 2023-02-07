@@ -1531,6 +1531,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
+  AssertInput(!import_statement.whereClause, "Predicates on imported files are not yet supported.");
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
                           import_type_to_file_type(import_statement.type));
 }
@@ -1539,13 +1540,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
-  const auto table_name = std::string{export_statement.tableName};
 
-  if (MetaTableManager::is_meta_table_name(table_name)) {
-    lqp = _translate_meta_table(table_name, sql_identifier_resolver);
+  if (export_statement.select) {
+    lqp = _translate_select_statement(*export_statement.select);
   } else {
-    // Get stored table as input (validated if MVCC is enabled)
-    lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+    AssertInput(export_statement.tableName, "ExportStatement must either specify a table name or a SelectStatement.");
+    const auto table_name = std::string{export_statement.tableName};
+    if (MetaTableManager::is_meta_table_name(table_name)) {
+      lqp = _translate_meta_table(table_name, sql_identifier_resolver);
+    } else {
+      // Get stored table as input (validated if MVCC is enabled)
+      lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+    }
   }
 
   return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), lqp);
