@@ -260,13 +260,4 @@ TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
                    IndexSide::Left, false);
 }
 
-TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
-  // scan that returns all rows
-  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-  scan_a->execute();
-
-  test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-                   1, true);
-}
-
 }  // namespace hyrise

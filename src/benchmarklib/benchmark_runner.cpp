@@ -497,7 +497,6 @@ cxxopts::Options BenchmarkRunner::get_basic_cli_options(const std::string& bench
     ("m,mode", "Ordered or Shuffled", cxxopts::value<std::string>()->default_value(default_mode))
     ("e,encoding", "Specify Chunk encoding as a string or as a JSON config file (for more detailed configuration, see --full_help). String options: " + encoding_strings_option, cxxopts::value<std::string>()->default_value("Dictionary"))  // NOLINT(whitespace/line_length)
     ("compression", "Specify vector compression as a string. Options: " + compression_strings_option, cxxopts::value<std::string>()->default_value(""))  // NOLINT(whitespace/line_length)
-    ("chunk_indexes", "Create chunk indexes (separate index per chunk; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("table_indexes", "Create table indexes (index per table column; columns defined by benchmark)", cxxopts::value<bool>()->default_value("false"))  // NOLINT(whitespace/line_length)
     ("scheduler", "Enable or disable the scheduler", cxxopts::value<bool>()->default_value("false"))
     ("cores", "Specify the number of cores used by the scheduler (if active). 0 means all available cores", cxxopts::value<uint32_t>()->default_value("0"))  // NOLINT(whitespace/line_length)
@@ -536,7 +535,7 @@ nlohmann::json BenchmarkRunner::create_context(const BenchmarkConfig& config) {
                         {"compiler", compiler.str()},
                         {"build_type", HYRISE_DEBUG ? "debug" : "release"},
                         {"encoding", config.encoding_config.to_json()},
-                        {"chunk_indexes", config.chunk_indexes},
+                        {"table_indexes", config.table_indexes},
                         {"benchmark_mode", magic_enum::enum_name(config.benchmark_mode)},
                         {"max_runs", config.max_runs},
                         {"max_duration", config.max_duration.count()},

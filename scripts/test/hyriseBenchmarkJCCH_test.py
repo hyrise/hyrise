@@ -16,7 +16,6 @@ def main():
     arguments["--warmup"] = "10"
     arguments["--encoding"] = "'LZ4'"
     arguments["--compression"] = "'Bit-packing'"
-    arguments["--chunk_indexes"] = "false"
     arguments["--scheduler"] = "true"
     arguments["--clients"] = "4"
     arguments["--jcch"] = "skewed"

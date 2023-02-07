@@ -225,8 +225,14 @@ std::shared_ptr<const Table> JoinIndex::_on_execute() {
         }
       }
     } else {
-      Fail("No Chunk Index Join anymore.");
+      const auto chunk_count_index_input_table = _index_input_table->chunk_count();
+      for (auto index_chunk_id = ChunkID{0}; index_chunk_id < chunk_count_index_input_table; ++index_chunk_id) {
+        _fallback_nested_loop(index_chunk_id, track_probe_matches, track_index_matches, is_semi_or_anti_join,
+                                 secondary_predicate_evaluator);
+        nested_loop_joining_duration += timer.lap();
+      }
     }
+    _append_matches_non_inner(is_semi_or_anti_join);
   }
 
   // write output chunks

@@ -23,7 +23,6 @@ void to_json(nlohmann::json& json, const TableGenerationMetrics& metrics) {
           {"binary_caching_duration", metrics.binary_caching_duration.count()},
           {"sort_duration", metrics.sort_duration.count()},
           {"store_duration", metrics.store_duration.count()},
-          {"chunk_index_duration", metrics.chunk_index_duration.count()},
           {"table_index_duration", metrics.table_index_duration.count()}};
 }
 
