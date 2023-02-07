@@ -43,6 +43,7 @@ RUN apt-get update \
     sudo \
     valgrind \
     ccache \
+    linux-tools \
     linux-tools-common \
     linux-tools-generic \
     linux-cloud-tools-generic \
