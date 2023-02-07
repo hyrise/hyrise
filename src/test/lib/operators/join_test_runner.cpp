@@ -1,8 +1,9 @@
 #include <fstream>
 #include <set>
 
-#include "base_test.hpp"
 #include "nlohmann/json.hpp"
+
+#include "base_test.hpp"
 #include "operators/join_hash.hpp"
 #include "operators/join_index.hpp"
 #include "operators/join_nested_loop.hpp"

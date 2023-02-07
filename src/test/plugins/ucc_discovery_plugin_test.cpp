@@ -118,7 +118,8 @@ TEST_F(UccDiscoveryPluginTest, BenchmarkHooks) {
   // We only check if the plugin has a pre-benchmark hook. Actually executing it requires benchmark items and tables.
   EXPECT_TRUE(plugin_manager.has_pre_benchmark_hook("hyriseUccDiscoveryPlugin"));
   EXPECT_FALSE(plugin_manager.has_post_benchmark_hook("hyriseUccDiscoveryPlugin"));
-  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseUccDiscoveryPlugin"), std::logic_error);
+  auto report = nlohmann::json{};
+  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseUccDiscoveryPlugin", report), std::logic_error);
   EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
 }
 

@@ -50,7 +50,10 @@ std::optional<PreBenchmarkHook> TestPlugin::pre_benchmark_hook() {
 }
 
 std::optional<PostBenchmarkHook> TestPlugin::post_benchmark_hook() {
-  return [&]() { storage_manager.drop_table("BenchmarkItems"); };
+  return [&](auto& report) {
+    storage_manager.drop_table("BenchmarkItems");
+    report["dummy"] = 1;
+  };
 }
 
 EXPORT_PLUGIN(TestPlugin);

@@ -198,9 +198,12 @@ TEST_F(PluginManagerTest, CallBenchmarkHooks) {
     EXPECT_EQ(entry.log_level, LogLevel::Info);
   }
 
-  pm.exec_post_benchmark_hook("hyriseTestPlugin");
+  auto report = nlohmann::json{};
+  pm.exec_post_benchmark_hook("hyriseTestPlugin", report);
   // The test plugin drops the created table when the hook is executed.
   EXPECT_FALSE(sm.has_table("BenchmarkItems"));
+  // Also, it adds a dummy entry to the report.
+  EXPECT_EQ(report["dummy"], 1);
 
   // The PluginManager adds log messages when benchmark hooks are called.
   ASSERT_EQ(lm.log_entries().size(), 2);
@@ -217,22 +220,23 @@ TEST_F(PluginManagerTest, CallNotExistingBenchmarkHooks) {
   const std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner = std::make_unique<TPCHBenchmarkItemRunner>(
       std::make_shared<BenchmarkConfig>(BenchmarkConfig::get_default_config()), false, 1,
       ClusteringConfiguration::None);
+  auto report = nlohmann::json{};
 
   // Call non-existing plugin (with non-existing hooks).
   EXPECT_THROW(pm.exec_pre_benchmark_hook("hyriseUnknownPlugin", *benchmark_item_runner), std::logic_error);
-  EXPECT_THROW(pm.exec_post_benchmark_hook("hyriseUnknownPlugin"), std::logic_error);
+  EXPECT_THROW(pm.exec_post_benchmark_hook("hyriseUnknownPlugin", report), std::logic_error);
 
   // Call existing, loaded plugin without hooks.
   pm.load_plugin(build_dylib_path("libhyriseSecondTestPlugin"));
   EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseSecondTestPlugin", *benchmark_item_runner), std::logic_error);
-  EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseSecondTestPlugin"), std::logic_error);
+  EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseSecondTestPlugin", report), std::logic_error);
   pm.unload_plugin("hyriseSecondTestPlugin");
 
   // Call hooks exposed by plugin but plugin has been unloaded before.
   pm.load_plugin(build_dylib_path("libhyriseTestPlugin"));
   pm.unload_plugin("hyriseTestPlugin");
   EXPECT_THROW(pm.exec_pre_benchmark_hook("libhyriseTestPlugin", *benchmark_item_runner), std::logic_error);
-  EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseTestPlugin"), std::logic_error);
+  EXPECT_THROW(pm.exec_post_benchmark_hook("libhyriseTestPlugin", report), std::logic_error);
 }
 
 TEST_F(PluginManagerTest, LoadingSameName) {

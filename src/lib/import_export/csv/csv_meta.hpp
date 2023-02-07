@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "nlohmann/json.hpp"
+
 #include "storage/chunk.hpp"
 
 namespace hyrise {
@@ -15,11 +16,11 @@ struct ColumnMeta {
   bool nullable = false;
 };
 
-// Strategies on how to deal with unquoted null Strings ("...,Null,...") in csv files:
-// RejectNullStrings: An unquoted null string (case-insensitive) causes an exception - only empty
-//  field is allowed as null value.
+// Strategies on how to deal with unquoted null strings ("...,Null,...") in CSV files:
+// RejectNullStrings: An unquoted null string (case-insensitive) causes an exception - only empty field is allowed as
+//                    null value.
 // NullStringAsValue: An unquoted null string is parsed as a string - eg. "Null", case is not changed.
-// NullStringAsNull: An unquoted null string (case-insensitive) is parsed as a null value.
+// NullStringAsNull:  An unquoted null string (case-insensitive) is parsed as a null value.
 enum class NullHandling { RejectNullStrings, NullStringAsNull, NullStringAsValue };
 
 struct ParseConfig {

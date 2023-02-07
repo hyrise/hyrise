@@ -117,12 +117,12 @@ void PluginManager::exec_pre_benchmark_hook(const PluginName& plugin_name,
                           LogLevel::Info);
 }
 
-void PluginManager::exec_post_benchmark_hook(const PluginName& plugin_name) {
+void PluginManager::exec_post_benchmark_hook(const PluginName& plugin_name, nlohmann::json& report) {
   Assert(_post_benchmark_hooks.contains({plugin_name}),
          "There is no post-benchmark hook defined for plugin '" + plugin_name + "'.");
 
   const auto& post_benchmark_hook = _post_benchmark_hooks[plugin_name];
-  post_benchmark_hook();
+  post_benchmark_hook(report);
 
   auto& log_manager = Hyrise::get().log_manager;
   log_manager.add_message("PluginManager", "Called post-benchmark hook provided by plugin '" + plugin_name + "'.",
