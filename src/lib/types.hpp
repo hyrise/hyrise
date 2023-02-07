@@ -14,7 +14,6 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
-#include <boost/version.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
