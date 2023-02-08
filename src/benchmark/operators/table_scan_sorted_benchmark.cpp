@@ -31,7 +31,8 @@ TableColumnDefinitions create_column_definitions(const DataType data_type) {
 }
 
 pmr_string pad_string(const std::string& str, const size_t size) {
-  return pmr_string{std::string(size - str.length(), '0').append(str)};
+  const auto some_string = std::string(size - str.length(), '0').append(str);
+  return pmr_string(some_string.begin(), some_string.end());
 }
 
 template <typename Type>
