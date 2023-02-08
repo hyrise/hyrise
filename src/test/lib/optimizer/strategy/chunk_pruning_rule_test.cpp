@@ -441,7 +441,7 @@ TEST_F(ChunkPruningRuleTest, UncorrelatedSubquery) {
 
   const auto input_lqp_2 =
   PredicateNode::make(greater_than_(stored_table_node_2->get_column("a"), value_(200)),  // prune chunk 1
-    PredicateNode::make(between_inclusive_(stored_table_node_2->get_column("b"), lqp_subquery_(subquery_2), lqp_subquery_(subquery_3)),  // NOLINT(whitespace/line-length)
+    PredicateNode::make(between_inclusive_(stored_table_node_2->get_column("b"), lqp_subquery_(subquery_2), lqp_subquery_(subquery_3)),  // NOLINT(whitespace/line_length)
       stored_table_node_2));
   // clang-format on
 
