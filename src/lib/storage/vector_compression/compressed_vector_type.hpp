@@ -3,10 +3,6 @@
 #include <cstdint>
 #include <optional>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
-#include "utils/boost_curry_override.hpp"  // NOLINT
-#endif
 #include <boost/hana/equal.hpp>
 #include <boost/hana/fold.hpp>
 #include <boost/hana/map.hpp>

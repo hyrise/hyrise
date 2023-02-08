@@ -4,10 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
-#include "utils/boost_curry_override.hpp"  // NOLINT
-#endif
 #include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
@@ -40,7 +36,7 @@ namespace detail {
   ((float,      Float,      "float"))  \
   ((double,     Double,     "double")) \
   ((pmr_string, String,     "string"))
-// Type          Enum Value   String
+//  Type        Enum Value   String
 // clang-format on
 
 #define NUM_DATA_TYPES BOOST_PP_SEQ_SIZE(DATA_TYPE_INFO)
