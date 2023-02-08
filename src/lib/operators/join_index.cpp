@@ -421,9 +421,9 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   return index_ranges;
 }
 
-void JoinIndex::_append_matches(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,
-                                const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
-                                const ChunkID index_chunk_id) {
+void JoinIndex::_append_matches(const AbstractChunkIndex::Iterator& range_begin,
+                                const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
+                                const ChunkID probe_chunk_id, const ChunkID index_chunk_id) {
   const auto num_index_matches = std::distance(range_begin, range_end);
 
   if (num_index_matches == 0) {

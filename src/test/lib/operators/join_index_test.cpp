@@ -135,145 +135,143 @@ class OperatorsJoinIndexTest : public BaseTest {
       _table_wrapper_h_no_index, _table_wrapper_i_no_index;
 };
 
-// TEST_F(OperatorsJoinIndexTest, Supports) {
-//   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
-//   auto configuration = JoinConfiguration{};
+TEST_F(OperatorsJoinIndexTest, Supports) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+  auto configuration = JoinConfiguration{};
 
-//   auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
-//                                                    std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
+  auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
+                                                   std::vector<OperatorJoinPredicate>{}, IndexSide::Left);
 
-//   EXPECT_THROW(join_operator->supports(configuration), std::logic_error);
+  EXPECT_THROW(join_operator->supports(configuration), std::logic_error);
 
-//   configuration.left_table_type = TableType::References;
-//   configuration.right_table_type = TableType::Data;
-//   configuration.index_side = IndexSide::Left;
-//   configuration.join_mode = JoinMode::FullOuter;
-//   EXPECT_FALSE(join_operator->supports(configuration));
-// }
+  configuration.left_table_type = TableType::References;
+  configuration.right_table_type = TableType::Data;
+  configuration.index_side = IndexSide::Left;
+  configuration.join_mode = JoinMode::FullOuter;
+  EXPECT_FALSE(join_operator->supports(configuration));
+}
 
-// TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
-//   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
-//   const auto secondary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals};
+TEST_F(OperatorsJoinIndexTest, DescriptionAndName) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+  const auto secondary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::NotEquals};
 
-//   // INDEX SIDE LEFT
-//   const auto join_operator_index_left =
-//       std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
-//                                   std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Left);
-//   // INDEX SIDE RIGHT
-//   const auto join_operator_index_right =
-//       std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
-//                                   std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Right);
+  // INDEX SIDE LEFT
+  const auto join_operator_index_left =
+      std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
+                                  std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Left);
+  // INDEX SIDE RIGHT
+  const auto join_operator_index_right =
+      std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Inner, primary_predicate,
+                                  std::vector<OperatorJoinPredicate>{secondary_predicate}, IndexSide::Right);
 
-//   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-//             "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Left");
-//   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-//             "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Left");
+  EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
+            "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Left");
+  EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
+            "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Left");
 
-//   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-//             "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Right");
-//   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-//             "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Right");
+  EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
+            "JoinIndex (Inner) Column #0 = Column #0 AND Column #0 != Column #0 Index side: Right");
+  EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
+            "JoinIndex (Inner)\nColumn #0 = Column #0\nAND Column #0 != Column #0\nIndex side: Right");
 
-//   dummy_input->execute();
+  dummy_input->execute();
 
-//   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
-//             "JoinIndex (Inner) a = a AND a != a Index side: Left");
-//   EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
-//             "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Left");
+  EXPECT_EQ(join_operator_index_left->description(DescriptionMode::SingleLine),
+            "JoinIndex (Inner) a = a AND a != a Index side: Left");
+  EXPECT_EQ(join_operator_index_left->description(DescriptionMode::MultiLine),
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Left");
 
-//   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
-//             "JoinIndex (Inner) a = a AND a != a Index side: Right");
-//   EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
-//             "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Right");
+  EXPECT_EQ(join_operator_index_right->description(DescriptionMode::SingleLine),
+            "JoinIndex (Inner) a = a AND a != a Index side: Right");
+  EXPECT_EQ(join_operator_index_right->description(DescriptionMode::MultiLine),
+            "JoinIndex (Inner)\na = a\nAND a != a\nIndex side: Right");
 
-//   EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
-// }
+  EXPECT_EQ(join_operator_index_left->name(), "JoinIndex");
+}
 
-// TEST_F(OperatorsJoinIndexTest, DeepCopy) {
-//   const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
-//   const auto secondary_predicates =
-//       std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
-//   const auto index_column_id = ColumnID{1};
-//   const auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Left, primary_predicate,
-//                                                          secondary_predicates, IndexSide::Left, index_column_id);
-//   const auto abstract_join_operator_copy = join_operator->deep_copy();
-//   const auto join_operator_copy = std::dynamic_pointer_cast<JoinIndex>(abstract_join_operator_copy);
+TEST_F(OperatorsJoinIndexTest, DeepCopy) {
+  const auto primary_predicate = OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals};
+  const auto secondary_predicates =
+      std::vector<OperatorJoinPredicate>{{{ColumnID{1}, ColumnID{1}}, PredicateCondition::NotEquals}};
+  const auto join_operator = std::make_shared<JoinIndex>(dummy_input, dummy_input, JoinMode::Left, primary_predicate,
+                                                         secondary_predicates, IndexSide::Left);
+  const auto abstract_join_operator_copy = join_operator->deep_copy();
+  const auto join_operator_copy = std::dynamic_pointer_cast<JoinIndex>(abstract_join_operator_copy);
 
-//   ASSERT_TRUE(join_operator_copy);
+  ASSERT_TRUE(join_operator_copy);
 
-//   EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
-//   EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
-//   EXPECT_EQ(join_operator_copy->secondary_predicates(), secondary_predicates);
-//   EXPECT_EQ(join_operator_copy->_index_column_id, index_column_id);
-//   EXPECT_NE(join_operator_copy->left_input(), nullptr);
-//   EXPECT_NE(join_operator_copy->right_input(), nullptr);
-// }
+  EXPECT_EQ(join_operator_copy->mode(), JoinMode::Left);
+  EXPECT_EQ(join_operator_copy->primary_predicate(), primary_predicate);
+  EXPECT_EQ(join_operator_copy->secondary_predicates(), secondary_predicates);
+  EXPECT_NE(join_operator_copy->left_input(), nullptr);
+  EXPECT_NE(join_operator_copy->right_input(), nullptr);
+}
 
-// TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
-//   auto performance_data = JoinIndex::PerformanceData{};
+TEST_F(OperatorsJoinIndexTest, PerformanceDataOutputToStream) {
+  auto performance_data = JoinIndex::PerformanceData{};
 
-//   performance_data.has_output = true;
-//   performance_data.output_row_count = 2u;
-//   performance_data.output_chunk_count = 1u;
-//   performance_data.step_runtimes[static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)] =
-//       std::chrono::nanoseconds{17};
-//   performance_data.walltime = std::chrono::nanoseconds{999u};
-//   performance_data.chunks_scanned_with_index = 10u;
-//   performance_data.chunks_scanned_without_index = 5u;
+  performance_data.has_output = true;
+  performance_data.output_row_count = 2u;
+  performance_data.output_chunk_count = 1u;
+  performance_data.step_runtimes[static_cast<size_t>(JoinIndex::OperatorSteps::IndexJoining)] =
+      std::chrono::nanoseconds{17};
+  performance_data.walltime = std::chrono::nanoseconds{999u};
+  performance_data.chunks_scanned_with_index = 10u;
+  performance_data.chunks_scanned_without_index = 5u;
 
-//   {
-//     std::stringstream stream;
-//     stream << performance_data;
-//     EXPECT_EQ(stream.str(),
-//               "Output: 2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
-//               "NestedLoopJoining 0 ns, OutputWriting 0 ns. Indexes used for 10 of 15 chunks.");
-//   }
+  {
+    std::stringstream stream;
+    stream << performance_data;
+    EXPECT_EQ(stream.str(),
+              "Output: 2 rows in 1 chunk, 999 ns. Operator step runtimes: IndexJoining 17 ns, "
+              "NestedLoopJoining 0 ns, OutputWriting 0 ns. Indexes used for 10 of 15 chunks.");
+  }
 
-//   {
-//     std::stringstream stream;
-//     performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
-//     EXPECT_EQ(stream.str(),
-//               "Output: 2 rows in 1 chunk, 999 ns.\nOperator step runtimes:\n IndexJoining 17 ns\n "
-//               "NestedLoopJoining 0 ns\n OutputWriting 0 ns.\nIndexes used for 10 of 15 chunks.");
-//   }
-// }
+  {
+    std::stringstream stream;
+    performance_data.output_to_stream(stream, DescriptionMode::MultiLine);
+    EXPECT_EQ(stream.str(),
+              "Output: 2 rows in 1 chunk, 999 ns.\nOperator step runtimes:\n IndexJoining 17 ns\n "
+              "NestedLoopJoining 0 ns\n OutputWriting 0 ns.\nIndexes used for 10 of 15 chunks.");
+  }
+}
 
-// TEST_F(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
-//   // scan that returns all rows
-//   auto scan_a = create_table_scan(_table_wrapper_h_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-//   scan_a->execute();
-//   auto scan_b = create_table_scan(_table_wrapper_i_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-//   scan_b->execute();
+TEST_F(OperatorsJoinIndexTest, InnerRefJoinNoIndex) {
+  // scan that returns all rows
+  auto scan_a = create_table_scan(_table_wrapper_h_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = create_table_scan(_table_wrapper_i_no_index, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
 
-//   test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
-// }
+  test_join_output(scan_a, scan_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, false);
+}
 
-// TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
-//   // scan that returns all rows
-//   auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-//   scan_a->execute();
-//   auto scan_b = create_table_scan(_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-//   scan_b->execute();
-//   auto scan_c = create_table_scan(_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-//   scan_c->execute();
+TEST_F(OperatorsJoinIndexTest, MultiJoinOnReferenceLeftIndexLeft) {
+  // scan that returns all rows
+  auto scan_a = create_table_scan(_table_wrapper_e, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
+  auto scan_b = create_table_scan(_table_wrapper_f, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_b->execute();
+  auto scan_c = create_table_scan(_table_wrapper_g, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_c->execute();
 
-//   auto join = std::make_shared<JoinIndex>(
-//       scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
-//   join->execute();
+  auto join = std::make_shared<JoinIndex>(
+      scan_a, scan_b, JoinMode::Inner, OperatorJoinPredicate{{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals});
+  join->execute();
 
-//   // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
-//   // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
-//   test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
-//                    IndexSide::Left, false);
-// }
+  // Referencing single chunk guarantee is not given since the left input of the index join is also an index join
+  // and the IndexSide is left. The execution of the index join does not provide single chunk reference guarantee.
+  test_join_output(join, scan_c, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Inner, 1, true,
+                   IndexSide::Left, false);
+}
 
-// TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
-//   // scan that returns all rows
-//   auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
-//   scan_a->execute();
+TEST_F(OperatorsJoinIndexTest, RightJoinPruneInputIsRefIndexInputIsDataIndexSideIsRight) {
+  // scan that returns all rows
+  auto scan_a = create_table_scan(_table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 0);
+  scan_a->execute();
 
-//   test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
-//                    1, true);
-// }
+  test_join_output(scan_a, _table_wrapper_b, {{ColumnID{0}, ColumnID{0}}, PredicateCondition::Equals}, JoinMode::Right,
+                   1, true);
+}
 
 }  // namespace hyrise
