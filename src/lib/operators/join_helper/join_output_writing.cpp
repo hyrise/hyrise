@@ -222,13 +222,14 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   auto pos_lists_by_column_are_created = false;
   if ((create_left_side_pos_lists_by_column || create_left_side_pos_lists_by_column) &&
       (left_input_table->chunk_count() + right_input_table->chunk_count()) > 2048) {
-    auto start = std::chrono::steady_clock::now();
+    //auto start = std::chrono::steady_clock::now();
     pos_lists_by_column_tasks.reserve(2);
     pos_lists_by_column_tasks.emplace_back(std::make_shared<JobTask>(create_left_side_pos_lists_by_column_job));
     pos_lists_by_column_tasks.emplace_back(std::make_shared<JobTask>(create_right_side_pos_lists_by_column_job));
     Hyrise::get().scheduler()->schedule_tasks(pos_lists_by_column_tasks);
 
 
+    /*
     Hyrise::get().scheduler()->wait_for_tasks(pos_lists_by_column_tasks);
     auto end = std::chrono::steady_clock::now();
     std::cout << "Jobs:" << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " µs (" << left_input_table->chunk_count() << " & " << right_input_table->chunk_count() << ")" << std::endl;
@@ -239,6 +240,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     pos_lists_by_column_are_created = true;
     auto end2 = std::chrono::steady_clock::now();
     std::cout << "Funs:" << std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2).count() << " µs" << std::endl;
+    */
   } else {
     create_left_side_pos_lists_by_column_job();
     create_right_side_pos_lists_by_column_job();
