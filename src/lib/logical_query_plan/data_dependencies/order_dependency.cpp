@@ -1,9 +1,13 @@
 #include "order_dependency.hpp"
 
+#include "expression/expression_functional.hpp"
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
 namespace hyrise {
+
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 OrderDependency::OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_expressions,
                                  std::vector<std::shared_ptr<AbstractExpression>> init_ordered_expessions)
@@ -62,6 +66,42 @@ std::ostream& operator<<(std::ostream& stream, const OrderDependency& od) {
   }
   stream << "]";
   return stream;
+}
+
+void build_transitive_od_closure(OrderDependencies& order_dependencies) {
+  // Usually, we do not expect to have much ODs per table with many transitive relationships. Thus, we chose a simple
+  // implementation to build the closure.
+  auto inserted = false;
+  do {
+    auto transitive_ods = std::vector<OrderDependency>{};
+    for (const auto& od : order_dependencies) {
+      const auto& ordered_expressions = od.ordered_expressions;
+      for (const auto& candidate_od : order_dependencies) {
+        // Given od [a] |-> [b], check if candidate_od looks like [b] |-> [c].
+        const auto& candidate_expressions = candidate_od.expressions;
+        if (ordered_expressions.size() != candidate_expressions.size() ||
+            !contains_all_expressions(ordered_expressions, candidate_expressions)) {
+          continue;
+        }
+
+        const auto& transitive_od = OrderDependency(od.expressions, candidate_od.ordered_expressions);
+        // Skip if OD is already known or transitive OD is circular.
+        if (order_dependencies.contains(transitive_od) ||
+            std::any_of(
+                transitive_od.expressions.cbegin(), transitive_od.expressions.cend(), [&](const auto& expression) {
+                  return contains_all_expressions(expression_vector(expression), candidate_od.ordered_expressions);
+                })) {
+          continue;
+        }
+
+        // We cannot insert directly into order_dependencies since we still iterate over it and might invalidate the
+        // iterator.
+        transitive_ods.emplace_back(transitive_od);
+      }
+    }
+    order_dependencies.insert(transitive_ods.cbegin(), transitive_ods.cend());
+    inserted = !transitive_ods.empty();
+  } while (inserted);
 }
 
 }  // namespace hyrise

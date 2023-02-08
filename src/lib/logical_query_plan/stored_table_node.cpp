@@ -185,33 +185,7 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   }
 
   // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
-  auto transitive_ods = std::vector<OrderDependency>{};
-  do {
-    transitive_ods = std::vector<OrderDependency>{};
-    for (const auto& od : order_dependencies) {
-      const auto& ordered_expressions = od.ordered_expressions;
-      for (const auto& candidate_od : order_dependencies) {
-        const auto& candidate_expressions = candidate_od.expressions;
-        if (ordered_expressions.size() != candidate_expressions.size() ||
-            !contains_all_expressions(ordered_expressions, candidate_expressions)) {
-          continue;
-        }
-
-        const auto& transitive_od = OrderDependency(od.expressions, candidate_od.ordered_expressions);
-        // Skip if OD is already known or OD has column on both sides.
-        if (order_dependencies.contains(transitive_od) ||
-            std::any_of(
-                transitive_od.expressions.cbegin(), transitive_od.expressions.cend(), [&](const auto& expression) {
-                  return contains_all_expressions(expression_vector(expression), candidate_od.ordered_expressions);
-                })) {
-          continue;
-        }
-
-        transitive_ods.emplace_back(transitive_od);
-      }
-    }
-    order_dependencies.insert(transitive_ods.cbegin(), transitive_ods.cend());
-  } while (!transitive_ods.empty());
+  build_transitive_od_closure(order_dependencies);
 
   return order_dependencies;
 }

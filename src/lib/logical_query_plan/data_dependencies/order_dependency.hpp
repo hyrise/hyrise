@@ -29,6 +29,9 @@ std::ostream& operator<<(std::ostream& stream, const OrderDependency& od);
 
 using OrderDependencies = std::unordered_set<OrderDependency>;
 
+// Construct all transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
+void build_transitive_od_closure(OrderDependencies& order_dependencies);
+
 }  // namespace hyrise
 
 namespace std {

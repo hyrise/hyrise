@@ -81,20 +81,6 @@ TEST_F(JoinNodeTest, DescriptionAntiJoin) {
   EXPECT_EQ(_anti_join_node->description(), "[Join] Mode: AntiNullAsTrue [a = y]");
 }
 
-TEST_F(JoinNodeTest, OutputColumnExpressions) {
-  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
-  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
-
-  ASSERT_EQ(_semi_join_node->output_expressions().size(), 3u);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(0), *_t_a_a);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(1), *_t_a_b);
-  EXPECT_EQ(*_semi_join_node->output_expressions().at(2), *_t_a_c);
-}
-
 TEST_F(JoinNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(*_anti_join_node, *_anti_join_node);
   EXPECT_EQ(*_cross_join_node, *_cross_join_node);
@@ -127,6 +113,15 @@ TEST_F(JoinNodeTest, Copy) {
   EXPECT_EQ(*_semi_join_node, *_semi_join_node->deep_copy());
   EXPECT_EQ(*_semi_join_reduction_node, *_semi_join_reduction_node->deep_copy());
   EXPECT_EQ(*_anti_join_node, *_anti_join_node->deep_copy());
+}
+
+TEST_F(JoinNodeTest, OutputColumnExpressionsCrossJoin) {
+  ASSERT_EQ(_cross_join_node->output_expressions().size(), 5u);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(0), *_t_a_a);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(1), *_t_a_b);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(2), *_t_a_c);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(3), *_t_b_x);
+  EXPECT_EQ(*_cross_join_node->output_expressions().at(4), *_t_b_y);
 }
 
 TEST_F(JoinNodeTest, OutputColumnExpressionsSemiJoin) {
@@ -693,7 +688,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
   }
 }
 
-TEST_F(JoinNodeTest, ForwardOrderDependencies) {
+TEST_F(JoinNodeTest, OrderDependenciesSemiAndAntiJoin) {
   const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
   const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
   _mock_node_a->set_order_dependencies({od_a_to_c});
@@ -705,26 +700,53 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
   for (const auto join_mode : {JoinMode::Semi, JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse}) {
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies.size(), 1) << "With join mode " << magic_enum::enum_name(join_mode);
-    EXPECT_TRUE(order_dependencies.contains(od_a_to_c)) << "With join mode " << magic_enum::enum_name(join_mode);
+    SCOPED_TRACE("with join mode " + std::string{magic_enum::enum_name(join_mode)});
+    EXPECT_EQ(order_dependencies.size(), 1);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
   }
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesOuterJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+  _mock_node_a->set_order_dependencies({od_a_to_c});
+  _mock_node_b->set_order_dependencies({od_y_to_x});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
 
   // Outer joins should forward ODs from left and right input.
   for (const auto join_mode : {JoinMode::Left, JoinMode::Right, JoinMode::FullOuter}) {
     const auto join_node = JoinNode::make(join_mode, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
     const auto& order_dependencies = join_node->order_dependencies();
-    EXPECT_EQ(order_dependencies.size(), 2) << "With join mode " << magic_enum::enum_name(join_mode);
-    EXPECT_TRUE(order_dependencies.contains(od_a_to_c)) << "With join mode " << magic_enum::enum_name(join_mode);
-    EXPECT_TRUE(order_dependencies.contains(od_y_to_x)) << "With join mode " << magic_enum::enum_name(join_mode);
-  }
-
-  // Cross joins should also forward ODs from left and right input.
-  {
-    const auto& order_dependencies = _cross_join_node->order_dependencies();
+    SCOPED_TRACE("with join mode " + std::string{magic_enum::enum_name(join_mode)});
     EXPECT_EQ(order_dependencies.size(), 2);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
     EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
   }
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesCrossJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+  _mock_node_a->set_order_dependencies({od_a_to_c});
+  _mock_node_b->set_order_dependencies({od_y_to_x});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
+
+  // Cross joins should also forward ODs from left and right input.
+  const auto& order_dependencies = _cross_join_node->order_dependencies();
+  EXPECT_EQ(order_dependencies.size(), 2);
+  EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+}
+
+TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
+  const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
+  const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
+  _mock_node_a->set_order_dependencies({od_a_to_c});
+  _mock_node_b->set_order_dependencies({od_y_to_x});
+  EXPECT_EQ(_mock_node_a->order_dependencies().size(), 1);
+  EXPECT_EQ(_mock_node_b->order_dependencies().size(), 1);
 
   // Inner joins forward ODs from left and right input. If the join predicates are equals predicates and the join
   // columns are both on the left-hand and the right-hand side of an OD, the node should create these new ODs, as well.
@@ -749,7 +771,21 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
     EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
   }
 
-  // Case (iii): OD from left input leads to new ODs with columns from the right input.
+  // Case (iii): Multiple join predicates.
+  {
+    // clang-format off
+    const auto inner_join_node =
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(_t_a_a, _t_b_x), equals_(_t_a_b, _t_b_y)),
+      _mock_node_a,
+      _mock_node_b);
+    // clang-format on
+    const auto& order_dependencies = inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+    EXPECT_TRUE(order_dependencies.contains(od_y_to_x));
+  }
+
+  // Case (iv): OD from left input leads to new ODs with columns from the right input.
   {
     const auto od_b_to_a = OrderDependency{{_t_a_b}, {_t_a_a}};
     _mock_node_a->set_order_dependencies({od_b_to_a});
@@ -766,7 +802,7 @@ TEST_F(JoinNodeTest, ForwardOrderDependencies) {
     EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_a_b}, {_t_b_x}}));
   }
 
-  // Case (iv): OD from right input leads to new ODs with columns from the left input.
+  // Case (v): OD from right input leads to new ODs with columns from the left input.
   {
     const auto od_a_to_b = OrderDependency{{_t_a_a}, {_t_a_b}};
     const auto od_x_to_y = OrderDependency{{_t_b_x}, {_t_b_y}};
