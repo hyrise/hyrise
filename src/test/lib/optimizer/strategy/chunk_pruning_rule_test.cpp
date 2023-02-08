@@ -1,4 +1,5 @@
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
@@ -9,6 +10,7 @@
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/dummy_table_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_translator.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -72,18 +74,16 @@ class ChunkPruningRuleTest : public StrategyBaseTest {
 };
 
 TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
+  const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 
   ASSERT_TRUE(stored_table_node->table_statistics);
 
@@ -102,284 +102,263 @@ TEST_F(ChunkPruningRuleTest, SimplePruningTest) {
 }
 
 TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(less_than_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
+  const auto predicate_node = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
   // If a temporary table is used more than once, only prune for the predicates that apply to all paths
-
-  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
+  const auto stored_table_node = StoredTableNode::make("int_float4");
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
   const auto b = lqp_column_(stored_table_node, ColumnID{1});
 
   // clang-format off
-  auto common =
-    PredicateNode::make(greater_than_(b, 700),    // allows for pruning of chunk 0
-      PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
-        stored_table_node));
-  auto lqp =
-    UnionNode::make(SetOperationMode::All,
-      PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
-        common),
-      PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
-        common));
+  const auto common =
+  PredicateNode::make(greater_than_(b, 700),    // allows for pruning of chunk 0
+    PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
+      stored_table_node));
+  const auto lqp =
+  UnionNode::make(SetOperationMode::All,
+    PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
+      common),
+    PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
+      common));
   // clang-format on
 
-  StrategyBaseTest::apply_rule(_rule, lqp);
-  auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, lqp);
+  EXPECT_EQ(actual_lqp, lqp);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
-  // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore
-
-  auto stored_table_node = std::make_shared<StoredTableNode>("int_float4");
+  // Similar to MultipleOutputs1, but b > 700 is now part of one of the branches and can't be used for pruning anymore.
+  const auto stored_table_node = StoredTableNode::make("int_float4");
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
   const auto b = lqp_column_(stored_table_node, ColumnID{1});
 
   // clang-format off
-  auto common =
-    PredicateNode::make(greater_than_(a, 123),      // Predicate allows for pruning of chunk 2
-      stored_table_node);
-  auto lqp =
-    UnionNode::make(SetOperationMode::All,
-      PredicateNode::make(greater_than_(b, 700),    // Predicate allows for pruning of chunk 0, 2
-        PredicateNode::make(less_than_(b, 850),     // Predicate allows for pruning of chunk 3
-          common)),
-      PredicateNode::make(greater_than_(b, 850),    // Predicate allows for pruning of chunk 0, 1, 2
-        common));
+  const auto common =
+  PredicateNode::make(greater_than_(a, 123),      // Predicate allows for pruning of chunk 2
+    stored_table_node);
+  const auto lqp =
+  UnionNode::make(SetOperationMode::All,
+    PredicateNode::make(greater_than_(b, 700),    // Predicate allows for pruning of chunk 0, 2
+      PredicateNode::make(less_than_(b, 850),     // Predicate allows for pruning of chunk 3
+        common)),
+    PredicateNode::make(greater_than_(b, 850),    // Predicate allows for pruning of chunk 0, 1, 2
+      common));
   // clang-format on
 
-  StrategyBaseTest::apply_rule(_rule, lqp);
-  auto pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, lqp);
+  EXPECT_EQ(actual_lqp, lqp);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, BetweenPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(between_inclusive_(lqp_column_(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
+  const auto predicate_node =
+      PredicateNode::make(between_inclusive_(lqp_column_(stored_table_node, ColumnID{1}), 350.0f, 351.0f));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, NoStatisticsAvailable) {
-  auto table = Hyrise::get().storage_manager.get_table("uncompressed");
-  auto chunk = table->get_chunk(ChunkID(0));
+  const auto table = Hyrise::get().storage_manager.get_table("uncompressed");
+  const auto chunk = table->get_chunk(ChunkID(0));
   EXPECT_TRUE(chunk->pruning_statistics());
   chunk->set_pruning_statistics(std::nullopt);
   EXPECT_FALSE(chunk->pruning_statistics());
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("uncompressed");
+  const auto stored_table_node = StoredTableNode::make("uncompressed");
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
+  const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, TwoOperatorPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node_0 =
-      std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
+  const auto predicate_node_0 = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 =
-      std::make_shared<PredicateNode>(less_than_equals_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
+  const auto predicate_node_1 =
+      PredicateNode::make(less_than_equals_(lqp_column_(stored_table_node, ColumnID{1}), 400.0f));
   predicate_node_1->set_left_input(predicate_node_0);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node_1);
 
-  EXPECT_EQ(pruned, predicate_node_1);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node_1);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, IntersectionPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node_0 = std::make_shared<PredicateNode>(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 10));
+  const auto predicate_node_0 = PredicateNode::make(less_than_(lqp_column_(stored_table_node, ColumnID{0}), 10));
   predicate_node_0->set_left_input(stored_table_node);
 
-  auto predicate_node_1 =
-      std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
+  const auto predicate_node_1 = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node_1->set_left_input(stored_table_node);
 
-  auto union_node = std::make_shared<UnionNode>(SetOperationMode::Positions);
+  const auto union_node = UnionNode::make(SetOperationMode::Positions);
   union_node->set_left_input(predicate_node_0);
   union_node->set_right_input(predicate_node_1);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, union_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, union_node);
 
-  EXPECT_EQ(pruned, union_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, union_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_GreaterThan) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 12345));
+  const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 12345));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, ComparatorEdgeCasePruningTest_Equals) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{1}), 458.7f));
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{1}), 458.7f));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, RangeFilterTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), 50));
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 50));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}, ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, LotsOfRangesFilterTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("long_compressed");
+  const auto stored_table_node = StoredTableNode::make("long_compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2500));
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2500));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, RunLengthSegmentPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("run_length_compressed");
+  const auto stored_table_node = StoredTableNode::make("run_length_compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2));
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), 2));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, GetTablePruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
-  auto predicate_node =
-      std::make_shared<PredicateNode>(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
+  const auto predicate_node = PredicateNode::make(greater_than_(lqp_column_(stored_table_node, ColumnID{0}), 200));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 
-  LQPTranslator translator;
-  auto get_table_operator = std::dynamic_pointer_cast<GetTable>(translator.translate_node(stored_table_node));
+  const auto lqp_translator = LQPTranslator{};
+  const auto get_table_operator = std::dynamic_pointer_cast<GetTable>(lqp_translator.translate_node(stored_table_node));
   EXPECT_TRUE(get_table_operator);
 
   get_table_operator->execute();
-  auto result_table = get_table_operator->get_output();
+  const auto result_table = get_table_operator->get_output();
 
   EXPECT_EQ(result_table->chunk_count(), ChunkID{1});
   EXPECT_EQ(result_table->get_value<int32_t>(ColumnID{0}, 0), 12345);
 }
 
 TEST_F(ChunkPruningRuleTest, StringPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("string_compressed");
+  const auto stored_table_node = StoredTableNode::make("string_compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, FixedStringPruningTest) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("fixed_string_compressed");
+  const auto stored_table_node = StoredTableNode::make("fixed_string_compressed");
 
-  auto predicate_node = std::make_shared<PredicateNode>(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
+  const auto predicate_node = PredicateNode::make(equals_(lqp_column_(stored_table_node, ColumnID{0}), "zzz"));
   predicate_node->set_left_input(stored_table_node);
 
-  auto pruned = StrategyBaseTest::apply_rule(_rule, predicate_node);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, predicate_node);
 
-  EXPECT_EQ(pruned, predicate_node);
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  EXPECT_EQ(actual_lqp, predicate_node);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
   const auto a = stored_table_node->get_column("a");
   const auto b = stored_table_node->get_column("b");
 
   // clang-format off
-  auto input_lqp =
+  const auto input_lqp =
   PredicateNode::make(greater_than_(a, 200),
     ProjectionNode::make(expression_vector(b, a),
       SortNode::make(expression_vector(b), std::vector<SortMode>{SortMode::Ascending},
@@ -387,25 +366,24 @@ TEST_F(ChunkPruningRuleTest, PrunePastNonFilteringNodes) {
           stored_table_node))));
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_EQ(actual_lqp, input_lqp);
 
-  std::vector<ChunkID> expected_chunk_ids = {ChunkID{1}};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
-  auto stored_table_node_1 = std::make_shared<StoredTableNode>("compressed");
-  auto stored_table_node_2 = std::make_shared<StoredTableNode>("int_float4");
+  const auto stored_table_node_1 = StoredTableNode::make("compressed");
+  const auto stored_table_node_2 = StoredTableNode::make("int_float4");
 
   const auto table_1_a = stored_table_node_1->get_column("a");
   const auto table_2_a = stored_table_node_2->get_column("a");
   const auto table_2_b = stored_table_node_2->get_column("b");
 
   // clang-format off
-  auto input_lqp =
+  const auto input_lqp =
   PredicateNode::make(less_than_(table_2_a, 10000),                              // prune chunk 0 and 1 on table 2
     JoinNode::make(JoinMode::Cross,
       PredicateNode::make(less_than_(table_1_a, 200), stored_table_node_1),      // prune chunk 0 on table 1
@@ -413,17 +391,15 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
 
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_EQ(actual_lqp, input_lqp);
 
-  std::vector<ChunkID> expected_chunk_ids_table_1 = {ChunkID{0}};
-  std::vector<ChunkID> pruned_chunk_ids_table_1 = stored_table_node_1->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids_table_1, expected_chunk_ids_table_1);
+  const auto expected_chunk_ids_table_1 = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids_table_1);
 
-  std::vector<ChunkID> expected_chunk_ids_table_2 = {ChunkID{0}, ChunkID{1}, ChunkID{3}};
-  std::vector<ChunkID> pruned_chunk_ids_table_2 = stored_table_node_2->pruned_chunk_ids();
-  EXPECT_EQ(pruned_chunk_ids_table_2, expected_chunk_ids_table_2);
+  const auto expected_chunk_ids_table_2 = std::vector<ChunkID>{ChunkID{0}, ChunkID{1}, ChunkID{3}};
+  EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_chunk_ids_table_2);
 }
 
 TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
@@ -432,21 +408,51 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   // TODO(anybody) In the test LQP below, the ChunkPruningRule could convert the -3'000'000'000 to MIN_INT (but ONLY
   //               as long as the predicate_condition is >= and not >).
 
-  auto stored_table_node = std::make_shared<StoredTableNode>("compressed");
+  const auto stored_table_node = StoredTableNode::make("compressed");
 
   // clang-format off
-  auto input_lqp =
+  const auto input_lqp =
   PredicateNode::make(greater_than_equals_(lqp_column_(stored_table_node, ColumnID{0}), int64_t{-3'000'000'000}),
     stored_table_node);
   // clang-format on
 
-  auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
 
   EXPECT_EQ(actual_lqp, input_lqp);
-  std::vector<ChunkID> expected_chunk_ids = {};
-  std::vector<ChunkID> pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
+  const auto expected_chunk_ids = std::vector<ChunkID>{};
+  EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
+}
 
-  EXPECT_EQ(pruned_chunk_ids, expected_chunk_ids);
+TEST_F(ChunkPruningRuleTest, UncorrelatedSubquery) {
+  // Predicates that have an uncorrelated subquery as an argument cannot be used for pruning as we do not know the
+  // predicate value yet. However, such predicates should not prevent us from pruning by other predicates.
+  const auto stored_table_node_1 = StoredTableNode::make("compressed");
+  const auto stored_table_node_2 = StoredTableNode::make("compressed");
+
+  const auto subquery_1 = ProjectionNode::make(expression_vector(value_(1.1)), DummyTableNode::make());
+  const auto subquery_2 = subquery_1->deep_copy();
+  const auto subquery_3 = ProjectionNode::make(expression_vector(value_(3.3)), DummyTableNode::make());
+
+  // clang-format off
+  const auto input_lqp_1 =
+  PredicateNode::make(greater_than_(stored_table_node_1->get_column("a"), value_(200)),  // prune chunk 1
+    PredicateNode::make(equals_(stored_table_node_1->get_column("b"), lqp_subquery_(subquery_1)),
+      stored_table_node_1));
+
+  const auto input_lqp_2 =
+  PredicateNode::make(greater_than_(stored_table_node_2->get_column("a"), value_(200)),  // prune chunk 1
+    PredicateNode::make(between_inclusive_(stored_table_node_2->get_column("b"), lqp_subquery_(subquery_2), lqp_subquery_(subquery_3)),  // NOLINT(whitespace/line-length)
+      stored_table_node_2));
+  // clang-format on
+
+  const auto actual_lqp_1 = StrategyBaseTest::apply_rule(_rule, input_lqp_1);
+  const auto actual_lqp_2 = StrategyBaseTest::apply_rule(_rule, input_lqp_2);
+
+  EXPECT_EQ(actual_lqp_1, input_lqp_1);
+  EXPECT_EQ(actual_lqp_2, input_lqp_2);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
+  EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
+  EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 }  // namespace hyrise

@@ -5,6 +5,7 @@
 
 #include "all_parameter_variant.hpp"
 #include "constant_mappings.hpp"
+#include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
@@ -137,6 +138,8 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
 
 namespace hyrise {
 
+using namespace expression_functional;  // NOLINT(build/namespaces)
+
 std::string ChunkPruningRule::name() const {
   static const auto name = std::string{"ChunkPruningRule"};
   return name;
@@ -231,6 +234,16 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     stored_table_node_without_column_pruning->set_pruned_column_ids({});
     const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
         predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
+
+    // OperatorScanPredicate::from_expression cannot translate predicates that contain uncorrelated subqueries. Thus,
+    // we replace uncorrelated subquery expressions by placeholders. Doing so, we can build a predicate that will simply
+    // be skipped for pruning rather than abort and do not prune at all.
+    for (auto& argument : predicate_without_column_pruning->arguments) {
+      if (argument->type == ExpressionType::LQPSubquery &&
+          !static_cast<LQPSubqueryExpression&>(*argument).is_correlated()) {
+        argument = placeholder_(ParameterID{0});
+      }
+    }
     const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
                                                                             *stored_table_node_without_column_pruning);
     // End of hacky
@@ -239,8 +252,8 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       return {};
     }
 
-    std::set<ChunkID> current_excluded_chunk_ids;
-    auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
+    auto current_excluded_chunk_ids = std::set<ChunkID>{};
+    const auto table = Hyrise::get().storage_manager.get_table(stored_table_node->table_name);
 
     const auto stored_table_node_output_expressions = stored_table_node_without_column_pruning->output_expressions();
     for (const auto& operator_predicate : *operator_predicates) {
