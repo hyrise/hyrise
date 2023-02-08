@@ -77,7 +77,8 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   // The SemiJoinReductionRule is very sensitive to the predicate placement and order present when it is applied. In
   // general, running the PredicatePlacementRule and the PredicateReorderingRule before the SemiJoinReductionRule is
-  // beneficial. However, there are edge cases that cause already long-running queries (TPC-H 21) to screw up.
+  // beneficial. However, TPC-H Q 21 (that is already long-running) queries screws up. See:
+  // https://github.com/hyrise/hyrise/pull/2536#issuecomment-1423076256
   // TODO(anyone): Re-evaluate this in the future.
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
