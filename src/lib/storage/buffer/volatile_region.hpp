@@ -17,7 +17,7 @@ namespace hyrise {
  */
 class VolatileRegion {
  public:
-  VolatileRegion(size_t num_bytes);
+  VolatileRegion(const size_t num_bytes);
 
   FrameID get_frame_id_from_ptr(const void* ptr) const;
   Page* get_page(const FrameID frame_id) const;

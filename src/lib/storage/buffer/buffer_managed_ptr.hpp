@@ -37,17 +37,17 @@ class BufferManagedPtr {
           reinterpret_cast<const void*>(ptr));
       _page_id = page_id;
       _offset = offset;
-      BufferManager::get_global_buffer_manager().pin_page(_page_id);
+      pin();
     }
   }
 
   BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {
-    BufferManager::get_global_buffer_manager().pin_page(_page_id);
+    pin();
   }
 
   template <class U>
   BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {
-    BufferManager::get_global_buffer_manager().pin_page(_page_id);
+    pin();
   }
 
   template <class T>
@@ -55,18 +55,18 @@ class BufferManagedPtr {
     const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
     _page_id = page_id;
     _offset = offset;
-    BufferManager::get_global_buffer_manager().pin_page(_page_id);
+    pin();
   }
 
   explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {
-    BufferManager::get_global_buffer_manager().pin_page(_page_id);
+    pin();
   }
 
   ~BufferManagedPtr() {
     if (_page_id == INVALID_PAGE_ID) {
       return;
     }
-    BufferManager::get_global_buffer_manager().unpin_page(_page_id);
+    unpin();
   }
 
   pointer operator->() const {
@@ -74,7 +74,7 @@ class BufferManagedPtr {
   }
 
   reference operator*() const {
-    // TODO: Check if pinned, and try to reduce branching
+    // TODO: Check if pid, and try to reduce branching
     pointer p = this->get();
     reference r = *p;
     return r;
@@ -187,6 +187,19 @@ class BufferManagedPtr {
     // TODO: If pinned, this is not needed
     const auto page = BufferManager::get_global_buffer_manager().get_page(_page_id);
     return page->data.data() + _offset;
+  }
+
+  // TODO: Return a guard to ensure unpinning
+  void pin() {
+    BufferManager::get_global_buffer_manager().pin_page(_page_id);
+  }
+
+  void unpin() {
+    BufferManager::get_global_buffer_manager().unpin_page(_page_id);
+  }
+
+  void mark_dirty() {
+    BufferManager::get_global_buffer_manager().mark_page_dirty(_page_id);
   }
 
  private:
