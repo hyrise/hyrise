@@ -8,15 +8,13 @@
 
 #include "abstract_join_operator.hpp"
 #include "storage/index/abstract_chunk_index.hpp"
-#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 
 namespace hyrise {
 
 class MultiPredicateJoinEvaluator;
-
-using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
+using IndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkIndex::Iterator>;
 
 /**
    * This operator joins two tables using one column of each table.
@@ -31,16 +29,13 @@ using ChunkIndexRange = std::pair<AbstractChunkIndex::Iterator, AbstractChunkInd
    * Note: An index needs to be present on the index side table in order to execute an index join.
    */
 class JoinIndex : public AbstractJoinOperator {
-  friend class OperatorsJoinIndexTest_DeepCopy_Test;
-
  public:
   static bool supports(const JoinConfiguration config);
 
   JoinIndex(const std::shared_ptr<const AbstractOperator>& left, const std::shared_ptr<const AbstractOperator>& right,
             const JoinMode mode, const OperatorJoinPredicate& primary_predicate,
             const std::vector<OperatorJoinPredicate>& secondary_predicates = {},
-            const IndexSide index_side = IndexSide::Right,
-            const std::optional<ColumnID> index_column_id_before_pruning = std::nullopt);
+            const IndexSide index_side = IndexSide::Right);
 
   const std::string& name() const override;
 
@@ -66,40 +61,28 @@ class JoinIndex : public AbstractJoinOperator {
       const std::shared_ptr<AbstractOperator>& copied_right_input,
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
-  template <typename Functor>
-  void _scan_probe_side_input(const Functor& functor);
-
   void _fallback_nested_loop(const ChunkID index_chunk_id, const bool track_probe_matches,
                              const bool track_index_matches, const bool is_semi_or_anti_join,
                              MultiPredicateJoinEvaluator& secondary_predicate_evaluator);
 
   template <typename ProbeIterator>
-  void _data_join_two_segments_using_chunk_index(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                 const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-                                                 const std::shared_ptr<AbstractChunkIndex>& chunk_index);
+  void _data_join_two_segments_using_index(ProbeIterator probe_iter, ProbeIterator probe_end,
+                                           const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
+                                           const std::shared_ptr<AbstractChunkIndex>& index);
 
   template <typename ProbeIterator>
-  void _data_join_probe_segment_with_indexed_segments(ProbeIterator probe_iter, ProbeIterator probe_end,
-                                                      const ChunkID probe_chunk_id,
-                                                      const std::shared_ptr<PartialHashIndex>& table_index);
-
-  template <typename ProbeIterator>
-  void _reference_join_two_segments_using_chunk_index(
+  void _reference_join_two_segments_using_index(
       ProbeIterator probe_iter, ProbeIterator probe_end, const ChunkID probe_chunk_id, const ChunkID index_chunk_id,
-      const std::shared_ptr<AbstractChunkIndex>& chunk_index,
+      const std::shared_ptr<AbstractChunkIndex>& index,
       const std::shared_ptr<const AbstractPosList>& reference_segment_pos_list);
 
   template <typename SegmentPosition>
-  std::vector<ChunkIndexRange> _chunk_index_ranges_for_value(
-      const SegmentPosition probe_side_position, const std::shared_ptr<AbstractChunkIndex>& chunk_index) const;
+  std::vector<IndexRange> _index_ranges_for_value(const SegmentPosition probe_side_position,
+                                                  const std::shared_ptr<AbstractChunkIndex>& index) const;
 
-  void _append_matches_chunk_index(const AbstractChunkIndex::Iterator& range_begin,
-                                   const AbstractChunkIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                   const ChunkID probe_chunk_id, const ChunkID index_chunk_id);
-
-  void _append_matches_table_index(const PartialHashIndex::Iterator& range_begin,
-                                   const PartialHashIndex::Iterator& range_end, const ChunkOffset probe_chunk_offset,
-                                   const ChunkID probe_chunk_id);
+  void _append_matches(const AbstractChunkIndex::Iterator& range_begin, const AbstractChunkIndex::Iterator& range_end,
+                       const ChunkOffset probe_chunk_offset, const ChunkID probe_chunk_id,
+                       const ChunkID index_chunk_id);
 
   void _append_matches_dereferenced(const ChunkID& probe_chunk_id, const ChunkOffset& probe_chunk_offset,
                                     const RowIDPosList& index_table_matches);
@@ -126,10 +109,6 @@ class JoinIndex : public AbstractJoinOperator {
   // The outer vector enumerates chunks, the inner enumerates chunk_offsets
   std::vector<std::vector<bool>> _probe_matches;
   std::vector<std::vector<bool>> _index_matches;
-
-  // ID of the column on which the index was created on the corresponding base table. If some of the base table's
-  // columns were pruned, _index_column_id represents the column id before the columns were pruned.
-  ColumnID _index_column_id;
 };
 
 }  // namespace hyrise
