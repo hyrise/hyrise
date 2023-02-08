@@ -16,10 +16,10 @@
 namespace hyrise {
 
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator,
-                     const ColumnID left_column_id, const PredicateCondition predicate_condition,
+                     const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
-      _left_column_id{left_column_id},
+      _left_column_ids{left_column_ids.front()},
       _predicate_condition{predicate_condition},
       _right_values{right_values},
       _right_values2{right_values2} {}
@@ -54,7 +54,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<IndexScan>(copied_left_input, _left_column_id, _predicate_condition,
+  return std::make_shared<IndexScan>(copied_left_input, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
 
