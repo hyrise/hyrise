@@ -65,19 +65,24 @@ std::shared_ptr<Optimizer> Optimizer::create_default_optimizer() {
 
   optimizer->add_rule(std::make_unique<SubqueryToJoinRule>());
 
-  // Run the ColumnPruningRule before the PredicatePlacementRule, as it might turn joins into semi joins, which
-  // can be treated as predicates and pushed further down. For the same reason, run it after the JoinOrderingRule,
-  // which does not like semi joins (see above).
   optimizer->add_rule(std::make_unique<ColumnPruningRule>());
 
+  // Run the JoinToSemiJoinRule and the JoinToPredicateRewriteRule before the PredicatePlacementRule, as they might turn
+  // joins into semi joins (which are treated as predicates) or predicates that can be pushed further down. For the same
+  // reason, run them after the JoinOrderingRule, which does not like semi joins (see above). Furthermore, these two
+  // rules depend on the ColumnPruningRule that flags joins where one input is not used later in the query plan.
   optimizer->add_rule(std::make_unique<JoinToSemiJoinRule>());
 
   optimizer->add_rule(std::make_unique<JoinToPredicateRewriteRule>());
 
+  // The SemiJoinReductionRule is very sensitive to the predicate placement and order present when it is applied. In
+  // general, running the PredicatePlacementRule and the PredicateReorderingRule before the SemiJoinReductionRule is
+  // beneficial. However, there are edge cases that cause already long-running queries (TPC-H 21) to screw up.
+  // TODO(anyone): Re-evaluate this in the future.
   optimizer->add_rule(std::make_unique<SemiJoinReductionRule>());
 
   // Run the PredicatePlacementRule a second time so that semi/anti joins created by the SubqueryToJoinRule, the
-  // JoinToSemiJoinuRule, and the SemiJoinReductionRule, or predicates created by the JoinToPredicateRewriteRule are
+  // JoinToSemiJoinRule, and the SemiJoinReductionRule, or predicates created by the JoinToPredicateRewriteRule are
   // properly placed, too.
   optimizer->add_rule(std::make_unique<PredicatePlacementRule>());
 
