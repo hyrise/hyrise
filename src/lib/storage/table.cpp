@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"

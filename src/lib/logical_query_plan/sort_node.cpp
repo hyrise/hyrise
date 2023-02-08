@@ -36,8 +36,8 @@ std::string SortNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
-std::shared_ptr<LQPUniqueConstraints> SortNode::unique_constraints() const {
-  return _forward_left_unique_constraints();
+UniqueColumnCombinations SortNode::unique_column_combinations() const {
+  return _forward_left_unique_column_combinations();
 }
 
 size_t SortNode::_on_shallow_hash() const {

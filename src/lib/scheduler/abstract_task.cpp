@@ -64,7 +64,7 @@ void AbstractTask::set_as_predecessor_of(const std::shared_ptr<AbstractTask>& su
   // _pending_predecessors count in the first place when this task is already done.
   // Note that _done_condition_variable_mutex must be locked to prevent a race condition where _on_predecessor_done
   // is called before _pending_predecessors++ has executed.
-  std::lock_guard<std::mutex> lock(_done_condition_variable_mutex);
+  auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
   if (!is_done()) {
     successor->_pending_predecessors++;
   }

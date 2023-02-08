@@ -32,31 +32,32 @@ bool ProjectionNode::is_column_nullable(const ColumnID column_id) const {
   return node_expressions[column_id]->is_nullable_on_lqp(*left_input());
 }
 
-std::shared_ptr<LQPUniqueConstraints> ProjectionNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
-  unique_constraints->reserve(node_expressions.size());
+UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
+  unique_column_combinations.reserve(node_expressions.size());
 
-  // Forward unique constraints, if applicable
-  const auto& input_unique_constraints = left_input()->unique_constraints();
+  // Forward unique column combinations, if applicable
+  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
+  const auto& output_expressions = this->output_expressions();
 
-  for (const auto& input_unique_constraint : *input_unique_constraints) {
-    if (!has_output_expressions(input_unique_constraint.expressions)) {
+  for (const auto& input_ucc : input_unique_column_combinations) {
+    if (!contains_all_expressions(input_ucc.expressions, output_expressions)) {
       continue;
       /**
        * Future Work:
        * Our implementation does not exploit all opportunities yet.
        * As the next step, we could check for derived output expressions that preserve uniqueness, for example,
        * the expression 'column + 1'.
-       * Instead of discarding a unique constraint for 'column', we could create and output a new one for 'column + 1'.
+       * Instead of discarding a UCC for 'column', we could create and output a new one for 'column + 1'.
        */
     }
-    unique_constraints->emplace_back(input_unique_constraint);
+    unique_column_combinations.emplace(input_ucc);
   }
 
-  return unique_constraints;
+  return unique_column_combinations;
 }
 
-std::vector<FunctionalDependency> ProjectionNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies ProjectionNode::non_trivial_functional_dependencies() const {
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 
   // Currently, we remove non-trivial FDs whose expressions are no longer part of the node's output expressions.

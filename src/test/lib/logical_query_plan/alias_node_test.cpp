@@ -4,8 +4,8 @@
 #include "logical_query_plan/alias_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "storage/table_key_constraint.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
@@ -71,23 +71,23 @@ TEST_F(AliasNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(b->hash(), expr_b->hash());
 }
 
-TEST_F(AliasNodeTest, UniqueConstraintsEmpty) {
-  EXPECT_TRUE(mock_node->unique_constraints()->empty());
-  EXPECT_TRUE(alias_node->unique_constraints()->empty());
+TEST_F(AliasNodeTest, UniqueColumnCombinationsEmpty) {
+  EXPECT_TRUE(mock_node->unique_column_combinations().empty());
+  EXPECT_TRUE(alias_node->unique_column_combinations().empty());
 }
 
-TEST_F(AliasNodeTest, UniqueConstraintsForwarding) {
-  // Add constraints to MockNode
+TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
+  // Add constraints to MockNode.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   mock_node->set_key_constraints({key_constraint_a_b, key_constraint_b});
 
-  // Basic check
-  const auto& unique_constraints = alias_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 2);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
+  // Basic check.
+  const auto& unique_column_combinations = alias_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
 }  // namespace hyrise

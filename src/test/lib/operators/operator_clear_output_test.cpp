@@ -133,6 +133,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubquery) {
   EXPECT_EQ(projection->consumer_count(), 0);
 
   // Check for consumer deregistration / output clearing
+  execute_all({dummy_table_wrapper, projection_literals});
   validate->execute();
   table_scan->execute();
   EXPECT_EQ(projection_literals->consumer_count(), 1);
@@ -187,6 +188,7 @@ TEST_F(OperatorClearOutputTest, ConsumerTrackingTableScanUncorrelatedSubqueryNes
   EXPECT_EQ(projection->consumer_count(), 0);
 
   // Check for consumer deregistration / output clearing
+  execute_all({dummy_table_wrapper, projection_literals});
   validate->execute();
   table_scan->execute();
   EXPECT_EQ(projection_literals->consumer_count(), 1);
