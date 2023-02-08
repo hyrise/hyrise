@@ -110,21 +110,23 @@ void PostgresProtocolHandler<SocketType>::send_data_row(
 
   _write_buffer.template put_value(PostgresMessageType::DataRow);
 
+  const auto column_count = values_as_strings.size();
+
   const auto packet_size =
-      LENGTH_FIELD_SIZE + sizeof(uint16_t) + values_as_strings.size() * LENGTH_FIELD_SIZE + string_length_sum;
+      LENGTH_FIELD_SIZE + sizeof(uint16_t) + column_count * LENGTH_FIELD_SIZE + string_length_sum;
 
   _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(packet_size));
 
   // Number of columns in row
-  _write_buffer.template put_value<uint16_t>(static_cast<uint16_t>(values_as_strings.size()));
+  _write_buffer.template put_value<uint16_t>(static_cast<uint16_t>(column_count));
 
   for (const auto& value_string : values_as_strings) {
-    if (value_string.has_value()) {
+    if (value_string) {
       // Size of string representation of value, NOT of value type's size
-      _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(value_string.value().size()));
+      _write_buffer.template put_value<uint32_t>(static_cast<uint32_t>(value_string->size()));
 
       // Text mode means all values are sent as non-terminated strings
-      _write_buffer.put_string(value_string.value(), HasNullTerminator::No);
+      _write_buffer.put_string(*value_string, HasNullTerminator::No);
     } else {
       // NULL values are represented by setting the value's length to -1
       _write_buffer.template put_value<int32_t>(-1);

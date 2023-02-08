@@ -1,6 +1,24 @@
 #include "result_serializer.hpp"
+
 #include "lossy_cast.hpp"
 #include "query_handler.hpp"
+#include "storage/segment_iterate.hpp"
+
+namespace {
+
+using namespace hyrise;
+
+// template<typename T, typename = std::enable_if<std::is_arithmetic_v<T>>>
+// std::string value_to_string(T value) {
+//   return std::to_string(value);
+// }
+
+// template<>
+// std::string value_to_string(pmr_string value) {
+//   return std::string{value};
+// }
+
+}  // namespace
 
 namespace hyrise {
 
@@ -54,7 +72,7 @@ void ResultSerializer::send_table_description(
 }
 
 template <typename SocketType>
-void ResultSerializer::send_query_response(
+void ResultSerializer::send_query_response2(
     const std::shared_ptr<const Table>& table,
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   auto values_as_strings = std::vector<std::optional<std::string>>(table->column_count());
@@ -88,6 +106,92 @@ void ResultSerializer::send_query_response(
       }
       postgres_protocol_handler->send_data_row(values_as_strings, string_length_sum);
     }
+  }
+}
+
+template <typename SocketType>
+void ResultSerializer::send_query_response(
+    const std::shared_ptr<const Table>& table,
+    const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
+  const auto chunk_count = table->chunk_count();
+  const auto column_count = table->column_count();
+  std::cout << "Chunk count: " << chunk_count << std::endl;
+
+  // Nested vectors that store (i) chunks, (ii) segments, (iii) string values.
+  auto string_table = std::vector<std::vector<std::vector<std::optional<std::string>>>>(chunk_count);
+
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(chunk_count);
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    auto process_chunk = [&, chunk_id]() {
+      const auto chunk = table->get_chunk(chunk_id);
+      const auto chunk_size = chunk->size();
+
+      string_table[chunk_id].resize(column_count);
+    
+      for (auto column_id = ColumnID{0}; column_id < column_count; column_id++) {
+        const auto& segment = *chunk->get_segment(column_id);
+        auto& quasi_segment = string_table[chunk_id][column_id];
+        quasi_segment.reserve(chunk_size);
+
+        resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
+          // using ColumnDataType = typename decltype(column_data_type_t)::type;
+
+          segment_iterate(segment, [&](const auto& segment_position) {
+            if (segment_position.is_null()) {
+              quasi_segment.emplace_back(std::nullopt);
+              return;
+            }
+
+            quasi_segment.emplace_back(boost::lexical_cast<std::string>(segment_position.value()));
+            // quasi_segment.emplace_back(value_to_string<ColumnDataType>(segment_position.value()));
+
+            // if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
+            //   // std::cout << "pmr_string: ";
+            //   // std::cout << segment_position.value() << std::endl;
+            //   quasi_segment.emplace_back(value_to_string<ColumnDataType>(segment_position.value()));
+            // } else if constexpr (std::is_arithmetic_v<ColumnDataType>) {
+            //   // std::cout << "arith: ";
+            //   // std::cout << std::to_string(segment_position.value()) << std::endl;
+            //   quasi_segment.emplace_back(value_to_string<ColumnDataType>(segment_position.value()));
+            // } else {
+            //   // std::cout << "else: ";
+            //   // std::cout << segment_position.value() << std::endl;
+            //   std::cout << "Narf" << std::endl;
+            // }
+            
+          });
+        });
+      }
+    };
+    jobs.emplace_back(std::make_shared<JobTask>(process_chunk));
+  }
+  Hyrise::get().scheduler()->schedule_tasks(jobs);
+
+  auto values_as_strings = std::vector<std::optional<std::string>>(column_count);
+
+  // We wait for tasks to finish in order of their creation (table could can be sorted).
+  auto processed_chunk_id = size_t{0};
+  for (const auto& job : jobs) {
+    while (!job->is_done()) {
+      _mm_pause();
+    }
+
+    const auto& quasi_chunk = string_table[processed_chunk_id];
+    const auto chunk_size = quasi_chunk[0].size();
+    for (auto row_id = size_t{0}; row_id < chunk_size; ++row_id) {
+      auto string_length_sum = uint32_t{0};
+
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+        const auto& value = quasi_chunk[column_id][row_id];
+        if (value) {
+          string_length_sum += static_cast<uint32_t>(value->size());
+          values_as_strings[column_id] = *value;
+        }
+      }
+      postgres_protocol_handler->send_data_row(values_as_strings, string_length_sum);
+    }
+    ++processed_chunk_id;
   }
 }
 

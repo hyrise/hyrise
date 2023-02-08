@@ -24,6 +24,12 @@ class ResultSerializer {
       const std::shared_ptr<const Table>& table,
       const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler);
 
+  template <typename SocketType>
+  // Cast attributes of the result table and send them row-wise
+  static void send_query_response2(
+      const std::shared_ptr<const Table>& table,
+      const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler);
+
   // Build completion message after query execution containing the statement type and the number of rows affected
   static std::string build_command_complete_message(const ExecutionInformation& execution_information,
                                                     const uint64_t row_count);
