@@ -36,13 +36,14 @@ SSDRegion::DeviceType SSDRegion::get_device_type() const {
 std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>> SSDRegion::open_file_descriptor(
     const std::filesystem::path& file_name) {
 #ifdef __APPLE__
-  int flags = O_RDWR | O_SYNC | O_CREAT;
+  int flags = O_RDWR | O_CREAT;
 #elif __linux__
-  int flags = O_RDWR | O_CREAT;  // TODO: O_DIRECT | O_SYNC |
+  int flags = O_RDWR | O_CREAT | O_DIRECT;  // SYNC?
 #endif
   int fd = open(std::string(file_name).c_str(), flags, 0666);
   if (fd < 0) {
-    Fail("Error while opening backing file at " + std::string(file_name) + ": " + strerror(errno));
+    Fail("Error while opening backing file at " + std::string(file_name) + ": " + strerror(errno) +
+         ". Did you open a file on tmpfs or a network mount?");
   }
   auto fpstream = std::make_unique<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>>(
       fd, boost::iostreams::close_handle);
@@ -54,10 +55,6 @@ std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descripto
     Fail("Error while setting F_NOCACHE on __APPLE__: " + strerror(errno));
   }
 #endif
-
-  // if (!std::filesystem::exists(file_name)) {
-  //   Fail("Backing file does not exist");
-  // }
 
   return fpstream;
 }

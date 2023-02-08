@@ -6,7 +6,6 @@
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/types.hpp"
 #include "storage/buffer/volatile_region.hpp"
-#include "storage/buffer/metrics.hpp"
 
 namespace hyrise {
 
@@ -20,6 +19,26 @@ class BufferManagedPtr;
  */
 class BufferManager {
  public:
+  struct Metrics {
+    // Tracks all allocation that are happening on the buffer manager through the BufferPoolAllocator
+    std::vector<std::size_t> allocations_in_bytes{};
+
+    // Tracks the number of hits in the page_table
+    std::size_t page_table_hits = 0;
+
+    // Tracks the number of hits in the page_table
+    std::size_t page_table_misses = 0;
+
+    // Tracks the number of frames in the volatile region
+    std::size_t num_frames = 0;
+
+    // Tracks the number of bytes written to SSD
+    std::size_t bytes_written = 0;
+
+    // Tracks the number of bytes read from SSD
+    std::size_t bytes_read = 0;
+  };
+
   BufferManager(std::unique_ptr<VolatileRegion> volatile_region, std::unique_ptr<SSDRegion> ssd_region);
 
   /**
@@ -51,6 +70,8 @@ class BufferManager {
    * @param page_id 
    */
   void unpin_page(const PageID page_id);
+
+  void mark_page_dirty(const PageID page_id);
 
   /**
    * @brief 
@@ -92,13 +113,18 @@ class BufferManager {
    */
   static BufferManager& get_global_buffer_manager();
 
+  /**
+   * @brief Returns a metrics strucut holding information about allocations, page table hits etc. of the current buffer manager instance
+  */
+  const Metrics& metrics();
+
  protected:
   friend class Hyrise;
 
  private:
   BufferManager();
 
-  Frame* allocate_frame();
+  std::pair<FrameID, Frame*> allocate_frame();
 
   Frame* find_in_page_table(const PageID page_id);
 
@@ -123,7 +149,7 @@ class BufferManager {
   std::unique_ptr<ClockReplacementStrategy> _replacement_strategy;
 
   // Metrics of buffer manager
-  BufferManagerMetrics _metrics{};
+  Metrics _metrics{};
 };
 
 }  // namespace hyrise

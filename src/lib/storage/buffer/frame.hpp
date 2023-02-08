@@ -7,10 +7,10 @@
 namespace hyrise {
 
 struct Frame {
-  PageID page_id;
-  std::atomic_bool dirty;
-  std::atomic_uint32_t pin_count;
-  Page *data;
+  PageID page_id = INVALID_PAGE_ID;
+  std::atomic_bool dirty {false};
+  std::atomic_uint32_t pin_count{0};
+  Page *data = nullptr;
 };
 
 }  // namespace hyrise

@@ -25,8 +25,13 @@ FrameID ClockReplacementStrategy::find_victim() {
 
   // Avoid an endless-loop if most frames are pinned. In this case, it should return an INVALID_FRAME_ID
   // and the buffer manager should handle things itself.
-  for(size_t frames_left = _num_frames; frames_left <= 0; frames_left--) {
-    if (_used_frames[_current_frame_id] && !_pinned_frames[_current_frame_id]) {
+  for (auto frames_left = _num_frames; frames_left > 0;
+       frames_left--, _current_frame_id = (_current_frame_id + 1) % _num_frames) {
+    if (_pinned_frames[_current_frame_id]) {
+      continue;
+    }
+
+    if (_used_frames[_current_frame_id]) {
       if (_reference_bits[_current_frame_id]) {
         // Remove the reference bit. This frame could become a victim in the next round.
         _reference_bits[_current_frame_id] = false;
@@ -35,8 +40,11 @@ FrameID ClockReplacementStrategy::find_victim() {
         _used_frames[_current_frame_id] = false;
         return _current_frame_id;
       }
+    } else {
+      _reference_bits[_current_frame_id] = true;
+      _used_frames[_current_frame_id] = true;
+      return _current_frame_id;
     }
-    _current_frame_id = (_current_frame_id + 1) % _num_frames;
   }
 
   return INVALID_FRAME_ID;

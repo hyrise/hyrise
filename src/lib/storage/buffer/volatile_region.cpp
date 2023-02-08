@@ -1,8 +1,8 @@
 #include "volatile_region.hpp"
 
 namespace hyrise {
-VolatileRegion::VolatileRegion(size_t num_bytes) : _num_bytes(num_bytes) {
-  _data = std::make_unique<std::byte[]>(num_bytes);
+VolatileRegion::VolatileRegion(const size_t num_bytes) : _num_bytes(num_bytes) {
+  _data = std::make_unique<std::byte[]>(num_bytes);  // TODO: Do alinged_alloc
   Assert(_data.get() != nullptr, "Could not properly allocate data for volatile region.");
   for (FrameID frame_id{0}; frame_id < capacity(); frame_id++) {
     _free_frames.push_front(frame_id);
@@ -19,15 +19,15 @@ std::pair<FrameID, Page*> VolatileRegion::allocate() {
   const auto frame_id = _free_frames.front();
   _free_frames.pop_front();
   _num_free_frames--;
-  const auto page = reinterpret_cast<Page*>(_data.get() + frame_id * sizeof(Page);
+  const auto page = reinterpret_cast<Page*>(_data.get() + frame_id * sizeof(Page));
   return std::make_pair(frame_id, page);
 };
 
 FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
   DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
-  DebugAssert(ptr < _data.get() + capacity() * sizeof(Frame), "Pointer is out of range of region");
+  DebugAssert(ptr < (_data.get() + capacity() * sizeof(Page)), "Pointer is out of range of region");
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _data.get();
-  return FrameID{offset / sizeof(Frame)};
+  return FrameID{offset / sizeof(Page)};
 }
 
 Page* VolatileRegion::get_page(const FrameID frame_id) const {
