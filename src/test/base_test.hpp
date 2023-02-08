@@ -104,4 +104,20 @@ const SegmentEncodingSpec all_segment_encoding_specs[]{
     SegmentEncodingSpec{EncodingType::FrameOfReference},
     SegmentEncodingSpec{EncodingType::LZ4},
     SegmentEncodingSpec{EncodingType::RunLength}};
+
+template <typename EnumType>
+inline auto enum_formatter =
+    [](const ::testing::TestParamInfo<EnumType>& info) { return std::string{magic_enum::enum_name(info.param)}; };
+
+inline auto segment_encoding_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec>& info) {
+  const auto& spec = info.param;
+
+  auto result = std::string{magic_enum::enum_name(spec.encoding_type)};
+  if (spec.vector_compression_type) {
+    result += "_" + std::string{magic_enum::enum_name(*spec.vector_compression_type)};
+  }
+
+  return result;
+};
+
 }  // namespace hyrise

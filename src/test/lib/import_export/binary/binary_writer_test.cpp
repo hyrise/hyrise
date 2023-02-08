@@ -30,20 +30,10 @@ class BinaryWriterTest : public BaseTest {
 
 class BinaryWriterMultiEncodingTest : public BinaryWriterTest, public ::testing::WithParamInterface<EncodingType> {};
 
-auto export_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
-  auto stream = std::stringstream{};
-  stream << info.param;
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryWriterMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
-                         export_binary_formatter);
+                         enum_formatter<EncodingType>);
 
 TEST_F(BinaryWriterTest, TwoColumnsNoValues) {
   TableColumnDefinitions column_definitions;

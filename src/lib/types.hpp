@@ -14,7 +14,6 @@
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
-#include <boost/version.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
@@ -211,6 +210,8 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 // AntiNullAsFalse:   If for a tuple Ri in R, there is a tuple Sj in S so that <condition> is TRUE, Ri is
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
+
+bool is_semi_or_anti_join(const JoinMode join_mode);
 
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,

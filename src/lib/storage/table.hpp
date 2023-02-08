@@ -11,10 +11,10 @@
 #include "abstract_segment.hpp"
 #include "chunk.hpp"
 #include "memory/zero_allocator.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 #include "storage/index/table_index_statistics.hpp"
 #include "storage/table_column_definition.hpp"
-#include "table_key_constraint.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
@@ -198,8 +198,8 @@ class Table : private Noncopyable {
   void create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name = "");
 
   /**
-   * NOTE: Key constraints are currently NOT ENFORCED and are only used to develop optimization rules.
-   * We call them "soft" key constraints to draw attention to that.
+   * NOTE: constraints are currently NOT ENFORCED and are only used to develop optimization rules.
+   * We call them "soft" constraints to draw attention to that.
    */
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;

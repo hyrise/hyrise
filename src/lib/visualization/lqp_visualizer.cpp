@@ -151,24 +151,25 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
   }
 
   if (!dynamic_pointer_cast<AbstractNonQueryNode>(source_node)) {
-    // Edge Tooltip: Unique Constraints
-    const auto& unique_constraints = source_node->unique_constraints();
+    // Edge Tooltip: Unique Column Combinations.
+    const auto& unique_column_combinations = source_node->unique_column_combinations();
     tooltip_stream << "\n"
-                   << "Unique Constraints: \n";
-    if (unique_constraints->empty()) {
+                   << "Unique Column Combinations: \n";
+    if (unique_column_combinations.empty()) {
       tooltip_stream << " <none>\n";
     }
 
-    const auto unique_constraint_count = unique_constraints->size();
-    for (auto constraint_index = size_t{0}; constraint_index < unique_constraint_count; ++constraint_index) {
-      tooltip_stream << " (" << constraint_index + 1 << ") ";
-      tooltip_stream << unique_constraints->at(constraint_index) << "\n";
+    auto ucc_idx = 1;
+    for (const auto& ucc : unique_column_combinations) {
+      tooltip_stream << " (" << ucc_idx << ") ";
+      tooltip_stream << ucc << "\n";
+      ++ucc_idx;
     }
 
-    // Edge Tooltip: Trivial FDs
-    auto trivial_fds = std::vector<FunctionalDependency>();
-    if (!unique_constraints->empty()) {
-      trivial_fds = fds_from_unique_constraints(source_node, unique_constraints);
+    // Edge Tooltip: Trivial FDs.
+    auto trivial_fds = FunctionalDependencies();
+    if (!unique_column_combinations.empty()) {
+      trivial_fds = fds_from_unique_column_combinations(source_node, unique_column_combinations);
     }
     tooltip_stream << "\n"
                    << "Functional Dependencies (trivial): \n";
@@ -176,10 +177,11 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
       tooltip_stream << " <none>\n";
     }
 
-    const auto trivial_fd_count = trivial_fds.size();
-    for (auto fd_idx = size_t{0}; fd_idx < trivial_fd_count; ++fd_idx) {
-      tooltip_stream << " (" << fd_idx + 1 << ") ";
-      tooltip_stream << trivial_fds.at(fd_idx) << "\n";
+    auto trivial_fd_idx = 1;
+    for (const auto& fd : trivial_fds) {
+      tooltip_stream << " (" << trivial_fd_idx << ") ";
+      tooltip_stream << fd << "\n";
+      ++trivial_fd_idx;
     }
 
     // Edge Tooltip: Non-trivial FDs
@@ -190,14 +192,15 @@ void LQPVisualizer::_build_dataflow(const std::shared_ptr<AbstractLQPNode>& sour
       tooltip_stream << " <none>";
     }
 
-    const auto fd_count = fds.size();
-    for (auto fd_idx = size_t{0}; fd_idx < fd_count; ++fd_idx) {
-      tooltip_stream << " (" << fd_idx + 1 << ") ";
-      tooltip_stream << fds.at(fd_idx) << "\n";
+    auto fd_idx = 1;
+    for (const auto& fd : fds) {
+      tooltip_stream << " (" << fd_idx << ") ";
+      tooltip_stream << fd << "\n";
+      ++fd_idx;
     }
   }
 
-  VizEdgeInfo info = _default_edge;
+  auto info = _default_edge;
   info.label = label_stream.str();
   info.label_tooltip = tooltip_stream.str();
   info.pen_width = pen_width;

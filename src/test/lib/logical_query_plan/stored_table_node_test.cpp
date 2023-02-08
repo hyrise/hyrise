@@ -9,10 +9,10 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "statistics/table_statistics.hpp"
 #include "storage/chunk_encoder.hpp"
+#include "storage/constraints/table_key_constraint.hpp"
 #include "storage/index/group_key/composite_group_key_index.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
-#include "storage/table_key_constraint.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
@@ -170,7 +170,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesSingle) {
   const auto fd_expected = FunctionalDependency{{_a}, {_b, _c}};
 
   EXPECT_EQ(fds.size(), 1);
-  EXPECT_EQ(fds.at(0), fd_expected);
+  EXPECT_TRUE(fds.contains(fd_expected));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet) {
@@ -192,7 +192,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedLeftColumnSet2) {
 
   const auto fd_expected = FunctionalDependency{{_b}, {_c}};
   EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 1);
-  EXPECT_EQ(_stored_table_node->functional_dependencies().at(0), fd_expected);
+  EXPECT_TRUE(_stored_table_node->functional_dependencies().contains(fd_expected));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
@@ -204,7 +204,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
 
   const auto fd_expected = FunctionalDependency{{_a}, {_c}};
   EXPECT_EQ(_stored_table_node->functional_dependencies().size(), 1);
-  EXPECT_EQ(_stored_table_node->functional_dependencies().at(0), fd_expected);
+  EXPECT_TRUE(_stored_table_node->functional_dependencies().contains(fd_expected));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
@@ -218,11 +218,8 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
 
   EXPECT_EQ(fds.size(), 2);
-  // Funtional dependencies are built from the table's unique constraints. These constraints are stored in a set, and
-  // their order is not relevant. Thus, we only ensure that both expected FDs are generated.
-  const auto fds_set = std::unordered_set<FunctionalDependency>{fds.cbegin(), fds.cend()};
-  EXPECT_TRUE(fds_set.contains(fd1_expected));
-  EXPECT_TRUE(fds_set.contains(fd2_expected));
+  EXPECT_TRUE(fds.contains(fd1_expected));
+  EXPECT_TRUE(fds.contains(fd2_expected));
 }
 
 TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
@@ -244,7 +241,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 
     const auto fd_expected = FunctionalDependency{{a}, {b, c}};
     EXPECT_EQ(fds.size(), 1);
-    EXPECT_EQ(fds.at(0), fd_expected);
+    EXPECT_TRUE(fds.contains(fd_expected));
   }
 
   // Test {a, b} => {c}
@@ -272,7 +269,7 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 
     const auto fd_expected = FunctionalDependency{{a, c}, {b}};
     EXPECT_EQ(fds.size(), 1);
-    EXPECT_EQ(fds.at(0), fd_expected);
+    EXPECT_TRUE(fds.contains(fd_expected));
   }
 
   // Test {b} => {a, c}
@@ -283,11 +280,11 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
     Hyrise::get().storage_manager.add_table("table_d", table);
     const auto& stored_table_node = StoredTableNode::make("table_d");
 
-    EXPECT_EQ(stored_table_node->functional_dependencies().size(), 0);
+    EXPECT_TRUE(stored_table_node->functional_dependencies().empty());
   }
 }
 
-TEST_F(StoredTableNodeTest, UniqueConstraints) {
+TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
@@ -295,17 +292,17 @@ TEST_F(StoredTableNodeTest, UniqueConstraints) {
   table->add_soft_key_constraint(key_constraint_a_b);
   table->add_soft_key_constraint(key_constraint_c);
 
-  const auto& unique_constraints = _stored_table_node->unique_constraints();
+  const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
 
-  // Basic check
-  EXPECT_EQ(unique_constraints->size(), 2);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_a_b, unique_constraints));
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
+  // Basic check.
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 
-  // Check whether StoredTableNode is referenced by the constraint's expressions
-  for (const auto& unique_constraint : *unique_constraints) {
-    for (const auto& expression : unique_constraint.expressions) {
+  // Check whether StoredTableNode is referenced by the UCC's expressions.
+  for (const auto& ucc : unique_column_combinations) {
+    for (const auto& expression : ucc.expressions) {
       const auto& column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression);
       EXPECT_TRUE(column_expression && !column_expression->original_node.expired());
       EXPECT_TRUE(column_expression->original_node.lock() == _stored_table_node);
@@ -313,10 +310,10 @@ TEST_F(StoredTableNodeTest, UniqueConstraints) {
   }
 }
 
-TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
+TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
 
-  // Prepare unique constraints
+  // Prepare unique UCCs.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
@@ -325,40 +322,40 @@ TEST_F(StoredTableNodeTest, UniqueConstraintsPrunedColumns) {
   table->add_soft_key_constraint(key_constraint_c);
   const auto& table_key_constraints = table->soft_key_constraints();
   EXPECT_EQ(table_key_constraints.size(), 3);
-  EXPECT_EQ(_stored_table_node->unique_constraints()->size(), 3);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 3);
 
-  // Prune column a, which should remove two unique constraints
+  // Prune column a, which should remove two UCCs.
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
-  // Basic check
-  const auto& unique_constraints = _stored_table_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 1);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_c, unique_constraints));
+  // Basic check.
+  const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
 }
 
-TEST_F(StoredTableNodeTest, UniqueConstraintsEmpty) {
+TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {
   EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
-  EXPECT_TRUE(_stored_table_node->unique_constraints()->empty());
+  EXPECT_TRUE(_stored_table_node->unique_column_combinations().empty());
 }
 
-TEST_F(StoredTableNodeTest, HasMatchingUniqueConstraint) {
+TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");
   const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   table->add_soft_key_constraint(key_constraint_a);
-  EXPECT_EQ(_stored_table_node->unique_constraints()->size(), 1);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
 
-  // Negative test
-  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_b}));
-  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_c}));
-  EXPECT_FALSE(_stored_table_node->has_matching_unique_constraint({_b, _c}));
+  // Negative test.
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}));
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}));
+  EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}));
 
-  // Test exact match
-  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a}));
+  // Test exact match.
+  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a}));
 
-  // Test superset of column ids
-  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _b}));
-  EXPECT_TRUE(_stored_table_node->has_matching_unique_constraint({_a, _c}));
+  // Test superset of column ids.
+  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _b}));
+  EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a, _c}));
 }
 
 }  // namespace hyrise

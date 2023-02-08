@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 #include "utils/assert.hpp"
@@ -73,31 +74,6 @@ void MockNode::set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_
   _output_expressions.reset();
 }
 
-std::shared_ptr<LQPUniqueConstraints> MockNode::unique_constraints() const {
-  auto unique_constraints = std::make_shared<LQPUniqueConstraints>();
-
-  for (const auto& table_key_constraint : _table_key_constraints) {
-    // Discard key constraints that involve pruned column id(s).
-    const auto& key_constraint_column_ids = table_key_constraint.columns();
-    if (std::any_of(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(),
-                    [&key_constraint_column_ids](const auto& pruned_column_id) {
-                      return key_constraint_column_ids.contains(pruned_column_id);
-                    })) {
-      continue;
-    }
-
-    // Search for output expressions that represent the TableKeyConstraint's ColumnIDs
-    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
-    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
-                "Unexpected count of column expressions.");
-
-    // Create LQPUniqueConstraint
-    unique_constraints->emplace_back(column_expressions);
-  }
-
-  return unique_constraints;
-}
-
 const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
@@ -121,6 +97,32 @@ std::string MockNode::description(const DescriptionMode mode) const {
   return stream.str();
 }
 
+UniqueColumnCombinations MockNode::unique_column_combinations() const {
+  auto unique_column_combinations = UniqueColumnCombinations{};
+  const auto contains = [](const auto& column_ids, const auto search_column_id) {
+    return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
+  };
+
+  for (const auto& table_key_constraint : _table_key_constraints) {
+    // Discard key constraints that involve pruned column id(s).
+    const auto& key_constraint_column_ids = table_key_constraint.columns();
+    if (std::any_of(key_constraint_column_ids.cbegin(), key_constraint_column_ids.cend(),
+                    [&](const auto column_id) { return contains(_pruned_column_ids, column_id); })) {
+      continue;
+    }
+
+    // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
+    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
+    DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
+                "Unexpected count of column expressions.");
+
+    // Create UniqueColumnCombination.
+    unique_column_combinations.emplace(column_expressions);
+  }
+
+  return unique_column_combinations;
+}
+
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {
   return _table_statistics;
 }
@@ -137,11 +139,11 @@ const TableKeyConstraints& MockNode::key_constraints() const {
   return _table_key_constraints;
 }
 
-void MockNode::set_non_trivial_functional_dependencies(const std::vector<FunctionalDependency>& fds) {
+void MockNode::set_non_trivial_functional_dependencies(const FunctionalDependencies& fds) {
   _functional_dependencies = fds;
 }
 
-std::vector<FunctionalDependency> MockNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies MockNode::non_trivial_functional_dependencies() const {
   return _functional_dependencies;
 }
 

@@ -137,6 +137,10 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
   Fail("Unexpected PredicateCondition");
 }
 
+bool is_semi_or_anti_join(const JoinMode join_mode) {
+  return join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsFalse || join_mode == JoinMode::AntiNullAsTrue;
+}
+
 const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string =
     make_bimap<PredicateCondition, std::string>({
         {PredicateCondition::Equals, "="},

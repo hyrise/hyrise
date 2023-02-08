@@ -9,7 +9,7 @@
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "types.hpp"
-#include "utils/constraint_test_utils.hpp"
+#include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
 
@@ -85,8 +85,8 @@ TEST_F(AggregateNodeTest, HashingAndEqualityCheck) {
 
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_a->hash());
   // _aggregate_node and different_aggregate_node_b are known to conflict because we do not recurse deep enough to
-  // identify the difference in the aggregate expressions. That is acceptable, as long as the comparison identifies
-  // the two nodes as non-equal.
+  // identify the difference in the aggregate expressions. That is acceptable, as long as the comparison identifies the
+  // two nodes as non-equal.
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_c->hash());
   EXPECT_NE(_aggregate_node->hash(), different_aggregate_node_d->hash());
 }
@@ -97,8 +97,8 @@ TEST_F(AggregateNodeTest, Copy) {
   EXPECT_EQ(*_aggregate_node->deep_copy(), *same_aggregate_node);
 }
 
-TEST_F(AggregateNodeTest, UniqueConstraintsAdd) {
-  EXPECT_TRUE(_mock_node->unique_constraints()->empty());
+TEST_F(AggregateNodeTest, UniqueColumnCombinationsAdd) {
+  EXPECT_TRUE(_mock_node->unique_column_combinations().empty());
 
   const auto aggregate1 = sum_(add_(_a, _b));
   const auto aggregate2 = sum_(add_(_a, _c));
@@ -107,117 +107,114 @@ TEST_F(AggregateNodeTest, UniqueConstraintsAdd) {
   const auto agg_node_b =
       AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate1, aggregate2), _mock_node);
 
-  // Check whether AggregateNode adds a new unique constraint for its group-by column(s)
+  // Check whether AggregateNode adds a new UCC for its group-by column(s).
   {
-    EXPECT_EQ(agg_node_a->unique_constraints()->size(), 1);
-    const auto unique_constraint = *agg_node_a->unique_constraints()->cbegin();
-    EXPECT_EQ(unique_constraint.expressions.size(), 1);
-    EXPECT_TRUE(unique_constraint.expressions.contains(_a));
+    const auto& unique_column_combinations = agg_node_a->unique_column_combinations();
+    EXPECT_EQ(unique_column_combinations.size(), 1);
+    EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
   }
   {
-    EXPECT_EQ(agg_node_b->unique_constraints()->size(), 1);
-    const auto unique_constraint = *agg_node_b->unique_constraints()->cbegin();
-    EXPECT_EQ(unique_constraint.expressions.size(), 2);
-    EXPECT_TRUE(unique_constraint.expressions.contains(_a));
-    EXPECT_TRUE(unique_constraint.expressions.contains(_b));
+    const auto& unique_column_combinations = agg_node_b->unique_column_combinations();
+    EXPECT_EQ(unique_column_combinations.size(), 1);
+    EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a, _b}}));
   }
 }
 
-TEST_F(AggregateNodeTest, UniqueConstraintsForwardingSimple) {
+TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingSimple) {
   const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
-  EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
   const auto aggregate_c = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate_c), _mock_node);
-  const auto& unique_constraints = _aggregate_node->unique_constraints();
+  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
 
   /**
    * Expected behaviour:
-   *  - key_constraint_b remains valid since _b is part of the group-by columns.
-   *  - key_constraint_c, however, should be discarded because _c gets aggregated.
+   *  - UCC from key_constraint_b remains valid since _b is part of the group-by columns.
+   *  - UCC from key_constraint_c, however, should be discarded because _c gets aggregated.
    */
 
-  // Basic check
-  EXPECT_EQ(unique_constraints->size(), 1);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
+  // Basic check.
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
-TEST_F(AggregateNodeTest, UniqueConstraintsForwardingAnyAggregates) {
+TEST_F(AggregateNodeTest, UniqueColumnCombinationsForwardingAnyAggregates) {
   const auto key_constraint_b = TableKeyConstraint{{_b->original_column_id}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{_c->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({key_constraint_b, key_constraint_c});
-  EXPECT_EQ(_mock_node->unique_constraints()->size(), 2);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
 
   const auto aggregate_b = any_(_b);
   const auto aggregate_c = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate_b, aggregate_c), _mock_node);
-  const auto& unique_constraints = _aggregate_node->unique_constraints();
+  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
 
   /**
    * Expected behaviour:
-   *  - key_constraint_b remains valid because _b is aggregated via ANY(), a pseudo aggregate function used
-   *    by the DependentGroupByReductionRule to optimize group-bys.
-   *  - key_constraint_c should be discarded because _c is aggregated.
-   *  - Also, we should gain a new unique constraint, covering all group-by columns.
+   *  - UCC from key_constraint_b remains valid because _b is aggregated via ANY(), a pseudo aggregate function used by
+   *    the DependentGroupByReductionRule to optimize group-bys.
+   *  - UCC from key_constraint_c should be discarded because _c is aggregated.
+   *  - Also, we should gain a new UCC covering all group-by columns.
    */
 
-  // Basic check
-  EXPECT_EQ(unique_constraints->size(), 2);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_b, unique_constraints));
-  const auto key_constraint_group_by = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(key_constraint_group_by, unique_constraints));
+  // Basic check.
+  EXPECT_EQ(unique_column_combinations.size(), 2);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
+  EXPECT_FALSE(find_ucc_by_key_constraint(key_constraint_c, unique_column_combinations));
+  const auto ucc_group_by = UniqueColumnCombination{{_a}};
+  EXPECT_TRUE(unique_column_combinations.contains(ucc_group_by));
 }
 
-TEST_F(AggregateNodeTest, UniqueConstraintsNoDuplicates) {
-  // Prepare single unique constraint
+TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoDuplicates) {
+  // Prepare single UCC.
   const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_key_constraint});
-  EXPECT_EQ(_mock_node->unique_constraints()->size(), 1);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
   const auto aggregate1 = sum_(_b);
   const auto aggregate2 = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(aggregate1, aggregate2), _mock_node);
 
   /**
-   * AggregateNode should try to create a new unique constraint from its group-by-column _a. It is the same as
-   * MockNode's unique constraint which gets forwarded.
+   * AggregateNode should try to create a new UCC from its group-by-column _a. It is the same as MockNode's UCC, which
+   * is forwarded.
    *
-   * Expected behaviour: AggregateNode should not output the same unique constraint twice.
+   * Expected behaviour: AggregateNode should not output the same UCC twice.
    */
 
-  // Basic check
-  const auto& unique_constraints = _aggregate_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 1);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_constraints));
+  // Basic check.
+  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
 }
 
-TEST_F(AggregateNodeTest, UniqueConstraintsNoSupersets) {
-  // Prepare single unique constraint
+TEST_F(AggregateNodeTest, UniqueColumnCombinationsNoSupersets) {
+  // Prepare single UCC.
   const auto table_key_constraint = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
   _mock_node->set_key_constraints({table_key_constraint});
-  EXPECT_EQ(_mock_node->unique_constraints()->size(), 1);
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
 
   const auto aggregate = sum_(_c);
   _aggregate_node = AggregateNode::make(expression_vector(_a, _b), expression_vector(aggregate), _mock_node);
 
   /**
-   * AggregateNode should try to create a new unique constraint from both group-by-columns _a and _b.
-   * However, MockNode already has a unique constraint for _a which gets forwarded. It is shorter and
-   * therefore preferred over the unique constraint covering both, _a and _b.
+   * AggregateNode should try to create a new UCC from both group-by-columns _a and _b. However, MockNode already has a
+   * UCC for _a, which is forwarded. It is shorter, and thus preferred over the UCC covering both _a and _b.
    *
-   * Expected behaviour: AggregateNode should forward the input unique constraint only.
+   * Expected behaviour: AggregateNode should only forward the input UCC.
    */
 
-  // Basic check
-  const auto& unique_constraints = _aggregate_node->unique_constraints();
-  EXPECT_EQ(unique_constraints->size(), 1);
-  // In-depth check
-  EXPECT_TRUE(find_unique_constraint_by_key_constraint(table_key_constraint, unique_constraints));
+  // Basic check.
+  const auto& unique_column_combinations = _aggregate_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  // In-depth check.
+  EXPECT_TRUE(find_ucc_by_key_constraint(table_key_constraint, unique_column_combinations));
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
@@ -239,24 +236,24 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesForwarding) {
   const auto& agg_node_b =
       AggregateNode::make(expression_vector(_a, _c), expression_vector(aggregate1, aggregate2), _mock_node);
   EXPECT_EQ(agg_node_b->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(agg_node_b->non_trivial_functional_dependencies().at(0), fd_a);
+  EXPECT_TRUE(agg_node_b->non_trivial_functional_dependencies().contains(fd_a));
 
   // Special case: All determinant expressions, but only some of the dependent expressions are part of the output
   const auto& agg_node_c =
       AggregateNode::make(expression_vector(_b, _c), expression_vector(aggregate1, aggregate2), _mock_node);
   const auto expected_fd = FunctionalDependency{{_b}, {_c}};
   EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_EQ(agg_node_c->non_trivial_functional_dependencies().at(0), expected_fd);
+  EXPECT_TRUE(agg_node_c->non_trivial_functional_dependencies().contains(expected_fd));
 }
 
 TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
-  // The group-by columns form a new candidate key / unique constraint from which we should derive a trivial FD.
+  // The group-by columns form a new candidate key / UCC from which we should derive a trivial FD.
   _mock_node->set_key_constraints({});
   _mock_node->set_non_trivial_functional_dependencies({});
 
   const auto& fds = _aggregate_node->functional_dependencies();
   EXPECT_EQ(fds.size(), 1);
-  const auto& fd = fds.at(0);
+  const auto& fd = *fds.cbegin();
   const auto expected_determinants =
       ExpressionUnorderedSet{_group_by_expressions.cbegin(), _group_by_expressions.cend()};
   const auto expected_dependents =

@@ -28,19 +28,19 @@ bool IntersectNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id) || right_input()->is_column_nullable(column_id);
 }
 
-std::shared_ptr<LQPUniqueConstraints> IntersectNode::unique_constraints() const {
+UniqueColumnCombinations IntersectNode::unique_column_combinations() const {
   /**
-   * Because INTERSECT acts as a pure filter for both input tables, all unique constraints remain valid.
+   * Because INTERSECT acts as a pure filter for both input tables, all unique column combinations remain valid.
    *
-   * Future Work: Merge unique constraints from the left and right input node.
+   * Future Work: Merge unique column combinations from the left and right input node.
    */
-  DebugAssert(left_input()->unique_constraints() == right_input()->unique_constraints(),
-              "Merging of unique constraints should be implemented.");
-  return _forward_left_unique_constraints();
+  DebugAssert(left_input()->unique_column_combinations() == right_input()->unique_column_combinations(),
+              "Merging of unique column combinations should be implemented.");
+  return _forward_left_unique_column_combinations();
 }
 
-std::vector<FunctionalDependency> IntersectNode::non_trivial_functional_dependencies() const {
-  Fail("Merging of FDs should be implemented.");
+FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {
+  Fail("Merging of FDs is not implemented.");
 }
 
 size_t IntersectNode::_on_shallow_hash() const {

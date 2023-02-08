@@ -21,8 +21,9 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 
-  // Generates unique constraints from table's key constraints.
-  std::shared_ptr<LQPUniqueConstraints> unique_constraints() const override;
+  // Generates UCCs from table's soft key constraints. We use these soft key constraints for storing table key
+  // constraints with CREATE TABLE statements.
+  UniqueColumnCombinations unique_column_combinations() const override;
 
   const std::shared_ptr<Table> table;
 

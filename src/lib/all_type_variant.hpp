@@ -4,10 +4,6 @@
 #include <string>
 #include <vector>
 
-#include <boost/version.hpp>
-#if BOOST_VERSION < 107100                 // TODO(anyone): remove this block once Ubuntu ships boost 1.71
-#include "utils/boost_curry_override.hpp"  // NOLINT
-#endif
 #include <boost/hana/core/to.hpp>
 #include <boost/hana/ext/boost/mpl/vector.hpp>
 #include <boost/hana/map.hpp>
