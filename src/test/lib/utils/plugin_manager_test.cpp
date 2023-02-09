@@ -157,8 +157,6 @@ TEST_F(PluginManagerTest, LoadingUnloadingBenchmarkHooks) {
   EXPECT_EQ(plugins.size(), 2u);
 
   {
-    auto user_executable_functions = pm.user_executable_functions();
-
     EXPECT_TRUE(pm.has_pre_benchmark_hook("hyriseTestPlugin"));
     EXPECT_TRUE(pm.has_post_benchmark_hook("hyriseTestPlugin"));
     EXPECT_FALSE(pm.has_pre_benchmark_hook("hyriseSecondTestPlugin"));
