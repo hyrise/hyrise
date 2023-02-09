@@ -102,7 +102,6 @@ constexpr ChunkOffset INVALID_CHUNK_OFFSET{std::numeric_limits<ChunkOffset::base
 constexpr ChunkID INVALID_CHUNK_ID{std::numeric_limits<ChunkID::base_type>::max()};
 
 struct RowID {
-  RowID(const ChunkID init_chunk_id, const ChunkOffset init_chunk_offset) : chunk_id{init_chunk_id}, chunk_offset{init_chunk_offset} {}
   ChunkID chunk_id{INVALID_CHUNK_ID};
   ChunkOffset chunk_offset{INVALID_CHUNK_OFFSET};
 
