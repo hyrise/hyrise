@@ -4,20 +4,31 @@
 #include "storage/buffer/buffer_manager.hpp"
 
 namespace hyrise {
+
+/**
+ * BufferManagerBenchmarkMemoryManager is a utility class that registers a buffer manager as
+ * the memory manager for a benchmarks. This is useful for tracking memory related metrics.
+*/
 class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
  public:
-  void Start() override {}
+  void Start() override {
+    _buffer_manager->metrics() = BufferManager::Metrics{};
+  }
 
   void Stop(Result* result) override {
-    result->num_allocs = _buffer_manager->metrics().allocations_in_bytes.size();
-    result->max_bytes_used = 2423424;
-    result->total_allocated_bytes = 2343;
-    result->net_heap_growth =234;
+    result->num_allocs = _buffer_manager->metrics().num_allocs;
+    result->max_bytes_used = _buffer_manager->metrics().max_bytes_used;
+    result->total_allocated_bytes = _buffer_manager->metrics().total_allocated_bytes;
+    // TODO: result->net_heap_growth
+    // The net changes in memory, in bytes, between Start and Stop.
+    // ie., total_allocated_bytes - total_deallocated_bytes.
+    // Init'ed to TombstoneValue if metric not available.
   }
 
   void Stop(Result& result) override {
-    // TODO: Add more stats here, and maybe adapt if buffer is not reset
-    result.num_allocs = _buffer_manager->metrics().allocations_in_bytes.size();
+    result.num_allocs = _buffer_manager->metrics().num_allocs;
+    result.max_bytes_used = _buffer_manager->metrics().max_bytes_used;
+    result.total_allocated_bytes = _buffer_manager->metrics().total_allocated_bytes;
   }
 
   BufferManagerBenchmarkMemoryManager(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
@@ -32,5 +43,13 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
  private:
   BufferManager* _buffer_manager;
 };
+
+static std::filesystem::path ssd_region_path() {
+  if(const char* path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
+    return path;
+  } else {
+    Fail("HYRISE_BUFFER_MANAGER_PATH not found in environment for benchmarks");
+  }
+}
 
 }  // namespace hyrise

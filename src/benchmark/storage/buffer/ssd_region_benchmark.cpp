@@ -10,16 +10,9 @@
 #include "operators/table_wrapper.hpp"
 #include "storage/buffer/page.hpp"
 #include "storage/buffer/ssd_region.hpp"
+#include "storage/buffer/utils.hpp"
 
 namespace hyrise {
-
-static std::filesystem::path ssd_region_path() {
-  if(const char* path = std::getenv("SSD_REGION_PATH")) {
-    return path;
-  } else {
-    return "./.hyrise_test_data";
-  }
-}
 
 static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();

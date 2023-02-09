@@ -1,4 +1,7 @@
 #include "buffer_manager.hpp"
+#include <algorithm>
+#include <boost/uuid/uuid.hpp>
+#include <chrono>
 #include <cstdlib>
 #include <utility>
 #include "hyrise.hpp"
@@ -15,16 +18,20 @@ std::size_t get_volatile_capacity_from_env() {
   }
 }
 
-std::filesystem::path get_ssd_region_path_from_env() {
+std::filesystem::path get_ssd_region_file_from_env() {
   if (const auto ssd_region_path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
-    return std::filesystem::path(ssd_region_path);
+    const auto path = std::filesystem::path(ssd_region_path);
+    const auto now = std::chrono::system_clock::now();
+    const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+    const auto db_file = std::filesystem::path{"hyrise-buffer-pool-" + std::to_string(timestamp) + ".bin"};
+    return path / db_file;
   } else {
     Fail("HYRISE_BUFFER_MANAGER_PATH not found in environment");
   }
 }
 
 BufferManager::BufferManager() : _num_pages(0), _frames(get_volatile_capacity_from_env() / sizeof(Page)) {
-  _ssd_region = std::make_unique<SSDRegion>(get_ssd_region_path_from_env());
+  _ssd_region = std::make_unique<SSDRegion>(get_ssd_region_file_from_env());
   _volatile_region = std::make_unique<VolatileRegion>(get_volatile_capacity_from_env());
   Assert(_frames.size() == _volatile_region->capacity(), "Frames size need to be equal to volatile region capacity");
   _metrics.num_frames = _volatile_region->capacity();
@@ -205,13 +212,22 @@ std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   Assert(bytes <= PAGE_SIZE, "Cannot allocate more than a Page currently");
+
+  // Update metrics
+  _metrics.allocations_in_bytes.push_back(bytes);
+  _metrics.current_bytes_used += bytes;
+  _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
+  _metrics.total_allocated_bytes += bytes;
+  _metrics.num_allocs++;
+
   // TODO: Do Alignment with aligner, https://www.boost.org/doc/libs/1_62_0/doc/html/align.html
   const auto page_id = new_page();
-  _metrics.allocations_in_bytes.push_back(bytes);
   return BufferManagedPtr<void>(page_id, 0);  // TODO: Use easier constrcutor without offset, no! alignment
 }
 
 void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align) {
+  _metrics.current_bytes_used -= bytes;
+
   remove_page(ptr.get_page_id());
 }
 
@@ -219,7 +235,7 @@ BufferManager& BufferManager::get_global_buffer_manager() {
   return Hyrise::get().buffer_manager;
 }
 
-const BufferManager::Metrics& BufferManager::metrics() {
+BufferManager::Metrics& BufferManager::metrics() {
   return _metrics;
 }
 

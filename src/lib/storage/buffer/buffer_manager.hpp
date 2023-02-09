@@ -15,13 +15,22 @@ class BufferManagedPtr;
 /**
  * @brief 
  * 
- * TODO: Ensure concurrent access via latches or other lock-free mechanims
+ * TODO: Ensure concurrent access via atomics
  */
 class BufferManager {
  public:
   struct Metrics {
     // Tracks all allocation that are happening on the buffer manager through the BufferPoolAllocator
     std::vector<std::size_t> allocations_in_bytes{};
+
+    std::size_t max_bytes_used;
+
+    std::size_t current_bytes_used;
+
+    std::size_t total_allocated_bytes;
+
+    std::size_t num_allocs;
+
 
     // Tracks the number of hits in the page_table
     std::size_t page_table_hits = 0;
@@ -116,7 +125,7 @@ class BufferManager {
   /**
    * @brief Returns a metrics strucut holding information about allocations, page table hits etc. of the current buffer manager instance
   */
-  const Metrics& metrics();
+  Metrics& metrics();
 
  protected:
   friend class Hyrise;
