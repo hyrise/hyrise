@@ -206,49 +206,16 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   auto left_side_pos_lists_by_column = PosListsByColumn{};
   auto right_side_pos_lists_by_column = PosListsByColumn{};
 
-  // Create tasks for post  
-  auto create_left_side_pos_lists_by_column_job = [&]() {
-    if (create_left_side_pos_lists_by_column) {
-      left_side_pos_lists_by_column = setup_pos_list_mapping(left_input_table);
-    }
-  };
-  auto create_right_side_pos_lists_by_column_job = [&]() {
-    if (create_right_side_pos_lists_by_column) {
-      right_side_pos_lists_by_column = setup_pos_list_mapping(right_input_table);
-    }
-  };
-
-  auto pos_lists_by_column_tasks = std::vector<std::shared_ptr<AbstractTask>>{};
-  auto pos_lists_by_column_are_created = false;
-  if ((create_left_side_pos_lists_by_column || create_left_side_pos_lists_by_column) &&
-      (left_input_table->chunk_count() + right_input_table->chunk_count()) > 2048) {
-    //auto start = std::chrono::steady_clock::now();
-    pos_lists_by_column_tasks.reserve(2);
-    pos_lists_by_column_tasks.emplace_back(std::make_shared<JobTask>(create_left_side_pos_lists_by_column_job));
-    pos_lists_by_column_tasks.emplace_back(std::make_shared<JobTask>(create_right_side_pos_lists_by_column_job));
-    Hyrise::get().scheduler()->schedule_tasks(pos_lists_by_column_tasks);
-
-
-    /*
-    Hyrise::get().scheduler()->wait_for_tasks(pos_lists_by_column_tasks);
-    auto end = std::chrono::steady_clock::now();
-    std::cout << "Jobs:" << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " µs (" << left_input_table->chunk_count() << " & " << right_input_table->chunk_count() << ")" << std::endl;
-
-    auto start2 = std::chrono::steady_clock::now();
-    create_left_side_pos_lists_by_column_job();
-    create_right_side_pos_lists_by_column_job();
-    pos_lists_by_column_are_created = true;
-    auto end2 = std::chrono::steady_clock::now();
-    std::cout << "Funs:" << std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2).count() << " µs" << std::endl;
-    */
-  } else {
-    create_left_side_pos_lists_by_column_job();
-    create_right_side_pos_lists_by_column_job();
-    pos_lists_by_column_are_created = true;
+  if (create_left_side_pos_lists_by_column) {
+    left_side_pos_lists_by_column = setup_pos_list_mapping(left_input_table);
   }
 
-  const auto pos_lists_left_size = pos_lists_left.size();
+  if (create_right_side_pos_lists_by_column) {
+    right_side_pos_lists_by_column = setup_pos_list_mapping(right_input_table);
+  }
 
+
+  const auto pos_lists_left_size = pos_lists_left.size();
   auto expected_output_chunk_count = size_t{0};
   for (auto partition_id = size_t{0}; partition_id < pos_lists_left_size; ++partition_id) {
     if (!pos_lists_left[partition_id].empty() || !pos_lists_right[partition_id].empty()) {
@@ -304,15 +271,11 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
       }
     }
 
-    if (!pos_lists_by_column_are_created) {
-      Hyrise::get().scheduler()->wait_for_tasks(pos_lists_by_column_tasks);
-      pos_lists_by_column_are_created = true;
-    }
-
     // We need to pass the pos lists as parameters to ensure the shared_ptr is copied. Capturing by value result in
     // const shared_ptrs and write_output_segments expects non-const.
     auto write_output_segments_task = [&, chunk_input_position] (auto left_side_pos_list, auto right_side_pos_list) {
       Segments output_segments;
+
       // Swap back the inputs, so that the order of the output columns is not changed.
       switch (output_column_order) {
         case OutputColumnOrder::LeftFirstRightSecond:
