@@ -133,6 +133,7 @@ add_executable(
     micro_benchmark_utils.cpp
     micro_benchmark_utils.hpp
 
+    storage/buffer/utils.hpp
     storage/buffer/allocation_benchmark.cpp
     storage/buffer/buffer_manager_benchmark.cpp
     storage/buffer/ssd_region_benchmark.cpp
