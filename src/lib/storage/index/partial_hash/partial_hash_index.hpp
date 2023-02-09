@@ -70,10 +70,10 @@ class PartialHashIndex {
   }
 
   /**
-   * Searches for all positions that do not equal to the entry in the table index and acquires a pair of IteratorRanges
-   * containing two iterator ranges: the range from the beginning of the map until the first occurence of a value
-   * equals to the searched entry and the range from the end of the value until the end of the map. After this, the
-   * functor is called twice, each time with one of the pairs.
+   * Searches for all positions that are not equal to the entry in the table index and acquires a pair of
+   * IteratorRanges containing two iterator ranges: the range from the beginning of the map until the first occurence
+   * of a value equals to the searched entry and the range from the end of the value until the end of the map. After
+   * this, the functor is called twice, each time with one of the pairs.
    * 
    * @param functor is a generic function object accepting two iterators as arguments
    * @param value is the entry searched for

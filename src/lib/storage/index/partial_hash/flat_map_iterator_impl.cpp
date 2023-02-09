@@ -23,14 +23,14 @@ FlatMapIteratorImpl<DataType>& FlatMapIteratorImpl<DataType>::operator++() {
 
 template <typename DataType>
 bool FlatMapIteratorImpl<DataType>::operator==(const BaseFlatMapIteratorImpl& other) const {
-  auto other_iterator = dynamic_cast<const FlatMapIteratorImpl*>(&other);
+  auto other_iterator = static_cast<const FlatMapIteratorImpl*>(&other);
   return other_iterator && _map_iterator == other_iterator->_map_iterator &&
          _vector_index == other_iterator->_vector_index;
 }
 
 template <typename DataType>
 bool FlatMapIteratorImpl<DataType>::operator!=(const BaseFlatMapIteratorImpl& other) const {
-  auto other_iterator = dynamic_cast<const FlatMapIteratorImpl*>(&other);
+  auto other_iterator = static_cast<const FlatMapIteratorImpl*>(&other);
   return !other_iterator || _map_iterator != other_iterator->_map_iterator ||
          _vector_index != other_iterator->_vector_index;
 }

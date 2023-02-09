@@ -13,8 +13,7 @@ namespace hyrise {
 class PartialHashIndexTest : public BaseTest {
  protected:
   void SetUp() override {
-    TableColumnDefinitions table_column_definitions;
-    table_column_definitions.emplace_back("column_1", DataType::String, true);
+    const auto table_column_definitions = TableColumnDefinitions{{"column_1", DataType::String, true}};
     table = std::make_shared<Table>(table_column_definitions, TableType::Data);
 
     values1 = {"hotel", "delta", "nullptr", "delta", "apple", "charlie", "charlie", "inbox"};
@@ -35,7 +34,7 @@ class PartialHashIndexTest : public BaseTest {
     chunks_to_index.push_back(std::make_pair(ChunkID{1}, table->get_chunk(ChunkID{1})));
 
     index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
-    index_map = &(dynamic_cast<PartialHashIndexImpl<pmr_string>*>(index->_impl.get())->_positions);
+    index_map = &(static_cast<PartialHashIndexImpl<pmr_string>*>(index->_impl.get())->_positions);
   }
 
   pmr_vector<pmr_string> values1;
@@ -437,7 +436,7 @@ TEST_F(PartialHashIndexTest, Values) {
       RowID{ChunkID{1}, ChunkOffset{6}}, RowID{ChunkID{1}, ChunkOffset{7}}};
   std::multiset<RowID> actual = {};
 
-  int size = 0;
+  auto size = uint32_t{0};
   while (begin != end) {
     actual.insert(*begin);
     ++begin;

@@ -27,15 +27,11 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
     // Iterate over the segment to index and populate the index.
     const auto& indexed_segment = chunk.second->get_segment(column_id);
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
-      const auto row_id = RowID{chunk.first, position.chunk_offset()};
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
-        if (!_null_positions.contains(DataType{})) {
-          _null_positions[DataType{}] = std::vector<RowID>();
-        }
-        _null_positions[DataType{}].push_back(row_id);
+        _null_positions[DataType{}].emplace_back(RowID{chunk.first, position.chunk_offset()});
       } else {
-        _positions[position.value()].push_back(row_id);
+        _positions[position.value()].emplace_back(RowID{chunk.first, position.chunk_offset()});
       }
     });
   }
