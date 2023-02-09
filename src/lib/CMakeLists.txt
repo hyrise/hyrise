@@ -17,8 +17,6 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
-    constant_mappings.cpp
-    constant_mappings.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
@@ -540,6 +538,7 @@ set(
     storage/vector_compression/base_compressed_vector.hpp
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/compressed_vector_type.cpp
     storage/vector_compression/compressed_vector_type.hpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp
@@ -567,8 +566,6 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
-    utils/boost_bimap_core_override.hpp
-    utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
     utils/column_ids_after_pruning.cpp

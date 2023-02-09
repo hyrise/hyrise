@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <nlohmann/json.hpp>
 #include "cxxopts.hpp"
+#include "nlohmann/json.hpp"
 
 #include "abstract_benchmark_item_runner.hpp"
 #include "abstract_table_generator.hpp"
@@ -36,7 +36,7 @@ class SQLiteWrapper;
 // calls the supplied table generator, runs and times the benchmark items, and reports the benchmark results.
 class BenchmarkRunner : public Noncopyable {
  public:
-  // Defines the interval in which the system utilization is collected
+  // Defines the interval in which the system utilization is collected.
   static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::seconds{1};
 
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
@@ -51,11 +51,6 @@ class BenchmarkRunner : public Noncopyable {
   // If the query execution should be validated, this stores a pointer to the used SQLite instance.
   std::shared_ptr<SQLiteWrapper> sqlite_wrapper;
 
-  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
-  // This is idempotent, i.e., you can call it multiple times and the resulting file will be overwritten. Be aware
-  // writing the file may affect the performance of concurrently running queries.
-  void write_report_to_file() const;
-
  private:
   // Run benchmark in BenchmarkMode::Shuffled mode.
   void _benchmark_shuffled();
@@ -69,6 +64,14 @@ class BenchmarkRunner : public Noncopyable {
   // Schedules a run of the specified for execution. After execution, the result is updated. If the scheduler is
   // disabled, the item is executed immediately.
   void _schedule_item_run(const BenchmarkItemID item_id);
+
+  // Create a report in roughly the same format as google benchmarks do when run with --benchmark_format=json.
+  nlohmann::json _create_report() const;
+
+  // Write the @param report to the @param file_name. This is idempotent, i.e., you can call it multiple times and the
+  // resulting file will be overwritten. Be aware that writing the file may affect the performance of concurrently
+  // running queries.
+  static void _write_report_to_file(const std::string& file_name, const nlohmann::json& report);
 
   // Converts the result of a SQL query into a JSON object.
   static nlohmann::json _sql_to_json(const std::string& sql);
@@ -107,6 +110,8 @@ class BenchmarkRunner : public Noncopyable {
   BenchmarkState _state{Duration{0}};
 
   int _snapshot_id{0};
+
+  std::vector<std::string> _loaded_plugins{};
 };
 
 }  // namespace hyrise

@@ -2,7 +2,6 @@
 
 #include <atomic>
 
-#include "constant_mappings.hpp"
 #include "encoding_config.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"

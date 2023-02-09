@@ -5,7 +5,6 @@
 #include "base_test.hpp"
 #include "lib/storage/encoding_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"

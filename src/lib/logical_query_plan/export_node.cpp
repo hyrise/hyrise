@@ -3,7 +3,6 @@
 #include <sstream>
 
 #include <boost/algorithm/string.hpp>
-
 #include "magic_enum.hpp"
 
 namespace hyrise {

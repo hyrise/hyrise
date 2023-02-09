@@ -1,6 +1,7 @@
 #include "meta_log_table.hpp"
 
-#include "constant_mappings.hpp"
+#include "magic_enum.hpp"
+
 #include "hyrise.hpp"
 #include "utils/assert.hpp"
 
@@ -36,9 +37,9 @@ std::shared_ptr<Table> MetaLogTable::_on_generate() const {
     auto buffer = tm{};
 
     timestamp_stream << std::put_time(localtime_r(&timestamp, &buffer), "%F %T");
-    output_table->append(
-        {timestamp_ns, pmr_string{timestamp_stream.str()}, pmr_string{log_level_to_string.left.at(entry.log_level)},
-         static_cast<int32_t>(entry.log_level), pmr_string{entry.reporter}, pmr_string{entry.message}});
+    output_table->append({timestamp_ns, pmr_string{timestamp_stream.str()},
+                          pmr_string{magic_enum::enum_name(entry.log_level)}, static_cast<int32_t>(entry.log_level),
+                          pmr_string{entry.reporter}, pmr_string{entry.message}});
   }
 
   return output_table;

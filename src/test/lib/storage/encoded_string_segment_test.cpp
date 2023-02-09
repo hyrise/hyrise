@@ -5,7 +5,6 @@
 
 #include "encoding_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
