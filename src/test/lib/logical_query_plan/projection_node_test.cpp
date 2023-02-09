@@ -77,6 +77,7 @@ TEST_F(ProjectionNodeTest, UniqueColumnCombinationsReorderedColumns) {
   // Add constraints to MockNode.
   _mock_node->set_key_constraints({*_key_constraint_a_b_pk, *_key_constraint_b});
   EXPECT_EQ(_mock_node->unique_column_combinations().size(), 2);
+
   {
     // Reorder columns: (a, b, c) -> (c, a, b).
     _projection_node = ProjectionNode::make(expression_vector(_c, _a, _b), _mock_node);
