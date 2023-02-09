@@ -193,41 +193,27 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 InclusionDependencies StoredTableNode::inclusion_dependencies() const {
   auto inclusion_dependencies = InclusionDependencies{};
 
-  // We create inclusion dependencies from table inclusion constraints
+  // We create inclusion dependencies from foreign constraints.
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& table_inclusion_constraints = table->soft_inclusion_constraints();
+  const auto& foreign_key_constraints = table->referenced_foreign_key_constraints();
 
-  for (const auto& table_inclusion_constraint : table_inclusion_constraints) {
-    const auto& referenced_table_name = table_inclusion_constraint.included_table_name();
-    if (!Hyrise::get().storage_manager.has_table(referenced_table_name)) {
+  for (const auto& foreign_key_constraint : foreign_key_constraints) {
+    const auto& referenced_table = foreign_key_constraint.foreign_key_table();
+    if (referenced_table) {
       // Referenced table was deleted, IND is useless.
       continue;
     }
 
     // Discard inclusion constraints that involve pruned column id(s).
-    if (contains_any_column_id(table_inclusion_constraint.columns(), _pruned_column_ids)) {
-      continue;
-    }
-
-    const auto& referenced_stored_table_node = _get_or_find_referenced_node(referenced_table_name);
-    if (!referenced_stored_table_node) {
-      // Referenced table is not part of this query, IND is irrelevant.
-      continue;
-    }
-
-    // Discard inclusion constraints that involve pruned column id(s) from other node.
-    if (contains_any_column_id(table_inclusion_constraint.included_columns(),
-                               referenced_stored_table_node->pruned_column_ids())) {
+    if (contains_any_column_id(foreign_key_constraint.columns(), _pruned_column_ids)) {
       continue;
     }
 
     // Search for expressions representing the inclusion constraint's ColumnIDs
-    const auto& column_expressions = find_expressions(table_inclusion_constraint.columns(), this->output_expressions());
-    const auto& included_column_expressions = find_expressions(table_inclusion_constraint.included_columns(),
-                                                               referenced_stored_table_node->output_expressions());
+    const auto& column_expressions = find_expressions(foreign_key_constraint.columns(), this->output_expressions());
 
     // Create InclusionDependency
-    inclusion_dependencies.emplace(column_expressions, included_column_expressions);
+    inclusion_dependencies.emplace(column_expressions, foreign_key_constraint.foreign_key_columns(), referenced_table);
   }
 
   return inclusion_dependencies;
@@ -292,50 +278,6 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
          _pruned_column_ids == stored_table_node._pruned_column_ids;
-}
-
-std::shared_ptr<const StoredTableNode> StoredTableNode::_get_or_find_referenced_node(
-    const std::string& table_name) const {
-  // Lookup referenced StoredTableNode from cache
-  auto referenced_node = std::shared_ptr<const StoredTableNode>{};
-  const auto& stored_table_node_it = _ind_stored_table_node_cache.find(table_name);
-  if (stored_table_node_it != _ind_stored_table_node_cache.cend()) {
-    // The node might still be a nullptr if the table is not part of the current LQP.
-    referenced_node = stored_table_node_it->second.lock();
-    return referenced_node;
-  }
-
-  // Lookup failed. Actually search for node.
-  auto root_node = std::shared_ptr<const AbstractLQPNode>{};
-  visit_lqp_upwards(shared_from_this(), [&](const auto& node) {
-    if (node->output_count() == 0) {
-      Assert(!root_node, "LQP has multiple root nodes");
-      root_node = node;
-    }
-
-    return LQPUpwardVisitation::VisitOutputs;
-  });
-
-  Assert(root_node, "LQP has no root node");
-  visit_lqp(root_node, [&](const auto& node) {
-    if (referenced_node) {
-      return LQPVisitation::DoNotVisitInputs;
-    }
-
-    if (node->type == LQPNodeType::StoredTable) {
-      const auto stored_table_node = std::static_pointer_cast<const StoredTableNode>(node);
-      if (stored_table_node->table_name == table_name) {
-        referenced_node = stored_table_node;
-      }
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
-
-  // referenced_node might be a nullptr if a StoredTableNode of the requested table is not present in the LQP. However,
-  // we do not want to search for it again.
-  _ind_stored_table_node_cache[table_name] = referenced_node;
-  return referenced_node;
 }
 
 }  // namespace hyrise

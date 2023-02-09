@@ -97,8 +97,8 @@ OrderDependencies JoinNode::order_dependencies() const {
     return _forward_left_order_dependencies();
   }
 
-  // ODs are not effected from removing or duplicating tuples, so we simply have to foward left and right ODs without
-  // duplicate ODs. We simply achieve deduplication by using sets for ODs.
+  // ODs are not affected from removing or duplicating tuples, so we simply have to foward left and right ODs without
+  // duplicate ODs. We achieve deduplication by using sets for ODs.
   const auto& left_order_dependencies = left_input()->order_dependencies();
   const auto& right_order_dependencies = right_input()->order_dependencies();
   auto order_dependencies = OrderDependencies{left_order_dependencies.cbegin(), left_order_dependencies.cend()};

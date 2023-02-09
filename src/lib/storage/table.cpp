@@ -366,7 +366,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 
   {
-    auto scoped_lock = acquire_append_mutex();
+    const auto scoped_lock = acquire_append_mutex();
 
     for (const auto& existing_constraint : _table_key_constraints) {
       // Ensure that no other PRIMARY KEY is defined
@@ -383,34 +383,41 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 }
 
-void Table::add_soft_inclusion_constraint(const TableInclusionConstraint& table_inclusion_constraint) {
-  Assert(_type == TableType::Data, "Inclusion constraints are not tracked for reference tables across the PQP.");
+void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
+  Assert(_type == TableType::Data, "Foreign key constraints are not tracked for reference tables across the PQP.");
+
+  Assert(&*foreign_key_constraint.foreign_key_table() == &*this, "Foreign key constraint is added to wrong table");
 
   // Check validity of specified columns
-  for (const auto& column_id : table_inclusion_constraint.columns()) {
+  for (const auto& column_id : foreign_key_constraint.foreign_key_columns()) {
     Assert(column_id < column_count(), "ColumnID out of range");
   }
 
-  Assert(Hyrise::get().storage_manager.has_table(table_inclusion_constraint.included_table_name()),
-         "Referenced table must exist");
-  const auto referenced_table_column_count =
-      Hyrise::get().storage_manager.get_table(table_inclusion_constraint.included_table_name())->column_count();
+  const auto referenced_table = foreign_key_constraint.table();
+  Assert(referenced_table, "Referenced table must exist");
+
+  const auto referenced_table_column_count = referenced_table->column_count();
 
   // Check validity of included columns
-  for (const auto& column_id : table_inclusion_constraint.included_columns()) {
+  for (const auto& column_id : foreign_key_constraint.columns()) {
     Assert(column_id < referenced_table_column_count, "ColumnID out of range");
   }
 
   {
-    auto scoped_lock = acquire_append_mutex();
-    Assert(!_table_inclusion_constraints.contains(table_inclusion_constraint),
-           "TableInclusionConstraint is already set");
-    _table_inclusion_constraints.insert(table_inclusion_constraint);
+    const auto scoped_lock = acquire_append_mutex();
+    Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set");
+    _foreign_key_constraints.insert(foreign_key_constraint);
+    const auto referenced_table_scoped_lock = referenced_table->acquire_append_mutex();
+    referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
   }
 }
 
-const TableInclusionConstraints& Table::soft_inclusion_constraints() const {
-  return _table_inclusion_constraints;
+const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
+  return _foreign_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
+  return _referenced_foreign_key_constraints;
 }
 
 void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
@@ -428,7 +435,7 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   }
 
   {
-    auto scoped_lock = acquire_append_mutex();
+    const auto scoped_lock = acquire_append_mutex();
     Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set");
     _table_order_constraints.insert(table_order_constraint);
   }

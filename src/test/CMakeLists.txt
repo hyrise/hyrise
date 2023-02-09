@@ -178,7 +178,7 @@ set(
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
-    lib/storage/constraints/table_inclusion_constraint_test.cpp
+    lib/storage/constraints/foreign_key_constraint_test.cpp
     lib/storage/constraints/table_key_constraint_test.cpp
     lib/storage/constraints/table_order_constraint_test.cpp
     lib/storage/dictionary_segment_test.cpp
