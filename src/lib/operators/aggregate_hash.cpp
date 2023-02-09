@@ -9,7 +9,6 @@
 #include <vector>
 
 #include "aggregate/aggregate_traits.hpp"
-#include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"

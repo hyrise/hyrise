@@ -25,6 +25,6 @@ void SecondTestPlugin::a_user_executable_function() const {
   storage_manager.add_table("TableOfSecondTestPlugin", table);
 }
 
-EXPORT_PLUGIN(SecondTestPlugin)
+EXPORT_PLUGIN(SecondTestPlugin);
 
 }  // namespace hyrise

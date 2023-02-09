@@ -1,6 +1,6 @@
 #include "date_time_utils.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 namespace hyrise {
 

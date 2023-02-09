@@ -10,7 +10,6 @@
 #include <tuple>
 #include <vector>
 
-#include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
@@ -238,8 +237,6 @@ enum class MetaTableChangeType { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
 
-enum class LogLevel { Debug, Info, Warning };
-
 enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
 
 // Used as a template parameter that is passed whenever we conditionally erase the type of a template. This is done to
@@ -272,12 +269,6 @@ class Noncopyable {
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
-
-extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<SortMode, std::string> sort_mode_to_string;
-extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
-extern const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string;
-extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
 std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);

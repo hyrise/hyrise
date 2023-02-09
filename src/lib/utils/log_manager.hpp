@@ -8,6 +8,8 @@
 
 namespace hyrise {
 
+enum class LogLevel { Debug, Info, Warning };
+
 struct LogEntry {
   // We need system_clock here to provide human readable timestamps in MetaLogTable.
   std::chrono::system_clock::time_point timestamp;

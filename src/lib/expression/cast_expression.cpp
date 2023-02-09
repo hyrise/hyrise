@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
-
 namespace hyrise {
 
 CastExpression::CastExpression(const std::shared_ptr<AbstractExpression>& argument, const DataType data_type)

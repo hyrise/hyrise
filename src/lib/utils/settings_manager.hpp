@@ -28,7 +28,7 @@ class SettingsManager : public Noncopyable {
   void _remove(const std::string& name);
 
  private:
-  std::map<std::string, std::shared_ptr<AbstractSetting>> _settings;
+  std::unordered_map<std::string, std::shared_ptr<AbstractSetting>> _settings;
 };
 
 }  // namespace hyrise

@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

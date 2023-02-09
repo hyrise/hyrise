@@ -4,7 +4,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "SQLParserResult.h"
 #include "benchmark_runner.hpp"

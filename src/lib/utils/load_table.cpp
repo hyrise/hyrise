@@ -9,7 +9,6 @@
 
 #include "storage/table.hpp"
 
-#include "constant_mappings.hpp"
 #include "resolve_type.hpp"
 #include "string_utils.hpp"
 
