@@ -6,7 +6,6 @@
 
 #include "aggregate/aggregate_traits.hpp"
 #include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "operators/sort.hpp"
 #include "storage/pos_lists/entire_chunk_pos_list.hpp"

@@ -10,11 +10,9 @@
 #include <tuple>
 #include <vector>
 
-#include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
 #include <boost/operators.hpp>
-#include <boost/version.hpp>
 
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
@@ -212,6 +210,8 @@ PredicateCondition conditions_to_between(const PredicateCondition lower, const P
 //                      dropped. This behavior mirrors NOT EXISTS
 enum class JoinMode { Inner, Left, Right, FullOuter, Cross, Semi, AntiNullAsTrue, AntiNullAsFalse };
 
+bool is_semi_or_anti_join(const JoinMode join_mode);
+
 // SQL set operations come in two flavors, with and without `ALL`, e.g., `UNION` and `UNION ALL`.
 // We have a third mode (Positions) that is used to intersect position lists that point to the same table,
 // see union_positions.hpp for details.
@@ -236,8 +236,6 @@ enum class EraseReferencedSegmentType : bool { Yes = true, No = false };
 enum class MetaTableChangeType { Insert, Delete, Update };
 
 enum class AutoCommit : bool { Yes = true, No = false };
-
-enum class LogLevel { Debug, Info, Warning };
 
 enum class DatetimeComponent { Year, Month, Day, Hour, Minute, Second };
 
@@ -271,12 +269,6 @@ class Noncopyable {
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};
-
-extern const boost::bimap<PredicateCondition, std::string> predicate_condition_to_string;
-extern const boost::bimap<SortMode, std::string> sort_mode_to_string;
-extern const boost::bimap<JoinMode, std::string> join_mode_to_string;
-extern const boost::bimap<SetOperationMode, std::string> set_operation_mode_to_string;
-extern const boost::bimap<TableType, std::string> table_type_to_string;
 
 std::ostream& operator<<(std::ostream& stream, PredicateCondition predicate_condition);
 std::ostream& operator<<(std::ostream& stream, SortMode sort_mode);

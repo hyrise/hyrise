@@ -5,7 +5,6 @@
 #include "base_test.hpp"
 #include "lib/storage/encoding_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "operators/get_table.hpp"
 #include "operators/print.hpp"
 #include "operators/table_scan.hpp"
@@ -141,24 +140,9 @@ class EncodedSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 };
 
-auto encoded_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
-  const auto spec = info.param;
-
-  auto stream = std::stringstream{};
-  stream << spec.encoding_type;
-  if (spec.vector_compression_type) {
-    stream << "-" << *spec.vector_compression_type;
-  }
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedSegmentTest,
                          ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, false)),
-                         encoded_segment_test_formatter);
+                         segment_encoding_formatter);
 
 TEST_P(EncodedSegmentTest, EncodeEmptyIntSegment) {
   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{});

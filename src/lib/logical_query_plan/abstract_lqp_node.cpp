@@ -270,15 +270,7 @@ ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) co
 
 bool AbstractLQPNode::has_output_expressions(const ExpressionUnorderedSet& expressions) const {
   const auto& output_expressions = this->output_expressions();
-
-  for (const auto& expression : expressions) {
-    if (!std::any_of(output_expressions.cbegin(), output_expressions.cend(),
-                     [&expression](const auto& output_expression) { return *output_expression == *expression; })) {
-      return false;
-    }
-  }
-
-  return true;
+  return contains_all_expressions(expressions, output_expressions);
 }
 
 bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
@@ -288,29 +280,29 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
   return left_input()->is_column_nullable(column_id);
 }
 
-bool AbstractLQPNode::has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const {
+bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
   DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
-  const auto& unique_constraints = this->unique_constraints();
-  if (unique_constraints->empty()) {
+  const auto& unique_column_combinations = this->unique_column_combinations();
+  if (unique_column_combinations.empty()) {
     return false;
   }
 
-  return contains_matching_unique_constraint(unique_constraints, expressions);
+  return contains_matching_unique_column_combination(unique_column_combinations, expressions);
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() const {
-  // (1) Gather non-trivial FDs and perform sanity checks
-  auto non_trivial_fds = non_trivial_functional_dependencies();
+FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
+  // (1) Gather non-trivial FDs and perform sanity checks.
+  const auto& non_trivial_fds = non_trivial_functional_dependencies();
   if constexpr (HYRISE_DEBUG) {
-    auto fds_set = std::unordered_set<FunctionalDependency>{};
+    auto fds = FunctionalDependencies{};
     const auto& output_expressions = this->output_expressions();
     const auto& output_expressions_set = ExpressionUnorderedSet{output_expressions.cbegin(), output_expressions.cend()};
 
     for (const auto& fd : non_trivial_fds) {
-      auto [_, inserted] = fds_set.insert(fd);
+      auto [_, inserted] = fds.insert(fd);
       Assert(inserted, "FDs with the same set of determinant expressions should be merged.");
 
       for (const auto& fd_determinant_expression : fd.determinants) {
@@ -327,26 +319,26 @@ std::vector<FunctionalDependency> AbstractLQPNode::functional_dependencies() con
     }
   }
 
-  // (2) Derive trivial FDs from the node's unique constraints
-  const auto& unique_constraints = this->unique_constraints();
-  // Early exit, if there are no unique constraints
-  if (unique_constraints->empty()) {
+  // (2) Derive trivial FDs from the node's unique column combinations.
+  const auto& unique_column_combinations = this->unique_column_combinations();
+  // Early exit if there are no UCCs.
+  if (unique_column_combinations.empty()) {
     return non_trivial_fds;
   }
 
-  auto trivial_fds = fds_from_unique_constraints(shared_from_this(), unique_constraints);
+  const auto& trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
 
-  // (3) Merge and return FDs
+  // (3) Merge and return FDs.
   return union_fds(non_trivial_fds, trivial_fds);
 }
 
-std::vector<FunctionalDependency> AbstractLQPNode::non_trivial_functional_dependencies() const {
+FunctionalDependencies AbstractLQPNode::non_trivial_functional_dependencies() const {
   if (left_input()) {
     Assert(!right_input(), "Expected single input node for implicit FD forwarding. Please override this function.");
     return left_input()->non_trivial_functional_dependencies();
   }
 
-  // e.g. StoredTableNode or StaticTableNode cannot provide any non-trivial FDs
+  // For instance, StoredTableNode or StaticTableNode cannot provide any non-trivial FDs.
   return {};
 }
 
@@ -426,18 +418,18 @@ void AbstractLQPNode::_add_output_pointer(const std::shared_ptr<AbstractLQPNode>
   _outputs.emplace_back(output);
 }
 
-std::shared_ptr<LQPUniqueConstraints> AbstractLQPNode::_forward_left_unique_constraints() const {
-  Assert(left_input(), "Cannot forward unique constraints without an input node.");
-  const auto& input_unique_constraints = left_input()->unique_constraints();
+UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinations() const {
+  Assert(left_input(), "Cannot forward unique column combinations without an input node.");
+  const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
     // Check whether output expressions are missing
-    for (const auto& unique_constraint : *input_unique_constraints) {
-      Assert(has_output_expressions(unique_constraint.expressions),
-             "Forwarding of constraints is illegal because node misses output expressions.");
+    for (const auto& ucc : input_unique_column_combinations) {
+      Assert(has_output_expressions(ucc.expressions),
+             "Forwarding of UCC is illegal because node misses output expressions.");
     }
   }
-  return input_unique_constraints;
+  return input_unique_column_combinations;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

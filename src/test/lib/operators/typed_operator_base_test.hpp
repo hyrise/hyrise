@@ -5,7 +5,6 @@
 #include <boost/hana/for_each.hpp>
 
 #include "base_test.hpp"
-#include "constant_mappings.hpp"
 #include "storage/encoding_type.hpp"
 #include "types.hpp"
 
@@ -18,9 +17,12 @@ class TypedOperatorBaseTest
  public:
   static std::string format(testing::TestParamInfo<ParamType> info) {
     const auto& [data_type, encoding, sort_mode, nullable] = info.param;
+    auto output = std::stringstream{};
 
-    return data_type_to_string.left.at(data_type) + encoding_type_to_string.left.at(encoding) +
-           (sort_mode ? sort_mode_to_string.left.at(*sort_mode) : "Unsorted") + (nullable ? "" : "Not") + "Nullable";
+    output << data_type << encoding << (sort_mode ? magic_enum::enum_name(*sort_mode) : "Unsorted")
+           << (nullable ? "" : "Not") << "Nullable";
+
+    return output.str();
   }
 };
 
@@ -30,15 +32,12 @@ static std::vector<TypedOperatorBaseTest::ParamType> create_test_params() {
   hana::for_each(data_type_pairs, [&](auto pair) {
     const auto& data_type = hana::first(pair);
 
-    for (auto encoding_it = encoding_type_to_string.begin(); encoding_it != encoding_type_to_string.end();
-         ++encoding_it) {
-      const auto& encoding = encoding_it->left;
+    for (const auto encoding : magic_enum::enum_values<EncodingType>()) {
       if (!encoding_supports_data_type(encoding, data_type)) {
         continue;
       }
 
-      for (auto sorted_by_it = sort_mode_to_string.begin(); sorted_by_it != sort_mode_to_string.end(); ++sorted_by_it) {
-        const auto& sort_mode = sorted_by_it->left;
+      for (const auto sort_mode : magic_enum::enum_values<SortMode>()) {
         pairs.emplace_back(data_type, encoding, sort_mode, true);
         pairs.emplace_back(data_type, encoding, sort_mode, false);
       }

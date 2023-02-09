@@ -78,4 +78,8 @@ TEST_F(PrintUtilsTest, print_table_key_constraints) {
   EXPECT_EQ(stream.str(), "PRIMARY_KEY(c) | UNIQUE(a, b)");
 }
 
+TEST_F(PrintUtilsTest, all_encoding_options) {
+  EXPECT_EQ(all_encoding_options(), "Unencoded, Dictionary, RunLength, FixedStringDictionary, FrameOfReference, LZ4");
+}
+
 }  // namespace hyrise

@@ -6,8 +6,8 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
-#include "functional_dependency.hpp"
-#include "lqp_unique_constraint.hpp"
+#include "logical_query_plan/data_dependencies/functional_dependency.hpp"
+#include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -180,29 +180,30 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool is_column_nullable(const ColumnID column_id) const;
 
   /**
-   * @return Unique constraints valid for the current LQP. See lqp_unique_constraint.hpp for more documentation.
+   * @return Unique column combinations (UCCs) valid for the current LQP. See unique_column_combination.hpp for more
+   *         documentation.
    */
-  virtual std::shared_ptr<LQPUniqueConstraints> unique_constraints() const = 0;
+  virtual UniqueColumnCombinations unique_column_combinations() const = 0;
 
   /**
-   * @return True, if there is a unique constraint matching the given subset of output expressions.
-   *         (i.e., the rows are guaranteed to be unique). This is preferred over calling
-   *         contains_matching_unique_constraint(unique_constraints(), ...) as it performs additional sanity
-   *         checks.
+   * @return True if there is a unique column combination (UCC) matching the given subset of output expressions (i.e.,
+   *         the rows are guaranteed to be unique). This is preferred over calling
+   *         contains_matching_unique_column_combination(unique_column_combinations(), ...) as it performs additional
+   *         sanity checks.
    */
-  bool has_matching_unique_constraint(const ExpressionUnorderedSet& expressions) const;
+  bool has_matching_ucc(const ExpressionUnorderedSet& expressions) const;
 
   /**
    * @return The functional dependencies valid for this node. See functional_dependency.hpp for documentation.
    *         They are collected from two different sources:
-   *          (1) FDs derived from the node's unique constraints. (trivial FDs)
-   *          (2) FDs provided by the child nodes (non-trivial FDs)
+   *          (1) FDs derived from the node's unique column combinations (trivial FDs).
+   *          (2) FDs provided by the child nodes (non-trivial FDs).
    */
-  std::vector<FunctionalDependency> functional_dependencies() const;
+  FunctionalDependencies functional_dependencies() const;
 
   /**
-   * This is a helper method that returns non-trivial FDs valid for the current node.
-   * We consider FDs as non-trivial if we cannot derive them from the current node's unique constraints.
+   * This is a helper method that returns non-trivial FDs valid for the current node. We consider FDs as non-trivial if
+   *  we cannot derive them from the current node's unique column combinations.
    *
    * @return The default implementation returns non-trivial FDs from the left input node, if available. Otherwise
    * an empty vector.
@@ -212,7 +213,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
    *  - to discard non-trivial FDs from the input nodes, if necessary.
    *  - to specify forwarding of non-trivial FDs in case of two input nodes.
    */
-  virtual std::vector<FunctionalDependency> non_trivial_functional_dependencies() const;
+  virtual FunctionalDependencies non_trivial_functional_dependencies() const;
 
   /**
    * Perform a deep equality check
@@ -255,10 +256,10 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const = 0;
 
   /**
-   * This is a helper method for node types that do not have an effect on the unique constraints from input nodes.
-   * @return All unique constraints from the left input node.
+   * This is a helper method for node types that do not have an effect on the UCCs from input nodes.
+   * @return All unique column combinations from the left input node.
    */
-  std::shared_ptr<LQPUniqueConstraints> _forward_left_unique_constraints() const;
+  UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

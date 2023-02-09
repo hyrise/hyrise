@@ -22,15 +22,15 @@ std::shared_ptr<AbstractSetting> SettingsManager::get_setting(const std::string&
 }
 
 std::vector<std::string> SettingsManager::setting_names() const {
-  std::vector<std::string> settings_list;
-  settings_list.reserve(_settings.size());
+  auto setting_names = std::vector<std::string>{};
+  setting_names.reserve(_settings.size());
 
   for (const auto& [setting_name, _] : _settings) {
-    settings_list.emplace_back(setting_name);
+    setting_names.emplace_back(setting_name);
   }
-  std::sort(settings_list.begin(), settings_list.end());
 
-  return settings_list;
+  std::sort(setting_names.begin(), setting_names.end());
+  return setting_names;
 }
 
 }  // namespace hyrise

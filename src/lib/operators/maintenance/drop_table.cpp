@@ -22,7 +22,7 @@ std::shared_ptr<const Table> DropTable::_on_execute() {
     Hyrise::get().storage_manager.drop_table(table_name);
   }
 
-  return std::make_shared<Table>(TableColumnDefinitions{{"OK", DataType::Int, false}}, TableType::Data);  // Dummy table
+  return nullptr;
 }
 
 std::shared_ptr<AbstractOperator> DropTable::_on_deep_copy(

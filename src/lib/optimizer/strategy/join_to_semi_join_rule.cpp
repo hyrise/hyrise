@@ -37,7 +37,7 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
        * as follows:
        * (1) From all predicates of type Equals, we collect the operand expressions by input node.
        * (2) We determine the input node that should be used for filtering.
-       * (3) We check the input node from (2) for a matching single- or multi-expression unique constraint.
+       * (3) We check the input node from (2) for a matching single- or multi-expression unique column combination.
        *     a) Found match -> Rewrite to semi join
        *     b) No match    -> Do no rewrite to semi join because we might end up with duplicated input records.
        */
@@ -73,13 +73,13 @@ void JoinToSemiJoinRule::_apply_to_plan_without_subqueries(const std::shared_ptr
 
       // Determine which node to use for Semi-Join-filtering and check for the required uniqueness guarantees.
       if (*join_node->prunable_input_side() == LQPInputSide::Left &&
-          join_node->left_input()->has_matching_unique_constraint(equals_predicate_expressions_left)) {
+          join_node->left_input()->has_matching_ucc(equals_predicate_expressions_left)) {
         join_node->join_mode = JoinMode::Semi;
         const auto temp = join_node->left_input();
         join_node->set_left_input(join_node->right_input());
         join_node->set_right_input(temp);
       } else if (*join_node->prunable_input_side() == LQPInputSide::Right &&
-                 join_node->right_input()->has_matching_unique_constraint(equals_predicate_expressions_right)) {
+                 join_node->right_input()->has_matching_ucc(equals_predicate_expressions_right)) {
         join_node->join_mode = JoinMode::Semi;
       }
     }

@@ -17,8 +17,6 @@ set(
     concurrency/transaction_context.hpp
     concurrency/transaction_manager.cpp
     concurrency/transaction_manager.hpp
-    constant_mappings.cpp
-    constant_mappings.hpp
     cost_estimation/abstract_cost_estimator.cpp
     cost_estimation/abstract_cost_estimator.hpp
     cost_estimation/cost_estimator_logical.cpp
@@ -115,6 +113,10 @@ set(
     logical_query_plan/create_table_node.hpp
     logical_query_plan/create_view_node.cpp
     logical_query_plan/create_view_node.hpp
+    logical_query_plan/data_dependencies/functional_dependency.cpp
+    logical_query_plan/data_dependencies/functional_dependency.hpp
+    logical_query_plan/data_dependencies/unique_column_combination.cpp
+    logical_query_plan/data_dependencies/unique_column_combination.hpp
     logical_query_plan/delete_node.cpp
     logical_query_plan/delete_node.hpp
     logical_query_plan/drop_table_node.cpp
@@ -128,8 +130,6 @@ set(
     logical_query_plan/except_node.hpp
     logical_query_plan/export_node.cpp
     logical_query_plan/export_node.hpp
-    logical_query_plan/functional_dependency.cpp
-    logical_query_plan/functional_dependency.hpp
     logical_query_plan/import_node.cpp
     logical_query_plan/import_node.hpp
     logical_query_plan/insert_node.cpp
@@ -144,8 +144,6 @@ set(
     logical_query_plan/logical_plan_root_node.hpp
     logical_query_plan/lqp_translator.cpp
     logical_query_plan/lqp_translator.hpp
-    logical_query_plan/lqp_unique_constraint.cpp
-    logical_query_plan/lqp_unique_constraint.hpp
     logical_query_plan/lqp_utils.cpp
     logical_query_plan/lqp_utils.hpp
     logical_query_plan/mock_node.cpp
@@ -432,14 +430,14 @@ set(
     storage/base_segment_accessor.hpp
     storage/base_segment_encoder.hpp
     storage/base_value_segment.hpp
-    storage/abstract_table_constraint.cpp
-    storage/abstract_table_constraint.hpp
-    storage/table_key_constraint.cpp
-    storage/table_key_constraint.hpp
     storage/chunk.cpp
     storage/chunk.hpp
     storage/chunk_encoder.cpp
     storage/chunk_encoder.hpp
+    storage/constraints/abstract_table_constraint.cpp
+    storage/constraints/abstract_table_constraint.hpp
+    storage/constraints/table_key_constraint.cpp
+    storage/constraints/table_key_constraint.hpp
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
@@ -540,6 +538,7 @@ set(
     storage/vector_compression/base_compressed_vector.hpp
     storage/vector_compression/base_vector_compressor.hpp
     storage/vector_compression/base_vector_decompressor.hpp
+    storage/vector_compression/compressed_vector_type.cpp
     storage/vector_compression/compressed_vector_type.hpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.cpp
     storage/vector_compression/fixed_width_integer/fixed_width_integer_compressor.hpp
@@ -567,8 +566,6 @@ set(
     utils/abstract_plugin.hpp
     utils/aligned_size.hpp
     utils/assert.hpp
-    utils/boost_bimap_core_override.hpp
-    utils/boost_curry_override.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
     utils/column_ids_after_pruning.cpp

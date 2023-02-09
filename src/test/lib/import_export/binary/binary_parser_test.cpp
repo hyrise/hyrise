@@ -18,20 +18,10 @@ class BinaryParserTest : public BaseTest {
 
 class BinaryParserMultiEncodingTest : public BinaryParserTest, public ::testing::WithParamInterface<EncodingType> {};
 
-auto import_binary_formatter = [](const ::testing::TestParamInfo<EncodingType> info) {
-  auto stream = std::stringstream{};
-  stream << info.param;
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(BinaryEncodingTypes, BinaryParserMultiEncodingTest,
                          ::testing::Values(EncodingType::Unencoded, EncodingType::Dictionary, EncodingType::RunLength,
                                            EncodingType::LZ4),
-                         import_binary_formatter);
+                         enum_formatter<EncodingType>);
 
 TEST_P(BinaryParserMultiEncodingTest, SingleChunkSingleFloatColumn) {
   auto expected_table =

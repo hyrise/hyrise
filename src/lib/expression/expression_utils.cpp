@@ -404,4 +404,25 @@ std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_exp
   return std::nullopt;
 }
 
+template <typename ExpressionContainer>
+bool contains_all_expressions(const ExpressionContainer& search_expressions,
+                              const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector) {
+  for (const auto& expression : search_expressions) {
+    if (!std::any_of(expression_vector.cbegin(), expression_vector.cend(),
+                     [&](const auto& output_expression) { return *output_expression == *expression; })) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+template bool contains_all_expressions<ExpressionUnorderedSet>(
+    const ExpressionUnorderedSet& search_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
+template bool contains_all_expressions<std::vector<std::shared_ptr<AbstractExpression>>>(
+    const std::vector<std::shared_ptr<AbstractExpression>>& search_expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector);
+
 }  // namespace hyrise

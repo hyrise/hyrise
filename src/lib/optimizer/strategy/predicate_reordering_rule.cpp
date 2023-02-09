@@ -6,7 +6,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -37,8 +36,7 @@ bool is_predicate_style_node(const std::shared_ptr<AbstractLQPNode>& node) {
   // from multiple tables), the ValidateNode will still be able to operate on the semi join's output.
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = static_cast<JoinNode&>(*node);
-    if (join_node.join_mode == JoinMode::Semi || join_node.join_mode == JoinMode::AntiNullAsTrue ||
-        join_node.join_mode == JoinMode::AntiNullAsFalse) {
+    if (is_semi_or_anti_join(join_node.join_mode)) {
       return true;
     }
   }

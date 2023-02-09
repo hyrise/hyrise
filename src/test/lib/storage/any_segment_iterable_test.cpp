@@ -68,22 +68,7 @@ TEST_P(AnySegmentIterableTest, IntWithPositionFilter) {
   EXPECT_EQ(index, position_filter->size());
 }
 
-auto any_segment_iterable_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
-  const auto spec = info.param;
-
-  auto stream = std::stringstream{};
-  stream << spec.encoding_type;
-  if (spec.vector_compression_type) {
-    stream << "-" << *spec.vector_compression_type;
-  }
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(AnySegmentIterableTestInstances, AnySegmentIterableTest,
                          ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::Int, true)),
-                         any_segment_iterable_test_formatter);
+                         segment_encoding_formatter);
 }  // namespace hyrise

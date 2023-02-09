@@ -9,7 +9,6 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
 
-#include "constant_mappings.hpp"
 #include "sql/sql_pipeline.hpp"
 #include "sql/sql_pipeline_builder.hpp"
 #include "storage/table.hpp"

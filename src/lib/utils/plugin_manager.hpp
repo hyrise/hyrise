@@ -40,10 +40,15 @@ class PluginManager : public Noncopyable {
   void load_plugin(const std::filesystem::path& path);
   void unload_plugin(const PluginName& name);
   void exec_user_function(const PluginName& plugin_name, const PluginFunctionName& function_name);
+  void exec_pre_benchmark_hook(const PluginName& plugin_name, AbstractBenchmarkItemRunner& benchmark_item_runner);
+  void exec_post_benchmark_hook(const PluginName& plugin_name, nlohmann::json& report);
 
   std::vector<PluginName> loaded_plugins() const;
 
   UserExecutableFunctionMap user_executable_functions() const;
+
+  bool has_pre_benchmark_hook(const PluginName& plugin_name) const;
+  bool has_post_benchmark_hook(const PluginName& plugin_name) const;
 
   ~PluginManager();
 
@@ -56,6 +61,8 @@ class PluginManager : public Noncopyable {
 
   std::unordered_map<PluginName, PluginHandleWrapper> _plugins;
   UserExecutableFunctionMap _user_executable_functions;
+  std::unordered_map<PluginName, PreBenchmarkHook> _pre_benchmark_hooks;
+  std::unordered_map<PluginName, PostBenchmarkHook> _post_benchmark_hooks;
 
   // This method is called during destruction and stops and unloads all currently loaded plugions.
   void _clean_up();

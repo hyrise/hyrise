@@ -5,7 +5,6 @@
 
 #include "encoding_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/resolve_encoded_segment_type.hpp"
@@ -122,24 +121,9 @@ class EncodedStringSegmentTest : public BaseTestWithParam<SegmentEncodingSpec> {
   }
 };
 
-auto encoded_string_segment_test_formatter = [](const ::testing::TestParamInfo<SegmentEncodingSpec> info) {
-  const auto spec = info.param;
-
-  auto stream = std::stringstream{};
-  stream << spec.encoding_type;
-  if (spec.vector_compression_type) {
-    stream << "-" << *spec.vector_compression_type;
-  }
-
-  auto string = stream.str();
-  string.erase(std::remove_if(string.begin(), string.end(), [](char c) { return !std::isalnum(c); }), string.end());
-
-  return string;
-};
-
 INSTANTIATE_TEST_SUITE_P(SegmentEncodingSpecs, EncodedStringSegmentTest,
                          ::testing::ValuesIn(get_supporting_segment_encodings_specs(DataType::String, false)),
-                         encoded_string_segment_test_formatter);
+                         segment_encoding_formatter);
 
 TEST_P(EncodedStringSegmentTest, SequentiallyReadNotNullableEmptyStringSegment) {
   auto value_segment = _create_empty_string_value_segment();

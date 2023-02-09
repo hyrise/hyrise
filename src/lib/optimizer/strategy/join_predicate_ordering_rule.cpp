@@ -48,8 +48,7 @@ void JoinPredicateOrderingRule::_apply_to_plan_without_subqueries(
 
     // Semi and anti joins are currently only implemented by hash joins. These need an equals comparison as the primary
     //  join predicate. Check that one exists and move it to the front.
-    if (join_mode == JoinMode::Semi || join_mode == JoinMode::AntiNullAsTrue ||
-        join_mode == JoinMode::AntiNullAsFalse) {
+    if (is_semi_or_anti_join(join_mode)) {
       auto first_equals_predicate = std::find_if(
           node->node_expressions.begin(), node->node_expressions.end(),
           [](const std::shared_ptr<AbstractExpression>& expression) {
