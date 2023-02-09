@@ -18,7 +18,7 @@ static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
   auto ssd_region = SSDRegion(ssd_region_path() / "read_single.data");  
-  auto outputPage = Page();
+  auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
     for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
@@ -26,7 +26,7 @@ static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(PAGE_SIZE));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
@@ -34,7 +34,7 @@ static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
   auto ssd_region = SSDRegion(ssd_region_path() / "read_serial.data");  
-  auto outputPage = Page();
+  auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
     for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
@@ -42,7 +42,7 @@ static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(PAGE_SIZE));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
@@ -50,7 +50,7 @@ static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
   auto ssd_region = SSDRegion(ssd_region_path() / "read_random.data");  
-  auto outputPage = Page();
+  auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
 
   std::vector<PageID> random_page_ids(num_pages);
@@ -64,7 +64,7 @@ static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(PAGE_SIZE));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
@@ -72,7 +72,7 @@ static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
   auto ssd_region = SSDRegion(ssd_region_path() / "write_single.data");  
-  auto outputPage = Page();
+  auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
     for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
@@ -80,7 +80,7 @@ static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(PAGE_SIZE));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
@@ -88,7 +88,7 @@ static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
   auto ssd_region = SSDRegion(ssd_region_path() / "write_serial.data");  
-  auto outputPage = Page();
+  auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
     for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
@@ -96,7 +96,7 @@ static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(PAGE_SIZE));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 

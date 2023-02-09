@@ -7,7 +7,7 @@ namespace hyrise {
 
 /**
  * BufferManagerBenchmarkMemoryManager is a utility class that registers a buffer manager as
- * the memory manager for a benchmarks. This is useful for tracking memory related metrics.
+ * the benchmark::MemoryManager for a Google benchmark. This is useful for tracking common memory related metrics.
 */
 class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
  public:

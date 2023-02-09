@@ -10,6 +10,17 @@
 
 namespace hyrise {
 
+constexpr PageSizeType next_fitting_page_size_type(const std::size_t value) {
+  if (value <= static_cast<std::size_t>(PageSizeType::KiB32)) {
+    return PageSizeType::KiB32;
+  } else if (value <= static_cast<std::size_t>(PageSizeType::KiB64)) {
+    return PageSizeType::KiB64;
+  } else if (value <= static_cast<std::size_t>(PageSizeType::KiB128)) {
+    return PageSizeType::KiB128;
+  }
+  Fail("Cannot fit input value to a PageSizeType");
+}
+
 std::size_t get_volatile_capacity_from_env() {
   if (const auto volatile_capacity = std::getenv("HYRISE_BUFFER_MANAGER_VOLATILE_CAPACITY")) {
     return boost::lexical_cast<size_t>(volatile_capacity);
@@ -30,7 +41,7 @@ std::filesystem::path get_ssd_region_file_from_env() {
   }
 }
 
-BufferManager::BufferManager() : _num_pages(0), _frames(get_volatile_capacity_from_env() / sizeof(Page)) {
+BufferManager::BufferManager() : _num_pages(0), _frames(get_volatile_capacity_from_env() / Page32KiB::Size()) {
   _ssd_region = std::make_unique<SSDRegion>(get_ssd_region_file_from_env());
   _volatile_region = std::make_unique<VolatileRegion>(get_volatile_capacity_from_env());
   Assert(_frames.size() == _volatile_region->capacity(), "Frames size need to be equal to volatile region capacity");
@@ -93,17 +104,17 @@ void BufferManager::mark_page_dirty(const PageID page_id) {
   frame->dirty.store(true);
 }
 
-void BufferManager::read_page(const PageID page_id, Page& destination) {
+void BufferManager::read_page(const PageID page_id, Page32KiB& destination) {
   _ssd_region->read_page(page_id, destination);
-  _metrics.bytes_read += PAGE_SIZE;
+  _metrics.bytes_read += Page32KiB::Size();
 }
 
-void BufferManager::write_page(const PageID page_id, Page& source) {
+void BufferManager::write_page(const PageID page_id, Page32KiB& source) {
   _ssd_region->write_page(page_id, source);
-  _metrics.bytes_written += PAGE_SIZE;
+  _metrics.bytes_written += Page32KiB::Size();
 }
 
-Page* BufferManager::get_page(const PageID page_id) {
+Page32KiB* BufferManager::get_page(const PageID page_id) {
   if (const auto frame = find_in_page_table(page_id)) {
     return frame->data;
   }
@@ -206,12 +217,12 @@ void BufferManager::remove_page(const PageID page_id) {
 
 std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr(const void* ptr) {
   auto frame_id = _volatile_region->get_frame_id_from_ptr(ptr);
-  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _frames[frame_id].data->data.data();
+  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _frames[frame_id].data->data();
   return std::make_pair(_frames[frame_id].page_id, std::ptrdiff_t{offset});
 };
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
-  Assert(bytes <= PAGE_SIZE, "Cannot allocate more than a Page currently");
+  Assert(next_fitting_page_size_type(bytes) == PageSizeType::KiB32, "Cannot allocate more than a Page currently");
 
   // Update metrics
   _metrics.allocations_in_bytes.push_back(bytes);

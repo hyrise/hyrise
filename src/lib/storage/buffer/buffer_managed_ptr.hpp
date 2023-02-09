@@ -186,7 +186,7 @@ class BufferManagedPtr {
     }
     // TODO: If pinned, this is not needed
     const auto page = BufferManager::get_global_buffer_manager().get_page(_page_id);
-    return page->data.data() + _offset;
+    return page->data() + _offset;
   }
 
   // TODO: Return a guard to ensure unpinning

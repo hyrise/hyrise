@@ -1,4 +1,5 @@
 #pragma once
+
 #include <memory>
 #include <utility>
 #include "storage/buffer/clock_replacement_strategy.hpp"
@@ -23,14 +24,17 @@ class BufferManager {
     // Tracks all allocation that are happening on the buffer manager through the BufferPoolAllocator
     std::vector<std::size_t> allocations_in_bytes{};
 
+    // The maximum amount of bytes being allocated with with subsequent calls of alloc and dealloc
     std::size_t max_bytes_used;
 
+    // The current amount of bytes being allocated
     std::size_t current_bytes_used;
 
+    // The total number of bytes being allocates
     std::size_t total_allocated_bytes;
 
+    // The number of allocation
     std::size_t num_allocs;
-
 
     // Tracks the number of hits in the page_table
     std::size_t page_table_hits = 0;
@@ -46,6 +50,8 @@ class BufferManager {
 
     // Tracks the number of bytes read from SSD
     std::size_t bytes_read = 0;
+
+    // TODO: Number of pages used, fragmentation rate
   };
 
   BufferManager(std::unique_ptr<VolatileRegion> volatile_region, std::unique_ptr<SSDRegion> ssd_region);
@@ -56,7 +62,7 @@ class BufferManager {
    * @param page_id 
    * @return std::unique_ptr<Page> 
    */
-  Page* get_page(const PageID page_id);
+  Page32KiB* get_page(const PageID page_id);
 
   /**
    * @brief 
@@ -123,7 +129,8 @@ class BufferManager {
   static BufferManager& get_global_buffer_manager();
 
   /**
-   * @brief Returns a metrics strucut holding information about allocations, page table hits etc. of the current buffer manager instance
+   * @brief Returns a metrics struture holding information about allocations, page table hits etc. of the current buffer manager instance. Can be reset by
+   * assigning a new instance
   */
   Metrics& metrics();
 
@@ -137,8 +144,8 @@ class BufferManager {
 
   Frame* find_in_page_table(const PageID page_id);
 
-  void read_page(const PageID page_id, Page& destination);
-  void write_page(const PageID page_id, Page& source);
+  void read_page(const PageID page_id, Page32KiB& destination);
+  void write_page(const PageID page_id, Page32KiB& source);
 
   size_t _num_pages;
 

@@ -10,7 +10,6 @@
 namespace hyrise {
 
 static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& state) {
-
   auto ssd_region = std::make_unique<SSDRegion>(ssd_region_path() / "pool_allocator_benchmark.data");  // TODO: Path
   auto volatile_region = std::make_unique<VolatileRegion>(1 << 20);
   auto buffer_manager = BufferManager(std::move(volatile_region), std::move(ssd_region));
@@ -19,7 +18,7 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
   auto memory_manager = BufferManagerBenchmarkMemoryManager::create_and_register(&buffer_manager);
 
   auto allocation_count = static_cast<size_t>(state.range(0));
-  const auto vector_size = PAGE_SIZE / sizeof(int);
+  const auto vector_size = Page32KiB::Size() / sizeof(int);
   for (auto _ : state) {
     state.PauseTiming();
     // TODO: Perform a reset here
@@ -36,7 +35,7 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
 
 static void BM_allocate_pages_std_allocator(benchmark::State& state) {
   auto allocation_count = static_cast<size_t>(state.range(0));
-  const auto vector_size = PAGE_SIZE / sizeof(int);
+  const auto vector_size = Page32KiB::Size() / sizeof(int);
   for (auto _ : state) {
     state.PauseTiming();
     auto allocator = std::allocator<int>();

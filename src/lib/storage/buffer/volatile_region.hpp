@@ -6,6 +6,7 @@
 #include "storage/buffer/types.hpp"
 
 namespace hyrise {
+
 /**
  * @brief Main-Memory pool consisting of chunks (= pages) of memory. A frame acts as a slot 
  * for pages. In order to allocate multiple, contiguous pages. The memory region keeps a sorted list
@@ -17,12 +18,13 @@ namespace hyrise {
  */
 class VolatileRegion {
  public:
+
   VolatileRegion(const size_t num_bytes);
 
   FrameID get_frame_id_from_ptr(const void* ptr) const;
-  Page* get_page(const FrameID frame_id) const;
+  Page32KiB* get_page(const FrameID frame_id) const;
 
-  std::pair<FrameID, Page*> allocate();
+  std::pair<FrameID, Page32KiB*> allocate();
   void deallocate(FrameID frame_id);
 
   size_t capacity() const;
