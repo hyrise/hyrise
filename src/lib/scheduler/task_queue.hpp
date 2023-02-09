@@ -1,11 +1,12 @@
 #pragma once
 
 #include <stdint.h>
-#include <tbb/concurrent_queue.h>
 #include <array>
 #include <atomic>
 #include <condition_variable>
 #include <memory>
+
+#include "concurrentqueue.h"
 
 #include "types.hpp"
 
@@ -58,7 +59,7 @@ class TaskQueue {
 
  private:
   NodeID _node_id;
-  std::array<tbb::concurrent_queue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
+  std::array<moodycamel::ConcurrentQueue<std::shared_ptr<AbstractTask>>, NUM_PRIORITY_LEVELS> _queues;
 };
 
 }  // namespace hyrise

@@ -12,7 +12,7 @@ TaskQueue::TaskQueue(NodeID node_id) : _node_id(node_id) {}
 
 bool TaskQueue::empty() const {
   for (const auto& queue : _queues) {
-    if (!queue.empty()) {
+    if (queue.size_approx() > size_t{0}) {
       return false;
     }
   }
@@ -33,7 +33,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
   }
 
   task->set_node_id(_node_id);
-  _queues[priority_uint].push(task);
+  _queues[priority_uint].enqueue(task);
 
   new_task.notify_one();
 }
@@ -41,7 +41,7 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
   std::shared_ptr<AbstractTask> task;
   for (auto& queue : _queues) {
-    if (queue.try_pop(task)) {
+    if (queue.try_dequeue(task)) {
       return task;
     }
   }
@@ -51,12 +51,12 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
 std::shared_ptr<AbstractTask> TaskQueue::steal() {
   std::shared_ptr<AbstractTask> task;
   for (auto& queue : _queues) {
-    if (queue.try_pop(task)) {
+    if (queue.try_dequeue(task)) {
       if (task->is_stealable()) {
         return task;
       }
 
-      queue.push(task);
+      queue.enqueue(task);
     }
   }
   return nullptr;
@@ -69,7 +69,7 @@ size_t TaskQueue::estimate_load() {
   // (starting with 2^0) to calculate the cost factor per priority level.
   for (auto queue_id = size_t{0}; queue_id < NUM_PRIORITY_LEVELS; ++queue_id) {
     // The lowest priority has a multiplier of 2^0, the next higher priority 2^1, and so on.
-    estimated_load += _queues[queue_id].unsafe_size() * (size_t{1} << (NUM_PRIORITY_LEVELS - 1 - queue_id));
+    estimated_load += _queues[queue_id].size_approx() * (size_t{1} << (NUM_PRIORITY_LEVELS - 1 - queue_id));
   }
 
   return estimated_load;
