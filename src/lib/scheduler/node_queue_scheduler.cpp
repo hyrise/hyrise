@@ -102,6 +102,12 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   if (!task->is_ready()) return;
 
   // Lookup node id for current worker.
+  // if (preferred_node_id == CURRENT_NODE_ID) {
+  //   std::printf("(node_id:__)");
+  // } else {
+  //   std::printf("(node_id:%zu)", static_cast<size_t>(preferred_node_id));
+  // }
+
   if (preferred_node_id == CURRENT_NODE_ID) {
     auto worker = Worker::get_this_thread_worker();
     if (worker) {
@@ -115,7 +121,7 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
   DebugAssert(!(static_cast<size_t>(preferred_node_id) >= _queues.size()),
               "preferred_node_id is not within range of available nodes");
 
-  auto queue = _queues[preferred_node_id];
+  auto& queue = _queues[preferred_node_id];
   queue->push(task, static_cast<uint32_t>(priority));
 }
 

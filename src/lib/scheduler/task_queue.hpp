@@ -38,6 +38,8 @@ class TaskQueue {
    */
   std::shared_ptr<AbstractTask> steal();
 
+  size_t size(const uint32_t priority);
+
   /**
    * Notifies one worker as soon as a new task gets pushed into the queue
    */

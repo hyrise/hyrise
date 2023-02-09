@@ -1,5 +1,11 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
+#include <boost/container/small_vector.hpp>
+#include "boost/container_hash/hash_fwd.hpp"
+// #include "small/string.h"
+#include "tsl/robin_map.h"  // NOLINT
+#include "xxhash/xxh3.h"
+
 #include "benchmark_config.hpp"
 #include "constant_mappings.hpp"
 #include "expression/aggregate_expression.hpp"
@@ -126,183 +132,303 @@ class TPCHDataMicroBenchmarkFixture : public MicroBenchmarkBasicFixture {
   std::shared_ptr<LQPColumnExpression> _lineitem_orderkey, _lineitem_commitdate, _lineitem_receiptdate;
 };
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
-  for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
-    table_scan->execute();
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6FirstScanPredicate)(benchmark::State& state) {
+//   for (auto _ : state) {
+//     const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+//     table_scan->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchmark::State& state) {
+//   const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+//   first_scan->execute();
+
+//   for (auto _ : state) {
+//     const auto table_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
+//     table_scan->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmark::State& state) {
+//   const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
+//   first_scan->execute();
+//   const auto first_scan_result = first_scan->get_output();
+//   const auto second_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
+//   second_scan->execute();
+
+//   for (auto _ : state) {
+//     const auto table_scan = std::make_shared<TableScan>(second_scan, _tpchq6_quantity_predicate);
+//     table_scan->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnPhysicalTable)(benchmark::State& state) {
+//   for (auto _ : state) {
+//     const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
+//     table_scan->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(benchmark::State& state) {
+//   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
+//   table_scan->execute();
+//   const auto scanned_table = table_scan->get_output();
+
+//   for (auto _ : state) {
+//     auto reference_table_scan = std::make_shared<TableScan>(table_scan, _int_predicate);
+//     reference_table_scan->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnPhysicalTable)(benchmark::State& state) {
+//   for (auto _ : state) {
+//     const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
+//     table_scan->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(benchmark::State& state) {
+//   const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
+//   table_scan->execute();
+//   const auto scanned_table = table_scan->get_output();
+
+//   for (auto _ : state) {
+//     auto reference_table_scan = std::make_shared<TableScan>(table_scan, _int_predicate);
+//     reference_table_scan->execute();
+//   }
+// }
+
+// /**
+//  * The objective of this benchmark is to measure performance improvements when having a sort-based aggregate on a
+//  * sorted column. This is not a TPC-H benchmark, it just uses TPC-H data (there are few joins on non-key columns in
+//  * TPC-H).
+//  */
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& state) {
+//   // In this case, we use TPC-H lineitem table (largest table in dataset).
+//   // Assumption: We joined on shipmode, which is why we are sorted by that column
+//   // Aggregate: group by shipmode and count(l_orderkey_id)
+
+//   const auto& lineitem = _table_wrapper_map.at("lineitem");
+//   const auto l_orderkey_id = ColumnID{0};
+//   const auto l_shipmode_id = ColumnID{10};
+
+//   const auto sorted_lineitem =
+//       std::make_shared<Sort>(lineitem, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
+//   sorted_lineitem->execute();
+//   const auto mocked_table_scan_output = sorted_lineitem->get_output();
+//   const ColumnID group_by_column = l_orderkey_id;
+//   const std::vector<ColumnID> group_by = {l_orderkey_id};
+//   const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
+//       count_(pqp_column_(group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
+//                          mocked_table_scan_output->column_is_nullable(group_by_column),
+//                          mocked_table_scan_output->column_name(group_by_column)))};
+//   for (auto _ : state) {
+//     const auto aggregate = std::make_shared<AggregateSort>(sorted_lineitem, aggregate_expressions, group_by);
+//     aggregate->execute();
+//   }
+// }
+
+// /** TPC-H Q4 Benchmarks:
+//   - the following two benchmarks use a static and slightly simplified TPC-H Query 4
+//   - objective is to compare the performance of unnesting the EXISTS subquery
+
+//   - The LQPs translate roughly to this query:
+//       SELECT
+//          o_orderpriority
+//       FROM orders
+//       WHERE
+//          o_orderdate >= date '1993-07-01'
+//          AND o_orderdate < date '1993-10-01'
+//          AND exists (
+//              SELECT *
+//              FROM lineitem
+//              WHERE
+//                  l_orderkey = o_orderkey
+//                  AND l_commitdate < l_receiptdate
+//              )
+//  */
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmark::State& state) {
+//   // clang-format off
+//   const auto parameter = correlated_parameter_(ParameterID{0}, _orders_orderkey);
+//   const auto subquery_lqp = PredicateNode::make(equals_(parameter, _lineitem_orderkey),
+//       PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node));
+//   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, _orders_orderkey));
+
+//   const auto lqp =
+//   ProjectionNode::make(expression_vector(_orders_orderpriority),
+//     PredicateNode::make(equals_(exists_(subquery), 1),
+//       PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
+//         PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
+//          _orders_table_node))));
+//   // clang-format on
+
+//   for (auto _ : state) {
+//     const auto pqp = LQPTranslator{}.translate_node(lqp);
+//     const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
+//     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchmark::State& state) {
+//   // clang-format off
+//   const auto lqp =
+//   ProjectionNode::make(expression_vector(_orders_orderpriority),
+//     JoinNode::make(JoinMode::Semi, equals_(_lineitem_orderkey, _orders_orderkey),
+//       PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
+//         PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
+//          _orders_table_node)),
+//       PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node)));
+//   // clang-format on
+
+//   for (auto _ : state) {
+//     const auto pqp = LQPTranslator{}.translate_node(lqp);
+//     const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
+//     Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
+//   }
+// }
+
+// /**
+//  * For semi joins, the semi relation (which is filtered and returned in a semi join) is passed as the left input and
+//  * the other relation (which is solely checked for value existence and then discarded) is passed as the right side.
+//  *
+//  * For hash-based semi joins, inputs are switched as the left relation can probe the (later discarded) right relation.
+//  * In case the left relation is significantly smaller, the hash join does not perform optimally due to the switching.
+//  */
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benchmark::State& state) {
+//   for (auto _ : state) {
+//     auto join = std::make_shared<JoinHash>(
+//         _table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+//     join->execute();
+//   }
+// }
+
+// BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(benchmark::State& state) {
+//   for (auto _ : state) {
+//     auto join = std::make_shared<JoinHash>(
+//         _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
+//         OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
+//     join->execute();
+//   }
+// }
+
+using HyriseTypesVariant = std::variant<int, long, float, double, std::string>;
+
+template<size_t N> 
+struct GroupKeyHasher {
+  std::size_t operator() (const std::pair<std::array<HyriseTypesVariant, N>, std::array<bool, N>>& key) const {
+    std::size_t seed = 0;
+
+    static_assert(std::is_same_v<int, std::variant_alternative_t<0, HyriseTypesVariant>>);
+
+    // std::cout << std::get<int>(key.first[0]) << " - " << std::get<int>(key.first[1]) << " - " << std::get<std::string>(key.first[2]) << std::endl;
+    // std::cout << key.second[0] << " - " << key.second[1] << " - " << key.second[2] << std::endl;
+
+    for (const auto& element: key.first) {
+      switch (element.index()) {
+        case 0: {
+          boost::hash_combine(seed, XXH3_64bits(&std::get<int>(element), sizeof(int)));
+          // std::cout << "h()" << std::get<int>(element) << ":" << XXH3_64bits(&std::get<int>(element), sizeof(int)) << std::endl;
+          break;
+        } case 1: {
+          boost::hash_combine(seed, XXH3_64bits(&std::get<long>(element), sizeof(long)));
+          // std::cout << "h()" << std::get<long>(element) << ":" << XXH3_64bits(&std::get<long>(element), sizeof(long)) << std::endl;
+          break;
+        } case 2: {
+          break;
+        }
+      }
+    }
+
+    for (const auto& null_flag: key.second) {
+      boost::hash_combine(seed, XXH3_64bits(&null_flag, sizeof(bool)));
+      // std::cout << "h():" << XXH3_64bits(&null_flag, sizeof(bool)) << std::endl;
+    }
+
+      // std::cout << std::get<int>(key.first[0]) << " - " << std::get<int>(key.first[1]) << " - " << std::get<std::string>(key.first[2]) << std::endl;
+
+      // boost::hash_combine(seed, XXH3_64bits_withSeed(std::get<int>(key[0]), sizeof(int), 0));
+      // boost::hash_combine(seed, boost::hash(std::get<float>(key[1])));
+      // boost::hash_combine(seed, boost::hash(std::get<std::string>(key[2])));
+    // }
+      // std::cout << "seed" << seed << std::endl;
+    return seed;
   }
-}
+};
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6SecondScanPredicate)(benchmark::State& state) {
-  const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
-  first_scan->execute();
+BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_testing_aggregation)(benchmark::State& state) {
 
+  // Two main issues:
+  //      - 24 byte large strings are a problem here, damn large as numerics are also 24 bytes (clang)
+  //      - robin_map does not yet have precalculated hashes for insertion. Bummer.
   for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
-    table_scan->execute();
-  }
-}
+    const auto column_count = 3;
+    std::vector<std::pair<std::array<HyriseTypesVariant, column_count>, std::array<bool, column_count>>> test(50);
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ6ThirdScanPredicate)(benchmark::State& state) {
-  const auto first_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _tpchq6_discount_predicate);
-  first_scan->execute();
-  const auto first_scan_result = first_scan->get_output();
-  const auto second_scan = std::make_shared<TableScan>(first_scan, _tpchq6_shipdate_less_predicate);
-  second_scan->execute();
+    // std::cout << "sizeof : " << sizeof(HyriseTypesVariant) << std::endl;
+    // std::cout << "sizeof : " << sizeof(int) << std::endl;
+    // std::cout << "sizeof : " << sizeof(int) << std::endl;
+    // // std::cout << "sizeof small string: " << sizeof(small::string) << std::endl;
+    // std::cout << "sizeof std string : " << sizeof(std::string) << std::endl;
+    // std::cout << "sizeof std::bitset<3> : " << sizeof(std::bitset<3>) << std::endl;
+    // std::cout << "sizeof std::array<bool, 3> : " << sizeof(std::array<bool, 3>) << std::endl;
+    // std::cout << "sizeof : " << sizeof(test[0]) << std::endl;
 
-  for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(second_scan, _tpchq6_quantity_predicate);
-    table_scan->execute();
-  }
-}
+    auto row_id = size_t{0};
+    for (auto int_col = int{0}; int_col < 5; ++int_col) {
+      for (auto int_col2 = int{0}; int_col2 < 5; ++int_col2) {
+        for (auto string_col = int{0}; string_col < 2; ++string_col) {
+          test[row_id].first[0] = int_col;
+          test[row_id].first[1] = int_col2;
+          test[row_id].first[2] = "fixed";
+          test[row_id].second[1] = true;
+          ++row_id;
+        }
+      }
+    }
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnPhysicalTable)(benchmark::State& state) {
-  for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
-    table_scan->execute();
-  }
-}
+    auto hashes = std::vector<size_t>{};
+    hashes.reserve(test.size());
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanIntegerOnReferenceTable)(benchmark::State& state) {
-  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _int_predicate);
-  table_scan->execute();
-  const auto scanned_table = table_scan->get_output();
+    // std::cout << "2" << std::endl;
 
-  for (auto _ : state) {
-    auto reference_table_scan = std::make_shared<TableScan>(table_scan, _int_predicate);
-    reference_table_scan->execute();
-  }
-}
+    // auto map = std::unordered_map<std::pair<std::array<HyriseTypesVariant, column_count>,
+    //                                         std::array<bool, column_count>>,
+    //                               std::vector<RowID>,
+    //                               GroupKeyHasher<3>, std::equal_to<>,
+    //                               std::allocator<std::pair<const std::pair<std::array<HyriseTypesVariant, column_count>,
+    //                                                                  std::array<bool, column_count>>,
+    //                                                        std::vector<RowID>>>>();
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnPhysicalTable)(benchmark::State& state) {
-  for (auto _ : state) {
-    const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
-    table_scan->execute();
-  }
-}
+    auto map = tsl::robin_map<std::pair<std::array<HyriseTypesVariant, column_count>,
+                                        std::array<bool, column_count>>,
+                              boost::container::small_vector<RowID, 4>,
+                              GroupKeyHasher<3>, std::equal_to<>,
+                              std::allocator<std::pair<const std::pair<std::array<HyriseTypesVariant, column_count>,
+                                                                       std::array<bool, column_count>>,
+                                                       boost::container::small_vector<RowID, 4>>>,
+                              true>();
 
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TableScanStringOnReferenceTable)(benchmark::State& state) {
-  const auto table_scan = std::make_shared<TableScan>(_table_wrapper_map.at("lineitem"), _string_predicate);
-  table_scan->execute();
-  const auto scanned_table = table_scan->get_output();
-
-  for (auto _ : state) {
-    auto reference_table_scan = std::make_shared<TableScan>(table_scan, _int_predicate);
-    reference_table_scan->execute();
-  }
-}
-
-/**
- * The objective of this benchmark is to measure performance improvements when having a sort-based aggregate on a
- * sorted column. This is not a TPC-H benchmark, it just uses TPC-H data (there are few joins on non-key columns in
- * TPC-H).
- */
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_ScanAggregate)(benchmark::State& state) {
-  // In this case, we use TPC-H lineitem table (largest table in dataset).
-  // Assumption: We joined on shipmode, which is why we are sorted by that column
-  // Aggregate: group by shipmode and count(l_orderkey_id)
-
-  const auto& lineitem = _table_wrapper_map.at("lineitem");
-  const auto l_orderkey_id = ColumnID{0};
-  const auto l_shipmode_id = ColumnID{10};
-
-  const auto sorted_lineitem =
-      std::make_shared<Sort>(lineitem, std::vector<SortColumnDefinition>{SortColumnDefinition{l_shipmode_id}});
-  sorted_lineitem->execute();
-  const auto mocked_table_scan_output = sorted_lineitem->get_output();
-  const ColumnID group_by_column = l_orderkey_id;
-  const std::vector<ColumnID> group_by = {l_orderkey_id};
-  const auto aggregate_expressions = std::vector<std::shared_ptr<AggregateExpression>>{
-      count_(pqp_column_(group_by_column, mocked_table_scan_output->column_data_type(group_by_column),
-                         mocked_table_scan_output->column_is_nullable(group_by_column),
-                         mocked_table_scan_output->column_name(group_by_column)))};
-  for (auto _ : state) {
-    const auto aggregate = std::make_shared<AggregateSort>(sorted_lineitem, aggregate_expressions, group_by);
-    aggregate->execute();
-  }
-}
-
-/** TPC-H Q4 Benchmarks:
-  - the following two benchmarks use a static and slightly simplified TPC-H Query 4
-  - objective is to compare the performance of unnesting the EXISTS subquery
-
-  - The LQPs translate roughly to this query:
-      SELECT
-         o_orderpriority
-      FROM orders
-      WHERE
-         o_orderdate >= date '1993-07-01'
-         AND o_orderdate < date '1993-10-01'
-         AND exists (
-             SELECT *
-             FROM lineitem
-             WHERE
-                 l_orderkey = o_orderkey
-                 AND l_commitdate < l_receiptdate
-             )
- */
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithExistsSubquery)(benchmark::State& state) {
-  // clang-format off
-  const auto parameter = correlated_parameter_(ParameterID{0}, _orders_orderkey);
-  const auto subquery_lqp = PredicateNode::make(equals_(parameter, _lineitem_orderkey),
-      PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node));
-  const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{0}, _orders_orderkey));
-
-  const auto lqp =
-  ProjectionNode::make(expression_vector(_orders_orderpriority),
-    PredicateNode::make(equals_(exists_(subquery), 1),
-      PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
-        PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
-         _orders_table_node))));
-  // clang-format on
-
-  for (auto _ : state) {
-    const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  }
-}
-
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_TPCHQ4WithUnnestedSemiJoin)(benchmark::State& state) {
-  // clang-format off
-  const auto lqp =
-  ProjectionNode::make(expression_vector(_orders_orderpriority),
-    JoinNode::make(JoinMode::Semi, equals_(_lineitem_orderkey, _orders_orderkey),
-      PredicateNode::make(greater_than_equals_(_orders_orderdate, "1993-07-01"),
-        PredicateNode::make(less_than_(_orders_orderdate, "1993-10-01"),
-         _orders_table_node)),
-      PredicateNode::make(less_than_(_lineitem_commitdate, _lineitem_receiptdate), _lineitem_table_node)));
-  // clang-format on
-
-  for (auto _ : state) {
-    const auto pqp = LQPTranslator{}.translate_node(lqp);
-    const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(pqp);
-    Hyrise::get().scheduler()->schedule_and_wait_for_tasks(tasks);
-  }
-}
-
-/**
- * For semi joins, the semi relation (which is filtered and returned in a semi join) is passed as the left input and
- * the other relation (which is solely checked for value existence and then discarded) is passed as the right side.
- *
- * For hash-based semi joins, inputs are switched as the left relation can probe the (later discarded) right relation.
- * In case the left relation is significantly smaller, the hash join does not perform optimally due to the switching.
- */
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationSmaller)(benchmark::State& state) {
-  for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(
-        _table_wrapper_map.at("orders"), _table_wrapper_map.at("lineitem"), JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
-  }
-}
-
-BENCHMARK_F(TPCHDataMicroBenchmarkFixture, BM_HashSemiProbeRelationLarger)(benchmark::State& state) {
-  for (auto _ : state) {
-    auto join = std::make_shared<JoinHash>(
-        _table_wrapper_map.at("lineitem"), _table_wrapper_map.at("orders"), JoinMode::Semi,
-        OperatorJoinPredicate{ColumnIDPair(ColumnID{0}, ColumnID{0}), PredicateCondition::Equals});
-    join->execute();
+    row_id = 0;
+    for (const auto& element : test) {
+      auto inserted = map.try_emplace(element, boost::container::small_vector<RowID, 4>{RowID{ChunkID{0}, static_cast<ChunkOffset>(row_id)}});
+      if (!inserted.second) {
+        auto& pos_list = inserted.first.value();
+        // ++pos_list;
+        pos_list.emplace_back(RowID{ChunkID{0}, static_cast<ChunkOffset>(row_id)});
+      }
+      ++row_id;
+    }
+    
+    for (const auto& [k, v] : map) {
+      std::cout << "[" << std::get<int>(k.first[0]) << "," << std::get<int>(k.first[1]) << "," << std::get<std::string>(k.first[2]);
+      std::cout << "]-[" << k.second[0] << "," << k.second[1] << "," << k.second[2] << "] >> ";
+      for (const auto row_id : v) {
+        std::cout << row_id.chunk_offset << ".";
+      }
+      std::cout << std::endl;
+    }
+    std::cout << "============" << std::endl;
   }
 }
 

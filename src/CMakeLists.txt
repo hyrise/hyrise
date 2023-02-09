@@ -64,6 +64,7 @@ include(${PROJECT_SOURCE_DIR}/cmake/TargetLinkLibrariesSystem.cmake)
 
 include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/googletest/googletest/include
+    ${PROJECT_SOURCE_DIR}/third_party/small/source
     ${PROJECT_SOURCE_DIR}/third_party/sql-parser/src
     ${PROJECT_SOURCE_DIR}/third_party/magic_enum/include
 
@@ -84,8 +85,9 @@ include_directories(
     ${PROJECT_SOURCE_DIR}/third_party/flat_hash_map
     ${PROJECT_SOURCE_DIR}/third_party/json
     ${PROJECT_SOURCE_DIR}/third_party/lz4
-    ${PROJECT_SOURCE_DIR}/third_party/zstd
     ${PROJECT_SOURCE_DIR}/third_party/tpcds-result-reproduction
+    ${PROJECT_SOURCE_DIR}/third_party/xxhash
+    ${PROJECT_SOURCE_DIR}/third_party/zstd
 )
 
 set(ENABLE_CLANG_TIDY OFF CACHE BOOL "Run clang-tidy")

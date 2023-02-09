@@ -5,6 +5,7 @@ from collections import OrderedDict
 import json
 import matplotlib
 import os
+import statistics
 
 # To prevent _tkinter.TclError: https://stackoverflow.com/a/37605654
 matplotlib.use("Agg")
@@ -36,7 +37,7 @@ def is_square(n):
 def get_subplot_row_and_column_count(num_plots):
     while not is_square(num_plots):
         num_plots += 1
-    return num_plots ** 0.5
+    return int(round(num_plots ** 0.5))
 
 
 def plot_performance(flipped_results, n_rows_cols, numa_borders, max_cores):
@@ -84,7 +85,7 @@ def plot_performance(flipped_results, n_rows_cols, numa_borders, max_cores):
     axis_description = fig.add_subplot(111, frameon=False)
     plt.tick_params(labelcolor="none", top=False, bottom=False, left=False, right=False)
     axis_description.set_xlabel("Utilized cores", labelpad=10)
-    axis_description.set_ylabel("Throughput (queries / s)", labelpad=20)
+    axis_description.set_ylabel("Throughput (runs / s)", labelpad=20)
 
     result_plot_file = os.path.join(os.getcwd(), "benchmark_comparison_performance." + args.format)
     plt.savefig(result_plot_file, bbox_inches="tight")
@@ -127,7 +128,7 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
     plt.tick_params(labelcolor="none", top=False, bottom=False, left=False, right=False)
     axis_description.set_xlabel("Utilized cores", labelpad=10)
     axis_description.set_ylabel(
-        "Throughput (queries / s) per core\n(relative to single-threaded without scheduler)", labelpad=20
+        "Throughput (runs / s) per core\n(relative to single-threaded without scheduler)", labelpad=20
     )
 
     result_plot_file = os.path.join(os.getcwd(), "benchmark_comparison_scaleup." + args.format)
@@ -136,6 +137,7 @@ def plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores):
 
 
 def plot(args):
+    full_run_name = "Sum Median Item Runtimes"
     max_cores = 0
     results = {}
 
@@ -145,15 +147,19 @@ def plot(args):
         label = result_dir.rstrip("/").split("/")[-1]
         results[label] = {}
         one_result = results[label]
+        one_result[full_run_name] = {"cores": [], "items_per_second": []}
 
         for _, _, files in os.walk(result_dir):
             json_files = [f for f in files if f.split(".")[-1] == "json"]
             # Add the results in sorted order (low core count -> high core count) for plotting later
             # The lambda extracts the number of cores from the filename
             for file in sorted(json_files, key=lambda filename: int(filename.split("-")[0])):
+                cumulative_median_runtimes = 0.0
+
                 with open(os.path.join(result_dir, file), "r") as json_file:
                     json_data = json.load(json_file)
                 cores = json_data["context"]["cores"]
+                one_result[full_run_name]["cores"].append(cores)
                 if cores > max_cores:
                     max_cores = cores
                     utilized_cores_per_numa_node = json_data["context"]["utilized_cores_per_numa_node"]
@@ -167,6 +173,12 @@ def plot(args):
                     else:
                         one_result[name]["cores"].append(cores)
                         one_result[name]["items_per_second"].append(items_per_second)
+                    
+                    if len(benchmark["successful_runs"]) > 0:
+                        median_runtime = statistics.median([run["duration"] for run in benchmark["successful_runs"]])
+                        cumulative_median_runtimes += median_runtime / 1000 / 1000 / 1000
+
+                one_result[full_run_name]["items_per_second"].append(1 / cumulative_median_runtimes)
 
     numa_borders = [sum(utilized_cores_per_numa_node[:x]) for x in range(1, len(utilized_cores_per_numa_node))]
 
@@ -181,7 +193,7 @@ def plot(args):
     n_rows_cols = get_subplot_row_and_column_count(len(flipped_results))
 
     plot_performance(flipped_results, n_rows_cols, numa_borders, max_cores)
-    plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores)
+    # plot_scaleup(flipped_results, n_rows_cols, numa_borders, max_cores)
 
 
 if __name__ == "__main__":
