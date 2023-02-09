@@ -15,11 +15,11 @@ std::string MvccDeletePlugin::description() const {
 }
 
 void MvccDeletePlugin::start() {
-  _loop_thread_logical_delete =
-      std::make_unique<PausableLoopThread>(IDLE_DELAY_LOGICAL_DELETE, [&](size_t) { _logical_delete_loop(); });
+  _loop_thread_logical_delete = std::make_unique<PausableLoopThread>(
+      IDLE_DELAY_LOGICAL_DELETE, [&](size_t /*unused*/) { _logical_delete_loop(); });
 
-  _loop_thread_physical_delete =
-      std::make_unique<PausableLoopThread>(IDLE_DELAY_PHYSICAL_DELETE, [&](size_t) { _physical_delete_loop(); });
+  _loop_thread_physical_delete = std::make_unique<PausableLoopThread>(
+      IDLE_DELAY_PHYSICAL_DELETE, [&](size_t /*unused*/) { _physical_delete_loop(); });
 }
 
 void MvccDeletePlugin::stop() {
@@ -113,12 +113,12 @@ void MvccDeletePlugin::_physical_delete_loop() {
 
     DebugAssert(chunk != nullptr, "Chunk does not exist. Physical Delete can not be applied.");
 
-    if (chunk->get_cleanup_commit_id().has_value()) {
+    if (chunk->get_cleanup_commit_id()) {
       // Check whether there are still active transactions that might use the chunk
       auto conflicting_transactions = false;
       auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 
-      if (lowest_snapshot_commit_id.has_value()) {
+      if (lowest_snapshot_commit_id) {
         conflicting_transactions = chunk->get_cleanup_commit_id().value() > lowest_snapshot_commit_id.value();
       }
 
@@ -177,13 +177,13 @@ bool MvccDeletePlugin::_try_logical_delete(const std::string& table_name, const 
 void MvccDeletePlugin::_delete_chunk_physically(const std::shared_ptr<Table>& table, const ChunkID chunk_id) {
   const auto& chunk = table->get_chunk(chunk_id);
 
-  Assert(chunk->get_cleanup_commit_id().has_value(),
+  Assert(chunk->get_cleanup_commit_id(),
          "The cleanup commit id of the chunk is not set. This should have been done by the logical delete.");
 
   // Usage checks have been passed. Apply physical delete now.
   table->remove_chunk(chunk_id);
 }
 
-EXPORT_PLUGIN(MvccDeletePlugin)
+EXPORT_PLUGIN(MvccDeletePlugin);
 
 }  // namespace hyrise

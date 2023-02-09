@@ -4,7 +4,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

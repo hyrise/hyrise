@@ -2,6 +2,7 @@
 
 #include <boost/container_hash/hash.hpp>
 
+#include "../benchmarklib/abstract_benchmark_item_runner.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/value_expression.hpp"
@@ -48,6 +49,15 @@ void UccDiscoveryPlugin::stop() {}
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 UccDiscoveryPlugin::provided_user_executable_functions() {
   return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
+}
+
+std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {
+  return [&](auto& benchmark_item_runner) {
+    for (const auto item_id : benchmark_item_runner.items()) {
+      benchmark_item_runner.execute_item(item_id);
+    }
+    _validate_ucc_candidates(_identify_ucc_candidates());
+  };
 }
 
 UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
@@ -365,7 +375,7 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
   });
 }
 
-EXPORT_PLUGIN(UccDiscoveryPlugin)
+EXPORT_PLUGIN(UccDiscoveryPlugin);
 
 }  // namespace hyrise
 

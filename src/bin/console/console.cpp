@@ -18,11 +18,9 @@
 #include <vector>
 
 #include <boost/algorithm/string/join.hpp>
-#include <boost/range/adaptors.hpp>
 
 #include "SQLParser.h"
 #include "concurrency/transaction_context.hpp"
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -48,6 +46,7 @@
 #include "utils/invalid_input_exception.hpp"
 #include "utils/load_table.hpp"
 #include "utils/meta_table_manager.hpp"
+#include "utils/print_utils.hpp"
 #include "utils/string_utils.hpp"
 #include "visualization/join_graph_visualizer.hpp"
 #include "visualization/lqp_visualizer.hpp"
@@ -418,8 +417,7 @@ int Console::_exit(const std::string& /*args*/) {
 
 int Console::_help(const std::string& /*args*/) {
   auto encoding_options = std::string{"                                                 Encoding options: "};
-  encoding_options += boost::algorithm::join(
-      encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
+  encoding_options += all_encoding_options();
   // Split the encoding options in lines of 120 and add padding. For each input line, it takes up to 120 characters
   // and replaces the following space(s) with a new line. `(?: +|$)` is a non-capturing group that matches either
   // a non-zero number of spaces or the end of the line.
@@ -570,11 +568,9 @@ int Console::_load_table(const std::string& args) {
 
   const std::string encoding = arguments.size() == 3 ? arguments.at(2) : "Unencoded";
 
-  const auto encoding_type = encoding_type_to_string.right.find(encoding);
-  if (encoding_type == encoding_type_to_string.right.end()) {
-    const auto encoding_options = boost::algorithm::join(
-        encoding_type_to_string.right | boost::adaptors::transformed([](auto it) { return it.first; }), ", ");
-    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + encoding_options + "\n");
+  const auto encoding_type = magic_enum::enum_cast<EncodingType>(encoding);
+  if (!encoding_type) {
+    out("Error: Invalid encoding type: '" + encoding + "', try one of these: " + all_encoding_options() + "\n");
     return ReturnCode::Error;
   }
 
@@ -582,7 +578,7 @@ int Console::_load_table(const std::string& args) {
   const auto& table = Hyrise::get().storage_manager.get_table(tablename);
   bool supported = true;
   for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
-    if (!encoding_supports_data_type(encoding_type->second, table->column_data_type(column_id))) {
+    if (!encoding_supports_data_type(*encoding_type, table->column_data_type(column_id))) {
       out("Encoding \"" + encoding + "\" not supported for column \"" + table->column_name(column_id) +
           "\", table left unencoded\n");
       supported = false;
@@ -597,7 +593,7 @@ int Console::_load_table(const std::string& args) {
         immutable_chunks.emplace_back(chunk_id);
       }
     }
-    ChunkEncoder::encode_chunks(table, immutable_chunks, SegmentEncodingSpec{encoding_type->second});
+    ChunkEncoder::encode_chunks(table, immutable_chunks, SegmentEncodingSpec{*encoding_type});
   }
 
   return ReturnCode::Ok;
