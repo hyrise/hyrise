@@ -4,21 +4,28 @@
 #include "query_handler.hpp"
 #include "storage/segment_iterate.hpp"
 
-namespace {
+// namespace {
 
-using namespace hyrise;
+// using namespace hyrise;
 
 // template<typename T, typename = std::enable_if<std::is_arithmetic_v<T>>>
-// std::string value_to_string(T value) {
+// std::string value_to_string(const T& value) {
+//   // static_assert(std::is_enum_v<T)
 //   return std::to_string(value);
 // }
 
 // template<>
-// std::string value_to_string(pmr_string value) {
+// std::string value_to_string(const pmr_string& value) {
 //   return std::string{value};
 // }
 
-}  // namespace
+// template std::string value_to_string<int32_t>(const int32_t& value); // explicit instantiation.
+// template std::string value_to_string<int64_t>(const int64_t& value); // explicit instantiation.
+// template std::string value_to_string<float>(const float& value); // explicit instantiation.
+// template std::string value_to_string<double>(const double& value); // explicit instantiation.
+
+
+// }  // namespace
 
 namespace hyrise {
 
@@ -115,7 +122,6 @@ void ResultSerializer::send_query_response(
     const std::shared_ptr<PostgresProtocolHandler<SocketType>>& postgres_protocol_handler) {
   const auto chunk_count = table->chunk_count();
   const auto column_count = table->column_count();
-  std::cout << "Chunk count: " << chunk_count << std::endl;
 
   // Nested vectors that store (i) chunks, (ii) segments, (iii) string values.
   auto string_table = std::vector<std::vector<std::vector<std::optional<std::string>>>>(chunk_count);
@@ -132,34 +138,24 @@ void ResultSerializer::send_query_response(
       for (auto column_id = ColumnID{0}; column_id < column_count; column_id++) {
         const auto& segment = *chunk->get_segment(column_id);
         auto& quasi_segment = string_table[chunk_id][column_id];
-        quasi_segment.reserve(chunk_size);
+        quasi_segment.resize(chunk_size);
 
         resolve_data_type(segment.data_type(), [&](const auto column_data_type_t) {
-          // using ColumnDataType = typename decltype(column_data_type_t)::type;
+          using ColumnDataType = typename decltype(column_data_type_t)::type;
 
-          segment_iterate(segment, [&](const auto& segment_position) {
+          auto insert_position = size_t{0};
+          segment_iterate<ColumnDataType>(segment, [&](const auto& segment_position) {
             if (segment_position.is_null()) {
-              quasi_segment.emplace_back(std::nullopt);
-              return;
+              quasi_segment[insert_position] = std::nullopt;
+            } else {
+              if constexpr (std::is_same_v<ColumnDataType, pmr_string>) {
+                quasi_segment[insert_position] = segment_position.value();
+              } else {
+                quasi_segment[insert_position] = std::to_string(segment_position.value());
+              }
             }
 
-            quasi_segment.emplace_back(boost::lexical_cast<std::string>(segment_position.value()));
-            // quasi_segment.emplace_back(value_to_string<ColumnDataType>(segment_position.value()));
-
-            // if constexpr (std::is_same_v<pmr_string, ColumnDataType>) {
-            //   // std::cout << "pmr_string: ";
-            //   // std::cout << segment_position.value() << std::endl;
-            //   quasi_segment.emplace_back(value_to_string<ColumnDataType>(segment_position.value()));
-            // } else if constexpr (std::is_arithmetic_v<ColumnDataType>) {
-            //   // std::cout << "arith: ";
-            //   // std::cout << std::to_string(segment_position.value()) << std::endl;
-            //   quasi_segment.emplace_back(value_to_string<ColumnDataType>(segment_position.value()));
-            // } else {
-            //   // std::cout << "else: ";
-            //   // std::cout << segment_position.value() << std::endl;
-            //   std::cout << "Narf" << std::endl;
-            // }
-            
+            ++insert_position;
           });
         });
       }
