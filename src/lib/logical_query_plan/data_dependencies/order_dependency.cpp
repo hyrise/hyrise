@@ -69,10 +69,9 @@ std::ostream& operator<<(std::ostream& stream, const OrderDependency& od) {
 }
 
 void build_transitive_od_closure(OrderDependencies& order_dependencies) {
-  // Usually, we do not expect to have much ODs per table with many transitive relationships. Thus, we chose a simple
-  // implementation to build the closure.
-  auto inserted = false;
-  do {
+  // Usually, we do not expect to have many ODs per table with even more transitive relationships. Thus, we chose a
+  // simple implementation to build the closure.
+  while (true) {
     auto transitive_ods = std::vector<OrderDependency>{};
     for (const auto& od : order_dependencies) {
       const auto& ordered_expressions = od.ordered_expressions;
@@ -85,7 +84,7 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
         }
 
         const auto& transitive_od = OrderDependency(od.expressions, candidate_od.ordered_expressions);
-        // Skip if OD is already known or transitive OD is circular.
+        // Skip if OD is already known or OD would contain an expression both in LHS and RHS.
         if (order_dependencies.contains(transitive_od) ||
             std::any_of(
                 transitive_od.expressions.cbegin(), transitive_od.expressions.cend(), [&](const auto& expression) {
@@ -99,9 +98,13 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
         transitive_ods.emplace_back(transitive_od);
       }
     }
+
+    if (transitive_ods.empty()) {
+      return;
+    }
+
     order_dependencies.insert(transitive_ods.cbegin(), transitive_ods.cend());
-    inserted = !transitive_ods.empty();
-  } while (inserted);
+  }
 }
 
 }  // namespace hyrise

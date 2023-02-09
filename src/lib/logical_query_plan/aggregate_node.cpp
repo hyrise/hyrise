@@ -96,6 +96,7 @@ bool AggregateNode::is_column_nullable(const ColumnID column_id) const {
 
 UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
+
   /**
    * (1) Forward unique column combinations from child nodes if all expressions belong to the group-by section.
    *     Note: The DependentGroupByReductionRule might wrap some expressions with an ANY() aggregate function.
@@ -124,7 +125,6 @@ UniqueColumnCombinations AggregateNode::unique_column_combinations() const {
   // Check each UCC for applicability.
   const auto& output_expressions = this->output_expressions();
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
-
   for (const auto& input_unique_constraint : input_unique_column_combinations) {
     if (!contains_all_expressions(input_unique_constraint.expressions, output_expressions)) {
       continue;
@@ -167,7 +167,6 @@ OrderDependencies AggregateNode::order_dependencies() const {
   // Similarly to UCCs, forward ODs if all expressions are part of the GROUP-BY expressions.
   const auto& input_order_dependencies = left_input()->order_dependencies();
   const auto& output_expressions = this->output_expressions();
-
   for (const auto& input_order_dependency : input_order_dependencies) {
     if (!(contains_all_expressions(input_order_dependency.expressions, output_expressions) &&
           contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
