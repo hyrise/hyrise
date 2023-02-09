@@ -1,11 +1,5 @@
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
 #include "lib/optimizer/strategy/strategy_base_test.hpp"
-#include "utils/assert.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
@@ -115,7 +109,7 @@ TEST_F(ChunkPruningRuleTest, SimpleChunkPruningTestWithColumnPruning) {
 }
 
 TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
-  // If a temporary table is used more than once, only prune for the predicates that apply to all paths
+  // If a temporary table is used more than once, only prune for the predicates that apply to all paths.
   const auto stored_table_node = StoredTableNode::make("int_float4");
 
   const auto a = lqp_column_(stored_table_node, ColumnID{0});
@@ -123,14 +117,14 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs1) {
 
   // clang-format off
   const auto common =
-  PredicateNode::make(greater_than_(b, 700),    // allows for pruning of chunk 0
-    PredicateNode::make(greater_than_(a, 123),  // allows for pruning of chunk 2
+  PredicateNode::make(greater_than_(b, 700),    // Allows for pruning of chunk 0.
+    PredicateNode::make(greater_than_(a, 123),  // Allows for pruning of chunk 2.
       stored_table_node));
   const auto lqp =
   UnionNode::make(SetOperationMode::All,
-    PredicateNode::make(less_than_(b, 850),     // would allow for pruning of chunk 3
+    PredicateNode::make(less_than_(b, 850),     // Would allow for pruning of chunk 3.
       common),
-    PredicateNode::make(greater_than_(b, 850),  // would allow for pruning of chunk 1
+    PredicateNode::make(greater_than_(b, 850),  // Would allow for pruning of chunk 1.
       common));
   // clang-format on
 
@@ -149,14 +143,14 @@ TEST_F(ChunkPruningRuleTest, MultipleOutputs2) {
 
   // clang-format off
   const auto common =
-  PredicateNode::make(greater_than_(a, 123),      // Predicate allows for pruning of chunk 2
+  PredicateNode::make(greater_than_(a, 123),      // Predicate allows for pruning of chunk 2.
     stored_table_node);
   const auto lqp =
   UnionNode::make(SetOperationMode::All,
-    PredicateNode::make(greater_than_(b, 700),    // Predicate allows for pruning of chunk 0, 2
-      PredicateNode::make(less_than_(b, 850),     // Predicate allows for pruning of chunk 3
+    PredicateNode::make(greater_than_(b, 700),    // Predicate allows for pruning of chunk 0, 2.
+      PredicateNode::make(less_than_(b, 850),     // Predicate allows for pruning of chunk 3.
         common)),
-    PredicateNode::make(greater_than_(b, 850),    // Predicate allows for pruning of chunk 0, 1, 2
+    PredicateNode::make(greater_than_(b, 850),    // Predicate allows for pruning of chunk 0, 1, 2.
       common));
   // clang-format on
 
@@ -383,10 +377,10 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
 
   // clang-format off
   const auto input_lqp =
-  PredicateNode::make(less_than_(table_2_a, 10000),                              // prune chunk 0 and 1 on table 2
+  PredicateNode::make(less_than_(table_2_a, 10000),                              // Prune chunk 0 and 1 of table 2.
     JoinNode::make(JoinMode::Cross,
-      PredicateNode::make(less_than_(table_1_a, 200), stored_table_node_1),      // prune chunk 0 on table 1
-      PredicateNode::make(less_than_(table_2_a, 13000), stored_table_node_2)));  // prune chunk 3 on table 2
+      PredicateNode::make(less_than_(table_1_a, 200), stored_table_node_1),      // Prune chunk 0 of table 1.
+      PredicateNode::make(less_than_(table_2_a, 13000), stored_table_node_2)));  // Prune chunk 3 of table 2.
 
   // clang-format on
 
@@ -403,7 +397,7 @@ TEST_F(ChunkPruningRuleTest, PrunePastJoinNodes) {
 
 TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   // Filters are not required to handle values out of their data type's range and the ColumnPruningRule currently
-  // doesn't convert out-of-range values into the type's range
+  // doesn't convert out-of-range values into the type's range.
   // TODO(anybody) In the test LQP below, the ChunkPruningRule could convert the -3'000'000'000 to MIN_INT (but ONLY
   //               as long as the predicate_condition is >= and not >).
 
@@ -422,9 +416,10 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
-TEST_F(ChunkPruningRuleTest, UncorrelatedSubquery) {
-  // Predicates that have an uncorrelated subquery as an argument cannot be used for pruning as we do not know the
-  // predicate value yet. However, such predicates should not prevent us from pruning by other predicates.
+// Predicates that have a subquery as an argument cannot be used for pruning as we do not know the predicate value yet.
+// However, such predicates should not prevent us from pruning by other predicates. The following two test cases ensure
+// correct pruning for predicates with uncorrelated and correlated subqueries.
+TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
   const auto stored_table_node_2 = StoredTableNode::make("compressed");
 
@@ -433,13 +428,15 @@ TEST_F(ChunkPruningRuleTest, UncorrelatedSubquery) {
   const auto subquery_3 = ProjectionNode::make(expression_vector(value_(3.3)), DummyTableNode::make());
 
   // clang-format off
+  // SELECT * FROM compressed WHERE a > 200 AND b = (SELECT 1.1);
   const auto input_lqp_1 =
-  PredicateNode::make(greater_than_(stored_table_node_1->get_column("a"), value_(200)),  // prune chunk 1
+  PredicateNode::make(greater_than_(stored_table_node_1->get_column("a"), value_(200)),  // Prunes chunk 1.
     PredicateNode::make(equals_(stored_table_node_1->get_column("b"), lqp_subquery_(subquery_1)),
       stored_table_node_1));
 
+  // SELECT * FROM compressed WHERE a > 200 AND b BETWEEN (SELECT 1.1) AND (SELECT 3.3);
   const auto input_lqp_2 =
-  PredicateNode::make(greater_than_(stored_table_node_2->get_column("a"), value_(200)),  // prune chunk 1
+  PredicateNode::make(greater_than_(stored_table_node_2->get_column("a"), value_(200)),  // Prunes chunk 1.
     PredicateNode::make(between_inclusive_(stored_table_node_2->get_column("b"), lqp_subquery_(subquery_2), lqp_subquery_(subquery_3)),  // NOLINT(whitespace/line_length)
       stored_table_node_2));
   // clang-format on
@@ -452,6 +449,32 @@ TEST_F(ChunkPruningRuleTest, UncorrelatedSubquery) {
   const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{1}};
   EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
   EXPECT_EQ(stored_table_node_2->pruned_chunk_ids(), expected_chunk_ids);
+}
+
+TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
+  const auto stored_table_node_1 = StoredTableNode::make("compressed");
+  const auto stored_table_node_2 = StoredTableNode::make("int_float4");
+  const auto compressed_a = stored_table_node_1->get_column("a");
+  const auto compressed_b = stored_table_node_1->get_column("b");
+
+  const auto parameter = correlated_parameter_(ParameterID{0}, compressed_b);
+
+  // clang-format off
+  const auto subquery =
+  PredicateNode::make(greater_than_(parameter, stored_table_node_2->get_column("b")),
+    stored_table_node_2);
+
+  // SELECT * FROM compressed WHERE a < 200 AND a IN (SELECT a FROM int_float4 WHERE compressed.b > b)
+  const auto input_lqp =
+  PredicateNode::make(less_than_(compressed_a, value_(200)),  // Prunes chunk 0.
+    PredicateNode::make(in_(compressed_a, lqp_subquery_(subquery, std::make_pair(ParameterID{0}, compressed_b))),
+      stored_table_node_1));
+  // clang-format on
+
+  const auto actual_lqp = StrategyBaseTest::apply_rule(_rule, input_lqp);
+  EXPECT_EQ(actual_lqp, input_lqp);
+  const auto expected_chunk_ids = std::vector<ChunkID>{ChunkID{0}};
+  EXPECT_EQ(stored_table_node_1->pruned_chunk_ids(), expected_chunk_ids);
 }
 
 }  // namespace hyrise

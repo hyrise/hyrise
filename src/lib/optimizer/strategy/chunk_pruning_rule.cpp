@@ -22,7 +22,7 @@
 #include "utils/assert.hpp"
 
 namespace {
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 using PredicatePruningChain = std::vector<std::shared_ptr<PredicateNode>>;
 
 /**
@@ -57,16 +57,16 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
       case LQPNodeType::Predicate: {
         const auto& predicate_node = std::static_pointer_cast<PredicateNode>(current_node);
         /**
-         * The recursion of this function should not lead to a repeated visitation of nodes. Due to the assumption
-         * that predicate pruning chains do not merge after having branched out, predicate nodes are checked
-         * for revisitation.
+         * The recursion of this function should not lead to a repeated visitation of nodes. Due to the assumption that
+         * predicate pruning chains do not merge after having branched out, predicate nodes are checked for
+         * revisitation.
          */
         Assert(!visited_predicate_nodes.contains(predicate_node),
                "Predicate chains are not expected to merge after having branched.");
         visited_predicate_nodes.insert(predicate_node);
 
-        // PredicateNode might not belong to the current predicate pruning chain,
-        // e.g. when it follows a JoinNode and references LQPColumnExpressions from other StoredTableNodes.
+        // PredicateNode might not belong to the current predicate pruning chain, e.g., when it follows a JoinNode and
+        // references LQPColumnExpressions from other StoredTableNodes.
         auto belongs_to_predicate_pruning_chain = true;
         const auto& predicate_expression = predicate_node->predicate();
         visit_expression(predicate_expression, [&](const auto& expression) {
@@ -86,7 +86,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
         }
       } break;
       case LQPNodeType::Join: {
-        // Check whether the predicate pruning chain can continue after the join
+        // Check whether the predicate pruning chain can continue after the join.
         predicate_pruning_chain_continues = false;
         auto join_node = std::static_pointer_cast<JoinNode>(current_node);
         for (const auto& expression : join_node->output_expressions()) {
@@ -127,7 +127,7 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
       return LQPUpwardVisitation::DoNotVisitOutputs;
     }
 
-    // Continue without recursion
+    // Continue without recursion.
     return LQPUpwardVisitation::VisitOutputs;
   });
 
@@ -149,36 +149,36 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
   std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>
       predicate_pruning_chains_by_stored_table_node;
 
-  // (1) Collect all StoredTableNodes and find the chains of PredicateNodes that sit on top of them
+  // (1) Collect all StoredTableNodes and find the chains of PredicateNodes that sit on top of them.
   const auto nodes = lqp_find_nodes_by_type(lqp_root, LQPNodeType::StoredTable);
   for (const auto& node : nodes) {
     const auto& stored_table_node = std::static_pointer_cast<StoredTableNode>(node);
     predicate_pruning_chains_by_stored_table_node.emplace(
         stored_table_node, _find_predicate_pruning_chains_by_stored_table_node(stored_table_node));
   }
-  // (2) Set pruned chunks for each StoredTableNode
+  // (2) Set pruned chunks for each StoredTableNode.
   for (const auto& [stored_table_node, predicate_pruning_chains] : predicate_pruning_chains_by_stored_table_node) {
     if (predicate_pruning_chains.empty()) {
       continue;
     }
 
-    // (2.1) Determine set of pruned chunks per predicate pruning chain
+    // (2.1) Determine set of pruned chunks per predicate pruning chain.
     std::vector<std::set<ChunkID>> pruned_chunk_id_sets;
     for (const auto& predicate_pruning_chain : predicate_pruning_chains) {
       auto exclusions = _compute_exclude_list(predicate_pruning_chain, stored_table_node);
       pruned_chunk_id_sets.emplace_back(std::move(exclusions));
     }
 
-    // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains
+    // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains.
     auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
     if (pruned_chunk_ids.empty()) {
       continue;
     }
 
-    // (2.3) Set the pruned chunk ids of stored_table_node
+    // (2.3) Set the pruned chunk ids of stored_table_node.
     DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
                 "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
-    // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted
+    // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted.
     stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
   }
 }
@@ -201,7 +201,7 @@ std::vector<PredicatePruningChain> ChunkPruningRule::_find_predicate_pruning_cha
    *      repeated visitation of nodes. Due to the assumption that predicate pruning chains do not merge after
    *      having branched out, visited predicate nodes are tracked and checked for revisitation in an Assert.
    */
-  std::unordered_set<std::shared_ptr<PredicateNode>> visited_predicate_nodes;  // for debugging / Assert purposes
+  auto visited_predicate_nodes = std::unordered_set<std::shared_ptr<PredicateNode>>{};
   return find_predicate_pruning_chains_by_stored_table_node_recursively(stored_table_node, {}, stored_table_node,
                                                                         visited_predicate_nodes);
 }
@@ -235,18 +235,17 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
     const auto predicate_without_column_pruning = expression_copy_and_adapt_to_different_lqp(
         predicate, {{stored_table_node, stored_table_node_without_column_pruning}});
 
-    // OperatorScanPredicate::from_expression cannot translate predicates that contain uncorrelated subqueries. Thus,
-    // we replace uncorrelated subquery expressions by placeholders. Doing so, we can build a predicate that will simply
-    // be skipped for pruning rather than abort and do not prune at all.
+    // OperatorScanPredicate::from_expression cannot translate predicates that contain subqueries, even though they do
+    // not influence other predicates. Thus, we replace subquery expressions by placeholders. Doing so, we can build a
+    // predicate that will simply be skipped for pruning rather than abort and do not prune at all.
     for (auto& argument : predicate_without_column_pruning->arguments) {
-      if (argument->type == ExpressionType::LQPSubquery &&
-          !static_cast<LQPSubqueryExpression&>(*argument).is_correlated()) {
+      if (argument->type == ExpressionType::LQPSubquery) {
         argument = placeholder_(ParameterID{0});
       }
     }
     const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_without_column_pruning,
                                                                             *stored_table_node_without_column_pruning);
-    // End of hacky
+    // End of hacky.
 
     if (!operator_predicates) {
       return {};
@@ -306,7 +305,7 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
           const auto& already_pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
           if (std::find(already_pruned_chunk_ids.begin(), already_pruned_chunk_ids.end(), chunk_id) ==
               already_pruned_chunk_ids.end()) {
-            // Chunk was not yet marked as pruned - update statistics
+            // Chunk was not yet marked as pruned - update statistics.
             num_rows_pruned += chunk->size();
           } else {
             // Chunk was already pruned. While we might prune on a different predicate this time, we must make sure that
@@ -324,10 +323,10 @@ std::set<ChunkID> ChunkPruningRule::_compute_exclude_list(
       }
     }
 
-    // Cache result
+    // Cache result.
     _excluded_chunk_ids_by_predicate_node_cache.emplace(std::make_pair(stored_table_node, predicate_node),
                                                         current_excluded_chunk_ids);
-    // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain
+    // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain.
     excluded_chunk_ids.insert(current_excluded_chunk_ids.begin(), current_excluded_chunk_ids.end());
   }
 
@@ -421,7 +420,7 @@ std::set<ChunkID> ChunkPruningRule::_intersect_chunk_ids(const std::vector<std::
       return {};
     }
 
-    std::set<ChunkID> intersection;
+    auto intersection = std::set<ChunkID>{};
     std::set_intersection(chunk_id_set.begin(), chunk_id_set.end(), current_chunk_id_set.begin(),
                           current_chunk_id_set.end(), std::inserter(intersection, intersection.end()));
     chunk_id_set = std::move(intersection);
