@@ -40,22 +40,22 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
 }
 
 template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks_to_unindex) {
+size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>& chunks) {
   const size_t size_before = _indexed_chunk_ids.size();
 
-  auto indexed_chunks_to_unindex = std::unordered_set<ChunkID>{};
-  for (const auto& chunk_id : chunks_to_unindex) {
+  auto indexed_chunks = std::unordered_set<ChunkID>{};
+  for (const auto& chunk_id : chunks) {
     if (!_indexed_chunk_ids.contains(chunk_id)) {
       continue;
     }
 
-    indexed_chunks_to_unindex.insert(chunk_id);
+    indexed_chunks.insert(chunk_id);
     _indexed_chunk_ids.erase(chunk_id);
   }
 
   // Checks whether a given RowID's ChunkID is in the set of ChunkIDs to be unindexed.
-  auto is_to_unindex = [&indexed_chunks_to_unindex](const RowID& row_id) {
-    return indexed_chunks_to_unindex.contains(row_id.chunk_id);
+  auto is_to_unindex = [&indexed_chunks](const RowID& row_id) {
+    return indexed_chunks.contains(row_id.chunk_id);
   };
 
   // Iterate over all values stored in the index.

@@ -364,7 +364,9 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
 
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto chunk = get_chunk(chunk_id);
+    const auto& chunk = get_chunk(chunk_id);
+    Assert(chunk, "Requested index on deleted chunk.");
+    Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
     chunk->create_index<Index>(column_ids);
   }
   ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};

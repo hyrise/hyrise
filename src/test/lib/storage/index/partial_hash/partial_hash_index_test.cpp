@@ -554,7 +554,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-  auto expected_memory_usage = size_t{0u};
+  auto expected_memory_usage = size_t{0};
   // + indexed ColumnID
   expected_memory_usage += sizeof(ColumnID);
   // + data access mutex
@@ -596,7 +596,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-  auto expected_memory_usage = size_t{0u};
+  auto expected_memory_usage = size_t{0};
   // + indexed ColumnID
   expected_memory_usage += sizeof(ColumnID);
   // + data access mutex
@@ -639,7 +639,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-  auto expected_memory_usage = size_t{0u};
+  auto expected_memory_usage = size_t{0};
   // + indexed ColumnID
   expected_memory_usage += sizeof(ColumnID);
   // + data access mutex
@@ -680,7 +680,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
-  auto expected_memory_usage = size_t{0u};
+  auto expected_memory_usage = size_t{0};
   // + indexed ColumnID
   expected_memory_usage += sizeof(ColumnID);
   // + data access mutex
@@ -722,7 +722,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 1);
   EXPECT_EQ(index->remove_entries(std::vector<ChunkID>{ChunkID{0}}), 0);
 
-  auto expected_memory_usage = size_t{0u};
+  auto expected_memory_usage = size_t{0};
   // + indexed ColumnID
   expected_memory_usage += sizeof(ColumnID);
   // + data access mutex
