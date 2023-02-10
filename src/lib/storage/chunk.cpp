@@ -186,8 +186,8 @@ void Chunk::migrate(boost::container::pmr::memory_resource* memory_source) {
     Fail("Cannot migrate Chunk with Indexes.");
   }
 
-  _alloc = PolymorphicAllocator<size_t>(memory_source);
-  Segments new_segments(_alloc);
+  // TODO: _alloc = PolymorphicAllocator<size_t>(memory_source);
+  Segments new_segments{};
   for (const auto& segment : _segments) {
     new_segments.push_back(segment->copy_using_allocator(_alloc));
   }

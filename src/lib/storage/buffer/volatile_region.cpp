@@ -20,20 +20,20 @@ std::pair<FrameID, Page32KiB*> VolatileRegion::allocate() {
   const auto frame_id = _free_frames.front();
   _free_frames.pop_front();
   _num_free_frames--;
-  const auto page = reinterpret_cast<Page32KiB*>(_data.get() + frame_id * Page32KiB::Size());
+  const auto page = reinterpret_cast<Page32KiB*>(_data.get() + frame_id * Page32KiB::size());
   return std::make_pair(frame_id, page);
 };
 
 FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
   DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
-  DebugAssert(ptr < (_data.get() + capacity() * Page32KiB::Size()), "Pointer is out of range of region");
+  DebugAssert(ptr < (_data.get() + capacity() * Page32KiB::size()), "Pointer is out of range of region");
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _data.get();
-  return FrameID{offset / Page32KiB::Size()};
+  return FrameID{offset / Page32KiB::size()};
 }
 
 Page32KiB* VolatileRegion::get_page(const FrameID frame_id) const {
   DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
-  return reinterpret_cast<Page32KiB*>(_data.get() + frame_id * Page32KiB::Size());
+  return reinterpret_cast<Page32KiB*>(_data.get() + frame_id * Page32KiB::size());
 }
 
 void VolatileRegion::deallocate(FrameID frame_id) {
@@ -44,12 +44,11 @@ void VolatileRegion::deallocate(FrameID frame_id) {
 };
 
 size_t VolatileRegion::capacity() const {
-  return _num_bytes / Page32KiB::Size();
+  return _num_bytes / Page32KiB::size();
 }
 
 size_t VolatileRegion::size() const {
   return capacity() - _num_free_frames;
 }
-
 
 }  // namespace hyrise

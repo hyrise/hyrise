@@ -120,9 +120,9 @@ bool check_segment_equal(const std::shared_ptr<AbstractSegment>& actual_segment,
   };
 
   auto actual_table = std::make_shared<Table>(definitions, table_type(actual_segment));
-  actual_table->append_chunk(pmr_vector<std::shared_ptr<AbstractSegment>>{actual_segment});
+  actual_table->append_chunk(std::vector<std::shared_ptr<AbstractSegment>>{actual_segment});
   auto expected_table = std::make_shared<Table>(definitions, table_type(expected_segment));
-  expected_table->append_chunk(pmr_vector<std::shared_ptr<AbstractSegment>>{expected_segment});
+  expected_table->append_chunk(std::vector<std::shared_ptr<AbstractSegment>>{expected_segment});
 
   // If check_table_equal returns something other than std::nullopt, a difference has been found.
   return !check_table_equal(actual_table, expected_table, order_sensitivity, type_cmp_mode, float_comparison_mode,

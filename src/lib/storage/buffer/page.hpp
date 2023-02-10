@@ -15,7 +15,7 @@ struct alignas(512) Page {
   static_assert(static_cast<std::size_t>(SizeType) >= 512,
                 "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
-  constexpr static std::size_t Size() {
+  constexpr static std::size_t size() {
     return static_cast<std::size_t>(SizeType);
   }
 

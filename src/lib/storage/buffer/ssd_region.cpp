@@ -60,18 +60,18 @@ std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descripto
 }
 
 void SSDRegion::write_page(const PageID page_id, Page32KiB& source) {
-  const off_t page_pos = page_id * Page32KiB::Size();
+  const off_t page_pos = page_id * Page32KiB::size();
   _backing_file.seekg(page_pos);
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  _backing_file.write(reinterpret_cast<char*>(source.data()), Page32KiB::Size());
+  _backing_file.write(reinterpret_cast<char*>(source.data()), Page32KiB::size());
   _backing_file.sync();
 }
 
 void SSDRegion::read_page(const PageID page_id, Page32KiB& destination) {
-  const off_t page_pos = page_id * Page32KiB::Size();
+  const off_t page_pos = page_id * Page32KiB::size();
   _backing_file.seekg(page_pos);
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  _backing_file.read(reinterpret_cast<char*>(destination.data()), Page32KiB::Size());
+  _backing_file.read(reinterpret_cast<char*>(destination.data()), Page32KiB::size());
 }
 
 }  // namespace hyrise

@@ -1,9 +1,9 @@
 #include <algorithm>
+#include <filesystem>
 #include <memory>
 #include <numeric>
 #include <random>
 #include <vector>
-#include <filesystem>
 
 #include "benchmark/benchmark.h"
 #include "micro_benchmark_utils.hpp"
@@ -17,7 +17,7 @@ namespace hyrise {
 static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion(ssd_region_path() / "read_single.data");  
+  auto ssd_region = SSDRegion(ssd_region_path() / "read_single.data");
   auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -26,14 +26,14 @@ static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
 static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion(ssd_region_path() / "read_serial.data");  
+  auto ssd_region = SSDRegion(ssd_region_path() / "read_serial.data");
   auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -42,16 +42,16 @@ static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
 static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion(ssd_region_path() / "read_random.data");  
-  auto outputPage = Page32KiB();
+  auto ssd_region = SSDRegion(ssd_region_path() / "read_random.data");
   const auto num_pages = state.range(0);
+  auto output_pages = std::vector<Page32KiB>{static_cast<uint64_t>(num_pages)};
 
   std::vector<PageID> random_page_ids(num_pages);
   std::iota(std::begin(random_page_ids), std::end(random_page_ids), 0);
@@ -60,18 +60,18 @@ static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
 
   for (auto _ : state) {
     for (auto read_index = int64_t{0}; read_index < num_pages; read_index++) {
-      ssd_region.read_page(random_page_ids[read_index], outputPage);
+      ssd_region.read_page(random_page_ids[read_index], output_pages[read_index]);
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
 static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion(ssd_region_path() / "write_single.data");  
+  auto ssd_region = SSDRegion(ssd_region_path() / "write_single.data");
   auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -80,14 +80,14 @@ static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
 static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
   // micro_benchmark_clear_cache();
 
-  auto ssd_region = SSDRegion(ssd_region_path() / "write_serial.data");  
+  auto ssd_region = SSDRegion(ssd_region_path() / "write_serial.data");
   auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -96,7 +96,7 @@ static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
     }
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::Size()));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * int64_t(Page32KiB::size()));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 

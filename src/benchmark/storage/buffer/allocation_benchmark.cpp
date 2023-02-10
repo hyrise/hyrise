@@ -18,7 +18,7 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
   auto memory_manager = BufferManagerBenchmarkMemoryManager::create_and_register(&buffer_manager);
 
   auto allocation_count = static_cast<size_t>(state.range(0));
-  const auto vector_size = Page32KiB::Size() / sizeof(int);
+  const auto vector_size = Page32KiB::size() / sizeof(int);
   for (auto _ : state) {
     state.PauseTiming();
     // TODO: Perform a reset here
@@ -35,7 +35,7 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
 
 static void BM_allocate_pages_std_allocator(benchmark::State& state) {
   auto allocation_count = static_cast<size_t>(state.range(0));
-  const auto vector_size = Page32KiB::Size() / sizeof(int);
+  const auto vector_size = Page32KiB::size() / sizeof(int);
   for (auto _ : state) {
     state.PauseTiming();
     auto allocator = std::allocator<int>();

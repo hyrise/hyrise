@@ -41,11 +41,10 @@ std::filesystem::path get_ssd_region_file_from_env() {
   }
 }
 
-BufferManager::BufferManager() : _num_pages(0), _frames(get_volatile_capacity_from_env() / Page32KiB::Size()) {
+BufferManager::BufferManager() : _num_pages(0), _frames(get_volatile_capacity_from_env() / Page32KiB::size()) {
   _ssd_region = std::make_unique<SSDRegion>(get_ssd_region_file_from_env());
   _volatile_region = std::make_unique<VolatileRegion>(get_volatile_capacity_from_env());
   Assert(_frames.size() == _volatile_region->capacity(), "Frames size need to be equal to volatile region capacity");
-  _metrics.num_frames = _volatile_region->capacity();
   _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 
@@ -54,7 +53,6 @@ BufferManager::BufferManager(std::unique_ptr<VolatileRegion> volatile_region, st
       _ssd_region(std::move(ssd_region)),
       _volatile_region(std::move(volatile_region)),
       _frames(_volatile_region->capacity()) {
-  _metrics.num_frames = _volatile_region->capacity();
   _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
 }
 
@@ -106,12 +104,12 @@ void BufferManager::mark_page_dirty(const PageID page_id) {
 
 void BufferManager::read_page(const PageID page_id, Page32KiB& destination) {
   _ssd_region->read_page(page_id, destination);
-  _metrics.bytes_read += Page32KiB::Size();
+  _metrics.total_bytes_read += Page32KiB::size();
 }
 
 void BufferManager::write_page(const PageID page_id, Page32KiB& source) {
   _ssd_region->write_page(page_id, source);
-  _metrics.bytes_written += Page32KiB::Size();
+  _metrics.total_bytes_written += Page32KiB::size();
 }
 
 Page32KiB* BufferManager::get_page(const PageID page_id) {
@@ -222,11 +220,13 @@ std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr
 };
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
-  Assert(next_fitting_page_size_type(bytes) == PageSizeType::KiB32, "Cannot allocate more than a Page currently");
+  const auto page_size_type = next_fitting_page_size_type(bytes);
+  Assert(page_size_type == PageSizeType::KiB32, "Cannot allocate " + std::to_string(bytes) + " bytes in maxium page size");
 
   // Update metrics
   _metrics.allocations_in_bytes.push_back(bytes);
   _metrics.current_bytes_used += bytes;
+  _metrics.total_unused_bytes += static_cast<std::size_t>(page_size_type) - bytes;  // TODO: Aligment
   _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
   _metrics.total_allocated_bytes += bytes;
   _metrics.num_allocs++;

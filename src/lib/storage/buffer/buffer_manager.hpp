@@ -20,6 +20,10 @@ class BufferManagedPtr;
  */
 class BufferManager {
  public:
+  /**
+   * Metrics are storing metric data that happens during allocation and access of the buffer manager.
+   * TODO: Make values atomic
+  */
   struct Metrics {
     // Tracks all allocation that are happening on the buffer manager through the BufferPoolAllocator
     std::vector<std::size_t> allocations_in_bytes{};
@@ -33,6 +37,9 @@ class BufferManager {
     // The total number of bytes being allocates
     std::size_t total_allocated_bytes;
 
+    // The total number of bytes that is unused when allocating memory on a page. Can be used to calculate internal fragmentation.
+    std::size_t total_unused_bytes;
+
     // The number of allocation
     std::size_t num_allocs;
 
@@ -42,14 +49,11 @@ class BufferManager {
     // Tracks the number of hits in the page_table
     std::size_t page_table_misses = 0;
 
-    // Tracks the number of frames in the volatile region
-    std::size_t num_frames = 0;
-
     // Tracks the number of bytes written to SSD
-    std::size_t bytes_written = 0;
+    std::size_t total_bytes_written = 0;
 
     // Tracks the number of bytes read from SSD
-    std::size_t bytes_read = 0;
+    std::size_t total_bytes_read = 0;
 
     // TODO: Number of pages used, fragmentation rate
   };

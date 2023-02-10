@@ -25,8 +25,8 @@ class AbstractIndex;
 class AbstractSegment;
 class BaseAttributeStatistics;
 
-using Segments = pmr_vector<std::shared_ptr<AbstractSegment>>;
-using Indexes = pmr_vector<std::shared_ptr<AbstractIndex>>;
+using Segments = std::vector<std::shared_ptr<AbstractSegment>>;
+using Indexes = std::vector<std::shared_ptr<AbstractIndex>>;
 using ChunkPruningStatistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>;
 
 /**

@@ -1,3 +1,6 @@
+#pragma once
+
+#include <algorithm>
 #include <memory>
 #include "benchmark/benchmark.h"
 #include "hyrise.hpp"
@@ -12,13 +15,14 @@ namespace hyrise {
 class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
  public:
   void Start() override {
-    _buffer_manager->metrics() = BufferManager::Metrics{};
+    _metrics_snapshot = _buffer_manager->metrics();
   }
 
   void Stop(Result* result) override {
-    result->num_allocs = _buffer_manager->metrics().num_allocs;
-    result->max_bytes_used = _buffer_manager->metrics().max_bytes_used;
-    result->total_allocated_bytes = _buffer_manager->metrics().total_allocated_bytes;
+    const auto metrics = _buffer_manager->metrics();
+    result->num_allocs = metrics.num_allocs - _metrics_snapshot.num_allocs;
+    result->max_bytes_used = std::max(metrics.max_bytes_used, _metrics_snapshot.num_allocs);
+    result->total_allocated_bytes = metrics.total_allocated_bytes - _metrics_snapshot.total_allocated_bytes;
     // TODO: result->net_heap_growth
     // The net changes in memory, in bytes, between Start and Stop.
     // ie., total_allocated_bytes - total_deallocated_bytes.
@@ -26,9 +30,10 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
   }
 
   void Stop(Result& result) override {
-    result.num_allocs = _buffer_manager->metrics().num_allocs;
-    result.max_bytes_used = _buffer_manager->metrics().max_bytes_used;
-    result.total_allocated_bytes = _buffer_manager->metrics().total_allocated_bytes;
+    const auto metrics = _buffer_manager->metrics();
+    result.num_allocs = metrics.num_allocs - _metrics_snapshot.num_allocs;
+    result.max_bytes_used = std::max(metrics.max_bytes_used, _metrics_snapshot.num_allocs);
+    result.total_allocated_bytes = metrics.total_allocated_bytes - _metrics_snapshot.total_allocated_bytes;
   }
 
   BufferManagerBenchmarkMemoryManager(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
@@ -41,15 +46,16 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
   }
 
  private:
+  BufferManager::Metrics _metrics_snapshot;
   BufferManager* _buffer_manager;
 };
 
-static std::filesystem::path ssd_region_path() {
-  if(const char* path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
-    return path;
-  } else {
-    Fail("HYRISE_BUFFER_MANAGER_PATH not found in environment for benchmarks");
-  }
-}
+/**
+ * Add specific counters for the buffer manager. 
+ * TODO: Optionally supply an existing metric struct for save the difference. 
+*/
+void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_manager);
+
+std::filesystem::path ssd_region_path();
 
 }  // namespace hyrise
