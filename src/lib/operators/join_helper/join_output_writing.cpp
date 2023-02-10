@@ -6,7 +6,6 @@
 
 #include "hyrise.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
 
 namespace {
@@ -14,7 +13,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
-using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;   // NAME sucks due to https://github.com/hyrise/hyrise/pull/1076
+using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
 
 
 struct PosListsHasher {
@@ -65,9 +64,6 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
     ++pos_lists_by_column_it;
   }
 
-  // std::cout << "column count is " << column_count << " and dist element coujnt is " << shared_pos_lists_by_pos_lists.size() << std::endl;
-
-  // std::cout << "/Set up pos list " << std::endl;
   return pos_lists_by_column;
 }
 
@@ -143,9 +139,6 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
 
         iter = output_pos_list_cache.emplace(input_table_pos_lists, new_pos_list).first;
       }
-      // else {
-      //   std::cout << "cache hit" << std::endl;
-      // }
 
       auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
           input_table->get_chunk(ChunkID{0})->get_segment(column_id));
@@ -213,7 +206,6 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   if (create_right_side_pos_lists_by_column) {
     right_side_pos_lists_by_column = setup_pos_list_mapping(right_input_table);
   }
-
 
   const auto pos_lists_left_size = pos_lists_left.size();
   auto expected_output_chunk_count = size_t{0};
