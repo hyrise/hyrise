@@ -8,7 +8,6 @@
 #include <string>
 #include <utility>
 
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "storage/chunk.hpp"

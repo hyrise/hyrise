@@ -2,7 +2,6 @@
 #include <string>
 #include <utility>
 
-#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "operators/limit.hpp"

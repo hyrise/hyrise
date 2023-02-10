@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstract_expression.hpp"
+#include "utils/make_bimap.hpp"
 
 namespace hyrise {
 
@@ -9,6 +10,11 @@ enum class FunctionType {
   Substring,   // SUBSTR()
   Concatenate  // CONCAT()
 };
+
+std::ostream& operator<<(std::ostream& stream, const FunctionType function_type);
+
+const auto function_type_to_string =
+    make_bimap<FunctionType, std::string>({{FunctionType::Substring, "SUBSTR"}, {FunctionType::Concatenate, "CONCAT"}});
 
 class FunctionExpression : public AbstractExpression {
  public:

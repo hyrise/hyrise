@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
 #include "static_table_node.hpp"
 
 namespace hyrise {

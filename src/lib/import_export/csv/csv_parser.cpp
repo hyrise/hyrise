@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "hyrise.hpp"
 #include "import_export/csv/csv_converter.hpp"
 #include "import_export/csv/csv_meta.hpp"

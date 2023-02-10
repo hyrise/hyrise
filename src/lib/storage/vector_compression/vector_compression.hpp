@@ -5,8 +5,8 @@
 #include <optional>
 
 #include "base_compressed_vector.hpp"
-
 #include "types.hpp"
+#include "utils/make_bimap.hpp"
 
 namespace hyrise {
 
@@ -17,6 +17,13 @@ namespace hyrise {
  * zero suppression in the literature.
  */
 enum class VectorCompressionType : uint8_t { FixedWidthInteger, BitPacking };
+
+const auto vector_compression_type_to_string = make_bimap<VectorCompressionType, std::string>({
+    {VectorCompressionType::FixedWidthInteger, "Fixed-width integer"},
+    {VectorCompressionType::BitPacking, "Bit-packing"},
+});
+
+std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type);
 
 /**
  * @brief Meta information about an uncompressed vector

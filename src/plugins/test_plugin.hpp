@@ -21,6 +21,10 @@ class TestPlugin : public AbstractPlugin {
 
   static void a_static_user_executable_function();
 
+  std::optional<PreBenchmarkHook> pre_benchmark_hook() final;
+
+  std::optional<PostBenchmarkHook> post_benchmark_hook() final;
+
   StorageManager& storage_manager;
 
  private:

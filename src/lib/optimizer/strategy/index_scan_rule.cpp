@@ -7,7 +7,6 @@
 #include <vector>
 
 #include "all_parameter_variant.hpp"
-#include "constant_mappings.hpp"
 #include "cost_estimation/abstract_cost_estimator.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"

@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
-
 namespace hyrise {
 
 ExportNode::ExportNode(const std::string& init_file_name, const FileType init_file_type)

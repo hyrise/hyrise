@@ -78,10 +78,12 @@ set(
     synthetic_table_generator.hpp
 )
 
-
 # Configure the regular hyrise library used for tests/server/playground...
 add_library(hyriseBenchmarkLib STATIC ${SOURCES})
 add_dependencies(hyriseBenchmarkLib jcchDbgen-build) # *-build is auto-generated
+
+# -fPIC generates position independent code which is necessary because plugins can access AbstractBenchmarkItemRunner in their pre-benchmark hooks.
+target_compile_options(hyriseBenchmarkLib PRIVATE -fPIC)
 
 target_link_libraries(
     hyriseBenchmarkLib
@@ -92,4 +94,3 @@ target_link_libraries(
     tpch_dbgen
     tpcds_dbgen
 )
-
