@@ -15,7 +15,6 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 using PosLists = std::vector<std::shared_ptr<const AbstractPosList>>;
 using PosListsByColumn = std::vector<std::shared_ptr<PosLists>>;
 
-
 struct PosListsHasher {
   size_t operator()(const PosLists& pos_lists) const {
     return boost::hash_range(pos_lists.begin(), pos_lists.end());
@@ -75,8 +74,8 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
  * @param pos_list contains the positions of rows to use from the input table
  */
 void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                                  const PosListsByColumn& input_pos_list_ptrs_sptrs_by_segments,
-                                  std::shared_ptr<RowIDPosList>& pos_list) {
+                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_segments,
+                           std::shared_ptr<RowIDPosList>& pos_list) {
   std::unordered_map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
   std::shared_ptr<Table> dummy_table;
@@ -103,7 +102,9 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
       // this is the list of Pos Lists for a column id
       const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[column_id];
 
-      Assert(output_pos_list_cache.size() > 0 || output_pos_list_cache.find(input_table_pos_lists) == output_pos_list_cache.end(), "Whoooot?");
+      Assert(output_pos_list_cache.size() > 0 ||
+                 output_pos_list_cache.find(input_table_pos_lists) == output_pos_list_cache.end(),
+             "Whoooot?");
 
       auto iter = output_pos_list_cache.find(input_table_pos_lists);
       if (iter == output_pos_list_cache.end()) {
@@ -140,8 +141,8 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         iter = output_pos_list_cache.emplace(input_table_pos_lists, new_pos_list).first;
       }
 
-      auto reference_segment = std::static_pointer_cast<const ReferenceSegment>(
-          input_table->get_chunk(ChunkID{0})->get_segment(column_id));
+      auto reference_segment =
+          std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(column_id));
       output_segments.push_back(std::make_shared<ReferenceSegment>(
           reference_segment->referenced_table(), reference_segment->referenced_column_id(), iter->second));
     } else {
@@ -265,23 +266,26 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
 
     // We need to pass the pos lists as parameters to ensure the shared_ptr is copied. Capturing by value result in
     // const shared_ptrs and write_output_segments expects non-const.
-    auto write_output_segments_task = [&, chunk_input_position] (auto left_side_pos_list, auto right_side_pos_list) {
+    auto write_output_segments_task = [&, chunk_input_position](auto left_side_pos_list, auto right_side_pos_list) {
       Segments output_segments;
 
       // Swap back the inputs, so that the order of the output columns is not changed.
       switch (output_column_order) {
         case OutputColumnOrder::LeftFirstRightSecond:
           write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column, right_side_pos_list);
+          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
+                                right_side_pos_list);
           break;
 
         case OutputColumnOrder::RightFirstLeftSecond:
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column, right_side_pos_list);
+          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
+                                right_side_pos_list);
           write_output_segments(output_segments, left_input_table, left_side_pos_lists_by_column, left_side_pos_list);
           break;
 
         case OutputColumnOrder::RightOnly:
-          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column, right_side_pos_list);
+          write_output_segments(output_segments, right_input_table, right_side_pos_lists_by_column,
+                                right_side_pos_list);
           break;
       }
 
@@ -289,8 +293,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     };
 
     // Bind parameters to lambda before passing it to constructor of JobTask.
-    auto write_output_segments_task_params = std::bind(write_output_segments_task, left_side_pos_list,
-                                                       right_side_pos_list);
+    auto write_output_segments_task_params =
+        std::bind(write_output_segments_task, left_side_pos_list, right_side_pos_list);
     write_output_segments_tasks.emplace_back(std::make_shared<JobTask>(write_output_segments_task_params));
     write_output_segments_tasks.back()->schedule();
 
