@@ -29,9 +29,9 @@ size_t PartialHashIndexImpl<DataType>::insert_entries(
     segment_iterate<DataType>(*indexed_segment, [&](const auto& position) {
       // If value is NULL, add to NULL vector, otherwise add into value map.
       if (position.is_null()) {
-        _null_positions[DataType{}].emplace_back(RowID{chunk.first, position.chunk_offset()});
+        _null_positions[DataType{}].emplace_back(chunk.first, position.chunk_offset());
       } else {
-        _positions[position.value()].emplace_back(RowID{chunk.first, position.chunk_offset()});
+        _positions[position.value()].emplace_back(chunk.first, position.chunk_offset());
       }
     });
   }
