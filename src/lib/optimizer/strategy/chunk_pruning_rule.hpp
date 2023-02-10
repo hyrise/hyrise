@@ -20,9 +20,9 @@ class PredicateNode;
 class Table;
 
 /**
- * For a given LQP, this rule determines the set of chunks that can be pruned from a table.
- * To calculate the sets of pruned chunks, it analyzes the predicates of PredicateNodes in a given LQP.
- * The resulting pruning information is stored inside the StoredTableNode objects.
+ * For a given LQP, this rule determines the set of chunks that can be pruned from a table. To calculate the sets of
+ * pruned chunks, it analyzes the predicates of PredicateNodes in a given LQP. The resulting pruning information i
+ * stored inside the StoredTableNode objects.
  */
 class ChunkPruningRule : public AbstractRule {
  public:
@@ -39,7 +39,7 @@ class ChunkPruningRule : public AbstractRule {
   std::set<ChunkID> _compute_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
                                           const std::shared_ptr<StoredTableNode>& stored_table_node) const;
 
-  // Check whether any of the statistics objects available for this Segment identify the predicate as prunable
+  // Check whether any of the statistics objects available for this Segment identify the predicate as prunable.
   static bool _can_prune(const BaseAttributeStatistics& base_segment_statistics,
                          const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
                          const std::optional<AllTypeVariant>& variant_value2);
@@ -52,8 +52,8 @@ class ChunkPruningRule : public AbstractRule {
 
  private:
   /**
-   * Caches intermediate results.
-   * Mutable because it needs to be called from the _apply_to_plan_without_subqueries function, which is const.
+   * Caches intermediate results. Mutable because it needs to be called from the _apply_to_plan_without_subqueries
+   * function, which is const.
    */
   using StoredTableNodePredicateNodePair = std::pair<std::shared_ptr<StoredTableNode>, std::shared_ptr<PredicateNode>>;
   mutable std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
