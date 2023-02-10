@@ -5,6 +5,8 @@
 #include <utility>
 #include <vector>
 
+#include <boost/iterator/iterator_facade.hpp>
+
 #include "types.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"

@@ -4,7 +4,6 @@
 #include <iostream>
 
 #include "all_parameter_variant.hpp"
-#include "constant_mappings.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"

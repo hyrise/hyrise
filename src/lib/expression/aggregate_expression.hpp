@@ -1,6 +1,7 @@
 #pragma once
 
 #include "abstract_expression.hpp"
+#include "utils/make_bimap.hpp"
 
 namespace hyrise {
 
@@ -11,6 +12,19 @@ namespace hyrise {
  * all values of the group are known to be equal (see DependentGroupByReductionRule).
  */
 enum class AggregateFunction { Min, Max, Sum, Avg, Count, CountDistinct, StandardDeviationSample, Any };
+
+const auto aggregate_function_to_string = make_bimap<AggregateFunction, std::string>({
+    {AggregateFunction::Min, "MIN"},
+    {AggregateFunction::Max, "MAX"},
+    {AggregateFunction::Sum, "SUM"},
+    {AggregateFunction::Avg, "AVG"},
+    {AggregateFunction::Count, "COUNT"},
+    {AggregateFunction::CountDistinct, "COUNT DISTINCT"},
+    {AggregateFunction::StandardDeviationSample, "STDDEV_SAMP"},
+    {AggregateFunction::Any, "ANY"},
+});
+
+std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function);
 
 class AggregateExpression : public AbstractExpression {
  public:
