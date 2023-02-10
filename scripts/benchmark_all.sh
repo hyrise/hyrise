@@ -60,6 +60,7 @@ fi
 mkdir benchmark_all_results 2>/dev/null || true
 
 build_folder=$(pwd)
+opt_plugin="-p ${build_folder}/lib/libhyriseUccDiscoveryPlugin.so"
 
 # Here comes the actual work
 for commit in $start_commit $end_commit
@@ -75,6 +76,7 @@ do
 
   # Checkout and build from scratch, tracking the compile time
   git checkout "$commit"
+  commit="${commit}_mining"
   git submodule update --init --recursive
   echo "Building $commit..."
   $build_system clean
@@ -87,22 +89,22 @@ do
     if [ "$benchmark" = "hyriseBenchmarkTPCC" ]; then
       echo "Running $benchmark for $commit... (single-threaded)"
       # Warming up does not make sense/much of a difference for TPCC.
-      ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+      ( "${build_folder}"/"$benchmark" -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json ${opt_plugin}" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
     else
       echo "Running $benchmark for $commit... (single-threaded)"
-      ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
+      ( "${build_folder}"/"$benchmark" -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.json ${opt_plugin}" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st.log"
     fi
 
     if [ "$benchmark" = "hyriseBenchmarkTPCH" ]; then
       echo "Running $benchmark for $commit... (single-threaded, SF 0.01)"
-      ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
+      ( "${build_folder}"/"$benchmark" -s .01 -r ${runs} -w ${warmup_seconds} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.json ${opt_plugin}" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_st_s01.log"
 
       echo "Running $benchmark for $commit... (multi-threaded, ordered, 1 client)"
-      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
+      ( "${build_folder}"/"$benchmark" --scheduler --clients 1 --cores ${num_phy_cores} -m Ordered -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.json ${opt_plugin}" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt_ordered.log"
     fi
 
     echo "Running $benchmark for $commit... (multi-threaded, shuffled, $num_phy_cores clients)"
-    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
+    ( "${build_folder}"/"$benchmark" --scheduler --clients ${num_phy_cores} --cores ${num_phy_cores} -m Shuffled -t ${mt_shuffled_runtime} -o "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.json ${opt_plugin}" 2>&1 ) | tee "${build_folder}/benchmark_all_results/${benchmark}_${commit}_mt.log"
   done
   cd "${build_folder}"
 
@@ -163,7 +165,7 @@ do
 
   for config in $configs
   do
-    output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}_${config}.json" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}_${config}.json" --github 2>/dev/null)
+    output=$(../scripts/compare_benchmarks.py "${build_folder}/benchmark_all_results/${benchmark}_${start_commit}_${config}.json ${opt_plugin}" "${build_folder}/benchmark_all_results/${benchmark}_${end_commit}_${config}.json ${opt_plugin}" --github 2>/dev/null)
     echo ""
     echo ""
     echo -n "**${benchmark} - "
