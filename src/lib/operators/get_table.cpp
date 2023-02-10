@@ -256,11 +256,12 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
       return false;
     }
 
-    const auto pruned_chunk_ids = std::unordered_set(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
-
     // Check if the indexed chunks have been pruned.
-    return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(),
-                       [&](const auto chunk_id) { return pruned_chunk_ids.contains(chunk_id); });
+    Assert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
+           "Expected _pruned_chunk_ids vector to be sorted.");
+    return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(), [&](const auto chunk_id) {
+      return std::binary_search(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend(), chunk_id);
+    });
   };
 
   auto table_indexes = stored_table->get_table_indexes();

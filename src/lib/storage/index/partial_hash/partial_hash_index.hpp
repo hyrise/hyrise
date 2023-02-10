@@ -6,8 +6,8 @@
 namespace hyrise {
 
 /**
- * Represents a table index using a hash map where all hashed values are mapped to the RowIDs of their occurrences in
- * the original Chunks. It can be constructed for a set of chunks of a table column and can later be modified by adding
+ * Represents a table index using a hash map where all values are mapped to the RowIDs of their occurrences in the
+ * original chunks. It can be constructed for a set of chunks of a table column and can later be modified by adding
  * additional chunks or removing already indexed chunks.
  */
 class PartialHashIndex {
@@ -55,8 +55,8 @@ class PartialHashIndex {
   }
 
   /**
-   * Searches for all positions of the entry within the table index and acquires a pair of Iterators containing the
-   * start and end iterator for the stored RowIDs of the element inside the table index. These are then passed to the
+   * Searches for all positions of the value within the table index and acquires a pair of iterators containing the
+   * start and end iterator for the stored RowIDs of the value inside the table index. These are then passed to the
    * functor.
    * 
    * @param functor is a generic function object accepting two iterators as arguments
