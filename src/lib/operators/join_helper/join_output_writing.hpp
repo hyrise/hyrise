@@ -14,13 +14,13 @@ enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, Right
  *  General description
  * 
  *  This file contains helpers for writing the join output. There are several challenges when writing join outputs:
- *    - positions need to be resolved (references to reference segments are not allowed)
+ *    - positions might need to be resolved (references to reference segments are not allowed)
  *    - PosLists might be joined when deemed beneficial (to avoid very small chunks)
- *    - no unnecessary pos lists should be created (i.e., re-use of PosLists)
+ *    - no unnecessary PosLists should be created (i.e., re-use of PosLists)
  * 
- *  The general idea is to first create a column-to-PosList mapping. Assume an input table which is the result of a
+ *  The general idea is to first create a column-to-PosLists mapping. Assume an input table which is the result of a
  *  join. In this case, there are two PosLists per chunk (each for one joined table) which are shared via a shared_ptr
- *  by each column of the respective table. For larger join graphs, there can be many more referenced tables. The 
+ *  by each segment of the respective chunk. For larger join graphs, there can be many more referenced tables. The 
  *  mapping is later used to recognize when an existing PosList can be reused. The function `setup_pos_list_mapping` is
  *  responsible to create such a mapping.
  */

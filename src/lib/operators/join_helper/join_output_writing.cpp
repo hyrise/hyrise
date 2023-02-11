@@ -22,7 +22,10 @@ struct PosListsHasher {
 };
 
 /**
- * Returns a vector with the size of the input table's column count. Each value in this table 
+ * Returns a vector where each entry with index i references a PosLists object. If entries i and j reference the same
+ * PosLists object, both columns originate from the same table. As a consequence, they can later share the same (newly
+ * created) PosLists of the join result.
+ * @param input_table
  */
 PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& input_table) {
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
@@ -54,9 +57,7 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
       pos_list_ptrs->push_back(ref_segment->pos_list());
     }
 
-    DebugAssert(pos_list_ptrs->size() == chunk_count, "Fewer position lists than expected.");
-
-    // pos_list_ptrs contains all position lists of the reference segments for the column_id.
+    // pos_list_ptrs contains all position lists of the reference segments for the current column at `column_id`.
     auto iter = shared_pos_lists_by_pos_lists.emplace(*pos_list_ptrs, pos_list_ptrs).first;
 
     *pos_lists_by_column_it = iter->second;
@@ -99,12 +100,9 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
         continue;
       }
 
-      // this is the list of Pos Lists for a column id
+      // Fetch the PosLists for the currently processed column. We can later use this list to avoid extracting
+      // PosList again from an AbstractSegment and it provides us with a key for `output_pos_list_cache`.
       const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[column_id];
-
-      Assert(output_pos_list_cache.size() > 0 ||
-                 output_pos_list_cache.find(input_table_pos_lists) == output_pos_list_cache.end(),
-             "Whoooot?");
 
       auto iter = output_pos_list_cache.find(input_table_pos_lists);
       if (iter == output_pos_list_cache.end()) {
