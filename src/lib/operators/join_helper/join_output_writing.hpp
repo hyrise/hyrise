@@ -1,5 +1,11 @@
 #pragma once
 
+#include <vector>
+
+#include "storage/chunk.hpp"
+#include "storage/pos_lists/row_id_pos_list.hpp"
+#include "storage/table.hpp"
+
 namespace hyrise {
 
 enum class OutputColumnOrder { LeftFirstRightSecond, RightFirstLeftSecond, RightOnly };
