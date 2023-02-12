@@ -35,20 +35,10 @@ bool FlatMapIterator::operator!=(const FlatMapIterator& other) const {
 }
 
 template <typename DataType>
-FlatMapIterator FlatMapIterator::create_iterator(
-    const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it) {
+FlatMapIterator CreateFlatMapIterator<DataType>::from_map_iterator(const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it) {
   return FlatMapIterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
 }
 
-template FlatMapIterator FlatMapIterator::create_iterator<int32_t>(
-    const tsl::sparse_map<int32_t, std::vector<RowID>>::const_iterator& it);
-template FlatMapIterator FlatMapIterator::create_iterator<int64_t>(
-    const tsl::sparse_map<int64_t, std::vector<RowID>>::const_iterator& it);
-template FlatMapIterator FlatMapIterator::create_iterator<float>(
-    const tsl::sparse_map<float, std::vector<RowID>>::const_iterator& it);
-template FlatMapIterator FlatMapIterator::create_iterator<double>(
-    const tsl::sparse_map<double, std::vector<RowID>>::const_iterator& it);
-template FlatMapIterator FlatMapIterator::create_iterator<pmr_string>(
-    const tsl::sparse_map<pmr_string, std::vector<RowID>>::const_iterator& it);
+EXPLICITLY_INSTANTIATE_DATA_TYPES(CreateFlatMapIterator);
 
 }  // namespace hyrise

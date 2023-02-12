@@ -62,6 +62,7 @@ class FlatMapIterator {
   using pointer = const RowID*;
   using reference = const RowID&;
 
+  explicit FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
   FlatMapIterator(const FlatMapIterator& other);
   FlatMapIterator& operator=(const FlatMapIterator& other);
   reference operator*() const;
@@ -69,15 +70,18 @@ class FlatMapIterator {
   bool operator==(const FlatMapIterator& other) const;
   bool operator!=(const FlatMapIterator& other) const;
 
+ private:
+  std::unique_ptr<BaseFlatMapIteratorImpl> _impl;
+};
+
+// We want to instantiate from_map_iterator() for all data types, but our EXPLICITLY_INSTANTIATE_DATA_TYPES macro
+// only supports classes. So we wrap from_map_iterator() in this class and instantiate the class in the .cpp.
+template <typename DataType>
+class CreateFlatMapIterator {
+ public:
   // Creates and returns an FlatMapIterator holding an instance of FlatMapIteratorImpl initialized using the passed
   // MapIterator.
-  template <typename DataType>
-  static FlatMapIterator create_iterator(
-      const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
-
- private:
-  explicit FlatMapIterator(std::unique_ptr<BaseFlatMapIteratorImpl>&& index_iterator);
-  std::unique_ptr<BaseFlatMapIteratorImpl> _impl;
+  static FlatMapIterator from_map_iterator(const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it);
 };
 
 }  // namespace hyrise

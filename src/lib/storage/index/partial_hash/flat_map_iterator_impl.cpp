@@ -1,5 +1,7 @@
 #include "flat_map_iterator_impl.hpp"
 
+#include "resolve_type.hpp"
+
 namespace hyrise {
 
 template <typename DataType>
