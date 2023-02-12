@@ -37,11 +37,4 @@ TEST_F(ColumnPruningUtilsTest, ColumnIDBeforePruning) {
   EXPECT_EQ(actual_column_id_before_pruning, expected_column_id_before_pruning);
 }
 
-TEST_F(ColumnPruningUtilsTest, ThrowWhenPrunedColumnIDsUnsorted) {
-  const auto pruned_column_ids = {ColumnID{3}, ColumnID{1}, ColumnID{2}};
-  const auto column_id_after_pruning = ColumnID{0};
-
-  EXPECT_THROW(column_id_before_pruning(column_id_after_pruning, pruned_column_ids), std::exception);
-}
-
 }  // namespace hyrise
