@@ -89,7 +89,8 @@ BasePartialHashIndexImpl::IteratorRange PartialHashIndexImpl<DataType>::range_eq
     return std::make_pair(end_iter, end_iter);
   }
   auto end = begin;
-  return std::make_pair(CreateFlatMapIterator<DataType>::from_map_iterator(begin), CreateFlatMapIterator<DataType>::from_map_iterator(++end));
+  return std::make_pair(CreateFlatMapIterator<DataType>::from_map_iterator(begin),
+                        CreateFlatMapIterator<DataType>::from_map_iterator(++end));
 }
 
 template <typename DataType>

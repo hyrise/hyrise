@@ -35,7 +35,8 @@ bool FlatMapIterator::operator!=(const FlatMapIterator& other) const {
 }
 
 template <typename DataType>
-FlatMapIterator CreateFlatMapIterator<DataType>::from_map_iterator(const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it) {
+FlatMapIterator CreateFlatMapIterator<DataType>::from_map_iterator(
+    const typename tsl::sparse_map<DataType, std::vector<RowID>>::const_iterator& it) {
   return FlatMapIterator(std::make_unique<FlatMapIteratorImpl<DataType>>(it));
 }
 

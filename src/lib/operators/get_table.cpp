@@ -240,7 +240,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
-  // Check if a table index is irrelevant because of pruning.
+  // Lambda to check if all chunks indexed by a table index have been pruned by the ChunkPruningRule or
+  // ColumnPruningRule of the optimizer.
   const auto all_indexed_segments_pruned = [&](const auto& table_index) {
     // Check if indexed ColumnID has been pruned.
     const auto indexed_column_id = table_index->get_indexed_column_id();
@@ -257,8 +258,8 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     }
 
     // Check if the indexed chunks have been pruned.
-    Assert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
-           "Expected _pruned_chunk_ids vector to be sorted.");
+    DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
+                "Expected _pruned_chunk_ids vector to be sorted.");
     return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(), [&](const auto chunk_id) {
       return std::binary_search(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend(), chunk_id);
     });

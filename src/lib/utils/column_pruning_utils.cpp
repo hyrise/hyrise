@@ -27,7 +27,8 @@ std::vector<std::optional<ColumnID>> column_ids_after_pruning(const size_t origi
 }
 
 ColumnID column_id_before_pruning(const ColumnID column_id, const std::vector<ColumnID>& pruned_column_ids) {
-  Assert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()), "Expected sorted vector of ColumnIDs");
+  DebugAssert(std::is_sorted(pruned_column_ids.begin(), pruned_column_ids.end()),
+              "Expected sorted vector of ColumnIDs");
 
   auto original_column_id = column_id;
   for (const auto& pruned_column_id : pruned_column_ids) {
