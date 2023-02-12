@@ -128,12 +128,14 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_positions);
+  bytes += sizeof(_null_positions);
+
+  // Since we do not exactly how much memory the hashmap has allocated at any given time, we use its .size() method to
+  // make a rough estimate about the map size. It should be noted that this is an underestimation.
   bytes += sizeof(DataType) * _positions.size();
 
   bytes += sizeof(std::vector<RowID>) * _positions.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
-
-  bytes += sizeof(_null_positions);
 
   if (_null_positions.contains(DataType{})) {
     bytes += sizeof(std::vector<RowID>);
