@@ -54,7 +54,7 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
   }
 
   // Checks whether a given RowID's ChunkID is in the set of ChunkIDs to be unindexed.
-  auto is_to_unindex = [&indexed_chunks](const RowID& row_id) { return indexed_chunks.contains(row_id.chunk_id); };
+  auto is_to_remove = [&indexed_chunks](const RowID& row_id) { return indexed_chunks.contains(row_id.chunk_id); };
 
   // Iterate over all values stored in the index.
   auto map_iter = _positions.begin();
@@ -62,14 +62,14 @@ size_t PartialHashIndexImpl<DataType>::remove_entries(const std::vector<ChunkID>
     auto& row_ids = _positions.at(map_iter->first);
 
     // Remove every RowID entry of the value that references one of the chunks.
-    row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_unindex), row_ids.end());
+    row_ids.erase(std::remove_if(row_ids.begin(), row_ids.end(), is_to_remove), row_ids.end());
 
     map_iter = row_ids.empty() ? _positions.erase(map_iter) : ++map_iter;
   }
 
   if (_null_positions.contains(DataType{})) {
     auto& nulls = _null_positions[DataType{}];
-    nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_unindex), nulls.end());
+    nulls.erase(std::remove_if(nulls.begin(), nulls.end(), is_to_remove), nulls.end());
   }
 
   return size_before - _indexed_chunk_ids.size();
