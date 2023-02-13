@@ -23,7 +23,6 @@ RUN apt-get update \
     gcovr \
     git \
     graphviz \
-    libboost-all-dev \
     libhwloc-dev \
     libncurses5-dev \
     libnuma-dev \
@@ -43,7 +42,6 @@ RUN apt-get update \
     sudo \
     valgrind \
     ccache \
-    linux-tools \
     linux-tools-common \
     linux-tools-generic \
     linux-cloud-tools-generic \
@@ -58,5 +56,13 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
     && ln -sf /usr/bin/llvm-symbolizer-14 /usr/bin/llvm-symbolizer \
     && pip3 install scipy pandas matplotlib # preload large Python packages (installs numpy and others)
+RUN cd /home && curl -L  http://downloads.sourceforge.net/project/boost/boost/1.81.0/boost_1_81_0.tar.gz --output boost_1_81_0.tar.gz  \
+  && tar xfz boost_1_81_0.tar.gz \
+  && rm boost_1_81_0.tar.gz \
+  && cd boost_1_81_0 \
+  && ./bootstrap.sh --prefix=/usr/local --with-libraries=program_options \
+  && ./b2 install \
+  && cd /home \
+  && rm -rf boost_1_81_0
 RUN curl -fsSL https://code-server.dev/install.sh | sh
 ENV HYRISE_HEADLESS_SETUP=true
