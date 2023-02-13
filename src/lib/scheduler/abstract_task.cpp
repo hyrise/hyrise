@@ -7,7 +7,6 @@
 
 #include "abstract_scheduler.hpp"
 #include "hyrise.hpp"
-#include "task_queue.hpp"
 #include "worker.hpp"
 
 #include "utils/assert.hpp"

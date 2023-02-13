@@ -23,7 +23,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
  public:
   static std::shared_ptr<Worker> get_this_thread_worker();
 
-  Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id);
+  Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id, std::atomic_bool& shutdown_flag);
 
   /**
    * Unique ID of a worker. Currently not in use, but really helpful for debugging.
@@ -68,6 +68,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   CpuID _cpu_id;
   std::thread _thread;
   std::atomic_uint64_t _num_finished_tasks{0};
+
+  std::atomic_bool& _shutdown_flag;
 
   std::vector<int> _random{};
   size_t _next_random{};

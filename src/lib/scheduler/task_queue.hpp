@@ -7,6 +7,7 @@
 #include <memory>
 
 #include "concurrentqueue.h"
+#include "lightweightsemaphore.h"
 
 #include "types.hpp"
 
@@ -48,14 +49,9 @@ class TaskQueue {
   size_t estimate_load();
 
   /**
-   * Notifies one worker as soon as a new task gets pushed into the queue
+   * Semaphore to signal waiting workers for new tasks.
    */
-  std::condition_variable new_task;
-
-  /**
-   * Mutex accessed by workers in order to notify them using condition variable
-   */
-  std::mutex lock;
+  moodycamel::LightweightSemaphore semaphore;
 
  private:
   NodeID _node_id;

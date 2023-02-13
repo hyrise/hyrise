@@ -26,17 +26,15 @@ namespace {
 thread_local std::weak_ptr<hyrise::Worker> this_thread_worker;  // NOLINT (clang-tidy wants this const)
 }  // namespace
 
-// The sleep time was determined experimentally
-static constexpr auto WORKER_SLEEP_TIME = std::chrono::microseconds(300);
-
 namespace hyrise {
 
 std::shared_ptr<Worker> Worker::get_this_thread_worker() {
   return ::this_thread_worker.lock();
 }
 
-Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id)
-    : _queue(queue), _id(worker_id), _cpu_id(cpu_id) {
+
+Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id, std::atomic_bool& shutdown_flag)
+    : _queue(queue), _id(worker_id), _cpu_id(cpu_id), _shutdown_flag(shutdown_flag) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
   std::iota(_random.begin(), _random.end(), 0);
@@ -74,7 +72,9 @@ void Worker::_work() {
     task = std::move(_next_task);
     _next_task = nullptr;
   } else {
-    task = _queue->pull();
+    if (_queue->semaphore.tryWait()) {
+      task = _queue->pull();
+    }
   }
 
   if (!task) {
@@ -85,21 +85,25 @@ void Worker::_work() {
         continue;
       }
 
-      task = queue->steal();
-      if (task) {
-        task->set_node_id(_queue->node_id());
-        work_stealing_successful = true;
-        break;
+      if (queue->semaphore.tryWait()) {
+        task = queue->steal();
+        if (task) {
+          task->set_node_id(_queue->node_id());
+          work_stealing_successful = true;
+          break;
+        }
       }
     }
 
     // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
     // own queue or returns after timer exceeded (whatever occurs first).
-    if (!work_stealing_successful) {
-      {
-        std::unique_lock<std::mutex> unique_lock(_queue->lock);
-        _queue->new_task.wait_for(unique_lock, WORKER_SLEEP_TIME);
-      }
+    if (!work_stealing_successful && !_shutdown_flag) {
+      _queue->semaphore.wait();
+      task = _queue->pull();
+    }
+
+    if (!task) {
+      // Neither stealing nor waiting succeeded or scheduler is shutting down.
       return;
     }
   }

@@ -131,6 +131,10 @@ class NodeQueueScheduler : public AbstractScheduler {
   std::vector<std::shared_ptr<Worker>> _workers;
   std::atomic_bool _active{false};
 
+  // Flag to signal workers that scheduler is about to shut down (at this point, workers no longer sleep and wait for
+  // queue pushes).
+  std::atomic_bool _shutdown_flag{false};
+
   size_t _queue_count{1};
   size_t _workers_per_node{2};
 };

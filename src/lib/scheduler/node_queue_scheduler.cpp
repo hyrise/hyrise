@@ -7,6 +7,7 @@
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
+#include "job_task.hpp"
 #include "task_queue.hpp"
 #include "worker.hpp"
 
@@ -43,7 +44,7 @@ void NodeQueueScheduler::begin() {
 
     for (const auto& topology_cpu : topology_node.cpus) {
       _workers.emplace_back(
-          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id));
+          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id, _shutdown_flag));
     }
   }
 
@@ -56,9 +57,20 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
+  // Signal workers that scheduler is shutting down.
+  _shutdown_flag = true;
+
+  // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events.
+  for (const auto& queue : _queues) {
+    for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
+      queue->push(std::make_shared<JobTask>([]() {}, SchedulePriority::Default, false), SchedulePriority::Default);
+      ++_task_counter;
+    }
+  }
+
   while (true) {
-    uint64_t num_finished_tasks = 0;
-    for (auto& worker : _workers) {
+    auto num_finished_tasks = uint64_t{0};
+    for (const auto& worker : _workers) {
       num_finished_tasks += worker->num_finished_tasks();
     }
 

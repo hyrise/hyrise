@@ -34,12 +34,11 @@ void TaskQueue::push(const std::shared_ptr<AbstractTask>& task, const SchedulePr
 
   task->set_node_id(_node_id);
   _queues[priority_uint].enqueue(task);
-
-  new_task.notify_one();
+  semaphore.signal();
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::pull() {
-  std::shared_ptr<AbstractTask> task;
+  auto task = std::shared_ptr<AbstractTask>{};
   for (auto& queue : _queues) {
     if (queue.try_dequeue(task)) {
       return task;
@@ -49,7 +48,7 @@ std::shared_ptr<AbstractTask> TaskQueue::pull() {
 }
 
 std::shared_ptr<AbstractTask> TaskQueue::steal() {
-  std::shared_ptr<AbstractTask> task;
+  auto task = std::shared_ptr<AbstractTask>{};
   for (auto& queue : _queues) {
     if (queue.try_dequeue(task)) {
       if (task->is_stealable()) {
@@ -57,6 +56,7 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
       }
 
       queue.enqueue(task);
+      semaphore.signal();
     }
   }
   return nullptr;

@@ -295,8 +295,10 @@ TEST_F(SchedulerTest, TaskToNodeAssignment) {
 
   node_queue_scheduler->wait_for_all_tasks();
 
-  EXPECT_EQ(node_queue_scheduler->workers()[0]->num_finished_tasks(), 3);
-  EXPECT_EQ(node_queue_scheduler->workers()[1]->num_finished_tasks(), 1);
+  // We check for the node-assigned tasks + 1, because workers are shut down by sending am empty task (see
+  // NodeQueueScheduler::wait_for_all_tasks()).
+  EXPECT_EQ(node_queue_scheduler->workers()[0]->num_finished_tasks(), 3 + 1);
+  EXPECT_EQ(node_queue_scheduler->workers()[1]->num_finished_tasks(), 1 + 1);
 }
 
 TEST_F(SchedulerTest, SingleWorkerGuaranteeProgress) {
