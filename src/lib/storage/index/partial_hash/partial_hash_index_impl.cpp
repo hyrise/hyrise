@@ -128,8 +128,8 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   // Since we do not know exactly how much memory the set has allocated at any given time, we devide the result of its
   // size() method by its maximum load factor. This way we also get an underestimation, but it is smaller than without
   // the maximum load factor.
-  bytes += sizeof(ChunkID) *
-           static_cast<size_t>(static_cast<float>(_indexed_chunk_ids.size()) / _indexed_chunk_ids.max_load_factor());
+  bytes += static_cast<size_t>(sizeof(ChunkID) *
+           (static_cast<float>(_indexed_chunk_ids.size()) / _indexed_chunk_ids.max_load_factor()));
 
   bytes += sizeof(_positions);
   bytes += sizeof(_null_positions);
@@ -137,8 +137,8 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   // Since we do not know exactly how much memory the map has allocated at any given time, we devide the result of its
   // size() method by its maximum load factor. This way we also get an underestimation, but it is smaller than without
   // the maximum load factor.
-  bytes += sizeof(std::pair<DataType, std::vector<RowID>>) *
-           static_cast<size_t>(static_cast<float>(_positions.size()) / _positions.max_load_factor());
+  bytes += static_cast<size_t>(sizeof(std::pair<DataType, std::vector<RowID>>) *
+           (static_cast<float>(_positions.size()) / _positions.max_load_factor()));
 
   bytes += sizeof(std::vector<RowID>) * _positions.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
