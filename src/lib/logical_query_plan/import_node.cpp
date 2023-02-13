@@ -2,8 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
-
 namespace hyrise {
 
 ImportNode::ImportNode(const std::string& init_table_name, const std::string& init_file_name,

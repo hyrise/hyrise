@@ -1,6 +1,5 @@
 #include "operator_scan_predicate.hpp"
 
-#include "constant_mappings.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/value_expression.hpp"

@@ -4,7 +4,6 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "constant_mappings.hpp"
 #include "expression_utils.hpp"
 #include "lqp_column_expression.hpp"
 #include "operators/aggregate/aggregate_traits.hpp"
@@ -126,6 +125,10 @@ bool AggregateExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) con
   // Aggregates (except COUNT and COUNT DISTINCT) will return NULL when executed on an
   // empty group - thus they are always nullable
   return aggregate_function != AggregateFunction::Count && aggregate_function != AggregateFunction::CountDistinct;
+}
+
+std::ostream& operator<<(std::ostream& stream, const AggregateFunction aggregate_function) {
+  return stream << aggregate_function_to_string.left.at(aggregate_function);
 }
 
 }  // namespace hyrise

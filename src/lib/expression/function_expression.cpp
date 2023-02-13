@@ -4,7 +4,6 @@
 
 #include <boost/container_hash/hash.hpp>
 
-#include "constant_mappings.hpp"
 #include "expression_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -66,6 +65,10 @@ bool FunctionExpression::_shallow_equals(const AbstractExpression& expression) c
 
 size_t FunctionExpression::_shallow_hash() const {
   return boost::hash_value(static_cast<size_t>(function_type));
+}
+
+std::ostream& operator<<(std::ostream& stream, const FunctionType function_type) {
+  return stream << function_type_to_string.left.at(function_type);
 }
 
 }  // namespace hyrise

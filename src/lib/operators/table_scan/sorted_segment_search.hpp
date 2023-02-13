@@ -8,7 +8,6 @@
 #include <boost/range/join.hpp>
 
 #include "all_type_variant.hpp"
-#include "constant_mappings.hpp"
 #include "storage/pos_lists/row_id_pos_list.hpp"
 #include "types.hpp"
 

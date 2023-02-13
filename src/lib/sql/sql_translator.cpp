@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "create_sql_parser_error_message.hpp"
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"

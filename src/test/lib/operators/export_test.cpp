@@ -5,7 +5,6 @@
 
 #include "base_test.hpp"
 
-#include "constant_mappings.hpp"
 #include "import_export/csv/csv_meta.hpp"
 #include "operators/export.hpp"
 #include "operators/table_scan.hpp"

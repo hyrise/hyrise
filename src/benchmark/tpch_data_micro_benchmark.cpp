@@ -1,7 +1,6 @@
 #include "micro_benchmark_basic_fixture.hpp"
 
 #include "benchmark_config.hpp"
-#include "constant_mappings.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
