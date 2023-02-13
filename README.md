@@ -175,6 +175,7 @@ Contact: firstname.lastname@hpi.de
 -   Pascal    Führlich
 -   Carl      Gödecken
 -   Adrian    Holfter
+-   Theresa   Hradilak
 -   Ben       Hurdelhey
 -   Sven      Ihde
 -   Ivan      Illic
@@ -199,10 +200,12 @@ Contact: firstname.lastname@hpi.de
 -   Leander   Neiß
 -   Hendrik   Rätz
 -   Alexander Riese
+-   Marc      Rosenau
 -   Johannes  Schneider
 -   David     Schumann
 -   Simon     Siegert
 -   Arthur    Silber
+-   Furkan    Simsek
 -   Toni      Stachewicz
 -   Daniel    Stolpe
 -   Jonathan  Striebel
@@ -210,6 +213,7 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
+-   Leo       Wendt
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann
