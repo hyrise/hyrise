@@ -14,6 +14,8 @@ VolatileRegion::VolatileRegion(const size_t num_bytes) : _num_bytes(num_bytes) {
 }
 
 std::pair<FrameID, Page32KiB*> VolatileRegion::allocate() {
+  std::lock_guard<std::mutex> lock_guard(_mutex);
+
   if (_num_free_frames <= 0) {
     return std::make_pair(INVALID_FRAME_ID, nullptr);
   }
@@ -37,6 +39,7 @@ Page32KiB* VolatileRegion::get_page(const FrameID frame_id) const {
 }
 
 void VolatileRegion::deallocate(FrameID frame_id) {
+  std::lock_guard<std::mutex> lock_guard(_mutex);
   DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
   // const auto frame_id = static_cast<FrameID>((reinterpret_cast<std::byte*>(frame) - _data.get()) / sizeof(Frame));
   _free_frames.push_front(frame_id);

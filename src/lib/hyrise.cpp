@@ -26,6 +26,7 @@ Hyrise::Hyrise() {
 }
 
 void Hyrise::reset() {
+  std::cout << "Reset called" << std::endl;
   Hyrise::get().scheduler()->finish();
   get() = Hyrise{};
 }

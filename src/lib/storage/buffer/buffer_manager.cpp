@@ -1,5 +1,6 @@
 #include "buffer_manager.hpp"
 #include <algorithm>
+#include <boost/thread/with_lock_guard.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <chrono>
 #include <cstdlib>
@@ -70,7 +71,7 @@ std::pair<FrameID, Frame*> BufferManager::allocate_frame() {
     if (victim_frame.dirty) {
       write_page(victim_frame.page_id, *victim_page);
     }
-    _page_table.erase(victim_frame.page_id);
+    boost::with_lock_guard(_page_table_mutex, [&] { _page_table.erase(victim_frame.page_id); });
     frame_id = victim_frame_id;
     allocated_page = victim_page;
   }
@@ -94,7 +95,8 @@ Frame* BufferManager::find_in_page_table(const PageID page_id) {
 }
 
 void BufferManager::mark_page_dirty(const PageID page_id) {
-  const auto frame = find_in_page_table(page_id);
+  const auto frame =
+      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
   if (!frame) {
     return;
   }
@@ -113,7 +115,8 @@ void BufferManager::write_page(const PageID page_id, Page32KiB& source) {
 }
 
 Page32KiB* BufferManager::get_page(const PageID page_id) {
-  if (const auto frame = find_in_page_table(page_id)) {
+  if (const auto frame =
+          boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); })) {
     return frame->data;
   }
 
@@ -129,7 +132,9 @@ Page32KiB* BufferManager::get_page(const PageID page_id) {
   _replacement_strategy->record_frame_access(frame_id);
 
   // Update the page table and metadata
-  _page_table[allocated_frame->page_id] = allocated_frame;
+  boost::with_lock_guard(_page_table_mutex, [this, allocated_frame = allocated_frame] {
+    this->_page_table[allocated_frame->page_id] = allocated_frame;
+  });
 
   return allocated_frame->data;
 }
@@ -146,20 +151,24 @@ PageID BufferManager::new_page() {
   _replacement_strategy->record_frame_access(frame_id);
 
   // Update the page table and metadata
-  _page_table[allocated_frame->page_id] = allocated_frame;
+  boost::with_lock_guard(_page_table_mutex, [this, allocated_frame = allocated_frame] {
+    this->_page_table[allocated_frame->page_id] = allocated_frame;
+  });
   _num_pages++;
 
   return allocated_frame->page_id;
 }
 
-void BufferManager::unpin_page(const PageID page_id) {
+void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
   Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
-  const auto frame = find_in_page_table(page_id);
+  const auto frame =
+      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
   if (frame == nullptr) {
     return;
   }
 
+  frame->dirty = dirty;
   frame->pin_count--;
 
   if (frame->pin_count.load() == 0) {  // TODO: Check atomics
@@ -170,7 +179,8 @@ void BufferManager::unpin_page(const PageID page_id) {
 }
 
 void BufferManager::pin_page(const PageID page_id) {
-  const auto frame = find_in_page_table(page_id);
+  const auto frame =
+      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
   if (frame == nullptr) {
     return;
   }
@@ -183,7 +193,8 @@ void BufferManager::pin_page(const PageID page_id) {
 }
 
 void BufferManager::flush_page(const PageID page_id) {
-  const auto frame = find_in_page_table(page_id);
+  const auto frame =
+      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
   if (frame == nullptr) {
     return;
   }
@@ -195,7 +206,8 @@ void BufferManager::flush_page(const PageID page_id) {
 };
 
 void BufferManager::remove_page(const PageID page_id) {
-  const auto frame = find_in_page_table(page_id);
+  const auto frame =
+      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
   if (frame == nullptr) {
     return;
   }
@@ -209,8 +221,7 @@ void BufferManager::remove_page(const PageID page_id) {
   }
   // TODO: Remove from clock
   // TODO: Remove from disk
-
-  _page_table.erase(page_id);
+  boost::with_lock_guard(_page_table_mutex, [&] { _page_table.erase(page_id); });
 }
 
 std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr(const void* ptr) {
@@ -221,7 +232,8 @@ std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   const auto page_size_type = next_fitting_page_size_type(bytes);
-  Assert(page_size_type == PageSizeType::KiB32, "Cannot allocate " + std::to_string(bytes) + " bytes in maxium page size");
+  Assert(page_size_type == PageSizeType::KiB32,
+         "Cannot allocate " + std::to_string(bytes) + " bytes in maxium page size");
 
   // Update metrics
   _metrics.allocations_in_bytes.push_back(bytes);
@@ -238,7 +250,7 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
 
 void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align) {
   _metrics.current_bytes_used -= bytes;
-
+  // TODO: What happens to page on SSD
   remove_page(ptr.get_page_id());
 }
 
@@ -248,6 +260,23 @@ BufferManager& BufferManager::get_global_buffer_manager() {
 
 BufferManager::Metrics& BufferManager::metrics() {
   return _metrics;
+}
+
+BufferManager& BufferManager::operator=(BufferManager&& other) {
+  if (&other != this) {
+    std::unique_lock this_lock(_page_table_mutex, std::defer_lock);
+    std::unique_lock other_lock(other._page_table_mutex, std::defer_lock);
+    std::lock(this_lock, other_lock);
+
+    _num_pages = other._num_pages;
+    _ssd_region = std::move(other._ssd_region);
+    _volatile_region = std::move(other._volatile_region);
+    _page_table = std::move(other._page_table);
+    _frames = std::move(other._frames);
+    _replacement_strategy = std::move(other._replacement_strategy);
+    _metrics = other._metrics;
+  }
+  return *this;
 }
 
 }  // namespace hyrise

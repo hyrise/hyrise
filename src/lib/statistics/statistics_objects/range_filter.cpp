@@ -130,7 +130,7 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
 
   DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
-  DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
+  // FIXME: DebugAssert(std::is_sorted(dictionary.begin().get_ptr().operator->(), dictionary.cend().get_ptr().operator->()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.empty()) {
     // Empty dictionaries will, e.g., occur in segments with only NULLs - or empty segments.
@@ -184,9 +184,9 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   // 1. Calculate the distance from each value in the (sorted) dictionary to the next value
   std::vector<std::pair<T, size_t>> distances;
   distances.reserve(dictionary.size() - 1);
-  for (auto dict_it = dictionary.cbegin(); dict_it + 1 != dictionary.cend(); ++dict_it) {
+  for (auto dict_it = dictionary.cbegin().get_ptr().operator->(); dict_it + 1 != dictionary.cend().get_ptr().operator->(); ++dict_it) {
     auto dict_it_next = dict_it + 1;
-    distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin(), dict_it));
+    distances.emplace_back(*dict_it_next - *dict_it, std::distance(dictionary.cbegin().get_ptr().operator->(), dict_it));
   }
 
   // 2. Sort the vector in descending order by the size of the gaps

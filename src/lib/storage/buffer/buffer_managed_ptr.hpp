@@ -37,17 +37,17 @@ class BufferManagedPtr {
           reinterpret_cast<const void*>(ptr));
       _page_id = page_id;
       _offset = offset;
-      pin();
+      // pin();
     }
   }
 
   BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {
-    pin();
+    // pin();
   }
 
   template <class U>
   BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {
-    pin();
+    // pin();
   }
 
   template <class T>
@@ -55,18 +55,18 @@ class BufferManagedPtr {
     const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
     _page_id = page_id;
     _offset = offset;
-    pin();
+    // pin();
   }
 
   explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {
-    pin();
+    // pin();
   }
 
   ~BufferManagedPtr() {
     if (_page_id == INVALID_PAGE_ID) {
       return;
     }
-    unpin();
+    // unpin();
   }
 
   pointer operator->() const {
@@ -97,11 +97,11 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr operator+(std::ptrdiff_t offset) const {
-    return BufferManagedPtr(_page_id, this->_offset + offset);
+    return BufferManagedPtr(_page_id, this->_offset + offset * sizeof(PointedType));
   }
 
   BufferManagedPtr operator-(std::ptrdiff_t offset) const {
-    return BufferManagedPtr(_page_id, this->_offset - offset);
+    return BufferManagedPtr(_page_id, this->_offset - offset * sizeof(PointedType));
   }
 
   BufferManagedPtr& operator+=(difference_type offset) noexcept {
@@ -191,15 +191,13 @@ class BufferManagedPtr {
 
   // TODO: Return a guard to ensure unpinning
   void pin() {
-    BufferManager::get_global_buffer_manager().pin_page(_page_id);
+    if (_page_id != INVALID_PAGE_ID) {
+      BufferManager::get_global_buffer_manager().pin_page(_page_id);
+    }
   }
 
-  void unpin() {
-    BufferManager::get_global_buffer_manager().unpin_page(_page_id);
-  }
-
-  void mark_dirty() {
-    BufferManager::get_global_buffer_manager().mark_page_dirty(_page_id);
+  void unpin(bool dirty) {
+    BufferManager::get_global_buffer_manager().unpin_page(_page_id, dirty);
   }
 
  private:

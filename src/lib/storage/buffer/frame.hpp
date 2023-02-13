@@ -13,4 +13,4 @@ struct Frame {
   Page<PageSizeType::KiB32>* data = nullptr;
 };
 
-}  // namespace hyrise
+}  // namespace hyris

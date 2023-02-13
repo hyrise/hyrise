@@ -4,6 +4,7 @@
 #include <memory>
 #include "frame.hpp"
 #include "storage/buffer/types.hpp"
+#include <mutex>
 
 namespace hyrise {
 
@@ -41,5 +42,7 @@ class VolatileRegion {
   // it might also be concurrent
   std::forward_list<FrameID> _free_frames;
   size_t _num_free_frames;
+
+  std::mutex _mutex;
 };
 }  // namespace hyrise

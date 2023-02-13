@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <memory>
 #include <utility>
 #include "storage/buffer/clock_replacement_strategy.hpp"
@@ -88,7 +89,7 @@ class BufferManager {
    * 
    * @param page_id 
    */
-  void unpin_page(const PageID page_id);
+  void unpin_page(const PageID page_id, const bool dirty = false);
 
   void mark_page_dirty(const PageID page_id);
 
@@ -138,12 +139,16 @@ class BufferManager {
   */
   Metrics& metrics();
 
+  BufferManager& operator=(BufferManager&& other);
+
+  ~BufferManager() {
+    std::cout << "Dealloc" << std::endl;
+  }
  protected:
   friend class Hyrise;
 
  private:
   BufferManager();
-
   std::pair<FrameID, Frame*> allocate_frame();
 
   Frame* find_in_page_table(const PageID page_id);
@@ -160,7 +165,9 @@ class BufferManager {
   std::unique_ptr<VolatileRegion> _volatile_region;
 
   // Page Table that contains frames (= pages) which are currently in the buffer pool
-  std::unordered_map<PageID, Frame*> _page_table;
+  boost::unordered_flat_map<PageID, Frame*> _page_table;
+
+  std::mutex _page_table_mutex;
 
   // Metadata storage of frames
   std::vector<Frame> _frames;

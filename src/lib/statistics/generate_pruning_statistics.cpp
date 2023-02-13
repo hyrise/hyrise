@@ -75,8 +75,12 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           }
         });
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        std::sort(dictionary.begin(), dictionary.end());
+        dictionary.begin().get_ptr().pin();
+        std::sort(dictionary.begin().get_ptr().operator->(), dictionary.end().get_ptr().operator->());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+
+        // TODO: Unpin actually happens automatically here with the deallocation
+        dictionary.begin().get_ptr().unpin(true);
       }
 
       chunk_statistics[column_id] = segment_statistics;
