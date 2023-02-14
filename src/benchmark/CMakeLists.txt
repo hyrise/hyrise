@@ -137,6 +137,7 @@ add_executable(
     storage/buffer/utils.cpp
     storage/buffer/allocation_benchmark.cpp
     storage/buffer/projection_benchmark.cpp
+    storage/buffer/table_scan_benchmark.cpp
     storage/buffer/ssd_region_benchmark.cpp
     storage/buffer/volatile_region_benchmark.cpp
     storage/buffer/vector_sort_benchmark.cpp

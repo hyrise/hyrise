@@ -1,0 +1,90 @@
+#include <memory>
+
+#include "benchmark/benchmark.h"
+#include "expression/expression_functional.hpp"
+#include "micro_benchmark_basic_fixture.hpp"
+#include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
+#include "storage/buffer/utils.hpp"
+#include "storage/table.hpp"
+#include "utils/load_table.hpp"
+
+using namespace hyrise::expression_functional;  // NOLINT
+
+namespace hyrise {
+
+void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<const AbstractOperator> in,
+                              ColumnID left_column_id, const PredicateCondition predicate_condition,
+                              const AllParameterVariant right_parameter) {
+  const auto left_operand = pqp_column_(left_column_id, in->get_output()->column_data_type(left_column_id),
+                                        in->get_output()->column_is_nullable(left_column_id), "");
+  auto right_operand = std::shared_ptr<AbstractExpression>{};
+  if (right_parameter.type() == typeid(ColumnID)) {
+    const auto right_column_id = boost::get<ColumnID>(right_parameter);
+    right_operand = pqp_column_(right_column_id, in->get_output()->column_data_type(right_column_id),
+                                in->get_output()->column_is_nullable(right_column_id), "");
+
+  } else {
+    right_operand = value_(boost::get<AllTypeVariant>(right_parameter));
+  }
+
+  const auto predicate = std::make_shared<BinaryPredicateExpression>(predicate_condition, left_operand, right_operand);
+
+  auto warm_up = std::make_shared<TableScan>(in, predicate);
+  warm_up->execute();
+  for (auto _ : state) {
+    auto table_scan = std::make_shared<TableScan>(in, predicate);
+    table_scan->execute();
+  }
+
+  add_buffer_manager_counters(state, BufferManager::get_global_buffer_manager());
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {
+  _clear_cache();
+  benchmark_tablescan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable)(benchmark::State& state) {
+  _clear_cache();
+  benchmark_tablescan_impl(state, _table_wrapper_a, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant_OnDict)(benchmark::State& state) {
+  _clear_cache();
+  benchmark_tablescan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, 7);
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanVariable_OnDict)(benchmark::State& state) {
+  _clear_cache();
+  benchmark_tablescan_impl(state, _table_dict_wrapper, ColumnID{0}, PredicateCondition::GreaterThanEquals, ColumnID{1});
+}
+
+BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScan_Like)(benchmark::State& state) {
+  const auto lineitem_table = load_table("resources/test_data/tbl/tpch/sf-0.001/lineitem.tbl");
+
+  const auto lineitem_wrapper = std::make_shared<TableWrapper>(lineitem_table);
+  lineitem_wrapper->never_clear_output();
+  lineitem_wrapper->execute();
+
+  const auto column_names_and_patterns = std::vector<std::pair<std::string, pmr_string>>({
+      {"l_comment", pmr_string{"%final%"}},
+      {"l_comment", pmr_string{"%final%requests%"}},
+      {"l_shipinstruct", pmr_string{"quickly%"}},
+      {"l_comment", pmr_string{"%foxes"}},
+      {"l_comment", pmr_string{"%quick_y__above%even%"}},
+  });
+
+  for (auto _ : state) {
+    for (const auto& column_name_and_pattern : column_names_and_patterns) {
+      const auto column_id = lineitem_table->column_id_by_name(column_name_and_pattern.first);
+      const auto column = pqp_column_(column_id, DataType::String, false, "");
+      const auto predicate = like_(column, value_(column_name_and_pattern.second));
+
+      auto table_scan = std::make_shared<TableScan>(lineitem_wrapper, predicate);
+      table_scan->execute();
+    }
+  }
+}
+
+}  // namespace hyrise
