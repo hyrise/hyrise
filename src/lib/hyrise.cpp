@@ -13,8 +13,8 @@ Hyrise::Hyrise() {
   // destructed last.
   boost::container::pmr::get_default_resource();
 
-  storage_manager = {};
   buffer_manager = BufferManager{};
+  storage_manager = {};
   plugin_manager = PluginManager{};
   transaction_manager = TransactionManager{};
   meta_table_manager = MetaTableManager{};
@@ -26,7 +26,6 @@ Hyrise::Hyrise() {
 }
 
 void Hyrise::reset() {
-  std::cout << "Reset called" << std::endl;
   Hyrise::get().scheduler()->finish();
   get() = Hyrise{};
 }

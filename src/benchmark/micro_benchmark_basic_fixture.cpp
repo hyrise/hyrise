@@ -31,6 +31,12 @@ void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
 }
 
 void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
+  // The table objects needs to be manually removed here to not interfere with the buffer manager
+  // that is reset below.
+  _table_wrapper_a = nullptr;
+  _table_wrapper_b = nullptr;
+  _table_dict_wrapper = nullptr;
+
   Hyrise::reset();
 }
 

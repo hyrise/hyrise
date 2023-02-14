@@ -27,7 +27,7 @@ class BufferManager {
   */
   struct Metrics {
     // Tracks all allocation that are happening on the buffer manager through the BufferPoolAllocator
-    std::vector<std::size_t> allocations_in_bytes{};
+    // std::vector<std::size_t> allocations_in_bytes{};
 
     // The maximum amount of bytes being allocated with with subsequent calls of alloc and dealloc
     std::size_t max_bytes_used;
@@ -91,8 +91,6 @@ class BufferManager {
    */
   void unpin_page(const PageID page_id, const bool dirty = false);
 
-  void mark_page_dirty(const PageID page_id);
-
   /**
    * @brief 
    * 
@@ -141,9 +139,6 @@ class BufferManager {
 
   BufferManager& operator=(BufferManager&& other);
 
-  ~BufferManager() {
-    std::cout << "Dealloc" << std::endl;
-  }
  protected:
   friend class Hyrise;
 

@@ -1,6 +1,5 @@
 #include "buffer_manager.hpp"
 #include <algorithm>
-#include <boost/thread/with_lock_guard.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <chrono>
 #include <cstdlib>
@@ -71,7 +70,7 @@ std::pair<FrameID, Frame*> BufferManager::allocate_frame() {
     if (victim_frame.dirty) {
       write_page(victim_frame.page_id, *victim_page);
     }
-    boost::with_lock_guard(_page_table_mutex, [&] { _page_table.erase(victim_frame.page_id); });
+    _page_table.erase(victim_frame.page_id);
     frame_id = victim_frame_id;
     allocated_page = victim_page;
   }
@@ -94,16 +93,6 @@ Frame* BufferManager::find_in_page_table(const PageID page_id) {
   return nullptr;
 }
 
-void BufferManager::mark_page_dirty(const PageID page_id) {
-  const auto frame =
-      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
-  if (!frame) {
-    return;
-  }
-
-  frame->dirty.store(true);
-}
-
 void BufferManager::read_page(const PageID page_id, Page32KiB& destination) {
   _ssd_region->read_page(page_id, destination);
   _metrics.total_bytes_read += Page32KiB::size();
@@ -115,8 +104,8 @@ void BufferManager::write_page(const PageID page_id, Page32KiB& source) {
 }
 
 Page32KiB* BufferManager::get_page(const PageID page_id) {
-  if (const auto frame =
-          boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); })) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  if (const auto frame = find_in_page_table(page_id)) {
     return frame->data;
   }
 
@@ -132,9 +121,7 @@ Page32KiB* BufferManager::get_page(const PageID page_id) {
   _replacement_strategy->record_frame_access(frame_id);
 
   // Update the page table and metadata
-  boost::with_lock_guard(_page_table_mutex, [this, allocated_frame = allocated_frame] {
-    this->_page_table[allocated_frame->page_id] = allocated_frame;
-  });
+  _page_table[allocated_frame->page_id] = allocated_frame;
 
   return allocated_frame->data;
 }
@@ -151,19 +138,18 @@ PageID BufferManager::new_page() {
   _replacement_strategy->record_frame_access(frame_id);
 
   // Update the page table and metadata
-  boost::with_lock_guard(_page_table_mutex, [this, allocated_frame = allocated_frame] {
-    this->_page_table[allocated_frame->page_id] = allocated_frame;
-  });
+  _page_table[allocated_frame->page_id] = allocated_frame;
+
   _num_pages++;
 
   return allocated_frame->page_id;
 }
 
 void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
   Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
-  const auto frame =
-      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
+  const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return;
   }
@@ -179,8 +165,8 @@ void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
 }
 
 void BufferManager::pin_page(const PageID page_id) {
-  const auto frame =
-      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return;
   }
@@ -193,8 +179,8 @@ void BufferManager::pin_page(const PageID page_id) {
 }
 
 void BufferManager::flush_page(const PageID page_id) {
-  const auto frame =
-      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return;
   }
@@ -206,8 +192,7 @@ void BufferManager::flush_page(const PageID page_id) {
 };
 
 void BufferManager::remove_page(const PageID page_id) {
-  const auto frame =
-      boost::with_lock_guard(_page_table_mutex, [this, page_id]() { return this->find_in_page_table(page_id); });
+  const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return;
   }
@@ -221,22 +206,26 @@ void BufferManager::remove_page(const PageID page_id) {
   }
   // TODO: Remove from clock
   // TODO: Remove from disk
-  boost::with_lock_guard(_page_table_mutex, [&] { _page_table.erase(page_id); });
+  _page_table.erase(page_id);
 }
 
 std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr(const void* ptr) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+
   auto frame_id = _volatile_region->get_frame_id_from_ptr(ptr);
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _frames[frame_id].data->data();
   return std::make_pair(_frames[frame_id].page_id, std::ptrdiff_t{offset});
 };
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+
   const auto page_size_type = next_fitting_page_size_type(bytes);
   Assert(page_size_type == PageSizeType::KiB32,
          "Cannot allocate " + std::to_string(bytes) + " bytes in maxium page size");
 
   // Update metrics
-  _metrics.allocations_in_bytes.push_back(bytes);
+  // _metrics.allocations_in_bytes.push_back(bytes);
   _metrics.current_bytes_used += bytes;
   _metrics.total_unused_bytes += static_cast<std::size_t>(page_size_type) - bytes;  // TODO: Aligment
   _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
@@ -249,6 +238,8 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
 }
 
 void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+
   _metrics.current_bytes_used -= bytes;
   // TODO: What happens to page on SSD
   remove_page(ptr.get_page_id());

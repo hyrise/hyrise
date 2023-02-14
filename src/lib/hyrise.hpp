@@ -41,8 +41,8 @@ class Hyrise : public Singleton<Hyrise> {
   // For example, the StorageManager's destructor should not be called before the PluginManager's destructor.
   // The latter stops all plugins which, in turn, might access tables during their shutdown procedure. This
   // could not work without the StorageManager still in place.
-  StorageManager storage_manager;
   BufferManager buffer_manager;
+  StorageManager storage_manager;
   PluginManager plugin_manager;
   TransactionManager transaction_manager;
   MetaTableManager meta_table_manager;
