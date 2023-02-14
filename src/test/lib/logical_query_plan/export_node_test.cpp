@@ -48,12 +48,4 @@ TEST_F(ExportNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_export_node->unique_column_combinations(), std::logic_error);
 }
 
-TEST_F(ExportNodeTest, NoOrderDependencies) {
-  EXPECT_THROW(_export_node->order_dependencies(), std::logic_error);
-}
-
-TEST_F(ExportNodeTest, NoIncusionDependencies) {
-  EXPECT_THROW(_export_node->inclusion_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

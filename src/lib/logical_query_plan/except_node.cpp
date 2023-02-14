@@ -33,14 +33,6 @@ UniqueColumnCombinations ExceptNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
-OrderDependencies ExceptNode::order_dependencies() const {
-  return _forward_left_order_dependencies();
-}
-
-InclusionDependencies ExceptNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
-}
-
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {
   // The right input node is used for filtering only. It does not contribute any FDs.
   return left_input()->non_trivial_functional_dependencies();

@@ -424,26 +424,4 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
   EXPECT_EQ(top_diamond_origin_node, bottom_diamond_root_node);
 }
 
-TEST_F(LQPUtilsTest, FindMatchingInclusionDependency) {
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{a_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_a_b = InclusionDependency{{a_a, a_b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  const auto inclusion_dependencies = InclusionDependencies{ind_a, ind_a_b};
-
-  EXPECT_FALSE(find_matching_inclusion_dependency(inclusion_dependencies, {b_x}));
-
-  if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(find_matching_inclusion_dependency(inclusion_dependencies, {}), std::logic_error);
-    EXPECT_THROW(find_matching_inclusion_dependency({}, {a_a, a_b}), std::logic_error);
-  }
-
-  const auto actual_ind_a = find_matching_inclusion_dependency(inclusion_dependencies, {a_a});
-  ASSERT_TRUE(actual_ind_a);
-  EXPECT_EQ(*actual_ind_a, ind_a);
-
-  const auto actual_ind_a_b = find_matching_inclusion_dependency(inclusion_dependencies, {a_a, a_b});
-  ASSERT_TRUE(actual_ind_a);
-  EXPECT_EQ(*actual_ind_a_b, ind_a_b);
-}
-
 }  // namespace hyrise

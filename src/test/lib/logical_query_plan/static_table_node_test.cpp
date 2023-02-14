@@ -100,12 +100,4 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
 }
 
-TEST_F(StaticTableNodeTest, NoOrderDependencies) {
-  EXPECT_TRUE(static_table_node->order_dependencies().empty());
-}
-
-TEST_F(StaticTableNodeTest, NoInclusionDependencies) {
-  EXPECT_TRUE(static_table_node->inclusion_dependencies().empty());
-}
-
 }  // namespace hyrise

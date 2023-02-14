@@ -80,38 +80,4 @@ TEST_F(PredicateNodeTest, ForwardUniqueColumnCombinations) {
   EXPECT_TRUE(unique_column_combinations.contains(ucc));
 }
 
-TEST_F(PredicateNodeTest, ForwardOrderDependencies) {
-  EXPECT_TRUE(_table_node->order_dependencies().empty());
-  EXPECT_TRUE(_predicate_node->order_dependencies().empty());
-
-  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
-  const auto od = OrderDependency{{_i}, {_f}};
-  EXPECT_EQ(_table_node->order_dependencies().size(), 1);
-  EXPECT_TRUE(_table_node->order_dependencies().contains(od));
-
-  const auto& order_dependencies = _predicate_node->order_dependencies();
-  EXPECT_EQ(order_dependencies.size(), 1);
-  EXPECT_TRUE(order_dependencies.contains(od));
-}
-
-TEST_F(PredicateNodeTest, ForwardInclusionDependencies) {
-  EXPECT_TRUE(_table_node->inclusion_dependencies().empty());
-  EXPECT_TRUE(_predicate_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_a, dummy_table});
-
-  const auto ind = InclusionDependency{{_i}, {ColumnID{0}}, dummy_table};
-  EXPECT_EQ(_table_node->inclusion_dependencies().size(), 1);
-  EXPECT_TRUE(_table_node->inclusion_dependencies().contains(ind));
-
-  // By default, INDs do not survive if there is a predicate and not all tuples exist anymore.
-  EXPECT_TRUE(_predicate_node->inclusion_dependencies().empty());
-
-  // INDs can only be forwarded if there is an IS NOT NULL predicate on its expression.
-  const auto predicate_node = PredicateNode::make(is_not_null_(_i), _table_node);
-  EXPECT_EQ(predicate_node->inclusion_dependencies().size(), 1);
-  EXPECT_TRUE(predicate_node->inclusion_dependencies().contains(ind));
-}
-
 }  // namespace hyrise

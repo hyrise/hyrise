@@ -123,41 +123,6 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
-void MockNode::set_order_dependencies(const OrderDependencies& order_dependencies) {
-  _order_dependencies = order_dependencies;
-}
-
-OrderDependencies MockNode::order_dependencies() const {
-  auto order_dependencies = OrderDependencies{};
-  const auto& output_expressions = this->output_expressions();
-  for (const auto& od : _order_dependencies) {
-    if (!(contains_all_expressions(od.expressions, output_expressions) &&
-          contains_all_expressions(od.ordered_expressions, output_expressions))) {
-      continue;
-    }
-
-    order_dependencies.emplace(od);
-  }
-  return order_dependencies;
-}
-
-void MockNode::set_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies) {
-  _inclusion_dependencies = inclusion_dependencies;
-}
-
-InclusionDependencies MockNode::inclusion_dependencies() const {
-  auto inclusion_dependencies = InclusionDependencies{};
-  const auto& output_expressions = this->output_expressions();
-  for (const auto& ind : _inclusion_dependencies) {
-    if (!contains_all_expressions(ind.expressions, output_expressions)) {
-      continue;
-    }
-
-    inclusion_dependencies.emplace(ind);
-  }
-  return inclusion_dependencies;
-}
-
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {
   return _table_statistics;
 }

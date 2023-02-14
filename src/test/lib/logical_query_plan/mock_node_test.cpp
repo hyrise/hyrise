@@ -135,49 +135,4 @@ TEST_F(MockNodeTest, UniqueColumnCombinationsPrunedColumns) {
   }
 }
 
-TEST_F(MockNodeTest, OrderDependencies) {
-  const auto od_a_to_b = OrderDependency{{_mock_node_a->get_column("a")}, {_mock_node_a->get_column("b")}};
-  const auto od_a_to_c = OrderDependency{{_mock_node_a->get_column("a")}, {_mock_node_a->get_column("c")}};
-  _mock_node_a->set_order_dependencies({od_a_to_b, od_a_to_c});
-
-  // Forward ODs.
-  {
-    const auto& order_dependencies = _mock_node_a->order_dependencies();
-    EXPECT_EQ(order_dependencies.size(), 2);
-    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
-    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
-  }
-
-  // Discard ODs that involve pruned columns.
-  {
-    _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
-    const auto& order_dependencies = _mock_node_a->order_dependencies();
-    EXPECT_TRUE(order_dependencies.empty());
-  }
-}
-
-TEST_F(MockNodeTest, InclusionDependencies) {
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_mock_node_a->get_column("a")}, {ColumnID{0}}, dummy_table};
-  const auto ind_a_b = InclusionDependency{
-      {_mock_node_a->get_column("a"), _mock_node_a->get_column("b")}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  _mock_node_a->set_inclusion_dependencies({ind_a, ind_a_b});
-
-  // Forward INDs.
-  {
-    const auto& inclusion_dependencies = _mock_node_a->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 2);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
-  }
-
-  // Discard INDs that involve pruned columns.
-  {
-    _mock_node_a->set_pruned_column_ids({ColumnID{1}});
-    const auto& inclusion_dependencies = _mock_node_a->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 1);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-  }
-}
-
 }  // namespace hyrise

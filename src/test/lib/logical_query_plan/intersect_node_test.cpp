@@ -86,35 +86,4 @@ TEST_F(IntersectNodeTest, ForwardUniqueColumnCombinations) {
   }
 }
 
-TEST_F(IntersectNodeTest, ForwardOrderDependencies) {
-  EXPECT_TRUE(_mock_node1->order_dependencies().empty());
-  EXPECT_TRUE(_intersect_node->order_dependencies().empty());
-
-  const auto od_a_to_b = OrderDependency{{_a}, {_b}};
-  const auto od_a_to_c = OrderDependency{{_a}, {_c}};
-  _mock_node1->set_order_dependencies({od_a_to_b, od_a_to_c});
-  EXPECT_EQ(_mock_node1->order_dependencies().size(), 2);
-
-  const auto& order_dependencies = _intersect_node->order_dependencies();
-  EXPECT_EQ(order_dependencies.size(), 2);
-  EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
-  EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
-
-  if constexpr (HYRISE_DEBUG) {
-    _intersect_node->set_right_input(_mock_node2);
-    EXPECT_THROW(_intersect_node->order_dependencies(), std::logic_error);
-  }
-}
-
-TEST_F(IntersectNodeTest, NoInclusionDependencies) {
-  EXPECT_TRUE(_mock_node1->inclusion_dependencies().empty());
-  EXPECT_TRUE(_intersect_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  _mock_node1->set_inclusion_dependencies({ind});
-  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
-
-  EXPECT_TRUE(_intersect_node->inclusion_dependencies().empty());
-}
 }  // namespace hyrise

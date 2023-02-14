@@ -32,10 +32,6 @@ class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public Abstrac
   // Forwards unique column combinations from the left input node
   UniqueColumnCombinations unique_column_combinations() const override;
 
-  OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
-
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 
   const SetOperationMode set_operation_mode;

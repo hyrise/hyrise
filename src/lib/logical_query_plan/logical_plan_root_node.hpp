@@ -22,10 +22,6 @@ class LogicalPlanRootNode : public EnableMakeForLQPNode<LogicalPlanRootNode>, pu
 
   UniqueColumnCombinations unique_column_combinations() const override;
 
-  OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
-
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 
  protected:

@@ -517,37 +517,6 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
   return fds;
 }
 
-FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                   const OrderDependencies& order_dependencies) {
-  Assert(!order_dependencies.empty(), "Did not expect empty set of ODs.");
-
-  auto fds = FunctionalDependencies{};
-
-  // Collect non-nullable output expressions.
-  const auto& output_expressions = lqp->output_expressions();
-  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
-  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
-    if (!lqp->is_column_nullable(column_id)) {
-      output_expressions_non_nullable.insert(output_expressions.at(column_id));
-    }
-  }
-
-  for (const auto& od : order_dependencies) {
-    auto determinants = ExpressionUnorderedSet{od.expressions.cbegin(), od.expressions.cend()};
-
-    // (1) Verify whether we can create an FD from the given OD (non-nullable expressions).
-    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
-          return output_expressions_non_nullable.contains(determinant_expression);
-        })) {
-      continue;
-    }
-
-    // (2) Add FD with ordered expressions as dependents.
-    fds.emplace(determinants, ExpressionUnorderedSet{od.ordered_expressions.cbegin(), od.ordered_expressions.cend()});
-  }
-  return fds;
-}
-
 void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, FunctionalDependencies& fds) {
   if (fds.empty()) {
     return;
@@ -644,24 +613,6 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
     return *diamond_origin_node;
   }
   return nullptr;
-}
-
-std::optional<InclusionDependency> find_matching_inclusion_dependency(
-    const InclusionDependencies& inclusion_dependencies, const ExpressionUnorderedSet& expressions) {
-  DebugAssert(!inclusion_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
-  DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
-
-  // Look for an inclusion dependency that is based on the given expressions.
-  for (const auto& ind : inclusion_dependencies) {
-    if (ind.expressions.size() <= expressions.size() &&
-        std::all_of(ind.expressions.cbegin(), ind.expressions.cend(),
-                    [&](const auto& ind_expression) { return expressions.contains(ind_expression); })) {
-      // Found a matching IND.
-      return ind;
-    }
-  }
-  // Did not find an IND for the given expressions.
-  return {};
 }
 
 }  // namespace hyrise

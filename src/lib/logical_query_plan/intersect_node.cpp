@@ -38,16 +38,6 @@ UniqueColumnCombinations IntersectNode::unique_column_combinations() const {
   return _forward_left_unique_column_combinations();
 }
 
-OrderDependencies IntersectNode::order_dependencies() const {
-  DebugAssert(left_input()->order_dependencies() == right_input()->order_dependencies(),
-              "Merging of order order dependencies should be implemented.");
-  return _forward_left_order_dependencies();
-}
-
-InclusionDependencies IntersectNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
-}
-
 FunctionalDependencies IntersectNode::non_trivial_functional_dependencies() const {
   Fail("Merging of FDs is not implemented.");
 }

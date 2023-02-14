@@ -28,14 +28,6 @@ UniqueColumnCombinations DummyTableNode::unique_column_combinations() const {
   return UniqueColumnCombinations{};
 }
 
-OrderDependencies DummyTableNode::order_dependencies() const {
-  return OrderDependencies{};
-}
-
-InclusionDependencies DummyTableNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
-}
-
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
   return std::make_shared<DummyTableNode>();
 }

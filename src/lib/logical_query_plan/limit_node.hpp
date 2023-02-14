@@ -18,10 +18,6 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
   // Forwards unique column combinations from the left input node.
   UniqueColumnCombinations unique_column_combinations() const override;
 
-  OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
-
   std::shared_ptr<AbstractExpression> num_rows_expression() const;
 
  protected:

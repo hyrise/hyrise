@@ -48,12 +48,4 @@ TEST_F(ChangeMetaTableNodeTest, NoUniqueColumnCombinations) {
   EXPECT_THROW(_change_meta_table_node->unique_column_combinations(), std::logic_error);
 }
 
-TEST_F(ChangeMetaTableNodeTest, NoOrderDependencies) {
-  EXPECT_THROW(_change_meta_table_node->order_dependencies(), std::logic_error);
-}
-
-TEST_F(ChangeMetaTableNodeTest, NoInclusionDependencies) {
-  EXPECT_THROW(_change_meta_table_node->inclusion_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

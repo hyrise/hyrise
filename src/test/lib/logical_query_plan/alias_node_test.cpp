@@ -90,31 +90,4 @@ TEST_F(AliasNodeTest, UniqueColumnCombinationsForwarding) {
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
-TEST_F(AliasNodeTest, ForwardOrderDependencies) {
-  EXPECT_TRUE(mock_node->order_dependencies().empty());
-  EXPECT_TRUE(alias_node->order_dependencies().empty());
-
-  const auto od = OrderDependency{{a}, {b}};
-  mock_node->set_order_dependencies({od});
-  EXPECT_EQ(mock_node->order_dependencies().size(), 1);
-
-  const auto& order_dependencies = alias_node->order_dependencies();
-  EXPECT_EQ(order_dependencies.size(), 1);
-  EXPECT_TRUE(order_dependencies.contains(od));
-}
-
-TEST_F(AliasNodeTest, ForwardInclusionDependencies) {
-  EXPECT_TRUE(mock_node->inclusion_dependencies().empty());
-  EXPECT_TRUE(alias_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind = InclusionDependency{{a}, {ColumnID{0}}, dummy_table};
-  mock_node->set_inclusion_dependencies({ind});
-  EXPECT_EQ(mock_node->inclusion_dependencies().size(), 1);
-
-  const auto& inclusion_dependencies = alias_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 1);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind));
-}
-
 }  // namespace hyrise

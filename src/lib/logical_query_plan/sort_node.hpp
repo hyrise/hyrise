@@ -21,10 +21,6 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
   // Forwards unique column combinations from the left input node.
   UniqueColumnCombinations unique_column_combinations() const override;
 
-  OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
-
   const std::vector<SortMode> sort_modes;
 
  protected:

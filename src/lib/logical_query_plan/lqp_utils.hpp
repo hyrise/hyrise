@@ -258,13 +258,6 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                                            const UniqueColumnCombinations& unique_column_combinations);
 
 /**
- * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of
- *         the given @param lqp node.
- */
-FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
-                                                   const OrderDependencies& order_dependencies);
-
-/**
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at
  * the @param lqp node's output expressions.
  */
@@ -275,15 +268,5 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
  * @returns a shared pointer to the diamond's origin node. If it was not found, a null pointer is returned.
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
-
-/**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
- *         expressions. A unique column combination matches if it covers a subset of @param expressions.
- */
-bool contains_matching_inclusion_dependency(const InclusionDependencies& inclusion_dependencies,
-                                            const ExpressionUnorderedSet& expressions);
-
-std::optional<InclusionDependency> find_matching_inclusion_dependency(
-    const InclusionDependencies& inclusion_dependencies, const ExpressionUnorderedSet& expressions);
 
 }  // namespace hyrise

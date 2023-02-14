@@ -22,27 +22,6 @@ bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const s
   });
 }
 
-std::vector<std::shared_ptr<AbstractExpression>> find_expressions(
-    const std::vector<ColumnID>& column_ids,
-    const std::vector<std::shared_ptr<AbstractExpression>>& output_expressions) {
-  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
-  expressions.reserve(column_ids.size());
-
-  for (const auto column_id : column_ids) {
-    for (const auto& expression : output_expressions) {
-      Assert(expression->type == ExpressionType::LQPColumn, "Invalid output expression for StoredTableNode");
-      const auto& column_expression = static_cast<LQPColumnExpression&>(*expression);
-      if (column_expression.original_column_id == column_id) {
-        expressions.emplace_back(expression);
-        break;
-      }
-    }
-  }
-
-  Assert(expressions.size() == column_ids.size(), "Could not resolve all column IDs to expressions");
-  return expressions;
-}
-
 }  // namespace
 
 namespace hyrise {
@@ -158,65 +137,6 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
   }
 
   return unique_column_combinations;
-}
-
-OrderDependencies StoredTableNode::order_dependencies() const {
-  auto order_dependencies = OrderDependencies{};
-
-  // We create order dependencies from table order constraints.
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& table_order_constraints = table->soft_order_constraints();
-
-  for (const auto& table_order_constraint : table_order_constraints) {
-    // Discard order constraints that involve pruned column id(s).
-    if (contains_any_column_id(table_order_constraint.columns(), _pruned_column_ids) ||
-        contains_any_column_id(table_order_constraint.ordered_columns(), _pruned_column_ids)) {
-      continue;
-    }
-
-    // Search for expressions representing the order constraint's ColumnIDs.
-    const auto& output_expressions = this->output_expressions();
-    const auto& column_expressions = find_expressions(table_order_constraint.columns(), output_expressions);
-    const auto& ordered_column_expressions =
-        find_expressions(table_order_constraint.ordered_columns(), output_expressions);
-
-    // Create OrderDependency.
-    order_dependencies.emplace(column_expressions, ordered_column_expressions);
-  }
-
-  // Construct transitive ODs. For instance, create [a] |-> [c] from [a] |-> [b] and [b] |-> [c].
-  build_transitive_od_closure(order_dependencies);
-
-  return order_dependencies;
-}
-
-InclusionDependencies StoredTableNode::inclusion_dependencies() const {
-  auto inclusion_dependencies = InclusionDependencies{};
-
-  // We create inclusion dependencies from foreign constraints.
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& foreign_key_constraints = table->referenced_foreign_key_constraints();
-
-  for (const auto& foreign_key_constraint : foreign_key_constraints) {
-    const auto& referenced_table = foreign_key_constraint.foreign_key_table();
-    if (!referenced_table) {
-      // Referenced table was deleted, IND is useless.
-      continue;
-    }
-
-    // Discard inclusion constraints that involve pruned column id(s).
-    if (contains_any_column_id(foreign_key_constraint.columns(), _pruned_column_ids)) {
-      continue;
-    }
-
-    // Search for expressions representing the inclusion constraint's ColumnIDs
-    const auto& column_expressions = find_expressions(foreign_key_constraint.columns(), this->output_expressions());
-
-    // Create InclusionDependency
-    inclusion_dependencies.emplace(column_expressions, foreign_key_constraint.foreign_key_columns(), referenced_table);
-  }
-
-  return inclusion_dependencies;
 }
 
 std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
