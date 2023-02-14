@@ -21,7 +21,7 @@ def main():
     server = pexpect.spawn(f"{build_dir}/hyriseServer --benchmark_data=tpc-h:0.01 -p 0", timeout=10)
 
     server.expect_exact("Loading/Generating tables", timeout=120)
-    server.expect_exact("Encoding 'lineitem'", timeout=120)
+    server.expect_exact("Processing 'lineitem'", timeout=120)
     search_regex = r"Server started at 0.0.0.0 and port (\d+)"
     server.expect(search_regex, timeout=120)
 
