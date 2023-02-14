@@ -44,6 +44,8 @@ class UccDiscoveryPlugin : public AbstractPlugin {
 
   std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> provided_user_executable_functions() final;
 
+  std::optional<PreBenchmarkHook> pre_benchmark_hook() final;
+
  protected:
   friend class UccDiscoveryPluginTest;
 

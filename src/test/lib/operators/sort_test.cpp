@@ -116,7 +116,7 @@ inline std::string sort_test_formatter(const testing::TestParamInfo<SortTestPara
   }
   stream << (param.input_is_reference ? "Reference" : "Data") << "Input";
   for (const auto& sort_column : param.sort_columns) {
-    stream << "Col" << sort_column.column << sort_mode_to_string.left.at(sort_column.sort_mode);
+    stream << "Col" << sort_column.column << sort_column.sort_mode;
   }
 
   if (param.output_chunk_size != Chunk::DEFAULT_SIZE) {

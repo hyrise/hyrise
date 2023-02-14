@@ -5,7 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -15,7 +14,7 @@ ExceptNode::ExceptNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Except), set_operation_mode(init_operation_mode) {}
 
 std::string ExceptNode::description(const DescriptionMode mode) const {
-  return "[ExceptNode] Mode: " + set_operation_mode_to_string.left.at(set_operation_mode);
+  return "[ExceptNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
 std::vector<std::shared_ptr<AbstractExpression>> ExceptNode::output_expressions() const {

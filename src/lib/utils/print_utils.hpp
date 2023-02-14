@@ -57,4 +57,6 @@ void print_directed_acyclic_graph(const std::shared_ptr<Node>& node, const NodeG
 void print_table_key_constraints(const std::shared_ptr<const Table>& table, std::ostream& stream,
                                  const std::string& separator = ", ");
 
+std::string all_encoding_options();
+
 }  // namespace hyrise

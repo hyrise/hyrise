@@ -1,5 +1,7 @@
 #include "table_key_constraint.hpp"
 
+#include <boost/container_hash/hash.hpp>
+
 namespace hyrise {
 
 TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, KeyConstraintType init_key_type)

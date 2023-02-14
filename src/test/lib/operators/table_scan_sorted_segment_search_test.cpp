@@ -1,6 +1,6 @@
 #include "base_test.hpp"
 
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "operators/table_scan/sorted_segment_search.hpp"
 #include "storage/segment_iterate.hpp"

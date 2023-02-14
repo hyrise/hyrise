@@ -272,6 +272,8 @@ set(
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
     hyriseUccDiscoveryPlugin
+    # Required for testing plugin benchmark hooks
+    hyriseBenchmarkLib
 )
 
 # This warning does not play well with SCOPED_TRACE

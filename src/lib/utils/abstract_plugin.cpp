@@ -9,4 +9,12 @@ std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>> AbstractPlugin
   return {};
 }
 
+std::optional<PreBenchmarkHook> AbstractPlugin::pre_benchmark_hook() {
+  return {};
+}
+
+std::optional<PostBenchmarkHook> AbstractPlugin::post_benchmark_hook() {
+  return {};
+}
+
 }  // namespace hyrise

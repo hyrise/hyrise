@@ -12,6 +12,10 @@ bool is_floating_point_data_type(const DataType data_type) {
   return data_type == DataType::Float || data_type == DataType::Double;
 }
 
+std::ostream& operator<<(std::ostream& stream, const DataType data_type) {
+  return stream << data_type_to_string.left.at(data_type);
+}
+
 }  // namespace hyrise
 
 namespace std {

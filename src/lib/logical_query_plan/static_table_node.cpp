@@ -2,7 +2,6 @@
 
 #include <sstream>
 
-#include "constant_mappings.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 #include "utils/print_utils.hpp"

@@ -9,7 +9,6 @@
 #include <utility>
 #include <vector>
 
-#include "constant_mappings.hpp"
 #include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"

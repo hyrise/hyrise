@@ -40,4 +40,8 @@ std::unique_ptr<const BaseCompressedVector> compress_vector(const pmr_vector<uin
   return compressor->compress(vector, alloc, meta_info);
 }
 
+std::ostream& operator<<(std::ostream& stream, const VectorCompressionType vector_compression_type) {
+  return stream << vector_compression_type_to_string.left.at(vector_compression_type);
+}
+
 }  // namespace hyrise

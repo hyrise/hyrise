@@ -117,7 +117,7 @@ void TransactionContext::commit() {
 
   auto committed = std::promise<void>{};
   const auto committed_future = committed.get_future();
-  const auto callback = [&committed](TransactionID) { committed.set_value(); };
+  const auto callback = [&committed](TransactionID /*unused*/) { committed.set_value(); };
 
   commit_async(callback);
 

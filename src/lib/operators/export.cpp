@@ -1,7 +1,7 @@
 #include "export.hpp"
 
 #include <boost/algorithm/string.hpp>
-#include <magic_enum.hpp>
+#include "magic_enum.hpp"
 
 #include "hyrise.hpp"
 #include "import_export/binary/binary_writer.hpp"
