@@ -212,19 +212,15 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
       return inclusion_dependencies;
     }
 
-    // Left / right outer joins foward all tuples of the repsective input. Its INDs remain valid.
-    case JoinMode::Left:
-      return left_input()->inclusion_dependencies();
-    case JoinMode::Right:
-      return left_input()->inclusion_dependencies();
-
     // Anti-joins filter the left input. No INDs remain valid.
     case JoinMode::AntiNullAsFalse:
     case JoinMode::AntiNullAsTrue:
       return InclusionDependencies{};
 
-    // Inner and semi-joins can only forward INDs if all input tuples are forwarded (i.e., there is an IND between the
-    // join keys and all predicates are equals_() predicates).
+    // All other joins can only forward INDs of the inputs if all input tuples are forwarded (i.e., (i) they are outer
+    // joins and/or (ii) there is an IND between the join keys of equals_() predicates).
+    case JoinMode::Left:
+    case JoinMode::Right:
     case JoinMode::Semi:
     case JoinMode::Inner: {
       const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
@@ -232,6 +228,10 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
       return _output_inclusion_dependencies(left_inclusion_dependencies, right_inclusion_dependencies);
     }
   }
+  /**
+   * Future work: The join keys of equals_() predicates form a new IND. However, we currently only care about INDs that
+   * result from foreign key constraints, which are known
+   */
 }
 
 InclusionDependencies JoinNode::_output_inclusion_dependencies(
@@ -241,6 +241,15 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   if (left_inclusion_dependencies.empty() && (join_mode == JoinMode::Semi || right_inclusion_dependencies.empty())) {
     return InclusionDependencies{};
   }
+
+  // Left / right outer joins foward all tuples of the repsective input. Its INDs remain valid.
+  auto inclusion_dependencies = InclusionDependencies{};
+  if (join_mode == JoinMode::Left) {
+    inclusion_dependencies.insert(left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend());
+  } else if (join_mode == JoinMode::Right) {
+    inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
+  }
+
 
   // Check that all join predicates are equals_() predicates and map the join keys to the input nodes.
   const auto join_predicates = this->join_predicates();
@@ -274,7 +283,6 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   Assert(left_input_join_predicates.size() == predicate_count && right_input_join_predicates.size() == predicate_count,
          "Could not resolve all join predicates.");
 
-  auto inclusion_dependencies = InclusionDependencies{};
   // Add INDs from left input if left join keys are contained in right join keys.
   if (right_input()->has_matching_ind(right_input_join_predicates, *left_input())) {
     inclusion_dependencies.insert(left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend());

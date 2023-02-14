@@ -9,9 +9,9 @@ namespace hyrise {
 class Table;
 
 /**
- * Container class to define inclusion constraints for tables (e.g., foreign key relationships). Modeled as a constraint
- * of the table with the including columns (e.g., nation.n_natiokey) pointing to the table with the included columns
- * (e.g., customer.c_nationkey).
+ * Container class to define foreign key relationships for tables. @param table and @param columns reference the table
+ * with the key columns (e.g., region.r_regionkey) whereas @param foreign_key_table and @param foreign_key_columns
+ * reference the table with the foreign key columns (e.g., nation.n_regionkey).
  */
 class ForeignKeyConstraint final : public AbstractTableConstraint {
  public:

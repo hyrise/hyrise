@@ -844,6 +844,76 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
   }
 }
 
+TEST_F(JoinNodeTest, InclusionDependenciesCrossAndFullOuterJoin) {
+  // Cross and full outer joins should forward INDs from both inputs.
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_t_a_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_x = InclusionDependency{{_t_b_x}, {ColumnID{0}}, dummy_table};
+
+  _mock_node_a->set_inclusion_dependencies({ind_a});
+  EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
+  _mock_node_a->set_inclusion_dependencies({ind_x});
+  EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
+
+  {
+  const auto& inclusion_dependencies = _cross_join_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 2);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+  }
+
+  // clang-format off
+  const auto& outer_join_node =
+  JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
+    _mock_node_a,
+    _mock_node_b);
+  // clang-format on
+
+  const auto& inclusion_dependencies = outer_join_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 2);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+}
+
+TEST_F(JoinNodeTest, InclusionDependenciesOuterJoin) {
+  // Left and right outer joins should forward INDs the "outer" input.
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_t_a_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_x = InclusionDependency{{_t_b_x}, {ColumnID{0}}, dummy_table};
+
+  _mock_node_a->set_inclusion_dependencies({ind_a});
+  EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
+  _mock_node_a->set_inclusion_dependencies({ind_x});
+  EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
+
+  {
+    // clang-format off
+    const auto& join_node =
+    JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b);
+    // clang-format on
+
+  const auto& inclusion_dependencies = join_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  }
+
+  {
+    // clang-format off
+    const auto& join_node =
+    JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
+      _mock_node_a,
+      _mock_node_b);
+    // clang-format on
+
+  const auto& inclusion_dependencies = join_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+  }
+
+}
+
 TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {
   const auto join_predicate = equals_(_t_a_a, _t_b_x);
   auto semi_reduction_node = JoinNode::make(JoinMode::Semi, join_predicate, _mock_node_a, _mock_node_b);

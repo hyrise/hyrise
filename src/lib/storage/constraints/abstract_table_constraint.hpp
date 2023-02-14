@@ -21,8 +21,9 @@ class AbstractTableConstraint {
 
   virtual ~AbstractTableConstraint() = default;
 
-  // Data dependencies might have either set or list semanticss. A list is generally applicable, and a constraint is
-  // responsible for handling columns accordingly when it uses certain semantics see table_key_constraint.hpp).
+  // Data dependencies might have either set (TableKeyConstraint) or list semantics (TableOrderConstraint,
+  // ForeignKeyConstraint). A list is generally applicable, and a constraint is responsible for handling columns
+  // accordingly when it uses certain semantics (see table_key_constraint.hpp).
   const std::vector<ColumnID>& columns() const;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
