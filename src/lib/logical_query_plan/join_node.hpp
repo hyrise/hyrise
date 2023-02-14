@@ -129,6 +129,9 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
       const UniqueColumnCombinations& left_unique_column_combinations,
       const UniqueColumnCombinations& right_unique_column_combinations) const;
 
+  InclusionDependencies _output_inclusion_dependencies(const InclusionDependencies& left_inclusion_dependencies,
+                                                       const InclusionDependencies& right_inclusion_dependencies) const;
+
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;
   bool _on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const override;

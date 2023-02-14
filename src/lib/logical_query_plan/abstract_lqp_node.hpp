@@ -222,6 +222,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual InclusionDependencies inclusion_dependencies() const = 0;
 
   /**
+   * @return True if there is an inclusion dependency (IND) matching the given subset of output expressions whose
+   *         included columns are also part of @param included_node's output expressions.
+   */
+  bool has_matching_ind(const ExpressionUnorderedSet& expressions, const AbstractLQPNode& included_node) const;
+
+  /**
    * Perform a deep equality check
    */
   bool operator==(const AbstractLQPNode& rhs) const;

@@ -269,4 +269,14 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 
+/**
+ * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
+ *         expressions. A unique column combination matches if it covers a subset of @param expressions.
+ */
+bool contains_matching_inclusion_dependency(const InclusionDependencies& inclusion_dependencies,
+                                            const ExpressionUnorderedSet& expressions);
+
+std::optional<InclusionDependency> find_matching_inclusion_dependency(
+    const InclusionDependencies& inclusion_dependencies, const ExpressionUnorderedSet& expressions);
+
 }  // namespace hyrise

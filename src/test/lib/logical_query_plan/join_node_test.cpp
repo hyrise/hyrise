@@ -823,6 +823,25 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_x}, {_t_a_b}}));
     EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_t_b_y}, {_t_a_b}}));
   }
+
+  // Case (vi): Self join. No new ODs should be built. Inner equi join on a = c and ODs [a] |-> [b] and [a] |-> [c]
+  // would lead to [c] |-> [a] and [c] |-> [b] normally.
+  {
+    const auto od_a_to_b = OrderDependency{{_t_a_a}, {_t_a_b}};
+    _mock_node_a->set_order_dependencies({od_a_to_b, od_a_to_c});
+
+    // clang-format off
+    const auto inner_join_node =
+    JoinNode::make(JoinMode::Inner, expression_vector(equals_(_t_a_a, _t_a_c)),
+      _mock_node_a,
+      _mock_node_a);
+    // clang-format on
+
+    const auto& order_dependencies = inner_join_node->order_dependencies();
+    EXPECT_EQ(order_dependencies.size(), 2);
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+    EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
+  }
 }
 
 TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {

@@ -615,4 +615,22 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
   return nullptr;
 }
 
+std::optional<InclusionDependency> find_matching_inclusion_dependency(
+    const InclusionDependencies& inclusion_dependencies, const ExpressionUnorderedSet& expressions) {
+  DebugAssert(!inclusion_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
+  DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
+
+  // Look for an inclusion dependency that is based on the given expressions.
+  for (const auto& ind : inclusion_dependencies) {
+    if (ind.expressions.size() <= expressions.size() &&
+        std::all_of(ind.expressions.cbegin(), ind.expressions.cend(),
+                    [&](const auto& ind_expression) { return expressions.contains(ind_expression); })) {
+      // Found a matching IND.
+      return ind;
+    }
+  }
+  // Did not find an IND for the given expressions.
+  return {};
+}
+
 }  // namespace hyrise

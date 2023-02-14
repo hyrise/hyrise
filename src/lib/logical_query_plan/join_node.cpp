@@ -91,6 +91,60 @@ UniqueColumnCombinations JoinNode::unique_column_combinations() const {
   return _output_unique_column_combinations(left_unique_column_combinations, right_unique_column_combinations);
 }
 
+UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
+    const UniqueColumnCombinations& left_unique_column_combinations,
+    const UniqueColumnCombinations& right_unique_column_combinations) const {
+  if (left_unique_column_combinations.empty() && right_unique_column_combinations.empty()) {
+    // Early exit.
+    return UniqueColumnCombinations{};
+  }
+
+  const auto predicates = join_predicates();
+  if (predicates.empty() || predicates.size() > 1) {
+    // No guarantees implemented yet for Cross Joins and multi-predicate joins.
+    return UniqueColumnCombinations{};
+  }
+
+  DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
+                  join_mode == JoinMode::FullOuter,
+              "Unhandled JoinMode");
+
+  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
+  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
+    // Also, no guarantees implemented yet for other join predicates than equals_() (Equi Join).
+    return UniqueColumnCombinations{};
+  }
+
+  // Check uniqueness of join columns.
+  bool left_operand_is_unique =
+      !left_unique_column_combinations.empty() &&
+      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
+  bool right_operand_is_unique =
+      !right_unique_column_combinations.empty() &&
+      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
+
+  if (left_operand_is_unique && right_operand_is_unique) {
+    // Due to the one-to-one relationship, the UCCs of both sides remain valid.
+    auto unique_column_combinations =
+        UniqueColumnCombinations{left_unique_column_combinations.begin(), left_unique_column_combinations.end()};
+    unique_column_combinations.insert(right_unique_column_combinations.cbegin(),
+                                      right_unique_column_combinations.cend());
+    return unique_column_combinations;
+  }
+
+  if (left_operand_is_unique) {
+    // Uniqueness on the left prevents duplication of records on the right.
+    return right_unique_column_combinations;
+  }
+
+  if (right_operand_is_unique) {
+    // Uniqueness on the right prevents duplication of records on the left.
+    return left_unique_column_combinations;
+  }
+
+  return UniqueColumnCombinations{};
+}
+
 OrderDependencies JoinNode::order_dependencies() const {
   if (is_semi_or_anti_join(join_mode)) {
     return _forward_left_order_dependencies();
@@ -119,8 +173,20 @@ OrderDependencies JoinNode::order_dependencies() const {
 
   const auto& join_key_1 = binary_predicate->left_operand();
   const auto& join_key_2 = binary_predicate->right_operand();
-  // Nothing to do if this is a self join.
-  if (*join_key_1 == *join_key_2) {
+
+  // Return if this is a self join and we already have ODs. This makes things tricky when we build the transitive
+  // closure.
+  const auto get_original_node = [](const auto& expression) {
+    // Skip complex join keys.
+    if (expression->type != ExpressionType::LQPColumn) {
+      return std::shared_ptr<const AbstractLQPNode>{};
+    }
+
+    return static_cast<LQPColumnExpression&>(*expression).original_node.lock();
+  };
+
+  const auto& original_node_1 = get_original_node(join_key_1);
+  if (original_node_1 && *original_node_1 == *get_original_node(join_key_2)) {
     return order_dependencies;
   }
 
@@ -157,67 +223,73 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
     case JoinMode::AntiNullAsTrue:
       return InclusionDependencies{};
 
-    // Inner and semi-joins can only forward INDs if all input tuples are forwarded (i.e., there is an IND between the join keys.)
-    // TODO implement.
-    case JoinMode::Inner:
-    case JoinMode::Semi: {
-      return InclusionDependencies{};
+    // Inner and semi-joins can only forward INDs if all input tuples are forwarded (i.e., there is an IND between the
+    // join keys and all predicates are equals_() predicates).
+    case JoinMode::Semi:
+    case JoinMode::Inner: {
+      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      const auto& right_inclusion_dependencies = right_input()->inclusion_dependencies();
+      return _output_inclusion_dependencies(left_inclusion_dependencies, right_inclusion_dependencies);
     }
   }
 }
 
-UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
-    const UniqueColumnCombinations& left_unique_column_combinations,
-    const UniqueColumnCombinations& right_unique_column_combinations) const {
-  if (left_unique_column_combinations.empty() && right_unique_column_combinations.empty()) {
-    // Early exit.
-    return UniqueColumnCombinations{};
+InclusionDependencies JoinNode::_output_inclusion_dependencies(
+    const InclusionDependencies& left_inclusion_dependencies,
+    const InclusionDependencies& right_inclusion_dependencies) const {
+  // Check if there are any INDs that might be forwarded.
+  if (left_inclusion_dependencies.empty() && (join_mode == JoinMode::Semi || right_inclusion_dependencies.empty())) {
+    return InclusionDependencies{};
   }
 
-  const auto predicates = join_predicates();
-  if (predicates.empty() || predicates.size() > 1) {
-    // No guarantees implemented yet for Cross Joins and multi-predicate joins.
-    return UniqueColumnCombinations{};
+  // Check that all join predicates are equals_() predicates and map the join keys to the input nodes.
+  const auto join_predicates = this->join_predicates();
+  const auto predicate_count = join_predicates.size();
+  auto left_input_join_predicates = ExpressionUnorderedSet{predicate_count};
+  auto right_input_join_predicates = ExpressionUnorderedSet{predicate_count};
+  const auto& left_expressions = left_input()->output_expressions();
+  const auto& right_expressions = left_input()->output_expressions();
+
+  for (const auto& expression : join_predicates) {
+    const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
+    if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
+      return InclusionDependencies{};
+    }
+
+    if (find_expression_idx(*predicate->left_operand(), left_expressions)) {
+      DebugAssert(find_expression_idx(*predicate->right_operand(), right_expressions),
+                  "Expected to resolve right operand.");
+      left_input_join_predicates.emplace(predicate->left_operand());
+      right_input_join_predicates.emplace(predicate->right_operand());
+    } else {
+      DebugAssert(find_expression_idx(*predicate->left_operand(), right_expressions),
+                  "Expected to resolve left operand.");
+      DebugAssert(find_expression_idx(*predicate->right_operand(), left_expressions),
+                  "Expected to resolve right operand.");
+      left_input_join_predicates.emplace(predicate->right_operand());
+      right_input_join_predicates.emplace(predicate->left_operand());
+    }
   }
 
-  DebugAssert(join_mode == JoinMode::Inner || join_mode == JoinMode::Left || join_mode == JoinMode::Right ||
-                  join_mode == JoinMode::FullOuter,
-              "Unhandled JoinMode");
+  Assert(left_input_join_predicates.size() == predicate_count && right_input_join_predicates.size() == predicate_count,
+         "Could not resolve all join predicates.");
 
-  const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
-  if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
-    // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join).
-    return UniqueColumnCombinations{};
+  auto inclusion_dependencies = InclusionDependencies{};
+  // Add INDs from left input if left join keys are contained in right join keys.
+  if (right_input()->has_matching_ind(right_input_join_predicates, *left_input())) {
+    inclusion_dependencies.insert(left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend());
   }
 
-  // Check uniqueness of join columns.
-  bool left_operand_is_unique =
-      !left_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
-  bool right_operand_is_unique =
-      !right_unique_column_combinations.empty() &&
-      contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
-
-  if (left_operand_is_unique && right_operand_is_unique) {
-    // Due to the one-to-one relationship, the UCCs of both sides remain valid.
-    auto unique_column_combinations =
-        UniqueColumnCombinations{left_unique_column_combinations.begin(), left_unique_column_combinations.end()};
-    unique_column_combinations.insert(right_unique_column_combinations.cbegin(),
-                                      right_unique_column_combinations.cend());
-    return unique_column_combinations;
+  if (join_mode == JoinMode::Semi) {
+    return inclusion_dependencies;
   }
 
-  if (left_operand_is_unique) {
-    // Uniqueness on the left prevents duplication of records on the right.
-    return right_unique_column_combinations;
+  // Add INDs from right input if right join keys are contained in left join keys.
+  if (left_input()->has_matching_ind(left_input_join_predicates, *right_input())) {
+    inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
   }
 
-  if (right_operand_is_unique) {
-    // Uniqueness on the right prevents duplication of records on the left.
-    return left_unique_column_combinations;
-  }
-
-  return UniqueColumnCombinations{};
+  return inclusion_dependencies;
 }
 
 FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {
