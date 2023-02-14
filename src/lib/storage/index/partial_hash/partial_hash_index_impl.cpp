@@ -123,8 +123,8 @@ BasePartialHashIndexImpl::Iterator PartialHashIndexImpl<DataType>::null_cend() c
 template <typename DataType>
 size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   auto bytes = size_t{0u};
-
   bytes += sizeof(_indexed_chunk_ids);
+
   // Since we do not know exactly how much memory the set has allocated at any given time, we devide the result of its
   // size() method by its maximum load factor. This way we also get an underestimation, but it is smaller than without
   // the maximum load factor.
@@ -134,11 +134,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(_positions);
   bytes += sizeof(_null_positions);
 
-  // Since we do not know exactly how much memory the map has allocated at any given time, we devide the result of its
-  // size() method by its maximum load factor. This way we also get an underestimation, but it is smaller than without
-  // the maximum load factor.
-  bytes += static_cast<size_t>(sizeof(std::pair<DataType, std::vector<RowID>>) *
-           (static_cast<float>(_positions.size()) / _positions.max_load_factor()));
+  bytes += sizeof(std::pair<DataType, std::vector<RowID>>) * _positions.size();
 
   bytes += sizeof(std::vector<RowID>) * _positions.size();
   bytes += sizeof(RowID) * std::distance(cbegin(), cend());
