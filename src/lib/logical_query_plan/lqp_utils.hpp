@@ -258,6 +258,13 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                                                            const UniqueColumnCombinations& unique_column_combinations);
 
 /**
+ * @return A set of FDs, derived from the given @param unique_column_combinations and based on the output expressions of
+ *         the given @param lqp node.
+ */
+FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                   const OrderDependencies& order_dependencies);
+
+/**
  * This is a helper method that removes invalid or unnecessary FDs from the given input set @param fds by looking at
  * the @param lqp node's output expressions.
  */

@@ -471,7 +471,7 @@ bool contains_matching_unique_column_combination(const UniqueColumnCombinations&
 
 FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr<const AbstractLQPNode>& lqp,
                                                            const UniqueColumnCombinations& unique_column_combinations) {
-  Assert(!unique_column_combinations.empty(), "Did not expect empty vector of UCCs.");
+  Assert(!unique_column_combinations.empty(), "Did not expect empty set of UCCs.");
 
   auto fds = FunctionalDependencies{};
 
@@ -513,6 +513,37 @@ FunctionalDependencies fds_from_unique_column_combinations(const std::shared_ptr
                              }) == fds.cend(),
                 "Creating duplicate functional dependencies is unexpected.");
     fds.emplace(determinants, dependents);
+  }
+  return fds;
+}
+
+FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const AbstractLQPNode>& lqp,
+                                                   const OrderDependencies& order_dependencies) {
+  Assert(!order_dependencies.empty(), "Did not expect empty set of ODs.");
+
+  auto fds = FunctionalDependencies{};
+
+  // Collect non-nullable output expressions.
+  const auto& output_expressions = lqp->output_expressions();
+  auto output_expressions_non_nullable = ExpressionUnorderedSet{};
+  for (auto column_id = ColumnID{0}; column_id < output_expressions.size(); ++column_id) {
+    if (!lqp->is_column_nullable(column_id)) {
+      output_expressions_non_nullable.insert(output_expressions.at(column_id));
+    }
+  }
+
+  for (const auto& od : order_dependencies) {
+    auto determinants = ExpressionUnorderedSet{od.expressions.cbegin(), od.expressions.cend()};
+
+    // (1) Verify whether we can create an FD from the given OD (non-nullable expressions).
+    if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
+          return output_expressions_non_nullable.contains(determinant_expression);
+        })) {
+      continue;
+    }
+
+    // (2) Add FD with ordered expressions as dependents.
+    fds.emplace(determinants, ExpressionUnorderedSet{od.ordered_expressions.cbegin(), od.ordered_expressions.cend()});
   }
   return fds;
 }

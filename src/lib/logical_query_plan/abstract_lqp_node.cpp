@@ -370,16 +370,22 @@ FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
     }
   }
 
-  // (2) Derive trivial FDs from the node's unique column combinations.
+  // (2) Derive trivial FDs from the node's unique column combinations and order dependencies.
   const auto& unique_column_combinations = this->unique_column_combinations();
-  // Early exit if there are no UCCs.
-  if (unique_column_combinations.empty()) {
+  const auto& order_dependencies = this->order_dependencies();
+  // Early exit if there are no UCCs and ODs.
+  if (unique_column_combinations.empty() && order_dependencies.empty()) {
     return non_trivial_fds;
   }
 
-  const auto& trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
+  auto trivial_fds = FunctionalDependencies{};
+  if (!unique_column_combinations.empty()) {
+    trivial_fds = fds_from_unique_column_combinations(shared_from_this(), unique_column_combinations);
+  }
 
-  // TODO: FDs from ODs
+  if (!order_dependencies.empty()) {
+    trivial_fds = union_fds(trivial_fds, fds_from_order_dependencies(shared_from_this(), order_dependencies));
+  }
 
   // (3) Merge and return FDs.
   return union_fds(non_trivial_fds, trivial_fds);

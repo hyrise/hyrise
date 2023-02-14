@@ -186,7 +186,7 @@ OrderDependencies JoinNode::order_dependencies() const {
   };
 
   const auto& original_node_1 = get_original_node(join_key_1);
-  if (original_node_1 && *original_node_1 == *get_original_node(join_key_2)) {
+  if (!original_node_1 || *original_node_1 == *get_original_node(join_key_2)) {
     return order_dependencies;
   }
 

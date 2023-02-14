@@ -432,7 +432,7 @@ TEST_F(LQPUtilsTest, FindMatchingInclusionDependency) {
 
   EXPECT_FALSE(find_matching_inclusion_dependency(inclusion_dependencies, {b_x}));
 
-  if constexpr (HYRISE_DEBUG){
+  if constexpr (HYRISE_DEBUG) {
     EXPECT_THROW(find_matching_inclusion_dependency(inclusion_dependencies, {}), std::logic_error);
     EXPECT_THROW(find_matching_inclusion_dependency({}, {a_a, a_b}), std::logic_error);
   }
