@@ -8,7 +8,15 @@ namespace hyrise {
 class Table;
 
 /**
- * TODO
+ * Container structure to define inclusion dependencies for LQP nodes. An inclusion dependency that is valid on a given
+ * LQP node expresses that the resulting table' values for `expressions` still contains all values existing in the
+ * columns specified by the `included_column_ids` of `included_table`.
+ *
+ * For example, we consider the IND nation.n_regionkey in region.r_regionkey and a StoredTableNode node. The valid IND
+ * of this looks like this: InclusionDependency{{node->get_column("n_regionkey")}, {ColumnID{0}}, region}
+ *
+ * NOTE: Inclusion dependencies (INDs) are only valid for LQP nodes that contain no invalidated rows (i.e., where there
+ *       has been a ValidateNode before or where MVCC is disabled).
  */
 struct InclusionDependency final {
   explicit InclusionDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_expressions,
