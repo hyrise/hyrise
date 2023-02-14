@@ -68,8 +68,16 @@ TEST_F(CreateViewNodeTest, NodeExpressions) {
   ASSERT_EQ(_view_node->node_expressions.size(), 0u);
 }
 
+TEST_F(CreateViewNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(_create_view_node->unique_column_combinations(), std::logic_error);
+}
+
 TEST_F(CreateViewNodeTest, NoOrderDependencies) {
   EXPECT_THROW(_create_view_node->order_dependencies(), std::logic_error);
+}
+
+TEST_F(CreateViewNodeTest, NoInclusionDependencies) {
+  EXPECT_THROW(_create_view_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

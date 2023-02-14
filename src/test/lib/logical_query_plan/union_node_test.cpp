@@ -263,7 +263,7 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionPositions) {
   _mock_node1->set_order_dependencies({od_a_to_b});
   EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
 
-  // Forward ODs.
+  // Forward OD.
   const auto& order_dependencies = _union_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
@@ -296,7 +296,7 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
   EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
 
   {
-    // Keep ODs if inputs have same output expressions.
+    // Keep OD if inputs have same output expressions.
     const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node1);
     const auto& order_dependencies = union_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 1);
@@ -320,6 +320,46 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
     const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, projection_node);
     EXPECT_THROW(union_node->order_dependencies(), std::logic_error);
   }
+}
+
+TEST_F(UnionNodeTest, InclusionDependenciesUnionPositions) {
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  _mock_node1->set_inclusion_dependencies({ind});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+
+  // Forward IND.
+  const auto& inclusion_dependencies = _union_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind));
+}
+
+TEST_F(UnionNodeTest, InclusionDependenciesUnionPositionsInvalidInput) {
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  _mock_node1->set_inclusion_dependencies({ind});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+
+  // Fail if inputs have different output expressions.
+  _union_node->set_right_input(_mock_node2);
+  EXPECT_THROW(_union_node->order_dependencies(), std::logic_error);
+}
+
+TEST_F(UnionNodeTest, InclusionDependenciesUnionAll) {
+  // Forward all INDs of both inputs.
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  _mock_node1->set_inclusion_dependencies({ind_a});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+  const auto ind_u = InclusionDependency{{_u}, {ColumnID{0}}, dummy_table};
+  _mock_node2->set_inclusion_dependencies({ind_u});
+  EXPECT_EQ(_mock_node2->inclusion_dependencies().size(), 1);
+
+  const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node2);
+  const auto& inclusion_dependencies = union_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 2);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  EXPECT_TRUE(inclusion_dependencies.contains(ind_u));
 }
 
 }  // namespace hyrise

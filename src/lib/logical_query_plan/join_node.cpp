@@ -134,10 +134,37 @@ OrderDependencies JoinNode::order_dependencies() const {
 }
 
 InclusionDependencies JoinNode::inclusion_dependencies() const {
-  // TODO: INDs of one joined table only exist further if all tuples of this side match --> there is an IND between the
-  // other side's join column and the table's join column. e.g.: Join A.a = B.b, A has IND C.c in A.d --> only valid if
-  // IND A.a in B.b. Also, consider transitive INDs.
-  return InclusionDependencies{};
+  switch (join_mode) {
+    case JoinMode::Cross:
+    case JoinMode::FullOuter: {
+      // These joins preserve all tuples from the inputs. All values survive and we can forward all INDs of the left and
+      // right input.
+      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
+      const auto& right_inclusion_dependencies = right_input()->inclusion_dependencies();
+      auto inclusion_dependencies =
+          InclusionDependencies{left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend()};
+      inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
+      return inclusion_dependencies;
+    }
+
+    // Left / right outer joins foward all tuples of the repsective input. Its INDs remain valid.
+    case JoinMode::Left:
+      return left_input()->inclusion_dependencies();
+    case JoinMode::Right:
+      return left_input()->inclusion_dependencies();
+
+    // Anti-joins filter the left input. No INDs remain valid.
+    case JoinMode::AntiNullAsFalse:
+    case JoinMode::AntiNullAsTrue:
+      return InclusionDependencies{};
+
+    // Inner and semi-joins can only forward INDs if all input tuples are forwarded (i.e., there is an IND between the join keys.)
+    // TODO implement.
+    case JoinMode::Inner:
+    case JoinMode::Semi: {
+      return InclusionDependencies{};
+    }
+  }
 }
 
 UniqueColumnCombinations JoinNode::_output_unique_column_combinations(

@@ -263,18 +263,17 @@ TEST_F(AggregateNodeTest, FunctionalDependenciesAdd) {
 }
 
 TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_aggregate_node->order_dependencies().empty());
+
   const auto od_a_to_b = OrderDependency{{_a}, {_b}};
   const auto od_a_to_b_c = OrderDependency{{_a}, {_b, _c}};
   const auto od_a_b_to_c = OrderDependency{{_a, _b}, {_c}};
   _mock_node->set_order_dependencies({od_a_to_b, od_a_to_b_c, od_a_b_to_c});
   EXPECT_EQ(_mock_node->order_dependencies().size(), 3);
 
-  const auto aggregate_a = sum_(_a);
-  const auto aggregate_b = min_(_b);
-  const auto aggregate_c = max_(_c);
-
   {
-    // All expressions are either in the GROUP BY clause or have an ANY aggregate. All ODs should remain valid.
+    // All expressions are either grouped or have an ANY aggregate. All ODs should remain valid.
     const auto& aggregate_node =
         AggregateNode::make(expression_vector(_a, _b), expression_vector(any_(_c)), _mock_node);
     const auto& order_dependencies = aggregate_node->order_dependencies();
@@ -297,6 +296,41 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
     const auto& order_dependencies = aggregate_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 1);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
+  }
+}
+
+TEST_F(AggregateNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_aggregate_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
+
+  _mock_node->set_inclusion_dependencies({ind_a, ind_a_b});
+  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
+
+  {
+    // All relevant expressions are either grouped or have an ANY aggregate. All INDs should remain valid.
+    const auto& aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(any_(_b)), _mock_node);
+    const auto& inclusion_dependencies = aggregate_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
+  }
+  {
+    // All columns are aggregated, no INDs remain valid.
+    const auto& aggregate_node =
+        AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b)), _mock_node);
+    const auto& inclusion_dependencies = aggregate_node->inclusion_dependencies();
+    EXPECT_TRUE(inclusion_dependencies.empty());
+  }
+  {
+    // b is aggregated, a is the group key. Only the first IND remains valid.
+    const auto& aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(max_(_b)), _mock_node);
+    const auto& inclusion_dependencies = aggregate_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
 }
 

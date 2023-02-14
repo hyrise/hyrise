@@ -13,8 +13,8 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class PredicateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table(
-        "table_a", load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2}));
+    _table_a = load_table("resources/test_data/tbl/int_float_double_string.tbl", ChunkOffset{2});
+    Hyrise::get().storage_manager.add_table("table_a", _table_a);
 
     _table_node = StoredTableNode::make("table_a");
     _i = lqp_column_(_table_node, ColumnID{0});
@@ -26,6 +26,7 @@ class PredicateNodeTest : public BaseTest {
   std::shared_ptr<StoredTableNode> _table_node;
   std::shared_ptr<LQPColumnExpression> _i, _f;
   std::shared_ptr<PredicateNode> _predicate_node;
+  std::shared_ptr<Table> _table_a;
 };
 
 TEST_F(PredicateNodeTest, Descriptions) {
@@ -65,8 +66,25 @@ TEST_F(PredicateNodeTest, NodeExpressions) {
   EXPECT_EQ(*_predicate_node->node_expressions.at(0), *equals_(_i, 5));
 }
 
+TEST_F(PredicateNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_table_node->unique_column_combinations().empty());
+  EXPECT_TRUE(_predicate_node->unique_column_combinations().empty());
+
+  _table_a->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE});
+  const auto ucc = UniqueColumnCombination{{_i}};
+  EXPECT_EQ(_table_node->unique_column_combinations().size(), 1);
+  EXPECT_TRUE(_table_node->unique_column_combinations().contains(ucc));
+
+  const auto& unique_column_combinations = _predicate_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains(ucc));
+}
+
 TEST_F(PredicateNodeTest, ForwardOrderDependencies) {
-  Hyrise::get().storage_manager.get_table("table_a")->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  EXPECT_TRUE(_table_node->order_dependencies().empty());
+  EXPECT_TRUE(_predicate_node->order_dependencies().empty());
+
+  _table_a->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
   const auto od = OrderDependency{{_i}, {_f}};
   EXPECT_EQ(_table_node->order_dependencies().size(), 1);
   EXPECT_TRUE(_table_node->order_dependencies().contains(od));
@@ -74,6 +92,26 @@ TEST_F(PredicateNodeTest, ForwardOrderDependencies) {
   const auto& order_dependencies = _predicate_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
+}
+
+TEST_F(PredicateNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_table_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_predicate_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_a, dummy_table});
+
+  const auto ind = InclusionDependency{{_i}, {ColumnID{0}}, dummy_table};
+  EXPECT_EQ(_table_node->inclusion_dependencies().size(), 1);
+  EXPECT_TRUE(_table_node->inclusion_dependencies().contains(ind));
+
+  // By default, INDs do not survive if there is a predicate and not all tuples exist anymore.
+  EXPECT_TRUE(_predicate_node->inclusion_dependencies().empty());
+
+  // INDs can only be forwarded if there is an IS NOT NULL predicate on its expression.
+  const auto predicate_node = PredicateNode::make(is_not_null_(_i), _table_node);
+  EXPECT_EQ(predicate_node->inclusion_dependencies().size(), 1);
+  EXPECT_TRUE(predicate_node->inclusion_dependencies().contains(ind));
 }
 
 }  // namespace hyrise

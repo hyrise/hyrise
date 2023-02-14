@@ -40,8 +40,16 @@ TEST_F(DummyTableNodeTest, NodeExpressions) {
   ASSERT_EQ(_dummy_table_node->node_expressions.size(), 0u);
 }
 
+TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_TRUE(_dummy_table_node->unique_column_combinations().empty());
+}
+
 TEST_F(DummyTableNodeTest, NoOrderDependencies) {
   EXPECT_TRUE(_dummy_table_node->order_dependencies().empty());
+}
+
+TEST_F(DummyTableNodeTest, NoInclusionDependencies) {
+  EXPECT_TRUE(_dummy_table_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise

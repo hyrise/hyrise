@@ -168,6 +168,9 @@ TEST_F(ProjectionNodeTest, FunctionalDependenciesForwarding) {
 }
 
 TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_projection_node->order_dependencies().empty());
+
   const auto od_a_to_b = OrderDependency{{_a}, {_b}};
   const auto od_a_to_c = OrderDependency{{_a}, {_c}};
   _mock_node->set_order_dependencies({od_a_to_b, od_a_to_c});
@@ -194,6 +197,40 @@ TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
     const auto projection_node = ProjectionNode::make(expression_vector(_a, add_(_b, _a), sub_(_c, _b)), _mock_node);
     const auto& order_dependencies = projection_node->order_dependencies();
     EXPECT_TRUE(order_dependencies.empty());
+  }
+}
+
+TEST_F(ProjectionNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_projection_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
+  _mock_node->set_inclusion_dependencies({ind_a, ind_a_b});
+  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
+
+  // Case (i): INDs are on "forwarded" projections. Forward INDs.
+  {
+    const auto& inclusion_dependencies = _projection_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
+  }
+
+  // Case (ii): A column of one IND is not in the projection. Do not forward this IND.
+  {
+    const auto projection_node = ProjectionNode::make(expression_vector(_a), _mock_node);
+    const auto& inclusion_dependencies = projection_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+  }
+
+  // Case (iii): Projections modify the values. Do not forward affected ODs.
+  {
+    const auto projection_node = ProjectionNode::make(expression_vector(add_(_a, value_(1))), _mock_node);
+    const auto& inclusion_dependencies = projection_node->inclusion_dependencies();
+    EXPECT_TRUE(inclusion_dependencies.empty());
   }
 }
 

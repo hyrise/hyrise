@@ -199,7 +199,7 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
 
   for (const auto& foreign_key_constraint : foreign_key_constraints) {
     const auto& referenced_table = foreign_key_constraint.foreign_key_table();
-    if (referenced_table) {
+    if (!referenced_table) {
       // Referenced table was deleted, IND is useless.
       continue;
     }

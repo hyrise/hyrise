@@ -40,6 +40,8 @@ UniqueColumnCombinations IntersectNode::unique_column_combinations() const {
 }
 
 OrderDependencies IntersectNode::order_dependencies() const {
+  DebugAssert(left_input()->order_dependencies() == right_input()->order_dependencies(),
+              "Merging of order order dependencies should be implemented.");
   return _forward_left_order_dependencies();
 }
 

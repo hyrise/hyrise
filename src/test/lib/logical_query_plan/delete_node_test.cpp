@@ -39,8 +39,16 @@ TEST_F(DeleteNodeTest, Copy) {
   EXPECT_EQ(*_delete_node, *_delete_node->deep_copy());
 }
 
+TEST_F(DeleteNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(_delete_node->unique_column_combinations(), std::logic_error);
+}
+
 TEST_F(DeleteNodeTest, NoOrderDependencies) {
   EXPECT_THROW(_delete_node->order_dependencies(), std::logic_error);
+}
+
+TEST_F(DeleteNodeTest, NoInclusionDependencies) {
+  EXPECT_THROW(_delete_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

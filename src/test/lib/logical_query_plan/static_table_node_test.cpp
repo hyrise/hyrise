@@ -104,4 +104,8 @@ TEST_F(StaticTableNodeTest, NoOrderDependencies) {
   EXPECT_TRUE(static_table_node->order_dependencies().empty());
 }
 
+TEST_F(StaticTableNodeTest, NoInclusionDependencies) {
+  EXPECT_TRUE(static_table_node->inclusion_dependencies().empty());
+}
+
 }  // namespace hyrise

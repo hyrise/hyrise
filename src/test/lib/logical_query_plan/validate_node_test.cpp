@@ -10,10 +10,16 @@ namespace hyrise {
 class ValidateNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    _validate_node = ValidateNode::make();
+    _mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
+    _validate_node = ValidateNode::make(_mock_node);
+
+    _a = _mock_node->get_column("a");
+    _b = _mock_node->get_column("b");
   }
 
   std::shared_ptr<ValidateNode> _validate_node;
+  std::shared_ptr<MockNode> _mock_node;
+  std::shared_ptr<LQPColumnExpression> _a, _b;
 };
 
 TEST_F(ValidateNodeTest, Description) {
@@ -21,6 +27,7 @@ TEST_F(ValidateNodeTest, Description) {
 }
 
 TEST_F(ValidateNodeTest, HashingAndEqualityCheck) {
+  _validate_node->set_left_input(nullptr);
   EXPECT_EQ(*_validate_node, *_validate_node);
 
   EXPECT_EQ(*_validate_node, *ValidateNode::make());
@@ -35,18 +42,43 @@ TEST_F(ValidateNodeTest, NodeExpressions) {
   ASSERT_EQ(_validate_node->node_expressions.size(), 0u);
 }
 
-TEST_F(ValidateNodeTest, ForwardOrderDependencies) {
-  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Float, "b"}});
-  const auto a = mock_node->get_column("a");
-  const auto b = mock_node->get_column("b");
-  const auto od = OrderDependency{{a}, {b}};
-  mock_node->set_order_dependencies({od});
-  EXPECT_EQ(mock_node->order_dependencies().size(), 1);
+TEST_F(ValidateNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_mock_node->unique_column_combinations().empty());
+  EXPECT_TRUE(_validate_node->unique_column_combinations().empty());
 
-  _validate_node->set_left_input(mock_node);
+  _mock_node->set_key_constraints({TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE}});
+  EXPECT_EQ(_mock_node->unique_column_combinations().size(), 1);
+
+  const auto& unique_column_combinations = _validate_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains(UniqueColumnCombination{{_a}}));
+}
+
+TEST_F(ValidateNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node->order_dependencies().empty());
+  EXPECT_TRUE(_validate_node->order_dependencies().empty());
+
+  const auto od = OrderDependency{{_a}, {_b}};
+  _mock_node->set_order_dependencies({od});
+  EXPECT_EQ(_mock_node->order_dependencies().size(), 1);
+
   const auto& order_dependencies = _validate_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
+}
+
+TEST_F(ValidateNodeTest, ForwardInclusionDependencies) {
+  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
+  EXPECT_TRUE(_validate_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  _mock_node->set_inclusion_dependencies({ind});
+  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 1);
+
+  const auto& inclusion_dependencies = _validate_node->inclusion_dependencies();
+  EXPECT_EQ(inclusion_dependencies.size(), 1);
+  EXPECT_TRUE(inclusion_dependencies.contains(ind));
 }
 
 }  // namespace hyrise

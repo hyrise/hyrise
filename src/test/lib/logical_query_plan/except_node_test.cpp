@@ -27,9 +27,7 @@ class ExceptNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
   std::shared_ptr<ExceptNode> _except_node;
-  std::shared_ptr<LQPColumnExpression> _a;
-  std::shared_ptr<LQPColumnExpression> _b;
-  std::shared_ptr<LQPColumnExpression> _c;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
 TEST_F(ExceptNodeTest, Description) {
@@ -70,7 +68,23 @@ TEST_F(ExceptNodeTest, NodeExpressions) {
   EXPECT_EQ(_except_node->node_expressions.size(), 0u);
 }
 
+TEST_F(ExceptNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_mock_node1->unique_column_combinations().empty());
+  EXPECT_TRUE(_except_node->unique_column_combinations().empty());
+
+  const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints({key_constraint_a});
+  EXPECT_EQ(_mock_node1->unique_column_combinations().size(), 1);
+
+  const auto& unique_column_combinations = _except_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains({UniqueColumnCombination{{_a}}}));
+}
+
 TEST_F(ExceptNodeTest, ForwardOrderDependencies) {
+  EXPECT_TRUE(_mock_node1->order_dependencies().empty());
+  EXPECT_TRUE(_except_node->order_dependencies().empty());
+
   const auto od = OrderDependency{{_a}, {_b}};
   _mock_node1->set_order_dependencies({od});
   EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
@@ -78,6 +92,18 @@ TEST_F(ExceptNodeTest, ForwardOrderDependencies) {
   const auto& order_dependencies = _except_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
+}
+
+TEST_F(ExceptNodeTest, NoInclusionDependencies) {
+  EXPECT_TRUE(_mock_node1->inclusion_dependencies().empty());
+  EXPECT_TRUE(_except_node->inclusion_dependencies().empty());
+
+  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
+  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
+  _mock_node1->set_inclusion_dependencies({ind});
+  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
+
+  EXPECT_TRUE(_except_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise

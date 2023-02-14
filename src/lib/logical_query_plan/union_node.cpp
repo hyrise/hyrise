@@ -96,7 +96,7 @@ InclusionDependencies UnionNode::inclusion_dependencies() const {
     case SetOperationMode::Positions: {
       const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
       Assert(left_inclusion_dependencies == right_input()->inclusion_dependencies(),
-             "Input tables should have the same constraints.");
+             "Input tables should have the same inclusion dependencies.");
       return left_inclusion_dependencies;
     }
     case SetOperationMode::All: {
