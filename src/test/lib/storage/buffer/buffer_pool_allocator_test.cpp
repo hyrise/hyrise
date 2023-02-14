@@ -22,7 +22,7 @@ TEST_F(BufferPoolAllocatorTest, TestAllocateVector) {
   data[4] = 5;
 
   auto page = Hyrise::get().buffer_manager.get_page(PageID{0});
-  auto raw_data = reinterpret_cast<int*>(page->data.data());
+  auto raw_data = reinterpret_cast<int*>(page->data());
   EXPECT_EQ(raw_data[0], 1);
   EXPECT_EQ(raw_data[1], 2);
   EXPECT_EQ(raw_data[2], 3);

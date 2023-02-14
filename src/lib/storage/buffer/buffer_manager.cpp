@@ -222,7 +222,7 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
 
   const auto page_size_type = next_fitting_page_size_type(bytes);
   Assert(page_size_type == PageSizeType::KiB32,
-         "Cannot allocate " + std::to_string(bytes) + " bytes in maxium page size");
+         "Cannot allocate " + std::to_string(bytes) + " bytes with maximum page size of " + std::to_string(static_cast<std::size_t>(PageSizeType::KiB32)));
 
   // Update metrics
   // _metrics.allocations_in_bytes.push_back(bytes);

@@ -48,7 +48,7 @@ class ExpressionEvaluatorToPosListTest : public BaseTest {
       expected_pos_list[chunk_offset] = RowID{chunk_id, matching_chunk_offsets[chunk_offset]};
     }
 
-    return true; // FIXME actual_pos_list == expected_pos_list;
+    return actual_pos_list == expected_pos_list;
   }
 
   std::shared_ptr<Table> table_a, table_b;
