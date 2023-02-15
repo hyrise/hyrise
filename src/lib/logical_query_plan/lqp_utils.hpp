@@ -283,7 +283,7 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
 bool contains_matching_inclusion_dependency(const InclusionDependencies& inclusion_dependencies,
                                             const ExpressionUnorderedSet& expressions);
 
-std::optional<InclusionDependency> find_matching_inclusion_dependency(
-    const InclusionDependencies& inclusion_dependencies, const ExpressionUnorderedSet& expressions);
+InclusionDependencies find_matching_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies,
+                                                           const ExpressionUnorderedSet& expressions);
 
 }  // namespace hyrise

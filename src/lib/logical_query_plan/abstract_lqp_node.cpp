@@ -307,15 +307,15 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions
     return false;
   }
 
-  const auto& ind = find_matching_inclusion_dependency(inclusion_dependencies, expressions);
-  if (!ind) {
+  const auto& inds = find_matching_inclusion_dependencies(inclusion_dependencies, expressions);
+  if (inds.empty()) {
     return false;
   }
 
   // Check that all referenced columns are still present in the other LQPNode.
   const auto& output_expressions = included_node.output_expressions();
-  const auto& original_table = ind->included_table;
-  auto preserved_column_ids = std::vector<ColumnID>{};
+  auto preserved_column_ids =
+      std::unordered_map<std::shared_ptr<Table>, std::unordered_set<ColumnID>>{output_expressions.size()};
   for (const auto& expression : output_expressions) {
     if (const auto& lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression)) {
       const auto original_node = lqp_column_expression->original_node.lock();
@@ -326,22 +326,20 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions
 
       const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
       const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
-      if (table != original_table) {
-        continue;
-      }
-
-      preserved_column_ids.emplace_back(lqp_column_expression->original_column_id);
+      preserved_column_ids[table].emplace(lqp_column_expression->original_column_id);
     }
   }
 
-  const auto& ind_column_ids = ind->included_column_ids;
-  const auto column_id_preserved = [&](const auto column_id) {
-    return std::find(preserved_column_ids.cbegin(), preserved_column_ids.cend(), column_id) !=
-           preserved_column_ids.cend();
-  };
-  return preserved_column_ids.size() >= ind_column_ids.size() &&
-         std::all_of(ind_column_ids.cbegin(), ind_column_ids.cend(),
-                     [&](const auto column_id) { return column_id_preserved(column_id); });
+  for (const auto& ind : inds) {
+    const auto& ind_column_ids = ind.included_column_ids;
+    const auto& original_table = ind.included_table;
+    if (std::all_of(ind_column_ids.cbegin(), ind_column_ids.cend(),
+                    [&](const auto column_id) { return preserved_column_ids[original_table].contains(column_id); })) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {

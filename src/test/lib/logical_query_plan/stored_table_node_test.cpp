@@ -23,10 +23,10 @@ class StoredTableNodeTest : public BaseTest {
   void SetUp() override {
     _table_a = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
     ChunkEncoder::encode_all_chunks(_table_a);
+    _table_b = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
 
     Hyrise::get().storage_manager.add_table("t_a", _table_a);
-    Hyrise::get().storage_manager.add_table("t_b",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    Hyrise::get().storage_manager.add_table("t_b", _table_b);
 
     _table_a->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
     _table_a->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
@@ -43,7 +43,7 @@ class StoredTableNodeTest : public BaseTest {
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
-  std::shared_ptr<Table> _table_a;
+  std::shared_ptr<Table> _table_a, _table_b;
 };
 
 TEST_F(StoredTableNodeTest, Description) {
@@ -438,6 +438,72 @@ TEST_F(StoredTableNodeTest, InclusionDependenciesTableDeleted) {
   }
 
   EXPECT_TRUE(_stored_table_node->inclusion_dependencies().empty());
+}
+
+TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
+  const auto table_c = Table::create_dummy_table(
+      {{"a", DataType::Int, false}, {"b", DataType::Int, false}, {"c", DataType::Float, false}});
+  Hyrise::get().storage_manager.add_table("t_c", table_c);
+
+  // [t_b.a] in [t_a.a]
+  const auto foreign_key_a = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, _table_a, _table_b};
+  _table_b->add_soft_foreign_key_constraint(foreign_key_a);
+
+  // [t_b.c] in [t_a.c]
+  const auto foreign_key_b = ForeignKeyConstraint{{ColumnID{2}}, {ColumnID{2}}, _table_a, _table_b};
+  _table_b->add_soft_foreign_key_constraint(foreign_key_b);
+
+  // [t_c.a] in [t_a.a]
+  const auto foreign_key_c = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, _table_a, table_c};
+  table_c->add_soft_foreign_key_constraint(foreign_key_c);
+
+  // [t_c.a, t_c.b] in [t_a.a, t_a.b]
+  const auto foreign_key_d =
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{0}, ColumnID{1}}, _table_a, table_c};
+  table_c->add_soft_foreign_key_constraint(foreign_key_d);
+
+  const auto stored_table_b = StoredTableNode::make("t_b");
+  const auto stored_table_c = StoredTableNode::make("t_c");
+
+  _stored_table_node->set_pruned_column_ids({});
+  EXPECT_EQ(_table_a->referenced_foreign_key_constraints().size(), 4);
+  EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 4);
+
+  // Negative tests.
+  // There is no matching IND at all.
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_b}, *stored_table_b));
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_b, _c}, *stored_table_b));
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_c}, *stored_table_c));
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_a, _c}, *stored_table_c));
+
+  // Columns are pruned on other side.
+  _stored_table_node->set_pruned_column_ids({});
+  stored_table_b->set_pruned_column_ids({ColumnID{0}});
+  stored_table_c->set_pruned_column_ids({ColumnID{0}});
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_a}, *stored_table_b));
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_a}, *stored_table_c));
+  EXPECT_FALSE(_stored_table_node->has_matching_ind({_a, _b}, *stored_table_c));
+
+  if constexpr (HYRISE_DEBUG) {
+    // Columns are pruned on this side.
+    _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+    EXPECT_THROW(_stored_table_node->has_matching_ind({_a}, *stored_table_b), std::logic_error);
+    // Expressions are empty.
+    EXPECT_THROW(_stored_table_node->has_matching_ind({}, *stored_table_b), std::logic_error);
+  }
+
+  // Test exact match.
+  _stored_table_node->set_pruned_column_ids({});
+  stored_table_b->set_pruned_column_ids({});
+  stored_table_c->set_pruned_column_ids({});
+  EXPECT_TRUE(_stored_table_node->has_matching_ind({_a}, *stored_table_b));
+  EXPECT_TRUE(_stored_table_node->has_matching_ind({_c}, *stored_table_b));
+  EXPECT_TRUE(_stored_table_node->has_matching_ind({_a}, *stored_table_c));
+  EXPECT_TRUE(_stored_table_node->has_matching_ind({_a, _b}, *stored_table_c));
+
+  // Test superset of column ids.
+  EXPECT_TRUE(_stored_table_node->has_matching_ind({_a}, *stored_table_c));
+  EXPECT_TRUE(_stored_table_node->has_matching_ind({_b}, *stored_table_c));
 }
 
 }  // namespace hyrise

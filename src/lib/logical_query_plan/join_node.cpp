@@ -250,7 +250,6 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
     inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
   }
 
-
   // Check that all join predicates are equals_() predicates and map the join keys to the input nodes.
   const auto join_predicates = this->join_predicates();
   const auto predicate_count = join_predicates.size();

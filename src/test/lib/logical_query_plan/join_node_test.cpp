@@ -856,10 +856,10 @@ TEST_F(JoinNodeTest, InclusionDependenciesCrossAndFullOuterJoin) {
   EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
 
   {
-  const auto& inclusion_dependencies = _cross_join_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 2);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+    const auto& inclusion_dependencies = _cross_join_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 2);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
   }
 
   // clang-format off
@@ -894,9 +894,9 @@ TEST_F(JoinNodeTest, InclusionDependenciesOuterJoin) {
       _mock_node_b);
     // clang-format on
 
-  const auto& inclusion_dependencies = join_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 1);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
+    const auto& inclusion_dependencies = join_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
 
   {
@@ -907,11 +907,10 @@ TEST_F(JoinNodeTest, InclusionDependenciesOuterJoin) {
       _mock_node_b);
     // clang-format on
 
-  const auto& inclusion_dependencies = join_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 1);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
+    const auto& inclusion_dependencies = join_node->inclusion_dependencies();
+    EXPECT_EQ(inclusion_dependencies.size(), 1);
+    EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
   }
-
 }
 
 TEST_F(JoinNodeTest, GetOrFindReducedJoinNode) {

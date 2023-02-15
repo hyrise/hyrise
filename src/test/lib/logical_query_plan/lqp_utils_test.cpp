@@ -424,26 +424,34 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
   EXPECT_EQ(top_diamond_origin_node, bottom_diamond_root_node);
 }
 
-TEST_F(LQPUtilsTest, FindMatchingInclusionDependency) {
+TEST_F(LQPUtilsTest, FindMatchingInclusionDependencies) {
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind_a = InclusionDependency{{a_a}, {ColumnID{0}}, dummy_table};
   const auto ind_a_b = InclusionDependency{{a_a, a_b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
   const auto inclusion_dependencies = InclusionDependencies{ind_a, ind_a_b};
 
-  EXPECT_FALSE(find_matching_inclusion_dependency(inclusion_dependencies, {b_x}));
+  EXPECT_TRUE(find_matching_inclusion_dependencies(inclusion_dependencies, {b_x}).empty());
 
   if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(find_matching_inclusion_dependency(inclusion_dependencies, {}), std::logic_error);
-    EXPECT_THROW(find_matching_inclusion_dependency({}, {a_a, a_b}), std::logic_error);
+    EXPECT_THROW(find_matching_inclusion_dependencies(inclusion_dependencies, {}), std::logic_error);
+    EXPECT_THROW(find_matching_inclusion_dependencies({}, {a_a, a_b}), std::logic_error);
   }
 
-  const auto actual_ind_a = find_matching_inclusion_dependency(inclusion_dependencies, {a_a});
-  ASSERT_TRUE(actual_ind_a);
-  EXPECT_EQ(*actual_ind_a, ind_a);
+  // Both INDs match because ind_a_b is a superset of ind_a.
+  const auto actual_inds_a = find_matching_inclusion_dependencies(inclusion_dependencies, {a_a});
+  EXPECT_EQ(actual_inds_a.size(), 2);
+  EXPECT_TRUE(actual_inds_a.contains(ind_a));
+  EXPECT_TRUE(actual_inds_a.contains(ind_a_b));
 
-  const auto actual_ind_a_b = find_matching_inclusion_dependency(inclusion_dependencies, {a_a, a_b});
-  ASSERT_TRUE(actual_ind_a);
-  EXPECT_EQ(*actual_ind_a_b, ind_a_b);
+  // Only ind_a_b matches.
+  const auto actual_inds_b = find_matching_inclusion_dependencies(inclusion_dependencies, {a_a, a_b});
+  EXPECT_EQ(actual_inds_b.size(), 1);
+  EXPECT_TRUE(actual_inds_b.contains(ind_a_b));
+
+  // Again, ind_a_b match because it is a superset of {a_b}.
+  const auto actual_inds_c = find_matching_inclusion_dependencies(inclusion_dependencies, {a_b});
+  EXPECT_EQ(actual_inds_c.size(), 1);
+  EXPECT_TRUE(actual_inds_c.contains(ind_a_b));
 }
 
 }  // namespace hyrise
