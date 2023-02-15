@@ -8,30 +8,13 @@ namespace hyrise {
 class TableOrderConstraintTest : public BaseTest {
  protected:
   void SetUp() override {
-    auto& sm = Hyrise::get().storage_manager;
-    {
-      auto column_definitions = TableColumnDefinitions{};
-      column_definitions.emplace_back("column0", DataType::Int, false);
-      column_definitions.emplace_back("column1", DataType::Int, false);
-      column_definitions.emplace_back("column2", DataType::Int, false);
-      column_definitions.emplace_back("column3", DataType::Int, false);
-      _table = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-
-      sm.add_table("table", _table);
-    }
-
-    {
-      auto column_definitions = TableColumnDefinitions{};
-      column_definitions.emplace_back("column0", DataType::Int, false);
-      column_definitions.emplace_back("column1", DataType::Int, true);
-      _table_nullable = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-
-      sm.add_table("table_nullable", _table_nullable);
-    }
+    _table = Table::create_dummy_table({{"a", DataType::Int, false},
+                                        {"b", DataType::Int, false},
+                                        {"c", DataType::Int, false},
+                                        {"d", DataType::Int, false}});
   }
 
   std::shared_ptr<Table> _table;
-  std::shared_ptr<Table> _table_nullable;
 };
 
 TEST_F(TableOrderConstraintTest, OrderedColumnIDs) {
@@ -69,13 +52,13 @@ TEST_F(TableOrderConstraintTest, AddOrderConstraints) {
 TEST_F(TableOrderConstraintTest, AddOrderConstraintsInvalid) {
   _table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
 
-  // Invalid, because the column id is out of range
+  // Invalid because the column id is out of range.
   EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{5}}, {ColumnID{1}}}), std::logic_error);
 
-  // Invalid, because the ordered column id is out of range
+  // Invalid because the ordered column id is out of range.
   EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{5}}}), std::logic_error);
 
-  // Invalid, because order constraint for the given column sets already exists
+  // Invalid because order constraint for the given column sets already exists.
   EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}}), std::logic_error);
 }
 

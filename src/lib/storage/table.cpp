@@ -353,13 +353,14 @@ const TableKeyConstraints& Table::soft_key_constraints() const {
 }
 
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
-  Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
+  Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
 
-  // Check validity of specified columns
+  // Check validity of specified columns.
+  const auto column_count = this->column_count();
   for (const auto& column_id : table_key_constraint.columns()) {
-    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range.");
 
-    // PRIMARY KEY requires non-nullable columns
+    // PRIMARY KEY requires non-nullable columns.
     if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
       Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
     }
@@ -372,11 +373,11 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
       // Ensure that no other PRIMARY KEY is defined
       Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
                  table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
-             "Another primary key already exists for this table.");
+             "Another primary TableKeyConstraint exists for this table.");
 
       // Ensure there is only one key constraint per column set.
       Assert(table_key_constraint.columns() != existing_constraint.columns(),
-             "Another key constraint for the same column set has already been defined.");
+             "Another TableKeyConstraint for the same column set has already been defined.");
     }
 
     _table_key_constraints.insert(table_key_constraint);
@@ -384,28 +385,28 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
 }
 
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
-  Assert(_type == TableType::Data, "Foreign key constraints are not tracked for reference tables across the PQP.");
+  Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
 
-  Assert(&*foreign_key_constraint.foreign_key_table() == &*this, "Foreign key constraint is added to wrong table");
+  Assert(&*foreign_key_constraint.foreign_key_table() == &*this, "ForeignKeyConstraint is added to the wrong table.");
 
-  // Check validity of specified columns
+  // Check validity of specified columns.
+  const auto column_count = this->column_count();
   for (const auto& column_id : foreign_key_constraint.foreign_key_columns()) {
-    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range.");
   }
 
   const auto referenced_table = foreign_key_constraint.table();
-  Assert(referenced_table, "Referenced table must exist");
+  Assert(referenced_table, "ForeignKeyConstraint must reference an existing table.");
 
+  // Check validity of key columns from other table.
   const auto referenced_table_column_count = referenced_table->column_count();
-
-  // Check validity of included columns
   for (const auto& column_id : foreign_key_constraint.columns()) {
-    Assert(column_id < referenced_table_column_count, "ColumnID out of range");
+    Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
   {
     const auto scoped_lock = acquire_append_mutex();
-    Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set");
+    Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set.");
     _foreign_key_constraints.insert(foreign_key_constraint);
     const auto referenced_table_scoped_lock = referenced_table->acquire_append_mutex();
     referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
@@ -421,22 +422,22 @@ const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
 }
 
 void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
-  Assert(_type == TableType::Data, "Inclusion constraints are not tracked for reference tables across the PQP.");
-  const auto column_count = this->column_count();
+  Assert(_type == TableType::Data, "TableOrderConstraint are not tracked for reference tables across the PQP.");
 
-  // Check validity of columns
+  // Check validity of columns.
+  const auto column_count = this->column_count();
   for (const auto& column_id : table_order_constraint.columns()) {
-    Assert(column_id < column_count, "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  // Check validity of ordered columns
+  // Check validity of ordered columns.
   for (const auto& column_id : table_order_constraint.ordered_columns()) {
-    Assert(column_id < column_count, "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range.");
   }
 
   {
     const auto scoped_lock = acquire_append_mutex();
-    Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set");
+    Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set.");
     _table_order_constraints.insert(table_order_constraint);
   }
 }

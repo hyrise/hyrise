@@ -2,10 +2,13 @@
 
 #include <numeric>
 
+#include <boost/container_hash/hash.hpp>
+
 namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
+// Taken from https://stackoverflow.com/a/17074810
 std::vector<size_t> sort_permutation(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.

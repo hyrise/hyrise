@@ -1,5 +1,7 @@
 #include "table_order_constraint.hpp"
 
+#include <boost/container_hash/hash.hpp>
+
 namespace hyrise {
 
 TableOrderConstraint::TableOrderConstraint(std::vector<ColumnID> columns, std::vector<ColumnID> ordered_columns)

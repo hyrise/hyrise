@@ -229,7 +229,7 @@ TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositionsInvalidInput) {
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
 
-  // Input are not allowed to have differing output expressions,
+  // Input are not allowed to have differing output expressions.
   _union_node->set_right_input(_mock_node2);
   EXPECT_THROW(_union_node->unique_column_combinations(), std::logic_error);
 

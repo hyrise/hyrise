@@ -256,6 +256,8 @@ class Table : private Noncopyable {
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
   ForeignKeyConstraints _foreign_key_constraints;
+  // Stores the ForeignKeyCostraints of another table that reference this table. Required for maintenance of inclusion
+  // dependencies in the query plan.
   ForeignKeyConstraints _referenced_foreign_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;

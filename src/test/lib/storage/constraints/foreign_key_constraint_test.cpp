@@ -10,36 +10,20 @@ namespace hyrise {
 class ForeignKeyConstraintTest : public BaseTest {
  protected:
   void SetUp() override {
-    {
-      auto column_definitions = TableColumnDefinitions{};
-      column_definitions.emplace_back("a", DataType::Int, false);
-      column_definitions.emplace_back("b", DataType::Int, false);
-      column_definitions.emplace_back("c", DataType::Int, false);
-      column_definitions.emplace_back("d", DataType::Int, false);
-      _table_a = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    }
-
-    {
-      auto column_definitions = TableColumnDefinitions{};
-      column_definitions.emplace_back("x", DataType::Int, false);
-      column_definitions.emplace_back("y", DataType::Int, true);
-      _table_b = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    }
-
-    {
-      auto column_definitions = TableColumnDefinitions{};
-      column_definitions.emplace_back("u", DataType::Int, false);
-      column_definitions.emplace_back("v", DataType::Int, true);
-      _table_c = std::make_shared<Table>(column_definitions, TableType::Data, ChunkOffset{2}, UseMvcc::Yes);
-    }
+    _table_a = Table::create_dummy_table({{"a", DataType::Int, false},
+                                          {"b", DataType::Int, false},
+                                          {"c", DataType::Int, false},
+                                          {"d", DataType::Int, false}});
+    _table_b = Table::create_dummy_table({{"x", DataType::Int, false}, {"y", DataType::Int, false}});
+    _table_c = Table::create_dummy_table({{"u", DataType::Int, false}, {"v", DataType::Int, false}});
   }
 
   std::shared_ptr<Table> _table_a, _table_b, _table_c;
 };
 
 TEST_F(ForeignKeyConstraintTest, OrderedColumnIDs) {
-  // To handle equivalent INDs with swapped columns, we sort the columns and apply the permutation to the foreign key
-  // columns.
+  // To handle equivalent foreign key constraints / INDs with swapped columns, we sort the columns and apply the
+  // permutation to the foreign key columns.
   const auto foreign_key_constraint =
       ForeignKeyConstraint{{ColumnID{2}, ColumnID{1}}, {ColumnID{3}, ColumnID{4}}, _table_a, _table_b};
   EXPECT_EQ(foreign_key_constraint.columns().size(), 2);
@@ -91,12 +75,14 @@ TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraints) {
                    {{ColumnID{0}, ColumnID{1}}, {ColumnID{3}, ColumnID{2}}, _table_b, _table_a}),
                std::logic_error);
 
+  // Ensure all constraints were added.
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_1));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_2));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_3));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_4));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_5));
 
+  // Ensure all constraints were also added to the other table.
   EXPECT_TRUE(_table_b->referenced_foreign_key_constraints().contains(foreign_key_constraint_1));
   EXPECT_TRUE(_table_b->referenced_foreign_key_constraints().contains(foreign_key_constraint_2));
   EXPECT_TRUE(_table_c->referenced_foreign_key_constraints().contains(foreign_key_constraint_3));
@@ -107,27 +93,27 @@ TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraints) {
 TEST_F(ForeignKeyConstraintTest, AddInclusionConstraintsInvalid) {
   _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a});
 
-  // Invalid, because the column id is out of range
+  // Invalid because the column id is out of range.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{5}}, {ColumnID{1}}, _table_b, _table_a}),
                std::logic_error);
 
-  // Invalid, because the column id of the referenced table is out of range
+  // Invalid because the column id of the referenced table is out of range.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{1}}, {ColumnID{5}}, _table_b, _table_a}),
                std::logic_error);
 
-  // Invalid, because inclusion constraint for the given column sets and referenced table already exists
+  // Invalid because inclusion constraint for the given column sets and referenced table already exists.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a}),
                std::logic_error);
 
-  // Invalid, because the referenced table does not exist
+  // Invalid,because the referenced table does not exist.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, nullptr, _table_a}),
                std::logic_error);
 
-  // Invalid, because the referenced table is not the table we add the constraint to.
+  // Invalid because the referenced table is not the table we add the constraint to.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_c}),
                std::logic_error);
 
-  // Invalid, because the column lists have different sizes
+  // Invalid because the column lists have different sizes.
   EXPECT_THROW(
       _table_a->add_soft_foreign_key_constraint({{ColumnID{0}, ColumnID{2}}, {ColumnID{1}}, _table_b, _table_a}),
       std::logic_error);
