@@ -752,7 +752,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   expected_memory_usage += sizeof(tsl::sparse_map<pmr_string, std::vector<RowID>>);
   // + vector size when NULL values are indexed
   expected_memory_usage += 0 * sizeof(std::vector<RowID>);
-    // + key tuple size if null values are indexed
+  // + key tuple size if null values are indexed
   expected_memory_usage += 0 * sizeof(std::pair<pmr_string, std::vector<RowID>>);
   // + number of NULL values * RowID
   expected_memory_usage += 0 * sizeof(RowID);

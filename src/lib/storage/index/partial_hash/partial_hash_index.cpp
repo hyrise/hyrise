@@ -15,8 +15,7 @@ PartialHashIndex::PartialHashIndex(const std::vector<std::pair<ChunkID, std::sha
                     });
 }
 
-size_t PartialHashIndex::insert(
-    const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
+size_t PartialHashIndex::insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index) {
   // Prevents multiple threads from indexing the same chunk concurrently.
   const auto lock = std::lock_guard<std::shared_mutex>{_data_access_mutex};
   return _impl->insert(chunks_to_index, _column_id);
