@@ -44,6 +44,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
  private:
   const std::vector<ColumnID> _left_column_ids;
+  const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
   const std::vector<AllTypeVariant> _right_values;
   const std::vector<AllTypeVariant> _right_values2;
