@@ -138,16 +138,16 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   bytes += sizeof(std::vector<RowID>) * _positions.size();
 
   // Capacity for indexed RowIDs.
-  for (const auto& entry : _positions) {
-    bytes += sizeof(RowID) * entry.second.capacity();
+  for (const auto& [_, row_ids] : _positions) {
+    bytes += sizeof(RowID) * row_ids.capacity();
   }
 
   if (_null_positions.contains(DataType{})) {
     bytes += sizeof(std::vector<RowID>);
     bytes += sizeof(std::pair<DataType, std::vector<RowID>>);
 
-    for (const auto& entry : _null_positions) {
-      bytes += sizeof(RowID) * entry.second.capacity();
+    for (const auto& [_, row_ids] : _null_positions) {
+      bytes += sizeof(RowID) * row_ids.capacity();
     }
   }
 
