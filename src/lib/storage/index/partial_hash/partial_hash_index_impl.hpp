@@ -33,14 +33,14 @@ class BasePartialHashIndexImpl : public Noncopyable {
    *
    * @return The number of added chunks.
    */
-  virtual size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) = 0;
+  virtual size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) = 0;
 
   /**
    * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.
    *
    * @return The number of removed chunks.
    */
-  virtual size_t remove_entries(const std::vector<ChunkID>&) = 0;
+  virtual size_t remove(const std::vector<ChunkID>&) = 0;
 
   virtual bool indexed_null_values() const = 0;
 
@@ -59,7 +59,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
 /** 
  * Templated implementation of the PartialHashIndex. It is possible to index any immutable chunk of the indexed column.
- * Chunks can be added via `insert_entries()`.
+ * Chunks can be added via `add()`.
  *
  * We did not perform a comprehensive experimental evaluation of different hash maps for concurrent workloads
  * (including reads and modifications) yet. Thus, choosing a different hash map might result in better performance.
@@ -73,8 +73,8 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   PartialHashIndexImpl() = delete;
   PartialHashIndexImpl(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID);
 
-  size_t insert_entries(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) final;
-  size_t remove_entries(const std::vector<ChunkID>&) final;
+  size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&, const ColumnID) final;
+  size_t remove(const std::vector<ChunkID>&) final;
 
   bool indexed_null_values() const final;
 
