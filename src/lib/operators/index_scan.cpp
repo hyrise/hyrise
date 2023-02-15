@@ -42,21 +42,16 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   if (included_chunk_ids.empty()) {
-    const auto chunk_count = _in_table->chunk_count();
-    jobs.reserve(chunk_count);
-    for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
+    jobs.reserve(1);
+    for (auto chunk_id = ChunkID{0u}; chunk_id < 1; ++chunk_id) {
       const auto chunk = _in_table->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       jobs.push_back(_create_job(chunk_id, output_mutex));
     }
   } else {
-    jobs.reserve(included_chunk_ids.size());
-    for (auto chunk_id : included_chunk_ids) {
-      if (_in_table->get_chunk(chunk_id)) {
-        jobs.push_back(_create_job(chunk_id, output_mutex));
-      }
-    }
+    jobs.reserve(1);
+    jobs.push_back(_create_job(included_chunk_ids.front(), output_mutex));
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -130,11 +125,6 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
     PerformanceWarning("There are multiple indexes available, but only the first one is used.");
   }
   const auto& index = indexes.front();
-  (void)index;
-
-  // auto append_matches = [&probe_side_position, &probe_chunk_id, this](auto index_begin, auto index_end) {
-  //     _append_matches_table_index(index_begin, index_end, probe_side_position.chunk_offset(), probe_chunk_id);
-  // };
 
   auto append_matches = [&](const PartialHashIndex::Iterator& begin,
                                             const PartialHashIndex::Iterator& end) {
@@ -155,15 +145,11 @@ RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {
-      for (const auto& value: _right_values) {
-        index->range_equals_with_iterators(append_matches, value);
-      }
+      index->range_equals_with_iterators(append_matches, _right_values.front());
       break;
     }
     case PredicateCondition::NotEquals: {
-      for (const auto& value: _right_values) {
-        index->range_not_equals_with_iterators(append_matches, value);
-      }
+      index->range_not_equals_with_iterators(append_matches, _right_values.front());
       break;
     }
     default:
