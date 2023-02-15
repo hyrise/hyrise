@@ -1530,7 +1530,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
-  AssertInput(!import_statement.whereClause, "Predicates on imported files are not yet supported.");
+  // Querying tables that are freshly loaded is not easy as we need meta information, such as column names and data
+  // types, to resolve queries and build the query plans. For instance, we need an origin node for column expressions
+  // and to provide correct output expressions for subsequent nodes, some optimization rules access stored tables, and
+  // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
+  // whole table when translating the SQL statement.
+  AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
                           import_type_to_file_type(import_statement.type));
 }
