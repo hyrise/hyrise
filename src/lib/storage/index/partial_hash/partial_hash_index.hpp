@@ -92,7 +92,7 @@ class PartialHashIndex {
    *
    * @return The number of chunks for which index entries were inserted.
    */
-  size_t add(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&);
+  size_t insert(const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>&);
 
   /**
    * Removes the given chunks from this index. If a chunk is not indexed, nothing will happen.

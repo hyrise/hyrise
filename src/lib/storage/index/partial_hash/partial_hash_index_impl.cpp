@@ -8,11 +8,11 @@ template <typename DataType>
 PartialHashIndexImpl<DataType>::PartialHashIndexImpl(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id)
     : BasePartialHashIndexImpl() {
-  add(chunks_to_index, column_id);
+  insert(chunks_to_index, column_id);
 }
 
 template <typename DataType>
-size_t PartialHashIndexImpl<DataType>::add(
+size_t PartialHashIndexImpl<DataType>::insert(
     const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunks_to_index, const ColumnID column_id) {
   auto indexed_chunks = size_t{0};
   for (const auto& chunk : chunks_to_index) {

@@ -284,7 +284,7 @@ TEST_F(PartialHashIndexTest, IndexedNullValues) {
   auto new_index = std::make_shared<PartialHashIndex>(chunks_to_index0, ColumnID{0});
   EXPECT_FALSE(new_index->indexed_null_values());
 
-  new_index->add(chunks_to_index1);
+  new_index->insert(chunks_to_index1);
   EXPECT_TRUE(new_index->indexed_null_values());
 }
 
@@ -296,7 +296,7 @@ TEST_F(PartialHashIndexTest, Add) {
 
   auto chunks_to_add =
       std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))};
-  EXPECT_EQ(index->add(chunks_to_add), 1);
+  EXPECT_EQ(index->insert(chunks_to_add), 1);
 
   EXPECT_EQ(index->get_indexed_chunk_ids().size(), 3);
   EXPECT_TRUE(index->get_indexed_chunk_ids().contains(ChunkID{0}));
@@ -307,7 +307,7 @@ TEST_F(PartialHashIndexTest, Add) {
   EXPECT_EQ(std::distance(null_cbegin(index), null_cend(index)), 3);
   EXPECT_EQ(*range_equals(index, "new1").first, (RowID{ChunkID{2}, ChunkOffset{0}}));
 
-  EXPECT_EQ(index->add(chunks_to_add), 0);
+  EXPECT_EQ(index->insert(chunks_to_add), 0);
 }
 
 TEST_F(PartialHashIndexTest, Remove) {
@@ -357,7 +357,7 @@ TEST_F(PartialHashIndexTest, ReadAndWriteConcurrentlyStressTest) {
       std::make_pair(ChunkID{5}, table->get_chunk(ChunkID{5}))});
 
   auto insert_entries_to_index = [&](const std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>& chunk_to_add) {
-    index->add(chunk_to_add);
+    index->insert(chunk_to_add);
   };
 
   auto read_from_index = [&]() {
@@ -408,7 +408,7 @@ TEST_F(PartialHashIndexTest, ParallelWritesStressTest) {
   auto chunks_to_add =
       std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{std::make_pair(ChunkID{2}, table->get_chunk(ChunkID{2}))};
 
-  auto insert_entries_to_index = [&]() { index->add(chunks_to_add); };
+  auto insert_entries_to_index = [&]() { index->insert(chunks_to_add); };
 
   constexpr auto N_THREADS = uint8_t{8};
   auto threads = std::vector<std::thread>(N_THREADS);
