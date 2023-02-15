@@ -1246,7 +1246,6 @@ TEST_F(SQLTranslatorTest, InSelect) {
   const auto [actual_lqp, translation_info] =
       sql_to_lqp_helper("SELECT * FROM int_float WHERE a + 7 IN (SELECT * FROM int_float2)");
 
-  // clang-format off
   const auto subquery_lqp = stored_table_node_int_float2;
   const auto subquery = lqp_subquery_(subquery_lqp);
 
@@ -1264,18 +1263,19 @@ TEST_F(SQLTranslatorTest, InCorrelatedSubquery) {
       "SELECT * FROM int_float WHERE a IN (SELECT * FROM int_float2 WHERE int_float.b * int_float.a * int_float.a > "
       "b)");
 
-  // clang-format off
   const auto parameter_a = correlated_parameter_(ParameterID{1}, int_float_a);
   const auto parameter_b = correlated_parameter_(ParameterID{0}, int_float_b);
 
   const auto b_times_a_times_a = mul_(mul_(parameter_b, parameter_a), parameter_a);
 
+  // clang-format off
   const auto subquery_lqp =
   PredicateNode::make(greater_than_(b_times_a_times_a, int_float2_b),
-      stored_table_node_int_float2);
+    stored_table_node_int_float2);
+  // clang-format on
 
   const auto subquery = lqp_subquery_(subquery_lqp, std::make_pair(ParameterID{1}, int_float_a),
-                                  std::make_pair(ParameterID{0}, int_float_b));
+                                      std::make_pair(ParameterID{0}, int_float_b));
 
   // clang-format off
   const auto expected_lqp =
