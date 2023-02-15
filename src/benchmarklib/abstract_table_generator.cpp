@@ -219,7 +219,7 @@ void AbstractTableGenerator::generate_and_store() {
         table_info.re_encoded =
             BenchmarkTableEncoder::encode(table_name, table_info.table, _benchmark_config->encoding_config);
         auto output = std::stringstream{};
-        output << "-  Encoding '" + table_name << "' - "
+        output << "-  Processing '" + table_name << "' - "
                << (table_info.re_encoded ? "encoding applied" : "no encoding necessary") << " ("
                << per_table_timer.lap_formatted() << ")\n";
         std::cout << output.str() << std::flush;
