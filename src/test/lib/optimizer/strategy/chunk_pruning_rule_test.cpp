@@ -416,10 +416,9 @@ TEST_F(ChunkPruningRuleTest, ValueOutOfRange) {
   EXPECT_EQ(stored_table_node->pruned_chunk_ids(), expected_chunk_ids);
 }
 
-// Predicates that have a subquery as an argument cannot be used for pruning as we do not know the predicate value yet.
-// However, such predicates should not prevent us from pruning by other predicates. The following two test cases ensure
-// correct pruning for predicates with uncorrelated and correlated subqueries.
 TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
+  // Predicates that have uncorrelated subqueries as arguments cannot be used for pruning as we do not know the
+  // predicate values yet. However, such predicates should not prevent us from pruning by other predicates.
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
   const auto stored_table_node_2 = StoredTableNode::make("compressed");
 
@@ -435,9 +434,10 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
       stored_table_node_1));
 
   // SELECT * FROM compressed WHERE a > 200 AND b BETWEEN (SELECT 1.1) AND (SELECT 3.3);
+  // We also switch the order of the predicates to ensure that it does not matter.
   const auto input_lqp_2 =
-  PredicateNode::make(greater_than_(stored_table_node_2->get_column("a"), value_(200)),  // Prunes chunk 1.
-    PredicateNode::make(between_inclusive_(stored_table_node_2->get_column("b"), lqp_subquery_(subquery_2), lqp_subquery_(subquery_3)),  // NOLINT(whitespace/line_length)
+  PredicateNode::make(between_inclusive_(stored_table_node_2->get_column("b"), lqp_subquery_(subquery_2), lqp_subquery_(subquery_3)),  // NOLINT(whitespace/line_length)
+    PredicateNode::make(greater_than_(stored_table_node_2->get_column("a"), value_(200)),  // Prunes chunk 1.
       stored_table_node_2));
   // clang-format on
 
@@ -452,6 +452,9 @@ TEST_F(ChunkPruningRuleTest, PredicateWithUncorrelatedSubquery) {
 }
 
 TEST_F(ChunkPruningRuleTest, PredicateWithCorrelatedSubquery) {
+  // Similar to PredicateWithUncorrelatedSubquery, we cannot use predicates with correlated subqueries as arguments for
+  // pruning because their values are not known before execution. However, pruning by other predicates is still
+  // possible.
   const auto stored_table_node_1 = StoredTableNode::make("compressed");
   const auto stored_table_node_2 = StoredTableNode::make("int_float4");
   const auto compressed_a = stored_table_node_1->get_column("a");

@@ -21,7 +21,7 @@ class Table;
 
 /**
  * For a given LQP, this rule determines the set of chunks that can be pruned from a table. To calculate the sets of
- * pruned chunks, it analyzes the predicates of PredicateNodes in a given LQP. The resulting pruning information i
+ * pruned chunks, it analyzes the predicates of PredicateNodes in a given LQP. The resulting pruning information is
  * stored inside the StoredTableNode objects.
  */
 class ChunkPruningRule : public AbstractRule {
