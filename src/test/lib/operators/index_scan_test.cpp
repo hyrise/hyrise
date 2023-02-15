@@ -122,69 +122,61 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   }
 }
 
-// TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
-//   const auto all_rows =
-//       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
-//   const auto no_rows = std::vector<AllTypeVariant>{};
+TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValue) {
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
+  const auto no_rows = std::vector<AllTypeVariant>{};
 
-//   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
-//   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
 
-//   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-//   tests[PredicateCondition::Equals] = no_rows;
-//   tests[PredicateCondition::NotEquals] = all_rows;
-//   tests[PredicateCondition::LessThan] = all_rows;
-//   tests[PredicateCondition::LessThanEquals] = all_rows;
-//   tests[PredicateCondition::GreaterThan] = no_rows;
-//   tests[PredicateCondition::GreaterThanEquals] = no_rows;
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = no_rows;
+  tests[PredicateCondition::NotEquals] = all_rows;
 
-//   for (const auto& test : tests) {
-//     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
-//                                             right_values, right_values2);
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids, test.first,
+                                            right_values, right_values2);
 
-//     scan->execute();
+    scan->execute();
 
-//     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-//                                                         this->_column_ids, test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
-//     scan_small_chunk->execute();
+    scan_small_chunk->execute();
 
-//     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-//     this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
-//   }
-// }
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+  }
+}
 
-// TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
-//   const auto all_rows =
-//       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
-//   const auto no_rows = std::vector<AllTypeVariant>{};
+TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) {
+  const auto all_rows =
+      std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
+  const auto no_rows = std::vector<AllTypeVariant>{};
 
-//   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
-//   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
+  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
+  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
 
-//   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-//   tests[PredicateCondition::Equals] = no_rows;
-//   tests[PredicateCondition::NotEquals] = all_rows;
-//   tests[PredicateCondition::LessThan] = no_rows;
-//   tests[PredicateCondition::LessThanEquals] = no_rows;
-//   tests[PredicateCondition::GreaterThan] = all_rows;
-//   tests[PredicateCondition::GreaterThanEquals] = all_rows;
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = no_rows;
+  tests[PredicateCondition::NotEquals] = all_rows;
 
-//   for (const auto& test : tests) {
-//     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids, test.first,
-//                                             right_values, right_values2);
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids, test.first,
+                                            right_values, right_values2);
 
-//     scan->execute();
+    scan->execute();
 
-//     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type,
-//                                                         this->_column_ids, test.first, right_values, right_values2);
+    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
+                                                        this->_column_ids, test.first, right_values, right_values2);
 
-//     scan_small_chunk->execute();
+    scan_small_chunk->execute();
 
-//     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-//     this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
-//   }
-// }
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+  }
+}
 
 // TEST_F(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
 //   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
@@ -193,17 +185,9 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 //   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
 //   tests[PredicateCondition::Equals] = {};
 //   tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 106, 110, 112};
-//   tests[PredicateCondition::LessThan] = {100, 102};
-//   tests[PredicateCondition::LessThanEquals] = {100, 102};
-//   tests[PredicateCondition::GreaterThan] = {106, 108, 110, 112, 106, 110, 112};
-//   tests[PredicateCondition::GreaterThanEquals] = {106, 108, 110, 112, 106, 110, 112};
-//   tests[PredicateCondition::BetweenInclusive] = {106, 106, 108};
-//   tests[PredicateCondition::BetweenLowerExclusive] = {106, 108, 106};
-//   tests[PredicateCondition::BetweenUpperExclusive] = {106, 108, 106};
-//   tests[PredicateCondition::BetweenExclusive] = {106, 108, 106};
 
 //   for (const auto& test : tests) {
-//     auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_index_type, this->_column_ids,
+//     auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_ids,
 //                                             test.first, right_values, right_values2);
 
 //     scan->included_chunk_ids = {ChunkID{0}, ChunkID{2}};
@@ -218,7 +202,7 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 //   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
 //   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
 
-//   auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
+//   auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids,
 //                                           PredicateCondition::Equals, right_values, right_values2);
 //   scan->execute();
 
@@ -233,14 +217,14 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 //   }
 // }
 
-// TEST_F(OperatorsIndexScanTest, OperatorName) {
-//   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
+TEST_F(OperatorsIndexScanTest, OperatorName) {
+  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
-//   auto scan = std::make_shared<IndexScan>(this->_int_int, this->_index_type, this->_column_ids,
-//                                           PredicateCondition::GreaterThanEquals, right_values);
+  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids,
+                                          PredicateCondition::GreaterThanEquals, right_values);
 
-//   EXPECT_EQ(scan->name(), "IndexScan");
-// }
+  EXPECT_EQ(scan->name(), "IndexScan");
+}
 
 // TEST_F(OperatorsIndexScanTest, AddedChunk) {
 //   // We want to make sure that all chunks are covered even if they have been added after SQL translation
@@ -251,10 +235,6 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
 //   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
 
-//   // Test correct LQP-Translation. For some reason, only GroupKeyIndexes are currently used.
-//   if (this->_index_type != ChunkIndexType::GroupKey) {
-//     return;
-//   }
 //   const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
 
 //   auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
