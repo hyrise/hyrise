@@ -1,8 +1,8 @@
 #pragma once
 
 #include <tsl/sparse_map.h>
+#include <tsl/sparse_set.h>
 
-#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -54,7 +54,7 @@ class BasePartialHashIndexImpl : public Noncopyable {
 
   virtual IteratorRangePair range_not_equals(const AllTypeVariant& value) const = 0;
 
-  virtual std::unordered_set<ChunkID> get_indexed_chunk_ids() const = 0;
+  virtual tsl::sparse_set<ChunkID> get_indexed_chunk_ids() const = 0;
 };
 
 /** 
@@ -87,12 +87,12 @@ class PartialHashIndexImpl : public BasePartialHashIndexImpl {
   BasePartialHashIndexImpl::IteratorRange range_equals(const AllTypeVariant& value) const final;
   BasePartialHashIndexImpl::IteratorRangePair range_not_equals(const AllTypeVariant& value) const final;
 
-  std::unordered_set<ChunkID> get_indexed_chunk_ids() const final;
+  tsl::sparse_set<ChunkID> get_indexed_chunk_ids() const final;
 
  private:
   tsl::sparse_map<DataType, std::vector<RowID>> _positions;
   tsl::sparse_map<DataType, std::vector<RowID>> _null_positions;
-  std::unordered_set<ChunkID> _indexed_chunk_ids = {};
+  tsl::sparse_set<ChunkID> _indexed_chunk_ids = {};
 };
 
 }  // namespace hyrise

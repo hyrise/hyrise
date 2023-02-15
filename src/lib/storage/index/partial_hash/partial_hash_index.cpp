@@ -69,7 +69,7 @@ bool PartialHashIndex::is_index_for(const ColumnID column_id) const {
   return column_id == _column_id;
 }
 
-std::unordered_set<ChunkID> PartialHashIndex::get_indexed_chunk_ids() const {
+tsl::sparse_set<ChunkID> PartialHashIndex::get_indexed_chunk_ids() const {
   return _impl->get_indexed_chunk_ids();
 }
 

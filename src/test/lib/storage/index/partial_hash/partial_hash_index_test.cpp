@@ -1,6 +1,5 @@
 #include <memory>
 #include <set>
-#include <unordered_set>
 #include <vector>
 
 #include "base_test.hpp"
@@ -313,7 +312,7 @@ TEST_F(PartialHashIndexTest, Add) {
 TEST_F(PartialHashIndexTest, Remove) {
   EXPECT_EQ(index->remove(std::vector<ChunkID>{ChunkID{0}}), 1);
 
-  EXPECT_EQ(index->get_indexed_chunk_ids(), (std::unordered_set<ChunkID>{ChunkID{1}}));
+  EXPECT_EQ(index->get_indexed_chunk_ids(), (tsl::sparse_set<ChunkID>{ChunkID{1}}));
   EXPECT_EQ(std::distance(cbegin(index), cend(index)), 7);
   EXPECT_EQ(std::distance(null_cbegin(index), null_cend(index)), 1);
   EXPECT_EQ(range_equals(index, "hotel").first, cend(index));
@@ -562,7 +561,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(tsl::sparse_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
@@ -606,7 +605,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(tsl::sparse_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
@@ -651,7 +650,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(tsl::sparse_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
@@ -694,7 +693,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(tsl::sparse_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 1 * sizeof(ChunkID);
   // + map size
@@ -738,7 +737,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   // + pointer to BaseParialHashIndexImpl
   expected_memory_usage += sizeof(std::unique_ptr<BasePartialHashIndexImpl>);
   // +  ChunkIDs set
-  expected_memory_usage += sizeof(std::unordered_set<ChunkID>);
+  expected_memory_usage += sizeof(tsl::sparse_set<ChunkID>);
   // +  number of indexed chunks * ChunkID
   expected_memory_usage += 0 * sizeof(ChunkID);
   // + map size

@@ -115,7 +115,7 @@ class PartialHashIndex {
    */
   bool is_index_for(const ColumnID column_id) const;
 
-  std::unordered_set<ChunkID> get_indexed_chunk_ids() const;
+  tsl::sparse_set<ChunkID> get_indexed_chunk_ids() const;
 
   /**
    * @return The ColumnID covered by the index.

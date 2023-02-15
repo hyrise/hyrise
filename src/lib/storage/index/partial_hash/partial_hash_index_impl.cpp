@@ -125,11 +125,9 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   auto bytes = size_t{0u};
   bytes += sizeof(_indexed_chunk_ids);
 
-  // Since we do not know exactly how much memory the set has allocated at any given time, we devide the result of its
-  // size() method by its maximum load factor. This way we also get an underestimation, but it is smaller than without
-  // the maximum load factor.
-  bytes += static_cast<size_t>(sizeof(ChunkID) *
-           (static_cast<float>(_indexed_chunk_ids.size()) / _indexed_chunk_ids.max_load_factor()));
+  // It is really hard to estimate the memory consumption of a HashSet. Since we are using sparse_set, the result of
+  // its .size() method should be very close to its capacity.
+  bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_positions);
   bytes += sizeof(_null_positions);
@@ -157,7 +155,7 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
 }
 
 template <typename DataType>
-std::unordered_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
+tsl::sparse_set<ChunkID> PartialHashIndexImpl<DataType>::get_indexed_chunk_ids() const {
   return _indexed_chunk_ids;
 }
 
