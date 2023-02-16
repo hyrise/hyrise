@@ -35,6 +35,7 @@ add_library(
 
     ${PARSER_DIR}/src/parser/bison_parser.cpp
     ${PARSER_DIR}/src/parser/flex_lexer.cpp
+    ${PARSER_DIR}/src/sql/CreateStatement.cpp
     ${PARSER_DIR}/src/sql/Expr.cpp
     ${PARSER_DIR}/src/sql/PrepareStatement.cpp
     ${PARSER_DIR}/src/sql/SQLStatement.cpp
