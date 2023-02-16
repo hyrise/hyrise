@@ -192,7 +192,7 @@ TEST_F(UnionNodeTest, FunctionalDependenciesUnionPositionsInvalidInput) {
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
   }
-  
+
   const auto trivial_fd_a = FunctionalDependency({_a}, {_b, _c});
   const auto non_trivial_fd_b = FunctionalDependency({_b}, {_a});
 
