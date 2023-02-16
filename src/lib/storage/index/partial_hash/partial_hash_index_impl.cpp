@@ -125,9 +125,9 @@ size_t PartialHashIndexImpl<DataType>::estimate_memory_usage() const {
   auto bytes = size_t{0u};
   bytes += sizeof(_indexed_chunk_ids);
 
-  // It is not trivial to estimate the memory consumption of a hash set. We use a tsl::sparse_set, so that the size()
-  // function is closer to its actual capacity. Sparse sets/maps usually require only a few bits of overhead per entry.
-  // For rurther information about sparse sets/maps, visit https://smerity.com/articles/2015/google_sparsehash.html
+  // It is not trivial to estimate the memory consumption of a hash set. We use a tsl::sparse_set, so that the result
+  // of size() estimates the used capacity sufficiently. Sparse sets/maps usually require only a few bits of overhead
+  // per entry. Further details about sparse sets/maps: https://smerity.com/articles/2015/google_sparsehash.html
   bytes += sizeof(ChunkID) * _indexed_chunk_ids.size();
 
   bytes += sizeof(_positions);
