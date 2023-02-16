@@ -1,10 +1,11 @@
 #pragma once
 
+#include <boost/align/aligned_allocator.hpp>
 #include <forward_list>
 #include <memory>
+#include <mutex>
 #include "frame.hpp"
 #include "storage/buffer/types.hpp"
-#include <mutex>
 
 namespace hyrise {
 
@@ -19,11 +20,10 @@ namespace hyrise {
  */
 class VolatileRegion {
  public:
-
   VolatileRegion(const size_t num_bytes);
 
   FrameID get_frame_id_from_ptr(const void* ptr) const;
-  Page32KiB* get_page(const FrameID frame_id) const;
+  Page32KiB* get_page(const FrameID frame_id);
 
   std::pair<FrameID, Page32KiB*> allocate();
   void deallocate(FrameID frame_id);
@@ -36,7 +36,7 @@ class VolatileRegion {
   const size_t _num_bytes;
 
   // The raw memory region that is preallocated for the frames
-  std::unique_ptr<std::byte[]> _data;
+  std::vector<Page32KiB, boost::alignment::aligned_allocator<Page32KiB>> _frames;
 
   // TODO: Evalulate linked list vs other DS, or maybe sort to fullfil large requests?
   // it might also be concurrent

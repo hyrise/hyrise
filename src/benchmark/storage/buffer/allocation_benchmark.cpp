@@ -29,9 +29,9 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
       benchmark::DoNotOptimize(array.size());
     }
   }
-}
 
-// static void BM_allocate_pages_buffer_pool_allocator_full(benchmark::State& state) {}
+  state.SetLabel("Multiple allocations of page-sized vector with BufferPoolAllocator");
+}
 
 static void BM_allocate_pages_std_allocator(benchmark::State& state) {
   auto allocation_count = static_cast<size_t>(state.range(0));
@@ -46,12 +46,10 @@ static void BM_allocate_pages_std_allocator(benchmark::State& state) {
       benchmark::DoNotOptimize(array.size());
     }
   }
+
+  state.SetLabel("Multiple allocations of page-sized vector with std::allocator");
 }
 
-BENCHMARK(BM_allocate_pages_buffer_pool_allocator_empty)
-    ->Name("Multiple allocations of page-sized vector with BufferPoolAllocator")
-    ->Range(8, 8 << 9);
-BENCHMARK(BM_allocate_pages_std_allocator)
-    ->Name("Multiple allocations of page-sized vector with std::allocator")
-    ->Range(8, 8 << 9);
+BENCHMARK(BM_allocate_pages_buffer_pool_allocator_empty)->Range(8, 8 << 9);
+BENCHMARK(BM_allocate_pages_std_allocator)->Range(8, 8 << 9);
 }  // namespace hyrise

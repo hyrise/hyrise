@@ -130,6 +130,14 @@ std::unique_ptr<RangeFilter<T>> RangeFilter<T>::build_filter(const pmr_vector<T>
   static_assert(std::is_arithmetic_v<T>, "Range filters are only allowed on arithmetic types.");
 
   DebugAssert(max_ranges_count > 0, "Number of ranges to create needs to be larger zero.");
+  if (!std::is_sorted(dictionary.begin(), dictionary.end())) {
+    for (auto v : dictionary) {
+      std::cout << v << ' ';
+    }
+    std::cout << std::endl;
+  } else {
+    std::cout << "Sorted" << std::endl;
+  }
   DebugAssert(std::is_sorted(dictionary.begin(), dictionary.cend()), "Dictionary must be sorted in ascending order.");
 
   if (dictionary.empty()) {

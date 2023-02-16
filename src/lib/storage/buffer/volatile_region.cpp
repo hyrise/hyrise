@@ -2,14 +2,11 @@
 
 namespace hyrise {
 
-VolatileRegion::VolatileRegion(const size_t num_bytes) : _num_bytes(num_bytes) {
-  _data = std::make_unique<std::byte[]>(num_bytes);  // TODO: Do alinged_alloc
-  Assert(_data.get() != nullptr, "Could not properly allocate data for volatile region.");
-  for (FrameID frame_id{0}; frame_id < capacity(); frame_id++) {
+VolatileRegion::VolatileRegion(const size_t num_bytes) : _num_bytes(num_bytes), _frames(num_bytes / sizeof(Page32KiB)) {
+  for (FrameID frame_id{0}; frame_id < _frames.size(); frame_id++) {
     _free_frames.push_front(frame_id);
   }
-  _num_free_frames = capacity();
-  // TODO: This could conflict with aligner, maybe store the Frame somewhere else
+  _num_free_frames = _frames.size();
   Assert(_num_free_frames > 0, "There should be at least one free frame in the volatile region while setting up.");
 }
 
@@ -22,32 +19,32 @@ std::pair<FrameID, Page32KiB*> VolatileRegion::allocate() {
   const auto frame_id = _free_frames.front();
   _free_frames.pop_front();
   _num_free_frames--;
-  const auto page = reinterpret_cast<Page32KiB*>(_data.get() + frame_id * Page32KiB::size());
+  const auto page = &_frames[frame_id];
   return std::make_pair(frame_id, page);
 };
 
 FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
-  DebugAssert(_data.get() <= ptr, "Pointer is out of range of region");
-  DebugAssert(ptr < (_data.get() + capacity() * Page32KiB::size()), "Pointer is out of range of region");
-  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _data.get();
+  DebugAssert(_frames.data() <= ptr, "Pointer is out of range of region");
+  DebugAssert(ptr < (_frames.data() + capacity() * Page32KiB::size()), "Pointer is out of range of region");
+  const auto offset = reinterpret_cast<const std::byte*>(ptr) - reinterpret_cast<const std::byte*>(_frames.data());
   return FrameID{offset / Page32KiB::size()};
 }
 
-Page32KiB* VolatileRegion::get_page(const FrameID frame_id) const {
+Page32KiB* VolatileRegion::get_page(const FrameID frame_id) {
   DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
-  return reinterpret_cast<Page32KiB*>(_data.get() + frame_id * Page32KiB::size());
+  return &_frames[frame_id];
 }
 
 void VolatileRegion::deallocate(FrameID frame_id) {
   std::lock_guard<std::mutex> lock_guard(_mutex);
+
   DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
-  // const auto frame_id = static_cast<FrameID>((reinterpret_cast<std::byte*>(frame) - _data.get()) / sizeof(Frame));
   _free_frames.push_front(frame_id);
   _num_free_frames++;
 };
 
 size_t VolatileRegion::capacity() const {
-  return _num_bytes / Page32KiB::size();
+  return _frames.size();
 }
 
 size_t VolatileRegion::size() const {

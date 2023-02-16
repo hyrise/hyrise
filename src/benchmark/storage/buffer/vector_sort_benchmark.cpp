@@ -26,6 +26,8 @@ static void BM_vector_sort_raw_pointers(benchmark::State& state) {
     benchmark::DoNotOptimize(array.size());
   }
 
+  state.SetLabel("std::sort with pmr_vector (Buffer Pool) and raw pointers");
+
   add_buffer_manager_counters(state, *array.get_allocator().buffer_manager());
 }
 
@@ -43,18 +45,21 @@ static void BM_vector_sort(benchmark::State& state) {
     std::sort(array.begin(), array.end());
     benchmark::DoNotOptimize(array.size());
   }
+
+  if constexpr (std::is_same_v<std::vector<int32_t, std::allocator<int32_t>>, VectorType>) {
+    state.SetLabel("std::sort with std::vector");
+  } else if constexpr (std::is_same_v<boost::container::vector<int32_t, std::allocator<int32_t>>, VectorType>) {
+    state.SetLabel("std::sort with boost::container::vector");
+  } else if constexpr (std::is_same_v<boost::container::vector<int32_t, BufferPoolAllocator<int32_t>>, VectorType>) {
+    state.SetLabel("std::sort with pmr_vector (Buffer Pool)");
+  } else {
+    Fail("Cannot set label for given VectorType");
+  }
 }
 
-BENCHMARK_TEMPLATE(BM_vector_sort, std::vector<int32_t, std::allocator<int32_t>>)
-    ->Name("std::sort with std::vector")
-    ->Range(8, 8 << 9);
-BENCHMARK_TEMPLATE(BM_vector_sort, boost::container::vector<int32_t, std::allocator<int32_t>>)
-    ->Name("std::sort with boost::container::vector")
-    ->Range(8, 8 << 9);
-BENCHMARK_TEMPLATE(BM_vector_sort, boost::container::vector<int32_t, BufferPoolAllocator<int32_t>>)
-    ->Name("std::sort with pmr_vector (Buffer Pool)")
-    ->Range(8, 8 << 9);
-BENCHMARK(BM_vector_sort_raw_pointers)
-    ->Name("std::sort with pmr_vector (Buffer Pool) and raw pointers")
-    ->Range(8, 8 << 9);
+BENCHMARK_TEMPLATE(BM_vector_sort, std::vector<int32_t, std::allocator<int32_t>>)->Range(8, 8 << 9);
+BENCHMARK_TEMPLATE(BM_vector_sort, boost::container::vector<int32_t, std::allocator<int32_t>>)->Range(8, 8 << 9);
+BENCHMARK_TEMPLATE(BM_vector_sort, boost::container::vector<int32_t, BufferPoolAllocator<int32_t>>)->Range(8, 8 << 9);
+BENCHMARK(BM_vector_sort_raw_pointers)->Range(8, 8 << 9);
+
 }  // namespace hyrise

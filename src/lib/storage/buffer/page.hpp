@@ -21,6 +21,10 @@ struct alignas(512) Page {
 
   std::array<std::byte, static_cast<std::size_t>(SizeType)> _data;
 
+  operator char*() {
+    return reinterpret_cast<char*>(_data.data());
+  }
+
   std::byte* data() {
     return _data.data();
   }

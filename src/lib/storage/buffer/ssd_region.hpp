@@ -23,12 +23,10 @@ class SSDRegion  {
   DeviceType get_device_type() const;
 
  private:
-  std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>> _fd_stream;
-  std::iostream _backing_file;
+  int _fd;
   const std::filesystem::path _backing_file_name;
   const DeviceType _device_type;
 
-  static std::unique_ptr<boost::iostreams::stream_buffer<boost::iostreams::file_descriptor>> open_file_descriptor(
-      const std::filesystem::path& file_name);
+  static int open_file_descriptor(const std::filesystem::path& file_name);
 };
 }  // namespace hyrise

@@ -41,32 +41,24 @@ class BufferManagedPtr {
     }
   }
 
-  BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {
-    // pin();
-  }
+  BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {}
 
   template <class U>
-  BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {
-    // pin();
-  }
+  BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {}
 
   template <class T>
   BufferManagedPtr(T* ptr) {
     const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
     _page_id = page_id;
     _offset = offset;
-    // pin();
   }
 
-  explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {
-    // pin();
-  }
+  explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {}
 
   ~BufferManagedPtr() {
     if (_page_id == INVALID_PAGE_ID) {
       return;
     }
-    // unpin();
   }
 
   pointer operator->() const {

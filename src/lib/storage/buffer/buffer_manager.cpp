@@ -31,6 +31,9 @@ std::size_t get_volatile_capacity_from_env() {
 
 std::filesystem::path get_ssd_region_file_from_env() {
   if (const auto ssd_region_path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
+    if(std::filesystem::is_block_file(ssd_region_path)) {
+      return ssd_region_path;
+    }
     const auto path = std::filesystem::path(ssd_region_path);
     const auto now = std::chrono::system_clock::now();
     const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
