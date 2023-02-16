@@ -367,7 +367,7 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   }
 
   {
-    const auto scoped_lock = acquire_append_mutex();
+    const auto append_lock = acquire_append_mutex();
 
     for (const auto& existing_constraint : _table_key_constraints) {
       // Ensure that no other PRIMARY KEY is defined
@@ -404,13 +404,12 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
-  {
-    const auto scoped_lock = acquire_append_mutex();
-    Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set.");
-    _foreign_key_constraints.insert(foreign_key_constraint);
-    const auto referenced_table_scoped_lock = referenced_table->acquire_append_mutex();
-    referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
-  }
+  // TODO: check no superkey exists
+  const auto append_lock = acquire_append_mutex();
+  Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set.");
+  _foreign_key_constraints.insert(foreign_key_constraint);
+  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
+  referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
 }
 
 const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
@@ -422,7 +421,7 @@ const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
 }
 
 void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
-  Assert(_type == TableType::Data, "TableOrderConstraint are not tracked for reference tables across the PQP.");
+  Assert(_type == TableType::Data, "TableOrderConstraints are not tracked for reference tables across the PQP.");
 
   // Check validity of columns.
   const auto column_count = this->column_count();
@@ -435,11 +434,9 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  {
-    const auto scoped_lock = acquire_append_mutex();
+    const auto append_lock = acquire_append_mutex();
     Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set.");
     _table_order_constraints.insert(table_order_constraint);
-  }
 }
 
 const TableOrderConstraints& Table::soft_order_constraints() const {

@@ -209,7 +209,7 @@ class Table : private Noncopyable {
   void add_soft_key_constraint(const TableKeyConstraint& table_key_constraint);
   const TableKeyConstraints& soft_key_constraints() const;
 
-  // Adds foreign key constraint s.t. it can be retrieved by soft_foreign_key_constraints() of this table and by
+  // Adds foreign key constraint so it can be retrieved by soft_foreign_key_constraints() of this table and by
   // referenced_foreign_key_constraints() of the table that has the primary key columns.
   void add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint);
   const ForeignKeyConstraints& soft_foreign_key_constraints() const;

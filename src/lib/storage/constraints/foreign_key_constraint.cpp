@@ -8,7 +8,9 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-// Taken from https://stackoverflow.com/a/17074810
+// ForeignKeyConstraints with swapped columns are equivalent. To ensure they are represented the same way, we determine
+// the permutation that sorts `columns` and apply it to `columns` and `foreign_key_columns`. Idea taken from from
+// https://stackoverflow.com/a/17074810
 std::vector<size_t> sort_permutation(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
@@ -18,25 +20,12 @@ std::vector<size_t> sort_permutation(const std::vector<ColumnID>& column_ids) {
   return permutation;
 }
 
-void apply_permutation_in_place(std::vector<ColumnID>& column_ids, const std::vector<size_t>& permutation) {
-  const auto column_count = column_ids.size();
-  auto done = std::vector<bool>(column_count);
+std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const std::vector<size_t>& permutation){
+  auto sorted_column_ids = std::vector<ColumnID>(column_ids.size());
 
-  for (auto column_idx = size_t{0}; column_idx < column_count; ++column_idx) {
-    if (done[column_idx]) {
-      continue;
-    }
-
-    done[column_idx] = true;
-    auto original_position = column_idx;
-    auto target_position = permutation[column_idx];
-    while (column_idx != target_position) {
-      std::swap(column_ids[original_position], column_ids[target_position]);
-      done[target_position] = true;
-      original_position = target_position;
-      target_position = permutation[target_position];
-    }
-  }
+    std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(),
+        [&](const auto position){ return column_ids[position]; });
+    return sorted_column_ids;
 }
 
 }  // namespace
@@ -58,9 +47,12 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& columns,
   // equals to [A.b, A.a] in [B.y, B.x], but not equals to [A.a, A.b] in [B.y, B.x]. To guarantee unambiguous
   // dependencies, we order the columns and apply the same permutation to the included columns. Doing so, we obtain the
   // same costraint for [A.a, A.b] in [B.x, B.y] and [A.b, A.a] in [B.y, B.x].
-  const auto& permutation = sort_permutation(_columns);
-  apply_permutation_in_place(_columns, permutation);
-  apply_permutation_in_place(_foreign_key_columns, permutation);
+  if (columns.size() > 1) {
+    const auto& permutation = sort_permutation(_columns);
+    _columns = apply_permutation(_columns, permutation);
+    _foreign_key_columns = apply_permutation(_foreign_key_columns, permutation);
+
+  }
 }
 
 const std::vector<ColumnID>& ForeignKeyConstraint::foreign_key_columns() const {
