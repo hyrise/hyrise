@@ -10,7 +10,7 @@
 #include <vector>
 
 #include "abstract_segment.hpp"
-#include "index/abstract_index.hpp"
+#include "index/abstract_chunk_index.hpp"
 #include "reference_segment.hpp"
 #include "resolve_type.hpp"
 #include "storage/segment_iterate.hpp"
@@ -97,9 +97,9 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
   return _mvcc_data;
 }
 
-std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
+std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
-  auto result = std::vector<std::shared_ptr<AbstractIndex>>();
+  auto result = std::vector<std::shared_ptr<AbstractChunkIndex>>();
   std::copy_if(_indexes.cbegin(), _indexes.cend(), std::back_inserter(result),
                [&](const auto& index) { return index->is_index_for(segments); });
   return result;
@@ -124,13 +124,13 @@ void Chunk::finalize() {
   }
 }
 
-std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
+std::vector<std::shared_ptr<AbstractChunkIndex>> Chunk::get_indexes(const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_indexes(segments);
 }
 
-std::shared_ptr<AbstractIndex> Chunk::get_index(
-    const SegmentIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
+std::shared_ptr<AbstractChunkIndex> Chunk::get_index(
+    const ChunkIndexType index_type, const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto index_it = std::find_if(_indexes.cbegin(), _indexes.cend(), [&](const auto& index) {
     return index->is_index_for(segments) && index->type() == index_type;
   });
@@ -138,13 +138,13 @@ std::shared_ptr<AbstractIndex> Chunk::get_index(
   return (index_it == _indexes.cend()) ? nullptr : *index_it;
 }
 
-std::shared_ptr<AbstractIndex> Chunk::get_index(const SegmentIndexType index_type,
-                                                const std::vector<ColumnID>& column_ids) const {
+std::shared_ptr<AbstractChunkIndex> Chunk::get_index(const ChunkIndexType index_type,
+                                                     const std::vector<ColumnID>& column_ids) const {
   auto segments = _get_segments_for_ids(column_ids);
   return get_index(index_type, segments);
 }
 
-void Chunk::remove_index(const std::shared_ptr<AbstractIndex>& index) {
+void Chunk::remove_index(const std::shared_ptr<AbstractChunkIndex>& index) {
   auto it = std::find(_indexes.cbegin(), _indexes.cend(), index);
   DebugAssert(it != _indexes.cend(), "Trying to remove a non-existing index");
   _indexes.erase(it);
@@ -216,16 +216,14 @@ size_t Chunk::memory_usage(const MemoryUsageCalculationMode mode) const {
 
 std::vector<std::shared_ptr<const AbstractSegment>> Chunk::_get_segments_for_ids(
     const std::vector<ColumnID>& column_ids) const {
-  DebugAssert(([&]() {
-                const auto number_of_columns = static_cast<ColumnID>(column_count());
-                for (const auto& column_id : column_ids) {
-                  if (column_id >= number_of_columns) {
-                    return false;
-                  }
-                }
-                return true;
-              }()),
-              "column ids not within range [0, column_count()).");
+  if constexpr (HYRISE_DEBUG) {
+    const auto number_of_columns = static_cast<ColumnID>(column_count());
+    for (const auto& column_id : column_ids) {
+      Assert(column_id < number_of_columns, "ColumnID " + std::to_string(column_id) +
+                                                " exceeds the maximum column index which is " +
+                                                std::to_string(column_count() - 1) + ".");
+    }
+  }
 
   auto segments = std::vector<std::shared_ptr<const AbstractSegment>>{};
   segments.reserve(column_ids.size());

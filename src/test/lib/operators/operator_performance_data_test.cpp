@@ -257,7 +257,7 @@ TEST_F(OperatorPerformanceDataTest, JoinIndexStepRuntimes) {
 
   // Add group-key index (required dictionary encoding) to table
   ChunkEncoder::encode_all_chunks(table);
-  table->create_index<GroupKeyIndex>({ColumnID{0}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{0}});
 
   {
     auto join = std::make_shared<JoinIndex>(

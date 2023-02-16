@@ -486,7 +486,7 @@ std::vector<std::shared_ptr<AbstractLQPNode>> PredicatePlacementRule::_pull_up_t
       return {};
   }
 
-  Fail("GCC thinks this is reachable");
+  Fail("GCC thinks this is reachable.");
 }
 
 void PredicatePlacementRule::_insert_nodes(const std::shared_ptr<AbstractLQPNode>& node, const LQPInputSide input_side,
