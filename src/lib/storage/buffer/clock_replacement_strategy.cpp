@@ -1,6 +1,8 @@
 #include "clock_replacement_strategy.hpp"
 #include "utils/assert.hpp"
 
+// TODO: Allow removal of frame
+
 namespace hyrise {
 ClockReplacementStrategy::ClockReplacementStrategy(const size_t num_frames)
     : _num_frames(num_frames), _current_frame_id(0) {

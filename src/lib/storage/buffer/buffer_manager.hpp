@@ -17,6 +17,10 @@ class BufferManagedPtr;
 /**
  * @brief 
  * 
+ * HYRISE_BUFFER_BLOCK_PATH="/dev/nvme3n1"
+ * HYRISE_BUFFER_SCRATCH_PATH="/scratch/niklas.riekenbrauck"
+ * HYRISE_BUFFER_MANAGER_PATH=$HYRISE_BUFFER_BLOCK_PATH
+ * 
  * TODO: Ensure concurrent access via atomics
  */
 class BufferManager {

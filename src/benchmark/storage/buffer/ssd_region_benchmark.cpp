@@ -15,11 +15,20 @@
 
 namespace hyrise {
 
-// TODO: Test file vs block
-static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
-  // micro_benchmark_clear_cache();
+SSDRegion _create_ssd_region(benchmark::State& state, const SSDRegion::DeviceType device_type) {
+  if (device_type == SSDRegion::DeviceType::BLOCK) {
+    return SSDRegion(ssd_region_block_path());
+  } else if (device_type == SSDRegion::DeviceType::REGULAR_FILE) {
+    std::filesystem::create_directories(ssd_region_scratch_path() / state.name());
+    return SSDRegion(ssd_region_scratch_path() / state.name() / "data.bin");
+  } else {
+    Fail("Cannot create region");
+  }
+}
 
-  auto ssd_region = SSDRegion("/dev/nvme3n1");
+// TODO: The cache hits hard here
+static void BM_SSDRegionReadPagesSingle(benchmark::State& state, const SSDRegion::DeviceType device_type) {
+  auto ssd_region = _create_ssd_region(state, device_type);
   auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -32,10 +41,8 @@ static void BM_SSDRegionReadPagesSingle(benchmark::State& state) {
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
-static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
-  // micro_benchmark_clear_cache();
-
-  auto ssd_region = SSDRegion("/dev/nvme3n1");
+static void BM_SSDRegionReadPagesSerial(benchmark::State& state, const SSDRegion::DeviceType device_type) {
+  auto ssd_region = _create_ssd_region(state, device_type);
   const auto num_pages = state.range(0);
   std::vector<Page32KiB, boost::alignment::aligned_allocator<Page32KiB>> pages(num_pages);
 
@@ -49,10 +56,8 @@ static void BM_SSDRegionReadPagesSerial(benchmark::State& state) {
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
-static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
-  // micro_benchmark_clear_cache();
-
-  auto ssd_region = SSDRegion("/dev/nvme3n1");
+static void BM_SSDRegionReadPagesRandom(benchmark::State& state, const SSDRegion::DeviceType device_type) {
+  auto ssd_region = _create_ssd_region(state, device_type);
   const auto num_pages = state.range(0);
   std::vector<Page32KiB, boost::alignment::aligned_allocator<Page32KiB>> pages(num_pages);
 
@@ -71,10 +76,8 @@ static void BM_SSDRegionReadPagesRandom(benchmark::State& state) {
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
-static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
-  // micro_benchmark_clear_cache();
-
-  auto ssd_region = SSDRegion("/dev/nvme3n1");
+static void BM_SSDRegionWritePagesSingle(benchmark::State& state, const SSDRegion::DeviceType device_type) {
+  auto ssd_region = _create_ssd_region(state, device_type);
   auto outputPage = Page32KiB();
   const auto num_pages = state.range(0);
   for (auto _ : state) {
@@ -87,10 +90,8 @@ static void BM_SSDRegionWritePagesSingle(benchmark::State& state) {
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
-static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
-  // micro_benchmark_clear_cache();
-
-  auto ssd_region = SSDRegion("/dev/nvme3n1");
+static void BM_SSDRegionWritePagesSerial(benchmark::State& state, const SSDRegion::DeviceType device_type) {
+  auto ssd_region = _create_ssd_region(state, device_type);
   const auto num_pages = state.range(0);
   std::vector<Page32KiB, boost::alignment::aligned_allocator<Page32KiB>> pages(num_pages);
   for (auto _ : state) {
@@ -104,10 +105,39 @@ static void BM_SSDRegionWritePagesSerial(benchmark::State& state) {
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
 }
 
-BENCHMARK(BM_SSDRegionReadPagesSingle)->RangeMultiplier(2)->Range(2 << 8, 8 << 10);
-BENCHMARK(BM_SSDRegionReadPagesSerial)->RangeMultiplier(2)->Range(2 << 8, 8 << 10);
-BENCHMARK(BM_SSDRegionReadPagesRandom)->RangeMultiplier(2)->Range(2 << 8, 8 << 10);
-BENCHMARK(BM_SSDRegionWritePagesSingle)->RangeMultiplier(2)->Range(2 << 8, 8 << 10);
-BENCHMARK(BM_SSDRegionWritePagesSerial)->RangeMultiplier(2)->Range(2 << 8, 8 << 10);
+BENCHMARK_CAPTURE(BM_SSDRegionReadPagesSingle, block_device, SSDRegion::DeviceType::BLOCK)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+BENCHMARK_CAPTURE(BM_SSDRegionReadPagesSingle, regular_file, SSDRegion::DeviceType::REGULAR_FILE)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+
+BENCHMARK_CAPTURE(BM_SSDRegionReadPagesSerial, block_device, SSDRegion::DeviceType::BLOCK)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+BENCHMARK_CAPTURE(BM_SSDRegionReadPagesSerial, regular_file, SSDRegion::DeviceType::REGULAR_FILE)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+
+BENCHMARK_CAPTURE(BM_SSDRegionReadPagesRandom, block_device, SSDRegion::DeviceType::BLOCK)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+BENCHMARK_CAPTURE(BM_SSDRegionReadPagesRandom, regular_file, SSDRegion::DeviceType::REGULAR_FILE)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+
+BENCHMARK_CAPTURE(BM_SSDRegionWritePagesSingle, block_device, SSDRegion::DeviceType::BLOCK)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+BENCHMARK_CAPTURE(BM_SSDRegionWritePagesSingle, regular_file, SSDRegion::DeviceType::REGULAR_FILE)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+
+BENCHMARK_CAPTURE(BM_SSDRegionWritePagesSerial, block_device, SSDRegion::DeviceType::BLOCK)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
+BENCHMARK_CAPTURE(BM_SSDRegionWritePagesSerial, regular_file, SSDRegion::DeviceType::REGULAR_FILE)
+    ->RangeMultiplier(2)
+    ->Range(2 << 8, 8 << 10);
 
 }  // namespace hyrise

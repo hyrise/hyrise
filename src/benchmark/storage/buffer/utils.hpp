@@ -8,6 +8,9 @@
 
 namespace hyrise {
 
+// TODO: Add more context about machine, SSD and the Page konfigurations
+// USe ClobberMemory etc
+
 /**
  * BufferManagerBenchmarkMemoryManager is a utility class that registers a buffer manager as
  * the benchmark::MemoryManager for a Google benchmark. This is useful for tracking common memory related metrics.
@@ -18,22 +21,15 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
     _metrics_snapshot = _buffer_manager->metrics();
   }
 
-  void Stop(Result* result) override {
-    const auto metrics = _buffer_manager->metrics();
-    result->num_allocs = metrics.num_allocs - _metrics_snapshot.num_allocs;
-    result->max_bytes_used = std::max(metrics.max_bytes_used, _metrics_snapshot.num_allocs);
-    result->total_allocated_bytes = metrics.total_allocated_bytes - _metrics_snapshot.total_allocated_bytes;
-    // TODO: result->net_heap_growth
-    // The net changes in memory, in bytes, between Start and Stop.
-    // ie., total_allocated_bytes - total_deallocated_bytes.
-    // Init'ed to TombstoneValue if metric not available.
-  }
-
   void Stop(Result& result) override {
     const auto metrics = _buffer_manager->metrics();
     result.num_allocs = metrics.num_allocs - _metrics_snapshot.num_allocs;
     result.max_bytes_used = std::max(metrics.max_bytes_used, _metrics_snapshot.num_allocs);
     result.total_allocated_bytes = metrics.total_allocated_bytes - _metrics_snapshot.total_allocated_bytes;
+    // TODO: result->net_heap_growth
+    // The net changes in memory, in bytes, between Start and Stop.
+    // ie., total_allocated_bytes - total_deallocated_bytes.
+    // Init'ed to TombstoneValue if metric not available.
   }
 
   BufferManagerBenchmarkMemoryManager(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
@@ -56,6 +52,7 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
 */
 void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_manager);
 
-std::filesystem::path ssd_region_path();
+std::filesystem::path ssd_region_scratch_path();
+std::filesystem::path ssd_region_block_path();
 
 }  // namespace hyrise

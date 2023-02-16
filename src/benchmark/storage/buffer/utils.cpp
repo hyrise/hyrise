@@ -25,11 +25,19 @@ void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_
   // TODO: read and write rate,
 }
 
-std::filesystem::path ssd_region_path() {
-  if (const char* path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
+std::filesystem::path ssd_region_scratch_path() {
+  if (const char* path = std::getenv("HYRISE_BUFFER_MANAGER_SCRATCH_PATH")) {
     return path;
   } else {
-    Fail("HYRISE_BUFFER_MANAGER_PATH not found in environment for benchmarks");
+    Fail("HYRISE_BUFFER_MANAGER_SCRATCH_PATH not found in environment for benchmarks");
+  }
+}
+
+std::filesystem::path ssd_region_block_path() {
+  if (const char* path = std::getenv("HYRISE_BUFFER_MANAGER_BLOCK_PATH")) {
+    return path;
+  } else {
+    Fail("HYRISE_BUFFER_MANAGER_BLOCK_PATH not found in environment for benchmarks");
   }
 }
 
