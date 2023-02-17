@@ -194,9 +194,9 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // clang-format off
     JoinTestConfiguration default_configuration{
       InputTableConfiguration{
-        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), all_encoding_types.front()},  // NOLINT
+        InputSide::Left, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), encoding_types.front()},  // NOLINT
       InputTableConfiguration{
-        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), all_encoding_types.front()},  // NOLINT
+        InputSide::Right, all_chunk_sizes.front(), all_table_sizes.front(), all_input_table_types.front(), encoding_types.front()},  // NOLINT
       JoinMode::Inner,
       DataType::Int,
       DataType::Int,
@@ -453,7 +453,7 @@ class JoinTestRunner : public BaseTestWithParam<JoinTestConfiguration> {
     // Dictionaries.
     // Since materialization interacts with data types, NULLs and InputTableTypes, vary all those, too.
     // Use both Equals and LessThan to trigger sorting/non-sorting mode of JoinSortedMerge's ColumnMaterializer.
-    for (const auto encoding_type : all_encoding_types) {
+    for (const auto encoding_type : encoding_types) {
       for (const auto data_type : all_data_types) {
         for (const auto nullable : {false, true}) {
           for (const auto table_type : all_input_table_types) {

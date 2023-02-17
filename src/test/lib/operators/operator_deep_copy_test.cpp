@@ -27,9 +27,8 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-// At the moment all the deep_copy() methods just call the constructor again. At first sight, these tests
-// do not seem to add too much value because. This might change in the future. Then, these tests will
-// make much more sense.
+// At the moment, all the deep_copy() methods just call the constructor again. At first sight, these tests do not seem
+// to add too much value because. This might change in the future. Then, these tests will make much more sense.
 
 class OperatorDeepCopyTest : public BaseTest {
  protected:
@@ -284,8 +283,8 @@ TEST_F(OperatorDeepCopyTest, DeduplicationAmongRootAndSubqueryPQPs) {
 
 TEST_F(OperatorDeepCopyTest, DeduplicationAmongSubqueries) {
   /**
-   * In this test, we check whether deep copies preserve deduplication for
-   *  uncorrelated subqueries that share parts of their PQP among each other. Similar to TPC-DS Q9.
+   * In this test, we check whether deep copies preserve deduplication for uncorrelated subqueries that share parts of
+   * their PQP among each other. Similar to TPC-DS Q9.
    */
   auto get_table_a = std::make_shared<GetTable>(_table_name_a);
   auto get_table_b = std::make_shared<GetTable>(_table_name_b);

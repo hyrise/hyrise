@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "hyrise.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -239,8 +240,37 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     ++output_chunks_iter;
   }
 
+  // Lambda to check if all chunks indexed by a table index have been pruned by the ChunkPruningRule or
+  // ColumnPruningRule of the optimizer.
+  const auto all_indexed_segments_pruned = [&](const auto& table_index) {
+    // Check if indexed ColumnID has been pruned.
+    const auto indexed_column_id = table_index->get_indexed_column_id();
+    if (std::find(_pruned_column_ids.cbegin(), _pruned_column_ids.cend(), indexed_column_id) !=
+        _pruned_column_ids.cend()) {
+      return true;
+    }
+
+    const auto indexed_chunk_ids = table_index->get_indexed_chunk_ids();
+
+    // Early out if index is empty.
+    if (indexed_chunk_ids.empty()) {
+      return false;
+    }
+
+    // Check if the indexed chunks have been pruned.
+    DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()),
+                "Expected _pruned_chunk_ids vector to be sorted.");
+    return std::all_of(indexed_chunk_ids.cbegin(), indexed_chunk_ids.cend(), [&](const auto chunk_id) {
+      return std::binary_search(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend(), chunk_id);
+    });
+  };
+
+  auto table_indexes = stored_table->get_table_indexes();
+  table_indexes.erase(std::remove_if(table_indexes.begin(), table_indexes.end(), all_indexed_segments_pruned),
+                      table_indexes.cend());
+
   return std::make_shared<Table>(pruned_column_definitions, TableType::Data, std::move(output_chunks),
-                                 stored_table->uses_mvcc());
+                                 stored_table->uses_mvcc(), table_indexes);
 }
 
 }  // namespace hyrise
