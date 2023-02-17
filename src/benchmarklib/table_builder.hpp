@@ -79,7 +79,7 @@ using get_value_type = typename GetValueType<T>::value_type;
 template <typename T>
 constexpr bool is_null(const T& optional_or_value) {
   if constexpr (is_optional_v<T>) {
-    return !optional_or_value.has_value();
+    return !optional_or_value;
   } else {
     return false;
   }
@@ -89,7 +89,7 @@ constexpr bool is_null(const T& optional_or_value) {
 template <typename T>
 get_value_type<T>& get_value(T& optional_or_value) {
   if constexpr (is_optional_v<T>) {
-    return optional_or_value.value();
+    return *optional_or_value;
   } else {
     return optional_or_value;
   }

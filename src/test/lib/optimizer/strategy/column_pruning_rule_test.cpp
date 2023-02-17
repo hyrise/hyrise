@@ -440,8 +440,9 @@ TEST_F(ColumnPruningRuleTest, AnnotatePrunableJoinInput) {
 
       apply_rule(rule, lqp);
 
-      EXPECT_TRUE(join_node->prunable_input_side().has_value()) << "With JoinMode::" << join_mode;
-      EXPECT_EQ(*join_node->prunable_input_side(), prunable_input_side) << "With JoinMode::" << join_mode;
+      SCOPED_TRACE("With JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
+      EXPECT_TRUE(join_node->prunable_input_side());
+      EXPECT_EQ(*join_node->prunable_input_side(), prunable_input_side);
     }
   }
 }
