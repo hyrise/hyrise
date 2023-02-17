@@ -342,11 +342,22 @@ TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
 
   // Negative test.
+  // Columns are empty.
+  EXPECT_THROW(_stored_table_node->has_matching_ucc({}), std::logic_error);
+
+  // There is no matching UCC.
   EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b}));
   EXPECT_FALSE(_stored_table_node->has_matching_ucc({_c}));
   EXPECT_FALSE(_stored_table_node->has_matching_ucc({_b, _c}));
 
+  if constexpr (HYRISE_DEBUG) {
+    // Columns are not part of output_expressions() (i.e., pruned).
+    _stored_table_node->set_pruned_column_ids({ColumnID{0}});
+    EXPECT_THROW(_stored_table_node->has_matching_ucc({_a}), std::logic_error);
+  }
+
   // Test exact match.
+  _stored_table_node->set_pruned_column_ids({});
   EXPECT_TRUE(_stored_table_node->has_matching_ucc({_a}));
 
   // Test superset of column ids.
@@ -398,6 +409,54 @@ TEST_F(StoredTableNodeTest, OrderDependenciesTransitive) {
   EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_c}, {_b}}));
   // Created from [b] |-> [c] and [c] |-> [a].
   EXPECT_TRUE(order_dependencies.contains(OrderDependency{{_b}, {_a}}));
+}
+
+TEST_F(StoredTableNodeTest, HasMatchingOrderDependency) {
+  const auto table_c = Table::create_dummy_table({{"a", DataType::Int, false},
+                                                  {"b", DataType::Int, false},
+                                                  {"c", DataType::Float, false},
+                                                  {"d", DataType::Float, false},
+                                                  {"e", DataType::Float, false}});
+  Hyrise::get().storage_manager.add_table("t_c", table_c);
+  const auto stored_table_node = StoredTableNode::make("t_c");
+  const auto a = stored_table_node->get_column("a");
+  const auto b = stored_table_node->get_column("b");
+  const auto c = stored_table_node->get_column("c");
+  const auto d = stored_table_node->get_column("d");
+  const auto e = stored_table_node->get_column("e");
+
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}};
+  table_c->add_soft_order_constraint(order_constraint);
+  EXPECT_EQ(stored_table_node->order_dependencies().size(), 1);
+
+  // Negative tests.
+  // Columns are empty.
+  EXPECT_THROW(stored_table_node->has_matching_od({}, {c}), std::logic_error);
+  EXPECT_THROW(stored_table_node->has_matching_od({a, b}, {}), std::logic_error);
+
+  // There is no matching OD at all.
+  EXPECT_FALSE(stored_table_node->has_matching_od({a}, {b}));
+  EXPECT_FALSE(stored_table_node->has_matching_od({b}, {c}));
+  EXPECT_FALSE(stored_table_node->has_matching_od({c}, {a}));
+  EXPECT_FALSE(stored_table_node->has_matching_od({a, b}, {d}));
+  EXPECT_FALSE(stored_table_node->has_matching_od({a, b}, {c, e}));
+  EXPECT_FALSE(stored_table_node->has_matching_od({a, b}, {c, d, e}));
+  EXPECT_FALSE(stored_table_node->has_matching_od({a}, {c, d}));
+
+  if constexpr (HYRISE_DEBUG) {
+    // Columns are not part of output_expressions() (i.e., pruned).
+    stored_table_node->set_pruned_column_ids({ColumnID{0}});
+    EXPECT_THROW(stored_table_node->has_matching_od({_a}, {_b}), std::logic_error);
+    EXPECT_THROW(stored_table_node->has_matching_od({_b}, {_a}), std::logic_error);
+  }
+
+  // Test exact match.
+  stored_table_node->set_pruned_column_ids({});
+  EXPECT_TRUE(stored_table_node->has_matching_od({a, b}, {c, d}));
+
+  // Test sub- and superset of column ids.
+  EXPECT_TRUE(stored_table_node->has_matching_od({a, b, e}, {c, d}));
+  EXPECT_TRUE(stored_table_node->has_matching_od({a, b}, {c}));
 }
 
 TEST_F(StoredTableNodeTest, InclusionDependenciesSimple) {
@@ -470,6 +529,9 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 4);
 
   // Negative tests.
+  // Columns are empty.
+  EXPECT_THROW(_stored_table_node->has_matching_ind({}, *stored_table_b), std::logic_error);
+
   // There is no matching IND at all.
   EXPECT_FALSE(_stored_table_node->has_matching_ind({_b}, *stored_table_b));
   EXPECT_FALSE(_stored_table_node->has_matching_ind({_b, _c}, *stored_table_b));
@@ -485,11 +547,9 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   EXPECT_FALSE(_stored_table_node->has_matching_ind({_a, _b}, *stored_table_c));
 
   if constexpr (HYRISE_DEBUG) {
-    // Columns are pruned on this side.
+    // Columns are not part of output_expressions() (i.e., pruned).
     _stored_table_node->set_pruned_column_ids({ColumnID{0}});
     EXPECT_THROW(_stored_table_node->has_matching_ind({_a}, *stored_table_b), std::logic_error);
-    // Expressions are empty.
-    EXPECT_THROW(_stored_table_node->has_matching_ind({}, *stored_table_b), std::logic_error);
   }
 
   // Test exact match.

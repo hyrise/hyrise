@@ -283,7 +283,7 @@ bool AbstractLQPNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions) const {
-  DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
+  Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
@@ -297,7 +297,7 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
 
 bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions,
                                        const AbstractLQPNode& included_node) const {
-  DebugAssert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
+  Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
   DebugAssert(has_output_expressions(expressions),
               "The given expressions are not a subset of the LQP's output expressions.");
 
@@ -340,6 +340,24 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions
   }
 
   return false;
+}
+
+bool AbstractLQPNode::has_matching_od(
+    const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const {
+  Assert(!expressions.empty(), "Invalid input. List of expressions should not be empty.");
+  DebugAssert(has_output_expressions({expressions.cbegin(), expressions.cend()}),
+              "The given expressions are not a subset of the LQP's output expressions.");
+  Assert(!ordered_expressions.empty(), "Invalid input. List of ordered expressions should not be empty.");
+  DebugAssert(has_output_expressions({ordered_expressions.cbegin(), ordered_expressions.cend()}),
+              "The given ordered expressions are not a subset of the LQP's output expressions.");
+
+  const auto& order_dependencies = this->order_dependencies();
+  if (order_dependencies.empty()) {
+    return false;
+  }
+
+  return contains_matching_order_dependency(order_dependencies, expressions, ordered_expressions);
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {

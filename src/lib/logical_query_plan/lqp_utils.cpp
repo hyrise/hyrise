@@ -136,6 +136,20 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
   recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
+bool first_expressions_match(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
+                             const std::vector<std::shared_ptr<AbstractExpression>>& rhs_expressions) {
+  const auto expression_count = lhs_expressions.size();
+  Assert(expression_count <= rhs_expressions.size(), "Did not expect left-hand side to be longer.");
+
+  for (auto expression_idx = size_t{0}; expression_idx < expression_count; ++expression_idx) {
+    if (*lhs_expressions[expression_idx] != *rhs_expressions[expression_idx]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -662,6 +676,40 @@ InclusionDependencies find_matching_inclusion_dependencies(const InclusionDepend
   }
 
   return matching_inds;
+}
+
+bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) {
+  DebugAssert(!order_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
+  DebugAssert(!expressions.empty(), "Invalid input: List of expressions should not be empty.");
+  DebugAssert(!ordered_expressions.empty(), "Invalid input: List of ordered expressions should not be empty.");
+
+  for (const auto& od : order_dependencies) {
+    // Continue if OD requires more expressions to guarantee sortedness than provided.
+    if (od.expressions.size() > expressions.size()) {
+      continue;
+    }
+
+    // Continue if the OD's expression are not the first of the provided expressions. It is totally fine if the OD
+    // requires fewer expressions than given.
+    if (!first_expressions_match(od.expressions, expressions)) {
+      continue;
+    }
+
+    // Continue if more ordered expressions are requested than OD guarantees.
+    if (ordered_expressions.size() > od.ordered_expressions.size()) {
+      continue;
+    }
+
+    // Found matching OD if the requested ordered expressions are the first of the OD's ordered expressions. Totally
+    // fine if the OD orders more expressions that requested.
+    if (first_expressions_match(ordered_expressions, od.ordered_expressions)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 }  // namespace hyrise

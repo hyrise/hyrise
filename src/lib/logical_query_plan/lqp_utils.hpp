@@ -244,7 +244,7 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
                                                const std::vector<ColumnID>& column_ids);
 
 /**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
+ * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
  *         expressions. A unique column combination matches if it covers a subset of @param expressions.
  */
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
@@ -277,13 +277,22 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
 
 /**
- * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of
- *         expressions. A unique column combination matches if it covers a subset of @param expressions.
+ * @return All INDs in the given set of @param inclusion_dependencies matching the given set of
+ *         @param expressions. An inclusion dependency matches if it covers a superset of @param expressions.
  */
-bool contains_matching_inclusion_dependency(const InclusionDependencies& inclusion_dependencies,
-                                            const ExpressionUnorderedSet& expressions);
-
 InclusionDependencies find_matching_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies,
                                                            const ExpressionUnorderedSet& expressions);
+
+/**
+ * @return True if there is an OD in the given set of @param order_dependencies matching the given lists of @param
+ *         expressions and @param ordered_expressions. An order dependency matches if it covers at most all of @param
+ *         expressions and at least @param ordered_expressions.
+ *         Example: - @param expressions: [a, b]
+ *                  - @param ordered_expressions: [c, d]
+ *                  - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
+ */
+bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions);
 
 }  // namespace hyrise
