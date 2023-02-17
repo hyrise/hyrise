@@ -68,7 +68,6 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
 }
 
 /**
- *
  * @param output_segments [in/out] Vector to which the newly created reference segments will be written.
  * @param input_table Table which all the position lists reference
  * @param input_pos_list_ptrs_sptrs_by_segments Contains all position lists of all columns of input table
