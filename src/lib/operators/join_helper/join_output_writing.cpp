@@ -53,8 +53,8 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       const auto& ref_segment_uncasted = chunk->get_segment(column_id);
-      const auto ref_segment = std::static_pointer_cast<const ReferenceSegment>(ref_segment_uncasted);
-      pos_list_ptrs->push_back(ref_segment->pos_list());
+      const auto& ref_segment = static_cast<const ReferenceSegment&>(*ref_segment_uncasted);
+      pos_list_ptrs->push_back(ref_segment.pos_list());
     }
 
     // pos_list_ptrs contains all position lists of the reference segments for the current column at `column_id`.
