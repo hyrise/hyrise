@@ -20,12 +20,12 @@ std::vector<size_t> sort_permutation(const std::vector<ColumnID>& column_ids) {
   return permutation;
 }
 
-std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const std::vector<size_t>& permutation){
+std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const std::vector<size_t>& permutation) {
   auto sorted_column_ids = std::vector<ColumnID>(column_ids.size());
 
-    std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(),
-        [&](const auto position){ return column_ids[position]; });
-    return sorted_column_ids;
+  std::transform(permutation.begin(), permutation.end(), sorted_column_ids.begin(),
+                 [&](const auto position) { return column_ids[position]; });
+  return sorted_column_ids;
 }
 
 }  // namespace
@@ -51,7 +51,6 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& columns,
     const auto& permutation = sort_permutation(_columns);
     _columns = apply_permutation(_columns, permutation);
     _foreign_key_columns = apply_permutation(_foreign_key_columns, permutation);
-
   }
 }
 

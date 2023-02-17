@@ -459,9 +459,9 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-    const auto append_lock = acquire_append_mutex();
-    Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set.");
-    _table_order_constraints.insert(table_order_constraint);
+  const auto append_lock = acquire_append_mutex();
+  Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set.");
+  _table_order_constraints.insert(table_order_constraint);
 }
 
 const TableOrderConstraints& Table::soft_order_constraints() const {
