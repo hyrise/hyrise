@@ -137,6 +137,8 @@ class NodeQueueScheduler : public AbstractScheduler {
 
   size_t _queue_count{1};
   size_t _workers_per_node{2};
+
+  std::mutex _finish_mutex{};
 };
 
 }  // namespace hyrise

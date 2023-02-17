@@ -62,7 +62,7 @@ std::shared_ptr<AbstractTask> TaskQueue::steal() {
   return nullptr;
 }
 
-size_t TaskQueue::estimate_load() {
+size_t TaskQueue::estimate_load() const {
   auto estimated_load = size_t{0};
 
   // Simple heuristic to estimate the load: the higher the priority, the higher the costs. We use powers of two

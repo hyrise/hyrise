@@ -51,7 +51,8 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
 
  protected:
   void operator()();
-  void _work();
+
+  void _work(const bool allow_sleep);
 
   void _wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& tasks);
 

@@ -1,4 +1,6 @@
 #include "node_queue_scheduler.hpp"
+
+#include <atomic>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -10,7 +12,6 @@
 #include "job_task.hpp"
 #include "task_queue.hpp"
 #include "worker.hpp"
-
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
 
@@ -29,13 +30,14 @@ NodeQueueScheduler::~NodeQueueScheduler() {
 }
 
 void NodeQueueScheduler::begin() {
+  _shutdown_flag = false;
   DebugAssert(!_active, "Scheduler is already active");
 
   _workers.reserve(Hyrise::get().topology.num_cpus());
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
 
-  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
+  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
     _queues.emplace_back(queue);
@@ -57,17 +59,7 @@ void NodeQueueScheduler::begin() {
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
-  // Signal workers that scheduler is shutting down.
-  _shutdown_flag = true;
-
-  // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events.
-  for (const auto& queue : _queues) {
-    for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
-      queue->push(std::make_shared<JobTask>([]() {}, SchedulePriority::Default, false), SchedulePriority::Default);
-      ++_task_counter;
-    }
-  }
-
+  auto wait_loops = size_t{0};
   while (true) {
     auto num_finished_tasks = uint64_t{0};
     for (const auto& worker : _workers) {
@@ -79,16 +71,68 @@ void NodeQueueScheduler::wait_for_all_tasks() {
     }
 
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
+
+    if (wait_loops > 10'000) {
+      Fail("Time out during wait_for_all_tasks().");
+    }
+    ++wait_loops;
   }
 }
 
 void NodeQueueScheduler::finish() {
+  // Lock finish() to ensure that the shutdown tasks are not send twice (we later check for empty queues).
+  auto lock = std::lock_guard<std::mutex>{_finish_mutex};
+
+  if (!_active) {
+    return;
+  }
+
+  // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
+  // down might create tasks before the workers are set up.
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+
+  // Signal workers that scheduler is shutting down.
+  _shutdown_flag = true;
+
+  auto wait_flag = std::atomic_flag{};
+  auto waiting_workers_counter = std::atomic_uint32_t{0};
+
+  // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events. The
+  // tasks cannot be stolen to ensure that we reach each worker of each node.
+  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+  jobs.reserve(_queue_count * _workers_per_node);
+  for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
+    for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
+      auto shutdown_signal_task = std::make_shared<JobTask>([&] () {
+        ++waiting_workers_counter;
+        wait_flag.wait(false);
+      }, SchedulePriority::Default, false);
+      jobs.push_back(std::move(shutdown_signal_task));
+      jobs.back()->schedule(node_id);
+    }
+  }
+
+  const auto worker_count = _workers.size();
+  auto wait_loop_count = size_t{0};
+  while (waiting_workers_counter < worker_count) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // We wait up to 30 seconds (tests might run on congested servers).
+    if (wait_loop_count > 300) {
+      Fail("Time out during scheduler shut down. Workers might not have woken up correctly.");
+    }
+    ++wait_loop_count;
+  }
+
+  wait_flag.test_and_set();
+  wait_flag.notify_all();
+
   wait_for_all_tasks();
 
   // All queues SHOULD be empty by now
   if (HYRISE_DEBUG) {
     for (auto& queue : _queues) {
-      Assert(queue->empty(), "NodeQueueScheduler bug: Queue wasn't empty even though all tasks finished");
+      Assert(queue->empty(), "NodeQueueScheduler bug: queue wasn't empty even though all tasks finished");
     }
   }
 

@@ -46,7 +46,7 @@ class TaskQueue {
    * The priority queues are weighted, i.e., a task in the high priority queue leads to a larger load than a task in the
    * default priority queue.
    */
-  size_t estimate_load();
+  size_t estimate_load() const;
 
   /**
    * Semaphore to signal waiting workers for new tasks.
