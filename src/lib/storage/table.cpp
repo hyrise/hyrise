@@ -429,7 +429,6 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
-  // TODO: check no superkey exists
   const auto append_lock = acquire_append_mutex();
   Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set.");
   _foreign_key_constraints.insert(foreign_key_constraint);

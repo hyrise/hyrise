@@ -9,7 +9,7 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 // ForeignKeyConstraints with swapped columns are equivalent. To ensure they are represented the same way, we determine
-// the permutation that sorts `columns` and apply it to `columns` and `foreign_key_columns`. Idea taken from from
+// the permutation that sorts `columns` and apply it to `columns` and `foreign_key_columns`. Idea taken from
 // https://stackoverflow.com/a/17074810
 std::vector<size_t> sort_permutation(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
