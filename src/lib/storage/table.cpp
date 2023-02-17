@@ -13,6 +13,10 @@
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp"
+#include "storage/index/group_key/composite_group_key_index.hpp"
+#include "storage/index/group_key/group_key_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/segment_iterate.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"
@@ -25,21 +29,24 @@ std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& c
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc)
+             const std::optional<ChunkOffset> target_chunk_size, const UseMvcc use_mvcc,
+             const pmr_vector<std::shared_ptr<PartialHashIndex>>& table_indexes)
     : _column_definitions(column_definitions),
       _type(type),
       _use_mvcc(use_mvcc),
       _target_chunk_size(type == TableType::Data ? target_chunk_size.value_or(Chunk::DEFAULT_SIZE) : Chunk::MAX_SIZE),
-      _append_mutex(std::make_unique<std::mutex>()) {
+      _append_mutex(std::make_unique<std::mutex>()),
+      _table_indexes(table_indexes) {
   DebugAssert(target_chunk_size <= Chunk::MAX_SIZE, "Chunk size exceeds maximum");
   DebugAssert(type == TableType::Data || !target_chunk_size, "Must not set target_chunk_size for reference tables");
   DebugAssert(!target_chunk_size || *target_chunk_size > 0, "Table must have a chunk size greater than 0.");
 }
 
 Table::Table(const TableColumnDefinitions& column_definitions, const TableType type,
-             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc)
+             std::vector<std::shared_ptr<Chunk>>&& chunks, const UseMvcc use_mvcc,
+             pmr_vector<std::shared_ptr<PartialHashIndex>> const& table_indexes)
     : Table(column_definitions, type, type == TableType::Data ? std::optional{Chunk::DEFAULT_SIZE} : std::nullopt,
-            use_mvcc) {
+            use_mvcc, table_indexes) {
   _chunks = {chunks.begin(), chunks.end()};
 
   if constexpr (HYRISE_DEBUG) {
@@ -344,8 +351,26 @@ void Table::set_table_statistics(const std::shared_ptr<TableStatistics>& table_s
   _table_statistics = table_statistics;
 }
 
-std::vector<IndexStatistics> Table::indexes_statistics() const {
-  return _indexes;
+std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
+  return _chunk_indexes_statistics;
+}
+
+template <typename Index>
+void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
+  static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
+                "'Index' template argument is not an AbstractChunkIndex.");
+
+  const auto chunk_index_type = get_chunk_index_type_of<Index>();
+
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = get_chunk(chunk_id);
+    Assert(chunk, "Requested index on deleted chunk.");
+    Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
+    chunk->create_index<Index>(column_ids);
+  }
+  ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
+  _chunk_indexes_statistics.emplace_back(indexes_statistics);
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
@@ -488,6 +513,17 @@ void Table::set_value_clustered_by(const std::vector<ColumnID>& value_clustered_
   _value_clustered_by = value_clustered_by;
 }
 
+pmr_vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes() const {
+  return _table_indexes;
+}
+
+std::vector<std::shared_ptr<PartialHashIndex>> Table::get_table_indexes(const ColumnID column_id) const {
+  auto result = std::vector<std::shared_ptr<PartialHashIndex>>();
+  std::copy_if(_table_indexes.cbegin(), _table_indexes.cend(), std::back_inserter(result),
+               [&](const auto& index) { return index->is_index_for(column_id); });
+  return result;
+}
+
 size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   auto bytes = size_t{sizeof(*this)};
 
@@ -510,5 +546,36 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
 
   return bytes;
 }
+
+void Table::create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
+  std::shared_ptr<PartialHashIndex> table_index = nullptr;
+  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
+
+  if (chunk_ids.empty()) {
+    Fail("Creating a partial hash index with no chunks being indexed is not supported.");
+  }
+
+  chunks_to_index.reserve(chunk_ids.size());
+  for (const auto& chunk_id : chunk_ids) {
+    const auto& chunk = get_chunk(chunk_id);
+    Assert(chunk, "Requested index on deleted chunk.");
+    Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
+    chunks_to_index.emplace_back(chunk_id, chunk);
+  }
+
+  table_index = std::make_shared<PartialHashIndex>(chunks_to_index, column_id);
+
+  _table_indexes.emplace_back(table_index);
+
+  auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index};
+  _table_indexes_statistics.emplace_back(table_indexes_statistics);
+}
+
+template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,
+                                                       const std::string& name);
+template void Table::create_chunk_index<CompositeGroupKeyIndex>(const std::vector<ColumnID>& column_ids,
+                                                                const std::string& name);
+template void Table::create_chunk_index<AdaptiveRadixTreeIndex>(const std::vector<ColumnID>& column_ids,
+                                                                const std::string& name);
 
 }  // namespace hyrise

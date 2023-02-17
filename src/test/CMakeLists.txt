@@ -194,6 +194,7 @@ set(
     lib/storage/index/group_key/variable_length_key_store_test.cpp
     lib/storage/index/group_key/variable_length_key_test.cpp
     lib/storage/index/multi_segment_index_test.cpp
+    lib/storage/index/partial_hash/partial_hash_index_test.cpp
     lib/storage/index/single_segment_index_test.cpp
     lib/storage/iterables_test.cpp
     lib/storage/lz4_segment_test.cpp
@@ -210,7 +211,7 @@ set(
     lib/storage/value_segment_test.cpp
     lib/tasks/chunk_compression_task_test.cpp
     lib/utils/check_table_equal_test.cpp
-    lib/utils/column_ids_after_pruning_test.cpp
+    lib/utils/column_pruning_utils_test.cpp
     lib/utils/date_time_utils_test.cpp
     lib/utils/format_bytes_test.cpp
     lib/utils/format_duration_test.cpp

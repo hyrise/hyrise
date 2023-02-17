@@ -17,6 +17,7 @@ add_subdirectory(libpqxx)
 add_subdirectory(magic_enum)
 add_subdirectory(nlohmann_json)
 add_subdirectory(robin-map)
+add_subdirectory(sparse-map)
 add_subdirectory(tpch-dbgen)
 add_subdirectory(zstd/build/cmake)
 # The library target provided by the zstd library is incomplete, see https://github.com/facebook/zstd/issues/2377
@@ -35,6 +36,7 @@ add_library(
 
     ${PARSER_DIR}/src/parser/bison_parser.cpp
     ${PARSER_DIR}/src/parser/flex_lexer.cpp
+    ${PARSER_DIR}/src/sql/CreateStatement.cpp
     ${PARSER_DIR}/src/sql/Expr.cpp
     ${PARSER_DIR}/src/sql/PrepareStatement.cpp
     ${PARSER_DIR}/src/sql/SQLStatement.cpp

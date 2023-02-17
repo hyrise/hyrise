@@ -12,6 +12,7 @@
 #include <boost/hana/type.hpp>
 
 #include "all_type_variant.hpp"
+#include "magic_enum.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
 #include "utils/enum_constant.hpp"
 
@@ -75,8 +76,6 @@ std::ostream& operator<<(std::ostream& stream, const SegmentEncodingSpec& spec);
 
 using ChunkEncodingSpec = std::vector<SegmentEncodingSpec>;
 
-inline constexpr std::array all_encoding_types{EncodingType::Unencoded,        EncodingType::Dictionary,
-                                               EncodingType::FrameOfReference, EncodingType::FixedStringDictionary,
-                                               EncodingType::RunLength,        EncodingType::LZ4};
+inline constexpr auto encoding_types = magic_enum::enum_values<EncodingType>();
 
 }  // namespace hyrise

@@ -6,11 +6,11 @@
 #include "hyrise.hpp"
 #include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
-#include "storage/index/index_statistics.hpp"
+#include "storage/index/chunk_index_statistics.hpp"
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/column_ids_after_pruning.hpp"
+#include "utils/column_pruning_utils.hpp"
 
 namespace {
 
@@ -139,11 +139,11 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
   return unique_column_combinations;
 }
 
-std::vector<IndexStatistics> StoredTableNode::indexes_statistics() const {
+std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {
   DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
 
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
-  auto pruned_indexes_statistics = table->indexes_statistics();
+  auto pruned_indexes_statistics = table->chunk_indexes_statistics();
 
   if (_pruned_column_ids.empty()) {
     return pruned_indexes_statistics;
