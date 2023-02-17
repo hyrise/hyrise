@@ -33,6 +33,11 @@ jobs:
         run: |
             cd ${{github.workspace}}/hyrise/cmake-build-debug-gcc
             ./hyriseTest
+
+      - name: Run TPCH (SF 0.1)
+        run: |
+            cd ${{github.workspace}}/hyrise/cmake-build-debug-gcc
+            ./hyriseBenchmarkTPCH -r 1 -s 0.1
     
   build-linux-clang:
     runs-on: ubuntu-22.04
@@ -64,6 +69,11 @@ jobs:
         run: |
             cd ${{github.workspace}}/hyrise/cmake-build-debug-clang
             ./hyriseTest
+      
+      - name: Run TPCH (SF 0.1)
+        run: |
+            cd ${{github.workspace}}/hyrise/cmake-build-debug-clang
+            ./hyriseBenchmarkTPCH -r 1 -s 0.1 
 
   build-mac-clang:
     runs-on: macos-latest
@@ -88,3 +98,8 @@ jobs:
         run: |
             cd ${{github.workspace}}/hyrise/cmake-build-debug-clang
             ./hyriseTest
+
+      - name: Run TPCH (SF 0.1)
+        run: |
+            cd ${{github.workspace}}/hyrise/cmake-build-debug-clang
+            ./hyriseBenchmarkTPCH -r 1 -s 0.1 
