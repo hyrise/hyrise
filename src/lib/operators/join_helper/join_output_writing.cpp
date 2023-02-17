@@ -22,10 +22,10 @@ struct PosListsHasher {
 };
 
 /**
- * Returns a vector where each entry with index i references a PosLists object. If entries i and j reference the same
- * PosLists object, both columns originate from the same table. As a consequence, they can later share the same (newly
- * created) PosLists of the join result.
- * @param input_table
+ * @param input_table the input reference table for which the PosList mapping is built
+ * @return Returns a vector where each entry with index i (for column i of input_table) references a PosLists object.
+ *         If entries i and j reference the same PosLists object, both columns originate from the same table. As a
+ *         consequence, they can later share the same (newly created) PosLists of the join result.
  */
 PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& input_table) {
   Assert(input_table->type() == TableType::References, "Function only works for reference tables");
@@ -33,7 +33,11 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
   const auto chunk_count = input_table->chunk_count();
   const auto column_count = input_table->column_count();
 
-  std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher> shared_pos_lists_by_pos_lists;
+  // We use a map to recognize when columns of the input table share the same PosLists (i.e., using shared pointers to
+  // the same PosList). The value of this map is later used to get the actual position lists when constructing new
+  // reference segments (otherwise, we would need to cast AbstractSegment to ReferenceSegment first in order to obtain
+  // the PosList).
+  auto shared_pos_lists_by_pos_lists = std::unordered_map<PosLists, std::shared_ptr<PosLists>, PosListsHasher>{};
   shared_pos_lists_by_pos_lists.reserve(column_count);
 
   auto pos_lists_by_column = PosListsByColumn(column_count);
@@ -47,7 +51,7 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
     auto pos_list_ptrs = std::make_shared<PosLists>();
     pos_list_ptrs->reserve(chunk_count);
 
-    // Iterate over every chunk and add the chunks segment with column_id to pos_list_ptrs
+    // Iterate over every chunk and add the chunk's segment with column_id to pos_list_ptrs.
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = input_table->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -68,30 +72,31 @@ PosListsByColumn setup_pos_list_mapping(const std::shared_ptr<const Table>& inpu
 }
 
 /**
- * @param output_segments [in/out] Vector to which the newly created reference segments will be written.
- * @param input_table Table which all the position lists reference
- * @param input_pos_list_ptrs_sptrs_by_segments Contains all position lists of all columns of input table
+ * @param output_segments [in/out] vector to which the newly created reference segments will be written
+ * @param input_table table which all the position lists reference
+ * @param input_pos_lists_by_column contains all position lists of all columns of input table
  * @param pos_list contains the positions of rows to use from the input table
  */
 void write_output_segments(Segments& output_segments, const std::shared_ptr<const Table>& input_table,
-                           const PosListsByColumn& input_pos_list_ptrs_sptrs_by_segments,
+                           const PosListsByColumn& input_pos_lists_by_column,
                            std::shared_ptr<RowIDPosList>& pos_list) {
   std::unordered_map<std::shared_ptr<PosLists>, std::shared_ptr<RowIDPosList>> output_pos_list_cache;
 
-  std::shared_ptr<Table> dummy_table;
+  auto dummy_table = std::shared_ptr<Table>{};
   const auto chunk_count = input_table->chunk_count();
   const auto column_count = input_table->column_count();
 
-  // Add segments from input table to output chunk.
-  // For every column and every row in pos_list: get corresponding PosList of input_pos_list_ptrs_sptrs_by_segments
-  // and add it to new_pos_list which is added to output_segments
+  // Add segments from input table to output chunk. For every column and every row in pos_list: get corresponding
+  // PosList of input_pos_lists_by_column and add it to new_pos_list which is added to output_segments.
   for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     if (input_table->type() == TableType::References) {
+      // Handle reference tables. As we do not allow referencing other reference segments, we need to resolve reference
+      // and write new reference segments.
       if (chunk_count == 0) {
-        // If there are no Chunks in the input_table, we can't deduce the Table that input_table is referencing to.
-        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which Table the ReferenceSegment that
-        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment ref
-        // it.
+        // If there are no chunks in the input_table, we can't deduce the table that input_table is referencing.
+        // pos_list will contain only NULL_ROW_IDs anyway, so it doesn't matter which table the ReferenceSegment that
+        // we output is referencing. HACK, but works fine: we create a dummy table and let the ReferenceSegment
+        // reference it.
         if (!dummy_table) {
           dummy_table = Table::create_dummy_table(input_table->column_definitions());
         }
@@ -101,11 +106,11 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
 
       // Fetch the PosLists for the currently processed column. We can later use this list to avoid extracting
       // PosList again from an AbstractSegment and it provides us with a key for `output_pos_list_cache`.
-      const auto& input_table_pos_lists = input_pos_list_ptrs_sptrs_by_segments[column_id];
+      const auto& input_table_pos_lists = input_pos_lists_by_column[column_id];
 
       auto iter = output_pos_list_cache.find(input_table_pos_lists);
       if (iter == output_pos_list_cache.end()) {
-        // Get the row ids that are referenced
+        // Get the row ids that are referenced.
         auto new_pos_list = std::make_shared<RowIDPosList>();
         new_pos_list->reserve(pos_list->size());
 
@@ -114,17 +119,18 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
           if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
             new_pos_list->push_back(row);
             common_chunk_id = INVALID_CHUNK_ID;
-          } else {
-            const auto& referenced_pos_list = *(*input_table_pos_lists)[row.chunk_id];
-            new_pos_list->push_back(referenced_pos_list[row.chunk_offset]);
+            continue;
+          }
 
-            // Check if the current row matches the ChunkIDs that we have seen in previous rows
-            const auto referenced_chunk_id = referenced_pos_list[row.chunk_offset].chunk_id;
-            if (!common_chunk_id) {
-              common_chunk_id = referenced_chunk_id;
-            } else if (*common_chunk_id != referenced_chunk_id) {
-              common_chunk_id = INVALID_CHUNK_ID;
-            }
+          const auto& referenced_pos_list = *(*input_table_pos_lists)[row.chunk_id];
+          new_pos_list->push_back(referenced_pos_list[row.chunk_offset]);
+
+          // Check if the current row matches the ChunkIDs that we have seen in previous rows.
+          const auto referenced_chunk_id = referenced_pos_list[row.chunk_offset].chunk_id;
+          if (!common_chunk_id) {
+            common_chunk_id = referenced_chunk_id;
+          } else if (*common_chunk_id != referenced_chunk_id) {
+            common_chunk_id = INVALID_CHUNK_ID;
           }
         }
         if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
@@ -142,34 +148,40 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
           std::static_pointer_cast<const ReferenceSegment>(input_table->get_chunk(ChunkID{0})->get_segment(column_id));
       output_segments.push_back(std::make_shared<ReferenceSegment>(
           reference_segment->referenced_table(), reference_segment->referenced_column_id(), iter->second));
-    } else {
-      // Check if the PosList references a single chunk. This is easier than tracking the flag through materialization,
-      // radix partitioning, and so on. Also, actually checking for this property instead of simply forwarding it may
-      // allows us to set guarantee_single_chunk in more cases. In cases where more than one chunk is referenced, this
-      // should be cheap. In the other cases, the cost of iterating through the PosList are likely to be amortized in
-      // following operators. See the comment at the previous call of guarantee_single_chunk to understand when this
-      // guarantee might not be given.
-      // This is not part of PosList as other operators should have a better understanding of how they emit references.
-      auto common_chunk_id = std::optional<ChunkID>{};
-      for (const auto& row : *pos_list) {
-        if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
-          common_chunk_id = INVALID_CHUNK_ID;
-          break;
-        } else {
-          if (!common_chunk_id) {
-            common_chunk_id = row.chunk_id;
-          } else if (*common_chunk_id != row.chunk_id) {
-            common_chunk_id = INVALID_CHUNK_ID;
-            break;
-          }
-        }
-      }
-      if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
-        pos_list->guarantee_single_chunk();
+
+      continue;
+    }
+
+    /**
+     * Handling of data tables.
+     * 
+     * Check if the PosList references a single chunk. This is easier than tracking the flag through materialization,
+     * radix partitioning, and so on. Also, actually checking for this property instead of simply forwarding it may
+     * allows us to set guarantee_single_chunk in more cases. In cases where more than one chunk is referenced, this
+     * should be cheap. In the other cases, the cost of iterating through the PosList are likely to be amortized in
+     * following operators. See the comment at the previous call of guarantee_single_chunk to understand when this
+     * guarantee might not be given.
+     * This is not part of PosList as other operators should have a better understanding of how they emit references.
+     */
+    auto common_chunk_id = std::optional<ChunkID>{};
+    for (const auto& row : *pos_list) {
+      if (row.chunk_offset == INVALID_CHUNK_OFFSET) {
+        common_chunk_id = INVALID_CHUNK_ID;
+        break;
       }
 
-      output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
+      if (!common_chunk_id) {
+        common_chunk_id = row.chunk_id;
+      } else if (*common_chunk_id != row.chunk_id) {
+        common_chunk_id = INVALID_CHUNK_ID;
+        break;
+      }
     }
+    if (common_chunk_id && *common_chunk_id != INVALID_CHUNK_ID) {
+      pos_list->guarantee_single_chunk();
+    }
+
+    output_segments.push_back(std::make_shared<ReferenceSegment>(input_table, column_id, pos_list));
   }
 }
 }  // namespace
@@ -182,17 +194,14 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
   /**
-     * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be
-     *  quite a lot Partitions (>500 seen), input Chunks (>500 seen), and columns (>50 seen), this speeds up
-     *  write_output_chunks a lot.
-     *
-     * They do two things:
-     *      - Make it possible to re-use output pos lists if two segments in the input table have exactly the same
-     *          PosLists Chunk by Chunk
-     *      - Avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
-     *
-     * They hold one entry per column in the table, not per AbstractSegment in a single chunk
-     */
+   * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be hundreds of
+   * partitions, hundreds of input chunks, and dozens of columns, this speeds up write_output_chunks a lot.
+   *
+   * They do two things:
+   *      - make it possible to re-use output position lists if two segments in the input table have exactly the same
+   *          PosLists chunk by chunk (see setup_pos_list_mapping() for more details)
+   *      - avoid creating the std::vector<const RowIDPosList*> for each Partition over and over again.
+   */
 
   auto left_side_pos_lists_by_column = PosListsByColumn{};
   auto right_side_pos_lists_by_column = PosListsByColumn{};
@@ -221,7 +230,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
   auto chunk_input_position = size_t{0};
 
   while (partition_id < pos_lists_left_size) {
-    // Moving the values into a shared pos list saves us some work in write_output_segments. We know that
+    // Moving the values into a shared PosList saves us some work in write_output_segments. We know that
     // left_side_pos_list and right_side_pos_list will not be used again.
     auto left_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_left[partition_id]));
     auto right_side_pos_list = std::make_shared<RowIDPosList>(std::move(pos_lists_right[partition_id]));
@@ -243,8 +252,8 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     right_side_pos_list->reserve(MAX_SIZE);
 
     if (allow_partition_merge) {
-      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same
-      // size or are empty (in case of semi/anti joins).
+      // Checking the probe side's PosLists is sufficient. The PosLists from the build side have either the same size
+      // or are empty (in case of semi/anti joins).
       while (partition_id + 1 < pos_lists_right.size() && right_side_pos_list->size() < MIN_SIZE &&
              right_side_pos_list->size() + pos_lists_right[partition_id + 1].size() < MAX_SIZE) {
         // Copy entries from following PosList into the current working set (left_side_pos_list) and free the memory
@@ -261,10 +270,10 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
       }
     }
 
-    // We need to pass the pos lists as parameters to ensure the shared_ptr is copied. Capturing by value result in
-    // const shared_ptrs and write_output_segments expects non-const.
+    // We need to pass the position lists as parameters to ensure the shared_ptr is copied (capturing by value would
+    // result in const shared_ptrs and write_output_segments expects non-const).
     auto write_output_segments_task = [&, chunk_input_position](auto left_side_pos_list, auto right_side_pos_list) {
-      Segments output_segments;
+      auto output_segments = Segments{};
 
       // Swap back the inputs, so that the order of the output columns is not changed.
       switch (output_column_order) {
