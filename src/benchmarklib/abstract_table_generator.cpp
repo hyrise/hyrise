@@ -47,7 +47,6 @@ void AbstractTableGenerator::generate_and_store() {
   metrics.generation_duration = timer.lap();
   std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
 
-
   /**
    * Finalizing all chunks of all tables that are still mutable.
    */
