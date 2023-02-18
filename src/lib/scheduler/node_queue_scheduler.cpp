@@ -11,9 +11,9 @@
 #include "hyrise.hpp"
 #include "job_task.hpp"
 #include "task_queue.hpp"
-#include "worker.hpp"
 #include "uid_allocator.hpp"
 #include "utils/assert.hpp"
+#include "worker.hpp"
 
 namespace hyrise {
 
@@ -45,8 +45,8 @@ void NodeQueueScheduler::begin() {
     const auto& topology_node = Hyrise::get().topology.nodes()[node_id];
 
     for (const auto& topology_cpu : topology_node.cpus) {
-      _workers.emplace_back(
-          std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()}, topology_cpu.cpu_id, _shutdown_flag));
+      _workers.emplace_back(std::make_shared<Worker>(queue, WorkerID{_worker_id_allocator->allocate()},
+                                                     topology_cpu.cpu_id, _shutdown_flag));
     }
   }
 
@@ -103,10 +103,12 @@ void NodeQueueScheduler::finish() {
   jobs.reserve(_queue_count * _workers_per_node);
   for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
     for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
-      auto shutdown_signal_task = std::make_shared<JobTask>([&] () {
-        ++waiting_workers_counter;
-        wait_flag.wait(false);
-      }, SchedulePriority::Default, false);
+      auto shutdown_signal_task = std::make_shared<JobTask>(
+          [&]() {
+            ++waiting_workers_counter;
+            wait_flag.wait(false);
+          },
+          SchedulePriority::Default, false);
       jobs.push_back(std::move(shutdown_signal_task));
       jobs.back()->schedule(node_id);
     }

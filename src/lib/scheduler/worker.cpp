@@ -32,8 +32,8 @@ std::shared_ptr<Worker> Worker::get_this_thread_worker() {
   return ::this_thread_worker.lock();
 }
 
-
-Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id, std::atomic_bool& shutdown_flag)
+Worker::Worker(const std::shared_ptr<TaskQueue>& queue, WorkerID worker_id, CpuID cpu_id,
+               std::atomic_bool& shutdown_flag)
     : _queue(queue), _id(worker_id), _cpu_id(cpu_id), _shutdown_flag(shutdown_flag) {
   // Generate a random distribution from 0-99 for later use, see below
   _random.resize(100);
