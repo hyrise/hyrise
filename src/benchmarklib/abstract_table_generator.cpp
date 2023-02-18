@@ -42,8 +42,11 @@ void AbstractTableGenerator::generate_and_store() {
   Hyrise::get().topology.use_default_topology(_benchmark_config->data_preparation_cores);
   Hyrise::get().set_scheduler(std::make_shared<NodeQueueScheduler>());
 
+  std::cout << "- Loading/Generating tables " << std::endl;
   auto table_info_by_name = generate();
   metrics.generation_duration = timer.lap();
+  std::cout << "- Loading/Generating tables done (" << format_duration(metrics.generation_duration) << ")" << std::endl;
+
 
   /**
    * Finalizing all chunks of all tables that are still mutable.

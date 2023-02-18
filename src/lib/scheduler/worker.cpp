@@ -63,6 +63,7 @@ void Worker::operator()() {
   Assert(!_shutdown_flag, "Shut down requested before worker started processing tasks.");
 
   while (Hyrise::get().scheduler()->active()) {
+    // Worker is allowed to sleep as long as the scheduler is not shutting down.
     _work(!_shutdown_flag);
   }
 }
@@ -98,14 +99,10 @@ void Worker::_work(const bool allow_sleep) {
     }
 
     // If there is no ready task neither in our queue nor in any other, worker waits for a new task to be pushed to the
-    // own queue or returns after timer exceeded (whatever occurs first).
+    // own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed (e.g., when
+    // _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
     if (!work_stealing_successful && !_shutdown_flag && allow_sleep) {
       _queue->semaphore.wait();
-      task = _queue->pull();
-    }
-
-    if (!task) {
-      // Neither stealing nor waiting succeeded, or scheduler is shutting down.
       return;
     }
   }
@@ -218,6 +215,7 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
   while (!all_own_tasks_done()) {
     // Run any job. This could be any job that is currently enqueued. Note: This job may internally call wait_for_tasks
     // again, in which case we would first wait for the inner task before the outer task has a chance to proceed.
+    // We do not allow the worker to sleep here as we know that the passed task list is not yet fully processed.
     _work(false);
   }
 }
