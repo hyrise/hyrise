@@ -80,9 +80,9 @@ void ResultSerializer::send_query_response(
         const auto attribute_value = (*segments[segment_id])[chunk_offset];
         // The PostgreSQL protocol requires the conversion of values to strings
         const auto string_value = lossy_variant_cast<pmr_string>(attribute_value);
-        if (string_value.has_value()) {
+        if (string_value) {
           // Sum up string lengths for a row to save an extra loop during serialization
-          string_length_sum += static_cast<uint32_t>(string_value.value().size());
+          string_length_sum += static_cast<uint32_t>(string_value->size());
         }
         values_as_strings[segment_id] = string_value;
       }
@@ -94,7 +94,7 @@ void ResultSerializer::send_query_response(
 std::string ResultSerializer::build_command_complete_message(const ExecutionInformation& execution_information,
                                                              const uint64_t row_count) {
   if (execution_information.custom_command_complete_message) {
-    return execution_information.custom_command_complete_message.value();
+    return *execution_information.custom_command_complete_message;
   }
 
   return build_command_complete_message(execution_information.root_operator_type, row_count);

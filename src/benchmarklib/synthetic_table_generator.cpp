@@ -76,7 +76,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   // add column definitions and initialize each value vector
   TableColumnDefinitions column_definitions;
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    const auto column_name = column_specifications[column_id].name ? column_specifications[column_id].name.value()
+    const auto column_name = column_specifications[column_id].name ? *column_specifications[column_id].name
                                                                    : "column_" + std::to_string(column_id + 1);
     column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
@@ -183,7 +183,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           } else {
             segments[column_index] =
                 ChunkEncoder::encode_segment(value_segment, column_specifications[column_index].data_type,
-                                             column_specifications[column_index].segment_encoding_spec.value());
+                                             *column_specifications[column_index].segment_encoding_spec);
           }
         });
       }));

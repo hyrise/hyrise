@@ -224,7 +224,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
   // are not prunable. Malformed predicates such as can_prune(PredicateCondition::LessThan, {5}, NULL_VALUE) are not
   // pruned either. While this call might be considered nonsensical (everything compared to NULL is null), we do not
   // require callers to identify these circumstances.
-  if (variant_is_null(variant_value) || (variant_value2.has_value() && variant_is_null(variant_value2.value())) ||
+  if (variant_is_null(variant_value) || (variant_value2 && variant_is_null(*variant_value2)) ||
       predicate_condition == PredicateCondition::IsNull || predicate_condition == PredicateCondition::IsNotNull) {
     return false;
   }
@@ -276,7 +276,7 @@ bool RangeFilter<T>::does_not_contain(const PredicateCondition predicate_conditi
        *    - both bounds are within the same gap
        */
 
-      Assert(variant_value2.has_value(), "Between operator needs two values.");
+      Assert(variant_value2, "Between operator needs two values.");
       const auto value2 = boost::get<T>(*variant_value2);
 
       // a BETWEEN 5 AND 4 will always be empty
