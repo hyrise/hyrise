@@ -34,7 +34,7 @@ std::optional<JoinGraphStatisticsCache::Bitmask> JoinGraphStatisticsCache::bitma
 
   visit_lqp(lqp, [&](const auto& node) {
     // Early out if `bitmask.reset()` was called during the search below
-    if (!bitmask.has_value()) {
+    if (!bitmask) {
       return LQPVisitation::DoNotVisitInputs;
     }
 

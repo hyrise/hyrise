@@ -138,7 +138,7 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
       return LQPVisitation::VisitInputs;
     }
 
-    const auto& left_expression = in_expression->value();
+    const auto& left_expression = in_expression->operand();
     const auto& right_side_expressions = static_cast<ListExpression&>(*in_expression->set()).elements();
 
     // Check whether all elements are literal values of the same data type (that is not NULL).
@@ -182,7 +182,7 @@ void InExpressionRewriteRule::_apply_to_plan_without_subqueries(
                   _cardinality_estimator()->estimate_cardinality(sub_node->left_input()) >=
                       MIN_INPUT_ROWS_FOR_DISJUNCTION) &&
                  !in_expression->is_negated() &&
-                 !std::dynamic_pointer_cast<FunctionExpression>(in_expression->value())) {
+                 !std::dynamic_pointer_cast<FunctionExpression>(in_expression->operand())) {
         rewrite_to_disjunction(sub_node, left_expression, right_side_expressions, *common_data_type);
       } else {
         // Stick with the ExpressionEvaluator
