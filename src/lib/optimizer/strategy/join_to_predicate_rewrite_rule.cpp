@@ -5,6 +5,7 @@
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
+#include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
@@ -15,9 +16,66 @@ namespace {
 using namespace hyrise;                         // NOLINT(build/namespaces)
 using namespace hyrise::expression_functional;  // NOLINT(build/namespaces)
 
-void gather_rewrite_info(
-    const std::shared_ptr<JoinNode>& join_node,
-    std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>& rewritables) {
+bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_node,
+                              const std::shared_ptr<AbstractExpression>& candidate_column_expression,
+                              const std::shared_ptr<AbstractExpression>& exchangeable_column_expression,
+                              const std::shared_ptr<AbstractLQPNode>& join_node,
+                              const std::shared_ptr<AbstractLQPNode>& removable_subtree) {
+  // Test that OD candidate_expression |-> exchangeable_column_expression holds.
+  if (!predicate_node->has_matching_od({exchangeable_column_expression}, {candidate_column_expression})) {
+    return false;
+  }
+
+  // To ensure that all tuples between min(key) and max(key) match, there must be an IND without our predicate. We check
+  // this by removing the predicate and look if the IND holds.
+  const auto& left_input = predicate_node->left_input();
+  lqp_remove_node(predicate_node);
+  const auto rewritable = removable_subtree->has_matching_ind({exchangeable_column_expression}, *join_node);
+  lqp_insert_node_above(left_input, predicate_node);
+  return rewritable;
+}
+
+void perform_ucc_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide prunable_side,
+                         const std::shared_ptr<AbstractLQPNode>& subquery_root,
+                         const std::shared_ptr<AbstractExpression>& join_column,
+                         const std::shared_ptr<AbstractExpression>& projection_column) {
+  if (prunable_side == LQPInputSide::Left) {
+    join_node->set_left_input(join_node->right_input());
+  }
+  join_node->set_right_input(nullptr);
+
+  const auto projection_node = ProjectionNode::make(expression_vector(projection_column), subquery_root);
+  const auto replacement_predicate_node = PredicateNode::make(equals_(join_column, lqp_subquery_(projection_node)));
+
+  lqp_replace_node(join_node, replacement_predicate_node);
+}
+
+void perform_od_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide prunable_side,
+                        const std::shared_ptr<AbstractLQPNode>& subquery_root,
+                        const std::shared_ptr<AbstractExpression>& join_column,
+                        const std::shared_ptr<AbstractExpression>& projection_column) {
+  if (prunable_side == LQPInputSide::Left) {
+    join_node->set_left_input(join_node->right_input());
+  }
+  join_node->set_right_input(nullptr);
+
+  const auto aggregate_min = min_(projection_column);
+  const auto aggregate_max = max_(projection_column);
+  // clang-format off
+  const auto aggregate_node =
+  AggregateNode::make(expression_vector(), expression_vector(aggregate_min, aggregate_max),
+    subquery_root);
+  // clang-format on
+  const auto projection_node_min = ProjectionNode::make(expression_vector(aggregate_min), aggregate_node);
+  const auto projection_node_max = ProjectionNode::make(expression_vector(aggregate_max), aggregate_node);
+
+  const auto replacement_predicate_node = PredicateNode::make(
+      between_inclusive_(join_column, lqp_subquery_(projection_node_min), lqp_subquery_(projection_node_max)));
+
+  lqp_replace_node(join_node, replacement_predicate_node);
+}
+
+void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
   const auto prunable_side = join_node->prunable_input_side();
   if (!prunable_side) {
     return;
@@ -27,23 +85,26 @@ void gather_rewrite_info(
   // finding and combining multiple suitable predicates. We also only rewrite inner and semi joins. However,
   // AntiNullAsFalse joins could be rewritten to a scan with PredicateCondition::NotEquals. We cannot rewrite outer or
   // cross joins, as the results of the original and the rewritten query plan would not be equal.
-  if (join_node->join_predicates().size() != 1 ||
+  const auto& join_predicates = join_node->join_predicates();
+  if (join_predicates.size() != 1 ||
       (join_node->join_mode != JoinMode::Inner && join_node->join_mode != JoinMode::Semi)) {
     return;
   }
 
-  const auto& join_predicates = join_node->join_predicates();
   const auto& join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates.front());
   Assert(join_predicate, "A join must have at least one BinaryPredicateExpression.");
 
   auto removable_subtree = join_node->input(*prunable_side);
   auto rewrite_predicate = std::shared_ptr<PredicateNode>{};
   auto exchangeable_column_expression = std::shared_ptr<AbstractExpression>{};
+  auto used_join_column_expression = std::shared_ptr<AbstractExpression>{};
 
   if (expression_evaluable_on_lqp(join_predicate->left_operand(), *removable_subtree)) {
     exchangeable_column_expression = join_predicate->left_operand();
+    used_join_column_expression = join_predicate->right_operand();
   } else if (expression_evaluable_on_lqp(join_predicate->right_operand(), *removable_subtree)) {
     exchangeable_column_expression = join_predicate->right_operand();
+    used_join_column_expression = join_predicate->left_operand();
   }
 
   Assert(exchangeable_column_expression,
@@ -58,8 +119,9 @@ void gather_rewrite_info(
   // predicate that filters on a UCC, a maximum of one tuple remains in the result relation. Since at this point, we al-
   // ready know the candidate join is basically a semi join, we can further transform the join to a single predicate
   // node filtering the join column for the value of the remaining tuple's join attribute.
-  visit_lqp(removable_subtree, [&removable_subtree, &rewrite_predicate](auto& current_node) {
-    if (current_node->type == LQPNodeType::Union) {
+  auto performed_rewrite = false;
+  visit_lqp(removable_subtree, [&](auto& current_node) {
+    if (performed_rewrite || current_node->type == LQPNodeType::Union) {
       return LQPVisitation::DoNotVisitInputs;
     }
     if (current_node->type != LQPNodeType::Predicate) {
@@ -68,6 +130,19 @@ void gather_rewrite_info(
 
     // We need to get a predicate node with a BinaryPredicateExpression.
     const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
+    if (const auto& candidate_expression = std::dynamic_pointer_cast<BetweenExpression>(candidate->predicate())) {
+      if (!expression_evaluable_on_lqp(candidate_expression->operand(), *removable_subtree) ||
+          !qualifies_for_od_rewrite(candidate, candidate_expression->operand(), exchangeable_column_expression,
+                                    join_node, removable_subtree)) {
+        return LQPVisitation::VisitInputs;
+      }
+
+      perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
+                         exchangeable_column_expression);
+      performed_rewrite = true;
+      return LQPVisitation::DoNotVisitInputs;
+    }
+
     const auto candidate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
     if (!candidate_expression) {
       return LQPVisitation::VisitInputs;
@@ -98,51 +173,27 @@ void gather_rewrite_info(
     // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
     // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
     // root and the current node, invalidating the unique column combination.
-    if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree) ||
-        !removable_subtree->has_matching_ucc({candidate_column_expression})) {
+    if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
       return LQPVisitation::VisitInputs;
     }
 
-    rewrite_predicate = candidate;
-    return LQPVisitation::DoNotVisitInputs;
+    if (removable_subtree->has_matching_ucc({candidate_column_expression})) {
+      perform_ucc_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
+                          exchangeable_column_expression);
+      performed_rewrite = true;
+      return LQPVisitation::DoNotVisitInputs;
+    }
+
+    if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, join_node,
+                                 removable_subtree)) {
+      perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
+                         exchangeable_column_expression);
+      performed_rewrite = true;
+      return LQPVisitation::DoNotVisitInputs;
+    }
+
+    return LQPVisitation::VisitInputs;
   });
-
-  if (rewrite_predicate) {
-    rewritables.emplace_back(join_node, *prunable_side, rewrite_predicate);
-  }
-}
-
-void perform_rewrite(const std::shared_ptr<JoinNode>& join_node, const LQPInputSide prunable_side,
-                     const std::shared_ptr<PredicateNode>& rewrite_predicate) {
-  if (prunable_side == LQPInputSide::Left) {
-    join_node->set_left_input(join_node->right_input());
-  }
-  join_node->set_right_input(nullptr);
-
-  // Get the join predicate, as we need to extract which column to filter on. We ensured before that there is exactly
-  // one predicate for the current join.
-  const auto& join_predicates = join_node->join_predicates();
-  const auto& join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates.front());
-
-  Assert(join_predicate, "A join must have at least one BinaryPredicateExpression.");
-
-  auto used_join_column = std::shared_ptr<AbstractExpression>{};
-  auto projection_column = std::shared_ptr<AbstractExpression>{};
-
-  if (expression_evaluable_on_lqp(join_predicate->left_operand(), *join_node->left_input())) {
-    used_join_column = join_predicate->left_operand();
-    projection_column = join_predicate->right_operand();
-  } else if (expression_evaluable_on_lqp(join_predicate->right_operand(), *join_node->left_input())) {
-    used_join_column = join_predicate->right_operand();
-    projection_column = join_predicate->left_operand();
-  }
-
-  const auto projections = expression_vector(projection_column);
-  const auto projection_node = ProjectionNode::make(projections, rewrite_predicate);
-  const auto replacement_predicate_node =
-      PredicateNode::make(equals_(used_join_column, lqp_subquery_(projection_node)));
-
-  lqp_replace_node(join_node, replacement_predicate_node);
 }
 
 }  // namespace
@@ -156,20 +207,13 @@ std::string JoinToPredicateRewriteRule::name() const {
 
 void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  // `rewritables finally contains all rewritable join nodes, their unused input side, and the predicates to be used for
-  // the rewrites.
-  auto rewritables = std::vector<std::tuple<std::shared_ptr<JoinNode>, LQPInputSide, std::shared_ptr<PredicateNode>>>{};
   visit_lqp(lqp_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Join) {
       const auto join_node = std::static_pointer_cast<JoinNode>(node);
-      gather_rewrite_info(join_node, rewritables);
+      try_rewrite(join_node);
     }
     return LQPVisitation::VisitInputs;
   });
-
-  for (const auto& [join_node, prunable_side, rewrite_predicate] : rewritables) {
-    perform_rewrite(join_node, prunable_side, rewrite_predicate);
-  }
 }
 
 }  // namespace hyrise
