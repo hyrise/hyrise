@@ -50,7 +50,7 @@ nlohmann::json EncodingConfig::to_json() const {
     nlohmann::json mapping{};
     mapping["encoding"] = std::string{magic_enum::enum_name(spec.encoding_type)};
     if (spec.vector_compression_type) {
-      mapping["compression"] = vector_compression_type_to_string.left.at(spec.vector_compression_type.value());
+      mapping["compression"] = vector_compression_type_to_string.left.at(*spec.vector_compression_type);
     }
     return mapping;
   };

@@ -159,6 +159,7 @@ Contact: firstname.lastname@hpi.de
 ## Contributors
 -   Yannick   Bäumer
 -   Lawrence  Benson
+-   Jasper    Blum
 -   Lukas     Budach
 -   Timo      Djürken
 -   Alexander Dubrawski
@@ -166,6 +167,7 @@ Contact: firstname.lastname@hpi.de
 -   Leonard   Geier
 -   Richard   Ebeling
 -   Fabian    Engel
+-   Ben-Noah  Engelhaupt
 -   Moritz    Eyssen
 -   Martin    Fischer
 -   Christian Flach
@@ -175,12 +177,14 @@ Contact: firstname.lastname@hpi.de
 -   Pascal    Führlich
 -   Carl      Gödecken
 -   Adrian    Holfter
+-   Theresa   Hradilak
 -   Ben       Hurdelhey
 -   Sven      Ihde
 -   Ivan      Illic
 -   Jonathan  Janetzki
 -   Michael   Janke
 -   Max       Jendruk
+-   Tobias    Jordan
 -   David     Justen
 -   Youri     Kaminsky
 -   Marvin    Keller
@@ -197,12 +201,15 @@ Contact: firstname.lastname@hpi.de
 -   Julian    Menzler
 -   Torben    Meyer
 -   Leander   Neiß
+-   Vincent   Rahn
 -   Hendrik   Rätz
 -   Alexander Riese
+-   Marc      Rosenau
 -   Johannes  Schneider
 -   David     Schumann
 -   Simon     Siegert
 -   Arthur    Silber
+-   Furkan    Simsek
 -   Toni      Stachewicz
 -   Daniel    Stolpe
 -   Jonathan  Striebel
@@ -210,6 +217,7 @@ Contact: firstname.lastname@hpi.de
 -   Hendrik   Tjabben
 -   Justin    Trautmann
 -   Carsten   Walther
+-   Leo       Wendt
 -   Lukas     Wenzel
 -   Fabian    Wiebe
 -   Tim       Zimmermann

@@ -459,8 +459,8 @@ set(
     storage/frame_of_reference_segment.hpp
     storage/frame_of_reference_segment/frame_of_reference_encoder.hpp
     storage/frame_of_reference_segment/frame_of_reference_segment_iterable.hpp
-    storage/index/abstract_index.cpp
-    storage/index/abstract_index.hpp
+    storage/index/abstract_chunk_index.cpp
+    storage/index/abstract_chunk_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.cpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_index.hpp
     storage/index/adaptive_radix_tree/adaptive_radix_tree_nodes.cpp
@@ -481,9 +481,19 @@ set(
     storage/index/group_key/variable_length_key_proxy.hpp
     storage/index/group_key/variable_length_key_store.cpp
     storage/index/group_key/variable_length_key_store.hpp
-    storage/index/index_statistics.cpp
-    storage/index/index_statistics.hpp
-    storage/index/segment_index_type.hpp
+    storage/index/chunk_index_statistics.cpp
+    storage/index/chunk_index_statistics.hpp
+    storage/index/table_index_statistics.cpp
+    storage/index/table_index_statistics.hpp
+    storage/index/partial_hash/flat_map_iterator.cpp
+    storage/index/partial_hash/flat_map_iterator.hpp
+    storage/index/partial_hash/flat_map_iterator_impl.cpp
+    storage/index/partial_hash/flat_map_iterator_impl.hpp
+    storage/index/partial_hash/partial_hash_index.cpp
+    storage/index/partial_hash/partial_hash_index.hpp
+    storage/index/partial_hash/partial_hash_index_impl.cpp
+    storage/index/partial_hash/partial_hash_index_impl.hpp
+    storage/index/chunk_index_type.hpp
     storage/lqp_view.cpp
     storage/lqp_view.hpp
     storage/lz4_segment.cpp
@@ -568,8 +578,8 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/column_ids_after_pruning.cpp
-    utils/column_ids_after_pruning.hpp
+    utils/column_pruning_utils.cpp
+    utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
@@ -724,6 +734,7 @@ target_link_libraries_system(
     flat-hash-map
     nlohmann_json::nlohmann_json
     robin_map
+    sparse_map
     SQLite::SQLite3
     tbb
 )

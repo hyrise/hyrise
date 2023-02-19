@@ -21,9 +21,9 @@ class OperatorsGetTableTest : public BaseTest {
 
     const auto& table = Hyrise::get().storage_manager.get_table("int_int_float");
     ChunkEncoder::encode_all_chunks(table);
-    table->create_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
-    table->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
-    table->create_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
+    table->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a");
+    table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b1");
+    table->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b2");
   }
 };
 

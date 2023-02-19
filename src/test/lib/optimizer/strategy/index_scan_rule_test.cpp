@@ -72,7 +72,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithoutIndex) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
-  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
 
   generate_mock_statistics();
 
@@ -85,7 +85,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithIndexOnOtherColumn) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithMultiSegmentIndex) {
-  table->create_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
+  table->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{2}, ColumnID{1}});
 
   generate_mock_statistics();
 
@@ -109,7 +109,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithTwoColumnPredicate) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
-  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
 
   generate_mock_statistics(80'000);
 
@@ -122,7 +122,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanWithHighSelectivity) {
 }
 
 TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
-  table->create_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
+  table->create_chunk_index<AdaptiveRadixTreeIndex>({ColumnID{2}});
 
   generate_mock_statistics(1'000'000);
 
@@ -135,7 +135,7 @@ TEST_F(IndexScanRuleTest, NoIndexScanIfNotGroupKey) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
-  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
 
   generate_mock_statistics(1'000'000);
 
@@ -148,7 +148,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndex) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
-  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
   stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   generate_mock_statistics(1'000'000);
@@ -162,7 +162,7 @@ TEST_F(IndexScanRuleTest, IndexScanWithIndexPrunedColumn) {
 }
 
 TEST_F(IndexScanRuleTest, IndexScanOnlyOnOutputOfStoredTableNode) {
-  table->create_index<GroupKeyIndex>({ColumnID{2}});
+  table->create_chunk_index<GroupKeyIndex>({ColumnID{2}});
 
   generate_mock_statistics(1'000'000);
 

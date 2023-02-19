@@ -15,7 +15,7 @@ TEST_F(TransactionHandlingTest, CreateTableWithinTransaction) {
   // begin and commit transaction statements are executed successfully
   EXPECT_TRUE(execution_information.error_messages.empty());
   EXPECT_EQ(execution_information.result_table, nullptr);
-  EXPECT_EQ(execution_information.custom_command_complete_message.value(), "COMMIT");
+  EXPECT_EQ(*execution_information.custom_command_complete_message, "COMMIT");
   EXPECT_EQ(Hyrise::get().storage_manager.get_table("users")->row_count(), 1);
 }
 

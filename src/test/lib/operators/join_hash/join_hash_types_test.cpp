@@ -31,7 +31,7 @@ void test_hash_map(const std::vector<T>& values) {
   // With only one offset value passed, one hash map will be created
   EXPECT_EQ(hash_maps.size(), 1);
 
-  const auto& first_hash_map = hash_maps.at(0).value();
+  const auto& first_hash_map = *hash_maps.at(0);
 
   ChunkOffset offset = ChunkOffset{0};
   for (const auto& element : partition.elements) {
