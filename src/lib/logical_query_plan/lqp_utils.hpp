@@ -236,12 +236,13 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_nodes_by_type(const std::
 std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_ptr<AbstractLQPNode>& lqp);
 
 /**
- * @return A set of column expressions created by the given @param lqp_node, matching the given @param column_ids.
- *         This is a helper method that maps column ids from tables to the matching output expressions. Conceptually,
- *         it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes and MockNodes.
+ * @return A vector or set of column expressions created by the given @param lqp_node, matching the given @param
+ *         column_ids. This is a helper method that maps column ids from tables to the matching output expressions.
+ *         Conceptually, it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes,
+ *         and MockNodes.
  */
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::vector<ColumnID>& column_ids);
+template <typename ExpressionContainer>
+ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 /**
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param

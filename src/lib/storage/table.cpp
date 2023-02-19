@@ -411,7 +411,8 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(_type == TableType::Data, "Foreign key constraints are not tracked for reference tables across the PQP.");
 
-  Assert(&*foreign_key_constraint.foreign_key_table() == &*this, "Foreign key constraint is added to wrong table");
+  Assert(foreign_key_constraint.foreign_key_table() && &*foreign_key_constraint.foreign_key_table() == &*this,
+         "Foreign key constraint is added to wrong table");
 
   // Check validity of specified columns
   for (const auto& column_id : foreign_key_constraint.foreign_key_columns()) {
@@ -431,9 +432,9 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   {
     const auto scoped_lock = acquire_append_mutex();
     Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set");
-    _foreign_key_constraints.insert(foreign_key_constraint);
+    Assert(_foreign_key_constraints.insert(foreign_key_constraint).second, "Error adding constraint");
     const auto referenced_table_scoped_lock = referenced_table->acquire_append_mutex();
-    referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
+    Assert(referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint).second, "WTF");
   }
 }
 

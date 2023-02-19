@@ -18,6 +18,9 @@ class ForeignKeyConstraint final : public AbstractTableConstraint {
   ForeignKeyConstraint(const std::vector<ColumnID>& columns, const std::vector<ColumnID>& foreign_key_columns,
                        const std::shared_ptr<Table>& table, const std::shared_ptr<Table>& foreign_key_table);
 
+  bool operator==(const ForeignKeyConstraint& other) const;
+  bool operator!=(const ForeignKeyConstraint& other) const;
+
   const std::vector<ColumnID>& foreign_key_columns() const;
 
   const std::shared_ptr<Table> table() const;

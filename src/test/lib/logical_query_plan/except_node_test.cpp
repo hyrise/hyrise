@@ -86,7 +86,8 @@ TEST_F(ExceptNodeTest, ForwardOrderDependencies) {
   EXPECT_TRUE(_except_node->order_dependencies().empty());
 
   const auto od = OrderDependency{{_a}, {_b}};
-  _mock_node1->set_order_dependencies({od});
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  _mock_node1->set_order_constraints({order_constraint});
   EXPECT_EQ(_mock_node1->order_dependencies().size(), 1);
 
   const auto& order_dependencies = _except_node->order_dependencies();
@@ -99,8 +100,8 @@ TEST_F(ExceptNodeTest, NoInclusionDependencies) {
   EXPECT_TRUE(_except_node->inclusion_dependencies().empty());
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  _mock_node1->set_inclusion_dependencies({ind});
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
 
   EXPECT_TRUE(_except_node->inclusion_dependencies().empty());

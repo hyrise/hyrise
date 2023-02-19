@@ -49,7 +49,8 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& columns,
       _table{table},
       _foreign_key_table{foreign_key_table} {
   Assert(_columns.size() == _foreign_key_columns.size(), "Invalid number of columns for ForeignKeyConstraint.");
-  Assert(table && foreign_key_table, "ForeignKeyConstraint must reference two tables.");
+  // For testing, MockNodes may have a ForeignKeyContraint without table.
+  Assert(foreign_key_table, "ForeignKeyConstraint must reference at least one table.");
 
   // For INDs with the same columns, the order of the expressions is relevant. For instance, [A.a, A.b] in [B.x, B.y] is
   // equals to [A.b, A.a] in [B.y, B.x], but not equals to [A.a, A.b] in [B.y, B.x]. To guarantee unambiguous
@@ -66,6 +67,14 @@ const std::vector<ColumnID>& ForeignKeyConstraint::foreign_key_columns() const {
 
 const std::shared_ptr<Table> ForeignKeyConstraint::table() const {
   return _table.lock();
+}
+
+bool ForeignKeyConstraint::operator==(const ForeignKeyConstraint& other) const {
+  return AbstractTableConstraint::operator==(other);
+
+}
+bool ForeignKeyConstraint::operator!=(const ForeignKeyConstraint& other) const {
+    return AbstractTableConstraint::operator!=(other);
 }
 
 const std::shared_ptr<Table> ForeignKeyConstraint::foreign_key_table() const {

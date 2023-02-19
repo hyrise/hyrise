@@ -230,11 +230,12 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
   }
   /**
    * Future work: The join keys of equals_() predicates form a new IND. However, we currently only care about INDs that
-   * result from foreign key constraints, which are known
+   * result from foreign key constraints.
    */
 }
 
 InclusionDependencies JoinNode::_output_inclusion_dependencies(
+  // TODO: test!
     const InclusionDependencies& left_inclusion_dependencies,
     const InclusionDependencies& right_inclusion_dependencies) const {
   // Check if there are any INDs that might be forwarded.

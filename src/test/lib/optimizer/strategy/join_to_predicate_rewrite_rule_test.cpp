@@ -30,6 +30,10 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "a");
     node_b = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "b");
+    table_c = Table::create_dummy_table(
+        {{"x", DataType::Int, false}, {"y", DataType::Int, false}, {"z", DataType::Int, false}});
+    Hyrise::get().storage_manager.add_table("table_c", table_c);
+    node_c = StoredTableNode::make("table_c");
 
     a = node_a->get_column("a");
     b = node_a->get_column("b");
@@ -37,13 +41,18 @@ class JoinToPredicateRewriteRuleTest : public StrategyBaseTest {
     u = node_b->get_column("u");
     v = node_b->get_column("v");
     w = node_b->get_column("w");
+    x = node_c->get_column("x");
+    y = node_c->get_column("y");
+    z = node_c->get_column("z");
 
     rule = std::make_shared<JoinToPredicateRewriteRule>();
   }
 
   std::shared_ptr<JoinToPredicateRewriteRule> rule;
   std::shared_ptr<MockNode> node_a, node_b;
-  std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w;
+  std::shared_ptr<StoredTableNode> node_c;
+  std::shared_ptr<LQPColumnExpression> a, b, c, u, v, w, x, y, z;
+  std::shared_ptr<Table> table_c;
 };
 
 class JoinToPredicateRewriteRuleJoinModeTest : public JoinToPredicateRewriteRuleTest,
@@ -52,7 +61,7 @@ class JoinToPredicateRewriteRuleJoinModeTest : public JoinToPredicateRewriteRule
 INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToPredicateRewriteRuleJoinModeTest,
                          ::testing::ValuesIn(magic_enum::enum_values<JoinMode>()), enum_formatter<JoinMode>);
 
-TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
+TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformUccRewrite) {
   // The rule should only rewrite inner and semi joins.
   auto key_constraints = TableKeyConstraints{};
   key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
@@ -68,7 +77,8 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
   ProjectionNode::make(expression_vector(b),
     join_node);
 
-  const auto subquery = ProjectionNode::make(expression_vector(u),
+  const auto subquery =
+  ProjectionNode::make(expression_vector(u),
     PredicateNode::make(equals_(v, 0), node_b));
 
   auto expected_lqp =
@@ -86,6 +96,63 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformRewrite) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   } else {
     EXPECT_LQP_EQ(actual_lqp, annotated_lqp->deep_copy());
+  }
+}
+
+TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformOdRewritePredicate) {
+  // The rule should only rewrite inner and semi joins.
+  const auto key_constraint = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto order_constraint = TableOrderConstraint{{u->original_column_id}, {v->original_column_id}};
+  const auto foreign_key_constraint =
+      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, table_c, nullptr};
+  node_b->set_key_constraints({key_constraint});
+  node_b->set_order_constraints({order_constraint});
+  node_b->set_foreign_key_constraints({foreign_key_constraint});
+
+  const auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{
+      equals_(v, 0), between_inclusive_(v, 0, 100), between_lower_exclusive_(v, 0, 100),
+      between_upper_exclusive_(v, 0, 100), between_exclusive_(v, 0, 100)};
+
+  for (const auto& predicate : predicates) {
+    const auto join_node =
+        GetParam() == JoinMode::Cross ? JoinNode::make(GetParam()) : JoinNode::make(GetParam(), equals_(x, u));
+    join_node->set_left_input(node_c);
+    join_node->set_right_input(PredicateNode::make(predicate, node_b));
+
+    // clang-format off
+    const auto lqp =
+    ProjectionNode::make(expression_vector(y),
+      join_node);
+
+    const auto aggregate_node =
+    AggregateNode::make(expression_vector(), expression_vector(min_(u), max_(u)),
+      PredicateNode::make(predicate, node_b));
+
+    const auto subquery_min =
+    ProjectionNode::make(expression_vector(min_(u)),
+      aggregate_node);
+
+    const auto subquery_max =
+    ProjectionNode::make(expression_vector(max_(u)),
+      aggregate_node);
+
+    auto expected_lqp =
+    ProjectionNode::make(expression_vector(y),
+      PredicateNode::make(between_inclusive_(x, lqp_subquery_(subquery_min), lqp_subquery_(subquery_max)),
+        node_c));
+    // clang-format on
+
+    const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp->deep_copy());
+    const auto actual_lqp = apply_rule(rule, annotated_lqp);
+    expected_lqp = std::static_pointer_cast<ProjectionNode>(
+        apply_rule(std::make_shared<ColumnPruningRule>(), expected_lqp->deep_copy()));
+
+    SCOPED_TRACE("For predicate " + predicate->description());
+    if (GetParam() == JoinMode::Inner || GetParam() == JoinMode::Semi) {
+      EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+    } else {
+      EXPECT_LQP_EQ(actual_lqp, annotated_lqp->deep_copy());
+    }
   }
 }
 

@@ -95,7 +95,8 @@ TEST_F(AliasNodeTest, ForwardOrderDependencies) {
   EXPECT_TRUE(alias_node->order_dependencies().empty());
 
   const auto od = OrderDependency{{a}, {b}};
-  mock_node->set_order_dependencies({od});
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  mock_node->set_order_constraints({order_constraint});
   EXPECT_EQ(mock_node->order_dependencies().size(), 1);
 
   const auto& order_dependencies = alias_node->order_dependencies();
@@ -109,7 +110,8 @@ TEST_F(AliasNodeTest, ForwardInclusionDependencies) {
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind = InclusionDependency{{a}, {ColumnID{0}}, dummy_table};
-  mock_node->set_inclusion_dependencies({ind});
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  mock_node->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(mock_node->inclusion_dependencies().size(), 1);
 
   const auto& inclusion_dependencies = alias_node->inclusion_dependencies();

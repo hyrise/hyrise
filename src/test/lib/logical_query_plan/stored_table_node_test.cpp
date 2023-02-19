@@ -527,8 +527,14 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   const auto stored_table_c = StoredTableNode::make("t_c");
 
   _stored_table_node->set_pruned_column_ids({});
+  std::cout << "b " << _table_b->soft_foreign_key_constraints().size() << std::endl;
+  std::cout << "c " << table_c->soft_foreign_key_constraints().size() << std::endl;
   EXPECT_EQ(_table_a->referenced_foreign_key_constraints().size(), 4);
   EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 4);
+
+  for (const auto& ind : _stored_table_node->inclusion_dependencies()) {
+    std::cout << ind << std::endl;
+  }
 
   // Negative tests.
   // Columns are empty.

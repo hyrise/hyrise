@@ -21,8 +21,16 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
                               const std::shared_ptr<AbstractExpression>& exchangeable_column_expression,
                               const std::shared_ptr<AbstractLQPNode>& join_node,
                               const std::shared_ptr<AbstractLQPNode>& removable_subtree) {
+  // std::cout << *predicate_node << std::endl << *candidate_column_expression << std::endl << *exchangeable_column_expression << std::endl << *join_node << std::endl << *removable_subtree << std::endl;
   // Test that OD candidate_expression |-> exchangeable_column_expression holds.
+  std::cout << __LINE__ << std::endl;
+  for (const auto& od : predicate_node->order_dependencies()) {
+    std::cout << od << std::endl;
+  }
+
+  std::cout << *predicate_node << std::endl;
   if (!predicate_node->has_matching_od({exchangeable_column_expression}, {candidate_column_expression})) {
+    std::cout << __LINE__ << std::endl;
     return false;
   }
 
@@ -31,6 +39,7 @@ bool qualifies_for_od_rewrite(const std::shared_ptr<PredicateNode>& predicate_no
   const auto& left_input = predicate_node->left_input();
   lqp_remove_node(predicate_node);
   const auto rewritable = removable_subtree->has_matching_ind({exchangeable_column_expression}, *join_node);
+  std::cout << __LINE__ << "  " << std::boolalpha << rewritable << std::endl;
   lqp_insert_node_above(left_input, predicate_node);
   return rewritable;
 }
@@ -184,8 +193,10 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
       return LQPVisitation::DoNotVisitInputs;
     }
 
+    std::cout << __LINE__ << std::endl;
     if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, join_node,
                                  removable_subtree)) {
+      std::cout << __LINE__ << std::endl;
       perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
                          exchangeable_column_expression);
       performed_rewrite = true;

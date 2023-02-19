@@ -269,7 +269,10 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
   const auto od_a_to_b = OrderDependency{{_a}, {_b}};
   const auto od_a_to_b_c = OrderDependency{{_a}, {_b, _c}};
   const auto od_a_b_to_c = OrderDependency{{_a, _b}, {_c}};
-  _mock_node->set_order_dependencies({od_a_to_b, od_a_to_b_c, od_a_b_to_c});
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_b_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}, ColumnID{2}}};
+  const auto order_constraint_a_b_to_c = TableOrderConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{2}}};
+  _mock_node->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_b_c, order_constraint_a_b_to_c});
   EXPECT_EQ(_mock_node->order_dependencies().size(), 3);
 
   {
@@ -306,8 +309,10 @@ TEST_F(AggregateNodeTest, ForwardInclusionDependencies) {
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
   const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-
-  _mock_node->set_inclusion_dependencies({ind_a, ind_a_b});
+  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint_a_b =
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{0}, ColumnID{1}}, nullptr, dummy_table};
+  _mock_node->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
   EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
 
   {

@@ -437,16 +437,15 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::vector<ColumnID>& column_ids) {
+template <typename ExpressionContainer>
+ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
   DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
 
   const auto& output_expressions = lqp_node.output_expressions();
-  auto column_expressions = ExpressionUnorderedSet{};
-  column_expressions.reserve(column_ids.size());
+  auto column_expressions = ExpressionContainer(column_ids.size());
 
   for (const auto& output_expression : output_expressions) {
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
@@ -455,15 +454,27 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
     }
 
     const auto original_column_id = column_expression->original_column_id;
-    if (std::find(column_ids.cbegin(), column_ids.cend(), original_column_id) != column_ids.cend() &&
-        *column_expression->original_node.lock() == lqp_node) {
-      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
-      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+    const auto it = std::find(column_ids.cbegin(), column_ids.cend(), original_column_id);
+    if (it != column_ids.end() && *column_expression->original_node.lock() == lqp_node) {
+      if constexpr (std::is_same_v<ExpressionContainer, ExpressionUnorderedSet>) {
+        [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
+        DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+      } else {
+        const auto offset = it - column_ids.cbegin();
+        DebugAssert(!column_expressions[offset],
+            "Did not expect multiple column expressions for the same column id.");
+        column_expressions[offset] = column_expression;
+      }
     }
   }
 
   return column_expressions;
 }
+
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::vector<ColumnID>& column_ids);
+template std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(
+    const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
                                                  const ExpressionUnorderedSet& expressions) {

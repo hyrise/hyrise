@@ -173,7 +173,9 @@ TEST_F(ProjectionNodeTest, ForwardOrderDependencies) {
 
   const auto od_a_to_b = OrderDependency{{_a}, {_b}};
   const auto od_a_to_c = OrderDependency{{_a}, {_c}};
-  _mock_node->set_order_dependencies({od_a_to_b, od_a_to_c});
+  const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
+  _mock_node->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_c});
   EXPECT_EQ(_mock_node->order_dependencies().size(), 2);
 
   // Case (i): ODs are on "forwarded" projections. Forward ODs.
@@ -207,7 +209,10 @@ TEST_F(ProjectionNodeTest, ForwardInclusionDependencies) {
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
   const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  _mock_node->set_inclusion_dependencies({ind_a, ind_a_b});
+  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint_a_b =
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{0}, ColumnID{1}}, nullptr, dummy_table};
+  _mock_node->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
   EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
 
   // Case (i): INDs are on "forwarded" projections. Forward INDs.

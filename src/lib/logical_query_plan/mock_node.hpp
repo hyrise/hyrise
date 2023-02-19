@@ -8,12 +8,15 @@
 
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
-#include "storage/constraints/table_key_constraint.hpp"
 
 namespace hyrise {
 
 class LQPColumnExpression;
 class TableStatistics;
+
+// class TableKeyConstraints;
+// class TableOrderConstraints;
+// class ForeignKeyConstraints;
 
 /**
  * Node that represents a table that has no data backing it, but may provide
@@ -66,9 +69,9 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   // Returns the specified set of non-trivial FDs.
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 
-  void set_order_dependencies(const OrderDependencies& order_dependencies);
+  void set_order_constraints(const TableOrderConstraints& order_constraints);
 
-  void set_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies);
+  void set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints);
 
   std::optional<std::string> name;
 
@@ -86,8 +89,8 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
   std::vector<ColumnID> _pruned_column_ids;
   FunctionalDependencies _functional_dependencies;
   TableKeyConstraints _table_key_constraints;
-  OrderDependencies _order_dependencies;
-  InclusionDependencies _inclusion_dependencies;
+  TableOrderConstraints _order_constraints;
+  ForeignKeyConstraints _foreign_key_constraints;
 };
 
 }  // namespace hyrise
