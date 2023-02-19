@@ -56,6 +56,16 @@ void NodeQueueScheduler::begin() {
   for (auto& worker : _workers) {
     worker->start();
   }
+
+  // We wait for each worker to start. Without waiting, test might shut down the scheduler before any workers have
+  // started.
+  for (const auto& worker : _workers) {
+    worker->is_ready.wait(false);
+  }
+
+  // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
+  // down might create tasks before the workers are set up.
+  std::this_thread::sleep_for(std::chrono::milliseconds(5));
 }
 
 void NodeQueueScheduler::wait_for_all_tasks() {
@@ -87,9 +97,7 @@ void NodeQueueScheduler::finish() {
     return;
   }
 
-  // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
-  // down might create tasks before the workers are set up.
-  std::this_thread::sleep_for(std::chrono::milliseconds(5));
+  
 
   // Signal workers that scheduler is shutting down.
   _shutdown_flag = true;

@@ -60,10 +60,11 @@ void Worker::operator()() {
 
   _set_affinity();
 
-  Assert(!_shutdown_flag, "Shut down requested before worker started processing tasks.");
+  is_ready.test_and_set();
+  is_ready.notify_all();
 
   while (Hyrise::get().scheduler()->active()) {
-    // Worker is allowed to sleep as long as the scheduler is not shutting down.
+    // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
     _work(!_shutdown_flag);
   }
 }
@@ -103,6 +104,11 @@ void Worker::_work(const bool allow_sleep) {
     // _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
     if (!work_stealing_successful && !_shutdown_flag && allow_sleep) {
       _queue->semaphore.wait();
+      task = _queue->pull();
+     }
+
+     if (!task) {
+       // Neither stealing nor waiting succeeded, or scheduler is shutting down.
       return;
     }
   }
