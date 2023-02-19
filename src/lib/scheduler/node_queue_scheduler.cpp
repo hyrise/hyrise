@@ -97,8 +97,6 @@ void NodeQueueScheduler::finish() {
     return;
   }
 
-  
-
   // Signal workers that scheduler is shutting down.
   _shutdown_flag = true;
 
