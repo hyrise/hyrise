@@ -53,7 +53,7 @@ class Worker : public std::enable_shared_from_this<Worker>, private Noncopyable 
   void operator=(const Worker&) = delete;
   void operator=(Worker&&) = delete;
 
-  boost::atomic_flag is_ready{false};
+  boost::atomic_flag is_ready{};
 
  protected:
   void operator()();
