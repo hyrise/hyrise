@@ -2,6 +2,7 @@
 
 #include "dependency_discovery/candidate_strategy/abstract_dependency_candidate_rule.hpp"
 #include "dependency_discovery/dependency_candidates.hpp"
+#include "dependency_discovery/validation_strategy/abstract_dependency_validation_rule.hpp"
 #include "expression/abstract_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "storage/table.hpp"
@@ -45,7 +46,7 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
    * Iterates over the provided set of columns identified as candidates for a uniqueness validation. Validates those
    * that are not already known to be unique.
    */
-  static void _validate_dependency_candidates(const DependencyCandidates& dependency_candidates);
+  void _validate_dependency_candidates(const DependencyCandidates& dependency_candidates);
 
  private:
   /**
@@ -64,31 +65,13 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
   template <typename ColumnDataType>
   static bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id);
 
-  /**
-   * Extracts columns as UCC validation candidates from a join node. Some criteria have to be fulfilled for this to be
-   * done:
-   *   - The Node may only have one predicate.
-   *   - This predicate must have the equals condition. This may be extended in the future to support other conditions.
-   *   - The join must be either a semi or an inner join.
-   * In addition to the column corresponding to the removable side of the join, the removable input side LQP is iterated
-   * and a column used in a PredicateNode may be added as a UCC candidate if the predicate filters the same table that
-   * contains the join column.
-   */
-  static void _dependency_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
-                                             DependencyCandidates& dependency_candidates);
-
-  /**
-   * Iterates through the LQP underneath the given root node. If a PredicateNode is encountered, checks whether it has a
-   * binary predicate checking for `column` = `value`. If the predicate column is from the same table as the passed
-   * column_candidate, adds both as UCC candidates.
-   */
-  static void _dependency_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
-                                                        std::shared_ptr<LQPColumnExpression> column_candidate,
-                                                        DependencyCandidates& dependency_candidates);
-
   void _add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule);
 
+  void _add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);
+
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _candidate_rules{};
+
+  std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _validation_rules{};
 };
 
 }  // namespace hyrise

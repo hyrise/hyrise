@@ -46,6 +46,8 @@ set(
     dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp
     dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.cpp
     dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp
+    dependency_discovery/validation_strategy/abstract_dependency_validation_rule.cpp
+    dependency_discovery/validation_strategy/abstract_dependency_validation_rule.hpp
 )
 
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp DEPS gtest hyriseBenchmarkLib magic_enum sqlparser)

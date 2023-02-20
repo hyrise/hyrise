@@ -151,15 +151,15 @@ TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
         std::make_shared<UccCandidate>(_table_name_B, _join_columnB->original_column_id);
     const auto ucc_predicate_column_B_candidate =
         std::make_shared<UccCandidate>(_table_name_B, _predicate_column_B->original_column_id);
-    const auto ind_candidate =
-        std::make_shared<IndCandidate>(_table_name_B, _join_columnB->original_column_id, _table_name_A, _join_columnA->original_column_id);
-    const auto od_candidate =
-        std::make_shared<OdCandidate>(_table_name_B, _join_columnB->original_column_id, _predicate_column_B->original_column_id);
+    const auto ind_candidate = std::make_shared<IndCandidate>(_table_name_B, _join_columnB->original_column_id,
+                                                              _table_name_A, _join_columnA->original_column_id);
+    const auto od_candidate = std::make_shared<OdCandidate>(_table_name_B, _join_columnB->original_column_id,
+                                                            _predicate_column_B->original_column_id);
 
-      EXPECT_TRUE(dependency_candidates.contains(ucc_join_column_B_candidate));
-      EXPECT_TRUE(dependency_candidates.contains(ucc_predicate_column_B_candidate));
-      EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
-      EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+    EXPECT_TRUE(dependency_candidates.contains(ucc_join_column_B_candidate));
+    EXPECT_TRUE(dependency_candidates.contains(ucc_predicate_column_B_candidate));
+    EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
+    EXPECT_TRUE(dependency_candidates.contains(od_candidate));
   }
 }
 
@@ -241,11 +241,12 @@ TEST_P(DependencyDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   _encode_table(_table_B, GetParam());
 
   // Insert all columns as candidates
-  auto dependency_candidates = DependencyCandidates{std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{0}),
-                                             std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{1}),
-                                             std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{2}),
-                                             std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{0}),
-                                             std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{1})};
+  auto dependency_candidates =
+      DependencyCandidates{std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{0}),
+                           std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{1}),
+                           std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{2}),
+                           std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{0}),
+                           std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{1})};
 
   _validate_dependency_candidates(dependency_candidates);
 

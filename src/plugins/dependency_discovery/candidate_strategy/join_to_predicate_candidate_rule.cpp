@@ -79,8 +79,8 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
                                                        join_lqp_column_expression->original_column_id,
                                                        predicate_column_expression->original_column_id));
       candidates.emplace(std::make_shared<IndCandidate>(
-          stored_table_node.table_name, join_lqp_column_expression->original_column_id,
-          other_stored_table_node->table_name, join_key_column_expression->original_column_id));
+          other_stored_table_node->table_name, join_key_column_expression->original_column_id,
+          stored_table_node.table_name, join_lqp_column_expression->original_column_id));
 
       return LQPVisitation::VisitInputs;
     }
@@ -125,9 +125,8 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
                                                      column_expression->original_column_id));
 
     candidates.emplace(std::make_shared<IndCandidate>(
-        stored_table_node.table_name, join_lqp_column_expression->original_column_id,
-        other_stored_table_node->table_name, join_key_column_expression->original_column_id));
-
+        other_stored_table_node->table_name, join_key_column_expression->original_column_id,
+        stored_table_node.table_name, join_lqp_column_expression->original_column_id));
 
     return LQPVisitation::VisitInputs;
   });

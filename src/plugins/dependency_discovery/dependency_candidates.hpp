@@ -12,8 +12,6 @@ namespace hyrise {
  */
 enum class DependencyType { UniqueColumn, Order, Inclusion };
 
-enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown };
-
 class AbstractDependencyCandidate : public Noncopyable {
  public:
   AbstractDependencyCandidate(const std::string& init_table_name, const ColumnID init_column_id,

@@ -219,6 +219,10 @@ void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDepe
   _candidate_rules[rule->target_node_type].emplace_back(std::move(rule));
 }
 
+void DependencyDiscoveryPlugin::_add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule) {
+  _validation_rules[rule->dependency_type] = std::move(rule);
+}
+
 EXPORT_PLUGIN(DependencyDiscoveryPlugin);
 
 }  // namespace hyrise
