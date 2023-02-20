@@ -206,7 +206,6 @@ try {
             stage("clang-debug:tidy") {
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 // We do not run tidy checks on the src/test folder, so there is no point in running the expensive clang-tidy for those files
-                // As clang-tidy is the slowest step, we allow it to use more parallel jobs.
                 sh "cd clang-debug-tidy && make hyrise_impl hyriseBenchmarkFileBased hyriseBenchmarkTPCH hyriseBenchmarkTPCDS hyriseBenchmarkJoinOrder hyriseConsole hyriseServer -k -j \$(( \$(nproc) / 10))"
               } else {
                 Utils.markStageSkippedForConditional("clangDebugTidy")
@@ -301,6 +300,7 @@ try {
               // Runs after the other sanitizers as it depends on gcc-release to be built. With #2402, valgrind now
               // uses the GCC build instead of the clang build as there are issues with valgrind and the debug symbols
               // of clang 14 (https://bugs.kde.org/show_bug.cgi?id=452758).
+              // TODO(anybody): Valgrind 3.20 should fix the clang-14 issues (not shipped with Ubuntu 22.04).
               if (env.BRANCH_NAME == 'master' || full_ci) {
                 sh "mkdir ./clang-release-memcheck-test"
                 // If this shows a leak, try --leak-check=full, which is slower but more precise
