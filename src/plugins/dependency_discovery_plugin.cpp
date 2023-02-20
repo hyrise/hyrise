@@ -1,4 +1,4 @@
-#include "ucc_discovery_plugin.hpp"
+#include "dependency_discovery_plugin.hpp"
 
 #include <boost/container_hash/hash.hpp>
 
@@ -21,37 +21,20 @@
 
 namespace hyrise {
 
-UccCandidate::UccCandidate(const std::string& init_table_name, const ColumnID init_column_id)
-    : table_name(init_table_name), column_id(init_column_id) {}
-
-bool UccCandidate::operator==(const UccCandidate& other) const {
-  return (column_id == other.column_id) && (table_name == other.table_name);
-}
-
-bool UccCandidate::operator!=(const UccCandidate& other) const {
-  return !(other == *this);
-}
-
-size_t UccCandidate::hash() const {
-  auto hash = boost::hash_value(table_name);
-  boost::hash_combine(hash, column_id);
-  return hash;
-}
-
-std::string UccDiscoveryPlugin::description() const {
+std::string DependencyDiscoveryPlugin::description() const {
   return "Unary Unique Column Combination Discovery Plugin";
 }
 
-void UccDiscoveryPlugin::start() {}
+void DependencyDiscoveryPlugin::start() {}
 
-void UccDiscoveryPlugin::stop() {}
+void DependencyDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
-UccDiscoveryPlugin::provided_user_executable_functions() {
+DependencyDiscoveryPlugin::provided_user_executable_functions() {
   return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
 }
 
-std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {
+std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() {
   return [&](auto& benchmark_item_runner) {
     for (const auto item_id : benchmark_item_runner.items()) {
       benchmark_item_runner.execute_item(item_id);
@@ -60,7 +43,7 @@ std::optional<PreBenchmarkHook> UccDiscoveryPlugin::pre_benchmark_hook() {
   };
 }
 
-UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
+DependencyCandidates DependencyDiscoveryPlugin::_identify_ucc_candidates() {
   const auto lqp_cache = Hyrise::get().default_lqp_cache;
   if (!lqp_cache) {
     return {};
@@ -69,7 +52,7 @@ UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
   // Get a snapshot of the current LQP cache to work on all currently cached queries.
   const auto& snapshot = Hyrise::get().default_lqp_cache->snapshot();
 
-  auto ucc_candidates = UccCandidates{};
+  auto ucc_candidates = DependencyCandidates{};
 
   for (const auto& [_, entry] : snapshot) {
     const auto& root_node = entry.value;
@@ -95,14 +78,19 @@ UccCandidates UccDiscoveryPlugin::_identify_ucc_candidates() {
   return ucc_candidates;
 }
 
-void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candidates) {
+void DependencyDiscoveryPlugin::_validate_ucc_candidates(const DependencyCandidates& ucc_candidates) {
   for (const auto& candidate : ucc_candidates) {
-    auto candidate_timer = Timer();
-    const auto table = Hyrise::get().storage_manager.get_table(candidate.table_name);
-    const auto column_id = candidate.column_id;
-
     auto message = std::stringstream{};
-    message << "Checking candidate " << candidate.table_name << "." << table->column_name(column_id);
+    if (candidate->type != DependencyType::UniqueColumn) {
+      message << "Skipping candidate " << *candidate << " (not implemented)" << std::endl;
+      Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
+      continue;
+    }
+
+    auto candidate_timer = Timer();
+    const auto table = Hyrise::get().storage_manager.get_table(candidate->table_name);
+    const auto column_id = candidate->column_id;
+    message << "Checking candidate " << *candidate << std::endl;
 
     const auto& soft_key_constraints = table->soft_key_constraints();
 
@@ -113,7 +101,7 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
                       return columns.size() == 1 && columns.front() == column_id;
                     })) {
       message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+      Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
       continue;
     }
 
@@ -123,31 +111,32 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
       // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
       if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
         message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
         return;
       }
 
       // If we reach here, we have to run the more expensive cross-segment duplicate check.
       if (!_uniqueness_holds_across_segments<ColumnDataType>(table, column_id)) {
         message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-        Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+        Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
         return;
       }
 
       // We save UCCs directly inside the table so they can be forwarded to nodes in a query plan.
       message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", message.str(), LogLevel::Info);
+      Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
       table->add_soft_key_constraint(TableKeyConstraint({column_id}, KeyConstraintType::UNIQUE));
     });
   }
-  Hyrise::get().log_manager.add_message("UccDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
+  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
 
   Hyrise::get().default_lqp_cache->clear();
   Hyrise::get().default_pqp_cache->clear();
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id) {
+bool DependencyDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr<Table> table,
+                                                                        ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
   // tes that at least one duplicate value or a NULL value is contained.
@@ -179,7 +168,7 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
+bool DependencyDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = std::unordered_set<ColumnDataType>{};
@@ -232,8 +221,8 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
   return true;
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
-                                                             UccCandidates& ucc_candidates) {
+void DependencyDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
+                                                                    DependencyCandidates& ucc_candidates) {
   const auto& aggregate_node = static_cast<AggregateNode&>(*node);
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
       aggregate_node.node_expressions.cbegin(),
@@ -246,12 +235,13 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<Abs
     }
     // Every ColumnExpression used as a GroupBy expression should be checked for uniqueness.
     const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_column_expression->original_node.lock());
-    ucc_candidates.insert(UccCandidate{stored_table_node.table_name, lqp_column_expression->original_column_id});
+    ucc_candidates.emplace(
+        std::make_shared<UccCandidate>(stored_table_node.table_name, lqp_column_expression->original_column_id));
   }
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
-                                                        UccCandidates& ucc_candidates) {
+void DependencyDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
+                                                               DependencyCandidates& ucc_candidates) {
   const auto& join_node = static_cast<JoinNode&>(*node);
   // Fetch the join predicate to extract the UCC candidates from. Right now, limited to single-predicate equi joins.
   const auto& join_predicates = join_node.join_predicates();
@@ -298,7 +288,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
           continue;
         }
         const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-        ucc_candidates.insert(UccCandidate{stored_table_node.table_name, lqp_column_expression->original_column_id});
+        ucc_candidates.emplace(
+            std::make_shared<UccCandidate>(stored_table_node.table_name, lqp_column_expression->original_column_id));
 
         _ucc_candidates_from_removable_join_input(subtree_root, lqp_column_expression, ucc_candidates);
       }
@@ -323,9 +314,9 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
   }
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
+void DependencyDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
     std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate,
-    UccCandidates& ucc_candidates) {
+    DependencyCandidates& ucc_candidates) {
   // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
   // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
   if (!root_node || !column_candidate) {
@@ -367,22 +358,16 @@ void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
 
     if (expression_table_node == candidate_table_node) {
       // Both columns should be in the same table.
-      ucc_candidates.emplace(expression_table_node->table_name, column_expression->original_column_id);
-      ucc_candidates.emplace(candidate_table_node->table_name, column_candidate->original_column_id);
+      ucc_candidates.emplace(
+          std::make_shared<UccCandidate>(expression_table_node->table_name, column_expression->original_column_id));
+      ucc_candidates.emplace(
+          std::make_shared<UccCandidate>(candidate_table_node->table_name, column_candidate->original_column_id));
     }
 
     return LQPVisitation::VisitInputs;
   });
 }
 
-EXPORT_PLUGIN(UccDiscoveryPlugin);
+EXPORT_PLUGIN(DependencyDiscoveryPlugin);
 
 }  // namespace hyrise
-
-namespace std {
-
-size_t hash<hyrise::UccCandidate>::operator()(const hyrise::UccCandidate& ucc_candidate) const {
-  return ucc_candidate.hash();
-}
-
-}  // namespace std

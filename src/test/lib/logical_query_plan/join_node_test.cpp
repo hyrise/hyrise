@@ -29,7 +29,6 @@ class JoinNodeTest : public BaseTest {
     _t_a_c = _mock_node_a->get_column("c");
     _t_b_x = _mock_node_b->get_column("x");
     _t_b_y = _mock_node_b->get_column("y");
-
     _t_c_u = _mock_node_c->get_column("u");
     _t_c_v = _mock_node_c->get_column("v");
     _t_c_w = _mock_node_c->get_column("w");
@@ -412,7 +411,8 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   /**
    * We set a UCC for the left, but not for the right join column of the Inner Join. Consequently, UCCs of the left
    * input node are discarded, whereas the UCCs of the right input node survive. Therefore, we have to check whether
-   * left input node's trivial FDs are forwarded as non-trivial ones.
+   * left input node's trivial FDs are forwarded as non-trivial ones. Furthermore, we check if FDs from the join keys of
+   * equi joins are added.
    */
   _mock_node_a->set_key_constraints({*_key_constraint_a});
   _mock_node_b->set_key_constraints({*_key_constraint_x});
@@ -423,15 +423,21 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
     _mock_node_b);
   // clang-format on
 
-  // Tests
-  const auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c}};
-  EXPECT_EQ(join_node->non_trivial_functional_dependencies().size(), 1);
-  EXPECT_TRUE(join_node->non_trivial_functional_dependencies().contains(generated_fd_a));
+  auto generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c}};
+  const auto& non_trivial_fds = join_node->non_trivial_functional_dependencies();
+  EXPECT_EQ(non_trivial_fds.size(), 1);
+  EXPECT_TRUE(non_trivial_fds.contains(generated_fd_a));
 
   const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
-  EXPECT_EQ(join_node->functional_dependencies().size(), 2);
-  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_a));
-  EXPECT_TRUE(join_node->functional_dependencies().contains(generated_fd_x));
+  // The join keys are mutually dependent on each other.
+  generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c, _t_b_y}};
+  const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_a_a}};
+
+  const auto& fds = join_node->functional_dependencies();
+  EXPECT_EQ(fds.size(), 3);
+  EXPECT_TRUE(fds.contains(generated_fd_a));
+  EXPECT_TRUE(fds.contains(generated_fd_x));
+  EXPECT_TRUE(fds.contains(generated_fd_y));
 }
 
 TEST_F(JoinNodeTest, FunctionalDependenciesUnify) {
@@ -687,7 +693,7 @@ TEST_P(JoinNodeMultiJoinModeTest, UniqueColumnCombinationsMultiPredicateJoin) {
 TEST_F(JoinNodeTest, OrderDependenciesSemiAndAntiJoin) {
   const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
   const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
-  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
   const auto order_constraint_y_to_x = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
   _mock_node_a->set_order_constraints({order_constraint_a_to_c});
   _mock_node_b->set_order_constraints({order_constraint_y_to_x});
@@ -707,7 +713,7 @@ TEST_F(JoinNodeTest, OrderDependenciesSemiAndAntiJoin) {
 TEST_F(JoinNodeTest, OrderDependenciesOuterJoin) {
   const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
   const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
-  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
   const auto order_constraint_y_to_x = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
   _mock_node_a->set_order_constraints({order_constraint_a_to_c});
   _mock_node_b->set_order_constraints({order_constraint_y_to_x});
@@ -728,7 +734,7 @@ TEST_F(JoinNodeTest, OrderDependenciesOuterJoin) {
 TEST_F(JoinNodeTest, OrderDependenciesCrossJoin) {
   const auto od_a_to_c = OrderDependency{{_t_a_a}, {_t_a_c}};
   const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
-  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  const auto order_constraint_a_to_c = TableOrderConstraint{{ColumnID{0}}, {ColumnID{2}}};
   const auto order_constraint_y_to_x = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
   _mock_node_a->set_order_constraints({order_constraint_a_to_c});
   _mock_node_b->set_order_constraints({order_constraint_y_to_x});
@@ -800,7 +806,7 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     const auto od_y_to_x = OrderDependency{{_t_b_y}, {_t_b_x}};
     const auto order_constraint = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
     _mock_node_a->set_order_constraints({order_constraint});
-    _mock_node_c->set_order_constraints({order_constraint});
+    _mock_node_b->set_order_constraints({order_constraint});
 
     const auto& order_dependencies = _inner_join_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 7);
@@ -820,7 +826,7 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     const auto od_x_to_y = OrderDependency{{_t_b_x}, {_t_b_y}};
     const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
     _mock_node_a->set_order_constraints({order_constraint});
-    _mock_node_c->set_order_constraints({order_constraint});
+    _mock_node_b->set_order_constraints({order_constraint});
 
     const auto& order_dependencies = _inner_join_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 7);
@@ -838,8 +844,8 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
   // would lead to [c] |-> [a] and [c] |-> [b] normally.
   {
     const auto od_a_to_b = OrderDependency{{_t_a_a}, {_t_a_b}};
-    const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
-    _mock_node_a->set_order_constraints({order_constraint});
+    const auto order_constraint_a_to_b = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+    _mock_node_a->set_order_constraints({order_constraint_a_to_b, order_constraint_a_to_c});
 
     // clang-format off
     const auto inner_join_node =
@@ -864,7 +870,7 @@ TEST_F(JoinNodeTest, InclusionDependenciesCrossAndFullOuterJoin) {
 
   _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
+  _mock_node_b->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
 
   {
@@ -896,7 +902,7 @@ TEST_F(JoinNodeTest, InclusionDependenciesOuterJoin) {
 
   _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
+  _mock_node_b->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
 
   {

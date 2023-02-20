@@ -431,10 +431,10 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
 
   {
     const auto scoped_lock = acquire_append_mutex();
-    Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set");
-    Assert(_foreign_key_constraints.insert(foreign_key_constraint).second, "Error adding constraint");
+    Assert(_foreign_key_constraints.insert(foreign_key_constraint).second, "ForeignKeyConstraint is already set.");
     const auto referenced_table_scoped_lock = referenced_table->acquire_append_mutex();
-    Assert(referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint).second, "WTF");
+    Assert(referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint).second,
+           "ForeignKeyConstraint is already set for referenced table.");
   }
 }
 

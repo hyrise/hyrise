@@ -175,7 +175,7 @@ OrderDependencies JoinNode::order_dependencies() const {
   const auto& join_key_2 = binary_predicate->right_operand();
 
   // Return if this is a self join and we already have ODs. This makes things tricky when we build the transitive
-  // closure.
+  // closure: If the join columns are different, we do not know to which of the output columns new ODs apply.
   const auto get_original_node = [](const auto& expression) {
     // Skip complex join keys.
     if (expression->type != ExpressionType::LQPColumn) {
@@ -235,7 +235,7 @@ InclusionDependencies JoinNode::inclusion_dependencies() const {
 }
 
 InclusionDependencies JoinNode::_output_inclusion_dependencies(
-  // TODO: test!
+    // TODO: test!
     const InclusionDependencies& left_inclusion_dependencies,
     const InclusionDependencies& right_inclusion_dependencies) const {
   // Check if there are any INDs that might be forwarded.
@@ -257,7 +257,7 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   auto left_input_join_predicates = ExpressionUnorderedSet{predicate_count};
   auto right_input_join_predicates = ExpressionUnorderedSet{predicate_count};
   const auto& left_expressions = left_input()->output_expressions();
-  const auto& right_expressions = left_input()->output_expressions();
+  const auto& right_expressions = right_input()->output_expressions();
 
   for (const auto& expression : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);

@@ -7,7 +7,7 @@
 #include "lib/storage/encoding_test.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 
-#include "../../plugins/ucc_discovery_plugin.hpp"
+#include "../../plugins/dependency_discovery_plugin.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -29,7 +29,7 @@
 
 namespace hyrise {
 
-class UccDiscoveryPluginTest : public BaseTest {
+class DependencyDiscoveryPluginTest : public BaseTest {
  public:
   void SetUp() override {
     _table_A = load_table("resources/test_data/tbl/uniqueness_test_A.tbl", _chunk_size);
@@ -50,16 +50,16 @@ class UccDiscoveryPluginTest : public BaseTest {
   }
 
  protected:
-  UccCandidates _identify_ucc_candidates() {
-    return UccDiscoveryPlugin::_identify_ucc_candidates();
+  DependencyCandidates _identify_ucc_candidates() {
+    return DependencyDiscoveryPlugin::_identify_ucc_candidates();
   }
 
   void _discover_uccs() {
-    UccDiscoveryPlugin::_validate_ucc_candidates(UccDiscoveryPlugin::_identify_ucc_candidates());
+    DependencyDiscoveryPlugin::_validate_ucc_candidates(DependencyDiscoveryPlugin::_identify_ucc_candidates());
   }
 
-  void _validate_ucc_candidates(const UccCandidates& candidates) {
-    UccDiscoveryPlugin::_validate_ucc_candidates(candidates);
+  void _validate_ucc_candidates(const DependencyCandidates& candidates) {
+    DependencyDiscoveryPlugin::_validate_ucc_candidates(candidates);
   }
 
   void _encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
@@ -87,43 +87,43 @@ class UccDiscoveryPluginTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _predicate_column_B{};
 };
 
-class UccDiscoveryPluginMultiEncodingTest : public UccDiscoveryPluginTest,
-                                            public ::testing::WithParamInterface<SegmentEncodingSpec> {};
+class DependencyDiscoveryPluginMultiEncodingTest : public DependencyDiscoveryPluginTest,
+                                                   public ::testing::WithParamInterface<SegmentEncodingSpec> {};
 
-TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
+TEST_F(DependencyDiscoveryPluginTest, LoadUnloadPlugin) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
-  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
-  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
 }
 
-TEST_F(UccDiscoveryPluginTest, DescriptionAndProvidedFunction) {
-  auto plugin = UccDiscoveryPlugin{};
+TEST_F(DependencyDiscoveryPluginTest, DescriptionAndProvidedFunction) {
+  auto plugin = DependencyDiscoveryPlugin{};
   EXPECT_EQ(plugin.description(), "Unary Unique Column Combination Discovery Plugin");
   const auto& provided_functions = plugin.provided_user_executable_functions();
   ASSERT_EQ(provided_functions.size(), 1);
   EXPECT_EQ(provided_functions.front().first, "DiscoverUCCs");
 }
 
-TEST_F(UccDiscoveryPluginTest, UserCallableFunction) {
+TEST_F(DependencyDiscoveryPluginTest, UserCallableFunction) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
-  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
-  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs"));
-  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseDependencyDiscoveryPlugin", "DiscoverUCCs"));
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
 }
 
-TEST_F(UccDiscoveryPluginTest, BenchmarkHooks) {
+TEST_F(DependencyDiscoveryPluginTest, BenchmarkHooks) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
 
-  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
   // We only check if the plugin has a pre-benchmark hook. Actually executing it requires benchmark items and tables.
-  EXPECT_TRUE(plugin_manager.has_pre_benchmark_hook("hyriseUccDiscoveryPlugin"));
-  EXPECT_FALSE(plugin_manager.has_post_benchmark_hook("hyriseUccDiscoveryPlugin"));
+  EXPECT_TRUE(plugin_manager.has_pre_benchmark_hook("hyriseDependencyDiscoveryPlugin"));
+  EXPECT_FALSE(plugin_manager.has_post_benchmark_hook("hyriseDependencyDiscoveryPlugin"));
   auto report = nlohmann::json{};
-  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseUccDiscoveryPlugin", report), std::logic_error);
-  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
+  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseDependencyDiscoveryPlugin", report), std::logic_error);
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
 }
 
-TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
+TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
   for (const auto join_mode : {JoinMode::Inner, JoinMode::Semi}) {
     // clang-format off
     const auto lqp =
@@ -141,10 +141,14 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
     const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 2;
     EXPECT_EQ(ucc_candidates.size(), expected_candidate_count);
 
-    const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
-    const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
-    const auto join_column_B_candidate = UccCandidate{_table_name_B, _join_columnB->original_column_id};
-    const auto predicate_column_B_candidate = UccCandidate{_table_name_B, _predicate_column_B->original_column_id};
+    const auto join_column_A_candidate =
+        std::make_shared<UccCandidate>(_table_name_A, _join_columnA->original_column_id);
+    const auto predicate_column_A_candidate =
+        std::make_shared<UccCandidate>(_table_name_A, _predicate_column_A->original_column_id);
+    const auto join_column_B_candidate =
+        std::make_shared<UccCandidate>(_table_name_B, _join_columnB->original_column_id);
+    const auto predicate_column_B_candidate =
+        std::make_shared<UccCandidate>(_table_name_B, _predicate_column_B->original_column_id);
 
     EXPECT_TRUE(ucc_candidates.contains(join_column_B_candidate));
     EXPECT_TRUE(ucc_candidates.contains(predicate_column_B_candidate));
@@ -156,7 +160,7 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
   }
 }
 
-TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
+TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
   const auto join_modes = {JoinMode::Left,           JoinMode::Right,           JoinMode::FullOuter,
                            JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse, JoinMode::Cross};
   for (const auto join_mode : join_modes) {
@@ -172,7 +176,7 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
   }
 }
 
-TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
+TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
   const auto join_modes = {JoinMode::Inner, JoinMode::Semi};
   for (const auto join_mode : join_modes) {
     // clang-format off
@@ -189,7 +193,7 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
   }
 }
 
-TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
+TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
 
   // clang-format off
@@ -202,15 +206,16 @@ TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
 
   auto ucc_candidates = _identify_ucc_candidates();
 
-  const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
-  const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
+  const auto join_column_A_candidate = std::make_shared<UccCandidate>(_table_name_A, _join_columnA->original_column_id);
+  const auto predicate_column_A_candidate =
+      std::make_shared<UccCandidate>(_table_name_A, _predicate_column_A->original_column_id);
 
   EXPECT_EQ(ucc_candidates.size(), 1);
   EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate));
   EXPECT_TRUE(!ucc_candidates.contains(predicate_column_A_candidate));
 }
 
-TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
+TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
   const auto table_node_B = StoredTableNode::make(_table_name_B);
 
@@ -228,16 +233,16 @@ TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
   EXPECT_TRUE(ucc_candidates.empty());
 }
 
-TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
+TEST_P(DependencyDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   _encode_table(_table_A, GetParam());
   _encode_table(_table_B, GetParam());
 
   // Insert all columns as candidates
-  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}},
-                                      {"uniquenessTestTableA", ColumnID{1}},
-                                      {"uniquenessTestTableA", ColumnID{2}},
-                                      {"uniquenessTestTableB", ColumnID{0}},
-                                      {"uniquenessTestTableB", ColumnID{1}}};
+  auto ucc_candidates = DependencyCandidates{std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{0}),
+                                             std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{1}),
+                                             std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{2}),
+                                             std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{0}),
+                                             std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{1})};
 
   _validate_ucc_candidates(ucc_candidates);
 
@@ -256,7 +261,7 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   EXPECT_FALSE(constraints_B.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
 }
 
-TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
+TEST_P(DependencyDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   // clang-format off
   const auto lqp =
   JoinNode::make(JoinMode::Inner, equals_(_join_columnA, _join_columnB),
@@ -289,7 +294,8 @@ TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   EXPECT_EQ(Hyrise::get().default_pqp_cache->size(), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(UccDiscoveryPluginMultiEncodingTestInstances, UccDiscoveryPluginMultiEncodingTest,
-                         ::testing::ValuesIn(all_segment_encoding_specs), all_segment_encoding_specs_formatter);
+INSTANTIATE_TEST_SUITE_P(DependencyDiscoveryPluginMultiEncodingTestInstances,
+                         DependencyDiscoveryPluginMultiEncodingTest, ::testing::ValuesIn(all_segment_encoding_specs),
+                         all_segment_encoding_specs_formatter);
 
 }  // namespace hyrise

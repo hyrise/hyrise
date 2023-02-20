@@ -242,7 +242,7 @@ set(
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
-    plugins/ucc_discovery_plugin_test.cpp
+    plugins/dependency_discovery_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp
     utils/data_dependency_test_utils.hpp
@@ -272,7 +272,7 @@ set(
     SQLite::SQLite3
     # Added plugin targets so that we can test member methods without going through dlsym
     hyriseMvccDeletePlugin
-    hyriseUccDiscoveryPlugin
+    hyriseDependencyDiscoveryPlugin
     # Required for testing plugin benchmark hooks
     hyriseBenchmarkLib
 )
@@ -290,7 +290,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 # Configure hyriseTest
 add_executable(hyriseTest ${HYRISE_UNIT_TEST_SOURCES})
-add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseUccDiscoveryPlugin)
+add_dependencies(hyriseTest hyriseSecondTestPlugin hyriseTestPlugin hyriseMvccDeletePlugin hyriseTestNonInstantiablePlugin hyriseDependencyDiscoveryPlugin)
 target_link_libraries(hyriseTest hyrise ${LIBRARIES})
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")

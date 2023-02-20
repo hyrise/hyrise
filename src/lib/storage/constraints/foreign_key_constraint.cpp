@@ -50,7 +50,7 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& columns,
       _foreign_key_table{foreign_key_table} {
   Assert(_columns.size() == _foreign_key_columns.size(), "Invalid number of columns for ForeignKeyConstraint.");
   // For testing, MockNodes may have a ForeignKeyContraint without table.
-  Assert(foreign_key_table, "ForeignKeyConstraint must reference at least one table.");
+  Assert(foreign_key_table, "ForeignKeyConstraint must reference a table.");
 
   // For INDs with the same columns, the order of the expressions is relevant. For instance, [A.a, A.b] in [B.x, B.y] is
   // equals to [A.b, A.a] in [B.y, B.x], but not equals to [A.a, A.b] in [B.y, B.x]. To guarantee unambiguous
@@ -67,14 +67,6 @@ const std::vector<ColumnID>& ForeignKeyConstraint::foreign_key_columns() const {
 
 const std::shared_ptr<Table> ForeignKeyConstraint::table() const {
   return _table.lock();
-}
-
-bool ForeignKeyConstraint::operator==(const ForeignKeyConstraint& other) const {
-  return AbstractTableConstraint::operator==(other);
-
-}
-bool ForeignKeyConstraint::operator!=(const ForeignKeyConstraint& other) const {
-    return AbstractTableConstraint::operator!=(other);
 }
 
 const std::shared_ptr<Table> ForeignKeyConstraint::foreign_key_table() const {
@@ -95,8 +87,8 @@ bool ForeignKeyConstraint::_on_equals(const AbstractTableConstraint& table_const
   DebugAssert(dynamic_cast<const ForeignKeyConstraint*>(&table_constraint),
               "Different table_constraint type should have been caught by AbstractTableConstraint::operator==");
   const auto& foreign_key_constraint = static_cast<const ForeignKeyConstraint&>(table_constraint);
-  return table() == foreign_key_constraint.table() && foreign_key_table() &&
-         foreign_key_constraint.foreign_key_table() &&
+  return table() == foreign_key_constraint.table() &&
+         foreign_key_table() == foreign_key_constraint.foreign_key_table() &&
          _foreign_key_columns == foreign_key_constraint._foreign_key_columns;
 }
 

@@ -280,16 +280,20 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionPositionsInvalidInput) {
   _union_node->set_right_input(_mock_node2);
   EXPECT_THROW(_union_node->order_dependencies(), std::logic_error);
 
+  // Fail if inputs have same output expressions, but different ODs.
   // clang-format off
-  const auto projection_node =
-  ProjectionNode::make(expression_vector(_a, _b, _c),
-    JoinNode::make(JoinMode::Inner, equals_(_a, _b),
+  const auto join_node_1 =
+    JoinNode::make(JoinMode::Cross,
       _mock_node1,
-      _mock_node1));
+      _mock_node2);
+  const auto join_node_2 =
+    JoinNode::make(JoinMode::Inner, equals_(_a, _u),
+      _mock_node1,
+      _mock_node2);
   // clang-format on
 
-  // Fail if inputs have same output expressions, but different ODs.
-  _union_node->set_right_input(projection_node);
+  _union_node->set_left_input(join_node_1);
+  _union_node->set_right_input(join_node_2);
   EXPECT_THROW(_union_node->order_dependencies(), std::logic_error);
 }
 
@@ -314,14 +318,17 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
   {
     // Fail if inputs have same output expressions, but different ODs.
     // clang-format off
-    const auto projection_node =
-    ProjectionNode::make(expression_vector(_a, _b, _c),
+    const auto join_node_1 =
       JoinNode::make(JoinMode::Cross,
         _mock_node1,
-        _mock_node1));
+        _mock_node2);
+    const auto join_node_2 =
+      JoinNode::make(JoinMode::Inner, equals_(_a, _u),
+        _mock_node1,
+        _mock_node2);
     // clang-format on
 
-    const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, projection_node);
+    const auto union_node = UnionNode::make(SetOperationMode::All, join_node_1, join_node_2);
     EXPECT_THROW(union_node->order_dependencies(), std::logic_error);
   }
 }

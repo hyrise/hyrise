@@ -28,8 +28,6 @@ class StoredTableNodeTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("t_a", _table_a);
     Hyrise::get().storage_manager.add_table("t_b", _table_b);
 
-    const auto& table_t_a = Hyrise::get().storage_manager.get_table("t_a");
-    ChunkEncoder::encode_all_chunks(table_t_a);
     _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
     _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
     _table_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}}, "i_a2");
@@ -527,14 +525,8 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   const auto stored_table_c = StoredTableNode::make("t_c");
 
   _stored_table_node->set_pruned_column_ids({});
-  std::cout << "b " << _table_b->soft_foreign_key_constraints().size() << std::endl;
-  std::cout << "c " << table_c->soft_foreign_key_constraints().size() << std::endl;
   EXPECT_EQ(_table_a->referenced_foreign_key_constraints().size(), 4);
   EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 4);
-
-  for (const auto& ind : _stored_table_node->inclusion_dependencies()) {
-    std::cout << ind << std::endl;
-  }
 
   // Negative tests.
   // Columns are empty.

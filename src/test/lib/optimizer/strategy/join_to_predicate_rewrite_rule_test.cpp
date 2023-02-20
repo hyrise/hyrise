@@ -16,6 +16,7 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "logical_query_plan/union_node.hpp"
 #include "logical_query_plan/update_node.hpp"
+#include "logical_query_plan/validate_node.hpp"
 #include "optimizer/strategy/column_pruning_rule.hpp"
 #include "optimizer/strategy/join_to_predicate_rewrite_rule.hpp"
 
@@ -63,23 +64,30 @@ INSTANTIATE_TEST_SUITE_P(JoinToPredicateRewriteRuleJoinModeTestInstance, JoinToP
 
 TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformUccRewrite) {
   // The rule should only rewrite inner and semi joins.
-  auto key_constraints = TableKeyConstraints{};
-  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
-  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
-  node_b->set_key_constraints(key_constraints);
+  const auto key_constraint_u = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_v = TableKeyConstraint{{v->original_column_id}, KeyConstraintType::UNIQUE};
+  node_b->set_key_constraints({key_constraint_u, key_constraint_v});
 
   const auto join_node =
       GetParam() == JoinMode::Cross ? JoinNode::make(GetParam()) : JoinNode::make(GetParam(), equals_(a, u));
   join_node->set_left_input(node_a);
-  join_node->set_right_input(PredicateNode::make(equals_(v, 0), node_b));
+
   // clang-format off
+  const auto right_input =
+  ValidateNode::make(
+    PredicateNode::make(equals_(v, 0),
+      node_b));
+  join_node->set_right_input(right_input);
+
   const auto lqp =
   ProjectionNode::make(expression_vector(b),
     join_node);
 
   const auto subquery =
   ProjectionNode::make(expression_vector(u),
-    PredicateNode::make(equals_(v, 0), node_b));
+    ValidateNode::make(
+      PredicateNode::make(equals_(v, 0),
+        node_b)));
 
   auto expected_lqp =
   ProjectionNode::make(expression_vector(b),
@@ -104,7 +112,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformOdRewritePredicate) {
   const auto key_constraint = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
   const auto order_constraint = TableOrderConstraint{{u->original_column_id}, {v->original_column_id}};
   const auto foreign_key_constraint =
-      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, table_c, nullptr};
+      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
   node_b->set_key_constraints({key_constraint});
   node_b->set_order_constraints({order_constraint});
   node_b->set_foreign_key_constraints({foreign_key_constraint});
@@ -117,16 +125,23 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformOdRewritePredicate) {
     const auto join_node =
         GetParam() == JoinMode::Cross ? JoinNode::make(GetParam()) : JoinNode::make(GetParam(), equals_(x, u));
     join_node->set_left_input(node_c);
-    join_node->set_right_input(PredicateNode::make(predicate, node_b));
 
     // clang-format off
+    const auto right_input =
+    ValidateNode::make(
+      PredicateNode::make(predicate,
+        node_b));
+    join_node->set_right_input(right_input);
+
     const auto lqp =
     ProjectionNode::make(expression_vector(y),
       join_node);
 
     const auto aggregate_node =
     AggregateNode::make(expression_vector(), expression_vector(min_(u), max_(u)),
-      PredicateNode::make(predicate, node_b));
+      ValidateNode::make(
+        PredicateNode::make(predicate,
+          node_b)));
 
     const auto subquery_min =
     ProjectionNode::make(expression_vector(min_(u)),
@@ -157,17 +172,22 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformOdRewritePredicate) {
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
-  // Do not rewrite if there is no predicate on the column with UCC.
-  auto key_constraints = TableKeyConstraints{};
-  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
-  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
-  node_b->set_key_constraints(key_constraints);
+  // Do not rewrite if there is no predicate on the column with UCC or OD.
+  const auto key_constraint_u = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_v = TableKeyConstraint{{v->original_column_id}, KeyConstraintType::UNIQUE};
+  node_b->set_key_constraints({key_constraint_u, key_constraint_v});
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  node_b->set_order_constraints({order_constraint});
+  const auto foreign_key_constraint =
+      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+  node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   // clang-format off
   const auto lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Inner, equals_(a, u),
-      node_a, node_b));
+  ProjectionNode::make(expression_vector(y),
+    JoinNode::make(JoinMode::Inner, equals_(x, u),
+      node_c,
+      node_b));
   // clang-format on
 
   const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
@@ -175,50 +195,95 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
 }
 
-TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnPredicateColumn) {
-  // Do not rewrite if there is no UCC on the predicate column.
-  auto key_constraints = TableKeyConstraints{};
-  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
-  node_b->set_key_constraints(key_constraints);
+TEST_F(JoinToPredicateRewriteRuleTest, MissingDependencyOnBetweenPredicateColumn) {
+  // Do not rewrite if there is no UCC or OD on the predicate column.
+  const auto key_constraint_u = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
+  node_b->set_key_constraints({key_constraint_u});
+  const auto foreign_key_constraint =
+      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+  node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   // clang-format off
   const auto lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Semi, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
+  ProjectionNode::make(expression_vector(y),
+    JoinNode::make(JoinMode::Semi, equals_(x, u),
+      node_c,
+      PredicateNode::make(between_inclusive_(v, 0, 100),
+        node_b)));
   // clang-format on
 
   const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
   const auto actual_lqp = apply_rule(rule, annotated_lqp);
   EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+}
+
+TEST_F(JoinToPredicateRewriteRuleTest, MissingIndForOdRewrite) {
+  // Do not rewrite if there is no predicate on the column with UCC or OD.
+  const auto key_constraint_u = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_v = TableKeyConstraint{{v->original_column_id}, KeyConstraintType::UNIQUE};
+  node_b->set_key_constraints({key_constraint_u, key_constraint_v});
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  node_b->set_order_constraints({order_constraint});
+
+  for (const auto& predicate :
+       std::vector<std::shared_ptr<AbstractExpression>>{equals_(v, 0), between_inclusive_(v, 0, 100)}) {
+    node_b->set_pruned_column_ids({});
+    node_c->set_pruned_column_ids({});
+
+    // clang-format off
+    const auto lqp =
+    ProjectionNode::make(expression_vector(y),
+      JoinNode::make(JoinMode::Inner, equals_(x, u),
+        node_c,
+        PredicateNode::make(predicate,
+          node_b)));
+    // clang-format on
+
+    const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+    const auto actual_lqp = apply_rule(rule, annotated_lqp);
+    SCOPED_TRACE("For predicate " + predicate->description());
+    EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  }
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   // Do not rewrite if there is no UCC on the join column.
-  auto key_constraints = TableKeyConstraints{};
-  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
-  node_b->set_key_constraints(key_constraints);
+  const auto key_constraint_v = TableKeyConstraint{{v->original_column_id}, KeyConstraintType::UNIQUE};
+  node_b->set_key_constraints({key_constraint_v});
+  const auto foreign_key_constraint =
+      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+  node_b->set_foreign_key_constraints({foreign_key_constraint});
 
-  // clang-format off
-  const auto lqp =
-  ProjectionNode::make(expression_vector(b),
-    JoinNode::make(JoinMode::Inner, equals_(a, u),
-      node_a,
-      PredicateNode::make(equals_(v, 0), node_b)));
-  // clang-format on
+  for (const auto& predicate :
+       std::vector<std::shared_ptr<AbstractExpression>>{equals_(v, 0), between_inclusive_(v, 0, 100)}) {
+    node_b->set_pruned_column_ids({});
+    node_c->set_pruned_column_ids({});
+    // clang-format off
+    const auto lqp =
+    ProjectionNode::make(expression_vector(y),
+      JoinNode::make(JoinMode::Inner, equals_(x, u),
+        node_c,
+        PredicateNode::make(predicate,
+          node_b)));
+    // clang-format on
 
-  const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
-  const auto actual_lqp = apply_rule(rule, annotated_lqp);
-  EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+    const auto annotated_lqp = apply_rule(std::make_shared<ColumnPruningRule>(), lqp);
+    const auto actual_lqp = apply_rule(rule, annotated_lqp);
+    SCOPED_TRACE("For predicate " + predicate->description());
+    EXPECT_LQP_EQ(actual_lqp, lqp->deep_copy());
+  }
 }
 
 TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   // Do not rewrite if columns from b are required upwards in LQP.
-  auto key_constraints = TableKeyConstraints{};
-  key_constraints.emplace(std::set<ColumnID>{u->original_column_id}, KeyConstraintType::UNIQUE);
-  key_constraints.emplace(std::set<ColumnID>{v->original_column_id}, KeyConstraintType::UNIQUE);
-  node_b->set_key_constraints(key_constraints);
+  const auto key_constraint_u = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_v = TableKeyConstraint{{v->original_column_id}, KeyConstraintType::UNIQUE};
+  node_b->set_key_constraints({key_constraint_u, key_constraint_v});
+  const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
+  node_b->set_order_constraints({order_constraint});
+  const auto foreign_key_constraint =
+      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+  node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   // clang-format off
   const auto lqp =

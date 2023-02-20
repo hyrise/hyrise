@@ -461,8 +461,7 @@ ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, con
         DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
       } else {
         const auto offset = it - column_ids.cbegin();
-        DebugAssert(!column_expressions[offset],
-            "Did not expect multiple column expressions for the same column id.");
+        DebugAssert(!column_expressions[offset], "Did not expect multiple column expressions for the same column id.");
         column_expressions[offset] = column_expression;
       }
     }
