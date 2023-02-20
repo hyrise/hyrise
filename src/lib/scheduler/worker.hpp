@@ -5,6 +5,10 @@
 #include <thread>
 #include <vector>
 
+// Using boost::atomic_flag as our use case with waiting requires GCC 11+.
+// TODO(anybody): switch to std::atomic_flag once we require at least GCC 11.
+#include <boost/atomic/atomic_flag.hpp>
+
 #include "scheduler/abstract_task.hpp"
 #include "types.hpp"
 #include "utils/assert.hpp"

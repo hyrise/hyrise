@@ -1,11 +1,14 @@
 #include "node_queue_scheduler.hpp"
 
-#include <atomic>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <utility>
 #include <vector>
+
+// Using boost::atomic_flag as our use case with waiting requires GCC 11+.
+// TODO(anybody): switch to std::atomic_flag once we require at least GCC 11.
+#include <boost/atomic/atomic_flag.hpp>
 
 #include "abstract_task.hpp"
 #include "hyrise.hpp"
@@ -100,7 +103,7 @@ void NodeQueueScheduler::finish() {
   // Signal workers that scheduler is shutting down.
   _shutdown_flag = true;
 
-  auto wait_flag = std::atomic_flag{};
+  auto wait_flag = boost::atomic_flag{};
   auto waiting_workers_counter = std::atomic_uint32_t{0};
 
   // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events. The
