@@ -36,8 +36,8 @@ cd build-coverage
 # We use clang 11 for the coverage check as clang 14 (the default clang version for Ubuntu 22.04) has an unresolved
 # issue (see https://github.com/llvm/llvm-project/issues/54907).
 path_to_compiler=''
-c_compiler='clang-11'
-cxx_compiler='clang++-11'
+c_compiler='clang-15'
+cxx_compiler='clang++-15'
 
 unamestr=$(uname)
 if [[ "$unamestr" == 'Darwin' ]]; then
