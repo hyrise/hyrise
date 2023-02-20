@@ -10,30 +10,37 @@ namespace hyrise {
 
 class SSDRegionTest : public BaseTest {
  public:
- private:
+ protected:
   const std::string db_file = test_data_path + "buffer_manager.data";
 };
 
-// TEST_F(SSDRegionTest, TestWriteReadPage) {
-//   const auto region = SSDRegion(db_file);
-//   Page page0;
-//   Page page1;
-//   Page page2;
-//   region.write_page(PageID{0}, page0);
-//   region.write_page(PageID{1}, page1);
-//   region.write_page(PageID{2}, page2);
+TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
+  auto region = std::make_unique<SSDRegion>(db_file);
 
-//   Page readPage0;
-//   Page readPage1;
-//   Page readPage2;
-//   region.read_page(PageID{0}, readPage0);
-//   region.read_page(PageID{1}, readPage1);
-//   region.read_page(PageID{2}, readPage1);
+  EXPECT_EQ(region->get_device_type(), SSDRegion::DeviceType::REGULAR_FILE);
+  ASSERT_TRUE(std::filesystem::exists(db_file));
 
-//   ASSERT_EQUAL(page0, readPage0);
-//   ASSERT_EQUAL(page0, readPage1);
-//   ASSERT_EQUAL(page0, readPage2);
-// }
+  std::vector<Page32KiB> write_pages(3);
+
+  region->write_page(PageID{0}, write_pages[0]);
+  region->write_page(PageID{1}, write_pages[1]);
+  region->write_page(PageID{2}, write_pages[2]);
+
+  std::vector<Page32KiB> read_pages(3);
+
+  region->read_page(PageID{2}, read_pages[2]);
+  region->read_page(PageID{0}, read_pages[1]);
+  region->read_page(PageID{1}, read_pages[0]);
+
+  ASSERT_EQ(read_pages[0], write_pages[0]);
+  ASSERT_EQ(read_pages[1], write_pages[1]);
+  ASSERT_EQ(read_pages[2], write_pages[2]);
+
+  region = nullptr;
+  ASSERT_FALSE(std::filesystem::exists(db_file));
+}
+
+// TODO: TEst on block device, GTEST_SKIP if no block
 
 // TEST_F(SSDRegionTest, TestBackingFileRemovedAfterDestruction) {
 //   auto region = std::make_unique<SSDRegion>(db_file);

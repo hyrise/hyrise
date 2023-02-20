@@ -12,8 +12,8 @@
 
 #include <boost/bimap.hpp>
 #include <boost/circular_buffer.hpp>
-#include <boost/container/scoped_allocator.hpp>
 #include <boost/container/pmr/polymorphic_allocator.hpp>
+#include <boost/container/scoped_allocator.hpp>
 
 #include <boost/container/string.hpp>
 #include <boost/container/vector.hpp>
@@ -159,7 +159,7 @@ constexpr ValueID INVALID_VALUE_ID{std::numeric_limits<ValueID::base_type>::max(
 
 // Get the default pre-allocated capacity of SSO strings. Note that the empty string has an unspecified capacity, so we
 // use a really short one here.
-const size_t SSO_STRING_CAPACITY = 1; // FIXME pmr_string{"."}.capacity();
+const size_t SSO_STRING_CAPACITY = pmr_string{"."}.capacity();
 
 // The Scheduler currently supports just these 3 priorities, subject to change.
 enum class SchedulePriority {
@@ -299,8 +299,8 @@ namespace std {
 // function.
 template <>
 struct hash<boost::container::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>> {
-  size_t operator()(
-      const boost::container::basic_string<char, std::char_traits<char>, hyrise::PolymorphicAllocator<char>>& string) const {
+  size_t operator()(const boost::container::basic_string<char, std::char_traits<char>,
+                                                         hyrise::PolymorphicAllocator<char>>& string) const {
     return std::hash<std::string_view>{}(string.c_str());
   }
 };

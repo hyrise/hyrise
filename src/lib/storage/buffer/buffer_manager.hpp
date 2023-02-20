@@ -74,13 +74,6 @@ class BufferManager {
   Page32KiB* get_page(const PageID page_id);
 
   /**
-   * @brief 
-   * 
-   * @return std::pair<PageID, std::unique_ptr<Page>> 
-   */
-  PageID new_page();
-
-  /**
    * @brief Pin a page marks a page unavailable for replacement. It needs to be unpinned before it can be replaced.
    * 
    * @param page_id 
@@ -94,20 +87,6 @@ class BufferManager {
    * @param page_id 
    */
   void unpin_page(const PageID page_id, const bool dirty = false);
-
-  /**
-   * @brief 
-   * 
-   * @param page_id 
-   */
-  void flush_page(const PageID page_id);
-
-  /**
-   * @brief Remove a page completely from the buffer manager and any of the storage regions
-   * 
-   * @param page_id 
-   */
-  void remove_page(const PageID page_id);
 
   /**
    * @brief Get the page id and offset from ptr object. PageID is on its max 
@@ -151,6 +130,10 @@ class BufferManager {
   std::pair<FrameID, Frame*> allocate_frame();
 
   Frame* find_in_page_table(const PageID page_id);
+
+  PageID new_page();
+  void flush_page(const PageID page_id);
+  void remove_page(const PageID page_id);
 
   void read_page(const PageID page_id, Page32KiB& destination);
   void write_page(const PageID page_id, Page32KiB& source);

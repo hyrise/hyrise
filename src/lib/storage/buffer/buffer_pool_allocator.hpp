@@ -2,9 +2,9 @@
 
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/move/utility.hpp>
+#include "storage/buffer/buffer_managed_ptr.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 #include "utils/assert.hpp"
-#include "storage/buffer/buffer_managed_ptr.hpp"
 
 namespace hyrise {
 
@@ -21,9 +21,7 @@ class BufferPoolAllocator {
   using difference_type = typename pointer::difference_type;
 
   // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
-  BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
-
-  }
+  BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {}
 
   explicit BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
 
@@ -65,6 +63,11 @@ class BufferPoolAllocator {
 
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
     return BufferPoolAllocator();
+  }
+
+  template <typename U, class... Args>
+  void construct(const U* ptr, BOOST_FWD_REF(Args)... args) {
+    ::new ((void*)ptr) U(boost::forward<Args>(args)...);
   }
 
   template <typename U, class Args>

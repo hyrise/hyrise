@@ -23,7 +23,7 @@ class SSDRegion  {
   DeviceType get_device_type() const;
 
  private:
-  int _fd;
+  const int _fd;
   const std::filesystem::path _backing_file_name;
   const DeviceType _device_type;
 

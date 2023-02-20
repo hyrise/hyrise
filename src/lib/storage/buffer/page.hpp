@@ -28,6 +28,10 @@ struct alignas(512) Page {
   std::byte* data() {
     return _data.data();
   }
+
+  friend bool operator==(const Page& p1, const Page& p2) noexcept {
+    return p1._data == p2._data;
+  }
 };
 
 using Page32KiB = Page<PageSizeType::KiB32>;

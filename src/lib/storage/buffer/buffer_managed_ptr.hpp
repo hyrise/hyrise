@@ -133,7 +133,7 @@ class BufferManagedPtr {
   }
 
   static BufferManagedPtr pointer_to(reference r) {
-    return BufferManagedPtr(std::addressof(r));
+    return BufferManagedPtr(&r);
   }
 
   friend bool operator==(const BufferManagedPtr& ptr1, const BufferManagedPtr& ptr2) noexcept {

@@ -24,8 +24,12 @@ std::pair<FrameID, Page32KiB*> VolatileRegion::allocate() {
 };
 
 FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
-  DebugAssert(_frames.data() <= ptr, "Pointer is out of range of region");
-  DebugAssert(ptr < (_frames.data() + capacity() * Page32KiB::size()), "Pointer is out of range of region");
+  // TODO
+  // DebugAssert(_frames.data() <= ptr, "Pointer is out of range of region");
+  // DebugAssert(ptr < (_frames.data() + capacity() * Page32KiB::size()), "Pointer is out of range of region");
+  if (ptr < _frames.begin().operator->() || ptr >= _frames.end().operator->()) {
+    return INVALID_FRAME_ID;
+  }
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - reinterpret_cast<const std::byte*>(_frames.data());
   return FrameID{offset / Page32KiB::size()};
 }

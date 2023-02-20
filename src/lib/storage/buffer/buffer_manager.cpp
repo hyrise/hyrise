@@ -216,6 +216,9 @@ std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr
   std::lock_guard<std::mutex> lock(_page_table_mutex);
 
   auto frame_id = _volatile_region->get_frame_id_from_ptr(ptr);
+  if(frame_id == INVALID_FRAME_ID) {
+    return std::make_pair(INVALID_PAGE_ID, 0);
+  }
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _frames[frame_id].data->data();
   return std::make_pair(_frames[frame_id].page_id, std::ptrdiff_t{offset});
 };
