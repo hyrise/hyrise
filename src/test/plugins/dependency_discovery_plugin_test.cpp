@@ -51,11 +51,11 @@ class DependencyDiscoveryPluginTest : public BaseTest {
 
  protected:
   DependencyCandidates _identify_ucc_candidates() {
-    return DependencyDiscoveryPlugin::_identify_ucc_candidates();
+    return DependencyDiscoveryPlugin{}._identify_ucc_candidates();
   }
 
   void _discover_uccs() {
-    DependencyDiscoveryPlugin::_validate_ucc_candidates(DependencyDiscoveryPlugin::_identify_ucc_candidates());
+    DependencyDiscoveryPlugin::_validate_ucc_candidates(DependencyDiscoveryPlugin{}._identify_ucc_candidates());
   }
 
   void _validate_ucc_candidates(const DependencyCandidates& candidates) {

@@ -1,18 +1,14 @@
 #include "dependency_discovery_plugin.hpp"
 
 #include <boost/container_hash/hash.hpp>
+#include "magic_enum.hpp"
 
 #include "../benchmarklib/abstract_benchmark_item_runner.hpp"
-#include "expression/binary_predicate_expression.hpp"
+#include "dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.hpp"
+#include "dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp"
+#include "dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/value_expression.hpp"
 #include "hyrise.hpp"
-#include "logical_query_plan/aggregate_node.hpp"
-#include "logical_query_plan/join_node.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "logical_query_plan/predicate_node.hpp"
-#include "logical_query_plan/stored_table_node.hpp"
-#include "magic_enum.hpp"
 #include "resolve_type.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterate.hpp"
@@ -20,6 +16,12 @@
 #include "utils/timer.hpp"
 
 namespace hyrise {
+
+DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
+  add_rule(std::make_unique<DependentGroupByReductionCandidateRule>());
+  add_rule(std::make_unique<JoinToSemiJoinCandidateRule>());
+  add_rule(std::make_unique<JoinToPredicateCandidateRule>());
+}
 
 std::string DependencyDiscoveryPlugin::description() const {
   return "Unary Unique Column Combination Discovery Plugin";
@@ -51,31 +53,23 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_ucc_candidates() {
 
   // Get a snapshot of the current LQP cache to work on all currently cached queries.
   const auto& snapshot = Hyrise::get().default_lqp_cache->snapshot();
-
-  auto ucc_candidates = DependencyCandidates{};
+  auto dependency_candidates = DependencyCandidates{};
 
   for (const auto& [_, entry] : snapshot) {
     const auto& root_node = entry.value;
 
     visit_lqp(root_node, [&](const auto& node) {
       const auto type = node->type;
-      if (type != LQPNodeType::Join && type != LQPNodeType::Aggregate) {
-        // Only join and aggregate (Groupby) nodes are considered for optimization using UCCs.
-        return LQPVisitation::VisitInputs;
-      }
 
-      if (type == LQPNodeType::Aggregate) {
-        _ucc_candidates_from_aggregate_node(node, ucc_candidates);
-        return LQPVisitation::VisitInputs;
+      for (const auto& rule : _rules[type]) {
+        rule->apply_to_node(node, dependency_candidates);
       }
-      // The only remaining option is a join node.
-      _ucc_candidates_from_join_node(node, ucc_candidates);
 
       return LQPVisitation::VisitInputs;
     });
   }
 
-  return ucc_candidates;
+  return dependency_candidates;
 }
 
 void DependencyDiscoveryPlugin::_validate_ucc_candidates(const DependencyCandidates& ucc_candidates) {
@@ -221,151 +215,8 @@ bool DependencyDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_pt
   return true;
 }
 
-void DependencyDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
-                                                                    DependencyCandidates& ucc_candidates) {
-  const auto& aggregate_node = static_cast<AggregateNode&>(*node);
-  const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
-      aggregate_node.node_expressions.cbegin(),
-      aggregate_node.node_expressions.cbegin() + aggregate_node.aggregate_expressions_begin_idx};
-
-  for (const auto& column_candidate : column_candidates) {
-    const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
-    if (!lqp_column_expression) {
-      continue;
-    }
-    // Every ColumnExpression used as a GroupBy expression should be checked for uniqueness.
-    const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_column_expression->original_node.lock());
-    ucc_candidates.emplace(
-        std::make_shared<UccCandidate>(stored_table_node.table_name, lqp_column_expression->original_column_id));
-  }
-}
-
-void DependencyDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
-                                                               DependencyCandidates& ucc_candidates) {
-  const auto& join_node = static_cast<JoinNode&>(*node);
-  // Fetch the join predicate to extract the UCC candidates from. Right now, limited to single-predicate equi joins.
-  const auto& join_predicates = join_node.join_predicates();
-  if (join_predicates.size() != 1) {
-    return;
-  }
-  const auto binary_join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates.front());
-  if (!binary_join_predicate || binary_join_predicate->predicate_condition != PredicateCondition::Equals) {
-    return;
-  }
-
-  const auto column_expression_for_join_input = [&](const auto& input_node) {
-    // The join predicate may be swapped, so get the proper operand.
-    auto column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->left_operand());
-    if (!column_candidate || !expression_evaluable_on_lqp(column_candidate, *input_node)) {
-      column_candidate = std::dynamic_pointer_cast<LQPColumnExpression>(binary_join_predicate->right_operand());
-    }
-    // We do not have to find an LQPColumnExpression in the join predicates at all, e.g., when joining on substrings:
-    // SELECT * FROM orders, lineitem WHERE EXTRACT(YEAR FROM o_orderdate) = EXTRACT(YEAR FROM l_shipdate).
-    // Thus, column_candidate might be a nullptr.
-    Assert(!column_candidate || expression_evaluable_on_lqp(column_candidate, *input_node),
-           "Join predicate should belong to an input");
-    return column_candidate;
-  };
-
-  // We only care about semi (right input is candidate) and inner (both are potential candidates) joins.
-  switch (join_node.join_mode) {
-    case JoinMode::Inner: {
-      for (const auto& column_candidate : binary_join_predicate->arguments) {
-        const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
-        if (!lqp_column_expression) {
-          continue;
-        }
-
-        // Determine which subtree (left or right) belongs to the ColumnExpression.
-        auto subtree_root = join_node.left_input();
-        if (!expression_evaluable_on_lqp(column_candidate, *subtree_root)) {
-          subtree_root = join_node.right_input();
-        }
-
-        // For JoinToSemiJoinRule, the join column is already interesting for optimization.
-        const auto& original_node = lqp_column_expression->original_node.lock();
-        if (original_node->type != LQPNodeType::StoredTable) {
-          continue;
-        }
-        const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-        ucc_candidates.emplace(
-            std::make_shared<UccCandidate>(stored_table_node.table_name, lqp_column_expression->original_column_id));
-
-        _ucc_candidates_from_removable_join_input(subtree_root, lqp_column_expression, ucc_candidates);
-      }
-      return;
-    }
-
-    case JoinMode::Semi: {
-      // We want to check only the right hand side here, as this is the one that will be removed in the end.
-      const auto subtree_root = join_node.right_input();
-      const auto column_candidate = column_expression_for_join_input(subtree_root);
-      _ucc_candidates_from_removable_join_input(subtree_root, column_candidate, ucc_candidates);
-      return;
-    }
-
-    case JoinMode::Left:
-    case JoinMode::Right:
-    case JoinMode::FullOuter:
-    case JoinMode::Cross:
-    case JoinMode::AntiNullAsTrue:
-    case JoinMode::AntiNullAsFalse:
-      return;
-  }
-}
-
-void DependencyDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
-    std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate,
-    DependencyCandidates& ucc_candidates) {
-  // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
-  // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
-  if (!root_node || !column_candidate) {
-    return;
-  }
-
-  visit_lqp(root_node, [&](auto& node) {
-    if (node->type != LQPNodeType::Predicate) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    // When we find a predicate node, we check whether the searched column is filtered in this predicate. If so, it is a
-    // valid UCC candidate; if not, continue searching.
-    const auto& predicate_node = static_cast<const PredicateNode&>(*node);
-
-    // Ensure that we look at a binary predicate expression checking for equality (e.g., a = 'x').
-    const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate());
-    if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    // Get the column expression, which is not always the left operand.
-    auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
-    auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->right_operand());
-    if (!column_expression) {
-      column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
-      value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->left_operand());
-    }
-
-    if (!column_expression || !value_expression) {
-      // The predicate needs to look like column = value or value = column; if not, move on.
-      return LQPVisitation::VisitInputs;
-    }
-
-    const auto expression_table_node =
-        std::static_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
-    const auto candidate_table_node =
-        std::static_pointer_cast<const StoredTableNode>(column_candidate->original_node.lock());
-
-    if (expression_table_node == candidate_table_node) {
-      // Both columns should be in the same table.
-      ucc_candidates.emplace(
-          std::make_shared<UccCandidate>(expression_table_node->table_name, column_expression->original_column_id));
-      ucc_candidates.emplace(
-          std::make_shared<UccCandidate>(candidate_table_node->table_name, column_candidate->original_column_id));
-    }
-
-    return LQPVisitation::VisitInputs;
-  });
+void DependencyDiscoveryPlugin::add_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
+  _rules[rule->target_node_type].emplace_back(std::move(rule));
 }
 
 EXPORT_PLUGIN(DependencyDiscoveryPlugin);
