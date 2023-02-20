@@ -39,13 +39,13 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
    * 
    * Returns an unordered set of these candidates to be used in the UCC validation function.
    */
-  DependencyCandidates _identify_ucc_candidates();
+  DependencyCandidates _identify_dependency_candidates();
 
   /**
    * Iterates over the provided set of columns identified as candidates for a uniqueness validation. Validates those
    * that are not already known to be unique.
    */
-  static void _validate_ucc_candidates(const DependencyCandidates& ucc_candidates);
+  static void _validate_dependency_candidates(const DependencyCandidates& dependency_candidates);
 
  private:
   /**
@@ -74,21 +74,21 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
    * and a column used in a PredicateNode may be added as a UCC candidate if the predicate filters the same table that
    * contains the join column.
    */
-  static void _ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
-                                             DependencyCandidates& ucc_candidates);
+  static void _dependency_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
+                                             DependencyCandidates& dependency_candidates);
 
   /**
    * Iterates through the LQP underneath the given root node. If a PredicateNode is encountered, checks whether it has a
    * binary predicate checking for `column` = `value`. If the predicate column is from the same table as the passed
    * column_candidate, adds both as UCC candidates.
    */
-  static void _ucc_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
+  static void _dependency_candidates_from_removable_join_input(std::shared_ptr<AbstractLQPNode> root_node,
                                                         std::shared_ptr<LQPColumnExpression> column_candidate,
-                                                        DependencyCandidates& ucc_candidates);
+                                                        DependencyCandidates& dependency_candidates);
 
-  void add_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule);
+  void _add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule);
 
-  std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _rules{};
+  std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _candidate_rules{};
 };
 
 }  // namespace hyrise

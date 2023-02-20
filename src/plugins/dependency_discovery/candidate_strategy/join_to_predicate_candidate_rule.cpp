@@ -108,13 +108,18 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
         std::dynamic_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
 
     // Both columns should be in the same table.
-    if (!expression_table_node || *expression_table_node != *other_stored_table_node) {
+    if (!expression_table_node || *expression_table_node != stored_table_node) {
       return LQPVisitation::VisitInputs;
     }
     candidates.emplace(
         std::make_shared<UccCandidate>(expression_table_node->table_name, column_expression->original_column_id));
     candidates.emplace(
         std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
+
+    if (!other_stored_table_node) {
+      return LQPVisitation::VisitInputs;
+    }
+
     candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
                                                      join_lqp_column_expression->original_column_id,
                                                      column_expression->original_column_id));
@@ -122,6 +127,7 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     candidates.emplace(std::make_shared<IndCandidate>(
         stored_table_node.table_name, join_lqp_column_expression->original_column_id,
         other_stored_table_node->table_name, join_key_column_expression->original_column_id));
+
 
     return LQPVisitation::VisitInputs;
   });

@@ -6,11 +6,13 @@
 
 namespace hyrise {
 /**
- * DependencyCandidate instances represent a column (referencing the table by name and the column by ID). They are used to
- * first collect all candidates for UCC validation before actually validating them in the DependencyDiscoveryPlugin.
+ * AbstractDependencyCandidate instances represent candidates for different data dependencies by one or more columns
+ * (referencing the table by name and the column by ID). They are used to first collect all candidates for dependency
+ * validation before actually validating them in the DependencyDiscoveryPlugin.
  */
-
 enum class DependencyType { UniqueColumn, Order, Inclusion };
+
+enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown };
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:
@@ -18,7 +20,6 @@ class AbstractDependencyCandidate : public Noncopyable {
                               const DependencyType init_type);
 
   AbstractDependencyCandidate() = delete;
-
   virtual ~AbstractDependencyCandidate() = default;
 
   bool operator==(const AbstractDependencyCandidate& rhs) const;
@@ -106,7 +107,7 @@ struct DependencyCandidateSharedPtrEqual final {
 
 // Note that operator== ignores the equality functions:
 // https://stackoverflow.com/questions/36167764/can-not-compare-stdunorded-set-with-custom-keyequal
-// If we want to prioritize dependency candidates in the future, this might be replaced by a priority queue.
+// If we want to prioritize dependency candidates in the future, this might be replaced or extended by a priority queue.
 using DependencyCandidates = std::unordered_set<std::shared_ptr<AbstractDependencyCandidate>,
                                                 DependencyCandidateSharedPtrHash, DependencyCandidateSharedPtrEqual>;
 

@@ -18,9 +18,9 @@
 namespace hyrise {
 
 DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
-  add_rule(std::make_unique<DependentGroupByReductionCandidateRule>());
-  add_rule(std::make_unique<JoinToSemiJoinCandidateRule>());
-  add_rule(std::make_unique<JoinToPredicateCandidateRule>());
+  _add_candidate_rule(std::make_unique<DependentGroupByReductionCandidateRule>());
+  _add_candidate_rule(std::make_unique<JoinToSemiJoinCandidateRule>());
+  _add_candidate_rule(std::make_unique<JoinToPredicateCandidateRule>());
 }
 
 std::string DependencyDiscoveryPlugin::description() const {
@@ -33,7 +33,7 @@ void DependencyDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 DependencyDiscoveryPlugin::provided_user_executable_functions() {
-  return {{"DiscoverUCCs", [&]() { _validate_ucc_candidates(_identify_ucc_candidates()); }}};
+  return {{"DiscoverUCCs", [&]() { _validate_dependency_candidates(_identify_dependency_candidates()); }}};
 }
 
 std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() {
@@ -41,11 +41,11 @@ std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() 
     for (const auto item_id : benchmark_item_runner.items()) {
       benchmark_item_runner.execute_item(item_id);
     }
-    _validate_ucc_candidates(_identify_ucc_candidates());
+    _validate_dependency_candidates(_identify_dependency_candidates());
   };
 }
 
-DependencyCandidates DependencyDiscoveryPlugin::_identify_ucc_candidates() {
+DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates() {
   const auto lqp_cache = Hyrise::get().default_lqp_cache;
   if (!lqp_cache) {
     return {};
@@ -61,7 +61,7 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_ucc_candidates() {
     visit_lqp(root_node, [&](const auto& node) {
       const auto type = node->type;
 
-      for (const auto& rule : _rules[type]) {
+      for (const auto& rule : _candidate_rules[type]) {
         rule->apply_to_node(node, dependency_candidates);
       }
 
@@ -72,8 +72,8 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_ucc_candidates() {
   return dependency_candidates;
 }
 
-void DependencyDiscoveryPlugin::_validate_ucc_candidates(const DependencyCandidates& ucc_candidates) {
-  for (const auto& candidate : ucc_candidates) {
+void DependencyDiscoveryPlugin::_validate_dependency_candidates(const DependencyCandidates& dependency_candidates) {
+  for (const auto& candidate : dependency_candidates) {
     auto message = std::stringstream{};
     if (candidate->type != DependencyType::UniqueColumn) {
       message << "Skipping candidate " << *candidate << " (not implemented)" << std::endl;
@@ -215,8 +215,8 @@ bool DependencyDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_pt
   return true;
 }
 
-void DependencyDiscoveryPlugin::add_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
-  _rules[rule->target_node_type].emplace_back(std::move(rule));
+void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
+  _candidate_rules[rule->target_node_type].emplace_back(std::move(rule));
 }
 
 EXPORT_PLUGIN(DependencyDiscoveryPlugin);
