@@ -17,6 +17,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<pmr_string>()),
       _dictionary{dictionary},
+      _dictionary_span{std::make_shared<const FixedStringSpan>(*_dictionary)},
       _attribute_vector{attribute_vector},
       _decompressor{_attribute_vector->create_base_decompressor()} {}
 
@@ -37,15 +38,20 @@ std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOff
   DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
 
   const auto value_id = _decompressor->get(chunk_offset);
-  if (value_id == _dictionary->size()) {
+  if (value_id == _dictionary_span->size()) {
     return std::nullopt;
   }
-  return _dictionary->get_string_at(value_id);
+  return _dictionary_span->get_string_at(value_id);
 }
 
 template <typename T>
 std::shared_ptr<const FixedStringVector> FixedStringDictionarySegment<T>::fixed_string_dictionary() const {
   return _dictionary;
+}
+
+template <typename T>
+std::shared_ptr<const FixedStringSpan> FixedStringDictionarySegment<T>::fixed_string_dictionary_span() const {
+  return _dictionary_span;
 }
 
 template <typename T>
@@ -88,11 +94,11 @@ ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value
 
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-  if (it == _dictionary->cend()) {
+  auto it = std::lower_bound(_dictionary_span->cbegin(), _dictionary_span->cend(), typed_value);
+  if (it == _dictionary_span->cend()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary_span->cbegin(), it))};
 }
 
 template <typename T>
@@ -101,22 +107,22 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
 
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
-  if (it == _dictionary->cend()) {
+  auto it = std::upper_bound(_dictionary_span->cbegin(), _dictionary_span->cend(), typed_value);
+  if (it == _dictionary_span->cend()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary_span->cbegin(), it))};
 }
 
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
-  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
-  return _dictionary->get_string_at(value_id);
+  DebugAssert(value_id < _dictionary_span->size(), "ValueID out of bounds");
+  return _dictionary_span->get_string_at(value_id);
 }
 
 template <typename T>
 ValueID::base_type FixedStringDictionarySegment<T>::unique_values_count() const {
-  return static_cast<ValueID::base_type>(_dictionary->size());
+  return static_cast<ValueID::base_type>(_dictionary_span->size());
 }
 
 template <typename T>
@@ -126,7 +132,7 @@ std::shared_ptr<const BaseCompressedVector> FixedStringDictionarySegment<T>::att
 
 template <typename T>
 ValueID FixedStringDictionarySegment<T>::null_value_id() const {
-  return ValueID{static_cast<ValueID::base_type>(_dictionary->size())};
+  return ValueID{static_cast<ValueID::base_type>(_dictionary_span->size())};
 }
 
 template class FixedStringDictionarySegment<pmr_string>;

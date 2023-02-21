@@ -448,6 +448,9 @@ set(
     storage/fixed_string_dictionary_segment.hpp
     storage/fixed_string_dictionary_segment/fixed_string.cpp
     storage/fixed_string_dictionary_segment/fixed_string.hpp
+    storage/fixed_string_dictionary_segment/fixed_string_span.cpp
+    storage/fixed_string_dictionary_segment/fixed_string_span.hpp
+    storage/fixed_string_dictionary_segment/fixed_string_span_iterator.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.cpp
     storage/fixed_string_dictionary_segment/fixed_string_vector.hpp
     storage/fixed_string_dictionary_segment/fixed_string_vector_iterator.hpp

@@ -99,15 +99,17 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_single_threaded(benchma
 }
 
 #ifdef __linux__
-void FileIOMicroReadBenchmarkFixture::memory_mapped_read_user_space(benchmark::State& state, const uint16_t thread_count,
-  const int access_order) {
+void FileIOMicroReadBenchmarkFixture::memory_mapped_read_user_space(benchmark::State& state,
+                                                                    const uint16_t thread_count,
+                                                                    const int access_order) {
   // Set number of threads used by UMAP.
   setenv("UMAP_PAGE_FILLERS", std::to_string(thread_count).c_str(), 1);
   setenv("UMAP_PAGE_EVICTORS", std::to_string(thread_count).c_str(), 1);
   setenv("UMAP_LOG_LEVEL", std::string("ERROR").c_str(), 1);
 
   auto fd = int32_t{};
-  Assert(((fd = open(filename.c_str(), O_RDONLY)) >= 0), close_file_and_return_error_message(fd, "Open error: ", errno));
+  Assert(((fd = open(filename.c_str(), O_RDONLY)) >= 0),
+         close_file_and_return_error_message(fd, "Open error: ", errno));
 
   for (auto _ : state) {
     state.PauseTiming();
@@ -118,7 +120,6 @@ void FileIOMicroReadBenchmarkFixture::memory_mapped_read_user_space(benchmark::S
     const auto OFFSET = off_t{0};
 
     auto* map = reinterpret_cast<int32_t*>(umap(NULL, NUMBER_OF_BYTES, PROT_READ, PRIVATE, fd, OFFSET));
-
 
     Assert((map != MAP_FAILED), close_file_and_return_error_message(fd, "Mapping Failed: ", errno));
 
@@ -302,10 +303,10 @@ BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQU
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_RANDOM_OLD)(benchmark::State& state) {
   const auto thread_count = static_cast<uint16_t>(state.range(1));
   if (thread_count == 1) {
-     memory_mapped_read_single_threaded(state, UMAP, PRIVATE, RANDOM);
-   } else {
-     memory_mapped_read_multi_threaded(state, UMAP, PRIVATE, thread_count, RANDOM);
-   }
+    memory_mapped_read_single_threaded(state, UMAP, PRIVATE, RANDOM);
+  } else {
+    memory_mapped_read_multi_threaded(state, UMAP, PRIVATE, thread_count, RANDOM);
+  }
 }
 
 BENCHMARK_DEFINE_F(FileIOMicroReadBenchmarkFixture, UMAP_ATOMIC_MAP_PRIVATE_SEQUENTIAL_OLD)(benchmark::State& state) {

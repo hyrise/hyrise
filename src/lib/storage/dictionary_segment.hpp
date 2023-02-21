@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 #include <string>
 
 #include "base_dictionary_segment.hpp"
@@ -22,8 +23,16 @@ class DictionarySegment : public BaseDictionarySegment {
   explicit DictionarySegment(const std::shared_ptr<const pmr_vector<T>>& dictionary,
                              const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
+  explicit DictionarySegment(const std::shared_ptr<const std::span<const T>>& dictionary,
+                             const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
+
+  explicit DictionarySegment(const uint32_t* start_address);
+
   // returns an underlying dictionary
   std::shared_ptr<const pmr_vector<T>> dictionary() const;
+
+  // returns an underlying dictionary
+  std::shared_ptr<const std::span<const T>> dictionary_span() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -35,10 +44,10 @@ class DictionarySegment : public BaseDictionarySegment {
   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == _dictionary->size()) {
+    if (value_id == _dictionary_span->size()) {
       return std::nullopt;
     }
-    return (*_dictionary)[value_id];
+    return (*_dictionary_span)[value_id];
   }
 
   ChunkOffset size() const final;
@@ -86,8 +95,16 @@ class DictionarySegment : public BaseDictionarySegment {
 
  protected:
   const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  std::shared_ptr<const std::span<const T>> _dictionary_span;
+  std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
+
+  static constexpr auto ENCODING_TYPE_OFFSET_INDEX = uint32_t{0};
+  static constexpr auto DICTIONARY_SIZE_OFFSET_INDEX = uint32_t{1};
+  static constexpr auto ATTRIBUTE_VECTOR_OFFSET_INDEX = uint32_t{2};
+  static constexpr auto HEADER_OFFSET_INDEX = uint32_t{3};
+  static constexpr auto NUM_BYTES_32_BIT_ENCODING = uint32_t{4};
+  static constexpr auto NUM_BYTES_16_BIT_ENCODING = uint32_t{2};
 };
 
 EXPLICITLY_DECLARE_DATA_TYPES(DictionarySegment);

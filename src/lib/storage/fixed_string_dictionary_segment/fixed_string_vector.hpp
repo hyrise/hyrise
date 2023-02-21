@@ -68,6 +68,9 @@ class FixedStringVector {
   // Return a pointer to the underlying memory
   const char* data() const;
 
+  // Return underlying chars vector
+  const pmr_vector<char> chars() const;
+
   // Return the number of entries in the vector.
   size_t size() const;
 

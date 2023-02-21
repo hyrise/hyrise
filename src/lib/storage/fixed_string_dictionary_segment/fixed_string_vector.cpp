@@ -88,6 +88,10 @@ const char* FixedStringVector::data() const {
   return _chars.data();
 }
 
+const pmr_vector<char> FixedStringVector::chars() const {
+  return _chars;
+}
+
 size_t FixedStringVector::size() const {
   return _size;
 }

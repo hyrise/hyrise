@@ -3,10 +3,10 @@
 
 #include <aio.h>
 #include <stddef.h>
-#include <unistd.h>
-#include <fstream>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <fstream>
 
 #include <algorithm>
 #include <cstring>
@@ -26,11 +26,11 @@ void micro_benchmark_clear_disk_cache() {
   // TODO(phoenix): better documentation of which caches we are clearing
   sync();
 #ifdef __APPLE__
-  auto return_val =  system("purge");
-  (void) return_val;
+  auto return_val = system("purge");
+  (void)return_val;
 #else
   auto return_val = system("echo 3 > /proc/sys/vm/drop_caches");
-  (void) return_val;
+  (void)return_val;
 #endif
 }
 
@@ -43,7 +43,6 @@ void aio_error_handling(aiocb* aiocb, uint32_t expected_bytes) {
   Assert(ret == static_cast<int32_t>(expected_bytes),
          "Error at aio_return(). Got: " + std::to_string(ret) + " Expected: " + std::to_string(expected_bytes) + ".");
 }
-
 
 /**
  * Generates a vector containing random indexes between 0 and number.

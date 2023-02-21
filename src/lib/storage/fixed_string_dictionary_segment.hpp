@@ -4,6 +4,7 @@
 #include <string>
 
 #include "base_dictionary_segment.hpp"
+#include "fixed_string_dictionary_segment/fixed_string_span.hpp"
 #include "fixed_string_dictionary_segment/fixed_string_vector.hpp"
 #include "types.hpp"
 #include "vector_compression/base_compressed_vector.hpp"
@@ -26,6 +27,8 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
+
+  std::shared_ptr<const FixedStringSpan> fixed_string_dictionary_span() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -71,6 +74,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
  protected:
   const std::shared_ptr<const FixedStringVector> _dictionary;
+  const std::shared_ptr<const FixedStringSpan> _dictionary_span;
   const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   const std::unique_ptr<BaseVectorDecompressor> _decompressor;
 };

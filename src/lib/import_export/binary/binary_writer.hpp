@@ -21,6 +21,7 @@ enum class CompressedVectorType : uint8_t;
 class BinaryWriter {
  public:
   static void write(const Table& table, const std::string& filename);
+  friend class StorageManager;
 
  private:
   /**

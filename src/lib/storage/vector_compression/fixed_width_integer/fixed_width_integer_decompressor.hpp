@@ -9,18 +9,18 @@ namespace hyrise {
 template <typename UnsignedIntType>
 class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
  public:
-  explicit FixedWidthIntegerDecompressor(const pmr_vector<UnsignedIntType>& data) : _data{data} {}
+  explicit FixedWidthIntegerDecompressor(const std::span<const UnsignedIntType>& data_span) : _data_span{data_span} {}
 
   FixedWidthIntegerDecompressor(const FixedWidthIntegerDecompressor&) = default;
   FixedWidthIntegerDecompressor(FixedWidthIntegerDecompressor&&) = default;
 
   FixedWidthIntegerDecompressor& operator=(const FixedWidthIntegerDecompressor& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
+    DebugAssert(_data_span.data() == other._data_span.data(), "Cannot reassign FixedWidthIntegerDecompressor");
     return *this;
   }
 
   FixedWidthIntegerDecompressor& operator=(FixedWidthIntegerDecompressor&& other) {
-    DebugAssert(&_data == &other._data, "Cannot reassign FixedWidthIntegerDecompressor");
+    DebugAssert(_data_span.data() == other._data_span.data(), "Cannot reassign FixedWidthIntegerDecompressor");
     return *this;
   }
 
@@ -31,17 +31,17 @@ class FixedWidthIntegerDecompressor : public BaseVectorDecompressor {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
 
-    return _data[i];
+    return _data_span[i];
 
 #pragma GCC diagnostic pop
   }
 
   size_t size() const final {
-    return _data.size();
+    return _data_span.size();
   }
 
  private:
-  const pmr_vector<UnsignedIntType>& _data;
+  const std::span<const UnsignedIntType> _data_span;
 };
 
 }  // namespace hyrise
