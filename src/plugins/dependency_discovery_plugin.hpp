@@ -3,10 +3,6 @@
 #include "dependency_discovery/candidate_strategy/abstract_dependency_candidate_rule.hpp"
 #include "dependency_discovery/dependency_candidates.hpp"
 #include "dependency_discovery/validation_strategy/abstract_dependency_validation_rule.hpp"
-#include "expression/abstract_expression.hpp"
-#include "logical_query_plan/abstract_lqp_node.hpp"
-#include "storage/table.hpp"
-#include "types.hpp"
 #include "utils/abstract_plugin.hpp"
 
 namespace hyrise {
@@ -40,31 +36,15 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
    * 
    * Returns an unordered set of these candidates to be used in the UCC validation function.
    */
-  DependencyCandidates _identify_dependency_candidates();
+  DependencyCandidates _identify_dependency_candidates() const;
 
   /**
    * Iterates over the provided set of columns identified as candidates for a uniqueness validation. Validates those
    * that are not already known to be unique.
    */
-  void _validate_dependency_candidates(const DependencyCandidates& dependency_candidates);
+  void _validate_dependency_candidates(const DependencyCandidates& dependency_candidates) const;
 
  private:
-  /**
-   * Checks whether individual DictionarySegments contain duplicates. This is an efficient operation as the check is
-   * simply comparing the length of the dictionary to that of the attribute vector. This function can therefore be used
-   * for an early-out before the more expensive cross-segment uniqueness check.
-   */
-  template <typename ColumnDataType>
-  static bool _dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id);
-
-  /**
-   * Checks whether the given table contains only unique values by inserting all values into an unordered set. If for
-   * any table segment the size of the set increases by less than the number of values in that segment, we know that
-   * there must be a duplicate and return false. Otherwise, returns true.
-   */
-  template <typename ColumnDataType>
-  static bool _uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id);
-
   void _add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule);
 
   void _add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);

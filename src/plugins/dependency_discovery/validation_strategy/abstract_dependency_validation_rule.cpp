@@ -23,7 +23,10 @@ ValidationResult AbstractDependencyValidationRule::validate(const AbstractDepend
     return ValidationResult{ValidationStatus::AlreadyKnown};
   }
 
-  return _on_validate(candidate);
+  const auto& result = _on_validate(candidate);
+  Assert(result.status != ValidationStatus::Uncertain,
+         "Expected explicit validation result for " + candidate.description());
+  return result;
 }
 
 bool AbstractDependencyValidationRule::_is_known(const std::string& table_name,

@@ -26,13 +26,13 @@ class StoredTableNode;
 
  * Example reformulation (only shown for c_name) which removes c_name from the list of group-by columns and adds it to
  * the list of aggregates via the ANY() function:
- * 		Aggregate: Grouping = [ c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment],
- * 				   Aggregates = [ sum(l_extendedprice * (1 - l_discount)) ]
+ *     Aggregate: Grouping = [ c_custkey, c_name, c_acctbal, c_phone, n_name, c_address, c_comment],
+ *                Aggregates = [ sum(l_extendedprice * (1 - l_discount)) ]
  *
  *          >>>
  *
- * 		Aggregate: Grouping = [ c_custkey, c_acctbal, c_phone, n_name, c_address, c_comment],
- * 				   Aggregates = [ SUM(l_extendedprice * (1 - l_discount)), ANY(c_name) ]
+ *     Aggregate: Grouping = [ c_custkey, c_acctbal, c_phone, n_name, c_address, c_comment],
+ *                Aggregates = [ SUM(l_extendedprice * (1 - l_discount)), ANY(c_name) ]
 
  * ANY() selects "any" value from the list of values per group (since we group by the functional dependency's
  * determinant column(s) in this case the group is ensured to be of size one). This rule implements choke point 1.4 of

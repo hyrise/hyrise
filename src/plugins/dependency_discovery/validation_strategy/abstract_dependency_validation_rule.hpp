@@ -13,7 +13,8 @@ struct ValidationResult {
   ValidationResult() = delete;
 
   const ValidationStatus status;
-  std::optional<std::vector<AbstractTableConstraint>> constraints{};
+  // Pointer is required for polymorphism.
+  std::optional<std::vector<std::shared_ptr<AbstractTableConstraint>>> constraints{};
 };
 
 class AbstractDependencyValidationRule {
