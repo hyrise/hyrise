@@ -103,40 +103,51 @@ void NodeQueueScheduler::finish() {
   // Signal workers that scheduler is shutting down.
   _shutdown_flag = true;
 
-  auto wait_flag = boost::atomic_flag{};
-  auto waiting_workers_counter = std::atomic_uint32_t{0};
+  {
+    auto wake_up_loop_count = size_t{0};
+    while (true) {
+      auto wait_flag = std::atomic_flag{};
+      auto waiting_workers_counter = std::atomic_uint32_t{0};
 
-  // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events. The
-  // tasks cannot be stolen to ensure that we reach each worker of each node.
-  auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(_queue_count * _workers_per_node);
-  for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
-    for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
-      auto shutdown_signal_task = std::make_shared<JobTask>(
-          [&]() {
+      // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events. The
+      // tasks cannot be stolen to ensure that we reach each worker of each node.
+      auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
+      jobs.reserve(_queue_count * _workers_per_node);
+      for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
+        for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
+          auto shutdown_signal_task = std::make_shared<JobTask>([&] () {
             ++waiting_workers_counter;
             wait_flag.wait(false);
-          },
-          SchedulePriority::Default, false);
-      jobs.push_back(std::move(shutdown_signal_task));
-      jobs.back()->schedule(node_id);
+          }, SchedulePriority::Default, false);
+          jobs.push_back(std::move(shutdown_signal_task));
+          jobs.back()->schedule(node_id);
+        }
+      }
+
+      const auto worker_count = _workers.size();
+      auto wait_loop_count = size_t{0};
+      while (waiting_workers_counter < worker_count) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+        // We wait up to 3 seconds (tests might run on congested servers) per loop.
+        if (wait_loop_count > 30) {
+          continue;
+        }
+        ++wait_loop_count;
+      }
+
+      std::cout << "run " << wake_up_loop_count << std::endl;
+
+      wait_flag.test_and_set();
+      wait_flag.notify_all();
+
+      if (waiting_workers_counter == worker_count) {
+        break;
+      }
+
+      ++wake_up_loop_count;
     }
-  }
-
-  const auto worker_count = _workers.size();
-  auto wait_loop_count = size_t{0};
-  while (waiting_workers_counter < worker_count) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // We wait up to 30 seconds (tests might run on congested servers).
-    if (wait_loop_count > 300) {
-      Fail("Time out during scheduler shut down. Workers might not have woken up correctly.");
-    }
-    ++wait_loop_count;
-  }
-
-  wait_flag.test_and_set();
-  wait_flag.notify_all();
+  }  
 
   wait_for_all_tasks();
 
