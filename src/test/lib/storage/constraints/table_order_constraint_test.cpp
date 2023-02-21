@@ -11,7 +11,8 @@ class TableOrderConstraintTest : public BaseTest {
     _table = Table::create_dummy_table({{"a", DataType::Int, false},
                                         {"b", DataType::Int, false},
                                         {"c", DataType::Int, false},
-                                        {"d", DataType::Int, false}});
+                                        {"d", DataType::Int, false},
+                                        {"e", DataType::Int, false}});
   }
 
   std::shared_ptr<Table> _table;
@@ -44,13 +45,18 @@ TEST_F(TableOrderConstraintTest, AddOrderConstraints) {
   _table->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{0}}});
   EXPECT_EQ(_table->soft_order_constraints().size(), 3);
 
+  const auto order_constraint_4 = TableOrderConstraint{{ColumnID{2}}, {ColumnID{1}}};
+  _table->add_soft_order_constraint({{ColumnID{2}}, {ColumnID{1}}});
+  EXPECT_EQ(_table->soft_order_constraints().size(), 4);
+
   EXPECT_TRUE(_table->soft_order_constraints().contains(order_constraint_1));
   EXPECT_TRUE(_table->soft_order_constraints().contains(order_constraint_2));
   EXPECT_TRUE(_table->soft_order_constraints().contains(order_constraint_3));
+  EXPECT_TRUE(_table->soft_order_constraints().contains(order_constraint_4));
 }
 
 TEST_F(TableOrderConstraintTest, AddOrderConstraintsInvalid) {
-  _table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  _table->add_soft_order_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}});
 
   // Invalid because the column id is out of range.
   EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{5}}, {ColumnID{1}}}), std::logic_error);
@@ -58,8 +64,23 @@ TEST_F(TableOrderConstraintTest, AddOrderConstraintsInvalid) {
   // Invalid because the ordered column id is out of range.
   EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{5}}}), std::logic_error);
 
-  // Invalid because order constraint for the given column sets already exists.
-  EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}}), std::logic_error);
+  // Invalid because the same order constraint already exists.
+  EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}}}),
+               std::logic_error);
+
+  // Invalid because the order constraint with same ordered columns, but more required columns already exists.
+  EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{2}, ColumnID{3}}}), std::logic_error);
+
+  // Invalid because the order constraint with same ordered columns, but fewer required columns already exists.
+  EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}, ColumnID{1}, ColumnID{4}}, {ColumnID{2}, ColumnID{3}}}),
+               std::logic_error);
+
+  // Invalid because the order constraint with same required columns, but more ordered columns already exists.
+  EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{2}}}), std::logic_error);
+
+  // Invalid because the order constraint with same required columns, but fewer ordered columns already exists.
+  EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}, ColumnID{4}}}),
+               std::logic_error);
 }
 
 TEST_F(TableOrderConstraintTest, Equals) {

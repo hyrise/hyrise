@@ -80,8 +80,8 @@ bool ForeignKeyConstraint::_on_equals(const AbstractTableConstraint& table_const
   DebugAssert(dynamic_cast<const ForeignKeyConstraint*>(&table_constraint),
               "Different table_constraint type should have been caught by AbstractTableConstraint::operator==");
   const auto& foreign_key_constraint = static_cast<const ForeignKeyConstraint&>(table_constraint);
-  return table() == foreign_key_constraint.table() && foreign_key_table() &&
-         foreign_key_constraint.foreign_key_table() &&
+  return table() == foreign_key_constraint.table() &&
+         foreign_key_table() == foreign_key_constraint.foreign_key_table() &&
          _foreign_key_columns == foreign_key_constraint._foreign_key_columns;
 }
 

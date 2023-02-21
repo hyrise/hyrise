@@ -22,6 +22,34 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+// Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3].
+bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
+  for (const auto column_id : lhs) {
+    if (std::find(rhs.cbegin(), rhs.cend(), column_id) != rhs.cend()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Checks if @param lhs is a sublist of @param rhs, e.g., lhs = [0, 2, 1] and rhs = [0, 2, 1, 3, 4], or vice versa.
+bool columns_overlap(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
+  const auto column_count = std::min(lhs.size(), rhs.size());
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+    if (lhs[column_id] != rhs[column_id]) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+}  // namespace
+
 namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
@@ -391,28 +419,26 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
     }
   }
 
-  {
-    const auto append_lock = acquire_append_mutex();
+  const auto append_lock = acquire_append_mutex();
 
-    for (const auto& existing_constraint : _table_key_constraints) {
-      // Ensure that no other PRIMARY KEY is defined
-      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
-                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
-             "Another primary TableKeyConstraint exists for this table.");
+  for (const auto& existing_constraint : _table_key_constraints) {
+    // Ensure that no other PRIMARY KEY is defined.
+    Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+               table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
+           "Another primary TableKeyConstraint exists for this table.");
 
-      // Ensure there is only one key constraint per column set.
-      Assert(table_key_constraint.columns() != existing_constraint.columns(),
-             "Another TableKeyConstraint for the same column set has already been defined.");
-    }
-
-    _table_key_constraints.insert(table_key_constraint);
+    // Ensure there is only one key constraint per column set.
+    Assert(table_key_constraint.columns() != existing_constraint.columns(),
+           "Another TableKeyConstraint for the same column set has already been defined.");
   }
+
+  _table_key_constraints.insert(table_key_constraint);
 }
 
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
 
-  Assert(&*foreign_key_constraint.foreign_key_table() == &*this, "ForeignKeyConstraint is added to the wrong table.");
+  Assert(&*foreign_key_constraint.foreign_key_table() == this, "ForeignKeyConstraint is added to the wrong table.");
 
   // Check validity of specified columns.
   const auto column_count = this->column_count();
@@ -421,7 +447,7 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   }
 
   const auto referenced_table = foreign_key_constraint.table();
-  Assert(referenced_table, "ForeignKeyConstraint must reference an existing table.");
+  Assert(referenced_table && &*referenced_table != this, "ForeignKeyConstraint must reference another existing table.");
 
   // Check validity of key columns from other table.
   const auto referenced_table_column_count = referenced_table->column_count();
@@ -430,7 +456,13 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
   }
 
   const auto append_lock = acquire_append_mutex();
-  Assert(!_foreign_key_constraints.contains(foreign_key_constraint), "ForeignKeyConstraint is already set.");
+  for (const auto& existing_constraint : _foreign_key_constraints) {
+    // Do not allow overlapping foreign key constraints. Though a table may have unlimited inclusion dependencies for
+    // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
+    // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
+    Assert(!columns_intersect(existing_constraint.foreign_key_columns(), foreign_key_constraint.foreign_key_columns()),
+           "ForeignKeyConstraint for required columns has already been set.");
+  }
   _foreign_key_constraints.insert(foreign_key_constraint);
   const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
   referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
@@ -459,7 +491,18 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   }
 
   const auto append_lock = acquire_append_mutex();
-  Assert(!_table_order_constraints.contains(table_order_constraint), "TableOrderConstraint is already set.");
+  for (const auto& existing_constraint : _table_order_constraints) {
+    // Do not allow order constraints that can be represented by existing constraints (and vice versa). For instance,
+    // we do not allow constraints that (i) order the same ordered columns but require fewer or more columns or (ii)
+    // have the same columns but order fewer or more columns.
+    const auto columns_invalid = columns_overlap(existing_constraint.columns(), table_order_constraint.columns()) &&
+                                 existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
+    const auto ordered_columns_invalid =
+        columns_overlap(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
+        existing_constraint.columns() == table_order_constraint.columns();
+    Assert(!columns_invalid && !ordered_columns_invalid,
+           "TableOrderConstraint for required columns has already been set.");
+  }
   _table_order_constraints.insert(table_order_constraint);
 }
 

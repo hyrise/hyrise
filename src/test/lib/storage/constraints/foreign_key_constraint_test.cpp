@@ -12,7 +12,8 @@ class ForeignKeyConstraintTest : public BaseTest {
     _table_a = Table::create_dummy_table({{"a", DataType::Int, false},
                                           {"b", DataType::Int, false},
                                           {"c", DataType::Int, false},
-                                          {"d", DataType::Int, false}});
+                                          {"d", DataType::Int, false},
+                                          {"e", DataType::Int, false}});
     _table_b = Table::create_dummy_table({{"x", DataType::Int, false}, {"y", DataType::Int, false}});
     _table_c = Table::create_dummy_table({{"u", DataType::Int, false}, {"v", DataType::Int, false}});
   }
@@ -47,49 +48,38 @@ TEST_F(ForeignKeyConstraintTest, OrderedColumnIDs) {
 TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraints) {
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 0);
 
-  const auto foreign_key_constraint_1 = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a});
+  const auto foreign_key_constraint_1 = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, _table_b, _table_a};
+  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_b, _table_a});
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 1);
 
-  const auto foreign_key_constraint_2 = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{3}}, _table_b, _table_a};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{3}}, _table_b, _table_a});
+  const auto foreign_key_constraint_2 = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a};
+  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a});
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 2);
 
-  const auto foreign_key_constraint_3 = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{1}}, _table_c, _table_a};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_c, _table_a});
+  const auto foreign_key_constraint_3 = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{2}}, _table_c, _table_a};
+  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{2}}, _table_c, _table_a});
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 3);
 
-  const auto foreign_key_constraint_4 = ForeignKeyConstraint{{ColumnID{1}}, {ColumnID{0}}, _table_b, _table_a};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{1}}, {ColumnID{0}}, _table_b, _table_a});
-  EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 4);
-
-  const auto foreign_key_constraint_5 =
-      ForeignKeyConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, _table_b, _table_a};
+  const auto foreign_key_constraint_4 =
+      ForeignKeyConstraint{{ColumnID{1}, ColumnID{0}}, {ColumnID{3}, ColumnID{4}}, _table_b, _table_a};
   _table_a->add_soft_foreign_key_constraint(
-      {{ColumnID{1}, ColumnID{0}}, {ColumnID{2}, ColumnID{3}}, _table_b, _table_a});
-  EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 5);
-  // The constraint is the swapped version of the previous constraint, which is equivalent. Thus, it cannot be added as
-  // a duplicate.
-  EXPECT_THROW(_table_a->add_soft_foreign_key_constraint(
-                   {{ColumnID{0}, ColumnID{1}}, {ColumnID{3}, ColumnID{2}}, _table_b, _table_a}),
-               std::logic_error);
+      {{ColumnID{1}, ColumnID{0}}, {ColumnID{3}, ColumnID{4}}, _table_b, _table_a});
+  EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 4);
 
   // Ensure all constraints were added.
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_1));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_2));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_3));
   EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_4));
-  EXPECT_TRUE(_table_a->soft_foreign_key_constraints().contains(foreign_key_constraint_5));
 
   // Ensure all constraints were also added to the other table.
   EXPECT_TRUE(_table_b->referenced_foreign_key_constraints().contains(foreign_key_constraint_1));
   EXPECT_TRUE(_table_b->referenced_foreign_key_constraints().contains(foreign_key_constraint_2));
   EXPECT_TRUE(_table_c->referenced_foreign_key_constraints().contains(foreign_key_constraint_3));
   EXPECT_TRUE(_table_b->referenced_foreign_key_constraints().contains(foreign_key_constraint_4));
-  EXPECT_TRUE(_table_b->referenced_foreign_key_constraints().contains(foreign_key_constraint_5));
 }
 
-TEST_F(ForeignKeyConstraintTest, AddInclusionConstraintsInvalid) {
+TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraintsInvalid) {
   _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a});
 
   // Invalid because the column id is out of range.
@@ -108,14 +98,27 @@ TEST_F(ForeignKeyConstraintTest, AddInclusionConstraintsInvalid) {
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, nullptr, _table_a}),
                std::logic_error);
 
-  // Invalid because the referenced table is not the table we add the constraint to.
+  // Invalid because the table is not the table we add the constraint to.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_c}),
+               std::logic_error);
+
+  // Invalid because the referenced table is the same table we add the constraint to.
+  EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_a, _table_a}),
                std::logic_error);
 
   // Invalid because the column lists have different sizes.
   EXPECT_THROW(
       _table_a->add_soft_foreign_key_constraint({{ColumnID{0}, ColumnID{2}}, {ColumnID{1}}, _table_b, _table_a}),
       std::logic_error);
+
+  // Invalid because same constraint is already set.
+  EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{1}}, _table_b, _table_a}),
+               std::logic_error);
+
+  // Invalid because there is already a foreign key on a.
+  EXPECT_THROW(_table_a->add_soft_foreign_key_constraint(
+                   {{ColumnID{1}, ColumnID{0}}, {ColumnID{1}, ColumnID{0}}, _table_b, _table_a}),
+               std::logic_error);
 }
 
 TEST_F(ForeignKeyConstraintTest, Equals) {
