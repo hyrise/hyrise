@@ -158,7 +158,7 @@ void write_output_segments(Segments& output_segments, const std::shared_ptr<cons
      * Check if the PosList references a single chunk. This is easier than tracking the flag through materialization,
      * radix partitioning, and so on. Also, actually checking for this property instead of simply forwarding it may
      * allow us to set guarantee_single_chunk in more cases. In cases where more than one chunk is referenced, this
-     * should be cheap. In the other cases, the cost of iterating through the PosList are likely to be amortized in
+     * should be cheap. In the other cases, the cost of iterating through the PosList is likely to be amortized in
      * following operators. See the comment at the previous call of guarantee_single_chunk to understand when this
      * guarantee might not be given.
      * This is not part of PosList as other operators should have a better understanding of how they emit references.
