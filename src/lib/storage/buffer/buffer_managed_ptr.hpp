@@ -169,7 +169,7 @@ class BufferManagedPtr {
   }
 
   explicit operator bool() const noexcept {
-    return _addressing.raw == 0;
+    return _addressing.raw;
   }
 
   pointer get() const {
@@ -308,9 +308,7 @@ namespace std {
 template <class T>
 struct hash<hyrise::BufferManagedPtr<T>> {
   size_t operator()(const hyrise::BufferManagedPtr<T>& ptr) const noexcept {
-    const auto page_id_hash = std::hash<hyrise::PageID>{}(ptr.get_page_id());
-    const auto offset_hash = std::hash<typename hyrise::BufferManagedPtr<T>::difference_type>{}(ptr.get_offset());
-    return boost::hash_combine(page_id_hash, offset_hash);
+    return std::hash<std::uintptr_t>{}(ptr._addressing.raw);
   }
 };
 
