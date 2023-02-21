@@ -8,11 +8,12 @@ namespace hyrise {
 
 class BetweenExpression : public AbstractPredicateExpression {
  public:
-  BetweenExpression(const PredicateCondition init_predicate_condition, const std::shared_ptr<AbstractExpression>& value,
+  BetweenExpression(const PredicateCondition init_predicate_condition,
+                    const std::shared_ptr<AbstractExpression>& operand,
                     const std::shared_ptr<AbstractExpression>& lower_bound,
                     const std::shared_ptr<AbstractExpression>& upper_bound);
 
-  const std::shared_ptr<AbstractExpression>& value() const;
+  const std::shared_ptr<AbstractExpression>& operand() const;
   const std::shared_ptr<AbstractExpression>& lower_bound() const;
   const std::shared_ptr<AbstractExpression>& upper_bound() const;
 

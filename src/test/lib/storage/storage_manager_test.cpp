@@ -58,7 +58,7 @@ TEST_F(StorageManagerTest, StatisticCreationOnAddTable) {
   const auto table = sm.get_table("int_float");
   EXPECT_EQ(table->table_statistics()->row_count, 3.0f);
   const auto chunk = table->get_chunk(ChunkID{0});
-  EXPECT_TRUE(chunk->pruning_statistics().has_value());
+  EXPECT_TRUE(chunk->pruning_statistics());
   EXPECT_EQ(chunk->pruning_statistics()->at(0)->data_type, DataType::Int);
   EXPECT_EQ(chunk->pruning_statistics()->at(1)->data_type, DataType::Float);
 }

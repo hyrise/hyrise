@@ -2071,14 +2071,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
       if (const auto* const between_expression = dynamic_cast<const BetweenExpression*>(&expression);
           between_expression) {
         // a BETWEEN b AND c -> a < b OR a > c
-        return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
-                   greater_than_(between_expression->value(), between_expression->upper_bound()));
+        return or_(less_than_(between_expression->operand(), between_expression->lower_bound()),
+                   greater_than_(between_expression->operand(), between_expression->upper_bound()));
       }
 
       const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
       Assert(in_expression, "Expected InExpression");
       return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
-                                            in_expression->value(), in_expression->set());
+                                            in_expression->operand(), in_expression->set());
     } break;
 
     case ExpressionType::Logical: {

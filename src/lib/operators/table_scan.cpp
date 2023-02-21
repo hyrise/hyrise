@@ -414,14 +414,14 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
     // lossless_predicate_variant_cast into the column's data type and reassemble the between condition.
 
     auto predicate_condition = between_expression->predicate_condition;
-    const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->value());
+    const auto left_column = std::dynamic_pointer_cast<PQPColumnExpression>(between_expression->operand());
 
     auto [lower_condition, upper_condition] = between_to_conditions(predicate_condition);
 
     auto lower_bound_value = expression_get_value_or_parameter(*between_expression->lower_bound());
     if (lower_bound_value) {
       const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
-          lower_condition, *lower_bound_value, between_expression->value()->data_type());
+          lower_condition, *lower_bound_value, between_expression->operand()->data_type());
       if (adjusted_predicate_and_value) {
         lower_condition = adjusted_predicate_and_value->first;
         lower_bound_value = adjusted_predicate_and_value->second;
@@ -433,7 +433,7 @@ std::unique_ptr<AbstractTableScanImpl> TableScan::create_impl() {
     auto upper_bound_value = expression_get_value_or_parameter(*between_expression->upper_bound());
     if (upper_bound_value) {
       const auto adjusted_predicate_and_value = lossless_predicate_variant_cast(
-          upper_condition, *upper_bound_value, between_expression->value()->data_type());
+          upper_condition, *upper_bound_value, between_expression->operand()->data_type());
       if (adjusted_predicate_and_value) {
         upper_condition = adjusted_predicate_and_value->first;
         upper_bound_value = adjusted_predicate_and_value->second;

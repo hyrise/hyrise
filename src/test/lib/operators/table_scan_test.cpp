@@ -77,7 +77,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
           continue;
         }
 
-        chunk->set_individually_sorted_by(sorted_by.value());
+        chunk->set_individually_sorted_by(*sorted_by);
       }
     }
 
