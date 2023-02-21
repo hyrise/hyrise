@@ -1,11 +1,49 @@
 #pragma once
 
+#include <climits>
 #include <cstddef>
+#include <cstdint>
+#include <utility>
 #include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+namespace detail {
+
+#if !(defined(__x86_64__) || defined(_M_X64))
+// TODO: For Apple Silicon: https://opensource.apple.com/source/WTF/WTF-7601.1.46.42/wtf/Platform.h.auto.html
+Fail("Cannot use tagged pointer on current system");
+#endif
+
+static_assert(sizeof(std::size_t) == sizeof(std::uintptr_t));
+static_assert(sizeof(std::size_t) == sizeof(void*));
+static_assert(sizeof(void*) * CHAR_BIT == 64);
+
+const size_t is_outside_address = 0;
+const size_t is_page_id_and_offset = 1;
+
+struct outside_address {
+  std::uintptr_t address : 63;
+  std::uintptr_t tag : 1;
+};
+
+struct page_id_and_offset {
+  size_t offset : 31;
+  size_t page_id : 32;
+  size_t tag : 1;
+};
+
+union addressing_t {
+  std::uintptr_t raw;
+  outside_address outside;
+  page_id_and_offset buffer_manager;
+};
+
+static_assert(sizeof(uintptr_t) * CHAR_BIT == 64);
+
+}  // namespace detail
 
 template <typename PointedType>
 class BufferManagedPtr {
@@ -16,6 +54,10 @@ class BufferManagedPtr {
   using value_type = std::remove_cv_t<PointedType>;  // TODO: is std::remove_cv_t a good idea?
   using difference_type = std::ptrdiff_t;            // TODO: Remove page offfset
   using iterator_category = std::random_access_iterator_tag;
+  using PageIDAndOffset = std::pair<PageID, difference_type>;
+
+  template <typename U>
+  friend class BufferManagedPtr;
 
   // TODO: This does not compile when unordered map/set iteratorsare used
   // using iterator_category = std::contiguous_iterator_tag;
@@ -29,36 +71,44 @@ class BufferManagedPtr {
   // https://www.youtube.com/watch?v=_nIET46ul6E
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
   // A lot of things are copied form offset_ptr
-
-  BufferManagedPtr(pointer ptr = 0) : _page_id(INVALID_PAGE_ID), _offset(0) {
+  // Pin and unp
+  BufferManagedPtr(pointer ptr = 0) {
     // TODO: This function totally breaks right now
     if (ptr) {
       const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
           reinterpret_cast<const void*>(ptr));
-      _page_id = page_id;
-      _offset = offset;
-      // pin();
+      if (page_id == INVALID_PAGE_ID) {
+        set_outside_ptr((std::uintptr_t)ptr);
+      } else {
+        set_page_id_and_offset(page_id, offset);
+      }
+    } else {
+      set_null();
     }
   }
 
-  BufferManagedPtr(const BufferManagedPtr& ptr) : _page_id(ptr.get_page_id()), _offset(ptr.get_offset()) {}
+  BufferManagedPtr(const BufferManagedPtr& ptr) : _addressing(ptr._addressing) {}
 
-  template <class U>
-  BufferManagedPtr(const BufferManagedPtr<U>& other) : _page_id(other.get_page_id()), _offset(other.get_offset()) {}
+  template <typename U>
+  BufferManagedPtr(const BufferManagedPtr<U>& other) : _addressing(other._addressing) {}
 
-  template <class T>
+  template <typename T>
   BufferManagedPtr(T* ptr) {
-    const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(ptr);
-    _page_id = page_id;
-    _offset = offset;
+    if (ptr) {
+      const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
+          reinterpret_cast<const void*>(ptr));
+      if (page_id == INVALID_PAGE_ID) {
+        set_outside_ptr(ptr);
+      } else {
+        set_page_id_and_offset(page_id, offset);
+      }
+    } else {
+      set_null();
+    }
   }
 
-  explicit BufferManagedPtr(const PageID page_id, difference_type offset) : _page_id(page_id), _offset(offset) {}
-
-  ~BufferManagedPtr() {
-    if (_page_id == INVALID_PAGE_ID) {
-      return;
-    }
+  explicit BufferManagedPtr(const PageID page_id, difference_type offset) {
+    set_page_id_and_offset(page_id, offset);
   }
 
   pointer operator->() const {
@@ -72,43 +122,38 @@ class BufferManagedPtr {
     return r;
   }
 
-  difference_type get_offset() const {
-    return _offset;
-  }
-
-  PageID get_page_id() const {
-    return _page_id;
-  }
-
   reference operator[](std::ptrdiff_t idx) const {
     return get()[idx];
   }
 
   bool operator!() const {
-    return this->get() == 0;
+    return !_addressing.raw;
   }
 
   BufferManagedPtr operator+(std::ptrdiff_t offset) const {
-    return BufferManagedPtr(_page_id, this->_offset + offset * sizeof(PointedType));
+    auto new_addressing = _addressing;
+    new_addressing.buffer_manager.offset += offset * sizeof(PointedType);
+    return BufferManagedPtr(_addressing);
   }
 
   BufferManagedPtr operator-(std::ptrdiff_t offset) const {
-    return BufferManagedPtr(_page_id, this->_offset - offset * sizeof(PointedType));
+    auto new_addressing = _addressing;
+    new_addressing.buffer_manager.offset -= offset * sizeof(PointedType);
+    return BufferManagedPtr(_addressing);
   }
 
   BufferManagedPtr& operator+=(difference_type offset) noexcept {
-    _offset += offset * difference_type(sizeof(PointedType));
+    _addressing.buffer_manager.offset += offset * difference_type(sizeof(PointedType));
     return *this;
   }
 
   BufferManagedPtr& operator-=(difference_type offset) noexcept {
-    _offset -= offset * difference_type(sizeof(PointedType));
+    _addressing.buffer_manager.offset -= offset * difference_type(sizeof(PointedType));
     return *this;
   }
 
   BufferManagedPtr& operator=(const BufferManagedPtr& ptr) {
-    _page_id = ptr.get_page_id();
-    _offset = ptr.get_offset();
+    _addressing = ptr._addressing;
     return *this;
   }
 
@@ -117,15 +162,14 @@ class BufferManagedPtr {
     return *this;
   }
 
-  template <class T2>
+  template <typename T2>
   BufferManagedPtr& operator=(const BufferManagedPtr<T2>& ptr) {
-    _page_id = ptr.get_page_id();
-    _offset = ptr.get_offset();
+    _addressing = ptr._addressing;
     return *this;
   }
 
   explicit operator bool() const noexcept {
-    return this->_page_id != INVALID_PAGE_ID;  //TODO || this->_offset == 0;
+    return _addressing.raw == 0;
   }
 
   pointer get() const {
@@ -145,7 +189,7 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator++(void) noexcept {
-    _offset += difference_type(sizeof(PointedType));
+    _addressing.buffer_manager.offset += difference_type(sizeof(PointedType));
     return *this;
   }
 
@@ -156,7 +200,7 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator--(void) noexcept {
-    _offset -= difference_type(sizeof(PointedType));
+    _addressing.buffer_manager.offset -= difference_type(sizeof(PointedType));
     return *this;
   }
 
@@ -173,28 +217,56 @@ class BufferManagedPtr {
   }
 
   void* get_pointer() const {
-    if (_page_id == INVALID_PAGE_ID) {
+    if (_addressing.outside.tag == detail::is_outside_address) {
+      return (void*)_addressing.outside.address;
+    } else if (_addressing.buffer_manager.tag == detail::is_page_id_and_offset) {
+      const auto page_id = PageID{_addressing.buffer_manager.page_id};
+      // TODO: If pinned, this is not needed
+      const auto page = BufferManager::get_global_buffer_manager().get_page(page_id);
+      return page->data() + _addressing.buffer_manager.offset;
+    } else {
       return nullptr;
     }
-    // TODO: If pinned, this is not needed
-    const auto page = BufferManager::get_global_buffer_manager().get_page(_page_id);
-    return page->data() + _offset;
   }
 
-  // TODO: Return a guard to ensure unpinning
+  // TODO: Return a guard to ensure unpinning. check pointer type
   void pin() {
-    if (_page_id != INVALID_PAGE_ID) {
-      BufferManager::get_global_buffer_manager().pin_page(_page_id);
-    }
+    const auto page_id = PageID{_addressing.buffer_manager.page_id};
+    BufferManager::get_global_buffer_manager().pin_page(page_id);
   }
 
   void unpin(bool dirty) {
-    BufferManager::get_global_buffer_manager().unpin_page(_page_id, dirty);
+    const auto page_id = PageID{_addressing.buffer_manager.page_id};
+    BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
+  }
+
+  PageID get_page_id() {
+    return PageID{_addressing.buffer_manager.page_id};
+  }
+
+  difference_type get_offset() {
+    return _addressing.buffer_manager.offset;
   }
 
  private:
-  PageID _page_id;  // TODO: Make const
-  difference_type _offset;
+  detail::addressing_t _addressing;
+
+  void set_null() {
+    _addressing.raw = 0;
+  }
+
+  void set_outside_ptr(const std::uintptr_t ptr) {
+    _addressing.outside.tag = detail::is_outside_address;
+    _addressing.outside.address = ptr;
+  }
+
+  void set_page_id_and_offset(const PageID page_id, const difference_type offset) {
+    _addressing.buffer_manager.tag = detail::is_page_id_and_offset;
+    _addressing.buffer_manager.page_id = page_id;
+    _addressing.buffer_manager.offset = offset;
+  }
+
+  BufferManagedPtr(const detail::addressing_t addressing) : _addressing(addressing) {}
 };
 
 template <class T1, class T2>
