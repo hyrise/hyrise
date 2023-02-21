@@ -105,10 +105,10 @@ void Worker::_work(const bool allow_sleep) {
     if (!work_stealing_successful && !_shutdown_flag && allow_sleep) {
       _queue->semaphore.wait();
       task = _queue->pull();
-     }
+    }
 
-     if (!task) {
-       // Neither stealing nor waiting succeeded, or scheduler is shutting down.
+    if (!task) {
+      // Neither stealing nor waiting succeeded, or scheduler is shutting down.
       return;
     }
   }
