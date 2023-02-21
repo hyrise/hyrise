@@ -194,7 +194,7 @@ std::vector<std::shared_ptr<Chunk>> write_output_chunks(
     bool create_left_side_pos_lists_by_column, bool create_right_side_pos_lists_by_column,
     OutputColumnOrder output_column_order, bool allow_partition_merge) {
   /**
-   * Two Caches to avoid redundant reference materialization for Reference input tables. As there might be hundreds of
+   * Two caches to avoid redundant reference materialization for Reference input tables. As there might be hundreds of
    * partitions, hundreds of input chunks, and dozens of columns, this speeds up write_output_chunks a lot.
    *
    * They do two things:
