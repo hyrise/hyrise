@@ -466,7 +466,7 @@ void StorageManager::persist_chunks_to_disk(const std::vector<std::shared_ptr<Ch
   // file_lock.release();
 }
 
-void StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id,
+uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id,
                                            const std::string& file_name) {
 
     if (std::filesystem::exists(file_name)) {
@@ -487,7 +487,7 @@ void StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, C
       overwrite_header(file_header, file_name);
 
       write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
-      return;
+      return file_prev_chunk_end_offset;
     }
 
     // create new file
@@ -510,18 +510,20 @@ void StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, C
 
     write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
 
-    return;
+    return _file_header_bytes;
 }
 
 void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
   // get current persistence_file for table
   const auto table_persistence_file = get_persistence_file_name(table_name);
   // persist chunk to disk
-  persist_chunk_to_file(chunk, chunk_id, table_persistence_file);
-  // map chunk from disk
-  //auto mapped_chunk = map_chunk_from_disk();
-  // replace chunk in table
+  auto chunk_start_offset = persist_chunk_to_file(chunk, chunk_id, table_persistence_file);
   _tables_current_persistence_file_mapping[table_name].current_chunk_count++;
+
+  // map chunk from disk
+  auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count());
+
+  // replace chunk in table
 }
 
 const std::string StorageManager::get_persistence_file_name(const std::string table_name){
