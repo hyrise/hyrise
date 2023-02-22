@@ -16,11 +16,10 @@
 
 namespace hyrise {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ChunkIndexType index_type,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator,
                      const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
-      _index_type{index_type},
       _left_column_ids{left_column_ids},
       _predicate_condition{predicate_condition},
       _right_values{right_values},
@@ -68,7 +67,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<IndexScan>(copied_left_input, _index_type, _left_column_ids, _predicate_condition,
+  return std::make_shared<IndexScan>(copied_left_input, _left_column_ids, _predicate_condition,
                                      _right_values, _right_values2);
 }
 
@@ -116,91 +115,90 @@ void IndexScan::_validate_input() {
 }
 
 RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
-  const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
+  // const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  auto range_begin = AbstractChunkIndex::Iterator{};
-  auto range_end = AbstractChunkIndex::Iterator{};
+  // auto range_begin = AbstractChunkIndex::Iterator{};
+  // auto range_end = AbstractChunkIndex::Iterator{};
 
-  const auto chunk = _in_table->get_chunk(chunk_id);
+  // const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = RowIDPosList{};
 
-  const auto index = chunk->get_index(_index_type, _left_column_ids);
-  Assert(index, "Index of specified type not found for segment (vector).");
+  // Assert(index, "Index of specified type not found for segment (vector).");
 
   switch (_predicate_condition) {
-    case PredicateCondition::Equals: {
-      range_begin = index->lower_bound(_right_values);
-      range_end = index->upper_bound(_right_values);
-      break;
-    }
-    case PredicateCondition::NotEquals: {
-      // first, get all values less than the search value
-      range_begin = index->cbegin();
-      range_end = index->lower_bound(_right_values);
+    // case PredicateCondition::Equals: {
+    //   range_begin = index->lower_bound(_right_values);
+    //   range_end = index->upper_bound(_right_values);
+    //   break;
+    // }
+    // case PredicateCondition::NotEquals: {
+    //   // first, get all values less than the search value
+    //   range_begin = index->cbegin();
+    //   range_end = index->lower_bound(_right_values);
 
-      matches_out.reserve(std::distance(range_begin, range_end));
-      std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
+    //   matches_out.reserve(std::distance(range_begin, range_end));
+    //   std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
 
-      // set range for second half to all values greater than the search value
-      range_begin = index->upper_bound(_right_values);
-      range_end = index->cend();
-      break;
-    }
-    case PredicateCondition::LessThan: {
-      range_begin = index->cbegin();
-      range_end = index->lower_bound(_right_values);
-      break;
-    }
-    case PredicateCondition::LessThanEquals: {
-      range_begin = index->cbegin();
-      range_end = index->upper_bound(_right_values);
-      break;
-    }
-    case PredicateCondition::GreaterThan: {
-      range_begin = index->upper_bound(_right_values);
-      range_end = index->cend();
-      break;
-    }
-    case PredicateCondition::GreaterThanEquals: {
-      range_begin = index->lower_bound(_right_values);
-      range_end = index->cend();
-      break;
-    }
-    case PredicateCondition::BetweenInclusive: {
-      range_begin = index->lower_bound(_right_values);
-      range_end = index->upper_bound(_right_values2);
-      break;
-    }
-    case PredicateCondition::BetweenLowerExclusive: {
-      range_begin = index->upper_bound(_right_values);
-      range_end = index->upper_bound(_right_values2);
-      break;
-    }
-    case PredicateCondition::BetweenUpperExclusive: {
-      range_begin = index->lower_bound(_right_values);
-      range_end = index->lower_bound(_right_values2);
-      break;
-    }
-    case PredicateCondition::BetweenExclusive: {
-      range_begin = index->upper_bound(_right_values);
-      range_end = index->lower_bound(_right_values2);
-      break;
-    }
+    //   // set range for second half to all values greater than the search value
+    //   range_begin = index->upper_bound(_right_values);
+    //   range_end = index->cend();
+    //   break;
+    // }
+    // case PredicateCondition::LessThan: {
+    //   range_begin = index->cbegin();
+    //   range_end = index->lower_bound(_right_values);
+    //   break;
+    // }
+    // case PredicateCondition::LessThanEquals: {
+    //   range_begin = index->cbegin();
+    //   range_end = index->upper_bound(_right_values);
+    //   break;
+    // }
+    // case PredicateCondition::GreaterThan: {
+    //   range_begin = index->upper_bound(_right_values);
+    //   range_end = index->cend();
+    //   break;
+    // }
+    // case PredicateCondition::GreaterThanEquals: {
+    //   range_begin = index->lower_bound(_right_values);
+    //   range_end = index->cend();
+    //   break;
+    // }
+    // case PredicateCondition::BetweenInclusive: {
+    //   range_begin = index->lower_bound(_right_values);
+    //   range_end = index->upper_bound(_right_values2);
+    //   break;
+    // }
+    // case PredicateCondition::BetweenLowerExclusive: {
+    //   range_begin = index->upper_bound(_right_values);
+    //   range_end = index->upper_bound(_right_values2);
+    //   break;
+    // }
+    // case PredicateCondition::BetweenUpperExclusive: {
+    //   range_begin = index->lower_bound(_right_values);
+    //   range_end = index->lower_bound(_right_values2);
+    //   break;
+    // }
+    // case PredicateCondition::BetweenExclusive: {
+    //   range_begin = index->upper_bound(_right_values);
+    //   range_end = index->lower_bound(_right_values2);
+    //   break;
+    // }
     default:
       Fail("Unsupported comparison type encountered");
   }
 
-  DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
-  matches_out.guarantee_single_chunk();
+  // DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
+  // matches_out.guarantee_single_chunk();
 
-  const auto current_matches_size = matches_out.size();
-  const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
-  matches_out.resize(final_matches_size);
+  // const auto current_matches_size = matches_out.size();
+  // const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
+  // matches_out.resize(final_matches_size);
 
-  for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
-    matches_out[matches_position] = RowID{chunk_id, *range_begin};
-    range_begin++;
-  }
+  // for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+  //   matches_out[matches_position] = RowID{chunk_id, *range_begin};
+  //   range_begin++;
+  // }
 
   return matches_out;
 }
