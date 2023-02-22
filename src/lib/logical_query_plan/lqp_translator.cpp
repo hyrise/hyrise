@@ -188,7 +188,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   auto column_id = ColumnID{0};
   auto value_variant = AllTypeVariant{NullValue{}};
-  auto value2_variant = std::optional<AllTypeVariant>{};
 
   // Currently, we will only use IndexScans if the PredicateNode directly follows a StoredTableNode.
   // Our IndexScan implementation does not work on reference segments yet.
@@ -205,19 +204,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     Assert(value_expression, "Expected value as second argument for IndexScan");
     value_variant = value_expression->value;
   }
-  if (predicate->arguments.size() > 2) {
-    const auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->arguments[2]);
-    // This is necessary because we currently support single column indexes only
-    Assert(value_expression, "Expected value as third argument for IndexScan");
-    value2_variant = value_expression->value;
-  }
 
   const std::vector<ColumnID> column_ids = {column_id};
   const std::vector<AllTypeVariant> right_values = {value_variant};
-  std::vector<AllTypeVariant> right_values2 = {};
-  if (value2_variant) {
-    right_values2.emplace_back(*value2_variant);
-  }
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
   const auto& pruned_chunk_ids = stored_table_node->pruned_chunk_ids();
@@ -250,8 +239,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, column_ids,
-                                                predicate->predicate_condition, right_values, right_values2);
+  auto index_scan = std::make_shared<IndexScan>(input_operator, column_id,
+                                                predicate->predicate_condition, value_variant);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 

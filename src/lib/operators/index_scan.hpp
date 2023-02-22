@@ -21,8 +21,8 @@ class AbstractTask;
 class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator,
-            const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
-            const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2 = {});
+            ColumnID left_column_ids, const PredicateCondition predicate_condition,
+            const AllTypeVariant right_value);
 
   const std::string& name() const final;
 
@@ -41,11 +41,9 @@ class IndexScan : public AbstractReadOnlyOperator {
   void _validate_input();
 
  private:
-  const std::vector<ColumnID> _left_column_ids;
   const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;
-  const std::vector<AllTypeVariant> _right_values;
-  const std::vector<AllTypeVariant> _right_values2;
+  const AllTypeVariant _right_value;
 
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<Table> _out_table;

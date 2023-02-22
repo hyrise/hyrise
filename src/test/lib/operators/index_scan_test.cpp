@@ -41,10 +41,10 @@ class OperatorsIndexScanTest : public BaseTest {
     _chunk_ids_partly_compressed = std::vector<ChunkID>(int_int_5->chunk_count());
     std::iota(_chunk_ids_partly_compressed.begin(), _chunk_ids_partly_compressed.end(), ChunkID{0});
 
-    _column_ids = std::vector<ColumnID>{ColumnID{0u}};
+    _column_id = ColumnID{0};
 
-    int_int_7->create_partial_hash_index(_column_ids[0], _chunk_ids);
-    int_int_5->create_partial_hash_index(_column_ids[0], _chunk_ids_partly_compressed);
+    int_int_7->create_partial_hash_index(_column_id, _chunk_ids);
+    int_int_5->create_partial_hash_index(_column_id, _chunk_ids_partly_compressed);
 
     _int_int = std::make_shared<TableWrapper>(std::move(int_int_7));
     _int_int->never_clear_output();
@@ -90,28 +90,27 @@ class OperatorsIndexScanTest : public BaseTest {
   std::shared_ptr<TableWrapper> _int_int_small_chunk;
   std::vector<ChunkID> _chunk_ids;
   std::vector<ChunkID> _chunk_ids_partly_compressed;
-  std::vector<ColumnID> _column_ids;
+  ColumnID _column_id;
 };
 
 
 TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
+  const auto right_value = AllTypeVariant{4};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
   tests[PredicateCondition::Equals] = {104, 104};
   tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids, test.first,
-                                            right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first,
+                                            right_value);
 
     scan->execute();
 
     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
-                                                        this->_column_ids, test.first, right_values, right_values2);
+                                                        this->_column_id, test.first, right_value);
 
     scan_small_chunk->execute();
 
@@ -127,21 +126,20 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValu
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{30}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
+  const auto right_value = AllTypeVariant{30};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
   tests[PredicateCondition::Equals] = no_rows;
   tests[PredicateCondition::NotEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids, test.first,
-                                            right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first,
+                                            right_value);
 
     scan->execute();
 
     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
-                                                        this->_column_ids, test.first, right_values, right_values2);
+                                                        this->_column_id, test.first, right_value);
 
     scan_small_chunk->execute();
 
@@ -155,21 +153,20 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
       std::vector<AllTypeVariant>{100, 102, 104, 106, 108, 110, 112, 100, 102, 104, 106, 108, 110, 112};
   const auto no_rows = std::vector<AllTypeVariant>{};
 
-  const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{-10}};
-  const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{34}};
+  const auto right_value = AllTypeVariant{-10};
 
   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
   tests[PredicateCondition::Equals] = no_rows;
   tests[PredicateCondition::NotEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids, test.first,
-                                            right_values, right_values2);
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first,
+                                            right_value);
 
     scan->execute();
 
     auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
-                                                        this->_column_ids, test.first, right_values, right_values2);
+                                                        this->_column_id, test.first, right_value);
 
     scan_small_chunk->execute();
 
@@ -179,10 +176,10 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
 }
 
 TEST_F(OperatorsIndexScanTest, OperatorName) {
-  const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
+  const auto right_value = AllTypeVariant{0};
 
-  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids,
-                                          PredicateCondition::GreaterThanEquals, right_values);
+  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id,
+                                          PredicateCondition::GreaterThanEquals, right_value);
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }

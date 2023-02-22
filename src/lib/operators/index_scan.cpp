@@ -17,14 +17,12 @@
 namespace hyrise {
 
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator,
-                     const std::vector<ColumnID>& left_column_ids, const PredicateCondition predicate_condition,
-                     const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
+                     const ColumnID left_column_id, const PredicateCondition predicate_condition,
+                     const AllTypeVariant right_value)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
-      _left_column_ids{left_column_ids},
-      _left_column_id{_left_column_ids[0]},
+      _left_column_id{left_column_id},
       _predicate_condition{predicate_condition},
-      _right_values{right_values},
-      _right_values2{right_values2} {}
+      _right_value{right_value} {}
 
 const std::string& IndexScan::name() const {
   static const auto name = std::string{"IndexScan"};
@@ -67,11 +65,11 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {
-      index->range_equals_with_iterators(append_matches, _right_values.front());
+      index->range_equals_with_iterators(append_matches, _right_value);
       break;
     }
     case PredicateCondition::NotEquals: {
-      index->range_not_equals_with_iterators(append_matches, _right_values.front());
+      index->range_not_equals_with_iterators(append_matches, _right_value);
       break;
     }
     default:
@@ -96,8 +94,8 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<IndexScan>(copied_left_input, _left_column_ids, _predicate_condition,
-                                     _right_values, _right_values2);
+  return std::make_shared<IndexScan>(copied_left_input, _left_column_id, _predicate_condition,
+                                     _right_value);
 }
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
@@ -105,13 +103,6 @@ void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 void IndexScan::_validate_input() {
   Assert(_predicate_condition != PredicateCondition::Like, "Predicate condition not supported by index scan.");
   Assert(_predicate_condition != PredicateCondition::NotLike, "Predicate condition not supported by index scan.");
-
-  Assert(_left_column_ids.size() == _right_values.size(),
-         "Count mismatch: left column IDs and right values don’t have same size.");
-  if (is_between_predicate_condition(_predicate_condition)) {
-    Assert(_left_column_ids.size() == _right_values2.size(),
-           "Count mismatch: left column IDs and right values don’t have same size.");
-  }
 
   Assert(_in_table->type() == TableType::Data, "IndexScan only supports persistent tables right now.");
 }
