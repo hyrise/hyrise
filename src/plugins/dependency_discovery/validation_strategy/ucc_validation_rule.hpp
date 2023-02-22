@@ -28,7 +28,7 @@ class UccValidationRule : public AbstractDependencyValidationRule {
    * there must be a duplicate and return false. Otherwise, returns true.
    */
   template <typename ColumnDataType>
-  static bool _uniqueness_holds_across_segments(const std::shared_ptr<Table>& table, ColumnID column_id);
+  static bool _uniqueness_holds_across_segments(const std::shared_ptr<Table>& table, const ColumnID column_id);
 };
 
 }  // namespace hyrise

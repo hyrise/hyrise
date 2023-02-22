@@ -1,5 +1,6 @@
 #include "ucc_validation_rule.hpp"
 
+#include "dependency_discovery/validation_strategy/validation_utils.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
@@ -22,9 +23,15 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
     using ColumnDataType = typename decltype(data_type_t)::type;
 
     // Utilize efficient check for uniqueness inside each dictionary segment for a potential early out.
-    if (_dictionary_segments_contain_duplicates<ColumnDataType>(table, column_id)) {
-      status = ValidationStatus::Invalid;
-      return;
+    const auto& column_statistics = ValidationUtils<ColumnDataType>::collect_column_statistics(table, column_id);
+    if (column_statistics.all_segments_dictionary) {
+      if (!column_statistics.all_segments_unique) {
+        status = ValidationStatus::Invalid;
+        return;
+      } else if (column_statistics.segments_disjoint) {
+        status = ValidationStatus::Valid;
+        return;
+      }
     }
 
     // If we reach here, we have to run the more expensive cross-segment duplicate check.
@@ -45,40 +52,8 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
 }
 
 template <typename ColumnDataType>
-bool UccValidationRule::_dictionary_segments_contain_duplicates(const std::shared_ptr<Table>& table,
-                                                                ColumnID column_id) {
-  const auto chunk_count = table->chunk_count();
-  // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
-  // tes that at least one duplicate value or a NULL value is contained.
-  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    const auto source_chunk = table->get_chunk(chunk_id);
-    if (!source_chunk) {
-      continue;
-    }
-    const auto source_segment = source_chunk->get_segment(column_id);
-    if (!source_segment) {
-      continue;
-    }
-
-    if (const auto& dictionary_segment = std::dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(source_segment)) {
-      if (dictionary_segment->unique_values_count() != dictionary_segment->size()) {
-        return true;
-      }
-    } else if (const auto& fixed_string_dictionary_segment =
-                   std::dynamic_pointer_cast<FixedStringDictionarySegment<pmr_string>>(source_segment)) {
-      if (fixed_string_dictionary_segment->unique_values_count() != fixed_string_dictionary_segment->size()) {
-        return true;
-      }
-    } else {
-      // If any segment is not dictionary-encoded, we have to perform a full validation.
-      return false;
-    }
-  }
-  return false;
-}
-
-template <typename ColumnDataType>
-bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<Table>& table, ColumnID column_id) {
+bool UccValidationRule::_uniqueness_holds_across_segments(const std::shared_ptr<Table>& table,
+                                                          const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = std::unordered_set<ColumnDataType>{};

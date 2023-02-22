@@ -242,6 +242,9 @@ set(
     lib/utils/size_estimation_utils_test.cpp
     lib/utils/string_utils_test.cpp
     plugins/mvcc_delete_plugin_test.cpp
+    plugins/dependency_discovery/candidate_strategy/candidate_strategy_base_test.hpp
+    plugins/dependency_discovery/candidate_strategy/candidate_strategy_base_test.cpp
+    plugins/dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule_test.cpp
     plugins/dependency_discovery_plugin_test.cpp
     testing_assert.cpp
     testing_assert.hpp

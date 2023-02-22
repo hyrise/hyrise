@@ -117,9 +117,9 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformOdRewritePredicate) {
   node_b->set_order_constraints({order_constraint});
   node_b->set_foreign_key_constraints({foreign_key_constraint});
 
-  const auto predicates = std::vector<std::shared_ptr<AbstractExpression>>{
-      equals_(v, 0), between_inclusive_(v, 0, 100), between_lower_exclusive_(v, 0, 100),
-      between_upper_exclusive_(v, 0, 100), between_exclusive_(v, 0, 100)};
+  const auto predicates =
+      expression_vector(equals_(v, 0), between_inclusive_(v, 0, 100), between_lower_exclusive_(v, 0, 100),
+                        between_upper_exclusive_(v, 0, 100), between_exclusive_(v, 0, 100));
 
   for (const auto& predicate : predicates) {
     const auto join_node =
@@ -225,8 +225,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingIndForOdRewrite) {
   const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
   node_b->set_order_constraints({order_constraint});
 
-  for (const auto& predicate :
-       std::vector<std::shared_ptr<AbstractExpression>>{equals_(v, 0), between_inclusive_(v, 0, 100)}) {
+  for (const auto& predicate : expression_vector(equals_(v, 0), between_inclusive_(v, 0, 100))) {
     node_b->set_pruned_column_ids({});
     node_c->set_pruned_column_ids({});
 
@@ -254,8 +253,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
       ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
   node_b->set_foreign_key_constraints({foreign_key_constraint});
 
-  for (const auto& predicate :
-       std::vector<std::shared_ptr<AbstractExpression>>{equals_(v, 0), between_inclusive_(v, 0, 100)}) {
+  for (const auto& predicate : expression_vector(equals_(v, 0), between_inclusive_(v, 0, 100))) {
     node_b->set_pruned_column_ids({});
     node_c->set_pruned_column_ids({});
     // clang-format off

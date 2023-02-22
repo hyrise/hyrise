@@ -257,7 +257,6 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
   auto left_input_join_predicates = ExpressionUnorderedSet{predicate_count};
   auto right_input_join_predicates = ExpressionUnorderedSet{predicate_count};
   const auto& left_expressions = left_input()->output_expressions();
-  const auto& right_expressions = right_input()->output_expressions();
 
   for (const auto& expression : join_predicates) {
     const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
@@ -266,12 +265,12 @@ InclusionDependencies JoinNode::_output_inclusion_dependencies(
     }
 
     if (find_expression_idx(*predicate->left_operand(), left_expressions)) {
-      DebugAssert(find_expression_idx(*predicate->right_operand(), right_expressions),
+      DebugAssert(find_expression_idx(*predicate->right_operand(), right_input()->output_expressions()),
                   "Expected to resolve right operand.");
       left_input_join_predicates.emplace(predicate->left_operand());
       right_input_join_predicates.emplace(predicate->right_operand());
     } else {
-      DebugAssert(find_expression_idx(*predicate->left_operand(), right_expressions),
+      DebugAssert(find_expression_idx(*predicate->left_operand(), right_input()->output_expressions()),
                   "Expected to resolve left operand.");
       DebugAssert(find_expression_idx(*predicate->right_operand(), left_expressions),
                   "Expected to resolve right operand.");

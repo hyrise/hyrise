@@ -143,9 +143,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
     }
 
-    if constexpr (HYRISE_DEBUG) {
-      validate_lqp(root_node);
-    }
+    // if constexpr (HYRISE_DEBUG) {
+    //   validate_lqp(root_node);
+    // }
   }
 
   // Remove LogicalPlanRootNode

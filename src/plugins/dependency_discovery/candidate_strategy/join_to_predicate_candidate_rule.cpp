@@ -17,9 +17,10 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
                                                  DependencyCandidates& candidates) const {
   const auto& join_node = static_cast<const JoinNode&>(*lqp_node);
 
-  const auto prunable_side = join_node.prunable_input_side();
   const auto& join_predicates = join_node.join_predicates();
   const auto join_mode = join_node.join_mode;
+  const auto prunable_side = join_node.prunable_input_side();
+
   if ((join_mode != JoinMode::Inner && join_mode != JoinMode::Semi) || !prunable_side || join_predicates.size() != 1) {
     return;
   }
@@ -54,7 +55,17 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
           ? std::dynamic_pointer_cast<const StoredTableNode>(join_key_column_expression->original_node.lock())
           : std::shared_ptr<const StoredTableNode>{};
 
+  // No self joins. Comparing the pointers or even the nodes directly does not work: In TPC-DS, we have multiple nodes
+  // with different pruned columns.
+  if (other_stored_table_node && other_stored_table_node->table_name == stored_table_node.table_name) {
+    return;
+  }
+
   visit_lqp(subtree_root, [&](const auto& node) {
+    if (node->type == LQPNodeType::Union || !expression_evaluable_on_lqp(join_lqp_column_expression, *node)) {
+      return LQPVisitation::DoNotVisitInputs;
+    }
+
     if (node->type != LQPNodeType::Predicate) {
       return LQPVisitation::VisitInputs;
     }
@@ -71,13 +82,18 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
 
       const auto& other_stored_table_node =
           std::dynamic_pointer_cast<const StoredTableNode>(join_key_column_expression->original_node.lock());
-      if (!other_stored_table_node) {
+      if (!other_stored_table_node || original_node != predicate_column_expression->original_node.lock()) {
         return LQPVisitation::VisitInputs;
       }
+
+      Assert(stored_table_node != *other_stored_table_node, "diff tables");
+      candidates.emplace(
+          std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
 
       candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
                                                        join_lqp_column_expression->original_column_id,
                                                        predicate_column_expression->original_column_id));
+
       candidates.emplace(std::make_shared<IndCandidate>(
           other_stored_table_node->table_name, join_key_column_expression->original_column_id,
           stored_table_node.table_name, join_lqp_column_expression->original_column_id));
@@ -111,6 +127,7 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     if (!expression_table_node || *expression_table_node != stored_table_node) {
       return LQPVisitation::VisitInputs;
     }
+
     candidates.emplace(
         std::make_shared<UccCandidate>(expression_table_node->table_name, column_expression->original_column_id));
     candidates.emplace(
@@ -120,10 +137,12 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
       return LQPVisitation::VisitInputs;
     }
 
+    Assert(*join_lqp_column_expression->original_node.lock() == *column_expression->original_node.lock(), "invalid");
     candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
                                                      join_lqp_column_expression->original_column_id,
                                                      column_expression->original_column_id));
 
+    Assert(stored_table_node != *other_stored_table_node, "diff tables");
     candidates.emplace(std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
         stored_table_node.table_name, join_lqp_column_expression->original_column_id));

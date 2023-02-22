@@ -5,6 +5,8 @@
 #include <boost/container_hash/hash.hpp>
 #include "magic_enum.hpp"
 
+#include "hyrise.hpp"
+
 namespace hyrise {
 
 // AbstractDependencyCandidate
@@ -45,8 +47,9 @@ UccCandidate::UccCandidate(const std::string& init_table_name, const ColumnID in
     : AbstractDependencyCandidate{init_table_name, init_column_id, DependencyType::UniqueColumn} {}
 
 std::string UccCandidate::description() const {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   auto stream = std::stringstream{};
-  stream << "UCC " << table_name << "." << column_id;
+  stream << "UCC " << table_name << "." << table->column_name(column_id);
   return stream.str();
 }
 
@@ -65,8 +68,10 @@ OdCandidate::OdCandidate(const std::string& init_table_name, const ColumnID init
       ordered_column_id{init_ordered_column_id} {}
 
 std::string OdCandidate::description() const {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   auto stream = std::stringstream{};
-  stream << "OD " << table_name << "." << column_id << " |-> " << table_name << "." << ordered_column_id;
+  stream << "OD " << table_name << "." << table->column_name(column_id) << " |-> " << table_name << "."
+         << table->column_name(ordered_column_id);
   return stream.str();
 }
 
@@ -83,13 +88,16 @@ bool OdCandidate::_on_equals(const AbstractDependencyCandidate& rhs) const {
 // IndCandidate
 IndCandidate::IndCandidate(const std::string& init_table_name, const ColumnID init_column_id,
                            const std::string& init_foreign_key_table, const ColumnID init_foreign_key_column_id)
-    : AbstractDependencyCandidate{init_table_name, init_column_id, DependencyType::Order},
+    : AbstractDependencyCandidate{init_table_name, init_column_id, DependencyType::Inclusion},
       foreign_key_table{init_foreign_key_table},
       foreign_key_column_id{init_foreign_key_column_id} {}
 
 std::string IndCandidate::description() const {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  const auto& other_table = Hyrise::get().storage_manager.get_table(foreign_key_table);
   auto stream = std::stringstream{};
-  stream << "IND " << foreign_key_table << "." << foreign_key_column_id << " in " << table_name << "." << column_id;
+  stream << "IND " << foreign_key_table << "." << other_table->column_name(foreign_key_column_id) << " in "
+         << table_name << "." << table->column_name(column_id);
   return stream.str();
 }
 

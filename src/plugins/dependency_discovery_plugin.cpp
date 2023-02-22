@@ -7,6 +7,8 @@
 #include "dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp"
+#include "dependency_discovery/validation_strategy/ind_validation_rule.hpp"
+#include "dependency_discovery/validation_strategy/od_validation_rule.hpp"
 #include "dependency_discovery/validation_strategy/ucc_validation_rule.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -21,10 +23,12 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
   _add_candidate_rule(std::make_unique<JoinToPredicateCandidateRule>());
 
   _add_validation_rule(std::make_unique<UccValidationRule>());
+  _add_validation_rule(std::make_unique<OdValidationRule>());
+  _add_validation_rule(std::make_unique<IndValidationRule>());
 }
 
 std::string DependencyDiscoveryPlugin::description() const {
-  return "Unary Unique Column Combination Discovery Plugin";
+  return "Data Dependency Discovery Plugin";
 }
 
 void DependencyDiscoveryPlugin::start() {}
@@ -33,7 +37,7 @@ void DependencyDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 DependencyDiscoveryPlugin::provided_user_executable_functions() {
-  return {{"DiscoverUCCs", [&]() { _validate_dependency_candidates(_identify_dependency_candidates()); }}};
+  return {{"DiscoverDependencies", [&]() { _validate_dependency_candidates(_identify_dependency_candidates()); }}};
 }
 
 std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() {
@@ -42,10 +46,14 @@ std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() 
       benchmark_item_runner.execute_item(item_id);
     }
     _validate_dependency_candidates(_identify_dependency_candidates());
+    for (const auto& log_entry : Hyrise::get().log_manager.log_entries()) {
+      std::cout << log_entry.message << std::endl;
+    }
   };
 }
 
 DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates() const {
+  auto generation_timer = Timer{};
   const auto lqp_cache = Hyrise::get().default_lqp_cache;
   if (!lqp_cache) {
     return {};
@@ -57,7 +65,6 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
 
   for (const auto& [_, entry] : snapshot) {
     const auto& root_node = entry.value;
-
     visit_lqp(root_node, [&](const auto& node) {
       const auto type = node->type;
 
@@ -74,39 +81,55 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
     });
   }
 
+  auto message = std::stringstream{};
+  std::cout << "Generated " << dependency_candidates.size() << " candidates in " << generation_timer.lap_formatted();
+  message << "Generated " << dependency_candidates.size() << " candidates in " << generation_timer.lap_formatted();
+  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   return dependency_candidates;
 }
 
 void DependencyDiscoveryPlugin::_validate_dependency_candidates(
     const DependencyCandidates& dependency_candidates) const {
+  auto validation_timer = Timer{};
   for (const auto& candidate : dependency_candidates) {
     auto message = std::stringstream{};
-
-    if (!_validation_rules.contains(candidate->type)) {
-      message << "Skipping candidate " << *candidate << " (not implemented)" << std::endl;
-      Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
-    }
+    DebugAssert(_validation_rules.contains(candidate->type),
+                "Unsupported dependency: " + std::string{magic_enum::enum_name(candidate->type)});
 
     auto candidate_timer = Timer{};
     const auto& validation_rule = _validation_rules.at(candidate->type);
-    message << "Checking candidate " << *candidate << std::endl;
-
+    message << "Checking candidate " << *candidate;
+    std::cout << "Checking candidate " << *candidate << std::endl;
     const auto& result = validation_rule->validate(*candidate);
 
-    if (result.status == ValidationStatus::Invalid) {
-      message << " [rejected in " << candidate_timer.lap_formatted() << "]";
-      Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
-      continue;
+    switch (result.status) {
+      case ValidationStatus::Invalid:
+        message << " [rejected in " << candidate_timer.lap_formatted() << "]";
+        break;
+      case ValidationStatus::AlreadyKnown:
+        message << " [skipped (already known) in " << candidate_timer.lap_formatted() << "]";
+        break;
+      case ValidationStatus::Valid:
+        message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
+        Assert(result.constraints, "Expected validation to yield constraints for " + candidate->description());
+        for (const auto& constraint : *result.constraints) {
+          _add_constraint(candidate->table_name, constraint);
+        }
+        break;
+      case ValidationStatus::Uncertain:
+        Fail("Expected explicit validation result for " + candidate->description());
     }
-
-    message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
     Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   }
 
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
   Hyrise::get().default_lqp_cache->clear();
   Hyrise::get().default_pqp_cache->clear();
+
+  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin",
+                                        "Validated " + std::to_string(dependency_candidates.size()) +
+                                            " candidates in " + validation_timer.lap_formatted(),
+                                        LogLevel::Info);
 }
 
 void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
@@ -115,6 +138,26 @@ void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDepe
 
 void DependencyDiscoveryPlugin::_add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule) {
   _validation_rules[rule->dependency_type] = std::move(rule);
+}
+
+void DependencyDiscoveryPlugin::_add_constraint(const std::string& table_name,
+                                                const std::shared_ptr<AbstractTableConstraint>& constraint) const {
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+
+  if (const auto& order_constraint = std::dynamic_pointer_cast<TableOrderConstraint>(constraint)) {
+    table->add_soft_order_constraint(*order_constraint);
+    return;
+  }
+  if (const auto& key_constraint = std::dynamic_pointer_cast<TableKeyConstraint>(constraint)) {
+    table->add_soft_key_constraint(*key_constraint);
+    return;
+  }
+  if (const auto& foreign_key_constraint = std::dynamic_pointer_cast<ForeignKeyConstraint>(constraint)) {
+    table->add_soft_foreign_key_constraint(*foreign_key_constraint);
+    return;
+  }
+
+  Fail("Invalid table constraint.");
 }
 
 EXPORT_PLUGIN(DependencyDiscoveryPlugin);

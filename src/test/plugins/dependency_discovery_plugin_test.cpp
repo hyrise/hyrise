@@ -102,16 +102,16 @@ TEST_F(DependencyDiscoveryPluginTest, LoadUnloadPlugin) {
 
 TEST_F(DependencyDiscoveryPluginTest, DescriptionAndProvidedFunction) {
   auto plugin = DependencyDiscoveryPlugin{};
-  EXPECT_EQ(plugin.description(), "Unary Unique Column Combination Discovery Plugin");
+  EXPECT_EQ(plugin.description(), "Data Dependency Discovery Plugin");
   const auto& provided_functions = plugin.provided_user_executable_functions();
   ASSERT_EQ(provided_functions.size(), 1);
-  EXPECT_EQ(provided_functions.front().first, "DiscoverUCCs");
+  EXPECT_EQ(provided_functions.front().first, "DiscoverDependencies");
 }
 
 TEST_F(DependencyDiscoveryPluginTest, UserCallableFunction) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
   EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
-  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseDependencyDiscoveryPlugin", "DiscoverUCCs"));
+  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseDependencyDiscoveryPlugin", "DiscoverDependencies"));
   EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
 }
 

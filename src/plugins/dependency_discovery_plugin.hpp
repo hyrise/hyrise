@@ -49,6 +49,8 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
 
   void _add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);
 
+  void _add_constraint(const std::string& table_name, const std::shared_ptr<AbstractTableConstraint>& constraint) const;
+
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _candidate_rules{};
 
   std::unordered_map<DependencyType, std::unique_ptr<AbstractDependencyValidationRule>> _validation_rules{};
