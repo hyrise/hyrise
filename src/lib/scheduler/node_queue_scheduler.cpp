@@ -138,21 +138,6 @@ void NodeQueueScheduler::finish() {
     //}
   }
 
-      std::cout << "run " << wake_up_loop_count << std::endl;
-
-      wait_flag.test_and_set();
-      wait_flag.notify_all();
-
-      if (waiting_workers_counter == worker_count) {
-        break;
-      }
-
-      ++wake_up_loop_count;
-    }
-  }
-
-  wait_for_all_tasks();
-
   // All queues SHOULD be empty by now
   if (HYRISE_DEBUG) {
     for (const auto& queue : _queues) {
