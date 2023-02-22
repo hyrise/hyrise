@@ -9,7 +9,7 @@
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 
-#include "storage/index/abstract_chunk_index.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
@@ -21,6 +21,7 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operat
                      const std::vector<AllTypeVariant>& right_values, const std::vector<AllTypeVariant>& right_values2)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       _left_column_ids{left_column_ids},
+      _left_column_id{_left_column_ids[0]},
       _predicate_condition{predicate_condition},
       _right_values{right_values},
       _right_values2{right_values2} {}
@@ -41,21 +42,16 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
   if (included_chunk_ids.empty()) {
-    const auto chunk_count = _in_table->chunk_count();
-    jobs.reserve(chunk_count);
-    for (auto chunk_id = ChunkID{0u}; chunk_id < chunk_count; ++chunk_id) {
+    jobs.reserve(1);
+    for (auto chunk_id = ChunkID{0u}; chunk_id < 1; ++chunk_id) {
       const auto chunk = _in_table->get_chunk(chunk_id);
       Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
       jobs.push_back(_create_job(chunk_id, output_mutex));
     }
   } else {
-    jobs.reserve(included_chunk_ids.size());
-    for (auto chunk_id : included_chunk_ids) {
-      if (_in_table->get_chunk(chunk_id)) {
-        jobs.push_back(_create_job(chunk_id, output_mutex));
-      }
-    }
+    jobs.reserve(1);
+    jobs.push_back(_create_job(included_chunk_ids.front(), output_mutex));
   }
 
   Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
@@ -117,88 +113,49 @@ void IndexScan::_validate_input() {
 RowIDPosList IndexScan::_scan_chunk(const ChunkID chunk_id) {
   // const auto to_row_id = [chunk_id](ChunkOffset chunk_offset) { return RowID{chunk_id, chunk_offset}; };
 
-  // auto range_begin = AbstractChunkIndex::Iterator{};
+  PartialHashIndex::Iterator range_begin;
   // auto range_end = AbstractChunkIndex::Iterator{};
 
-  // const auto chunk = _in_table->get_chunk(chunk_id);
   auto matches_out = RowIDPosList{};
 
-  // Assert(index, "Index of specified type not found for segment (vector).");
+  const auto& indexes = _in_table->get_table_indexes();
+  Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
+
+  if (indexes.size() > 1) {
+    PerformanceWarning("There are multiple indexes available, but only the first one is used.");
+  }
+  const auto& index = indexes.front();
+
+  auto append_matches = [&](const PartialHashIndex::Iterator& begin,
+                                            const PartialHashIndex::Iterator& end) {
+    auto current_iter = begin;
+    DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
+    matches_out.guarantee_single_chunk();
+
+    const auto current_matches_size = matches_out.size();
+    const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(current_iter, end));
+    matches_out.resize(final_matches_size);
+
+    for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
+      matches_out[matches_position] = *current_iter;
+      ++current_iter;
+    }
+  };
+
 
   switch (_predicate_condition) {
-    // case PredicateCondition::Equals: {
-    //   range_begin = index->lower_bound(_right_values);
-    //   range_end = index->upper_bound(_right_values);
-    //   break;
-    // }
-    // case PredicateCondition::NotEquals: {
-    //   // first, get all values less than the search value
-    //   range_begin = index->cbegin();
-    //   range_end = index->lower_bound(_right_values);
-
-    //   matches_out.reserve(std::distance(range_begin, range_end));
-    //   std::transform(range_begin, range_end, std::back_inserter(matches_out), to_row_id);
-
-    //   // set range for second half to all values greater than the search value
-    //   range_begin = index->upper_bound(_right_values);
-    //   range_end = index->cend();
-    //   break;
-    // }
-    // case PredicateCondition::LessThan: {
-    //   range_begin = index->cbegin();
-    //   range_end = index->lower_bound(_right_values);
-    //   break;
-    // }
-    // case PredicateCondition::LessThanEquals: {
-    //   range_begin = index->cbegin();
-    //   range_end = index->upper_bound(_right_values);
-    //   break;
-    // }
-    // case PredicateCondition::GreaterThan: {
-    //   range_begin = index->upper_bound(_right_values);
-    //   range_end = index->cend();
-    //   break;
-    // }
-    // case PredicateCondition::GreaterThanEquals: {
-    //   range_begin = index->lower_bound(_right_values);
-    //   range_end = index->cend();
-    //   break;
-    // }
-    // case PredicateCondition::BetweenInclusive: {
-    //   range_begin = index->lower_bound(_right_values);
-    //   range_end = index->upper_bound(_right_values2);
-    //   break;
-    // }
-    // case PredicateCondition::BetweenLowerExclusive: {
-    //   range_begin = index->upper_bound(_right_values);
-    //   range_end = index->upper_bound(_right_values2);
-    //   break;
-    // }
-    // case PredicateCondition::BetweenUpperExclusive: {
-    //   range_begin = index->lower_bound(_right_values);
-    //   range_end = index->lower_bound(_right_values2);
-    //   break;
-    // }
-    // case PredicateCondition::BetweenExclusive: {
-    //   range_begin = index->upper_bound(_right_values);
-    //   range_end = index->lower_bound(_right_values2);
-    //   break;
-    // }
+    case PredicateCondition::Equals: {
+      index->range_equals_with_iterators(append_matches, _right_values.front());
+      break;
+    }
+    case PredicateCondition::NotEquals: {
+      index->range_not_equals_with_iterators(append_matches, _right_values.front());
+      break;
+    }
     default:
       Fail("Unsupported comparison type encountered");
   }
 
-  // DebugAssert(_in_table->type() == TableType::Data, "Cannot guarantee single chunk PosList for non-data tables.");
-  // matches_out.guarantee_single_chunk();
-
-  // const auto current_matches_size = matches_out.size();
-  // const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(range_begin, range_end));
-  // matches_out.resize(final_matches_size);
-
-  // for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
-  //   matches_out[matches_position] = RowID{chunk_id, *range_begin};
-  //   range_begin++;
-  // }
 
   return matches_out;
 }
