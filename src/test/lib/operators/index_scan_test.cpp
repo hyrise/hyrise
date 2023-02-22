@@ -178,45 +178,6 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
   }
 }
 
-// TEST_F(OperatorsIndexScanTest, SingleColumnScanOnlySomeChunks) {
-//   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
-//   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
-
-//   std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
-//   tests[PredicateCondition::Equals] = {};
-//   tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 106, 110, 112};
-
-//   for (const auto& test : tests) {
-//     auto scan = std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_ids,
-//                                             test.first, right_values, right_values2);
-
-//     scan->included_chunk_ids = {ChunkID{0}, ChunkID{2}};
-
-//     scan->execute();
-
-//     this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
-//   }
-// }
-
-// TEST_F(OperatorsIndexScanTest, PosListGuarenteesSingleChunkReference) {
-//   const auto right_values = std::vector<AllTypeVariant>{AllTypeVariant{4}};
-//   const auto right_values2 = std::vector<AllTypeVariant>{AllTypeVariant{9}};
-
-//   auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_ids,
-//                                           PredicateCondition::Equals, right_values, right_values2);
-//   scan->execute();
-
-//   const auto chunk_count = scan->get_output()->chunk_count();
-//   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-//     const auto chunk = scan->get_output()->get_chunk(chunk_id);
-
-//     const auto segment = chunk->get_segment(this->_column_ids[0]);
-//     const auto reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment);
-//     const auto& pos_list = reference_segment->pos_list();
-//     EXPECT_TRUE(pos_list->references_single_chunk());
-//   }
-// }
-
 TEST_F(OperatorsIndexScanTest, OperatorName) {
   const auto right_values = std::vector<AllTypeVariant>(this->_column_ids.size(), AllTypeVariant{0});
 
@@ -225,43 +186,5 @@ TEST_F(OperatorsIndexScanTest, OperatorName) {
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }
-
-// TEST_F(OperatorsIndexScanTest, AddedChunk) {
-//   // We want to make sure that all chunks are covered even if they have been added after SQL translation
-
-//   const auto stored_table_node = StoredTableNode::make("index_test_table");
-//   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("a"), 4), stored_table_node);
-//   predicate_node->scan_type = ScanType::IndexScan;
-
-//   const auto pqp = LQPTranslator{}.translate_node(predicate_node);
-
-//   const auto indexed_chunks = std::vector<ChunkID>{ChunkID{1}};
-
-//   auto union_op = std::dynamic_pointer_cast<UnionAll>(pqp);
-//   ASSERT_TRUE(union_op);
-//   auto index_scan = std::dynamic_pointer_cast<IndexScan>(union_op->mutable_left_input());
-//   ASSERT_TRUE(index_scan);
-//   EXPECT_EQ(index_scan->included_chunk_ids, indexed_chunks);
-//   auto table_scan = std::dynamic_pointer_cast<TableScan>(union_op->mutable_right_input());
-//   ASSERT_TRUE(table_scan);
-//   EXPECT_EQ(table_scan->excluded_chunk_ids, indexed_chunks);
-//   auto get_table = std::dynamic_pointer_cast<GetTable>(table_scan->mutable_left_input());
-//   ASSERT_TRUE(get_table);
-
-//   // Add values:
-//   const auto table = Hyrise::get().storage_manager.get_table("index_test_table");
-//   table->append({4, 5});
-//   EXPECT_EQ(table->chunk_count(), 3);
-
-//   // Test correct execution:
-//   get_table->execute();
-//   table_scan->execute();
-//   index_scan->execute();
-//   union_op->execute();
-
-//   EXPECT_TABLE_EQ_UNORDERED(
-//       union_op->get_output(),
-//       load_table("resources/test_data/tbl/int_int_shuffled_appended_and_filtered.tbl", ChunkOffset{10}));
-// }
 
 }  // namespace hyrise

@@ -39,8 +39,6 @@ class IndexScan : public AbstractReadOnlyOperator {
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   void _validate_input();
-  std::shared_ptr<AbstractTask> _create_job(const ChunkID chunk_id, std::mutex& output_mutex);
-  RowIDPosList _scan_chunk(const ChunkID chunk_id);
 
  private:
   const std::vector<ColumnID> _left_column_ids;
