@@ -63,9 +63,9 @@ void NodeQueueScheduler::begin() {
 
   // We wait for each worker to start. Without waiting, test might shut down the scheduler before any workers have
   // started.
-  //for (const auto& worker : _workers) {
-    //worker->is_ready.wait(false);
-  //}
+  // for (const auto& worker : _workers) {
+  // worker->is_ready.wait(false);
+  // }
 
   // Sleep to ensure that worker threads have been set up correctly. Otherwise, tests that immediate take the scheduler
   // down might create tasks before the workers are set up.
@@ -101,41 +101,12 @@ void NodeQueueScheduler::finish() {
     return;
   }
 
-  //std::printf("FFFFFFFINISH\n");
-
-  //std::cout << "wait for tasks\n" << std::flush;
   wait_for_all_tasks();
-  //std::cout << "/wait for tasks\n" << std::flush;
 
   // Signal workers that scheduler is shutting down.
   _shutdown_flag = true;
-
-  {
-    //auto wake_up_loop_count = size_t{0};
-    //while (true) {
-      // Schedule non-op jobs (one for each worker). Can be necessary as workers might sleep and wait for queue events. The
-      // tasks cannot be stolen to ensure that we reach each worker of each node.
-      //auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-      //jobs.reserve(_queue_count * _workers_per_node);
-      //for (auto node_id = NodeID{0}; node_id < _queue_count; ++node_id) {
-       // for (auto worker_id = size_t{0}; worker_id < _workers_per_node; ++worker_id) {
-          //auto shutdown_signal_task = std::make_shared<JobTask>([&] () {
-          //  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-          //}, SchedulePriority::Default, false);
-          //jobs.push_back(std::move(shutdown_signal_task));
-      //  }
-      //}
-      //Hyrise::get().scheduler()->schedule_and_wait_for_tasks(jobs);
-
-      for (auto& queue : _queues) {
-	      queue->signal(_workers_per_node);
-      }
-
-      //std::cout << "run " << wake_up_loop_count << std::endl;
-      //std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-      //++wake_up_loop_count;
-    //}
+  for (auto& queue : _queues) {
+    queue->signal(_workers_per_node);
   }
 
   // All queues SHOULD be empty by now
@@ -147,13 +118,9 @@ void NodeQueueScheduler::finish() {
 
   _active = false;
 
-  //std::cout << "join" << std::endl;
   for (auto& worker : _workers) {
-    //std::printf("W%zu is requested to join\n", static_cast<size_t>(worker->id()));
     worker->join();
   }
-  //std::cout << "/joined" << std::endl;
-
 
   _workers = {};
   _queues = {};

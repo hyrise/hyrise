@@ -67,7 +67,6 @@ void Worker::operator()() {
     // Worker is allowed to sleep (when queue is empty) as long as the scheduler is not shutting down.
     _work(true);
   }
-  //std::printf("W%zu is done\n", static_cast<size_t>(_id));
 }
 
 void Worker::_work(const bool allow_sleep) {
@@ -104,9 +103,7 @@ void Worker::_work(const bool allow_sleep) {
     // own queue. The waiting is skipped in case the scheduler is shutting down or sleep is not allowed (e.g., when
     // _work() in called for a known number of unfinished jobs, see wait_for_tasks()).
     if (!work_stealing_successful && !_shutdown_flag && allow_sleep) {
-      //std::printf("W%zu goes sleeping\n", static_cast<size_t>(_id));
       _queue->semaphore.wait();
-      //std::printf("W%zu awakes\n", static_cast<size_t>(_id));
       task = _queue->pull();
     }
 
@@ -122,10 +119,7 @@ void Worker::_work(const bool allow_sleep) {
     return;
   }
 
-  //std::printf("W%zu executes in work()\n", static_cast<size_t>(_id));
   task->execute();
-  //std::printf("W%zu /executed in work()\n", static_cast<size_t>(_id));
-
 
   // This is part of the Scheduler shutdown system. Count the number of tasks a Worker executed to allow the
   // Scheduler to determine whether all tasks finished
@@ -212,10 +206,8 @@ void Worker::_wait_for_tasks(const std::vector<std::shared_ptr<AbstractTask>>& t
         continue;
       }
 
-      //std::printf("W%zu executes in wait_for()\n", static_cast<size_t>(_id));
       // Actually execute it.
       task->execute();
-      //std::printf("W%zu /executed in wait_for()\n", static_cast<size_t>(_id));
       ++_num_finished_tasks;
 
       // Reset loop so that we re-visit tasks that may have finished in the meantime. We need to decrement `it` because
