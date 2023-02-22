@@ -26,8 +26,9 @@ FrameID ClockReplacementStrategy::find_victim() {
   Assert(!_pinned_frames.all(), "All frames are currently pinned");
 
   // Avoid an endless-loop if most frames are pinned. In this case, it should return an INVALID_FRAME_ID
-  // and the buffer manager should handle things itself.
-  for (auto frames_left = _num_frames; frames_left > 0;
+  // and the buffer manager should handle things itself. We loop at most 2 times, so the the reference-bits
+  // can be reset after one round.
+  for (auto frames_left = _num_frames * 2; frames_left > 0;
        frames_left--, _current_frame_id = (_current_frame_id + 1) % _num_frames) {
     if (_pinned_frames[_current_frame_id]) {
       continue;

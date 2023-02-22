@@ -230,21 +230,21 @@ class BufferManagedPtr {
   }
 
   // TODO: Return a guard to ensure unpinning. check pointer type
-  void pin() {
+  void pin() const {
     const auto page_id = PageID{_addressing.buffer_manager.page_id};
     BufferManager::get_global_buffer_manager().pin_page(page_id);
   }
 
-  void unpin(bool dirty) {
+  void unpin(bool dirty) const {
     const auto page_id = PageID{_addressing.buffer_manager.page_id};
     BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
   }
 
-  PageID get_page_id() {
+  PageID get_page_id() const {
     return PageID{_addressing.buffer_manager.page_id};
   }
 
-  difference_type get_offset() {
+  difference_type get_offset() const {
     return _addressing.buffer_manager.offset;
   }
 

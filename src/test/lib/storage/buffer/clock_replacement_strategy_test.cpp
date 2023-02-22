@@ -14,9 +14,37 @@ TEST_F(ClockReplacementStrategyTest, TestReplacementSimple) {
   auto strategy = ClockReplacementStrategy(3);
   strategy.record_frame_access(FrameID{0});
   strategy.record_frame_access(FrameID{1});
-  strategy.record_frame_access(FrameID{2});
+  // strategy.record_frame_access(FrameID{2});
 
   // EXPECT_EQ(strategy.find_victim(), FrameID{1};
 }
+
+TEST_F(ClockReplacementStrategyTest, TestReplacementAllInUse) {
+
+}
+
+TEST_F(ClockReplacementStrategyTest, TestReplacementAllReferenced) {
+  auto strategy = ClockReplacementStrategy(3);
+  
+  strategy.record_frame_access(FrameID{0});
+  strategy.record_frame_access(FrameID{1});
+  strategy.record_frame_access(FrameID{3});
+}
+
+TEST_F(ClockReplacementStrategyTest, TestReplacementAllPinned) {
+  auto strategy = ClockReplacementStrategy(3);
+
+  strategy.record_frame_access(FrameID{0});
+  strategy.record_frame_access(FrameID{1});
+  strategy.record_frame_access(FrameID{3});
+
+  strategy.pin(FrameID{0});
+  strategy.pin(FrameID{1});
+  strategy.pin(FrameID{2});
+
+  EXPECT_ANY_THROW(strategy.find_victim());
+}
+
+// TODO: Include unpin
 
 }  // namespace hyrise
