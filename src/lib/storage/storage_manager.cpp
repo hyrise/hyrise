@@ -378,19 +378,19 @@ void export_compressed_vector(const CompressedVectorType type, const BaseCompres
   }
 }
 
-void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<DictionarySegment<int>> segment,
+template <typename T>
+void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<DictionarySegment<T>> segment,
                                                 const std::string& file_name) {
   /*
    * For a description of how dictionary segments look, see the following PR:
    *    https://github.com/hyrise-mp-22-23/hyrise/pull/94
    */
-  //TODO: Next step - figure out why putting a DictionarySegment into a function expecting an abstract_encoded_segment worked before.
-  const auto compressed_vector_type_id = static_cast<uint32_t>(BinaryWriter::_compressed_vector_type_id<int>(*segment));
+  const auto compressed_vector_type_id = segment->compressed_vector_type();
   export_value(compressed_vector_type_id, file_name);
   export_value(static_cast<uint32_t>(segment->dictionary()->size()), file_name);
   export_value(static_cast<uint32_t>(segment->attribute_vector()->size()), file_name);
 
-  export_values<int32_t>(*segment->dictionary(), file_name);
+  export_values<T>(*segment->dictionary(), file_name);
   export_compressed_vector(*segment->compressed_vector_type(), *segment->attribute_vector(), file_name);
 }
 
@@ -410,9 +410,11 @@ void StorageManager::write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk,
   const auto segment_count = chunk->column_count();
   for (auto segment_index = size_t{0}; segment_index < segment_count; ++segment_index) {
     const auto abstract_segment = chunk->get_segment(static_cast<ColumnID>(static_cast<uint16_t>(segment_index)));
-    const auto dict_segment = dynamic_pointer_cast<DictionarySegment<int>>(abstract_segment);
-
-    write_dict_segment_to_disk(dict_segment, file_name);
+    resolve_data_type(abstract_segment->data_type(), [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      const auto dict_segment = dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(abstract_segment);
+      write_dict_segment_to_disk(dict_segment, file_name);
+    });
   }
 }
 
@@ -516,8 +518,8 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   const auto table_persistence_file = get_persistence_file_name(table_name);
   // persist chunk to disk
   persist_chunk_to_file(chunk, chunk_id, table_persistence_file);
-
   // map chunk from disk
+  //auto mapped_chunk = map_chunk_from_disk();
   // replace chunk in table
 }
 
