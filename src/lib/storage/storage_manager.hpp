@@ -124,7 +124,7 @@ class StorageManager : public Noncopyable {
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{INITIAL_MAP_SIZE};
 
  private:
-  static constexpr uint32_t _chunk_count = 50;
+  static constexpr uint32_t _chunk_count = MAX_CHUNK_COUNT_PER_FILE;
   static constexpr uint32_t _storage_format_version_id = 1;
 
   // Fileformat constants

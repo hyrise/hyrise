@@ -56,7 +56,7 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   _tables[name] = std::move(table);
 
   auto table_persistence_file_name = name + "_0.bin";
-  _tables_current_persistence_file_mapping[name] = {table_persistence_file_name, 1, 0};
+  _tables_current_persistence_file_mapping[name] = {table_persistence_file_name, 0, 0};
 }
 
 void StorageManager::drop_table(const std::string& name) {
@@ -521,6 +521,7 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   // map chunk from disk
   //auto mapped_chunk = map_chunk_from_disk();
   // replace chunk in table
+  _tables_current_persistence_file_mapping[table_name].current_chunk_count++;
 }
 
 const std::string StorageManager::get_persistence_file_name(const std::string table_name){
