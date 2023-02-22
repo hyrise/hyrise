@@ -54,6 +54,9 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   generate_chunk_pruning_statistics(table);
 
   _tables[name] = std::move(table);
+
+  auto table_persistence_file_name = name + "_0.bin";
+  _tables_current_persistence_file_mapping[name] = {table_persistence_file_name, 1, 0};
 }
 
 void StorageManager::drop_table(const std::string& name) {
@@ -284,33 +287,39 @@ std::vector<uint32_t> StorageManager::generate_segment_offset_ends(const std::sh
     offset_end += _segment_header_bytes;
 
     const auto abstract_segment = chunk->get_segment(static_cast<ColumnID>(static_cast<uint16_t>(segment_index)));
-    const auto dict_segment = dynamic_pointer_cast<DictionarySegment<int>>(abstract_segment);
 
-    offset_end += byte_index(dict_segment->dictionary()->size(), 4);
+    resolve_data_type(abstract_segment->data_type(), [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
 
-    const auto attribute_vector = dict_segment->attribute_vector();
-    const auto attribute_vector_type = attribute_vector->type();
+      const auto dict_segment = dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(abstract_segment);
 
-    switch (attribute_vector_type) {
-      case CompressedVectorType::FixedWidthInteger4Byte:
-        offset_end += byte_index(attribute_vector->size(), 4);
-        break;
-      case CompressedVectorType::FixedWidthInteger2Byte:
-        offset_end += byte_index(attribute_vector->size(), 2);
-        break;
-      case CompressedVectorType::FixedWidthInteger1Byte:
-        offset_end += attribute_vector->size();
-        break;
-      case CompressedVectorType::BitPacking:
-        offset_end += 4;
-        offset_end += dynamic_cast<const BitPackingVector&>(*attribute_vector).data().bytes();
-        break;
-      default:
+      offset_end += byte_index(dict_segment->dictionary()->size(), 4);
+
+      const auto attribute_vector = dict_segment->attribute_vector();
+      const auto attribute_vector_type = attribute_vector->type();
+
+      switch (attribute_vector_type) {
+        case CompressedVectorType::FixedWidthInteger4Byte:
+          offset_end += byte_index(attribute_vector->size(), 4);
+          break;
+        case CompressedVectorType::FixedWidthInteger2Byte:
+          offset_end += byte_index(attribute_vector->size(), 2);
+          break;
+        case CompressedVectorType::FixedWidthInteger1Byte:
+          offset_end += attribute_vector->size();
+          break;
+        case CompressedVectorType::BitPacking:
+          offset_end += 4;
+          offset_end += dynamic_cast<const BitPackingVector&>(*attribute_vector).data().bytes();
+          break;
+        default:
         Fail("Any other type should have been caught before.");
-    }
+      }
 
-    segment_offset_ends[segment_index] = offset_end;
+      segment_offset_ends[segment_index] = offset_end;
+    });
   }
+
   return segment_offset_ends;
 }
 
@@ -323,6 +332,14 @@ void export_value(const T& value, std::string file_name) {
   std::ofstream ofstream(file_name, std::ios::binary | std::ios::app);
   ofstream.write(reinterpret_cast<const char*>(&value), sizeof(T));
   ofstream.close();
+}
+
+// not copied, own creation
+void overwrite_header(const FILE_HEADER header, std::string file_name) {
+  std::fstream fstream(file_name, std::ios::binary); // use option std::ios_base::binary if necessary
+  fstream.seekp(0, std::ios_base::beg);
+  fstream.write(reinterpret_cast<const char*>(&header), sizeof(header));
+  fstream.close();
 }
 
 template <typename T, typename Alloc>
@@ -367,6 +384,7 @@ void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<Dictionary
    * For a description of how dictionary segments look, see the following PR:
    *    https://github.com/hyrise-mp-22-23/hyrise/pull/94
    */
+  //TODO: Next step - figure out why putting a DictionarySegment into a function expecting an abstract_encoded_segment worked before.
   const auto compressed_vector_type_id = static_cast<uint32_t>(BinaryWriter::_compressed_vector_type_id<int>(*segment));
   export_value(compressed_vector_type_id, file_name);
   export_value(static_cast<uint32_t>(segment->dictionary()->size()), file_name);
@@ -444,6 +462,72 @@ void StorageManager::persist_chunks_to_disk(const std::vector<std::shared_ptr<Ch
   }
 
   // file_lock.release();
+}
+
+void StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id,
+                                           const std::string& file_name) {
+
+    if (std::filesystem::exists(file_name)) {
+      //append to existing file
+
+      auto chunk_segment_offset_ends = generate_segment_offset_ends(chunk);
+      auto chunk_offset_end = chunk_segment_offset_ends.back();
+
+      // adapt and rewrite file header
+      FILE_HEADER file_header = read_file_header(file_name);
+      const auto file_header_previous_chunk_count = file_header.chunk_count;
+      const auto file_prev_chunk_end_offset = file_header.chunk_offset_ends[file_header_previous_chunk_count - 1];
+
+      file_header.chunk_count = file_header.chunk_count + 1;
+      file_header.chunk_ids[file_header_previous_chunk_count] = chunk_id;
+      file_header.chunk_offset_ends[file_header_previous_chunk_count] = file_prev_chunk_end_offset + chunk_offset_end;
+
+      overwrite_header(file_header, file_name);
+
+      write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
+      return;
+    }
+
+    // create new file
+    auto chunk_segment_offset_ends = generate_segment_offset_ends(chunk);
+    auto chunk_offset_end = chunk_segment_offset_ends.back();
+
+    auto fh = FILE_HEADER{};
+    auto chunk_ids = std::array<uint32_t, MAX_CHUNK_COUNT_PER_FILE>();
+    chunk_ids[0] = chunk_id;
+
+    auto chunk_offset_ends = std::array<uint32_t, MAX_CHUNK_COUNT_PER_FILE>();
+    chunk_offset_ends[0] = chunk_offset_end;
+
+    fh.storage_format_version_id = _storage_format_version_id;
+    fh.chunk_count = uint32_t{1};
+    fh.chunk_ids = chunk_ids;
+    fh.chunk_offset_ends = chunk_offset_ends;
+
+    export_value<FILE_HEADER>(fh, file_name);
+
+    write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
+
+    return;
+}
+
+void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
+  // get current persistence_file for table
+  const auto table_persistence_file = get_persistence_file_name(table_name);
+  // persist chunk to disk
+  persist_chunk_to_file(chunk, chunk_id, table_persistence_file);
+
+  // map chunk from disk
+  // replace chunk in table
+}
+
+const std::string StorageManager::get_persistence_file_name(const std::string table_name){
+  if (_tables_current_persistence_file_mapping[table_name].current_chunk_count == MAX_CHUNK_COUNT_PER_FILE) {
+    const auto next_file_index = _tables_current_persistence_file_mapping[table_name].file_index + 1;
+    auto next_persistence_file_name = table_name + "_" + std::to_string(next_file_index) + ".bin";
+    _tables_current_persistence_file_mapping[table_name] = {next_persistence_file_name, next_file_index, 0};
+  }
+  return _tables_current_persistence_file_mapping[table_name].file_name;
 }
 
 FILE_HEADER StorageManager::read_file_header(const std::string& filename) {

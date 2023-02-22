@@ -35,6 +35,12 @@ struct CHUNK_HEADER {
   std::vector<uint32_t> segment_offset_ends;
 };
 
+struct PERSISTENCE_FILE_DATA {
+  std::string file_name;
+  uint32_t file_index;
+  uint32_t current_chunk_count;
+};
+
 enum class PersistedSegmentEncodingType : uint32_t {
   Unencoded,
   DictionaryEncoding8Bit,
@@ -89,6 +95,9 @@ class StorageManager : public Noncopyable {
   void export_all_tables_as_csv(const std::string& path);
 
   void persist_chunks_to_disk(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::string& file_name);
+  void persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id, const std::string& file_name);
+
+  void replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name);
 
   FILE_HEADER read_file_header(const std::string& filename);
   std::shared_ptr<Chunk> map_chunk_from_disk(const uint32_t chunk_offset_end, const std::string& filename,
@@ -110,6 +119,7 @@ class StorageManager : public Noncopyable {
   static constexpr size_t INITIAL_MAP_SIZE = 100;
 
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<Table>> _tables{INITIAL_MAP_SIZE};
+  tbb::concurrent_unordered_map<std::string, PERSISTENCE_FILE_DATA> _tables_current_persistence_file_mapping{INITIAL_MAP_SIZE};
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<LQPView>> _views{INITIAL_MAP_SIZE};
   tbb::concurrent_unordered_map<std::string, std::shared_ptr<PreparedPlan>> _prepared_plans{INITIAL_MAP_SIZE};
 
@@ -145,8 +155,12 @@ class StorageManager : public Noncopyable {
   void write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk, const std::vector<uint32_t>& segment_offset_ends,
                            const std::string& file_name);
   uint32_t _chunk_header_bytes(uint32_t column_count);
+
+  const std::string get_persistence_file_name(const std::string table_name);
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
+
+//const std::string get_next_table_persistence_file_name(std::string table_name, 0)
 
 }  // namespace hyrise
