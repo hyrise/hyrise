@@ -294,27 +294,7 @@ std::vector<uint32_t> StorageManager::calculate_segment_offset_ends(const std::s
       const auto dict_segment = dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(abstract_segment);
 
       offset_end += byte_index(dict_segment->dictionary()->size(), sizeof(ColumnDataType));
-
-      const auto attribute_vector = dict_segment->attribute_vector();
-      const auto attribute_vector_type = attribute_vector->type();
-
-      switch (attribute_vector_type) {
-        case CompressedVectorType::FixedWidthInteger4Byte:
-          offset_end += byte_index(attribute_vector->size(), 4);
-          break;
-        case CompressedVectorType::FixedWidthInteger2Byte:
-          offset_end += byte_index(attribute_vector->size(), 2);
-          break;
-        case CompressedVectorType::FixedWidthInteger1Byte:
-          offset_end += attribute_vector->size();
-          break;
-        case CompressedVectorType::BitPacking:
-          offset_end += 4;
-          offset_end += dynamic_cast<const BitPackingVector&>(*attribute_vector).data().bytes();
-          break;
-        default:
-        Fail("Any other type should have been caught before.");
-      }
+      offset_end += calculate_four_byte_aligned_size_of_attribute_vector(dict_segment->attribute_vector());
 
       segment_offset_ends[segment_index] = offset_end;
     });
@@ -399,32 +379,41 @@ void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<Dictionary
   }
 
   export_compressed_vector(*segment->compressed_vector_type(), *segment->attribute_vector(), file_name);
-  //TODO: Does this work for non compressed attribute vectors?
-  const auto attribute_vector_difference_to_four_byte_alignment = (segment->attribute_vector()->size() * get_size_of_compressed_vector_data_type(segment->compressed_vector_type().value()) % 4);
+  //TODO: What to do with non-compressed AttributeVectors?
+  const auto attribute_vector_difference_to_four_byte_alignment = calculate_byte_size_of_attribute_vector(segment->attribute_vector()) % 4;
   if (attribute_vector_difference_to_four_byte_alignment != 0) {
     const auto padding = std::vector<uint8_t>(4 - attribute_vector_difference_to_four_byte_alignment, 0);
     export_values(padding, file_name);
   }
 }
 
-uint8_t get_size_of_compressed_vector_data_type(CompressedVectorType compressed_vector_type) {
-  uint8_t size = 1;
+uint32_t calculate_byte_size_of_attribute_vector(std::shared_ptr<const BaseCompressedVector> attribute_vector) {
+  const auto compressed_vector_type = attribute_vector->type();
+  auto size = uint32_t{};
   switch (compressed_vector_type) {
     case CompressedVectorType::FixedWidthInteger1Byte:
-      size = 1;
+      size = attribute_vector->size();
       break;
     case CompressedVectorType::FixedWidthInteger2Byte:
-      size = 2;
+      size = attribute_vector->size() * 2;
       break;
     case CompressedVectorType::FixedWidthInteger4Byte:
-      size = 4;
+      size = attribute_vector->size() * 4;
       break;
     case CompressedVectorType::BitPacking:
-      Fail("BitPacking Compression not yet implemented for mmap-based persitence.");
+      size += 4;
+      size += dynamic_cast<const BitPackingVector&>(*attribute_vector).data().bytes();
+      break;
     default:
       Fail("Unknown Compression Type in Storage Manager.");
   }
   return size;
+}
+
+uint32_t calculate_four_byte_aligned_size_of_attribute_vector(std::shared_ptr<const BaseCompressedVector> attribute_vector) {
+  const auto attribute_vector_size = calculate_byte_size_of_attribute_vector(attribute_vector);
+  const auto attribute_vector_difference_to_four_byte_alignment = attribute_vector_size % 4;
+  return attribute_vector_size + attribute_vector_difference_to_four_byte_alignment;
 }
 
 void StorageManager::write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk,
