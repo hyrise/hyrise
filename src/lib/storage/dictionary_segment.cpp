@@ -43,8 +43,6 @@ DictionarySegment<T>::DictionarySegment(const std::shared_ptr<const std::span<co
 template <typename T>
 DictionarySegment<T>::DictionarySegment(const uint32_t* start_address)
     : BaseDictionarySegment(data_type_from_type<T>()) {
-    //TODO: The encoding_type needed here - the encoding used for the DictionarySegment is not the same as
-    //the version_id that is stored at ENCODING_TYPE_OFFSET_INDEX
     const auto encoding_type = PersistedSegmentEncodingType{start_address[ENCODING_TYPE_OFFSET_INDEX]};
     const auto dictionary_size = start_address[DICTIONARY_SIZE_OFFSET_INDEX];
     const auto attribute_vector_size = start_address[ATTRIBUTE_VECTOR_OFFSET_INDEX];

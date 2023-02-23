@@ -101,7 +101,7 @@ class StorageManager : public Noncopyable {
 
   FILE_HEADER read_file_header(const std::string& filename);
   std::shared_ptr<Chunk> map_chunk_from_disk(const uint32_t chunk_offset_end, const std::string& filename,
-                                             const uint32_t segment_count);
+                                             const uint32_t segment_count, std::vector<DataType> column_definitions);
 
   uint32_t get_max_chunk_count_per_file() {
     return _chunk_count;
@@ -157,6 +157,8 @@ class StorageManager : public Noncopyable {
   uint32_t _chunk_header_bytes(uint32_t column_count);
 
   const std::string get_persistence_file_name(const std::string table_name);
+
+  PersistedSegmentEncodingType resolve_persisted_segment_encoding_type_from_compression_type(CompressedVectorType compressed_vector_type);
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);

@@ -385,7 +385,7 @@ void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<Dictionary
    * For a description of how dictionary segments look, see the following PR:
    *    https://github.com/hyrise-mp-22-23/hyrise/pull/94
    */
-  const auto compressed_vector_type_id = segment->compressed_vector_type();
+  const auto compressed_vector_type_id = resolve_persisted_segment_encoding_type_from_compression_type(segment->compressed_vector_type().value());
   export_value(compressed_vector_type_id, file_name);
   export_value(static_cast<uint32_t>(segment->dictionary()->size()), file_name);
   export_value(static_cast<uint32_t>(segment->attribute_vector()->size()), file_name);
@@ -521,7 +521,8 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   _tables_current_persistence_file_mapping[table_name].current_chunk_count++;
 
   // map chunk from disk
-  auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count());
+  const auto column_definitions = _tables[table_name]->column_data_types();
+  auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count(), column_definitions);
 
   // replace chunk in table
 }
@@ -583,7 +584,7 @@ CHUNK_HEADER StorageManager::read_chunk_header(const std::string& filename, cons
 }
 
 std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_offset_end, const std::string& filename,
-                                                           const uint32_t segment_count) {
+                                                           const uint32_t segment_count, const std::vector<DataType> column_definitions) {
   auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
 
   auto fd = int32_t{};
@@ -605,7 +606,10 @@ std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_
       segment_offset_end = chunk_header.segment_offset_ends[segment_index - 1] + chunk_offset_end;
     }
 
-    segments.emplace_back(std::make_shared<DictionarySegment<int32_t>>(map + segment_offset_end / 4));
+    resolve_data_type(column_definitions[segment_index], [&](auto type) {
+      using ColumnDataType = typename decltype(type)::type;
+      segments.emplace_back(std::make_shared<DictionarySegment<ColumnDataType>>(map + segment_offset_end / 4));
+    });
   }
 
   const auto chunk = std::make_shared<Chunk>(segments);
@@ -614,6 +618,27 @@ std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_
 
 uint32_t StorageManager::_chunk_header_bytes(uint32_t column_count) {
   return _row_count_bytes + column_count * _segment_offset_bytes;
+}
+
+PersistedSegmentEncodingType StorageManager::resolve_persisted_segment_encoding_type_from_compression_type(CompressedVectorType compressed_vector_type) {
+  PersistedSegmentEncodingType persisted_vector_type_id = {};
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      persisted_vector_type_id = PersistedSegmentEncodingType::DictionaryEncoding32Bit;
+      break;
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      persisted_vector_type_id = PersistedSegmentEncodingType::DictionaryEncoding16Bit;
+      break;
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      persisted_vector_type_id = PersistedSegmentEncodingType::DictionaryEncoding8Bit;
+      break;
+    case CompressedVectorType::BitPacking:
+      persisted_vector_type_id = PersistedSegmentEncodingType::DictionaryEncodingBitPacking;
+      break;
+    default:
+      persisted_vector_type_id = PersistedSegmentEncodingType::Unencoded;
+  }
+  return persisted_vector_type_id;
 }
 
 }  // namespace hyrise
