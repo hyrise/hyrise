@@ -12,6 +12,9 @@ class OdValidationRule : public AbstractDependencyValidationRule {
  public:
   OdValidationRule();
 
+  constexpr static size_t SAMPLE_SIZE{100};
+  constexpr static size_t MIN_SIZE_FOR_RANDOM_SAMPLE{SAMPLE_SIZE * 2};
+
  protected:
   ValidationResult _on_validate(const AbstractDependencyCandidate& candidate) const override;
 };

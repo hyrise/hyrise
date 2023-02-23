@@ -82,7 +82,6 @@ DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates(
   }
 
   auto message = std::stringstream{};
-  std::cout << "Generated " << dependency_candidates.size() << " candidates in " << generation_timer.lap_formatted();
   message << "Generated " << dependency_candidates.size() << " candidates in " << generation_timer.lap_formatted();
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   return dependency_candidates;
@@ -98,8 +97,7 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
 
     auto candidate_timer = Timer{};
     const auto& validation_rule = _validation_rules.at(candidate->type);
-    message << "Checking candidate " << *candidate;
-    std::cout << "Checking candidate " << *candidate << std::endl;
+    message << "Checking " << *candidate;
     const auto& result = validation_rule->validate(*candidate);
 
     switch (result.status) {

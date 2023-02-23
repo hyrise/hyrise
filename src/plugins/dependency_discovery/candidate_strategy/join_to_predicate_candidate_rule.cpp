@@ -21,7 +21,8 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
   const auto join_mode = join_node.join_mode;
   const auto prunable_side = join_node.prunable_input_side();
 
-  if ((join_mode != JoinMode::Inner && join_mode != JoinMode::Semi) || !prunable_side || join_predicates.size() != 1) {
+  if ((join_mode != JoinMode::Inner && join_mode != JoinMode::Semi) || !prunable_side || join_predicates.size() != 1 ||
+      join_node.is_semi_reduction()) {
     return;
   }
 
@@ -86,9 +87,10 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
         return LQPVisitation::VisitInputs;
       }
 
-      Assert(stored_table_node != *other_stored_table_node, "diff tables");
-      candidates.emplace(
-          std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
+      if (join_node.join_mode != JoinMode::Semi) {
+        candidates.emplace(std::make_shared<UccCandidate>(stored_table_node.table_name,
+                                                          join_lqp_column_expression->original_column_id));
+      }
 
       candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
                                                        join_lqp_column_expression->original_column_id,
@@ -130,8 +132,10 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
 
     candidates.emplace(
         std::make_shared<UccCandidate>(expression_table_node->table_name, column_expression->original_column_id));
-    candidates.emplace(
-        std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
+    if (join_node.join_mode != JoinMode::Semi) {
+      candidates.emplace(
+          std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
+    }
 
     if (!other_stored_table_node) {
       return LQPVisitation::VisitInputs;
@@ -142,7 +146,6 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
                                                      join_lqp_column_expression->original_column_id,
                                                      column_expression->original_column_id));
 
-    Assert(stored_table_node != *other_stored_table_node, "diff tables");
     candidates.emplace(std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
         stored_table_node.table_name, join_lqp_column_expression->original_column_id));
