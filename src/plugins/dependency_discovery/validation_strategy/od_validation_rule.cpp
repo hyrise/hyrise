@@ -35,52 +35,89 @@ std::vector<T> apply_permutation(std::vector<T>& values, const std::vector<size_
 }
 
 template <typename T, typename U>
-bool sample_not_ordered(const std::shared_ptr<const Table>& table, const ColumnID column_id,
-                        const ColumnID ordered_column_id) {
-  const auto row_count = table->row_count();
-  auto random_rows = std::unordered_set<size_t>{OdValidationRule::SAMPLE_SIZE};
+bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID column_id,
+                    const ColumnID ordered_column_id, const uint64_t row_count) {
+  const auto sample_size = std::min(row_count, OdValidationRule::SAMPLE_SIZE);
 
-  // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample might be slower).
+  auto lhs_sample_value = std::vector<U>{};
+  auto rhs_sample_value = std::vector<T>{};
+  lhs_sample_value.reserve(sample_size);
+  rhs_sample_value.reserve(sample_size);
+
+  // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
   if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
-    auto first_rows = std::vector<size_t>(OdValidationRule::SAMPLE_SIZE);
-    std::iota(first_rows.begin(), first_rows.end(), 0);
-    random_rows.insert(first_rows.cbegin(), first_rows.cend());
+    const auto chunk_count = table->chunk_count();
+    auto added_rows = uint64_t{1};
+    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+      const auto& chunk = table->get_chunk(chunk_id);
+      if (!chunk) {
+        continue;
+      }
+
+      const auto& lhs_segment = chunk->get_segment(column_id);
+      const auto& rhs_segment = chunk->get_segment(ordered_column_id);
+
+      auto contains_nulls = false;
+      segment_with_iterators<U>(*lhs_segment, [&](auto lhs_it, const auto lhs_end) {
+        segment_with_iterators<T>(*rhs_segment, [&](auto rhs_it, const auto rhs_end) {
+          while (lhs_it != lhs_end && rhs_it != rhs_end) {
+            if (lhs_it->is_null() || rhs_it->is_null()) {
+              contains_nulls = true;
+              return;
+            }
+
+            lhs_sample_value.emplace_back(lhs_it->value());
+            rhs_sample_value.emplace_back(rhs_it->value());
+            if (added_rows == sample_size) {
+              return;
+            }
+            ++added_rows;
+            ++lhs_it;
+            ++rhs_it;
+          }
+        });
+      });
+
+      if (contains_nulls) {
+        return false;
+      }
+
+      if (added_rows == sample_size) {
+        break;
+      }
+    }
   } else {
+    auto random_rows = std::unordered_set<size_t>{sample_size};
     auto generator = std::mt19937{1337};
     auto distribution = std::uniform_int_distribution<size_t>{0, row_count - 1};
-    while (random_rows.size() < OdValidationRule::SAMPLE_SIZE) {
+    while (random_rows.size() < sample_size) {
       random_rows.emplace(distribution(generator));
     }
-  }
 
-  auto random_values = std::vector<U>{};
-  auto random_ordered_values = std::vector<T>{};
-  random_values.reserve(OdValidationRule::SAMPLE_SIZE);
-  random_ordered_values.reserve(OdValidationRule::SAMPLE_SIZE);
-
-  auto performance_warning_disabler = PerformanceWarningDisabler{};
-  for (const auto random_row : random_rows) {
-    const auto& random_value = table->get_value<U>(column_id, random_row);
-    const auto& random_ordered_value = table->get_value<T>(ordered_column_id, random_row);
-    if (!random_value || !random_ordered_value) {
-      continue;
+    auto performance_warning_disabler = PerformanceWarningDisabler{};
+    for (const auto random_row : random_rows) {
+      const auto& random_value = table->get_value<U>(column_id, random_row);
+      const auto& random_ordered_value = table->get_value<T>(ordered_column_id, random_row);
+      if (!random_value || !random_ordered_value) {
+        return false;
+      }
+      lhs_sample_value.emplace_back(*random_value);
+      rhs_sample_value.emplace_back(*random_ordered_value);
     }
-    random_values.emplace_back(*random_value);
-    random_ordered_values.emplace_back(*random_ordered_value);
   }
 
-  const auto& permutation = sort_permutation<U>(random_values);
-  const auto& ordered_values = apply_permutation<T>(random_ordered_values, permutation);
+  const auto& permutation = sort_permutation<U>(lhs_sample_value);
+  const auto& ordered_values = apply_permutation<T>(rhs_sample_value, permutation);
   bool is_initialized = false;
   auto last_value = T{};
   for (const auto& current_value : ordered_values) {
     if (is_initialized && last_value > current_value) {
-      return true;
+      return false;
     }
     is_initialized = true;
     last_value = current_value;
   }
-  return false;
+  return true;
 }
 
 }  // namespace
@@ -97,21 +134,30 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   const auto ordered_column_id = od_candidate.ordered_column_id;
 
   auto status = ValidationStatus::Uncertain;
-  if (table->row_count() > SAMPLE_SIZE) {
-    resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
-      using ColumnDataType = typename decltype(data_type_t)::type;
+  const auto row_count = table->row_count();
+  resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
+    using ColumnDataType = typename decltype(data_type_t)::type;
+    resolve_data_type(table->column_data_type(ordered_column_id), [&](const auto data_type_t2) {
+      using OrderedColumnDataType = typename decltype(data_type_t2)::type;
+      const auto ordered =
+          sample_ordered<OrderedColumnDataType, ColumnDataType>(table, column_id, ordered_column_id, row_count);
+      if (!ordered) {
+        status = ValidationStatus::Invalid;
+        return;
+      }
 
-      resolve_data_type(table->column_data_type(ordered_column_id), [&](const auto data_type_t2) {
-        using OrderedColumnDataType = typename decltype(data_type_t2)::type;
-        if (sample_not_ordered<OrderedColumnDataType, ColumnDataType>(table, column_id, ordered_column_id)) {
-          status = ValidationStatus::Invalid;
-        }
-      });
+      if (row_count <= SAMPLE_SIZE) {
+        status = ValidationStatus::Valid;
+      }
     });
-  }
+  });
 
-  if (status == ValidationStatus::Invalid) {
-    return ValidationResult(status);
+  if (status != ValidationStatus::Uncertain) {
+    auto result = ValidationResult{status};
+    if (status == ValidationStatus::Valid) {
+      result.constraints = {_constraint_from_candidate(candidate)};
+    }
+    return result;
   }
 
   auto pruned_column_ids = std::vector<ColumnID>{};

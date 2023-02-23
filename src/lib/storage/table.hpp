@@ -161,7 +161,7 @@ class Table : private Noncopyable {
         }
       }
     }
-    Fail("Row does not exist.");
+    Fail("Row does not exist. " + std::to_string(row_number) + "  " + std::to_string(row_counter));
   }
 
   template <typename T>
