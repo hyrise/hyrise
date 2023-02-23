@@ -278,7 +278,7 @@ std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_man
   return stream;
 }
 
-std::vector<uint32_t> StorageManager::generate_segment_offset_ends(const std::shared_ptr<Chunk> chunk) {
+std::vector<uint32_t> StorageManager::calculate_segment_offset_ends(const std::shared_ptr<Chunk> chunk) {
   const auto segment_count = chunk->column_count();
   auto segment_offset_ends = std::vector<uint32_t>(segment_count);
 
@@ -467,7 +467,7 @@ void StorageManager::persist_chunks_to_disk(const std::vector<std::shared_ptr<Ch
 
   auto offset = uint32_t{_file_header_bytes};
   for (auto chunk_index = uint32_t{0}; chunk_index < chunks.size(); ++chunk_index) {
-    const auto segment_offset_ends = generate_segment_offset_ends(chunks[chunk_index]);
+    const auto segment_offset_ends = calculate_segment_offset_ends(chunks[chunk_index]);
     offset += segment_offset_ends.back();
 
     chunk_segment_offset_ends[chunk_index] = segment_offset_ends;
@@ -505,7 +505,7 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
     if (std::filesystem::exists(file_name)) {
       //append to existing file
 
-      auto chunk_segment_offset_ends = generate_segment_offset_ends(chunk);
+      auto chunk_segment_offset_ends = calculate_segment_offset_ends(chunk);
       auto chunk_offset_end = chunk_segment_offset_ends.back();
 
       // adapt and rewrite file header
@@ -524,7 +524,7 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
     }
 
     // create new file
-    auto chunk_segment_offset_ends = generate_segment_offset_ends(chunk);
+    auto chunk_segment_offset_ends = calculate_segment_offset_ends(chunk);
     auto chunk_offset_end = chunk_segment_offset_ends.back();
 
     auto fh = FILE_HEADER{};
