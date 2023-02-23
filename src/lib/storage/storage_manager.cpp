@@ -293,7 +293,7 @@ std::vector<uint32_t> StorageManager::generate_segment_offset_ends(const std::sh
 
       const auto dict_segment = dynamic_pointer_cast<DictionarySegment<ColumnDataType>>(abstract_segment);
 
-      offset_end += byte_index(dict_segment->dictionary()->size(), 4);
+      offset_end += byte_index(dict_segment->dictionary()->size(), sizeof(ColumnDataType));
 
       const auto attribute_vector = dict_segment->attribute_vector();
       const auto attribute_vector_type = attribute_vector->type();
@@ -386,7 +386,7 @@ void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<Dictionary
    *    https://github.com/hyrise-mp-22-23/hyrise/pull/94
    */
   const auto compressed_vector_type_id = resolve_persisted_segment_encoding_type_from_compression_type(segment->compressed_vector_type().value());
-  export_value(compressed_vector_type_id, file_name);
+  export_value(static_cast<uint32_t>(compressed_vector_type_id), file_name);
   export_value(static_cast<uint32_t>(segment->dictionary()->size()), file_name);
   export_value(static_cast<uint32_t>(segment->attribute_vector()->size()), file_name);
 
@@ -576,7 +576,7 @@ CHUNK_HEADER StorageManager::read_chunk_header(const std::string& filename, cons
 
   header.row_count = map[map_index];
 
-  for (auto segment_offset_index = size_t{0}; segment_offset_index < segment_count + 1; ++segment_offset_index) {
+  for (auto segment_offset_index = size_t{0}; segment_offset_index < segment_count; ++segment_offset_index) {
     header.segment_offset_ends.emplace_back(map[segment_offset_index + map_index + 1]);
   }
 
@@ -600,15 +600,15 @@ std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_
   const auto chunk_header = read_chunk_header(filename, segment_count, chunk_offset_end);
 
   for (auto segment_index = size_t{0}; segment_index < segment_count; ++segment_index) {
-    auto segment_offset_end = _chunk_header_bytes(segment_count) + chunk_offset_end;
+    auto segment_offset_begin = _chunk_header_bytes(segment_count) + chunk_offset_end;
 
     if (segment_index > 0) {
-      segment_offset_end = chunk_header.segment_offset_ends[segment_index - 1] + chunk_offset_end;
+      segment_offset_begin = chunk_header.segment_offset_ends[segment_index - 1] + chunk_offset_end;
     }
 
     resolve_data_type(column_definitions[segment_index], [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      segments.emplace_back(std::make_shared<DictionarySegment<ColumnDataType>>(map + segment_offset_end / 4));
+      segments.emplace_back(std::make_shared<DictionarySegment<ColumnDataType>>(map + segment_offset_begin / 4));
     });
   }
 
