@@ -390,8 +390,41 @@ void StorageManager::write_dict_segment_to_disk(const std::shared_ptr<Dictionary
   export_value(static_cast<uint32_t>(segment->dictionary()->size()), file_name);
   export_value(static_cast<uint32_t>(segment->attribute_vector()->size()), file_name);
 
+  // we need to ensure that every part can be mapped with a uint32_t map
   export_values<T>(*segment->dictionary(), file_name);
+  const auto dictionary_difference_to_four_byte_alignment = (segment->dictionary()->size() * sizeof(T)) % 4;
+  if (dictionary_difference_to_four_byte_alignment != 0) {
+    const auto padding = std::vector<uint8_t>(4 - dictionary_difference_to_four_byte_alignment, 0);
+    export_values(padding, file_name);
+  }
+
   export_compressed_vector(*segment->compressed_vector_type(), *segment->attribute_vector(), file_name);
+  //TODO: Does this work for non compressed attribute vectors?
+  const auto attribute_vector_difference_to_four_byte_alignment = (segment->attribute_vector()->size() * get_size_of_compressed_vector_data_type(segment->compressed_vector_type().value()) % 4);
+  if (attribute_vector_difference_to_four_byte_alignment != 0) {
+    const auto padding = std::vector<uint8_t>(4 - attribute_vector_difference_to_four_byte_alignment, 0);
+    export_values(padding, file_name);
+  }
+}
+
+uint8_t get_size_of_compressed_vector_data_type(CompressedVectorType compressed_vector_type) {
+  uint8_t size = 1;
+  switch (compressed_vector_type) {
+    case CompressedVectorType::FixedWidthInteger1Byte:
+      size = 1;
+      break;
+    case CompressedVectorType::FixedWidthInteger2Byte:
+      size = 2;
+      break;
+    case CompressedVectorType::FixedWidthInteger4Byte:
+      size = 4;
+      break;
+    case CompressedVectorType::BitPacking:
+      Fail("BitPacking Compression not yet implemented for mmap-based persitence.");
+    default:
+      Fail("Unknown Compression Type in Storage Manager.");
+  }
+  return size;
 }
 
 void StorageManager::write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk,
