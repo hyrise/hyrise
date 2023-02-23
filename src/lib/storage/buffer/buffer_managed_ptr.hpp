@@ -222,6 +222,7 @@ class BufferManagedPtr {
     } else if (_addressing.buffer_manager.tag == detail::is_page_id_and_offset) {
       const auto page_id = PageID{_addressing.buffer_manager.page_id};
       // TODO: If pinned, this is not needed
+      // TODO: What happens if page is deleted? Pointer should become null
       const auto page = BufferManager::get_global_buffer_manager().get_page(page_id);
       return page->data() + _addressing.buffer_manager.offset;
     } else {

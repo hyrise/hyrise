@@ -70,6 +70,7 @@ TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
   auto ptr = buffer_manager.allocate(1024);
   EXPECT_EQ(ptr, BufferManagedPtr<void>(PageID{0}, 0));
 
+  // TODO: If the page is deallocated, the pointer should be set to 0
   EXPECT_NE(ptr.operator->(), nullptr);
   buffer_manager.deallocate(ptr, 1024);
   EXPECT_EQ(ptr.operator->(), nullptr);
