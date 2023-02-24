@@ -10,6 +10,8 @@ namespace hyrise {
  * Container class to define order constraints for tables (i.e., ordering a table by @param ordering_columns also orders
  * @param ordered_columns). An order constraint must not be mistaken as information about the actual sorting of a table
  * (we use Chunk::individually_sorted_by() to get sortedness information on a chunk level).
+ *
+ * Table order constraints are translated to order dependencies (ODs) in the LQP.
  */
 class TableOrderConstraint final : public AbstractTableConstraint {
  public:

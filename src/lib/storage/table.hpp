@@ -263,8 +263,12 @@ class Table : private Noncopyable {
   TableKeyConstraints _table_key_constraints;
   TableOrderConstraints _table_order_constraints;
   ForeignKeyConstraints _foreign_key_constraints;
-  // Stores the ForeignKeyCostraints of another table that reference this table. Required for maintenance of inclusion
-  // dependencies in the query plan.
+
+  /**
+   * Stores the ForeignKeyCostraints of another table that reference this table. Since we translate foreign key
+   * constraints to inclusion dependencies (INDs) in the LQP, which we maintain on the primary key table's nodes, we
+   * need this information to maintain inclusion dependencies in the query plan.
+   */
   ForeignKeyConstraints _referenced_foreign_key_constraints;
 
   std::vector<ColumnID> _value_clustered_by;

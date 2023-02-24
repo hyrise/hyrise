@@ -21,6 +21,8 @@ class Table;
  * Given this example, @param foreign_key_columns and @param foreign_key_table reference the table with the foreign key
  * (e.g., nation.r_regionkey) whereas @param primary_key_columns and @param primary_key_table reference the table with
  * the primary key (e.g., region.n_regionkey).
+ *
+ * Foreign key constraints are translated to inclusion dependencies (INDs) in the LQP.
  */
 class ForeignKeyConstraint final : public AbstractTableConstraint {
  public:

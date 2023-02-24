@@ -11,7 +11,7 @@ enum class KeyConstraintType { PRIMARY_KEY, UNIQUE };
 
 /**
  * Container class to define uniqueness constraints for tables. As defined by SQL, two types of keys are supported:
- * PRIMARY KEY and UNIQUE keys.
+ * PRIMARY KEY and UNIQUE keys. Table key constraints are translated to unique column combinations (UCCs) in the LQP.
  */
 class TableKeyConstraint final : public AbstractTableConstraint {
  public:
