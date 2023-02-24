@@ -13,15 +13,6 @@ namespace {
 using namespace hyrise;  // NOLINT(build/namespaces)
 
 template <typename T>
-struct MinMaxContainer {
-  MinMaxContainer(const T& init_min, const T& init_max) : min{init_min}, max{init_max} {}
-
-  T min;
-  T max;
-};
-
-// bool: Everything is null.
-template <typename T>
 typename ValidationUtils<T>::ColumnStatistics gather_segment_statistics(const std::shared_ptr<const Chunk>& chunk,
                                                                         const ColumnID column_id) {
   const auto& segment = chunk->get_segment(column_id);
@@ -80,7 +71,7 @@ namespace hyrise {
 template <typename T>
 typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column_statistics(
     const std::shared_ptr<const Table>& table, const ColumnID column_id, bool early_out) {
-  auto min_max_ordered = std::map<T, std::vector<std::shared_ptr<MinMaxContainer<T>>>>{};
+  auto min_max_ordered = std::map<T, std::vector<std::shared_ptr<std::pair<T, T>>>>{};
   auto is_unique = true;
   auto column_statistics = ValidationUtils<T>::ColumnStatistics{};
   column_statistics.contains_only_nulls = true;
@@ -114,9 +105,9 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
 
     const auto& min = *segment_statistics.min;
     const auto& max = *segment_statistics.max;
-    const auto& min_max_container = std::make_shared<MinMaxContainer<T>>(min, max);
-    min_max_ordered[min].emplace_back(min_max_container);
-    min_max_ordered[max].emplace_back(min_max_container);
+    const auto& min_max_pair = std::make_shared<std::pair<T, T>>(min, max);
+    min_max_ordered[min].emplace_back(min_max_pair);
+    min_max_ordered[max].emplace_back(min_max_pair);
   }
 
   column_statistics.min = min_max_ordered.cbegin()->first;
@@ -130,27 +121,27 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
   // check if everything is disjoint and continuous
   for (auto it = min_max_ordered.cbegin(); it != min_max_ordered.cend(); ++it) {
     // if list contains more than 1 value: not continuous, not disjoint.
-    const auto& min_max_containers = it->second;
-    if (min_max_containers.size() != 1) {
+    const auto& min_max_pairs = it->second;
+    if (min_max_pairs.size() != 1) {
       return column_statistics;
     }
 
     // check if next or previous item is same --> no overlap.
-    const auto& min_max_container = min_max_containers.front();
+    const auto& min_max_pair = min_max_pairs.front();
     // no overlap possible if only one value in segment
-    if (min_max_container->min == min_max_container->max) {
+    if (min_max_pair->first == min_max_pair->second) {
       continue;
     }
 
     auto neighbor_identical = false;
     if (it != min_max_ordered.cbegin()) {
       // we already visited that list and ensured it is unique.
-      neighbor_identical = min_max_container == std::prev(it)->second.front();
+      neighbor_identical = min_max_pair == std::prev(it)->second.front();
     }
 
     if (!neighbor_identical && std::next(it) != min_max_ordered.cend()) {
       // we will check that list in the next step and ensure it is unique.
-      neighbor_identical = min_max_container == std::next(it)->second.front();
+      neighbor_identical = min_max_pair == std::next(it)->second.front();
     }
 
     if (!neighbor_identical) {
@@ -159,7 +150,7 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
     }
 
     if constexpr (std::is_integral_v<T>) {
-      if (it->first == min_max_container->max && std::next(it) != min_max_ordered.cend()) {
+      if (it->first == min_max_pair->second && std::next(it) != min_max_ordered.cend()) {
         column_statistics.segments_continuous &= it->first + 1 == std::next(it)->first;
       }
     }
