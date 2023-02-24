@@ -574,17 +574,22 @@ void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::share
 
   });
 
-//  // print row 17 of created and mapped chunk
-//  std::cout << "Row 17 of created chunk: ";
-//  for (auto column_index = size_t{0}; column_index < 16; ++column_index) {
-//    std::cout << (chunk->get_segment(ColumnID{column_index}))[ChunkOffset{16}] << " ";
-//  }
-//  std::cout << std::endl;
-//
-//  std::cout << "Row 17 of mapped chunk: ";
-//  for (auto column_index = size_t{0}; column_index < 16; ++column_index) {
-//    std::cout << (mapped_chunk->get_segment(ColumnID{column_index})[ChunkOffset{16}]) << " ";
-//  }
+  // print row 17 of created and mapped chunk
+  std::cout << "Row 17 of created chunk: ";
+  for (auto column_index = ColumnID{0}; column_index < 16; ++column_index) {
+    const auto segment = chunk->get_segment(column_index);
+    const auto attribute_value = (*segment)[ChunkOffset{16}];
+    std::cout << attribute_value << " ";
+  }
+  std::cout << std::endl;
+
+  std::cout << "Row 17 of mapped chunk: ";
+  for (auto column_index = ColumnID{0}; column_index < 16; ++column_index) {
+    const auto segment = mapped_chunk->get_segment(column_index);
+    const auto attribute_value = (*segment)[ChunkOffset{16}];
+    std::cout << attribute_value << " ";
+  }
+  std::cout << std::endl;
 }
 
 void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
