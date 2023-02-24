@@ -32,25 +32,29 @@ std::vector<ColumnID> apply_permutation(std::vector<ColumnID>& column_ids, const
 
 namespace hyrise {
 
-ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& columns,
-                                           const std::vector<ColumnID>& foreign_key_columns,
-                                           const std::shared_ptr<Table>& table,
-                                           const std::shared_ptr<Table>& foreign_key_table)
-    : AbstractTableConstraint{columns},
-      _foreign_key_columns{foreign_key_columns},
-      _table{table},
-      _foreign_key_table{foreign_key_table} {
-  Assert(_columns.size() == _foreign_key_columns.size(), "Invalid number of columns for ForeignKeyConstraint.");
-  Assert(table && foreign_key_table, "ForeignKeyConstraint must reference two tables.");
+ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_key_columns,
+                                           const std::shared_ptr<Table>& foreign_key_table,
+                                           const std::vector<ColumnID>& primary_key_columns,
+                                           const std::shared_ptr<Table>& primary_key_table)
+    : _foreign_key_columns{foreign_key_columns},
+      _foreign_key_table{foreign_key_table},
+      _primary_key_columns{primary_key_columns},
+      _primary_key_table{primary_key_table} {
+  Assert(_foreign_key_columns.size() == _primary_key_columns.size(),
+         "Invalid number of columns for ForeignKeyConstraint.");
+  // MockNodes can hold ForeignKeyConstraints that do not reference a primary key table (since they mock the node
+  // representing this table). When added to a table, Table::add_soft_foreign_key_constraint(...) checks that the
+  // pointer is set and valid.
+  Assert(foreign_key_table, "ForeignKeyConstraint must reference a table.");
 
-  // For INDs with the same columns, the order of the expressions is relevant. For instance, [A.a, A.b] in [B.x, B.y] is
-  // equals to [A.b, A.a] in [B.y, B.x], but not equals to [A.a, A.b] in [B.y, B.x]. To guarantee unambiguous
-  // dependencies, we order the columns and apply the same permutation to the included columns. Doing so, we obtain the
-  // same costraint for [A.a, A.b] in [B.x, B.y] and [A.b, A.a] in [B.y, B.x].
-  if (columns.size() > 1) {
-    const auto& permutation = sort_permutation(_columns);
-    _columns = apply_permutation(_columns, permutation);
+  // For foreign key constraints / INDs with the same columns, the order of the expressions is relevant. For instance,
+  // [A.a, A.b] in [B.x, B.y] is equals to [A.b, A.a] in [B.y, B.x], but not equals to [A.a, A.b] in [B.y, B.x]. To
+  // guarantee unambiguous dependencies, we order the columns and apply the same permutation to the included columns.
+  // Doing so, we obtain the same costraint for [A.a, A.b] in [B.x, B.y] and [A.b, A.a] in [B.y, B.x].
+  if (_foreign_key_columns.size() > 1) {
+    const auto& permutation = sort_permutation(_foreign_key_columns);
     _foreign_key_columns = apply_permutation(_foreign_key_columns, permutation);
+    _primary_key_columns = apply_permutation(_primary_key_columns, permutation);
   }
 }
 
@@ -58,20 +62,24 @@ const std::vector<ColumnID>& ForeignKeyConstraint::foreign_key_columns() const {
   return _foreign_key_columns;
 }
 
-const std::shared_ptr<Table> ForeignKeyConstraint::table() const {
-  return _table.lock();
-}
-
-const std::shared_ptr<Table> ForeignKeyConstraint::foreign_key_table() const {
+std::shared_ptr<Table> ForeignKeyConstraint::foreign_key_table() const {
   return _foreign_key_table.lock();
 }
 
+const std::vector<ColumnID>& ForeignKeyConstraint::primary_key_columns() const {
+  return _primary_key_columns;
+}
+
+std::shared_ptr<Table> ForeignKeyConstraint::primary_key_table() const {
+  return _primary_key_table.lock();
+}
+
 size_t ForeignKeyConstraint::hash() const {
-  auto hash = boost::hash_value(table());
-  boost::hash_combine(hash, foreign_key_table());
-  boost::hash_combine(hash, _columns.size());
-  boost::hash_combine(hash, _columns);
+  auto hash = boost::hash_value(foreign_key_table());
+  boost::hash_combine(hash, primary_key_table());
+  boost::hash_combine(hash, _foreign_key_columns.size());
   boost::hash_combine(hash, _foreign_key_columns);
+  boost::hash_combine(hash, _primary_key_columns);
 
   return hash;
 }
@@ -79,10 +87,9 @@ size_t ForeignKeyConstraint::hash() const {
 bool ForeignKeyConstraint::_on_equals(const AbstractTableConstraint& table_constraint) const {
   DebugAssert(dynamic_cast<const ForeignKeyConstraint*>(&table_constraint),
               "Different table_constraint type should have been caught by AbstractTableConstraint::operator==");
-  const auto& foreign_key_constraint = static_cast<const ForeignKeyConstraint&>(table_constraint);
-  return table() == foreign_key_constraint.table() &&
-         foreign_key_table() == foreign_key_constraint.foreign_key_table() &&
-         _foreign_key_columns == foreign_key_constraint._foreign_key_columns;
+  const auto& rhs = static_cast<const ForeignKeyConstraint&>(table_constraint);
+  return foreign_key_table() == rhs.foreign_key_table() && primary_key_table() == rhs.primary_key_table() &&
+         _foreign_key_columns == rhs._foreign_key_columns && _primary_key_columns == rhs._primary_key_columns;
 }
 
 }  // namespace hyrise

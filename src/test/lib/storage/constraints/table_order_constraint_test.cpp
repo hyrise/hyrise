@@ -21,9 +21,9 @@ class TableOrderConstraintTest : public BaseTest {
 TEST_F(TableOrderConstraintTest, OrderedColumnIDs) {
   // Implementation should not mess up the order of the column IDs.
   const auto order_constraint = TableOrderConstraint({{ColumnID{2}, ColumnID{1}}, {{ColumnID{3}, ColumnID{4}}}});
-  EXPECT_EQ(order_constraint.columns().size(), 2);
-  EXPECT_EQ(order_constraint.columns().front(), ColumnID{2});
-  EXPECT_EQ(order_constraint.columns().back(), ColumnID{1});
+  EXPECT_EQ(order_constraint.ordering_columns().size(), 2);
+  EXPECT_EQ(order_constraint.ordering_columns().front(), ColumnID{2});
+  EXPECT_EQ(order_constraint.ordering_columns().back(), ColumnID{1});
 
   EXPECT_EQ(order_constraint.ordered_columns().size(), 2);
   EXPECT_EQ(order_constraint.ordered_columns().front(), ColumnID{3});

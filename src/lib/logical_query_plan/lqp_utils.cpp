@@ -423,8 +423,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                               const std::vector<ColumnID>& column_ids) {
+template <typename ColumnIDs>
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
@@ -450,6 +450,11 @@ ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
 
   return column_expressions;
 }
+
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::set<ColumnID>& column_ids);
+template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                        const std::vector<ColumnID>& column_ids);
 
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
                                                  const ExpressionUnorderedSet& expressions) {

@@ -4,16 +4,20 @@
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, KeyConstraintType init_key_type)
-    : AbstractTableConstraint{{columns.cbegin(), columns.cend()}}, _key_type{init_key_type} {}
+TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, KeyConstraintType key_type)
+    : _key_type{key_type}, _columns{columns} {}
 
 KeyConstraintType TableKeyConstraint::key_type() const {
   return _key_type;
 }
 
+const std::set<ColumnID>& TableKeyConstraint::columns() const {
+  return _columns;
+}
+
 size_t TableKeyConstraint::hash() const {
   auto hash = boost::hash_value(_key_type);
-  for (const auto& column : columns()) {
+  for (const auto& column : _columns) {
     boost::hash_combine(hash, column);
   }
   return hash;
@@ -22,16 +26,17 @@ size_t TableKeyConstraint::hash() const {
 bool TableKeyConstraint::_on_equals(const AbstractTableConstraint& table_constraint) const {
   DebugAssert(dynamic_cast<const TableKeyConstraint*>(&table_constraint),
               "Different table_constraint type should have been caught by AbstractTableConstraint::operator==");
-  return key_type() == static_cast<const TableKeyConstraint&>(table_constraint).key_type();
+  const auto& rhs = static_cast<const TableKeyConstraint&>(table_constraint);
+  return _key_type == rhs._key_type && _columns == rhs._columns;
 }
 
 bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
   // PRIMARY_KEY constraints are "smaller" than UNIQUE constraints. Thus, they are listed first when printing them.
-  if (_key_type != rhs.key_type()) {
-    return _key_type < rhs.key_type();
+  if (_key_type != rhs._key_type) {
+    return _key_type < rhs._key_type;
   }
 
-  // As the columns were originally stored in a std::set, iteration is sorted and the result is not ambiguous.
+  // As the columns are stored in a std::set, iteration is sorted and the result is not ambiguous.
   return std::lexicographical_compare(_columns.cbegin(), _columns.cend(), rhs._columns.cbegin(), rhs._columns.cend());
 }
 

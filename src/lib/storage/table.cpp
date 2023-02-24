@@ -26,7 +26,9 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-// Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3].
+// Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3]. We expect veryy short
+// vectors, so we use a simple but quadratic solution. For larger vectors, we could create sets and check set
+// containment.
 bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
   for (const auto column_id : lhs) {
     if (std::find(rhs.cbegin(), rhs.cend(), column_id) != rhs.cend()) {
@@ -401,10 +403,6 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(indexes_statistics);
 }
 
-const TableKeyConstraints& Table::soft_key_constraints() const {
-  return _table_key_constraints;
-}
-
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
   Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
 
@@ -435,6 +433,10 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
   _table_key_constraints.insert(table_key_constraint);
 }
 
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
+
 void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
   Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
 
@@ -446,12 +448,12 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
-  const auto referenced_table = foreign_key_constraint.table();
+  const auto referenced_table = foreign_key_constraint.primary_key_table();
   Assert(referenced_table && &*referenced_table != this, "ForeignKeyConstraint must reference another existing table.");
 
   // Check validity of key columns from other table.
   const auto referenced_table_column_count = referenced_table->column_count();
-  for (const auto& column_id : foreign_key_constraint.columns()) {
+  for (const auto& column_id : foreign_key_constraint.primary_key_columns()) {
     Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
   }
 
@@ -481,7 +483,7 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
 
   // Check validity of columns.
   const auto column_count = this->column_count();
-  for (const auto& column_id : table_order_constraint.columns()) {
+  for (const auto& column_id : table_order_constraint.ordering_columns()) {
     Assert(column_id < column_count, "ColumnID out of range.");
   }
 
@@ -493,14 +495,15 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
   const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
     // Do not allow order constraints that can be represented by existing constraints (and vice versa). For instance,
-    // we do not allow constraints that (i) order the same ordered columns but require fewer or more columns or (ii)
-    // have the same columns but order fewer or more columns.
-    const auto columns_invalid = columns_overlap(existing_constraint.columns(), table_order_constraint.columns()) &&
-                                 existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
+    // we do not allow constraints that (i) order the same ordered columns but require fewer or more ordering columns
+    // or (ii) have the same ordering columns but order fewer or more ordered columns.
+    const auto ordering_columns_invalid =
+        columns_overlap(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
+        existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
     const auto ordered_columns_invalid =
         columns_overlap(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
-        existing_constraint.columns() == table_order_constraint.columns();
-    Assert(!columns_invalid && !ordered_columns_invalid,
+        existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
+    Assert(!ordering_columns_invalid && !ordered_columns_invalid,
            "TableOrderConstraint for required columns has already been set.");
   }
   _table_order_constraints.insert(table_order_constraint);
