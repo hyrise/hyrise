@@ -19,8 +19,8 @@ class Table;
                             FOREIGN KEY (n_regionkey) REFERENCES region(r_regionkey));
  *
  * Given this example, @param foreign_key_columns and @param foreign_key_table reference the table with the foreign key
- * (e.g., nation.r_regionkey) whereas @param primary_key_columns and @param primary_key_table reference the table with
- * the primary key (e.g., region.n_regionkey).
+ * (e.g., nation.n_regionkey) whereas @param primary_key_columns and @param primary_key_table reference the table with
+ * the primary key (e.g., region.r_regionkey).
  *
  * Foreign key constraints are translated to inclusion dependencies (INDs) in the LQP.
  */

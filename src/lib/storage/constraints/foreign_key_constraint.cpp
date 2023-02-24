@@ -48,7 +48,7 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_
   Assert(foreign_key_table, "ForeignKeyConstraint must reference a table.");
 
   // For foreign key constraints / INDs with the same columns, the order of the expressions is relevant. For instance,
-  // [A.a, A.b] in [B.x, B.y] is equals to [A.b, A.a] in [B.y, B.x], but not equals to [A.a, A.b] in [B.y, B.x]. To
+  // [A.a, A.b] in [B.x, B.y] is equal to [A.b, A.a] in [B.y, B.x], but not equal to [A.a, A.b] in [B.y, B.x]. To
   // guarantee unambiguous dependencies, we order the columns and apply the same permutation to the included columns.
   // Doing so, we obtain the same costraint for [A.a, A.b] in [B.x, B.y] and [A.b, A.a] in [B.y, B.x].
   if (_foreign_key_columns.size() > 1) {
