@@ -37,7 +37,7 @@ void DependencyDiscoveryPlugin::stop() {}
 
 std::vector<std::pair<PluginFunctionName, PluginFunctionPointer>>
 DependencyDiscoveryPlugin::provided_user_executable_functions() {
-  return {{"DiscoverDependencies", [&]() { _validate_dependency_candidates(_identify_dependency_candidates()); }}};
+  return {{"DiscoverDependencies", [&]() { _discover_dependencies(); }}};
 }
 
 std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() {
@@ -45,11 +45,23 @@ std::optional<PreBenchmarkHook> DependencyDiscoveryPlugin::pre_benchmark_hook() 
     for (const auto item_id : benchmark_item_runner.items()) {
       benchmark_item_runner.execute_item(item_id);
     }
-    _validate_dependency_candidates(_identify_dependency_candidates());
+
+    _discover_dependencies();
+
     for (const auto& log_entry : Hyrise::get().log_manager.log_entries()) {
       std::cout << log_entry.message << std::endl;
     }
   };
+}
+
+void DependencyDiscoveryPlugin::_discover_dependencies() const {
+  auto discovery_timer = Timer{};
+
+  _validate_dependency_candidates(_identify_dependency_candidates());
+
+  auto message = std::stringstream{};
+  message << "Executed dependency discovery in " << discovery_timer.lap_formatted();
+  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
 }
 
 DependencyCandidates DependencyDiscoveryPlugin::_identify_dependency_candidates() const {
@@ -109,25 +121,27 @@ void DependencyDiscoveryPlugin::_validate_dependency_candidates(
         break;
       case ValidationStatus::Valid:
         message << " [confirmed in " << candidate_timer.lap_formatted() << "]";
-        Assert(result.constraints, "Expected validation to yield constraints for " + candidate->description());
-        for (const auto& constraint : *result.constraints) {
-          _add_constraint(candidate->table_name, constraint);
-        }
+        Assert(!result.constraints.empty(),
+               "Expected validation to yield constraint(s) for " + candidate->description());
         break;
       case ValidationStatus::Uncertain:
         Fail("Expected explicit validation result for " + candidate->description());
     }
+
+    for (const auto& [table, constraint] : result.constraints) {
+      _add_constraint(table, constraint);
+    }
     Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", message.str(), LogLevel::Info);
   }
-
-  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
-  Hyrise::get().default_lqp_cache->clear();
-  Hyrise::get().default_pqp_cache->clear();
 
   Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin",
                                         "Validated " + std::to_string(dependency_candidates.size()) +
                                             " candidates in " + validation_timer.lap_formatted(),
                                         LogLevel::Info);
+
+  Hyrise::get().log_manager.add_message("DependencyDiscoveryPlugin", "Clearing LQP and PQP cache...", LogLevel::Debug);
+  Hyrise::get().default_lqp_cache->clear();
+  Hyrise::get().default_pqp_cache->clear();
 }
 
 void DependencyDiscoveryPlugin::_add_candidate_rule(std::unique_ptr<AbstractDependencyCandidateRule> rule) {
@@ -138,10 +152,8 @@ void DependencyDiscoveryPlugin::_add_validation_rule(std::unique_ptr<AbstractDep
   _validation_rules[rule->dependency_type] = std::move(rule);
 }
 
-void DependencyDiscoveryPlugin::_add_constraint(const std::string& table_name,
+void DependencyDiscoveryPlugin::_add_constraint(const std::shared_ptr<Table>& table,
                                                 const std::shared_ptr<AbstractTableConstraint>& constraint) const {
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-
   if (const auto& order_constraint = std::dynamic_pointer_cast<TableOrderConstraint>(constraint)) {
     table->add_soft_order_constraint(*order_constraint);
     return;

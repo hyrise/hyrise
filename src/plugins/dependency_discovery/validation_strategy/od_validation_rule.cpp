@@ -161,7 +161,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   if (status != ValidationStatus::Uncertain) {
     auto result = ValidationResult{status};
     if (status == ValidationStatus::Valid) {
-      result.constraints = {_constraint_from_candidate(candidate)};
+      result.constraints[table] = _constraint_from_candidate(candidate);
     }
     return result;
   }
@@ -226,7 +226,7 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
 
   auto result = ValidationResult(status);
   if (status == ValidationStatus::Valid) {
-    result.constraints = {_constraint_from_candidate(candidate)};
+    result.constraints[table] = _constraint_from_candidate(candidate);
   }
 
   return result;

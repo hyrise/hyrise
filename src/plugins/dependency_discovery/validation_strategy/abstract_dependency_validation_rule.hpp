@@ -1,9 +1,13 @@
 #pragma once
 
+#include <unordered_map>
+
 #include "dependency_discovery/dependency_candidates.hpp"
 #include "storage/constraints/abstract_table_constraint.hpp"
 
 namespace hyrise {
+
+class Table;
 
 enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown };
 
@@ -12,9 +16,9 @@ struct ValidationResult {
   ValidationResult(const ValidationStatus init_status);
   ValidationResult() = delete;
 
-  const ValidationStatus status;
+  ValidationStatus status;
   // Pointer is required for polymorphism.
-  std::optional<std::vector<std::shared_ptr<AbstractTableConstraint>>> constraints{};
+  std::unordered_map<std::shared_ptr<Table>, std::shared_ptr<AbstractTableConstraint>> constraints{};
 };
 
 class AbstractDependencyValidationRule {

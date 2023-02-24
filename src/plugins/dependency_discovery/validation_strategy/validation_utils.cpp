@@ -204,7 +204,11 @@ std::optional<std::pair<T, T>> ValidationUtils<T>::get_column_min_max_value(cons
     }
 
     min = std::min(*segment_statistics.min, min);
-    max = std::min(*segment_statistics.max, max);
+    max = std::max(*segment_statistics.max, max);
+  }
+
+  if (!is_initialized) {
+    return {};
   }
 
   return std::make_pair(min, max);

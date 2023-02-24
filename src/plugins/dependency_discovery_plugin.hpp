@@ -29,6 +29,8 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
  protected:
   friend class DependencyDiscoveryPluginTest;
 
+  void _discover_dependencies() const;
+
   /**
    * Takes a snapshot of the current LQP Cache. Iterates through the LQPs and tries to extract sensible columns as can-
    * didates for UCC validation from each of them. A column is added as candidates if being a UCC has the potential to
@@ -49,7 +51,8 @@ class DependencyDiscoveryPlugin : public AbstractPlugin {
 
   void _add_validation_rule(std::unique_ptr<AbstractDependencyValidationRule> rule);
 
-  void _add_constraint(const std::string& table_name, const std::shared_ptr<AbstractTableConstraint>& constraint) const;
+  void _add_constraint(const std::shared_ptr<Table>& table_name,
+                       const std::shared_ptr<AbstractTableConstraint>& constraint) const;
 
   std::unordered_map<LQPNodeType, std::vector<std::unique_ptr<AbstractDependencyCandidateRule>>> _candidate_rules{};
 

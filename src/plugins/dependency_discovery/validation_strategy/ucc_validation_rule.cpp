@@ -45,7 +45,7 @@ ValidationResult UccValidationRule::_on_validate(const AbstractDependencyCandida
 
   auto result = ValidationResult(status);
   if (status == ValidationStatus::Valid) {
-    result.constraints = {_constraint_from_candidate(candidate)};
+    result.constraints[table] = _constraint_from_candidate(candidate);
   }
 
   return result;
