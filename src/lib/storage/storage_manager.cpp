@@ -413,7 +413,7 @@ uint32_t calculate_byte_size_of_attribute_vector(std::shared_ptr<const BaseCompr
 uint32_t calculate_four_byte_aligned_size_of_attribute_vector(std::shared_ptr<const BaseCompressedVector> attribute_vector) {
   const auto attribute_vector_size = calculate_byte_size_of_attribute_vector(attribute_vector);
   const auto attribute_vector_difference_to_four_byte_alignment = attribute_vector_size % 4;
-  return attribute_vector_size + attribute_vector_difference_to_four_byte_alignment;
+  return attribute_vector_size + (4 - attribute_vector_difference_to_four_byte_alignment);
 }
 
 void StorageManager::write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk,
@@ -545,7 +545,7 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   // map chunk from disk
   const auto column_definitions = _tables[table_name]->column_data_types();
   auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count(), column_definitions);
-
+  std::cout << "We are able to map a first chunk!" << std::endl;
   // replace chunk in table
 }
 
