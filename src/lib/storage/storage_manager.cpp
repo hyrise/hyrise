@@ -2,6 +2,7 @@
 
 #include <sys/fcntl.h>
 #include <sys/mman.h>
+#include <numeric>
 #include <memory>
 #include <string>
 #include <utility>
@@ -18,6 +19,7 @@
 #include "storage/base_dictionary_segment.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/dictionary_segment/dictionary_segment_iterable.hpp"
+#include "storage/create_iterable_from_segment.hpp"
 #include "storage/value_segment.hpp"
 #include "utils/assert.hpp"
 #include "utils/meta_table_manager.hpp"
@@ -535,6 +537,56 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
     return _file_header_bytes;
 }
 
+void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::shared_ptr<Chunk>& mapped_chunk) {
+  const auto created_segment = chunk->get_segment(ColumnID{5});
+
+  resolve_data_type(created_segment->data_type(), [&](auto segment_data_type) {
+    using SegmentDataType = typename decltype(segment_data_type)::type;
+    const auto created_dict_segment = dynamic_pointer_cast<DictionarySegment<SegmentDataType>>(created_segment);
+    auto dict_segment_iterable = create_iterable_from_segment<SegmentDataType>(*created_dict_segment);
+
+    auto column_sum_of_created_chunk = SegmentDataType{};
+    dict_segment_iterable.with_iterators([&](auto it, auto end) {
+      column_sum_of_created_chunk = std::accumulate(it, end, SegmentDataType{0}, [](const auto& accumulator, const auto& currentValue) {
+        return accumulator + SegmentDataType{currentValue.value()};
+      });
+    });
+
+    std::cout << "Sum of column 6 of created chunk: " << column_sum_of_created_chunk << std::endl;
+
+  });
+
+  const auto mapped_segment = mapped_chunk->get_segment(ColumnID{5});
+
+  resolve_data_type(mapped_segment->data_type(), [&](auto segment_data_type) {
+    using SegmentDataType = typename decltype(segment_data_type)::type;
+    const auto mapped_dict_segment = dynamic_pointer_cast<DictionarySegment<SegmentDataType>>(mapped_segment);
+    auto mapped_dict_segment_iterable = create_iterable_from_segment<SegmentDataType>(*mapped_dict_segment);
+
+    auto column_sum_of_mapped_chunk = SegmentDataType{};
+    mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
+      column_sum_of_mapped_chunk = std::accumulate(it, end, SegmentDataType{0}, [](const auto& accumulator, const auto& currentValue) {
+        return accumulator + SegmentDataType{currentValue.value()};
+      });
+    });
+
+    std::cout << "Sum of column 6 of mapped chunk: " << column_sum_of_mapped_chunk << std::endl;
+
+  });
+
+//  // print row 17 of created and mapped chunk
+//  std::cout << "Row 17 of created chunk: ";
+//  for (auto column_index = size_t{0}; column_index < 16; ++column_index) {
+//    std::cout << (chunk->get_segment(ColumnID{column_index}))[ChunkOffset{16}] << " ";
+//  }
+//  std::cout << std::endl;
+//
+//  std::cout << "Row 17 of mapped chunk: ";
+//  for (auto column_index = size_t{0}; column_index < 16; ++column_index) {
+//    std::cout << (mapped_chunk->get_segment(ColumnID{column_index})[ChunkOffset{16}]) << " ";
+//  }
+}
+
 void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
   // get current persistence_file for table
   const auto table_persistence_file = get_persistence_file_name(table_name);
@@ -545,7 +597,8 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   // map chunk from disk
   const auto column_definitions = _tables[table_name]->column_data_types();
   auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count(), column_definitions);
-  std::cout << "We are able to map a first chunk!" << std::endl;
+  evaluate_mapped_chunk(chunk, mapped_chunk);
+
   // replace chunk in table
 }
 
