@@ -34,57 +34,63 @@ std::vector<T> apply_permutation(std::vector<T>& values, const std::vector<size_
   return sorted_values;
 }
 
+template <typename T>
+bool fill_sample_consecutive(const std::shared_ptr<const Table>& table, const ColumnID column_id,
+                             const uint64_t sample_size, std::vector<T>& values) {
+  const auto chunk_count = table->chunk_count();
+  auto row_count = uint64_t{1};
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    const auto& chunk = table->get_chunk(chunk_id);
+    if (!chunk) {
+      continue;
+    }
+
+    const auto& segment = chunk->get_segment(column_id);
+
+    auto contains_nulls = false;
+    segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
+      while (it != end) {
+        if (it->is_null()) {
+          contains_nulls = true;
+          return;
+        }
+
+        values.emplace_back(it->value());
+        if (row_count == sample_size) {
+          return;
+        }
+        ++row_count;
+        ++it;
+      }
+    });
+
+    if (contains_nulls) {
+      return false;
+    }
+
+    if (row_count == sample_size) {
+      break;
+    }
+  }
+
+  return true;
+}
+
 template <typename T, typename U>
 bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID column_id,
                     const ColumnID ordered_column_id, const uint64_t row_count) {
   const auto sample_size = std::min(row_count, OdValidationRule::SAMPLE_SIZE);
 
-  auto lhs_sample_value = std::vector<U>{};
-  auto rhs_sample_value = std::vector<T>{};
-  lhs_sample_value.reserve(sample_size);
-  rhs_sample_value.reserve(sample_size);
+  auto lhs_sample_values = std::vector<U>{};
+  auto rhs_sample_values = std::vector<T>{};
+  lhs_sample_values.reserve(sample_size);
+  rhs_sample_values.reserve(sample_size);
 
   // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
   if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
-    const auto chunk_count = table->chunk_count();
-    auto added_rows = uint64_t{1};
-    for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-      const auto& chunk = table->get_chunk(chunk_id);
-      if (!chunk) {
-        continue;
-      }
-
-      const auto& lhs_segment = chunk->get_segment(column_id);
-      const auto& rhs_segment = chunk->get_segment(ordered_column_id);
-
-      auto contains_nulls = false;
-      segment_with_iterators<U>(*lhs_segment, [&](auto lhs_it, const auto lhs_end) {
-        segment_with_iterators<T>(*rhs_segment, [&](auto rhs_it, const auto rhs_end) {
-          while (lhs_it != lhs_end && rhs_it != rhs_end) {
-            if (lhs_it->is_null() || rhs_it->is_null()) {
-              contains_nulls = true;
-              return;
-            }
-
-            lhs_sample_value.emplace_back(lhs_it->value());
-            rhs_sample_value.emplace_back(rhs_it->value());
-            if (added_rows == sample_size) {
-              return;
-            }
-            ++added_rows;
-            ++lhs_it;
-            ++rhs_it;
-          }
-        });
-      });
-
-      if (contains_nulls) {
-        return false;
-      }
-
-      if (added_rows == sample_size) {
-        break;
-      }
+    if (!fill_sample_consecutive(table, column_id, sample_size, lhs_sample_values) ||
+        !fill_sample_consecutive(table, ordered_column_id, sample_size, rhs_sample_values)) {
+      return false;
     }
   } else {
     auto random_rows = std::unordered_set<size_t>{sample_size};
@@ -101,13 +107,13 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID co
       if (!random_value || !random_ordered_value) {
         return false;
       }
-      lhs_sample_value.emplace_back(*random_value);
-      rhs_sample_value.emplace_back(*random_ordered_value);
+      lhs_sample_values.emplace_back(*random_value);
+      rhs_sample_values.emplace_back(*random_ordered_value);
     }
   }
 
-  const auto& permutation = sort_permutation<U>(lhs_sample_value);
-  const auto& ordered_values = apply_permutation<T>(rhs_sample_value, permutation);
+  const auto& permutation = sort_permutation<U>(lhs_sample_values);
+  const auto& ordered_values = apply_permutation<T>(rhs_sample_values, permutation);
   bool is_initialized = false;
   auto last_value = T{};
   for (const auto& current_value : ordered_values) {

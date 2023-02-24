@@ -101,7 +101,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
 
         if (!including_unique) {
           const auto& including_statistics =
-              ValidationUtils<ColumnDataType>::collect_column_statistics(including_table, included_column_id);
+              ValidationUtils<ColumnDataType>::collect_column_statistics(including_table, including_column_id);
           if (including_statistics.min && including_statistics.max) {
             const auto min = *including_statistics.min;
             const auto max = *including_statistics.max;

@@ -96,8 +96,8 @@ std::string IndCandidate::description() const {
   const auto& table = Hyrise::get().storage_manager.get_table(table_name);
   const auto& other_table = Hyrise::get().storage_manager.get_table(foreign_key_table);
   auto stream = std::stringstream{};
-  stream << "IND " << foreign_key_table << "." << other_table->column_name(foreign_key_column_id) << " in "
-         << table_name << "." << table->column_name(column_id);
+  stream << "IND " << table_name << "." << table->column_name(column_id) << " in " << foreign_key_table << "."
+         << other_table->column_name(foreign_key_column_id);
   return stream.str();
 }
 
