@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <utility>
+#include <variant>
 #include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/types.hpp"
 #include "utils/assert.hpp"
@@ -12,41 +13,53 @@ namespace hyrise {
 
 namespace detail {
 
-#if !(defined(__x86_64__) || defined(_M_X64))
-// TODO: For Apple Silicon: https://opensource.apple.com/source/WTF/WTF-7601.1.46.42/wtf/Platform.h.auto.html
-Fail("Cannot use tagged pointer on current system");
-#endif
+// #if !(defined(__x86_64__) || defined(_M_X64))
+// // TODO: For Apple Silicon: https://opensource.apple.com/source/WTF/WTF-7601.1.46.42/wtf/Platform.h.auto.html
+// Fail("Cannot use tagged pointer on current system");
+// #endif
 
-static_assert(sizeof(std::size_t) == sizeof(std::uintptr_t));
-static_assert(sizeof(std::size_t) == sizeof(void*));
-static_assert(sizeof(void*) * CHAR_BIT == 64);
+// static_assert(sizeof(std::size_t) == sizeof(std::uintptr_t));
+// static_assert(sizeof(std::size_t) == sizeof(void*));
+// static_assert(sizeof(void*) * CHAR_BIT == 64);
 
-const size_t is_outside_address = 0;
-const size_t is_page_id_and_offset = 1;
+// const size_t is_outside_address = 0;
+// const size_t is_page_id_and_offset = 1;
 
-struct outside_address {
-  std::uintptr_t address : 63;
-  std::uintptr_t tag : 1;
-};
+// struct outside_address {
+//   std::uintptr_t address : 63;
+//   std::uintptr_t tag : 1;
+// };
 
-struct page_id_and_offset {
-  size_t offset : 31;
+// struct page_id_and_offset {
+//   size_t offset : 31;
+//   size_t page_id : 32;
+//   size_t tag : 1;
+// };
+
+// union addressing_t {
+//   std::uintptr_t raw;
+//   outside_address outside;
+//   page_id_and_offset buffer_manager;
+// };
+
+// static_assert(sizeof(uintptr_t) * CHAR_BIT == 64);
+
+struct PageIDOffsetAddress {
   size_t page_id : 32;
-  size_t tag : 1;
+  size_t offset : 32;
 };
 
-union addressing_t {
-  std::uintptr_t raw;
-  outside_address outside;
-  page_id_and_offset buffer_manager;
-};
+using OutsideAddress = std::uintptr_t;
+using EmptyAddress = std::monostate;
 
-static_assert(sizeof(uintptr_t) * CHAR_BIT == 64);
-
+using BufferManagedPtrAddressing =
+    std::variant<detail::EmptyAddress, detail::OutsideAddress, detail::PageIDOffsetAddress>;
 }  // namespace detail
 
 template <typename PointedType>
 class BufferManagedPtr {
+  using Addressing = detail::BufferManagedPtrAddressing;
+
  public:
   using pointer = PointedType*;
   using reference = typename add_reference<PointedType>::type;
@@ -74,17 +87,7 @@ class BufferManagedPtr {
   // Pin and unp
   BufferManagedPtr(pointer ptr = 0) {
     // TODO: This function totally breaks right now
-    if (ptr) {
-      const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
-          reinterpret_cast<const void*>(ptr));
-      if (page_id == INVALID_PAGE_ID) {
-        set_outside_ptr((std::uintptr_t)ptr);
-      } else {
-        set_page_id_and_offset(page_id, offset);
-      }
-    } else {
-      set_null();
-    }
+    set_from_ptr(ptr);
   }
 
   BufferManagedPtr(const BufferManagedPtr& ptr) : _addressing(ptr._addressing) {}
@@ -94,21 +97,11 @@ class BufferManagedPtr {
 
   template <typename T>
   BufferManagedPtr(T* ptr) {
-    if (ptr) {
-      const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
-          reinterpret_cast<const void*>(ptr));
-      if (page_id == INVALID_PAGE_ID) {
-        set_outside_ptr(ptr);
-      } else {
-        set_page_id_and_offset(page_id, offset);
-      }
-    } else {
-      set_null();
-    }
+    set_from_ptr(ptr);
   }
 
   explicit BufferManagedPtr(const PageID page_id, difference_type offset) {
-    set_page_id_and_offset(page_id, offset);
+    _addressing = detail::PageIDOffsetAddress{page_id, static_cast<size_t>(offset)};
   }
 
   pointer operator->() const {
@@ -127,28 +120,44 @@ class BufferManagedPtr {
   }
 
   bool operator!() const {
-    return !_addressing.raw;
+    return std::holds_alternative<detail::EmptyAddress>(_addressing);
   }
 
   BufferManagedPtr operator+(std::ptrdiff_t offset) const {
     auto new_addressing = _addressing;
-    new_addressing.buffer_manager.offset += offset * sizeof(PointedType);
-    return BufferManagedPtr(_addressing);
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&new_addressing)) {
+      *outside_addressing += offset * difference_type(sizeof(PointedType));
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&new_addressing)) {
+      page_id_offset->offset += offset * difference_type(sizeof(PointedType));
+    }
+    return BufferManagedPtr(new_addressing);
   }
 
   BufferManagedPtr operator-(std::ptrdiff_t offset) const {
     auto new_addressing = _addressing;
-    new_addressing.buffer_manager.offset -= offset * sizeof(PointedType);
-    return BufferManagedPtr(_addressing);
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&new_addressing)) {
+      *outside_addressing -= offset * difference_type(sizeof(PointedType));
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&new_addressing)) {
+      page_id_offset->offset -= offset * difference_type(sizeof(PointedType));
+    }
+    return BufferManagedPtr(new_addressing);
   }
 
   BufferManagedPtr& operator+=(difference_type offset) noexcept {
-    _addressing.buffer_manager.offset += offset * difference_type(sizeof(PointedType));
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&_addressing)) {
+      *outside_addressing += offset * difference_type(sizeof(PointedType));
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&_addressing)) {
+      page_id_offset->offset += offset * difference_type(sizeof(PointedType));
+    }
     return *this;
   }
 
   BufferManagedPtr& operator-=(difference_type offset) noexcept {
-    _addressing.buffer_manager.offset -= offset * difference_type(sizeof(PointedType));
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&_addressing)) {
+      *outside_addressing -= offset * difference_type(sizeof(PointedType));
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&_addressing)) {
+      page_id_offset->offset -= offset * difference_type(sizeof(PointedType));
+    }
     return *this;
   }
 
@@ -158,7 +167,7 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator=(pointer from) {
-    // TODO: _offset = reinterpret_cast<difference_type>
+    set_from_ptr(from);
     return *this;
   }
 
@@ -169,7 +178,7 @@ class BufferManagedPtr {
   }
 
   explicit operator bool() const noexcept {
-    return _addressing.raw;
+    return !std::holds_alternative<detail::EmptyAddress>(_addressing);
   }
 
   pointer get() const {
@@ -189,7 +198,11 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator++(void) noexcept {
-    _addressing.buffer_manager.offset += difference_type(sizeof(PointedType));
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&_addressing)) {
+      *outside_addressing += difference_type(sizeof(PointedType));
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&_addressing)) {
+      page_id_offset->offset += difference_type(sizeof(PointedType));
+    }
     return *this;
   }
 
@@ -200,7 +213,11 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator--(void) noexcept {
-    _addressing.buffer_manager.offset -= difference_type(sizeof(PointedType));
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&_addressing)) {
+      *outside_addressing -= difference_type(sizeof(PointedType));
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&_addressing)) {
+      page_id_offset->offset -= difference_type(sizeof(PointedType));
+    }
     return *this;
   }
 
@@ -217,14 +234,14 @@ class BufferManagedPtr {
   }
 
   void* get_pointer() const {
-    if (_addressing.outside.tag == detail::is_outside_address) {
-      return (void*)_addressing.outside.address;
-    } else if (_addressing.buffer_manager.tag == detail::is_page_id_and_offset) {
-      const auto page_id = PageID{_addressing.buffer_manager.page_id};
+    if (const auto outside_addressing = std::get_if<detail::OutsideAddress>(&_addressing)) {
+      return (void*)*outside_addressing;
+    } else if (const auto page_id_offset = std::get_if<detail::PageIDOffsetAddress>(&_addressing)) {
+      const auto page_id = PageID{page_id_offset->page_id};
       // TODO: If pinned, this is not needed
       // TODO: What happens if page is deleted? Pointer should become null
       const auto page = BufferManager::get_global_buffer_manager().get_page(page_id);
-      return page->data() + _addressing.buffer_manager.offset;
+      return page->data() + page_id_offset->offset;
     } else {
       return nullptr;
     }
@@ -232,42 +249,57 @@ class BufferManagedPtr {
 
   // TODO: Return a guard to ensure unpinning. check pointer type
   void pin() const {
-    const auto page_id = PageID{_addressing.buffer_manager.page_id};
+    const auto page_id = PageID{std::get<detail::PageIDOffsetAddress>(_addressing).page_id};
     BufferManager::get_global_buffer_manager().pin_page(page_id);
   }
 
   void unpin(bool dirty) const {
-    const auto page_id = PageID{_addressing.buffer_manager.page_id};
+    const auto page_id = PageID{std::get<detail::PageIDOffsetAddress>(_addressing).page_id};
     BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
   }
 
   PageID get_page_id() const {
-    return PageID{_addressing.buffer_manager.page_id};
+    return PageID{std::get<detail::PageIDOffsetAddress>(_addressing).page_id};
   }
 
   difference_type get_offset() const {
-    return _addressing.buffer_manager.offset;
+    return std::get<detail::PageIDOffsetAddress>(_addressing).offset;
   }
 
  private:
-  detail::addressing_t _addressing;
+  Addressing _addressing;
 
-  void set_null() {
-    _addressing.raw = 0;
+  template <typename T>
+  void set_from_ptr(T* ptr) {
+    if (ptr) {
+      const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
+          reinterpret_cast<const void*>(ptr));
+      if (page_id == INVALID_PAGE_ID) {
+        _addressing = detail::OutsideAddress(ptr);
+      } else {
+        _addressing = detail::PageIDOffsetAddress{page_id, static_cast<size_t>(offset)};
+      }
+    } else {
+      _addressing = detail::EmptyAddress{};
+    }
   }
 
-  void set_outside_ptr(const std::uintptr_t ptr) {
-    _addressing.outside.tag = detail::is_outside_address;
-    _addressing.outside.address = ptr;
-  }
+  // void set_null() {
+  //   _addressing.raw = 0;
+  // }
 
-  void set_page_id_and_offset(const PageID page_id, const difference_type offset) {
-    _addressing.buffer_manager.tag = detail::is_page_id_and_offset;
-    _addressing.buffer_manager.page_id = page_id;
-    _addressing.buffer_manager.offset = offset;
-  }
+  // void set_outside_ptr(const std::uintptr_t ptr) {
+  //   _addressing.outside.tag = detail::is_outside_address;
+  //   _addressing.outside.address = ptr;
+  // }
 
-  BufferManagedPtr(const detail::addressing_t addressing) : _addressing(addressing) {}
+  // void set_page_id_and_offset(const PageID page_id, const difference_type offset) {
+  //   _addressing.buffer_manager.tag = detail::is_page_id_and_offset;
+  //   _addressing.buffer_manager.page_id = page_id;
+  //   _addressing.buffer_manager.offset = offset;
+  // }
+
+  BufferManagedPtr(const Addressing addressing) : _addressing(addressing) {}
 };
 
 template <class T1, class T2>
@@ -309,7 +341,8 @@ namespace std {
 template <class T>
 struct hash<hyrise::BufferManagedPtr<T>> {
   size_t operator()(const hyrise::BufferManagedPtr<T>& ptr) const noexcept {
-    return std::hash<std::uintptr_t>{}(ptr._addressing.raw);
+    // TODO
+    return 0;
   }
 };
 

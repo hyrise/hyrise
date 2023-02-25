@@ -106,7 +106,7 @@ class PosHashTable {
   explicit PosHashTable(const JoinHashBuildMode mode, const size_t max_size)
       : _mode(mode),
         _small_pos_lists(mode == JoinHashBuildMode::AllPositions ? max_size + 1 : 0,
-                         SmallPosList{SmallPosList::allocator_type(_memory_pool.get())}) {
+                         SmallPosList{SmallPosList::allocator_type()}) {
     // _small_pos_lists is initialized with an additional element to make the enforcement of the assertions easier. For
     // _JoinHashBuildMode::ExistenceOnly, we do not store positions and thus do not initialize _small_pos_lists.
     _offset_hash_table.reserve(max_size);
@@ -160,8 +160,8 @@ class PosHashTable {
 
       // The SmallPosLists are no longer needed. Delete both the lists and the associated memory resources.
       _small_pos_lists = {};
-      _memory_pool = {};
-      _monotonic_buffer = {};
+      // _memory_pool = {};
+      // _monotonic_buffer = {};
     }
   }
 
@@ -213,10 +213,11 @@ class PosHashTable {
   // safe) by design. This way, we can quickly perform a high number of allocations without having to synchronize with
   // other threads for each allocation. Instead, we synchronize only when we refill the underlying
   // monotonic_buffer_resource. This works because each PosHashTable is used by exactly one thread.
-  std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
-      std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
-  std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
-      std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
+  // TODO: Lets use the buffer pool for it
+  // std::unique_ptr<boost::container::pmr::monotonic_buffer_resource> _monotonic_buffer =
+  //     std::make_unique<boost::container::pmr::monotonic_buffer_resource>();
+  // std::unique_ptr<boost::container::pmr::unsynchronized_pool_resource> _memory_pool =
+  //     std::make_unique<boost::container::pmr::unsynchronized_pool_resource>(_monotonic_buffer.get());
 
   JoinHashBuildMode _mode{};
   OffsetHashTable _offset_hash_table{};

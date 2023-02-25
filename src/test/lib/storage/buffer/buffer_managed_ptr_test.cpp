@@ -3,8 +3,9 @@
 #include "base_test.hpp"
 
 #include <filesystem>
-#include "storage/buffer/buffer_manager.hpp"
+#include "gtest_printers.hpp"
 #include "storage/buffer/buffer_managed_ptr.hpp"
+#include "storage/buffer/buffer_manager.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -14,6 +15,11 @@ class BufferManagedPtrTest : public BaseTest {
   using PtrInt = BufferManagedPtr<int32_t>;
   using PtrFloat = BufferManagedPtr<float>;
 };
+
+TEST_F(BufferManagedPtrTest, TestSize) {
+  static_assert(sizeof(PtrInt) == 16);
+  static_assert(sizeof(PtrFloat) == 16);
+}
 
 TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
   // Test type conversion
@@ -46,17 +52,16 @@ TEST_F(BufferManagedPtrTest, TestArithmetic) {
   EXPECT_EQ((++preDecrementPtr).get_offset(), 4);
   EXPECT_EQ(preDecrementPtr.get_offset(), 4);
 
-  EXPECT_EQ(PtrInt(PageID{0}, 8) - 4, PtrInt(PageID{0}, 4));
-
-  EXPECT_EQ(PtrInt(PageID{0}, 8) + 4, PtrInt(PageID{0}, 12));
+  EXPECT_EQ(PtrInt(PageID{0}, 8) - 1, PtrInt(PageID{0}, 4));
+  EXPECT_EQ(PtrInt(PageID{0}, 8) + 4, PtrInt(PageID{0}, 24));
 
   auto incrementAssignPtr = PtrInt(PageID{0}, 8);
-  incrementAssignPtr += 8;
-  EXPECT_EQ((++incrementAssignPtr).get_offset(), 16);
+  incrementAssignPtr += 3;
+  EXPECT_EQ((incrementAssignPtr).get_offset(), 20);
 
-  auto decrementAssignPtr = PtrInt(PageID{0}, 12);
-  decrementAssignPtr -= 8;
-  EXPECT_EQ((++decrementAssignPtr).get_offset(), 4);
+  auto decrementAssignPtr = PtrInt(PageID{0}, 20);
+  decrementAssignPtr -= 2;
+  EXPECT_EQ((decrementAssignPtr).get_offset(), 12);
 }
 
 TEST_F(BufferManagedPtrTest, TestComparisons) {
@@ -73,7 +78,7 @@ TEST_F(BufferManagedPtrTest, TestPinUnpin) {
   ptr.unpin(true);
 }
 
-TEST_F(BufferManagedPtrTest, TestGetPageIdAndOffset) {
+TEST_F(BufferManagedPtrTest, TestGetPageIDAndOffset) {
   // TODO: Get Page should nor create a new page
   auto ptr = PtrInt(PageID{5}, 12);
 
@@ -84,10 +89,14 @@ TEST_F(BufferManagedPtrTest, TestGetPageIdAndOffset) {
 // TODO: Work with outside ptr
 
 TEST_F(BufferManagedPtrTest, TestPointerTraits) {
-  //TODO:static_assert(std::is_same<std::pointer_traits<PtrInt>::pointer, int32_t*>::value);
+  // TODO: static_assert(std::is_same<std::pointer_traits<PtrInt>::pointer, int32_t*>::value, typeid(std::pointer_traits<PtrInt>::pointer).name());
   static_assert(std::is_same<std::pointer_traits<PtrInt>::element_type, int32_t>::value);
   static_assert(std::is_same<std::pointer_traits<PtrInt>::difference_type, std::ptrdiff_t>::value);
   static_assert(std::is_same<std::pointer_traits<PtrInt>::rebind<float>, PtrFloat>::value);
+
+  // TODO_ TEst with inside and outside address
+  auto ptr = PtrInt(PageID{5}, 12);
+  EXPECT_EQ(std::pointer_traits<PtrInt>::pointer_to(*ptr), ptr);
 }
 
 }  // namespace hyrise
