@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-class SSDRegion  {
+class SSDRegion {
  public:
   enum class DeviceType { BLOCK, REGULAR_FILE };
 

@@ -1,8 +1,8 @@
 #pragma once
 
 #include <limits>
-#include "strong_typedef.hpp"
 #include "storage/buffer/types.hpp"
+#include "strong_typedef.hpp"
 
 // Declare types here to avoid problems with circular dependency
 STRONG_TYPEDEF(uint32_t, PageID);
