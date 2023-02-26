@@ -13,7 +13,7 @@ namespace hyrise {
  * for replacement in a FIFO-like fashion. Frames can be pinned to avoid replacement.
  * 
  */
-class ClockReplacementStrategy  {
+class ClockReplacementStrategy {
  public:
   ClockReplacementStrategy(const size_t num_frames);
 

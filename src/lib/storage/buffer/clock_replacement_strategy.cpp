@@ -18,8 +18,8 @@ void ClockReplacementStrategy::record_frame_access(FrameID frame_id) {
   if (_pinned_frames[frame_id]) {
     return;
   }
-  _used_frames[_current_frame_id] = true;
-  _reference_bits[_current_frame_id] = true;
+  _used_frames[frame_id] = true;
+  _reference_bits[frame_id] = true;
 }
 
 FrameID ClockReplacementStrategy::find_victim() {
