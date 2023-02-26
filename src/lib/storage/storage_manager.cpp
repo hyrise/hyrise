@@ -567,7 +567,8 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
       overwrite_header(file_header, file_name);
 
       write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
-      return file_prev_chunk_end_offset;
+
+      return file_prev_chunk_end_offset + _file_header_bytes;
     }
 
     // create new file
@@ -730,7 +731,7 @@ std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_
 
   const auto file_bytes = std::filesystem::file_size(filename);
 
-  // TODO: Remove unneccesary map on whole file
+  // TODO: Remove unneccessary map on whole file
   const auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, file_bytes, PROT_READ, MAP_PRIVATE, fd, off_t{0}));
   Assert((map != MAP_FAILED), "Mapping of File Failed.");
   close(fd);
