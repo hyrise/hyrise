@@ -14,6 +14,7 @@
 #include "prepared_plan.hpp"
 #include "storage/chunk_encoder.hpp"
 #include "storage/dictionary_segment.hpp"
+#include "storage/fixed_string_dictionary_segment.hpp"
 #include "types.hpp"
 
 namespace hyrise {
@@ -152,8 +153,13 @@ class StorageManager : public Noncopyable {
 
   std::vector<uint32_t> calculate_segment_offset_ends(const std::shared_ptr<Chunk> chunk);
   template <typename T> void write_dict_segment_to_disk(const std::shared_ptr<DictionarySegment<T>> segment, const std::string& file_name);
-  void write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk, const std::vector<uint32_t>& segment_offset_ends,
+  template <typename T>
+  void write_fixed_string_dict_segment_to_disk(const std::shared_ptr<FixedStringDictionarySegment<T>> segment, const std::string& file_name);
+
+    void write_chunk_to_disk(const std::shared_ptr<Chunk>& chunk, const std::vector<uint32_t>& segment_offset_ends,
                            const std::string& file_name);
+  void write_segment_to_disk(const std::shared_ptr<AbstractSegment> abstract_segment, const std::string& file_name);
+
   uint32_t _chunk_header_bytes(uint32_t column_count);
 
   const std::string get_persistence_file_name(const std::string table_name);
