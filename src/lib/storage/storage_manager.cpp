@@ -391,9 +391,9 @@ void StorageManager::write_fixed_string_dict_segment_to_disk(const std::shared_p
   std::cout << dictionary_byte_size << " " << segment->fixed_string_dictionary()->chars().size() << std::endl;
   const auto dictionary_difference_to_four_byte_alignment = dictionary_byte_size % 4;
   if (dictionary_difference_to_four_byte_alignment != 0) {
-  const auto padding = std::vector<uint8_t>(4 - dictionary_difference_to_four_byte_alignment, 0);
-  export_values(padding, file_name);
-}
+    const auto padding = std::vector<uint8_t>(4 - dictionary_difference_to_four_byte_alignment, 0);
+    export_values(padding, file_name);
+  }
 
   export_compressed_vector(*segment->compressed_vector_type(), *segment->attribute_vector(), file_name);
   //TODO: What to do with non-compressed AttributeVectors?
@@ -465,7 +465,6 @@ uint32_t calculate_four_byte_aligned_size_of_attribute_vector(std::shared_ptr<co
 void StorageManager::write_segment_to_disk(const std::shared_ptr<AbstractSegment> abstract_segment, const std::string& file_name) {
   resolve_data_type(abstract_segment->data_type(), [&](auto type) {
     using ColumnDataType = typename decltype(type)::type;
-    //currently only implemented for DictionarySegments
     if constexpr(std::is_same<ColumnDataType, pmr_string>::value) {
       const auto fixed_string_dict_segment = dynamic_pointer_cast<FixedStringDictionarySegment<ColumnDataType>>(abstract_segment);
       write_fixed_string_dict_segment_to_disk(fixed_string_dict_segment, file_name);

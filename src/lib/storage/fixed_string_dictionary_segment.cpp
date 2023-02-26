@@ -39,9 +39,15 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
       break;
     }
     case PersistedSegmentEncodingType::DictionaryEncoding8Bit: {
-      //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
+      //differently from Numeric DictionarySegments dictionary elements aren't necessarily four bytes long
+      //as we calculate with uint32_t* start_address, need to add element_index of four bytes to start_address
+      //need to calculate dictionary_size_bytes / 4 as adding value
+      auto dictionary_size_bytes = (dictionary_size * string_length);
+      if (dictionary_size_bytes % 4 != 0) {
+        dictionary_size_bytes += 4 - (dictionary_size_bytes %4 );
+      }
       auto* const attribute_vector_address =
-        reinterpret_cast<const uint8_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size);
+        reinterpret_cast<const uint8_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size_bytes/4);
       auto attribute_data_span = std::span<const uint8_t>(attribute_vector_address, attribute_vector_size);
       auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint8_t>>(attribute_data_span);
 
@@ -53,8 +59,12 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
     }
     case PersistedSegmentEncodingType::DictionaryEncoding16Bit: {
       //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
+      auto dictionary_size_bytes = (dictionary_size * string_length);
+      if (dictionary_size_bytes % 4 != 0) {
+        dictionary_size_bytes += 4 - (dictionary_size_bytes % 4 );
+      }
       auto* const attribute_vector_address =
-        reinterpret_cast<const uint16_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size);
+        reinterpret_cast<const uint16_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size_bytes/4);
       auto attribute_data_span = std::span<const uint16_t>(attribute_vector_address, attribute_vector_size);
       auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint16_t>>(attribute_data_span);
 
@@ -66,8 +76,12 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
     }
     case PersistedSegmentEncodingType::DictionaryEncoding32Bit: {
       //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
+      auto dictionary_size_bytes = (dictionary_size * string_length);
+      if (dictionary_size_bytes % 4 != 0) {
+        dictionary_size_bytes += 4 - (dictionary_size_bytes %4 );
+      }
       auto* const attribute_vector_address =
-        reinterpret_cast<const uint32_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size);
+        reinterpret_cast<const uint32_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size_bytes/4);
       auto attribute_data_span = std::span<const uint32_t>(attribute_vector_address, attribute_vector_size);
       auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint32_t>>(attribute_data_span);
 
