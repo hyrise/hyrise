@@ -238,6 +238,10 @@ void Table::remove_chunk(ChunkID chunk_id) {
   std::atomic_store(&_chunks[chunk_id], std::shared_ptr<Chunk>(nullptr));
 }
 
+void Table::replace_chunk(ChunkID chunk_id, const std::shared_ptr<Chunk>& chunk) {
+  std::atomic_store(&_chunks[chunk_id], chunk);
+}
+
 void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvcc_data,  // NOLINT
                          const std::optional<PolymorphicAllocator<Chunk>>& alloc) {
   Assert(_type != TableType::Data || static_cast<bool>(mvcc_data) == (_use_mvcc == UseMvcc::Yes),

@@ -102,6 +102,8 @@ class Table : private Noncopyable {
    */
   void remove_chunk(ChunkID chunk_id);
 
+  void replace_chunk(ChunkID chunk_id, const std::shared_ptr<Chunk>& chunk);
+
   /**
    * Creates a new Chunk from a set of segments and appends it to this table.
    * When implementing operators, prefer building the Chunks upfront and adding them to the output table on

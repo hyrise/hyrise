@@ -660,6 +660,7 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   evaluate_mapped_chunk(chunk, mapped_chunk);
 
   // replace chunk in table
+  _tables[table_name]->replace_chunk(chunk_id, mapped_chunk);
 }
 
 const std::string StorageManager::get_persistence_file_name(const std::string table_name){
