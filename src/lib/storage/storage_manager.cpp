@@ -333,9 +333,11 @@ void export_values(const FixedStringVector& values, std::string file_name) {
 
 // not copied, own creation
 void overwrite_header(const FILE_HEADER header, std::string file_name) {
-  std::fstream fstream(file_name, std::ios::binary); // use option std::ios_base::binary if necessary
+  //yes, all modes are needed exactly like that to allow us to overwrite the first part of the file
+  //yes, fstream should open with "std::ios::in | std::ios::out by default", don't ask me, this was a pain to figure out
+  std::fstream fstream(file_name, std::ios::binary | std::ios::in | std::ios::out);
   fstream.seekp(0, std::ios_base::beg);
-  fstream.write(reinterpret_cast<const char*>(&header), sizeof(header));
+  fstream.write(reinterpret_cast<const char*>(&header), sizeof(FILE_HEADER));
   fstream.close();
 }
 
