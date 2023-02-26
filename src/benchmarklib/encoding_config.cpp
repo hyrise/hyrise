@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}} {}
+EncodingConfig::EncodingConfig() : EncodingConfig{SegmentEncodingSpec{EncodingType::Dictionary}, DataTypeEncodingMapping{{DataType::String, SegmentEncodingSpec{EncodingType::FixedStringDictionary}}}, {}} {}
 
 EncodingConfig::EncodingConfig(const SegmentEncodingSpec& init_default_encoding_spec)
     : EncodingConfig{init_default_encoding_spec, {}, {}} {}

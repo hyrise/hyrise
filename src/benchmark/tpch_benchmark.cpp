@@ -149,6 +149,7 @@ int main(int argc, char* argv[]) {
   context.emplace("scale_factor", scale_factor);
   context.emplace("clustering", magic_enum::enum_name(clustering_configuration));
   context.emplace("use_prepared_statements", use_prepared_statements);
+  config->encoding_config = EncodingConfig();
 
   auto table_generator = std::unique_ptr<AbstractTableGenerator>{};
   auto item_runner = std::unique_ptr<AbstractBenchmarkItemRunner>{};
