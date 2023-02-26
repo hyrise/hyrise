@@ -63,6 +63,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
+        auto pin_guard = PinGuard(dictionary.begin().get_ptr(), false);
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
         // if we have a generic segment we create the dictionary ourselves
@@ -75,13 +76,9 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           }
         });
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        dictionary.begin().get_ptr().pin();
-        std::sort(dictionary.begin(), dictionary.end());
-        // std::sort(dictionary.begin().get_ptr().get(), dictionary.end().get_ptr().get());
+        auto pin_guard = PinGuard(dictionary.begin().get_ptr(), true);
+        std::sort(dictionary.begin().get_ptr().get(), dictionary.end().get_ptr().get());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
-
-        // TODO: Unpin actually happens automatically here with the deallocation
-        dictionary.begin().get_ptr().unpin(true);
       }
 
       chunk_statistics[column_id] = segment_statistics;

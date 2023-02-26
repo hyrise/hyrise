@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-constexpr PageSizeType next_fitting_page_size_type(const std::size_t value) {
+constexpr PageSizeType find_fitting_page_size_type(const std::size_t value) {
   if (value <= static_cast<std::size_t>(PageSizeType::KiB32)) {
     return PageSizeType::KiB32;
   } else if (value <= static_cast<std::size_t>(PageSizeType::KiB64)) {
@@ -33,7 +33,7 @@ std::size_t get_volatile_capacity_from_env() {
 
 std::filesystem::path get_ssd_region_file_from_env() {
   if (const auto ssd_region_path = std::getenv("HYRISE_BUFFER_MANAGER_PATH")) {
-    if(std::filesystem::is_block_file(ssd_region_path)) {
+    if (std::filesystem::is_block_file(ssd_region_path)) {
       return ssd_region_path;
     }
     const auto path = std::filesystem::path(ssd_region_path);
@@ -71,7 +71,6 @@ std::pair<FrameID, Frame*> BufferManager::allocate_frame() {
 
     // TODO: Pinc count is wrong
     // DebugAssert(victim_frame.pin_count.load() == 0, "The victim frame cannot be unpinned");
-
     if (victim_frame.dirty) {
       write_page(victim_frame.page_id, *victim_page);
     }
@@ -87,11 +86,12 @@ std::pair<FrameID, Frame*> BufferManager::allocate_frame() {
 
 Frame* BufferManager::find_in_page_table(const PageID page_id) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
-
+  std::thread::id this_id = std::this_thread::get_id();
   const auto frame_in_page_table_it = _page_table.find(page_id);
   if (frame_in_page_table_it != _page_table.end()) {
     _metrics.page_table_hits++;
     auto [_, frame] = *frame_in_page_table_it;
+    // _replacement_strategy->record_frame_access(frame_id);
     return frame;
   }
   _metrics.page_table_misses++;
@@ -183,6 +183,24 @@ void BufferManager::pin_page(const PageID page_id) {
   _replacement_strategy->pin(frame_id);
 }
 
+uint32_t BufferManager::get_pin_count(const PageID page_id) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  const auto frame = find_in_page_table(page_id);
+  if (frame == nullptr) {
+    return 0;
+  }
+  return frame->pin_count.load();
+}
+
+bool BufferManager::is_dirty(const PageID page_id) {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  const auto frame = find_in_page_table(page_id);
+  if (frame == nullptr) {
+    return false;
+  }
+  return frame->dirty.load();
+}
+
 void BufferManager::flush_page(const PageID page_id) {
   std::lock_guard<std::mutex> lock(_page_table_mutex);
   const auto frame = find_in_page_table(page_id);
@@ -218,7 +236,7 @@ std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr
   std::lock_guard<std::mutex> lock(_page_table_mutex);
 
   auto frame_id = _volatile_region->get_frame_id_from_ptr(ptr);
-  if(frame_id == INVALID_FRAME_ID) {
+  if (frame_id == INVALID_FRAME_ID) {
     return std::make_pair(INVALID_PAGE_ID, 0);
   }
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _frames[frame_id].data->data();
@@ -228,9 +246,10 @@ std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   std::lock_guard<std::mutex> lock(_page_table_mutex);
 
-  const auto page_size_type = next_fitting_page_size_type(bytes);
-  Assert(page_size_type == PageSizeType::KiB32,
-         "Cannot allocate " + std::to_string(bytes) + " bytes with maximum page size of " + std::to_string(static_cast<std::size_t>(PageSizeType::KiB32)));
+  const auto page_size_type = find_fitting_page_size_type(bytes);
+  Assert(page_size_type == PageSizeType::KiB32, "Cannot allocate " + std::to_string(bytes) +
+                                                    " bytes with maximum page size of " +
+                                                    std::to_string(static_cast<std::size_t>(PageSizeType::KiB32)));
 
   // Update metrics
   // _metrics.allocations_in_bytes.push_back(bytes);

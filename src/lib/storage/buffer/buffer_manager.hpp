@@ -88,6 +88,10 @@ class BufferManager {
    */
   void unpin_page(const PageID page_id, const bool dirty = false);
 
+  uint32_t get_pin_count(const PageID page_id);
+
+  bool is_dirty(const PageID page_id);
+
   /**
    * @brief Get the page id and offset from ptr object. PageID is on its max 
    * if the page there was no page found
