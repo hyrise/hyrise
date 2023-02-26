@@ -665,6 +665,8 @@ void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk
   auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count(), column_definitions);
   evaluate_mapped_chunk(chunk, mapped_chunk);
 
+  mapped_chunk->set_mvcc_data(chunk->mvcc_data());
+
   // replace chunk in table
   _tables[table_name]->replace_chunk(chunk_id, mapped_chunk);
 }

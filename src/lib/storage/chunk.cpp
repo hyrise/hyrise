@@ -98,6 +98,10 @@ std::shared_ptr<MvccData> Chunk::mvcc_data() const {
   return _mvcc_data;
 }
 
+void Chunk::set_mvcc_data(std::shared_ptr<MvccData> mvcc_data) {
+  _mvcc_data = mvcc_data;
+}
+
 std::vector<std::shared_ptr<AbstractIndex>> Chunk::get_indexes(
     const std::vector<std::shared_ptr<const AbstractSegment>>& segments) const {
   auto result = std::vector<std::shared_ptr<AbstractIndex>>();
