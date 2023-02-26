@@ -37,6 +37,7 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
     table_scan->execute();
   }
 
+  // TODO: Separe per iteration, not total
   add_buffer_manager_counters(state, BufferManager::get_global_buffer_manager());
 }
 

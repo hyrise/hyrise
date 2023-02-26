@@ -15,7 +15,7 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
   auto buffer_manager = BufferManager(std::move(volatile_region), std::move(ssd_region));
   auto allocator = BufferPoolAllocator<int>(&buffer_manager);
 
-  auto memory_manager = BufferManagerBenchmarkMemoryManager::create_and_register(&buffer_manager);
+  // TODO: auto memory_manager = BufferManagerBenchmarkMemoryManager::create_and_register(&buffer_manager);
 
   auto allocation_count = static_cast<size_t>(state.range(0));
   const auto vector_size = Page32KiB::size() / sizeof(int);
@@ -26,7 +26,8 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
 
     for (auto index = size_t{0}; index < allocation_count; index++) {
       auto array = boost::container::vector<int, BufferPoolAllocator<int>>{vector_size, allocator};
-      benchmark::DoNotOptimize(array.size());
+      auto size = array.size();
+      benchmark::DoNotOptimize(size);
     }
   }
 
@@ -43,7 +44,8 @@ static void BM_allocate_pages_std_allocator(benchmark::State& state) {
 
     for (auto index = size_t{0}; index < allocation_count; index++) {
       auto array = boost::container::vector<int, std::allocator<int>>{vector_size, allocator};
-      benchmark::DoNotOptimize(array.size());
+      auto size = array.size();
+      benchmark::DoNotOptimize(size);
     }
   }
 

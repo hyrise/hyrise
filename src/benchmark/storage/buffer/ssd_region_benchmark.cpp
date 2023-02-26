@@ -97,7 +97,8 @@ static void BM_SSDRegionWritePagesSerial(benchmark::State& state, const SSDRegio
   for (auto _ : state) {
     for (auto page_id = PageID{0}; page_id < num_pages; page_id++) {
       ssd_region.write_page(page_id, pages[page_id]);
-      benchmark::DoNotOptimize(pages.size());
+      auto size = pages.size();
+       benchmark::DoNotOptimize(size);
     }
   }
 
