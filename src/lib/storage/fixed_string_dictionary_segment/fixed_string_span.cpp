@@ -14,6 +14,9 @@ namespace hyrise {
 FixedStringSpan::FixedStringSpan(const FixedStringVector& vector)
     : _string_length(vector.string_length()), _chars{vector.data(), vector.chars().size()}, _size(vector.size()) {}
 
+FixedStringSpan::FixedStringSpan(const char* start_address, const uint32_t string_length, const uint32_t size)
+  : _string_length(string_length), _chars{start_address, size}, _size(size) {}
+
 FixedStringSpanIterator<false> FixedStringSpan::begin() noexcept {
   return {_string_length, _chars, 0};
 }

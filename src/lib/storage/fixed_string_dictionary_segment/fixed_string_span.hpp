@@ -19,6 +19,7 @@ namespace hyrise {
 class FixedStringSpan {
  public:
   FixedStringSpan(const FixedStringVector& vector);
+  FixedStringSpan(const char* start_address, const uint32_t string_length, const uint32_t size);
 
   // Return the value at a certain position.
   // FixedString operator[](const size_t pos);

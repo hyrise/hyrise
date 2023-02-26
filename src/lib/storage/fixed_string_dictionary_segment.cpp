@@ -8,6 +8,7 @@
 #include "storage/vector_compression/base_compressed_vector.hpp"
 #include "utils/assert.hpp"
 #include "utils/performance_warning.hpp"
+#include "storage_manager.hpp"
 
 namespace hyrise {
 
@@ -20,6 +21,72 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
       _dictionary_span{std::make_shared<const FixedStringSpan>(*_dictionary)},
       _attribute_vector{attribute_vector},
       _decompressor{_attribute_vector->create_base_decompressor()} {}
+
+template <typename T>
+FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* start_address)
+  : BaseDictionarySegment(data_type_from_type<T>()) {
+  const auto encoding_type = PersistedSegmentEncodingType{start_address[ENCODING_TYPE_OFFSET_INDEX]};
+  const auto string_length = start_address[STRING_LENGTH_OFFSET_INDEX];
+  const auto dictionary_size = start_address[DICTIONARY_SIZE_OFFSET_INDEX ];
+  const auto attribute_vector_size = start_address[ATTRIBUTE_VECTOR_OFFSET_INDEX];
+
+  auto* dictionary_address = reinterpret_cast<const char*>(start_address + HEADER_OFFSET_INDEX);
+  auto dictionary_span_pointer = std::make_shared<const FixedStringSpan>(dictionary_address, string_length, dictionary_size);
+
+  switch (encoding_type) {
+    case PersistedSegmentEncodingType::Unencoded: {
+      Fail("Unencoded Segments are not yet implemented for mmap-based storage.");
+      break;
+    }
+    case PersistedSegmentEncodingType::DictionaryEncoding8Bit: {
+      //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
+      auto* const attribute_vector_address =
+        reinterpret_cast<const uint8_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size);
+      auto attribute_data_span = std::span<const uint8_t>(attribute_vector_address, attribute_vector_size);
+      auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint8_t>>(attribute_data_span);
+
+      _dictionary_span = dictionary_span_pointer;
+      _attribute_vector = attribute_vector;
+      _decompressor = _attribute_vector->create_base_decompressor();
+
+      break;
+    }
+    case PersistedSegmentEncodingType::DictionaryEncoding16Bit: {
+      //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
+      auto* const attribute_vector_address =
+        reinterpret_cast<const uint16_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size);
+      auto attribute_data_span = std::span<const uint16_t>(attribute_vector_address, attribute_vector_size);
+      auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint16_t>>(attribute_data_span);
+
+      _dictionary_span = dictionary_span_pointer;
+      _attribute_vector = attribute_vector;
+      _decompressor = _attribute_vector->create_base_decompressor();
+
+      break;
+    }
+    case PersistedSegmentEncodingType::DictionaryEncoding32Bit: {
+      //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
+      auto* const attribute_vector_address =
+        reinterpret_cast<const uint32_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size);
+      auto attribute_data_span = std::span<const uint32_t>(attribute_vector_address, attribute_vector_size);
+      auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint32_t>>(attribute_data_span);
+
+      _dictionary_span = dictionary_span_pointer;
+      _attribute_vector = attribute_vector;
+      _decompressor = _attribute_vector->create_base_decompressor();
+
+      break;
+    }
+    case PersistedSegmentEncodingType::DictionaryEncodingBitPacking: {
+      Fail("Support for span-based BitPackingVectors for DictionarySegments not implemented yet.");
+      break;
+    }
+    default: {
+      Fail("Unsupported EncodingType.");
+      break;
+    }
+  }
+}
 
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::operator[](const ChunkOffset chunk_offset) const {

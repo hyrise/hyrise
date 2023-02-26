@@ -25,6 +25,8 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
+  explicit FixedStringDictionarySegment(const uint32_t* start_address);
+
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
 
@@ -74,9 +76,17 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
 
  protected:
   const std::shared_ptr<const FixedStringVector> _dictionary;
-  const std::shared_ptr<const FixedStringSpan> _dictionary_span;
-  const std::shared_ptr<const BaseCompressedVector> _attribute_vector;
-  const std::unique_ptr<BaseVectorDecompressor> _decompressor;
+  std::shared_ptr<const FixedStringSpan> _dictionary_span;
+  std::shared_ptr<const BaseCompressedVector> _attribute_vector;
+  std::unique_ptr<BaseVectorDecompressor> _decompressor;
+
+  static constexpr auto ENCODING_TYPE_OFFSET_INDEX = uint32_t{0};
+  static constexpr auto STRING_LENGTH_OFFSET_INDEX = uint32_t{1};
+  static constexpr auto DICTIONARY_SIZE_OFFSET_INDEX = uint32_t{2};
+  static constexpr auto ATTRIBUTE_VECTOR_OFFSET_INDEX = uint32_t{3};
+  static constexpr auto HEADER_OFFSET_INDEX = uint32_t{4};
+  static constexpr auto NUM_BYTES_32_BIT_ENCODING = uint32_t{4};
+  static constexpr auto NUM_BYTES_16_BIT_ENCODING = uint32_t{2};
 };
 
 extern template class FixedStringDictionarySegment<pmr_string>;
