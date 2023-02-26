@@ -459,9 +459,12 @@ uint32_t calculate_byte_size_of_attribute_vector(std::shared_ptr<const BaseCompr
 }
 
 uint32_t calculate_four_byte_aligned_size_of_attribute_vector(std::shared_ptr<const BaseCompressedVector> attribute_vector) {
-  const auto attribute_vector_size = calculate_byte_size_of_attribute_vector(attribute_vector);
+  auto attribute_vector_size = calculate_byte_size_of_attribute_vector(attribute_vector);
   const auto attribute_vector_difference_to_four_byte_alignment = attribute_vector_size % 4;
-  return attribute_vector_size + (4 - attribute_vector_difference_to_four_byte_alignment);
+  if (attribute_vector_difference_to_four_byte_alignment != 0) {
+     attribute_vector_size += 4 - attribute_vector_difference_to_four_byte_alignment;
+  }
+  return attribute_vector_size;
 }
 
 void StorageManager::write_segment_to_disk(const std::shared_ptr<AbstractSegment> abstract_segment, const std::string& file_name) {
@@ -595,7 +598,7 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
 }
 
 void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::shared_ptr<Chunk>& mapped_chunk) {
-  const auto created_segment = chunk->get_segment(ColumnID{5});
+  const auto created_segment = chunk->get_segment(ColumnID{0});
 
   resolve_data_type(created_segment->data_type(), [&](auto segment_data_type) {
     using SegmentDataType = typename decltype(segment_data_type)::type;
@@ -609,11 +612,11 @@ void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::share
       });
     });
 
-    std::cout << "Sum of column 6 of created chunk: " << column_sum_of_created_chunk << std::endl;
+    std::cout << "Sum of column 1 of created chunk: " << column_sum_of_created_chunk << std::endl;
 
   });
 
-  const auto mapped_segment = mapped_chunk->get_segment(ColumnID{5});
+  const auto mapped_segment = mapped_chunk->get_segment(ColumnID{0});
 
   resolve_data_type(mapped_segment->data_type(), [&](auto segment_data_type) {
     using SegmentDataType = typename decltype(segment_data_type)::type;
@@ -627,24 +630,24 @@ void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::share
       });
     });
 
-    std::cout << "Sum of column 6 of mapped chunk: " << column_sum_of_mapped_chunk << std::endl;
+    std::cout << "Sum of column 1 of mapped chunk: " << column_sum_of_mapped_chunk << std::endl;
 
   });
 
   // print row 17 of created and mapped chunk
-  std::cout << "Row 17 of created chunk: ";
-  for (auto column_index = ColumnID{0}; column_index < 16; ++column_index) {
+  std::cout << "Row 2 of created chunk: ";
+  for (auto column_index = ColumnID{0}; column_index < chunk->column_count(); ++column_index) {
     const auto segment = chunk->get_segment(column_index);
-    const auto attribute_value = (*segment)[ChunkOffset{16}];
+    const auto attribute_value = (*segment)[ChunkOffset{1}];
     std::cout << attribute_value << " ";
   }
   std::cout << std::endl;
 
 
-  std::cout << "Row 17 of mapped chunk: ";
-  for (auto column_index = ColumnID{0}; column_index < 16; ++column_index) {
+  std::cout << "Row 2 of mapped chunk: ";
+  for (auto column_index = ColumnID{0}; column_index < mapped_chunk->column_count(); ++column_index) {
     const auto segment = mapped_chunk->get_segment(column_index);
-    const auto attribute_value = (*segment)[ChunkOffset{16}];
+    const auto attribute_value = (*segment)[ChunkOffset{1}];
     std::cout << attribute_value << " ";
   }
   std::cout << std::endl;
