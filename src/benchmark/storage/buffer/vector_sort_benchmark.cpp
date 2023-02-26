@@ -23,11 +23,16 @@ static void BM_vector_sort_raw_pointers(benchmark::State& state) {
     state.ResumeTiming();
 
     std::sort(array.begin().get_ptr().operator->(), array.end().get_ptr().operator->());
-    benchmark::DoNotOptimize(array.size());
+    auto size = array.size();
+    benchmark::DoNotOptimize(size);
   }
+
+  state.SetBytesProcessed(int64_t(state.iterations()) * count);
+  state.SetItemsProcessed(int64_t(state.iterations()) * count * sizeof(decltype(array)::value_type));
 
   state.SetLabel("std::sort with pmr_vector (Buffer Pool) and raw pointers");
 
+  // TODO: Separe per iteration, not total
   add_buffer_manager_counters(state, *array.get_allocator().buffer_manager());
 }
 
@@ -43,8 +48,12 @@ static void BM_vector_sort(benchmark::State& state) {
     state.ResumeTiming();
 
     std::sort(array.begin(), array.end());
-    benchmark::DoNotOptimize(array.size());
+    auto size = array.size();
+    benchmark::DoNotOptimize(size);
   }
+
+  state.SetBytesProcessed(int64_t(state.iterations()) * count);
+  state.SetItemsProcessed(int64_t(state.iterations()) * count * sizeof(typename VectorType::value_type));
 
   if constexpr (std::is_same_v<std::vector<int32_t, std::allocator<int32_t>>, VectorType>) {
     state.SetLabel("std::sort with std::vector");
