@@ -77,10 +77,10 @@ void ColumnLikeTableScanImpl::_scan_dictionary_segment(const BaseDictionarySegme
 
   if (segment.encoding_type() == EncodingType::Dictionary) {
     const auto& typed_segment = static_cast<const DictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.dictionary());
+    result = _find_matches_in_dictionary(*typed_segment.dictionary_span());
   } else {
     const auto& typed_segment = static_cast<const FixedStringDictionarySegment<pmr_string>&>(segment);
-    result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary());
+    result = _find_matches_in_dictionary(*typed_segment.fixed_string_dictionary_span());
   }
 
   const auto& match_count = result.first;
