@@ -348,6 +348,13 @@ void export_values(const std::vector<T, Alloc>& values, std::string file_name) {
   ofstream.close();
 }
 
+template <typename T>
+void export_values(const std::span<const T>& data_span, std::string file_name) {
+  std::ofstream ofstream(file_name, std::ios::binary | std::ios::app);
+  ofstream.write(reinterpret_cast<const char*>(data_span.data()), data_span.size() * sizeof(T));
+  ofstream.close();
+}
+
 // needed for attribute vector which is stored in a compact manner
 void export_compact_vector(const pmr_compact_vector& values, std::string file_name) {
   //adapted to uint32_t format of later created map (see comment in `write_dict_segment_to_disk`)
@@ -389,8 +396,6 @@ void StorageManager::write_fixed_string_dict_segment_to_disk(const std::shared_p
   // we need to ensure that every part can be mapped with a uint32_t map
   export_values(*segment->fixed_string_dictionary(), file_name);
   const auto dictionary_byte_size = byte_index(segment->fixed_string_dictionary()->size(), segment->fixed_string_dictionary()->string_length());
-  //TODO: use chars.size() instead?
-  std::cout << dictionary_byte_size << " " << segment->fixed_string_dictionary()->chars().size() << std::endl;
   const auto dictionary_difference_to_four_byte_alignment = dictionary_byte_size % 4;
   if (dictionary_difference_to_four_byte_alignment != 0) {
     const auto padding = std::vector<uint8_t>(4 - dictionary_difference_to_four_byte_alignment, 0);

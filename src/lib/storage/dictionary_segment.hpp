@@ -29,10 +29,7 @@ class DictionarySegment : public BaseDictionarySegment {
   explicit DictionarySegment(const uint32_t* start_address);
 
   // returns an underlying dictionary
-  std::shared_ptr<const pmr_vector<T>> dictionary() const;
-
-  // returns an underlying dictionary
-  std::shared_ptr<const std::span<const T>> dictionary_span() const;
+  std::shared_ptr<const std::span<const T>> dictionary() const;
 
   /**
    * @defgroup AbstractSegment interface
@@ -44,10 +41,10 @@ class DictionarySegment : public BaseDictionarySegment {
   std::optional<T> get_typed_value(const ChunkOffset chunk_offset) const {
     // performance critical - not in cpp to help with inlining
     const auto value_id = _decompressor->get(chunk_offset);
-    if (value_id == _dictionary_span->size()) {
+    if (value_id == _dictionary->size()) {
       return std::nullopt;
     }
-    return (*_dictionary_span)[value_id];
+    return (*_dictionary)[value_id];
   }
 
   ChunkOffset size() const final;
@@ -94,8 +91,8 @@ class DictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const pmr_vector<T>> _dictionary;
-  std::shared_ptr<const std::span<const T>> _dictionary_span;
+  const std::shared_ptr<const pmr_vector<T>> _dictionary_base_vector;
+  std::shared_ptr<const std::span<const T>> _dictionary;
   std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 

@@ -17,7 +17,7 @@ class DictionarySegmentIterable
   using ValueType = T;
 
   explicit DictionarySegmentIterable(const DictionarySegment<T>& segment)
-      : _segment{segment}, _dictionary_span(segment.dictionary_span()) {}
+      : _segment{segment}, _dictionary_span(segment.dictionary()) {}
 
   explicit DictionarySegmentIterable(const FixedStringDictionarySegment<pmr_string>& segment)
       : _segment{segment}, _dictionary_span(segment.fixed_string_dictionary_span()) {}

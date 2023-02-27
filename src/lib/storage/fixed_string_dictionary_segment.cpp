@@ -61,7 +61,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
       //start_address is expressed as uint32_t pointer, therefore have to add dictionary_size
       auto dictionary_size_bytes = (dictionary_size * string_length);
       if (dictionary_size_bytes % 4 != 0) {
-        dictionary_size_bytes += 4 - (dictionary_size_bytes % 4 );
+        dictionary_size_bytes += 4 - (dictionary_size_bytes % 4);
       }
       auto* const attribute_vector_address =
         reinterpret_cast<const uint16_t*>(start_address + HEADER_OFFSET_INDEX + dictionary_size_bytes/4);

@@ -63,7 +63,8 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
-        create_pruning_statistics_for_segment(*segment_statistics, dictionary);
+        pmr_vector<ColumnDataType> dictionary_vector{dictionary.begin(), dictionary.end()};
+        create_pruning_statistics_for_segment(*segment_statistics, dictionary_vector);
       } else {
         // if we have a generic segment we create the dictionary ourselves
         auto iterable = create_iterable_from_segment<ColumnDataType>(typed_segment);
