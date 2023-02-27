@@ -29,14 +29,25 @@ TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
   auto nullPtr = PtrInt(nullptr);
   EXPECT_FALSE(nullPtr);
   EXPECT_TRUE(!nullPtr);
+  EXPECT_EQ(nullPtr.operator->(), nullptr);
 
-  // Test for an address that is in the buffer manager
-  // EXPECT_TRUE(nullPtr);
+  // Test Outside address
+  auto outsidePtr = PtrInt((int*)0x1);
+  EXPECT_TRUE(outsidePtr);
+  EXPECT_FALSE(!outsidePtr);
+  EXPECT_EQ(outsidePtr.get_page_id(), 0);
+  EXPECT_EQ(outsidePtr.get_offset(), 0);
+  EXPECT_EQ(outsidePtr.operator->(), (int*)0x1);
 
-  // Test for an address outside of buffer manager
-  // EXPECT_TRUE(nullPtr);
+  // Test Address in Buffer Manager
+  auto allocatedPtr = BufferManager::get_global_buffer_manager().allocate(1024);
+  EXPECT_TRUE(allocatedPtr);
+  EXPECT_FALSE(!allocatedPtr);
+  EXPECT_EQ(allocatedPtr.get_page_id(), 0);
+  EXPECT_EQ(allocatedPtr.get_offset(), 0);
+  EXPECT_NE(allocatedPtr.operator->(), nullptr);
 
-  // using PtrConstInt = BufferManagedPtr<const int32_t>;
+  // TODO: Test for some more properties
 }
 
 TEST_F(BufferManagedPtrTest, TestArithmetic) {
@@ -72,17 +83,30 @@ TEST_F(BufferManagedPtrTest, TestComparisons) {
 }
 
 TEST_F(BufferManagedPtrTest, TestPinUnpin) {
-  // TODO: Get Page should nor create a new page
-  auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
-  ptr.pin();
-  ptr.unpin(true);
-}
-
-TEST_F(BufferManagedPtrTest, TestPinGuard) {
   auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
   auto page_id = ptr.get_page_id();
 
+  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+
+  ptr.pin();
+  ptr.pin();
+  ptr.pin();
+  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 3);
+
+  ptr.unpin(false);
+  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 2);
+  EXPECT_FALSE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
+
+  ptr.unpin(true);
+  ptr.unpin(false);
+  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+  EXPECT_TRUE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
+}
+
+TEST_F(BufferManagedPtrTest, TestPinGuardNotDirty) {
   // Test PinGuard with non-dirty flag
+  auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
+  auto page_id = ptr.get_page_id();
   {
     EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
     auto pin_guard = PinGuard(ptr, false);
@@ -90,8 +114,12 @@ TEST_F(BufferManagedPtrTest, TestPinGuard) {
   }
   EXPECT_FALSE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
   EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+}
 
-  // Test PinGuard with dirty flag
+TEST_F(BufferManagedPtrTest, TestPinGuardDirty) {
+  // Test PinGuard with non-dirty flag
+  auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
+  auto page_id = ptr.get_page_id();
   {
     EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
     auto pin_guard = PinGuard(ptr, true);
