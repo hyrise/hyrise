@@ -1,32 +1,35 @@
 #include "volatile_region.hpp"
+#include "utils/assert.hpp"
 
 namespace hyrise {
 
 VolatileRegion::VolatileRegion(const size_t num_bytes) : _num_bytes(num_bytes), _frames(num_bytes / sizeof(Page32KiB)) {
-  for (FrameID frame_id{0}; frame_id < _frames.size(); frame_id++) {
-    _free_frames.push_front(frame_id);
+  for (FrameID frame_id{0}; frame_id < _frames.size() - 1; frame_id++) {
+    const auto frame = reinterpret_cast<Page32KiB**>(_frames.data() + frame_id);
+    *frame = _frames.data() + (frame_id + 1);
   }
+  _free_list = &_frames[0];
   _num_free_frames = _frames.size();
   Assert(_num_free_frames > 0, "There should be at least one free frame in the volatile region while setting up.");
 }
 
 std::pair<FrameID, Page32KiB*> VolatileRegion::allocate() {
-  std::lock_guard<std::mutex> lock_guard(_mutex);
+  // std::lock_guard<std::mutex> lock_guard(_mutex);
 
   if (_num_free_frames <= 0) {
     return std::make_pair(INVALID_FRAME_ID, nullptr);
   }
-  const auto frame_id = _free_frames.front();
-  _free_frames.pop_front();
+  auto free_frame = _free_list;
+  const auto new_free_frame = reinterpret_cast<Page32KiB**>(free_frame);
+  _free_list = *new_free_frame;
+
   _num_free_frames--;
-  const auto page = &_frames[frame_id];
-  return std::make_pair(frame_id, page);
+  const auto frame_id = get_frame_id_from_ptr(free_frame);
+  return std::make_pair(frame_id, free_frame);
 };
 
 FrameID VolatileRegion::get_frame_id_from_ptr(const void* ptr) const {
-  // TODO
-  // DebugAssert(_frames.data() <= ptr, "Pointer is out of range of region");
-  // DebugAssert(ptr < (_frames.data() + capacity() * Page32KiB::size()), "Pointer is out of range of region");
+  // TODO: This could be made branchless actually
   if (ptr < _frames.begin().operator->() || ptr >= _frames.end().operator->()) {
     return INVALID_FRAME_ID;
   }
@@ -40,10 +43,13 @@ Page32KiB* VolatileRegion::get_page(const FrameID frame_id) {
 }
 
 void VolatileRegion::deallocate(FrameID frame_id) {
-  std::lock_guard<std::mutex> lock_guard(_mutex);
-
+  // std::lock_guard<std::mutex> lock_guard(_mutex);
   DebugAssert(frame_id < capacity(), "Cannot request a frame id larger than capacity.");
-  _free_frames.push_front(frame_id);
+
+  auto old_free_list = _free_list;
+  _free_list = _frames.data() + frame_id;
+  auto free_list_cast = reinterpret_cast<Page32KiB**>(_free_list);
+  *free_list_cast = old_free_list;
   _num_free_frames++;
 };
 

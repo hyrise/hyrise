@@ -16,7 +16,6 @@ enum class PageSizeType : std::size_t {
   KiB32 = 1 << 15,
   KiB64 = 1 << 16,
   KiB128 = 1 << 17,
-  KiB256 = 1 << 18,
 };
 
 // Copied from boost::interprocess, because #include <boost/type_traits/add_reference.hpp> was not enough

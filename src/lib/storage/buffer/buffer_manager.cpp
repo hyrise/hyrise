@@ -17,8 +17,6 @@ constexpr PageSizeType find_fitting_page_size_type(const std::size_t value) {
     return PageSizeType::KiB64;
   } else if (value <= static_cast<std::size_t>(PageSizeType::KiB128)) {
     return PageSizeType::KiB128;
-  } else if (value <= static_cast<std::size_t>(PageSizeType::KiB256)) {
-    return PageSizeType::KiB256;
   }
   Fail("Cannot fit input value to a PageSizeType");
 }
@@ -159,7 +157,8 @@ void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
     return;
   }
 
-  frame->dirty = dirty;
+  // TODO: check
+  frame->dirty = frame->dirty.load() || dirty;
   frame->pin_count--;
 
   if (frame->pin_count.load() == 0) {  // TODO: Check atomics

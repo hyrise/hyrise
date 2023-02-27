@@ -38,11 +38,10 @@ class VolatileRegion {
   // The raw memory region that is preallocated for the frames
   std::vector<Page32KiB, boost::alignment::aligned_allocator<Page32KiB>> _frames;
 
-  // TODO: Evalulate linked list vs other DS, or maybe sort to fullfil large requests?
-  // it might also be concurrent
-  std::forward_list<FrameID> _free_frames;
+  Page32KiB* _free_list;
+
   size_t _num_free_frames;
 
-  std::mutex _mutex;
+  // std::mutex _mutex;
 };
 }  // namespace hyrise

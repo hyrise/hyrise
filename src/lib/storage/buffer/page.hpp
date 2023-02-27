@@ -35,5 +35,7 @@ struct alignas(512) Page {
 };
 
 using Page32KiB = Page<PageSizeType::KiB32>;
+using Page64KiB = Page<PageSizeType::KiB64>;
+using Page32KiB = Page<PageSizeType::KiB128>;
 
 }  // namespace hyrise
