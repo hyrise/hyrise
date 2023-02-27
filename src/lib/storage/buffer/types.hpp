@@ -13,6 +13,8 @@ constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
 constexpr FrameID INVALID_FRAME_ID{std::numeric_limits<FrameID::base_type>::max()};
 
 enum class PageSizeType : std::size_t {
+  KiB8 = 1 << 13,
+  KiB16 = 1 << 14,
   KiB32 = 1 << 15,
   KiB64 = 1 << 16,
   KiB128 = 1 << 17,
