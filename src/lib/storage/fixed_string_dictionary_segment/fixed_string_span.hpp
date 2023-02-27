@@ -47,7 +47,7 @@ class FixedStringSpan {
   size_t string_length() const;
 
   // // Return the calculated size of FixedStringSpan in main memory
-  // size_t data_size() const;
+  size_t data_size() const;
 
  protected:
   const size_t _string_length;

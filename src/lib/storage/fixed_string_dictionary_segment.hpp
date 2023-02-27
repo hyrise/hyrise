@@ -28,7 +28,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   explicit FixedStringDictionarySegment(const uint32_t* start_address);
 
   // returns an underlying dictionary
-  std::shared_ptr<const FixedStringVector> fixed_string_dictionary() const;
+  std::shared_ptr<const FixedStringSpan> fixed_string_dictionary() const;
 
   std::shared_ptr<const FixedStringSpan> fixed_string_dictionary_span() const;
 
@@ -75,8 +75,8 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   /**@}*/
 
  protected:
-  const std::shared_ptr<const FixedStringVector> _dictionary;
-  std::shared_ptr<const FixedStringSpan> _dictionary_span;
+  const std::shared_ptr<const FixedStringVector> _dictionary_base_vector;
+  std::shared_ptr<const FixedStringSpan> _dictionary;
   std::shared_ptr<const BaseCompressedVector> _attribute_vector;
   std::unique_ptr<BaseVectorDecompressor> _decompressor;
 

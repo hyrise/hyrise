@@ -17,8 +17,8 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(
     const std::shared_ptr<const FixedStringVector>& dictionary,
     const std::shared_ptr<const BaseCompressedVector>& attribute_vector)
     : BaseDictionarySegment(data_type_from_type<pmr_string>()),
-      _dictionary{dictionary},
-      _dictionary_span{std::make_shared<const FixedStringSpan>(*_dictionary)},
+      _dictionary_base_vector{dictionary},
+      _dictionary{std::make_shared<const FixedStringSpan>(*_dictionary_base_vector)},
       _attribute_vector{attribute_vector},
       _decompressor{_attribute_vector->create_base_decompressor()} {}
 
@@ -51,7 +51,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
       auto attribute_data_span = std::span<const uint8_t>(attribute_vector_address, attribute_vector_size);
       auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint8_t>>(attribute_data_span);
 
-      _dictionary_span = dictionary_span_pointer;
+      _dictionary = dictionary_span_pointer;
       _attribute_vector = attribute_vector;
       _decompressor = _attribute_vector->create_base_decompressor();
 
@@ -68,7 +68,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
       auto attribute_data_span = std::span<const uint16_t>(attribute_vector_address, attribute_vector_size);
       auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint16_t>>(attribute_data_span);
 
-      _dictionary_span = dictionary_span_pointer;
+      _dictionary = dictionary_span_pointer;
       _attribute_vector = attribute_vector;
       _decompressor = _attribute_vector->create_base_decompressor();
 
@@ -85,7 +85,7 @@ FixedStringDictionarySegment<T>::FixedStringDictionarySegment(const uint32_t* st
       auto attribute_data_span = std::span<const uint32_t>(attribute_vector_address, attribute_vector_size);
       auto attribute_vector = std::make_shared<FixedWidthIntegerVector<uint32_t>>(attribute_data_span);
 
-      _dictionary_span = dictionary_span_pointer;
+      _dictionary = dictionary_span_pointer;
       _attribute_vector = attribute_vector;
       _decompressor = _attribute_vector->create_base_decompressor();
 
@@ -119,20 +119,20 @@ std::optional<T> FixedStringDictionarySegment<T>::get_typed_value(const ChunkOff
   DebugAssert(chunk_offset < size(), "ChunkOffset out of bounds.");
 
   const auto value_id = _decompressor->get(chunk_offset);
-  if (value_id == _dictionary_span->size()) {
+  if (value_id == _dictionary->size()) {
     return std::nullopt;
   }
-  return _dictionary_span->get_string_at(value_id);
+  return _dictionary->get_string_at(value_id);
 }
 
 template <typename T>
-std::shared_ptr<const FixedStringVector> FixedStringDictionarySegment<T>::fixed_string_dictionary() const {
+std::shared_ptr<const FixedStringSpan> FixedStringDictionarySegment<T>::fixed_string_dictionary() const {
   return _dictionary;
 }
 
 template <typename T>
 std::shared_ptr<const FixedStringSpan> FixedStringDictionarySegment<T>::fixed_string_dictionary_span() const {
-  return _dictionary_span;
+  return _dictionary;
 }
 
 template <typename T>
@@ -143,7 +143,8 @@ ChunkOffset FixedStringDictionarySegment<T>::size() const {
 template <typename T>
 std::shared_ptr<AbstractSegment> FixedStringDictionarySegment<T>::copy_using_allocator(
     const PolymorphicAllocator<size_t>& alloc) const {
-  auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary, alloc);
+  Assert(_dictionary_base_vector, "Cannot copy span-based FixedStringDictionarySegments.");
+  auto new_dictionary = std::make_shared<FixedStringVector>(*_dictionary_base_vector, alloc);
   auto new_attribute_vector = _attribute_vector->copy_using_allocator(alloc);
 
   auto copy = std::make_shared<FixedStringDictionarySegment<T>>(new_dictionary, std::move(new_attribute_vector));
@@ -175,11 +176,11 @@ ValueID FixedStringDictionarySegment<T>::lower_bound(const AllTypeVariant& value
 
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto it = std::lower_bound(_dictionary_span->cbegin(), _dictionary_span->cend(), typed_value);
-  if (it == _dictionary_span->cend()) {
+  auto it = std::lower_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (it == _dictionary->cend()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary_span->cbegin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
@@ -188,22 +189,22 @@ ValueID FixedStringDictionarySegment<T>::upper_bound(const AllTypeVariant& value
 
   const auto typed_value = boost::get<pmr_string>(value);
 
-  auto it = std::upper_bound(_dictionary_span->cbegin(), _dictionary_span->cend(), typed_value);
-  if (it == _dictionary_span->cend()) {
+  auto it = std::upper_bound(_dictionary->cbegin(), _dictionary->cend(), typed_value);
+  if (it == _dictionary->cend()) {
     return INVALID_VALUE_ID;
   }
-  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary_span->cbegin(), it))};
+  return ValueID{static_cast<ValueID::base_type>(std::distance(_dictionary->cbegin(), it))};
 }
 
 template <typename T>
 AllTypeVariant FixedStringDictionarySegment<T>::value_of_value_id(const ValueID value_id) const {
-  DebugAssert(value_id < _dictionary_span->size(), "ValueID out of bounds");
-  return _dictionary_span->get_string_at(value_id);
+  DebugAssert(value_id < _dictionary->size(), "ValueID out of bounds");
+  return _dictionary->get_string_at(value_id);
 }
 
 template <typename T>
 ValueID::base_type FixedStringDictionarySegment<T>::unique_values_count() const {
-  return static_cast<ValueID::base_type>(_dictionary_span->size());
+  return static_cast<ValueID::base_type>(_dictionary->size());
 }
 
 template <typename T>
@@ -213,7 +214,7 @@ std::shared_ptr<const BaseCompressedVector> FixedStringDictionarySegment<T>::att
 
 template <typename T>
 ValueID FixedStringDictionarySegment<T>::null_value_id() const {
-  return ValueID{static_cast<ValueID::base_type>(_dictionary_span->size())};
+  return ValueID{static_cast<ValueID::base_type>(_dictionary->size())};
 }
 
 template class FixedStringDictionarySegment<pmr_string>;

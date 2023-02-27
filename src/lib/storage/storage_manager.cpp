@@ -355,6 +355,12 @@ void export_values(const std::span<const T>& data_span, std::string file_name) {
   ofstream.close();
 }
 
+void export_values(const FixedStringSpan& data_span, std::string file_name) {
+  std::ofstream ofstream(file_name, std::ios::binary | std::ios::app);
+  ofstream.write(reinterpret_cast<const char*>(data_span.data()), data_span.size() * data_span.string_length());
+  ofstream.close();
+}
+
 // needed for attribute vector which is stored in a compact manner
 void export_compact_vector(const pmr_compact_vector& values, std::string file_name) {
   //adapted to uint32_t format of later created map (see comment in `write_dict_segment_to_disk`)

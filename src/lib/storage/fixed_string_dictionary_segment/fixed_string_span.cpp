@@ -82,8 +82,9 @@ size_t FixedStringSpan::string_length() const {
   return _string_length;
 }
 
-// size_t FixedStringSpan::data_size() const {
-//   return sizeof(*this) + _chars.capacity();
-// }
+ size_t FixedStringSpan::data_size() const {
+  //TODO: Check if this is correct.
+   return sizeof(*this) + _chars.size_bytes();
+ }
 
 }  // namespace hyrise
