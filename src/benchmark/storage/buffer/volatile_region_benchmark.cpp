@@ -1,6 +1,6 @@
 #include <memory>
 
-#include <boost/container/pmr/monotonic_buffer_resource.hpp>
+#include <boost/align/aligned_allocator.hpp>
 #include "benchmark/benchmark.h"
 #include "storage/buffer/page.hpp"
 #include "storage/buffer/volatile_region.hpp"
@@ -8,25 +8,45 @@
 
 namespace hyrise {
 
-// static void BM_VolatileRegionAllocateAndDeallocateSegmentInPage(benchmark::State& state) {
-//   const auto num_frames = state.range(0);
-//   auto volatile_region = VolatileRegion(sizeof(Frame));  // TODO: Increase the size
-//   auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{17, 0, 1, 1},
-//                                                                pmr_vector<bool>{true, true, false, false});
+static void BM_VolatileRegionAllocator(benchmark::State& state) {
+  const auto num_frames = state.range(0);
 
-//   for (auto _ : state) {
-//     auto frame = volatile_region.allocate();
-//     boost::container::pmr::monotonic_buffer_resource resource{frame->data.data.data(), frame->data.data.size(),
-//                                                               nullptr};
-//     const auto allocator = PolymorphicAllocator<size_t>(&resource);
-//     auto segment_in_page = value_segment->copy_using_allocator(allocator);
-//     segment_in_page = nullptr;
-//     volatile_region.deallocate(frame);
-//   }
+  auto volatile_region = std::make_unique<VolatileRegion>(num_frames * sizeof(Page32KiB));
 
-//   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames));
-// }
+  for (auto _ : state) {
+    for (auto i = size_t{0}; i < num_frames; i++) {
+      auto frame = volatile_region->allocate();
+      benchmark::DoNotOptimize(frame);
+    }
+    state.PauseTiming();
+    volatile_region = std::make_unique<VolatileRegion>(num_frames * sizeof(Page32KiB));
+    state.ResumeTiming();
+  }
 
-// BENCHMARK(BM_VolatileRegionAllocateAndDeallocateSegmentInPage)->Range(8, 8 << 10);
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames) * sizeof(Page32KiB));
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames));
+}
+
+static void BM_VolatileRegionAllocatorCompareToBoostAlignedAllocator(benchmark::State& state) {
+  const auto num_frames = state.range(0);
+  auto allocator = boost::alignment::aligned_allocator<Page32KiB>{};
+
+  // TODO: This leaks
+  for (auto _ : state) {
+    for (auto i = size_t{0}; i < num_frames; i++) {
+      auto page = allocator.allocate(1);
+      benchmark::DoNotOptimize(page);
+      // state.PauseTiming();
+      // allocator.deallocate(page, 0);
+      // state.ResumeTiming();
+    }
+  }
+
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames) * sizeof(Page32KiB));
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames));
+}
+
+BENCHMARK(BM_VolatileRegionAllocator)->RangeMultiplier(2)->Range(8, 8 << 5);
+BENCHMARK(BM_VolatileRegionAllocatorCompareToBoostAlignedAllocator)->RangeMultiplier(2)->Range(8, 8 << 5);
 
 }  // namespace hyrise
