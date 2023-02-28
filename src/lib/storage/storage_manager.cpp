@@ -733,23 +733,14 @@ FILE_HEADER StorageManager::read_file_header(const std::string& filename) {
   return file_header;
 }
 
-CHUNK_HEADER StorageManager::read_chunk_header(const std::string& filename, const uint32_t segment_count,
+CHUNK_HEADER StorageManager::read_chunk_header(const uint32_t* map, const uint32_t segment_count,
                                                const uint32_t chunk_offset_begin) {
-  // TODO: Remove need to map the whole file.
   auto header = CHUNK_HEADER{};
-  const auto map_index = element_index(chunk_offset_begin, 4);
 
-  auto fd = int32_t{};
-  Assert((fd = open(filename.c_str(), O_RDONLY)) >= 0, "Opening of file failed.");
-
-  auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, _chunk_header_bytes(segment_count), PROT_READ, MAP_PRIVATE, fd, off_t{0}));
-  Assert((map != MAP_FAILED), "Mapping of Chunk Failed.");
-  close(fd);
-
-  header.row_count = map[map_index];
+  header.row_count = map[0];
 
   for (auto segment_offset_index = size_t{0}; segment_offset_index < segment_count; ++segment_offset_index) {
-    header.segment_offset_ends.emplace_back(map[segment_offset_index + map_index + 1]);
+    header.segment_offset_ends.emplace_back(map[segment_offset_index + 1]);
   }
 
   return header;
@@ -764,7 +755,7 @@ std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_
 
 
   // TODO: Remove unneccessary map on whole file
-  // Step 1: Pass map around. [x] -> unnecessary.
+  // Step 1: Pass map around. [x]
   // Step 1.2: Only map necessary part chunk of file! Currently we map chunks not as whole but separatedly, needs to be pagesize aligned [x]
   // Step 2: Adapt map to std::byte & adapt accesses
   // Step 3: Remove padding. (Maybe needs to be done to get step 2 running.)
@@ -779,7 +770,7 @@ std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_
   Assert((map != MAP_FAILED), "Mapping of File Failed.");
   close(fd);
 
-  const auto chunk_header = read_chunk_header(filename, segment_count, chunk_offset_begin);
+  const auto chunk_header = read_chunk_header(map, segment_count, chunk_offset_begin);
 
   for (auto segment_index = size_t{0}; segment_index < segment_count; ++segment_index) {
     auto segment_offset_begin = _chunk_header_bytes(segment_count);

@@ -147,7 +147,7 @@ class StorageManager : public Noncopyable {
   static constexpr uint32_t _segment_header_bytes =
       _dictionary_size_bytes + _element_count_bytes + _compressed_vector_type_id_bytes;
 
-  CHUNK_HEADER read_chunk_header(const std::string& filename, const uint32_t segment_count,
+  CHUNK_HEADER read_chunk_header(const uint32_t* map, const uint32_t segment_count,
                                  const uint32_t chunk_offset_begin);
 
   FILE_HEADER read_file_header(const std::string& filename);
