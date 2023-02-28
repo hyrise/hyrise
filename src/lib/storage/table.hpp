@@ -61,10 +61,6 @@ class Table : private Noncopyable {
   // Fail()s, if there is no column of that name
   ColumnID column_id_by_name(const std::string& column_name) const;
 
-  void set_name(const std::string table_name){
-    _name = table_name;
-  }
-
   /** @} */
 
   TableType type() const;
@@ -246,7 +242,6 @@ class Table : private Noncopyable {
   const TableType _type;
   const UseMvcc _use_mvcc;
   const ChunkOffset _target_chunk_size;
-  std::string _name;
 
   /**
    * To prevent data races for TableType::Data tables, we must access _chunks atomically.

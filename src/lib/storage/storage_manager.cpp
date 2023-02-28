@@ -44,8 +44,6 @@ void StorageManager::add_table(const std::string& name, std::shared_ptr<Table> t
   Assert(view_iter == _views.end() || !view_iter->second,
          "Cannot add table " + name + " - a view with the same name already exists");
 
-  table->set_name(name);
-
   for (ChunkID chunk_id{0}; chunk_id < table->chunk_count(); chunk_id++) {
     // We currently assume that all tables stored in the StorageManager are mutable and, as such, have MVCC data. This
     // way, we do not need to check query plans if they try to update immutable tables. However, this is not a hard
@@ -81,6 +79,15 @@ std::shared_ptr<Table> StorageManager::get_table(const std::string& name) const 
          "Nullptr found when accessing table named '" + name + "'. This can happen if a dropped table is accessed.");
 
   return table;
+}
+
+std::string StorageManager::_get_table_name(const Table* address) const {
+  for (const auto& [name, pointer] : _tables) {
+    if (pointer.get() == address) {
+      return name;
+    }
+  }
+  return std::string{};
 }
 
 bool StorageManager::has_table(const std::string& name) const {
@@ -672,7 +679,10 @@ void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::share
   std::cout << std::endl;
 }
 
-void StorageManager::replace_chunk_with_persisted_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
+void StorageManager::replace_chunk_with_persisted_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const Table* table_address) {
+  const auto table_name = _get_table_name(table_address);
+  Assert(!table_name.empty(), "Only tables registered with StorageManager can be persisted.");
+  
   // get current persistence_file for table
   const auto table_persistence_file = get_persistence_file_name(table_name);
   // persist chunk to disk

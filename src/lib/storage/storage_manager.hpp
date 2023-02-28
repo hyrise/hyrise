@@ -98,7 +98,7 @@ class StorageManager : public Noncopyable {
   void persist_chunks_to_disk(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::string& file_name);
   std::pair<uint32_t, uint32_t> persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id, const std::string& file_name);
 
-  void replace_chunk_with_persisted_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name);
+  void replace_chunk_with_persisted_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const Table* table_address);
 
   std::shared_ptr<Chunk> map_chunk_from_disk(const uint32_t chunk_offset_end, const uint32_t chunk_bytes, const std::string& filename,
                                              const uint32_t segment_count, std::vector<DataType> column_definitions);
@@ -166,6 +166,7 @@ class StorageManager : public Noncopyable {
   const std::string get_persistence_file_name(const std::string table_name);
 
   PersistedSegmentEncodingType resolve_persisted_segment_encoding_type_from_compression_type(CompressedVectorType compressed_vector_type);
+  std::string _get_table_name(const Table* address) const;
 };
 
 std::ostream& operator<<(std::ostream& stream, const StorageManager& storage_manager);
