@@ -353,6 +353,14 @@ void AbstractTableGenerator::generate_and_store() {
     }
   }
 
+#ifdef __APPLE__
+  auto return_val = system("purge");
+  (void)return_val;
+#else
+  auto return_val = system("echo 3 > /proc/sys/vm/drop_caches");
+  (void)return_val;
+#endif
+
   // Set scheduler back to previously used scheduler.
   Hyrise::get().topology.use_default_topology(_benchmark_config->cores);
   Hyrise::get().set_scheduler(initial_scheduler);

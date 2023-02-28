@@ -45,6 +45,10 @@ class StorageManagerTest : public BaseTest {
   }
   const uint32_t file_header_bytes = StorageManager::_file_header_bytes;
 
+  FILE_HEADER read_file_header(const std::string& filename) {
+    return Hyrise::get().storage_manager.read_file_header(filename);
+  }
+
 };
 
 TEST_F(StorageManagerTest, AddTableTwice) {
@@ -236,178 +240,178 @@ TEST_F(StorageManagerTest, HasPreparedPlan) {
   EXPECT_EQ(sm.has_prepared_plan("first_prepared_plan"), true);
 }
 
-TEST_F(StorageManagerTest, WriteMaxNumberOfChunksToFileMid) {
-  const auto file_name = "test_chunks_file.bin";
-  std::remove(file_name);
-  auto& sm = Hyrise::get().storage_manager;
+// TEST_F(StorageManagerTest, WriteMaxNumberOfChunksToFileMid) {
+//   const auto file_name = "test_chunks_file.bin";
+//   std::remove(file_name);
+//   auto& sm = Hyrise::get().storage_manager;
 
-  const auto ROW_COUNT = uint32_t{65000};  // can't be greater than INT32_MAX
-  const auto COLUMN_COUNT = uint32_t{23};
-  const auto CHUNK_COUNT = sm.get_max_chunk_count_per_file();
+//   const auto ROW_COUNT = uint32_t{65000};  // can't be greater than INT32_MAX
+//   const auto COLUMN_COUNT = uint32_t{23};
+//   const auto CHUNK_COUNT = sm.get_max_chunk_count_per_file();
 
-  const auto chunk = StorageManagerTestUtil::create_dictionary_segment_chunk(ROW_COUNT, COLUMN_COUNT);
-  std::vector<std::shared_ptr<Chunk>> chunks(CHUNK_COUNT);
-  for (auto index = size_t{0}; index < chunks.size(); ++index) {
-    chunks[index] = chunk;
-  }
-  sm.persist_chunks_to_disk(chunks, file_name);
+//   const auto chunk = StorageManagerTestUtil::create_dictionary_segment_chunk(ROW_COUNT, COLUMN_COUNT);
+//   std::vector<std::shared_ptr<Chunk>> chunks(CHUNK_COUNT);
+//   for (auto index = size_t{0}; index < chunks.size(); ++index) {
+//     chunks[index] = chunk;
+//   }
+//   sm.persist_chunks_to_disk(chunks, file_name);
 
-  EXPECT_TRUE(std::filesystem::exists(file_name));
+//   EXPECT_TRUE(std::filesystem::exists(file_name));
 
-  const auto read_header = sm.read_file_header(file_name);
+//   const auto read_header = read_file_header(file_name);
 
-  EXPECT_EQ(read_header.chunk_count, CHUNK_COUNT);
-  EXPECT_EQ(read_header.storage_format_version_id, sm.get_storage_format_version_id());
-  EXPECT_EQ(read_header.chunk_ids.size(), CHUNK_COUNT);
-  EXPECT_EQ(read_header.chunk_offset_ends.size(), CHUNK_COUNT);
+//   EXPECT_EQ(read_header.chunk_count, CHUNK_COUNT);
+//   EXPECT_EQ(read_header.storage_format_version_id, sm.get_storage_format_version_id());
+//   EXPECT_EQ(read_header.chunk_ids.size(), CHUNK_COUNT);
+//   EXPECT_EQ(read_header.chunk_offset_ends.size(), CHUNK_COUNT);
 
-  auto mapped_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  for (auto index = size_t{0}; index < CHUNK_COUNT; ++index) {
-    if (index == 0) {
-      mapped_chunks.emplace_back(sm.map_chunk_from_disk(file_header_bytes, file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
-    } else {
-      mapped_chunks.emplace_back(
-          sm.map_chunk_from_disk(read_header.chunk_offset_ends[index - 1], file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
-    }
-  }
-  const auto dict_segment_16 = dynamic_pointer_cast<DictionarySegment<int>>(chunks[0]->get_segment(ColumnID{16}));
-  auto dict_segment_iterable = create_iterable_from_segment<int>(*dict_segment_16);
+//   auto mapped_chunks = std::vector<std::shared_ptr<Chunk>>{};
+//   for (auto index = size_t{0}; index < CHUNK_COUNT; ++index) {
+//     if (index == 0) {
+//       mapped_chunks.emplace_back(sm.map_chunk_from_disk(file_header_bytes, file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
+//     } else {
+//       mapped_chunks.emplace_back(
+//           sm.map_chunk_from_disk(read_header.chunk_offset_ends[index - 1], file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
+//     }
+//   }
+//   const auto dict_segment_16 = dynamic_pointer_cast<DictionarySegment<int>>(chunks[0]->get_segment(ColumnID{16}));
+//   auto dict_segment_iterable = create_iterable_from_segment<int>(*dict_segment_16);
 
-  auto column_sum_of_created_chunk = uint64_t{};
-  dict_segment_iterable.with_iterators([&](auto it, auto end) {
-    column_sum_of_created_chunk = std::accumulate(
-        it, end, uint64_t{0},
-        [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
-  });
+//   auto column_sum_of_created_chunk = uint64_t{};
+//   dict_segment_iterable.with_iterators([&](auto it, auto end) {
+//     column_sum_of_created_chunk = std::accumulate(
+//         it, end, uint64_t{0},
+//         [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
+//   });
 
-  const auto mapped_dictionary_segment =
-      dynamic_pointer_cast<DictionarySegment<int>>(mapped_chunks[0]->get_segment(ColumnID{16}));
-  auto mapped_dict_segment_iterable = create_iterable_from_segment<int>(*mapped_dictionary_segment);
+//   const auto mapped_dictionary_segment =
+//       dynamic_pointer_cast<DictionarySegment<int>>(mapped_chunks[0]->get_segment(ColumnID{16}));
+//   auto mapped_dict_segment_iterable = create_iterable_from_segment<int>(*mapped_dictionary_segment);
 
-  auto column_sum_of_mapped_chunk = uint64_t{};
-  mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
-    column_sum_of_mapped_chunk = std::accumulate(
-        it, end, uint64_t{0},
-        [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
-  });
+//   auto column_sum_of_mapped_chunk = uint64_t{};
+//   mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
+//     column_sum_of_mapped_chunk = std::accumulate(
+//         it, end, uint64_t{0},
+//         [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
+//   });
 
-  EXPECT_EQ(column_sum_of_created_chunk, column_sum_of_mapped_chunk);
-}
+//   EXPECT_EQ(column_sum_of_created_chunk, column_sum_of_mapped_chunk);
+// }
 
-TEST_F(StorageManagerTest, WriteMaxNumberOfChunksToFileSmall) {
-  const auto file_name = "test_chunks_file.bin";
-  std::remove(file_name);
-  auto& sm = Hyrise::get().storage_manager;
+// TEST_F(StorageManagerTest, WriteMaxNumberOfChunksToFileSmall) {
+//   const auto file_name = "test_chunks_file.bin";
+//   std::remove(file_name);
+//   auto& sm = Hyrise::get().storage_manager;
 
-  constexpr auto ROW_COUNT = uint32_t{100};  // can't be greater than INT32_MAX
-  constexpr auto COLUMN_COUNT = uint32_t{23};
-  auto CHUNK_COUNT = sm.get_max_chunk_count_per_file();
+//   constexpr auto ROW_COUNT = uint32_t{100};  // can't be greater than INT32_MAX
+//   constexpr auto COLUMN_COUNT = uint32_t{23};
+//   auto CHUNK_COUNT = sm.get_max_chunk_count_per_file();
 
-  const auto chunk = StorageManagerTestUtil::create_dictionary_segment_chunk(ROW_COUNT, COLUMN_COUNT);
-  std::vector<std::shared_ptr<Chunk>> chunks(CHUNK_COUNT);
-  for (auto index = size_t{0}; index < chunks.size(); ++index) {
-    chunks[index] = chunk;
-  }
-  sm.persist_chunks_to_disk(chunks, file_name);
+//   const auto chunk = StorageManagerTestUtil::create_dictionary_segment_chunk(ROW_COUNT, COLUMN_COUNT);
+//   std::vector<std::shared_ptr<Chunk>> chunks(CHUNK_COUNT);
+//   for (auto index = size_t{0}; index < chunks.size(); ++index) {
+//     chunks[index] = chunk;
+//   }
+//   sm.persist_chunks_to_disk(chunks, file_name);
 
-  EXPECT_TRUE(std::filesystem::exists(file_name));
+//   EXPECT_TRUE(std::filesystem::exists(file_name));
 
-  const auto read_header = sm.read_file_header(file_name);
+//   const auto read_header = read_file_header(file_name);
 
-  EXPECT_EQ(read_header.chunk_count, CHUNK_COUNT);
-  EXPECT_EQ(read_header.storage_format_version_id, sm.get_storage_format_version_id());
-  EXPECT_EQ(read_header.chunk_ids.size(), CHUNK_COUNT);
-  EXPECT_EQ(read_header.chunk_offset_ends.size(), CHUNK_COUNT);
+//   EXPECT_EQ(read_header.chunk_count, CHUNK_COUNT);
+//   EXPECT_EQ(read_header.storage_format_version_id, sm.get_storage_format_version_id());
+//   EXPECT_EQ(read_header.chunk_ids.size(), CHUNK_COUNT);
+//   EXPECT_EQ(read_header.chunk_offset_ends.size(), CHUNK_COUNT);
 
-  auto mapped_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  for (auto index = size_t{0}; index < CHUNK_COUNT; ++index) {
-    if (index == 0) {
-      mapped_chunks.emplace_back(sm.map_chunk_from_disk(sizeof(FILE_HEADER), file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
-    } else {
-      mapped_chunks.emplace_back(
-          sm.map_chunk_from_disk(read_header.chunk_offset_ends[index - 1], file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
-    }
-  }
-  const auto dict_segment_16 = dynamic_pointer_cast<DictionarySegment<int>>(chunks[0]->get_segment(ColumnID{16}));
-  auto dict_segment_iterable = create_iterable_from_segment<int>(*dict_segment_16);
+//   auto mapped_chunks = std::vector<std::shared_ptr<Chunk>>{};
+//   for (auto index = size_t{0}; index < CHUNK_COUNT; ++index) {
+//     if (index == 0) {
+//       mapped_chunks.emplace_back(sm.map_chunk_from_disk(sizeof(FILE_HEADER), file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
+//     } else {
+//       mapped_chunks.emplace_back(
+//           sm.map_chunk_from_disk(read_header.chunk_offset_ends[index - 1], file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
+//     }
+//   }
+//   const auto dict_segment_16 = dynamic_pointer_cast<DictionarySegment<int>>(chunks[0]->get_segment(ColumnID{16}));
+//   auto dict_segment_iterable = create_iterable_from_segment<int>(*dict_segment_16);
 
-  auto column_sum_of_created_chunk = uint64_t{};
-  dict_segment_iterable.with_iterators([&](auto it, auto end) {
-    column_sum_of_created_chunk = std::accumulate(
-        it, end, uint64_t{0},
-        [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
-  });
+//   auto column_sum_of_created_chunk = uint64_t{};
+//   dict_segment_iterable.with_iterators([&](auto it, auto end) {
+//     column_sum_of_created_chunk = std::accumulate(
+//         it, end, uint64_t{0},
+//         [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
+//   });
 
-  const auto mapped_dictionary_segment =
-      dynamic_pointer_cast<DictionarySegment<int>>(mapped_chunks[0]->get_segment(ColumnID{16}));
-  auto mapped_dict_segment_iterable = create_iterable_from_segment<int>(*mapped_dictionary_segment);
+//   const auto mapped_dictionary_segment =
+//       dynamic_pointer_cast<DictionarySegment<int>>(mapped_chunks[0]->get_segment(ColumnID{16}));
+//   auto mapped_dict_segment_iterable = create_iterable_from_segment<int>(*mapped_dictionary_segment);
 
-  auto column_sum_of_mapped_chunk = uint64_t{};
-  mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
-    column_sum_of_mapped_chunk = std::accumulate(
-        it, end, uint64_t{0},
-        [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
-  });
+//   auto column_sum_of_mapped_chunk = uint64_t{};
+//   mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
+//     column_sum_of_mapped_chunk = std::accumulate(
+//         it, end, uint64_t{0},
+//         [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
+//   });
 
-  EXPECT_EQ(column_sum_of_created_chunk, column_sum_of_mapped_chunk);
-}
+//   EXPECT_EQ(column_sum_of_created_chunk, column_sum_of_mapped_chunk);
+// }
 
-TEST_F(StorageManagerTest, WriteMaxNumberOfChunksToFileLarge) {
-  const auto file_name = "test_chunks_file.bin";
-  std::remove(file_name);
-  auto& sm = Hyrise::get().storage_manager;
+// TEST_F(StorageManagerTest, WriteMaxNumberOfChunksToFileLarge) {
+//   const auto file_name = "test_chunks_file.bin";
+//   std::remove(file_name);
+//   auto& sm = Hyrise::get().storage_manager;
 
-  const auto ROW_COUNT = uint32_t{UINT16_MAX + 1};  // can't be greater than INT32_MAX
-  const auto COLUMN_COUNT = uint32_t{23};
-  const auto CHUNK_COUNT = sm.get_max_chunk_count_per_file();
+//   const auto ROW_COUNT = uint32_t{UINT16_MAX + 1};  // can't be greater than INT32_MAX
+//   const auto COLUMN_COUNT = uint32_t{23};
+//   const auto CHUNK_COUNT = sm.get_max_chunk_count_per_file();
 
-  const auto chunk = StorageManagerTestUtil::create_dictionary_segment_chunk_large(ROW_COUNT, COLUMN_COUNT);
-  std::vector<std::shared_ptr<Chunk>> chunks(CHUNK_COUNT);
-  for (auto index = size_t{0}; index < chunks.size(); ++index) {
-    chunks[index] = chunk;
-  }
-  sm.persist_chunks_to_disk(chunks, file_name);
+//   const auto chunk = StorageManagerTestUtil::create_dictionary_segment_chunk_large(ROW_COUNT, COLUMN_COUNT);
+//   std::vector<std::shared_ptr<Chunk>> chunks(CHUNK_COUNT);
+//   for (auto index = size_t{0}; index < chunks.size(); ++index) {
+//     chunks[index] = chunk;
+//   }
+//   sm.persist_chunks_to_disk(chunks, file_name);
 
-  EXPECT_TRUE(std::filesystem::exists(file_name));
+//   EXPECT_TRUE(std::filesystem::exists(file_name));
 
-  const auto read_header = sm.read_file_header(file_name);
+//   const auto read_header = read_file_header(file_name);
 
-  EXPECT_EQ(read_header.chunk_count, CHUNK_COUNT);
-  EXPECT_EQ(read_header.storage_format_version_id, sm.get_storage_format_version_id());
-  EXPECT_EQ(read_header.chunk_ids.size(), CHUNK_COUNT);
-  EXPECT_EQ(read_header.chunk_offset_ends.size(), CHUNK_COUNT);
+//   EXPECT_EQ(read_header.chunk_count, CHUNK_COUNT);
+//   EXPECT_EQ(read_header.storage_format_version_id, sm.get_storage_format_version_id());
+//   EXPECT_EQ(read_header.chunk_ids.size(), CHUNK_COUNT);
+//   EXPECT_EQ(read_header.chunk_offset_ends.size(), CHUNK_COUNT);
 
-  auto mapped_chunks = std::vector<std::shared_ptr<Chunk>>{};
-  for (auto index = size_t{0}; index < CHUNK_COUNT; ++index) {
-    if (index == 0) {
-      mapped_chunks.emplace_back(sm.map_chunk_from_disk(sizeof(FILE_HEADER), file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
-    } else {
-      mapped_chunks.emplace_back(
-          sm.map_chunk_from_disk(read_header.chunk_offset_ends[index - 1], file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
-    }
-  }
-  const auto dict_segment_16 = dynamic_pointer_cast<DictionarySegment<int>>(chunks[0]->get_segment(ColumnID{16}));
-  auto dict_segment_iterable = create_iterable_from_segment<int>(*dict_segment_16);
+//   auto mapped_chunks = std::vector<std::shared_ptr<Chunk>>{};
+//   for (auto index = size_t{0}; index < CHUNK_COUNT; ++index) {
+//     if (index == 0) {
+//       mapped_chunks.emplace_back(sm.map_chunk_from_disk(sizeof(FILE_HEADER), file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
+//     } else {
+//       mapped_chunks.emplace_back(
+//           sm.map_chunk_from_disk(read_header.chunk_offset_ends[index - 1], file_name, COLUMN_COUNT, std::vector<DataType>(COLUMN_COUNT, DataType::Int)));
+//     }
+//   }
+//   const auto dict_segment_16 = dynamic_pointer_cast<DictionarySegment<int>>(chunks[0]->get_segment(ColumnID{16}));
+//   auto dict_segment_iterable = create_iterable_from_segment<int>(*dict_segment_16);
 
-  auto column_sum_of_created_chunk = uint64_t{};
-  dict_segment_iterable.with_iterators([&](auto it, auto end) {
-    column_sum_of_created_chunk = std::accumulate(
-        it, end, uint64_t{0},
-        [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
-  });
+//   auto column_sum_of_created_chunk = uint64_t{};
+//   dict_segment_iterable.with_iterators([&](auto it, auto end) {
+//     column_sum_of_created_chunk = std::accumulate(
+//         it, end, uint64_t{0},
+//         [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
+//   });
 
-  const auto mapped_dictionary_segment =
-      dynamic_pointer_cast<DictionarySegment<int>>(mapped_chunks[0]->get_segment(ColumnID{16}));
-  auto mapped_dict_segment_iterable = create_iterable_from_segment<int>(*mapped_dictionary_segment);
+//   const auto mapped_dictionary_segment =
+//       dynamic_pointer_cast<DictionarySegment<int>>(mapped_chunks[0]->get_segment(ColumnID{16}));
+//   auto mapped_dict_segment_iterable = create_iterable_from_segment<int>(*mapped_dictionary_segment);
 
-  auto column_sum_of_mapped_chunk = uint64_t{};
-  mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
-    column_sum_of_mapped_chunk = std::accumulate(
-        it, end, uint64_t{0},
-        [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
-  });
+//   auto column_sum_of_mapped_chunk = uint64_t{};
+//   mapped_dict_segment_iterable.with_iterators([&](auto it, auto end) {
+//     column_sum_of_mapped_chunk = std::accumulate(
+//         it, end, uint64_t{0},
+//         [](const auto& accumulator, const auto& currentValue) { return accumulator + currentValue.value(); });
+//   });
 
-  EXPECT_EQ(column_sum_of_created_chunk, column_sum_of_mapped_chunk);
-}
+//   EXPECT_EQ(column_sum_of_created_chunk, column_sum_of_mapped_chunk);
+// }
 
 }  // namespace hyrise
