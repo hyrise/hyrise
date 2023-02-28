@@ -65,10 +65,10 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
   ofstream.write(reinterpret_cast<const char*>(values.data()), values.size() * sizeof(T));
 }
 
-template <typename T>
-void export_values(std::ofstream& ofstream, const std::span<const T>& data_span) {
-  ofstream.write(reinterpret_cast<const char*>(data_span.data()), data_span.size() * sizeof(T));
-}
+//template <typename T>
+//void export_values(std::ofstream& ofstream, const std::span<const T>& data_span) {
+//  ofstream.write(reinterpret_cast<const char*>(data_span.data()), data_span.size() * sizeof(T));
+//}
 
 void export_values(std::ofstream& ofstream, const FixedStringSpan& data_span) {
   ofstream.write(reinterpret_cast<const char*>(data_span.data()), data_span.size() * data_span.string_length());
@@ -222,7 +222,11 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 
   // Write the dictionary size and dictionary
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
-  export_values(ofstream, *dictionary_segment.dictionary());
+  //TODO: Evaluate provisorial fix. As opposed to the mmap-based persistence implementation this also needs to be
+  //able to persist <String>DictionarySegments, a different span-based export_values function would be needed.
+  const auto& dictionary = dictionary_segment.dictionary();
+  pmr_vector<T> dictionary_vector{dictionary->begin(), dictionary->end()};
+  export_values(ofstream, dictionary_vector);
 
   // Write attribute vector
   _export_compressed_vector(ofstream, *dictionary_segment.compressed_vector_type(),
