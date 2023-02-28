@@ -106,14 +106,18 @@ TEST_F(OptimizerTest, AllowsSubqueryReuse) {
   PredicateNode::make(between_inclusive_(y, 1, 3),
     node_b);
 
-  const auto min_x =
-  AggregateNode::make(expression_vector(), expression_vector(min_(x)),
+  const auto aggregate_node =
+  AggregateNode::make(expression_vector(), expression_vector(min_(x), max_(x)),
     predicate_node);
+
+  const auto min_x =
+  ProjectionNode::make(expression_vector(min_(x)),
+    aggregate_node);
   const auto subquery_min_x = lqp_subquery_(min_x);
 
   const auto max_x =
-  AggregateNode::make(expression_vector(), expression_vector(max_(x)),
-    predicate_node);
+  ProjectionNode::make(expression_vector(max_(x)),
+    aggregate_node);
   const auto subquery_max_x = lqp_subquery_(max_x);
 
   auto lqp =
