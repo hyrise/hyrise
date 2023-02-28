@@ -29,6 +29,134 @@
 #include "strategy/subquery_to_join_rule.hpp"
 #include "utils/timer.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+std::vector<std::shared_ptr<const AbstractLQPNode>> uncorrelated_subqueries_per_node(const auto& node) {
+  auto uncorrelated_subqueries = std::vector<std::shared_ptr<const AbstractLQPNode>>{};
+  for (const auto& expression : node->node_expressions) {
+    visit_expression(expression, [&](const auto& sub_expression) {
+      const auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(sub_expression);
+      if (subquery_expression && !subquery_expression->is_correlated()) {
+        uncorrelated_subqueries.emplace_back(subquery_expression->lqp);
+      }
+
+      return ExpressionVisitation::VisitArguments;
+    });
+  }
+
+  return uncorrelated_subqueries;
+}
+
+void assign_node_to_lqp_recursively(const auto& subquery_root_node, const auto& root_node, auto& nodes_by_lqp) {
+  visit_lqp(subquery_root_node, [&](auto& node) {
+    nodes_by_lqp[root_node].emplace(node);
+    for (const auto& uncorrelated_subquery : uncorrelated_subqueries_per_node(node)) {
+      assign_node_to_lqp_recursively(uncorrelated_subquery, root_node, nodes_by_lqp);
+    }
+    return LQPVisitation::VisitInputs;
+  });
+}
+
+void validate_lqp_with_uncorrelated_subqueries(const auto& lqp, const auto& root_lqp, const auto& nodes_by_lqp) {
+  // If you can think of a way in which an LQP can be corrupt, please add it!
+  // (1) Make sure that all outputs found in an LQP are also part of the same LQP (excluding uncorrelated subqueries).
+  // (2) Make sure each node has the number of inputs expected for that node type.
+  // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP.
+  visit_lqp(lqp, [&](const auto& node) {
+    // Check that all outputs are part of the LQP.
+    const auto outputs = node->outputs();
+    for (const auto& output : outputs) {
+      // LQP nodes should only be part of a single LQP and all of their outputs should be part of the same LQP. If you
+      // run into this assertion as part of a new test, there is a good chance that you are using parts of the LQP
+      // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
+      // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
+      // enforced when rules are executed through the optimizer, not when tests call the rule directly.
+      Assert(nodes_by_lqp.at(root_lqp).contains(output), std::string{"Output `"} + output->description() +
+                                                             "` of node `" + node->description() +
+                                                             "` not found in LQP.");
+
+      for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
+        if (other_lqp == root_lqp) {
+          continue;
+        }
+        Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
+                                          node->description() + "` found in different LQP.");
+      }
+    }
+
+    // Check that all LQPColumnExpressions in the node can be resolved. This mostly guards against expired columns
+    // leaving an optimizer rule. It does not guarantee that it the LQPColumnExpressions are correctly returned from one
+    // of the (transitive) inputs of `node`. If that is not the case, that will be caught by the LQPTranslator, at the
+    // latest. However, feel free to add that check here.
+    for (const auto& node_expression : node->node_expressions) {
+      visit_expression(node_expression, [&](const auto& sub_expression) {
+        if (sub_expression->type != ExpressionType::LQPColumn) {
+          return ExpressionVisitation::VisitArguments;
+        }
+
+        const auto original_node = static_cast<LQPColumnExpression&>(*sub_expression).original_node.lock();
+        Assert(original_node, "LQPColumnExpression is expired, LQP is invalid.");
+        Assert(nodes_by_lqp.at(root_lqp).contains(original_node),
+               std::string{"LQPColumnExpression "} + sub_expression->as_column_name() + " cannot be resolved.");
+        return ExpressionVisitation::VisitArguments;
+      });
+    }
+
+    // Check that the node has the expected number of inputs.
+    auto num_expected_inputs = size_t{0};
+    switch (node->type) {
+      case LQPNodeType::CreatePreparedPlan:
+      case LQPNodeType::CreateView:
+      case LQPNodeType::DummyTable:
+      case LQPNodeType::DropView:
+      case LQPNodeType::DropTable:
+      case LQPNodeType::Import:
+      case LQPNodeType::StaticTable:
+      case LQPNodeType::StoredTable:
+      case LQPNodeType::Mock:
+        num_expected_inputs = 0;
+        break;
+
+      case LQPNodeType::Aggregate:
+      case LQPNodeType::Alias:
+      case LQPNodeType::CreateTable:
+      case LQPNodeType::Delete:
+      case LQPNodeType::Export:
+      case LQPNodeType::Insert:
+      case LQPNodeType::Limit:
+      case LQPNodeType::Predicate:
+      case LQPNodeType::Projection:
+      case LQPNodeType::Root:
+      case LQPNodeType::Sort:
+      case LQPNodeType::Validate:
+        num_expected_inputs = 1;
+        break;
+
+      case LQPNodeType::Join:
+      case LQPNodeType::ChangeMetaTable:
+      case LQPNodeType::Update:
+      case LQPNodeType::Union:
+      case LQPNodeType::Intersect:
+      case LQPNodeType::Except:
+        num_expected_inputs = 2;
+        break;
+    }
+    Assert(node->input_count() == num_expected_inputs, std::string{"Node "} + node->description() + " has " +
+                                                           std::to_string(node->input_count()) + " inputs, while " +
+                                                           std::to_string(num_expected_inputs) + " were expected.");
+
+    for (const auto& uncorrelated_subquery : uncorrelated_subqueries_per_node(node)) {
+      validate_lqp_with_uncorrelated_subqueries(uncorrelated_subquery, root_lqp, nodes_by_lqp);
+    }
+
+    return LQPVisitation::VisitInputs;
+  });
+}
+
+}  // namespace
+
 namespace hyrise {
 
 /**
@@ -123,7 +251,7 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
   // pointer to a node that is not even part of the plan anymore after optimization. Thus, callers of this method need
   // to relinquish their ownership (i.e., move their shared_ptr into the method) and take ownership of the resulting
   // optimized plan.
-  Assert(input.use_count() == 1, "Optimizer should have exclusive ownership of plan");
+  Assert(input.use_count() == 1, "Optimizer should have exclusive ownership of plan.");
 
   // Add explicit root node, so the rules can freely change the tree below it without having to maintain a root node
   // to return to the Optimizer
@@ -143,9 +271,9 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
       rule_durations->emplace_back(OptimizerRuleMetrics{rule->name(), rule_duration});
     }
 
-    // if constexpr (HYRISE_DEBUG) {
-    //   validate_lqp(root_node);
-    // }
+    if constexpr (HYRISE_DEBUG) {
+      validate_lqp(root_node);
+    }
   }
 
   // Remove LogicalPlanRootNode
@@ -156,111 +284,24 @@ std::shared_ptr<AbstractLQPNode> Optimizer::optimize(
 }
 
 void Optimizer::validate_lqp(const std::shared_ptr<AbstractLQPNode>& root_node) {
-  // If you can think of a way in which an LQP can be corrupt, please add it!
-
-  // First, collect all LQPs (the main LQP and all subqueries)
+  // First, collect all LQPs (the main LQP and all uncorrelated subqueries).
   auto lqps = std::vector<std::shared_ptr<AbstractLQPNode>>{root_node};
-  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node);
-  for (const auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_node, true);
+  for (const auto& [lqp, _] : subquery_expressions_by_lqp) {
     lqps.emplace_back(lqp);
   }
 
-  std::unordered_map<std::shared_ptr<const AbstractLQPNode>, std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>
-      nodes_by_lqp;
+  auto nodes_by_lqp = std::unordered_map<std::shared_ptr<const AbstractLQPNode>,
+                                         std::unordered_set<std::shared_ptr<const AbstractLQPNode>>>{};
+  // Second, assign each LQPNode to its LQP. Uncorrelated subqueries are treated like normal LQPNodes since their output
+  // can also be used multiple times.
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&](const auto& node) {
-      nodes_by_lqp[lqp].emplace(node);
-      return LQPVisitation::VisitInputs;
-    });
+    assign_node_to_lqp_recursively(lqp, lqp, nodes_by_lqp);
   }
 
-  // (1) Make sure that all outputs found in an LQP are also part of the same LQP (excluding subqueries)
-  // (2) Make sure each node has the number of inputs expected for that node type
-  // (3) Make sure that for all LQPColumnExpressions, the original_node is part of the LQP
+  // Third, check that each of the LQPs is valid.
   for (const auto& lqp : lqps) {
-    visit_lqp(lqp, [&](const auto& node) {
-      // Check that all outputs are part of the LQP
-      const auto outputs = node->outputs();
-      for (const auto& output : outputs) {
-        // LQP nodes should only be part of a single LQP and all of their outputs should be part of the same LQP. If you
-        // run into this assertion as part of a new test, there is a good chance that you are using parts of the LQP
-        // outside of the LQP that is currently optimized. For example, if you create a bunch of LQP nodes in the test's
-        // SetUp method but these are not used in the current LQP, this can cause this assertion to fail. This is only
-        // enforced when rules are executed through the optimizer, not when tests call the rule directly.
-        Assert(nodes_by_lqp[lqp].contains(output), std::string{"Output `"} + output->description() + "` of node `" +
-                                                       node->description() + "` not found in LQP");
-
-        for (const auto& [other_lqp, nodes] : nodes_by_lqp) {
-          if (other_lqp == lqp) {
-            continue;
-          }
-          Assert(!nodes.contains(node), std::string{"Output `"} + output->description() + "` of node `" +
-                                            node->description() + "` found in different LQP");
-        }
-      }
-
-      // Check that all LQPColumnExpressions in the node can be resolved. This mostly guards against expired columns
-      // leaving an optimizer rule. It does not guarantee that it the LQPColumnExpressions are correctly returned from
-      // one of the (transitive) inputs of `node`. If that is not the case, that will be caught by the LQPTranslator,
-      // at the latest. However, feel free to add that check here.
-      for (const auto& node_expression : node->node_expressions) {
-        visit_expression(node_expression, [&](const auto& sub_expression) {
-          if (sub_expression->type != ExpressionType::LQPColumn) {
-            return ExpressionVisitation::VisitArguments;
-          }
-          const auto original_node = dynamic_cast<LQPColumnExpression&>(*sub_expression).original_node.lock();
-          Assert(original_node, "LQPColumnExpression is expired, LQP is invalid");
-          Assert(nodes_by_lqp[lqp].contains(original_node),
-                 std::string{"LQPColumnExpression "} + sub_expression->as_column_name() + " can not be resolved");
-          return ExpressionVisitation::VisitArguments;
-        });
-      }
-
-      // Check that the node has the expected number of inputs
-      auto num_expected_inputs = size_t{0};
-      switch (node->type) {
-        case LQPNodeType::CreatePreparedPlan:
-        case LQPNodeType::CreateView:
-        case LQPNodeType::DummyTable:
-        case LQPNodeType::DropView:
-        case LQPNodeType::DropTable:
-        case LQPNodeType::Import:
-        case LQPNodeType::StaticTable:
-        case LQPNodeType::StoredTable:
-        case LQPNodeType::Mock:
-          num_expected_inputs = 0;
-          break;
-
-        case LQPNodeType::Aggregate:
-        case LQPNodeType::Alias:
-        case LQPNodeType::CreateTable:
-        case LQPNodeType::Delete:
-        case LQPNodeType::Export:
-        case LQPNodeType::Insert:
-        case LQPNodeType::Limit:
-        case LQPNodeType::Predicate:
-        case LQPNodeType::Projection:
-        case LQPNodeType::Root:
-        case LQPNodeType::Sort:
-        case LQPNodeType::Validate:
-          num_expected_inputs = 1;
-          break;
-
-        case LQPNodeType::Join:
-        case LQPNodeType::ChangeMetaTable:
-        case LQPNodeType::Update:
-        case LQPNodeType::Union:
-        case LQPNodeType::Intersect:
-        case LQPNodeType::Except:
-          num_expected_inputs = 2;
-          break;
-      }
-      Assert(node->input_count() == num_expected_inputs, std::string{"Node "} + node->description() + " has " +
-                                                             std::to_string(node->input_count()) + " inputs, while " +
-                                                             std::to_string(num_expected_inputs) + " were expected");
-
-      return LQPVisitation::VisitInputs;
-    });
+    validate_lqp_with_uncorrelated_subqueries(lqp, lqp, nodes_by_lqp);
   }
 }
 

@@ -103,7 +103,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes, const bool only_correlated) {
   if (!node || !visited_nodes.emplace(node).second) {
     return;
   }
@@ -115,25 +115,29 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
         return ExpressionVisitation::VisitArguments;
       }
 
-      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-        if (*lqp == *subquery_expression->lqp) {
-          subquery_expressions.emplace_back(subquery_expression);
-          return ExpressionVisitation::DoNotVisitArguments;
+      if (subquery_expression->is_correlated() || !only_correlated) {
+        for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+          if (*lqp == *subquery_expression->lqp) {
+            subquery_expressions.emplace_back(subquery_expression);
+            return ExpressionVisitation::DoNotVisitArguments;
+          }
         }
+        subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
+                                            std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
       }
-      subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
-                                          std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
       recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
-                                                          visited_nodes);
+                                                          visited_nodes, only_correlated);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes,
+                                                      only_correlated);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes,
+                                                      only_correlated);
 }
 
 bool first_expressions_match(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
@@ -154,10 +158,11 @@ bool first_expressions_match(const std::vector<std::shared_ptr<AbstractExpressio
 
 namespace hyrise {
 
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
+                                                                 const bool only_correlated) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
   auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
-  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes, only_correlated);
 
   return subqueries_by_lqp;
 }
