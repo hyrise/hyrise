@@ -223,7 +223,8 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
   // Write the dictionary size and dictionary
   export_value(ofstream, static_cast<ValueID::base_type>(dictionary_segment.dictionary()->size()));
   //TODO: Evaluate provisorial fix. As opposed to the mmap-based persistence implementation this also needs to be
-  //able to persist <String>DictionarySegments, a different span-based export_values function would be needed.
+  //able to persist <String>DictionarySegments, a different span-based export string values function would be needed.
+  //Analogous to export_values function specialized to pmr_vector<pmr_string>.
   const auto& dictionary = dictionary_segment.dictionary();
   pmr_vector<T> dictionary_vector{dictionary->begin(), dictionary->end()};
   export_values(ofstream, dictionary_vector);
