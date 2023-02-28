@@ -25,7 +25,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   explicit FixedStringDictionarySegment(const std::shared_ptr<const FixedStringVector>& dictionary,
                                         const std::shared_ptr<const BaseCompressedVector>& attribute_vector);
 
-  explicit FixedStringDictionarySegment(const uint32_t* start_address);
+  explicit FixedStringDictionarySegment(const std::byte* start_address);
 
   // returns an underlying dictionary
   std::shared_ptr<const FixedStringSpan> fixed_string_dictionary() const;
@@ -84,7 +84,7 @@ class FixedStringDictionarySegment : public BaseDictionarySegment {
   static constexpr auto STRING_LENGTH_OFFSET_INDEX = uint32_t{1};
   static constexpr auto DICTIONARY_SIZE_OFFSET_INDEX = uint32_t{2};
   static constexpr auto ATTRIBUTE_VECTOR_OFFSET_INDEX = uint32_t{3};
-  static constexpr auto HEADER_OFFSET_INDEX = uint32_t{4};
+  static constexpr auto HEADER_OFFSET_BYTES = uint32_t{16};
   static constexpr auto NUM_BYTES_32_BIT_ENCODING = uint32_t{4};
   static constexpr auto NUM_BYTES_16_BIT_ENCODING = uint32_t{2};
 };
