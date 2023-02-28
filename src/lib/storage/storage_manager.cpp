@@ -371,8 +371,7 @@ void export_values(const FixedStringSpan& data_span, std::string file_name) {
 
 // needed for attribute vector which is stored in a compact manner
 void export_compact_vector(const pmr_compact_vector& values, std::string file_name) {
-  //adapted to uint32_t format of later created map (see comment in `write_dict_segment_to_disk`)
-  export_value(static_cast<uint32_t>(values.bits()), file_name);
+  export_value(values.bits(), file_name);
   std::ofstream ofstream(file_name, std::ios::binary | std::ios::app);
   ofstream.write(reinterpret_cast<const char*>(values.get()), static_cast<int64_t>(values.bytes()));
   ofstream.close();
@@ -677,21 +676,21 @@ FILE_HEADER StorageManager::read_file_header(const std::string& filename) {
   auto fd = int32_t{};
 
   Assert((fd = open(filename.c_str(), O_RDONLY)) >= 0, "Open error");
-  auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, _file_header_bytes, PROT_READ, MAP_PRIVATE, fd, off_t{0}));
-  Assert((map != MAP_FAILED), "Mapping Failed");
+  auto* persisted_header = reinterpret_cast<uint32_t*>(mmap(NULL, _file_header_bytes, PROT_READ, MAP_PRIVATE, fd, off_t{0}));
+  Assert((persisted_header != MAP_FAILED), "Mapping Failed");
   close(fd);
 
-  file_header.storage_format_version_id = map[0];
-  file_header.chunk_count = map[1];
+  file_header.storage_format_version_id = persisted_header[0];
+  file_header.chunk_count = persisted_header[1];
 
   const auto header_constants_size = element_index(_format_version_id_bytes + _chunk_count_bytes, 4);
 
   for (auto header_index = size_t{0}; header_index < file_header.chunk_count; ++header_index) {
-    file_header.chunk_ids[header_index] = map[header_constants_size + header_index];
+    file_header.chunk_ids[header_index] = persisted_header[header_constants_size + header_index];
     file_header.chunk_offset_ends[header_index] =
-        map[header_constants_size + StorageManager::_chunk_count + header_index];
+      persisted_header[header_constants_size + StorageManager::_chunk_count + header_index];
   }
-  munmap(map, _file_header_bytes);
+  munmap(persisted_header, _file_header_bytes);
 
   return file_header;
 }
