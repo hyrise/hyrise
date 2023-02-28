@@ -467,7 +467,7 @@ void Table::persist_chunk(ChunkID chunk_id) {
   //TODO: It would be nicer to just pass the table and let the StorageManager handle the rest.
   //And not depend on name registration happening earlier in StorageManager.
   Assert(!_name.empty(), "Only tables registered with StorageManager can be persisted.");
-  storage_manager.replace_chunk_with_mmaped_chunk(_chunks[chunk_id], chunk_id, _name);
+  storage_manager.replace_chunk_with_persisted_chunk(_chunks[chunk_id], chunk_id, _name);
 }
 
 }  // namespace hyrise

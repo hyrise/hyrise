@@ -96,12 +96,11 @@ class StorageManager : public Noncopyable {
   void export_all_tables_as_csv(const std::string& path);
 
   void persist_chunks_to_disk(const std::vector<std::shared_ptr<Chunk>>& chunks, const std::string& file_name);
-  uint32_t persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id, const std::string& file_name);
+  std::pair<uint32_t, uint32_t> persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id, const std::string& file_name);
 
-  void replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name);
+  void replace_chunk_with_persisted_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name);
 
-  FILE_HEADER read_file_header(const std::string& filename);
-  std::shared_ptr<Chunk> map_chunk_from_disk(const uint32_t chunk_offset_end, const std::string& filename,
+  std::shared_ptr<Chunk> map_chunk_from_disk(const uint32_t chunk_offset_end, const uint32_t chunk_bytes, const std::string& filename,
                                              const uint32_t segment_count, std::vector<DataType> column_definitions);
 
   uint32_t get_max_chunk_count_per_file() {
@@ -150,6 +149,8 @@ class StorageManager : public Noncopyable {
 
   CHUNK_HEADER read_chunk_header(const std::string& filename, const uint32_t segment_count,
                                  const uint32_t chunk_offset_begin);
+
+  FILE_HEADER read_file_header(const std::string& filename);
 
   std::vector<uint32_t> calculate_segment_offset_ends(const std::shared_ptr<Chunk> chunk);
   template <typename T> void write_dict_segment_to_disk(const std::shared_ptr<DictionarySegment<T>> segment, const std::string& file_name);

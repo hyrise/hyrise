@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <unistd.h>
 
 #include "hyrise.hpp"
 #include "import_export/binary/binary_writer.hpp"
@@ -294,6 +295,7 @@ std::vector<uint32_t> StorageManager::calculate_segment_offset_ends(const std::s
       using ColumnDataType = typename decltype(type)::type;
       if constexpr(std::is_same<ColumnDataType, pmr_string>::value) {
         offset_end += _segment_header_bytes + 4;
+        //TODO: this should be encapsulated in a size_bytes() function
         const auto fixed_string_dict_segment = std::dynamic_pointer_cast<FixedStringDictionarySegment<ColumnDataType>>(abstract_segment);
         Assert(fixed_string_dict_segment, "Trying to map a non-FixedString String DictionarySegment");
         const auto fixed_dict_size = byte_index(fixed_string_dict_segment->fixed_string_dictionary()->size(), fixed_string_dict_segment->fixed_string_dictionary()->string_length());
@@ -562,7 +564,7 @@ void StorageManager::persist_chunks_to_disk(const std::vector<std::shared_ptr<Ch
   // file_lock.release();
 }
 
-uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id,
+std::pair<uint32_t, uint32_t> StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chunk, ChunkID chunk_id,
                                            const std::string& file_name) {
 
     if (std::filesystem::exists(file_name)) {
@@ -584,7 +586,9 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
 
       write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
 
-      return file_prev_chunk_end_offset + _file_header_bytes;
+      const auto chunk_bytes = chunk_offset_end - file_prev_chunk_end_offset;
+      const auto chunk_start_offset = file_prev_chunk_end_offset + _file_header_bytes;
+      return std::make_pair(chunk_start_offset, chunk_bytes);
     }
 
     // create new file
@@ -607,7 +611,9 @@ uint32_t StorageManager::persist_chunk_to_file(const std::shared_ptr<Chunk> chun
 
     write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
 
-    return _file_header_bytes;
+    const auto chunk_bytes = chunk_offset_end;
+    const auto chunk_start_offset = _file_header_bytes;
+    return std::make_pair(chunk_start_offset, chunk_bytes);
 }
 
 void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::shared_ptr<Chunk>& mapped_chunk) {
@@ -666,16 +672,16 @@ void evaluate_mapped_chunk(const std::shared_ptr<Chunk>& chunk, const std::share
   std::cout << std::endl;
 }
 
-void StorageManager::replace_chunk_with_mmaped_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
+void StorageManager::replace_chunk_with_persisted_chunk(const std::shared_ptr<Chunk>& chunk, ChunkID chunk_id, const std::string& table_name) {
   // get current persistence_file for table
   const auto table_persistence_file = get_persistence_file_name(table_name);
   // persist chunk to disk
-  auto chunk_start_offset = persist_chunk_to_file(chunk, chunk_id, table_persistence_file);
+  auto [chunk_start_offset, chunk_bytes] = persist_chunk_to_file(chunk, chunk_id, table_persistence_file);
   _tables_current_persistence_file_mapping[table_name].current_chunk_count++;
 
   // map chunk from disk
   const auto column_definitions = _tables[table_name]->column_data_types();
-  auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, table_persistence_file, chunk->column_count(), column_definitions);
+  auto mapped_chunk = map_chunk_from_disk(chunk_start_offset, chunk_bytes, table_persistence_file, chunk->column_count(), column_definitions);
   evaluate_mapped_chunk(chunk, mapped_chunk);
 
   mapped_chunk->set_mvcc_data(chunk->mvcc_data());
@@ -726,8 +732,7 @@ CHUNK_HEADER StorageManager::read_chunk_header(const std::string& filename, cons
   auto fd = int32_t{};
   Assert((fd = open(filename.c_str(), O_RDONLY)) >= 0, "Opening of file failed.");
 
-  const auto file_bytes = std::filesystem::file_size(filename);
-  auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, file_bytes, PROT_READ, MAP_PRIVATE, fd, off_t{0}));
+  auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, _chunk_header_bytes(segment_count), PROT_READ, MAP_PRIVATE, fd, off_t{0}));
   Assert((map != MAP_FAILED), "Mapping of Chunk Failed.");
   close(fd);
 
@@ -740,27 +745,37 @@ CHUNK_HEADER StorageManager::read_chunk_header(const std::string& filename, cons
   return header;
 }
 
-std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_offset_end, const std::string& filename,
+std::shared_ptr<Chunk> StorageManager::map_chunk_from_disk(const uint32_t chunk_offset_begin, const uint32_t chunk_bytes, const std::string& filename,
                                                            const uint32_t segment_count, const std::vector<DataType> column_definitions) {
   auto segments = pmr_vector<std::shared_ptr<AbstractSegment>>{};
 
   auto fd = int32_t{};
   Assert((fd = open(filename.c_str(), O_RDONLY)) >= 0, "Opening of file failed.");
 
-  const auto file_bytes = std::filesystem::file_size(filename);
 
   // TODO: Remove unneccessary map on whole file
-  const auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, file_bytes, PROT_READ, MAP_PRIVATE, fd, off_t{0}));
+  // Step 1: Pass map around. [x] -> unnecessary.
+  // Step 1.2: Only map necessary part chunk of file! Currently we map chunks not as whole but separatedly, needs to be pagesize aligned [x]
+  // Step 2: Adapt map to std::byte & adapt accesses
+  // Step 3: Remove padding. (Maybe needs to be done to get step 2 running.)
+
+  const auto pagesize = getpagesize();
+
+  const auto difference_to_pagesize_alignment = chunk_offset_begin % pagesize;
+  const auto page_size_aligned_offset = chunk_offset_begin - difference_to_pagesize_alignment;
+
+  const auto* map = reinterpret_cast<uint32_t*>(mmap(NULL, chunk_bytes + difference_to_pagesize_alignment, PROT_READ, MAP_PRIVATE, fd, off_t{page_size_aligned_offset}));
+  map = map + difference_to_pagesize_alignment/4;
   Assert((map != MAP_FAILED), "Mapping of File Failed.");
   close(fd);
 
-  const auto chunk_header = read_chunk_header(filename, segment_count, chunk_offset_end);
+  const auto chunk_header = read_chunk_header(filename, segment_count, chunk_offset_begin);
 
   for (auto segment_index = size_t{0}; segment_index < segment_count; ++segment_index) {
-    auto segment_offset_begin = _chunk_header_bytes(segment_count) + chunk_offset_end;
+    auto segment_offset_begin = _chunk_header_bytes(segment_count);
 
     if (segment_index > 0) {
-      segment_offset_begin = chunk_header.segment_offset_ends[segment_index - 1] + chunk_offset_end;
+      segment_offset_begin = chunk_header.segment_offset_ends[segment_index - 1];
     }
 
     resolve_data_type(column_definitions[segment_index], [&](auto type) {
