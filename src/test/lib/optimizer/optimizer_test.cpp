@@ -62,7 +62,7 @@ TEST_F(OptimizerTest, RequiresOwnership) {
   EXPECT_THROW(optimizer->optimize(lqp), std::logic_error);
 }
 
-TEST_F(OptimizerTest, AssertsValidOutputs) {
+TEST_F(OptimizerTest, AssertsValidOutputsOutOfPlan) {
   // clang-format off
   auto lqp =
   ProjectionNode::make(expression_vector(add_(b, subquery_a)),
@@ -71,6 +71,19 @@ TEST_F(OptimizerTest, AssertsValidOutputs) {
   // clang-format on
 
   auto out_of_plan_node = LimitNode::make(value_(10), lqp->left_input());
+
+  EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
+}
+
+TEST_F(OptimizerTest, AssertsValidOutputsInDifferentPlan) {
+  // LimitNode is part of an uncorrelated and a correlated subquery.
+
+  // clang-format off
+  auto lqp =
+  PredicateNode::make(greater_than_(a, subquery_b),
+    PredicateNode::make(less_than_(a, lqp_subquery_(subquery_lqp_b)),
+      node_a));
+  // clang-format on
 
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
 }
@@ -91,9 +104,8 @@ TEST_F(OptimizerTest, AssertsInPlanReferences) {
   // clang-format off
   auto lqp =
   JoinNode::make(JoinMode::Inner, equals_(x, 1),
-    ProjectionNode::make(expression_vector(add_(b, subquery_a)),
-      PredicateNode::make(greater_than_(a, subquery_b),
-        node_a)));
+    node_a,
+    node_a);
   // clang-format on
 
   EXPECT_THROW(Optimizer::validate_lqp(lqp), std::logic_error);
@@ -102,13 +114,10 @@ TEST_F(OptimizerTest, AssertsInPlanReferences) {
 TEST_F(OptimizerTest, AllowsSubqueryReuse) {
   subquery_lqp_a->set_left_input(nullptr);
   // clang-format off
-  const auto predicate_node =
-  PredicateNode::make(between_inclusive_(y, 1, 3),
-    node_b);
-
   const auto aggregate_node =
   AggregateNode::make(expression_vector(), expression_vector(min_(x), max_(x)),
-    predicate_node);
+    PredicateNode::make(between_inclusive_(y, 1, 3),
+      node_b));
 
   const auto min_x =
   ProjectionNode::make(expression_vector(min_(x)),
