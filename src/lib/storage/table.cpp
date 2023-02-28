@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "concurrency/transaction_manager.hpp"
+#include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/table_statistics.hpp"
@@ -452,6 +453,21 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
   // TODO(anybody) TableLayout missing
 
   return bytes;
+}
+
+void Table::persist() {
+  const auto chunk_count = _chunks.size();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+    persist_chunk(chunk_id);
+  }
+}
+
+void Table::persist_chunk(ChunkID chunk_id) {
+  auto& storage_manager = Hyrise::get().storage_manager;
+  //TODO: It would be nicer to just pass the table and let the StorageManager handle the rest.
+  //And not depend on name registration happening earlier in StorageManager.
+  Assert(!_name.empty(), "Only tables registered with StorageManager can be persisted.");
+  storage_manager.replace_chunk_with_mmaped_chunk(_chunks[chunk_id], chunk_id, _name);
 }
 
 }  // namespace hyrise

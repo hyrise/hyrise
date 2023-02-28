@@ -347,14 +347,9 @@ void AbstractTableGenerator::generate_and_store() {
   // As we will later persist on chunk basis, this implementation iterates over all chunks and persists them
   // This is a short-cut for a proof of concept of running benchmarks with persisted chunks
   {
-    auto& storage_manager = Hyrise::get().storage_manager;
     for (auto& [table_name, table_info] : table_info_by_name) {
       auto& table = table_info_by_name[table_name].table;
-      for (auto chunk_id = ChunkID{0}; chunk_id < table->chunk_count(); ++chunk_id) {
-        const auto chunk = table->get_chunk(chunk_id);
-        // We assume that at every point where we want to persist a chunk we know in which table it is located
-        storage_manager.replace_chunk_with_mmaped_chunk(chunk, chunk_id, table_name);
-      }
+      table->persist();
     }
   }
 
