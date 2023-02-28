@@ -23,15 +23,18 @@ class LQPUtilsTest : public BaseTest {
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
+    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "node_c");
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
     b_x = node_b->get_column("x");
     b_y = node_b->get_column("y");
+    c_u = node_c->get_column("u");
+    c_v = node_c->get_column("v");
   }
 
-  std::shared_ptr<MockNode> node_a, node_b;
-  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_x, b_y;
+  std::shared_ptr<MockNode> node_a, node_b, node_c;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_x, b_y, c_u, c_v;
 };
 
 TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {
@@ -298,38 +301,62 @@ TEST_F(LQPUtilsTest, LQPInsertAboveNode) {
 }
 
 TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
-  // Prepare an LQP with multiple subqueries in a nested manner
+  // Prepare an LQP with multiple subqueries in a nested manner.
 
-  // clang-format off
-  const auto nested_subquery_lqp =
-  AggregateNode::make(expression_vector(), expression_vector(max_(a_a)),
-    node_a);
-  const auto max_a_subquery = lqp_subquery_(nested_subquery_lqp);
+  for (const auto only_correlated_subqueries : {true, false}) {
+    auto message = std::stringstream{};
+    message << "Consider only uncorrelated subqueries: " << std::boolalpha << only_correlated_subqueries;
+    SCOPED_TRACE(message.str());
 
-  const auto subquery_lqp =
-  ProjectionNode::make(expression_vector(b_x),
-    PredicateNode::make(greater_than_(b_x, max_a_subquery),
-      node_b));
-  const auto x_greater_than_max_a_subquery = lqp_subquery_(subquery_lqp);
+    // clang-format off
+    const auto nested_subquery_lqp =
+    AggregateNode::make(expression_vector(), expression_vector(max_(a_a)),
+      node_a);
+    const auto max_a_subquery = lqp_subquery_(nested_subquery_lqp);
 
-  const auto root_lqp =
-  ProjectionNode::make(expression_vector(add_(a_a, a_b)),
-    PredicateNode::make(in_(a_b, x_greater_than_max_a_subquery),
-      node_a));
-  // clang-format on
 
-  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_lqp);
-  EXPECT_EQ(subquery_expressions_by_lqp.size(), 2);
+    const auto correlated_parameter = correlated_parameter_(ParameterID{0}, b_y);
+    const auto correlated_subquery_lqp =
+    PredicateNode::make(equals_(c_u, correlated_parameter),
+      PredicateNode::make(greater_than_(c_v, max_a_subquery),
+        node_c));
+    const auto correlated_subquery = lqp_subquery_(correlated_subquery_lqp,
+                                                   std::make_pair(ParameterID{0}, correlated_parameter));
 
-  ASSERT_TRUE(subquery_expressions_by_lqp.contains(x_greater_than_max_a_subquery->lqp));
-  EXPECT_EQ(subquery_expressions_by_lqp.find(x_greater_than_max_a_subquery->lqp)->second.size(), 1);
-  EXPECT_EQ(subquery_expressions_by_lqp.find(x_greater_than_max_a_subquery->lqp)->second.at(0).lock(),
-            x_greater_than_max_a_subquery);
+    const auto subquery_lqp =
+    ProjectionNode::make(expression_vector(b_x),
+      PredicateNode::make(greater_than_(b_x, correlated_subquery),
+        node_b));
+    const auto x_greater_than_max_a_subquery = lqp_subquery_(subquery_lqp);
 
-  ASSERT_TRUE(subquery_expressions_by_lqp.contains(max_a_subquery->lqp));
-  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
-  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
-  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
+    const auto root_lqp =
+    ProjectionNode::make(expression_vector(add_(a_a, a_b)),
+      PredicateNode::make(in_(a_b, x_greater_than_max_a_subquery),
+        node_a));
+    // clang-format on
+
+    const auto subquery_expressions_by_lqp =
+        collect_lqp_subquery_expressions_by_lqp(root_lqp, only_correlated_subqueries);
+    const auto expected_expression_count = only_correlated_subqueries ? 1 : 3;
+    EXPECT_EQ(subquery_expressions_by_lqp.size(), expected_expression_count);
+
+    ASSERT_TRUE(subquery_expressions_by_lqp.contains(correlated_subquery->lqp));
+    EXPECT_EQ(subquery_expressions_by_lqp.at(correlated_subquery->lqp).size(), 1);
+    EXPECT_EQ(subquery_expressions_by_lqp.at(correlated_subquery->lqp).at(0).lock(), correlated_subquery);
+
+    if (only_correlated_subqueries) {
+      continue;
+    }
+
+    ASSERT_TRUE(subquery_expressions_by_lqp.contains(x_greater_than_max_a_subquery->lqp));
+    EXPECT_EQ(subquery_expressions_by_lqp.at(x_greater_than_max_a_subquery->lqp).size(), 1);
+    EXPECT_EQ(subquery_expressions_by_lqp.at(x_greater_than_max_a_subquery->lqp).at(0).lock(),
+              x_greater_than_max_a_subquery);
+
+    ASSERT_TRUE(subquery_expressions_by_lqp.contains(max_a_subquery->lqp));
+    EXPECT_EQ(subquery_expressions_by_lqp.at(max_a_subquery->lqp).size(), 1);
+    EXPECT_EQ(subquery_expressions_by_lqp.at(max_a_subquery->lqp).at(0).lock(), max_a_subquery);
+  }
 }
 
 TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
