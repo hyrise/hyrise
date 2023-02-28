@@ -39,7 +39,7 @@ class OptimizerTest : public BaseTest {
     LimitNode::make(to_expression(1),
       PredicateNode::make(greater_than_(u, correlated_parameter),
         node_c));
-    //clang-format on
+    // clang-format on
     subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, correlated_parameter));
   }
 
