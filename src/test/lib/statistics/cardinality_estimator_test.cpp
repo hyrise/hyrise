@@ -1006,4 +1006,25 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   }
 }
 
+TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjections) {
+  // Similar to BetweenScanWithUncorrelatedSubquery, but with a single AggregateNode and two projections.
+  // clang-format off
+  const auto subquery =
+  AggregateNode::make(expression_vector(), expression_vector(min_(c_y), max_(c_y)),
+    PredicateNode::make(between_inclusive_(c_y, value_(0), value_(2)),
+      node_c));
+  // clang-format on
+
+  const auto min_c_y = ProjectionNode::make(expression_vector(min_(c_y)), subquery);
+
+  const auto max_c_y = ProjectionNode::make(expression_vector(max_(c_y)), subquery);
+
+  auto lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y)), node_a);
+
+  const auto semi_join_lqp = JoinNode::make(JoinMode::Semi, equals_(a_a, c_y), node_a, subquery->left_input());
+
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+}
+
 }  // namespace hyrise

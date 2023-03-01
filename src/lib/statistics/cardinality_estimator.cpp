@@ -464,39 +464,51 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
         return input_table_statistics;
       }
 
-      const auto& lower_bound_lqp = lower_bound_subquery->lqp;
-      const auto& upper_bound_lqp = upper_bound_subquery->lqp;
-      if (lower_bound_lqp->type != LQPNodeType::Aggregate || upper_bound_lqp->type != LQPNodeType::Aggregate) {
+      // Check that input nodes provide only a single AggregateExpression.
+      const auto& lower_bound_lqp = *lower_bound_subquery->lqp;
+      const auto& upper_bound_lqp = *upper_bound_subquery->lqp;
+      const auto& lower_bound_node_expressions = lower_bound_lqp.node_expressions;
+      const auto& upper_bound_node_expressions = upper_bound_lqp.node_expressions;
+      if (lower_bound_node_expressions.size() != 1 || upper_bound_node_expressions.size() != 1) {
         return input_table_statistics;
       }
-
-      const auto& lower_bound_aggregate = static_cast<AggregateNode&>(*lower_bound_lqp);
-      const auto& upper_bound_aggregate = static_cast<AggregateNode&>(*upper_bound_lqp);
-
-      const auto get_aggregate_expression = [](const auto& aggregate_node) {
-        const auto& node_expressions = aggregate_node.node_expressions;
-        if (node_expressions.size() > 1 || aggregate_node.aggregate_expressions_begin_idx != 0) {
-          return std::shared_ptr<AggregateExpression>{};
-        }
-
-        return std::static_pointer_cast<AggregateExpression>(node_expressions.front());
-      };
-
-      const auto& lower_bound_aggregate_expression = get_aggregate_expression(lower_bound_aggregate);
-      const auto& upper_bound_aggregate_expression = get_aggregate_expression(upper_bound_aggregate);
-
+      const auto& lower_bound_aggregate_expression =
+          std::dynamic_pointer_cast<AggregateExpression>(lower_bound_node_expressions.front());
+      const auto& upper_bound_aggregate_expression =
+          std::dynamic_pointer_cast<AggregateExpression>(upper_bound_node_expressions.front());
       if (!lower_bound_aggregate_expression || !upper_bound_aggregate_expression) {
         return input_table_statistics;
       }
 
-      // Check that aggregate functions are as expected, are performed on the same column, and the AggregatNodes have
-      // the same input.
-      const auto subquery_origin_node = lower_bound_aggregate.left_input();
+      // Check that the AggregateFunctions are as expected and are performed on the same column, and the nodes have the
+      // same input.
+      auto subquery_origin_node = lower_bound_lqp.left_input();
       if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
           upper_bound_aggregate_expression->aggregate_function != AggregateFunction::Max ||
           *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
-          *subquery_origin_node != *upper_bound_aggregate.left_input()) {
+          *subquery_origin_node != *upper_bound_lqp.left_input()) {
         return input_table_statistics;
+      }
+
+      // The lower/upper bound nodes might not be AggregateNodes themselves, but projections on a common AggregateNode.
+      // In this case, check that (i) their input is an AggregateNode and (ii) it aggregates the min/max of the common
+      // column.
+      const auto lower_bound_type = lower_bound_lqp.type;
+      const auto upper_bound_type = upper_bound_lqp.type;
+      if ((lower_bound_type != LQPNodeType::Aggregate || upper_bound_type != LQPNodeType::Aggregate) &&
+          (lower_bound_type != LQPNodeType::Projection || upper_bound_type != LQPNodeType::Projection ||
+           subquery_origin_node->type != LQPNodeType::Aggregate)) {
+        return input_table_statistics;
+      }
+
+      if (subquery_origin_node->type == LQPNodeType::Aggregate) {
+        const auto& node_expressions = subquery_origin_node->node_expressions;
+        if (node_expressions.size() != 2 || !find_expression_idx(*lower_bound_aggregate_expression, node_expressions) ||
+            !find_expression_idx(*upper_bound_aggregate_expression, node_expressions)) {
+          return input_table_statistics;
+        }
+
+        subquery_origin_node = subquery_origin_node->left_input();
       }
 
       subquery_statistics = estimate_statistics(subquery_origin_node);
