@@ -52,7 +52,7 @@ WarningsAsErrors: '*'
 
 # Explanation of disabled checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them)
-#   - google-build-using-namespace                              We use namespaces (cf. expression_functional)
+#   - google-build-using-namespace                              We use using namespace (see anonymous namespaces and expression_functional)
 #   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls
 #   - readability-implicit-bool-conversion                      Doesn't like if(map.count(foo))
 #   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
