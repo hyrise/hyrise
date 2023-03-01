@@ -22,15 +22,15 @@ TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
 
   std::vector<Page32KiB> write_pages(3);
 
-  region->write_page(PageID{0}, write_pages[0]);
-  region->write_page(PageID{1}, write_pages[1]);
-  region->write_page(PageID{2}, write_pages[2]);
+  region->write_page(PageID{0}, write_pages[0].size_type(), write_pages[0].data());
+  region->write_page(PageID{1}, write_pages[1].size_type(), write_pages[1].data());
+  region->write_page(PageID{2}, write_pages[2].size_type(), write_pages[2].data());
 
   std::vector<Page32KiB> read_pages(3);
 
-  region->read_page(PageID{2}, read_pages[2]);
-  region->read_page(PageID{0}, read_pages[1]);
-  region->read_page(PageID{1}, read_pages[0]);
+  region->read_page(PageID{2}, read_pages[0].size_type(), read_pages[2].data());
+  region->read_page(PageID{0}, read_pages[1].size_type(), read_pages[1].data());
+  region->read_page(PageID{1}, read_pages[2].size_type(), read_pages[0].data());
 
   ASSERT_EQ(read_pages[0], write_pages[0]);
   ASSERT_EQ(read_pages[1], write_pages[1]);

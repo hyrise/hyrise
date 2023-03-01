@@ -9,17 +9,21 @@ namespace hyrise {
  * O_DIRECT is often used in databases when they implement their own caching/buffer management like in our case.
  */
 template <PageSizeType SizeType>
-struct alignas(512) Page {
-  static_assert(static_cast<std::size_t>(SizeType) % 512 == 0,
+struct alignas(REQUIRED_PAGE_ALIGNMENT) Page {
+  static_assert(bytes_for_size_type(SizeType) % REQUIRED_PAGE_ALIGNMENT == 0,
                 "SizeType needs to be a multiple of 512 for optimal SSD reads and writes");
-  static_assert(static_cast<std::size_t>(SizeType) >= 512,
+  static_assert(bytes_for_size_type(SizeType) >= REQUIRED_PAGE_ALIGNMENT,
                 "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
   constexpr static std::size_t size() {
-    return static_cast<std::size_t>(SizeType);
+    return bytes_for_size_type(SizeType);
   }
 
-  std::array<std::byte, static_cast<std::size_t>(SizeType)> _data;
+  constexpr PageSizeType size_type() {
+    return SizeType;
+  }
+
+  std::array<std::byte, bytes_for_size_type(SizeType)> _data;
 
   operator char*() {
     return reinterpret_cast<char*>(_data.data());

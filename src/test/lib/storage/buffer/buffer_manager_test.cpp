@@ -12,7 +12,7 @@ class BufferManagerTest : public BaseTest {
  public:
   BufferManager create_buffer_manager(const size_t num_bytes = 1 << 10) {
     auto ssd_region = std::make_unique<SSDRegion>(db_file);
-    auto volatile_region = std::make_unique<VolatileRegion>(num_bytes);
+    auto volatile_region = std::make_unique<VolatileRegion>(num_bytes, PageSizeType::KiB32);
     return BufferManager(std::move(volatile_region), std::move(ssd_region));
   }
 
@@ -55,18 +55,18 @@ TEST_F(BufferManagerTest, TestFlushDirtyPage) {
   // Unpin the page and mark it as dirty. There should be nothing on the SSD yet.
   buffer_manager.unpin_page(page_id, true);
   auto page_read = Page32KiB{};
-  ssd_region.read_page(page_id, page_read);
+  ssd_region.read_page(page_id, page_read.size_type(), page_read.data());
   EXPECT_NE(memcmp(page, &page_read, sizeof(Page32KiB)), 0) << "The page should not have been written to SSD";
 
   // Allocate a new page, which should replace the old one and write it to SSD.
   EXPECT_NO_THROW(buffer_manager.allocate(512));
-  ssd_region.read_page(page_id, page_read);
+  ssd_region.read_page(page_id, page_read.size_type(), page_read.data());
   EXPECT_EQ(memcmp(page, &page_read, sizeof(Page32KiB)), 0) << "The page should have been written to SSD";
 }
 
 TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
   auto buffer_manager = create_buffer_manager(static_cast<size_t>(PageSizeType::KiB32));
-  
+
   auto ptr = buffer_manager.allocate(1024);
   EXPECT_EQ(ptr, BufferManagedPtr<void>(PageID{0}, 0));
 

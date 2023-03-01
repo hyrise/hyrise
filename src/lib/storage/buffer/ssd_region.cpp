@@ -60,22 +60,21 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 
 // TODO: Write test for reinterpret, maybe use custom operaor
 
-void SSDRegion::write_page(const PageID page_id, Page32KiB& source) {
-  const off_t page_pos = page_id * Page32KiB::size();
+void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source) {
+  const off_t page_pos = page_id * bytes_for_size_type(MIN_PAGE_SIZE_TYPE);
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  DebugAssert(uint64_t(&source) % 512 == 0,
-              "Source is not properly aligned to 512, but " + std::to_string(uint64_t(&source) % 512));
-  const auto result = pwrite(_fd, static_cast<char*>(source), 512, page_pos);
+  // DebugAssert(source % 512 == 0, "Source is not properly aligned to 512, but " + std::to_string(source % 512));
+  const auto result = pwrite(_fd, source, bytes_for_size_type(size_type), page_pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
 }
 
-void SSDRegion::read_page(const PageID page_id, Page32KiB& destination) {
-  const off_t page_pos = page_id * Page32KiB::size();
+void SSDRegion::read_page(const PageID page_id, const PageSizeType size_type, std::byte* destination) {
+  const off_t page_pos = page_id * bytes_for_size_type(MIN_PAGE_SIZE_TYPE);
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  const auto result = pread(_fd, static_cast<char*>(destination), Page32KiB::size(), page_pos);
+  const auto result = pread(_fd, destination, bytes_for_size_type(size_type), page_pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while reading from SSDRegion: " + strerror(error));

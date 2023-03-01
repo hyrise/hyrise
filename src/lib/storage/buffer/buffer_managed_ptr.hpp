@@ -13,12 +13,14 @@ namespace hyrise {
 
 namespace detail {
 
-struct PageIDOffsetAddress {
-  size_t page_id : 32;
-  size_t offset : 32;
+struct UnswizzledAddress {
+  size_t size_type : BITS_PAGE_SIZE_TYPES = static_cast<size_t>(PageSizeType::KiB32);   // 3 bits for size type
+  size_t page_id : sizeof(size_t) * CHAR_BIT - BITS_PAGE_SIZE_TYPES - MAX_PAGE_OFFSET;  // 44 bits for the page_id
+  size_t offset : MAX_PAGE_OFFSET;  // 17 bits for the maximum offset
 };
 
-static_assert(sizeof(PageIDOffsetAddress) == 8);
+// The unswizzled address should have only 64 bits
+static_assert(sizeof(UnswizzledAddress) == 8);
 
 }  // namespace detail
 
@@ -26,8 +28,8 @@ template <typename PointedType>
 class BufferManagedPtr {
   using OutsideAddress = std::uintptr_t;
   using EmptyAddress = std::monostate;
-  using PageIDOffsetAddress = detail::PageIDOffsetAddress;
-  using Addressing = std::variant<EmptyAddress, OutsideAddress, PageIDOffsetAddress>;
+  using UnswizzledAddress = detail::UnswizzledAddress;
+  using Addressing = std::variant<EmptyAddress, OutsideAddress, UnswizzledAddress>;
 
  public:
   using pointer = PointedType*;
@@ -66,8 +68,9 @@ class BufferManagedPtr {
     set_from_ptr(ptr);
   }
 
-  explicit BufferManagedPtr(const PageID page_id, difference_type offset) {
-    _addressing = PageIDOffsetAddress{page_id, static_cast<size_t>(offset)};
+  explicit BufferManagedPtr(const PageID page_id, const difference_type offset,
+                            const PageSizeType size_type = PageSizeType::KiB32) {
+    _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
   }
 
   pointer operator->() const {
@@ -93,7 +96,7 @@ class BufferManagedPtr {
     auto new_addressing = _addressing;
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&new_addressing)) {
       *outside_addressing += offset * difference_type(sizeof(PointedType));
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&new_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&new_addressing)) {
       page_id_offset->offset += offset * difference_type(sizeof(PointedType));
     }
     return BufferManagedPtr(new_addressing);
@@ -103,7 +106,7 @@ class BufferManagedPtr {
     auto new_addressing = _addressing;
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&new_addressing)) {
       *outside_addressing -= offset * difference_type(sizeof(PointedType));
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&new_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&new_addressing)) {
       page_id_offset->offset -= offset * difference_type(sizeof(PointedType));
     }
     return BufferManagedPtr(new_addressing);
@@ -112,7 +115,7 @@ class BufferManagedPtr {
   BufferManagedPtr& operator+=(difference_type offset) noexcept {
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&_addressing)) {
       *outside_addressing += offset * difference_type(sizeof(PointedType));
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&_addressing)) {
       page_id_offset->offset += offset * difference_type(sizeof(PointedType));
     }
     return *this;
@@ -121,7 +124,7 @@ class BufferManagedPtr {
   BufferManagedPtr& operator-=(difference_type offset) noexcept {
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&_addressing)) {
       *outside_addressing -= offset * difference_type(sizeof(PointedType));
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&_addressing)) {
       page_id_offset->offset -= offset * difference_type(sizeof(PointedType));
     }
     return *this;
@@ -166,7 +169,7 @@ class BufferManagedPtr {
   BufferManagedPtr& operator++(void) noexcept {
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&_addressing)) {
       *outside_addressing += difference_type(sizeof(PointedType));
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&_addressing)) {
       page_id_offset->offset += difference_type(sizeof(PointedType));
     }
     return *this;
@@ -181,7 +184,7 @@ class BufferManagedPtr {
   BufferManagedPtr& operator--(void) noexcept {
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&_addressing)) {
       *outside_addressing -= difference_type(sizeof(PointedType));
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&_addressing)) {
       page_id_offset->offset -= difference_type(sizeof(PointedType));
     }
     return *this;
@@ -202,7 +205,7 @@ class BufferManagedPtr {
   void* get_pointer() const {
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&_addressing)) {
       return (void*)*outside_addressing;
-    } else if (const auto page_id_offset = std::get_if<PageIDOffsetAddress>(&_addressing)) {
+    } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&_addressing)) {
       const auto page_id = PageID{page_id_offset->page_id};
       // TODO: If pinned, this is not needed
       // TODO: What happens if page is deleted? Pointer should become null
@@ -217,21 +220,25 @@ class BufferManagedPtr {
 
   // TODO: Return a guard to ensure unpinning. check pointer type
   void pin() const {
-    const auto page_id = PageID{std::get<PageIDOffsetAddress>(_addressing).page_id};
+    const auto page_id = PageID{std::get<UnswizzledAddress>(_addressing).page_id};
     BufferManager::get_global_buffer_manager().pin_page(page_id);
   }
 
   void unpin(bool dirty) const {
-    const auto page_id = PageID{std::get<PageIDOffsetAddress>(_addressing).page_id};
+    const auto page_id = PageID{std::get<UnswizzledAddress>(_addressing).page_id};
     BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
   }
 
   PageID get_page_id() const {
-    return PageID{std::get<PageIDOffsetAddress>(_addressing).page_id};
+    return PageID{std::get<UnswizzledAddress>(_addressing).page_id};
   }
 
   difference_type get_offset() const {
-    return std::get<PageIDOffsetAddress>(_addressing).offset;
+    return std::get<UnswizzledAddress>(_addressing).offset;
+  }
+
+  PageSizeType get_size_type() const {
+    return static_cast<PageSizeType>(std::get<UnswizzledAddress>(_addressing).size_type);
   }
 
  private:
@@ -245,7 +252,7 @@ class BufferManagedPtr {
       if (page_id == INVALID_PAGE_ID) {
         _addressing = OutsideAddress(ptr);
       } else {
-        _addressing = PageIDOffsetAddress{page_id, static_cast<size_t>(offset)};
+        _addressing = UnswizzledAddress{page_id, static_cast<size_t>(offset)};
       }
     } else {
       _addressing = EmptyAddress{};

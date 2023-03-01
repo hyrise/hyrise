@@ -17,8 +17,8 @@ class SSDRegion {
   SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes = 1UL << 32);
   ~SSDRegion();
 
-  void write_page(const PageID page_id, Page32KiB& destination);
-  void read_page(const PageID page_id, Page32KiB& source);
+  void write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source);
+  void read_page(const PageID page_id, const PageSizeType size_type, std::byte* destination);
 
   DeviceType get_device_type() const;
 
