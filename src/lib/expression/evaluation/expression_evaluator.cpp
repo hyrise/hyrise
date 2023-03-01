@@ -326,7 +326,7 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
     }
   } else if (!left_results->is_literal() && right_results->is_literal()) {
     // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
-    LikeMatcher like_matcher{right_results->values.front()};
+    const auto like_matcher = LikeMatcher{right_results->values.front()};
 
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
       like_matcher.resolve(invert_results, [&](const auto& matcher) {
@@ -1076,7 +1076,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
                   if (matches != 0) {
-                    result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                    result_pos_list.emplace_back(_chunk_id, chunk_offset);
                   }
                 }
               } else {
@@ -1101,14 +1101,14 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
                 if (result.is_null(chunk_offset)) {
-                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) {
-                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             }
@@ -1130,7 +1130,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                  ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
-                result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             }
           });
@@ -1169,14 +1169,14 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
              ++chunk_offset) {
           if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
-            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
         }
       } else {
         if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                ++chunk_offset) {
-            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
         }
       }
@@ -1330,7 +1330,7 @@ void ExpressionEvaluator::_resolve_to_expression_result(const AbstractExpression
 
   if (expression.data_type() == DataType::Null) {
     // resolve_data_type() doesn't support Null, so we have handle it explicitly
-    ExpressionResult<NullValue> null_value_result{{NullValue{}}, {true}};
+    const auto null_value_result = ExpressionResult<NullValue>{{NullValue{}}, {true}};
 
     functor(null_value_result);
   } else {
