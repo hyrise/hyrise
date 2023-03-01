@@ -119,7 +119,7 @@ void MvccDeletePlugin::_physical_delete_loop() {
       auto lowest_snapshot_commit_id = Hyrise::get().transaction_manager.get_lowest_active_snapshot_commit_id();
 
       if (lowest_snapshot_commit_id) {
-        conflicting_transactions = chunk->get_cleanup_commit_id().value() > lowest_snapshot_commit_id.value();
+        conflicting_transactions = *chunk->get_cleanup_commit_id() > lowest_snapshot_commit_id.value();
       }
 
       if (!conflicting_transactions) {

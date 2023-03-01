@@ -1530,6 +1530,12 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_execute(const hsql::E
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::ImportStatement& import_statement) {
+  // Querying tables that are freshly loaded is not easy as we need meta information, such as column names and data
+  // types, to resolve queries and build the query plans. For instance, we need an origin node for column expressions
+  // and to provide correct output expressions for subsequent nodes, some optimization rules access stored tables, and
+  // so on. Anyway, we would need to decouple data loading and storing the table and have to load metadata or even the
+  // whole table when translating the SQL statement.
+  AssertInput(!import_statement.whereClause, "Predicates on imported files are not supported.");
   return ImportNode::make(import_statement.tableName, import_statement.filePath,
                           import_type_to_file_type(import_statement.type));
 }
@@ -1538,13 +1544,18 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_import(const hsql::Im
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_export(const hsql::ExportStatement& export_statement) {
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   auto lqp = std::shared_ptr<AbstractLQPNode>{};
-  const auto table_name = std::string{export_statement.tableName};
 
-  if (MetaTableManager::is_meta_table_name(table_name)) {
-    lqp = _translate_meta_table(table_name, sql_identifier_resolver);
+  if (export_statement.select) {
+    lqp = _translate_select_statement(*export_statement.select);
   } else {
-    // Get stored table as input (validated if MVCC is enabled)
-    lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+    AssertInput(export_statement.tableName, "ExportStatement must either specify a table name or a SelectStatement.");
+    const auto table_name = std::string{export_statement.tableName};
+    if (MetaTableManager::is_meta_table_name(table_name)) {
+      lqp = _translate_meta_table(table_name, sql_identifier_resolver);
+    } else {
+      // Get stored table as input (validated if MVCC is enabled)
+      lqp = _translate_stored_table(export_statement.tableName, sql_identifier_resolver);
+    }
   }
 
   return ExportNode::make(export_statement.filePath, import_type_to_file_type(export_statement.type), lqp);
@@ -2060,14 +2071,14 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
       if (const auto* const between_expression = dynamic_cast<const BetweenExpression*>(&expression);
           between_expression) {
         // a BETWEEN b AND c -> a < b OR a > c
-        return or_(less_than_(between_expression->value(), between_expression->lower_bound()),
-                   greater_than_(between_expression->value(), between_expression->upper_bound()));
+        return or_(less_than_(between_expression->operand(), between_expression->lower_bound()),
+                   greater_than_(between_expression->operand(), between_expression->upper_bound()));
       }
 
       const auto* in_expression = dynamic_cast<const InExpression*>(&expression);
       Assert(in_expression, "Expected InExpression");
       return std::make_shared<InExpression>(inverse_predicate_condition(in_expression->predicate_condition),
-                                            in_expression->value(), in_expression->set());
+                                            in_expression->operand(), in_expression->set());
     } break;
 
     case ExpressionType::Logical: {

@@ -406,7 +406,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
     expressions.reserve(list_expression.elements().size());
     for (const auto& list_element : list_expression.elements()) {
-      expressions.emplace_back(equals_(in_expression->value(), list_element));
+      expressions.emplace_back(equals_(in_expression->operand(), list_element));
     }
 
     const auto disjunction = inflate_logical_expressions(expressions, LogicalOperator::Or);

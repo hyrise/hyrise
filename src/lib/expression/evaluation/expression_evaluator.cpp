@@ -77,12 +77,13 @@ std::shared_ptr<AbstractExpression> rewrite_between_expression(const AbstractExp
 
   const auto lower_expression =
       is_lower_inclusive_between(between_expression->predicate_condition)
-          ? greater_than_equals_(between_expression->value(), between_expression->lower_bound())
-          : greater_than_(between_expression->value(), between_expression->lower_bound());
+          ? greater_than_equals_(between_expression->operand(), between_expression->lower_bound())
+          : greater_than_(between_expression->operand(), between_expression->lower_bound());
 
-  const auto upper_expression = is_upper_inclusive_between(between_expression->predicate_condition)
-                                    ? less_than_equals_(between_expression->value(), between_expression->upper_bound())
-                                    : less_than_(between_expression->value(), between_expression->upper_bound());
+  const auto upper_expression =
+      is_upper_inclusive_between(between_expression->predicate_condition)
+          ? less_than_equals_(between_expression->operand(), between_expression->upper_bound())
+          : less_than_(between_expression->operand(), between_expression->upper_bound());
 
   return and_(lower_expression, upper_expression);
 }
@@ -93,14 +94,14 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
    * "a NOT IN (x, y, z)"   ---->   "a != x AND a != y AND a != z"
    *
    * Out of array_expression.elements(), pick those expressions whose type can be compared with
-   * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+   * in_expression.operand() so we're not getting "Can't compare Int and String" when doing something crazy like
    * "5 IN (6, 5, "Hello")
    */
 
   const auto list_expression = std::dynamic_pointer_cast<ListExpression>(in_expression.set());
   Assert(list_expression, "Expected ListExpression");
 
-  const auto left_is_string = in_expression.value()->data_type() == DataType::String;
+  const auto left_is_string = in_expression.operand()->data_type() == DataType::String;
   std::vector<std::shared_ptr<AbstractExpression>> type_compatible_elements;
   for (const auto& element : list_expression->elements()) {
     if ((element->data_type() == DataType::String) == left_is_string) {
@@ -118,16 +119,16 @@ std::shared_ptr<AbstractExpression> rewrite_in_list_expression(const InExpressio
 
   if (in_expression.is_negated()) {
     // a NOT IN (1,2,3) --> a != 1 AND a != 2 AND a != 3
-    rewritten_expression = not_equals_(in_expression.value(), type_compatible_elements.front());
+    rewritten_expression = not_equals_(in_expression.operand(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_element_count; ++element_idx) {
-      const auto equals_element = not_equals_(in_expression.value(), type_compatible_elements[element_idx]);
+      const auto equals_element = not_equals_(in_expression.operand(), type_compatible_elements[element_idx]);
       rewritten_expression = and_(rewritten_expression, equals_element);
     }
   } else {
     // a IN (1,2,3) --> a == 1 OR a == 2 OR a == 3
-    rewritten_expression = equals_(in_expression.value(), type_compatible_elements.front());
+    rewritten_expression = equals_(in_expression.operand(), type_compatible_elements.front());
     for (auto element_idx = size_t{1}; element_idx < type_compatible_element_count; ++element_idx) {
-      const auto equals_element = equals_(in_expression.value(), type_compatible_elements[element_idx]);
+      const auto equals_element = equals_(in_expression.operand(), type_compatible_elements[element_idx]);
       rewritten_expression = or_(rewritten_expression, equals_element);
     }
   }
@@ -384,7 +385,7 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null
 template <>
 std::shared_ptr<ExpressionResult<ExpressionEvaluator::Bool>>
 ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const InExpression& in_expression) {
-  const auto& left_expression = *in_expression.value();
+  const auto& left_expression = *in_expression.operand();
   const auto& right_expression = *in_expression.set();
 
   pmr_vector<ExpressionEvaluator::Bool> result_values;
@@ -407,7 +408,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
     /**
      * Out of array_expression.elements(), pick those expressions whose type can be compared with
-     * in_expression.value() so we're not getting "Can't compare Int and String" when doing something crazy like
+     * in_expression.operand() so we're not getting "Can't compare Int and String" when doing something crazy like
      * "5 IN (6, 5, "Hello")
      */
     const auto left_is_string = left_expression.data_type() == DataType::String;
@@ -561,7 +562,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
      */
 
     return _evaluate_in_expression<ExpressionEvaluator::Bool>(*std::make_shared<InExpression>(
-        in_expression.predicate_condition, in_expression.value(), list_(in_expression.set())));
+        in_expression.predicate_condition, in_expression.operand(), list_(in_expression.set())));
   }
 
   return std::make_shared<ExpressionResult<ExpressionEvaluator::Bool>>(std::move(result_values),

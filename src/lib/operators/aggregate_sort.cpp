@@ -512,13 +512,13 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
    *               This is because no new group starts after it.
    *               So in total, group_boundaries will contain one element less than there are groups.
    */
-  std::set<RowID> group_boundaries;
+  auto group_boundaries = std::set<RowID>{};
   const auto chunk_count = sorted_table->chunk_count();
   for (const auto& column_id : _groupby_column_ids) {
     auto data_type = input_table->column_data_type(column_id);
     resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      std::optional<ColumnDataType> previous_value;
+      auto previous_value = std::optional<ColumnDataType>{};
 
       /*
        * Initialize previous_value to the first value in the table, so we avoid considering it a value change.
@@ -531,7 +531,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       if (variant_is_null(first_value)) {
         previous_value.reset();
       } else {
-        previous_value.emplace(boost::get<ColumnDataType>(first_value));
+        previous_value = boost::get<ColumnDataType>(first_value);
       }
 
       // Iterate over all chunks and insert RowIDs when values change
@@ -541,7 +541,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
         const auto& segment = chunk->get_segment(column_id);
         segment_iterate<ColumnDataType>(*segment, [&](const auto& position) {
           if (previous_value.has_value() == position.is_null() ||
-              (previous_value.has_value() && !position.is_null() && position.value() != *previous_value)) {
+              (previous_value && !position.is_null() && position.value() != *previous_value)) {
             group_boundaries.insert(RowID{chunk_id, position.chunk_offset()});
             if (position.is_null()) {
               previous_value.reset();

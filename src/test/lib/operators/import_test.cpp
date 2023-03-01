@@ -68,8 +68,8 @@ TEST_P(OperatorsImportMultiFileTypeTest, HasCorrectMvccData) {
 
   EXPECT_EQ(table->uses_mvcc(), UseMvcc::Yes);
   EXPECT_TRUE(table->get_chunk(ChunkID{0})->has_mvcc_data());
-  EXPECT_TRUE(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.has_value());
-  EXPECT_EQ(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid.value(), CommitID{0});
+  EXPECT_TRUE(table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid);
+  EXPECT_EQ(*table->get_chunk(ChunkID{0})->mvcc_data()->max_begin_cid, CommitID{0});
 }
 
 TEST_F(OperatorsImportTest, FileDoesNotExist) {

@@ -87,9 +87,18 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
     std::cout << "- Encoding is '" << encoding_type_str << "'" << std::endl;
   }
 
-  const auto indexes = parse_result["indexes"].as<bool>();
-  if (indexes) {
-    std::cout << "- Creating indexes (as defined by the benchmark)" << std::endl;
+  const auto chunk_indexes = parse_result["chunk_indexes"].as<bool>();
+  if (chunk_indexes) {
+    std::cout << "- Creating chunk indexes (separate index per chunk; columns defined by benchmark)" << std::endl;
+  }
+
+  const auto table_indexes = parse_result["table_indexes"].as<bool>();
+  if (table_indexes) {
+    std::cout << "- Creating table indexes (index per table column; columns defined by benchmark)" << std::endl;
+  }
+
+  if (chunk_indexes && table_indexes) {
+    std::cout << "WARNING: Creating chunk and table indexes simultaneously." << std::endl;
   }
 
   // Get all other variables
@@ -146,7 +155,8 @@ BenchmarkConfig CLIConfigParser::parse_cli_options(const cxxopts::ParseResult& p
   return BenchmarkConfig{benchmark_mode,
                          chunk_size,
                          *encoding_config,
-                         indexes,
+                         chunk_indexes,
+                         table_indexes,
                          max_runs,
                          timeout_duration,
                          warmup_duration,
