@@ -14,7 +14,6 @@ Checks: '
          -hicpp-no-array-decay,
          -readability-named-parameter,
          -cert-dcl58-cpp,
-         -clang-analyzer-optin.cplusplus.VirtualCall,
          -modernize-avoid-bind,
          -hicpp-no-assembler,
          -cppcoreguidelines-pro-type-vararg,
@@ -38,7 +37,6 @@ Checks: '
          -modernize-use-trailing-return-type,
          -clang-diagnostic-unknown-warning-option,
          -modernize-use-nodiscard,
-         -cppcoreguidelines-init-variables,
          -llvmlibc-*,
          -altera-*,
          -abseil-*,
@@ -54,18 +52,16 @@ WarningsAsErrors: '*'
 
 # Explanation of disabled checks:
 #   - *-default-arguments*                                      We do use default arguments (and like them)
-#   - google-build-using-namespace                              While we discourage its use, in some cases, using namespace makes sense
+#   - google-build-using-namespace                              We use namespaces (cf. expression_functional)
 #   - clang-analyzer-security.insecureAPI.rand                  We don't care about cryptographically unsafe rand() calls
 #   - readability-implicit-bool-conversion                      Doesn't like if(map.count(foo))
 #   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
-#   - readability-misleading-indentation                        Doesn't like if constexpr
 #   - modernize-pass-by-value                                   We don't trust people to properly use std::move
-#   - cppcoreguidelines-pro-bounds-constant-array-index         Weird stuff. "do not use array subscript when the index is not an integer constant expression"?!
+#   - cppcoreguidelines-pro-bounds-constant-array-index         "Do not use array subscript when the index is not an integer constant expression"?!
 #   - cppcoreguidelines-pro-type-static-cast-downcast           We do allow static downcasts for performance reasons
 #   - misc-unused-parameters                                    We don't care about unused parameters
 #   - cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
 #   - hicpp-no-array-decay                                       (same)
-#   - readability-named-parameter                               Unused parameters don't need names
 #   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
 #   - clang-analyzer-optin.cplusplus.VirtualCall                false positive in boost::lexical_cast
 #   - modernize-avoid-bind                                      meh, bind isn't thaaaat bad
@@ -98,7 +94,7 @@ WarningsAsErrors: '*'
 #   - readability-identifier-naming                             Error spamming on non-Hyrise code. LLVM Bug. TODO(anyone): test renabling with newer LLVM versions which fixes
 #                                                                https://github.com/llvm/llvm-project/issues/46097
 #   - misc-no-recursion                                         Ignore general recommendation to avoid recursion, which we commonly use when working with query plans.
-#   - bugprone-easily-swappable-parameters                      Ignore issues with swapple parameters as we found them to be of no help.
+#   - bugprone-easily-swappable-parameters                      Ignore issues with swappable parameters as we found them to be of no help.
 #   - readability-function-cognitive-complexity                 When appropriate, long functions with a sequential data flow (which is sometimes easier to read) are fine. In many
 #                                                                places, the rule catches functions where the code could be improved, but will likely not be due to a lack of time.
 #   - bugprone-suspicious-include                               Unity builds use `#include`s for cpp files. However, unity builds significantly improve the runtime of clang-tidy,
