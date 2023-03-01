@@ -556,7 +556,7 @@ std::pair<uint32_t, uint32_t> StorageManager::persist_chunk_to_file(const std::s
 
       write_chunk_to_disk(chunk, chunk_segment_offset_ends, file_name);
 
-      const auto chunk_bytes = chunk_offset_end - file_prev_chunk_end_offset;
+      const auto chunk_bytes = chunk_offset_end;
       const auto chunk_start_offset = file_prev_chunk_end_offset + _file_header_bytes;
       return std::make_pair(chunk_start_offset, chunk_bytes);
     }
