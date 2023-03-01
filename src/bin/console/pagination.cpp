@@ -1,9 +1,9 @@
 #include "pagination.hpp"
 
-#include "ncurses.h"
-
 #include <string>
 #include <vector>
+
+#include "ncurses.h"
 
 constexpr auto CURSES_CTRL_C = static_cast<uint32_t>('c') & uint32_t{31};
 
