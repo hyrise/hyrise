@@ -985,6 +985,11 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_x), lqp_subquery_(max_c_y)), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
+  // Aggregate functions must not group the tuples.
+  const auto min_c_y_grouped = AggregateNode::make(expression_vector(c_x), expression_vector(min_(c_y)), subquery);
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_grouped), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
   // There must not be another operator in between aggregate and origin node.
   // clang-format off
   const auto min_c_y_filtered =
@@ -1016,7 +1021,6 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjectio
   // clang-format on
 
   const auto min_c_y = ProjectionNode::make(expression_vector(min_(c_y)), subquery);
-
   const auto max_c_y = ProjectionNode::make(expression_vector(max_(c_y)), subquery);
 
   auto lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y)), node_a);
@@ -1025,6 +1029,23 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjectio
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
   EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Input nodes must be ProjectionNodes.
+  const auto min_c_y_alias = AliasNode::make(expression_vector(min_(c_y)), std::vector<std::string>{"foo"}, subquery);
+  lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_alias), lqp_subquery_(max_c_y)), node_a);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Common node must be AggregateNode.
+  const auto union_node = UnionNode::make(SetOperationMode::All, subquery, subquery);
+  min_c_y->set_left_input(union_node);
+  max_c_y->set_left_input(union_node);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Aggregate node must not group the tuples.
+  const auto aggregate_node = AggregateNode::make(expression_vector(c_x), expression_vector(min_(c_y), max_(c_y)));
+  min_c_y->set_left_input(aggregate_node);
+  max_c_y->set_left_input(aggregate_node);
+  EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 }
 
 }  // namespace hyrise
