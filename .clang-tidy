@@ -16,8 +16,6 @@ Checks: '
          -cert-dcl58-cpp,
          -modernize-avoid-bind,
          -hicpp-no-assembler,
-         -cppcoreguidelines-pro-type-vararg,
-         -hicpp-vararg,
          -cert-env33-c,
          -misc-macro-parentheses,
          -fuchsia-overloaded-operator,
@@ -65,8 +63,6 @@ WarningsAsErrors: '*'
 #   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
 #   - modernize-avoid-bind                                      meh, bind isn't thaaaat bad
 #   - hicpp-no-assembler                                        Sometimes we need assembler...
-#   - cppcoreguidelines-pro-type-vararg                         We use old C functions for ncurses
-#   - hicpp-vararg                                               (same)
 #   - cert-env33-c                                              Yes, we do call system()
 #   - misc-macro-parentheses                                    Causes weird problems with BOOST_PP_TUPLE_ELEM
 #   - fuchsia-overloaded-operator                               We are not supposed to overload operator()?!
@@ -132,7 +128,7 @@ CheckOptions:
   - { key: readability-identifier-naming.UnionCase, value: CamelCase }
   - { key: readability-identifier-naming.UsingCase, value: lower_case }
   - { key: readability-identifier-naming.ValueTemplateParameterCase, value: lower_case }
-  - { key: readability-identifier-naming.VariableCase, value: lower_case
+  - { key: readability-identifier-naming.VariableCase, value: lower_case }
 
   # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency are fine.
   - { key: readability-identifier-length.IgnoredParameterNames, value: "^(it|fd|op)$" }
