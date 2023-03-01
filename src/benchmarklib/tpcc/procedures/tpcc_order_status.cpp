@@ -46,9 +46,12 @@ bool TPCCOrderStatus::_on_execute() {
     Assert(customer_table->row_count() >= 1, "Did not find customer by name");
 
     // Calculate ceil(n/2)
-    auto customer_offset =
+    const auto customer_offset =
         static_cast<size_t>(std::min(std::ceil(static_cast<double>(customer_table->row_count()) / 2.0),
                                      static_cast<double>(customer_table->row_count() - 1)));
+    // NOLINTBEGIN(bugprone-unchecked-optional-access)
+    // All values we access in this method via `get_value` are from non-nullable columns. Thus, we cannot get an
+    // std::nullopt and dereference the optionals without an additional check.
     customer_id = *customer_table->get_value<int32_t>(ColumnID{0}, customer_offset);
   }
 
@@ -72,6 +75,7 @@ bool TPCCOrderStatus::_on_execute() {
          "Did not find order lines");
   for (auto row = size_t{0}; row < order_line_table->row_count(); ++row) {
     ol_quantity_sum += *order_line_table->get_value<int32_t>(ColumnID{2}, row);
+    // NOLINTEND(bugprone-unchecked-optional-access)
   }
 
   _sql_executor.commit();

@@ -63,7 +63,6 @@ WarningsAsErrors: '*'
 #   - cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
 #   - hicpp-no-array-decay                                       (same)
 #   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
-#   - clang-analyzer-optin.cplusplus.VirtualCall                false positive in boost::lexical_cast
 #   - modernize-avoid-bind                                      meh, bind isn't thaaaat bad
 #   - hicpp-no-assembler                                        Sometimes we need assembler...
 #   - cppcoreguidelines-pro-type-vararg                         We use old C functions for ncurses
@@ -86,7 +85,6 @@ WarningsAsErrors: '*'
 #   - modernize-use-trailing-return-type                        https://clang.llvm.org/extra/clang-tidy/checks/modernize-use-trailing-return-type.html - no that is way too weird
 #   - clang-diagnostic-unknown-warning-option                   Don't complain about gcc warning options
 #   - modernize-use-nodiscard                                   Don't want to tag everything [[nodiscard]]
-#   - cppcoreguidelines-init-variables                          If a variable is only declared and initialized in two different branches, we do not want to initialize it first
 #   - llvmlibc-*                                                LLVM-internal development guidelines.
 #   - altera-*                                                  Checks related to OpenCL programming for FPGAs.
 #   - abseil-*                                                  Checks related to Google's abseil library (not used in Hyrise).
@@ -103,105 +101,40 @@ WarningsAsErrors: '*'
 
 
 CheckOptions:
-  - key: readability-identifier-naming.ClassCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.ConstexprVariableCase
-    value: UPPER_CASE
-
-  - key: readability-identifier-naming.EnumCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.EnumConstantCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.FunctionCase
-    value: lower_case
-
-  - key: readability-identifier-naming.GlobalFunctionCase
-    value: lower_case
-
-  - key: readability-identifier-naming.InlineNamespaceCase
-    value: lower_case
-
-  - key: readability-identifier-naming.LocalConstantCase
-    value: lower_case
-
-  - key: readability-identifier-naming.LocalVariableCase
-    value: lower_case
-
-  - key: readability-identifier-naming.MemberCase
-    value: lower_case
-
-  - key: readability-identifier-naming.PrivateMemberPrefix
-    value: '_'
-
-  - key: readability-identifier-naming.ProtectedMemberPrefix
-    value: '_'
-
-  - key: readability-identifier-naming.PublicMemberCase
-    value: lower_case
-
-  - key: readability-identifier-naming.MethodCase
-    value: lower_case
-
-  - key: readability-identifier-naming.PrivateMethodPrefix
-    value: '_'
-
-  - key: readability-identifier-naming.ProtectedMethodPrefix
-    value: '_'
-
-  - key: readability-identifier-naming.NamespaceCase
-    value: lower_case
-
-  - key: readability-identifier-naming.ParameterCase
-    value: lower_case
-
-  - key: readability-identifier-naming.ConstantParameterCase
-    value: lower_case
-
-  - key: readability-identifier-naming.ParameterPackCase
-    value: lower_case
-
-  - key: readability-identifier-naming.StaticConstantCase
-    value: lower_case
-
-  - key: readability-identifier-naming.StaticVariableCase
-    value: lower_case
-
-  - key: readability-identifier-naming.StructCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.TemplateParameterCase
-    value: UPPER_CASE
-
-  - key: readability-identifier-naming.TemplateTemplateParameterCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.TemplateUsingCase
-    value: lower_case
-
-  - key: readability-identifier-naming.TypeTemplateParameterCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.TypedefCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.UnionCase
-    value: CamelCase
-
-  - key: readability-identifier-naming.UsingCase
-    value: lower_case
-
-  - key: readability-identifier-naming.ValueTemplateParameterCase
-    value: lower_case
-
-  - key: readability-identifier-naming.VariableCase
-    value: lower_case
+  - { key: readability-identifier-naming.ClassCase, value: CamelCase }
+  - { key: readability-identifier-naming.ConstexprVariableCase, value: UPPER_CASE }
+  - { key: readability-identifier-naming.EnumCase, value: CamelCase }
+  - { key: readability-identifier-naming.EnumConstantCase, value: CamelCase }
+  - { key: readability-identifier-naming.FunctionCase, value: lower_case }
+  - { key: readability-identifier-naming.GlobalFunctionCase, value: lower_case }
+  - { key: readability-identifier-naming.InlineNamespaceCase, value: lower_case }
+  - { key: readability-identifier-naming.LocalConstantCase, value: lower_case }
+  - { key: readability-identifier-naming.LocalVariableCase, value: lower_case }
+  - { key: readability-identifier-naming.MemberCase, value: lower_case }
+  - { key: readability-identifier-naming.PrivateMemberPrefix, value: '_' }
+  - { key: readability-identifier-naming.ProtectedMemberPrefix, value: '_' }
+  - { key: readability-identifier-naming.PublicMemberCase, value: lower_case }
+  - { key: readability-identifier-naming.MethodCase, value: lower_case }
+  - { key: readability-identifier-naming.PrivateMethodPrefix, value: '_' }
+  - { key: readability-identifier-naming.ProtectedMethodPrefix, value: '_' }
+  - { key: readability-identifier-naming.NamespaceCase, value: lower_case }
+  - { key: readability-identifier-naming.ParameterCase, value: lower_case }
+  - { key: readability-identifier-naming.ConstantParameterCase, value: lower_case }
+  - { key: readability-identifier-naming.ParameterPackCase, value: lower_case }
+  - { key: readability-identifier-naming.StaticConstantCase, value: lower_case }
+  - { key: readability-identifier-naming.StaticVariableCase, value: lower_case }
+  - { key: readability-identifier-naming.StructCase, value: CamelCase }
+  - { key: readability-identifier-naming.TemplateParameterCase, value: UPPER_CASE }
+  - { key: readability-identifier-naming.TemplateTemplateParameterCase, value: CamelCase }
+  - { key: readability-identifier-naming.TemplateUsingCase, value: lower_case }
+  - { key: readability-identifier-naming.TypeTemplateParameterCase, value: CamelCase }
+  - { key: readability-identifier-naming.TypedefCase, value: CamelCase }
+  - { key: readability-identifier-naming.UnionCase, value: CamelCase }
+  - { key: readability-identifier-naming.UsingCase, value: lower_case }
+  - { key: readability-identifier-naming.ValueTemplateParameterCase, value: lower_case }
+  - { key: readability-identifier-naming.VariableCase, value: lower_case
 
   # Iff(!) the context is clear, 'it' for iterator, 'op' for operator, or 'fd' for functional dependency are fine.
-  - key: readability-identifier-length.IgnoredParameterNames
-    value: "^(it|fd|op)$"
-  - key: readability-identifier-length.IgnoredVariableNames
-    value: "^(it|fd|op)$"
+  - { key: readability-identifier-length.IgnoredParameterNames, value: "^(it|fd|op)$" }
+  - { key: readability-identifier-length.IgnoredVariableNames, value: "^(it|fd|op)$" }
 

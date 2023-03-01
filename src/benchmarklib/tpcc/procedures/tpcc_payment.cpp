@@ -42,7 +42,7 @@ TPCCPayment::TPCCPayment(const int num_warehouses, BenchmarkSQLExecutor& sql_exe
 }
 
 bool TPCCPayment::_on_execute() {
-  SQLPipelineStatus pipeline_status;
+  auto pipeline_status = SQLPipelineStatus::NotExecuted;
 
   // Retrieve information about the warehouse
   const auto warehouse_select_pair = _sql_executor.execute(
@@ -50,8 +50,11 @@ bool TPCCPayment::_on_execute() {
       std::to_string(w_id));
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
-  auto w_name = *warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
-  auto w_ytd = *warehouse_table->get_value<float>(ColumnID{6}, 0);
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
+  // All values we access in this method via `get_value` are from non-nullable columns. Thus, we cannot get an
+  // std::nullopt and dereference the optionals without an additional check.
+  const auto w_name = *warehouse_table->get_value<pmr_string>(ColumnID{0}, 0);
+  const auto w_ytd = *warehouse_table->get_value<float>(ColumnID{6}, 0);
 
   // Update warehouse YTD
   std::tie(pipeline_status, std::ignore) =
@@ -68,8 +71,10 @@ bool TPCCPayment::_on_execute() {
       std::to_string(w_id) + " AND D_ID = " + std::to_string(d_id));
   const auto& district_table = district_select_pair.second;
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
-  auto d_name = *district_table->get_value<pmr_string>(ColumnID{0}, 0);
-  auto d_ytd = *district_table->get_value<float>(ColumnID{6}, 0);
+  // NOLINTBEGIN(bugprone-unchecked-optional-access)
+  const auto d_name = *district_table->get_value<pmr_string>(ColumnID{0}, 0);
+  const auto d_ytd = *district_table->get_value<float>(ColumnID{6}, 0);
+  // NOLINTEND(bugprone-unchecked-optional-access)
 
   // Update district YTD
   const auto district_update_pair =
@@ -131,6 +136,7 @@ bool TPCCPayment::_on_execute() {
     new_c_data_stream << w_id;
     new_c_data_stream << h_amount;
     new_c_data_stream << *customer_table->get_value<pmr_string>(ColumnID{15}, customer_offset);  // C_DATA
+    // NOLINTEND(bugprone-unchecked-optional-access)
     auto new_c_data = new_c_data_stream.str();
     new_c_data.resize(std::min(new_c_data.size(), size_t{500}));
     const auto customer_update_data_pair = _sql_executor.execute(

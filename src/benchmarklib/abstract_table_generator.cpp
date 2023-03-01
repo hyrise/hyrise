@@ -255,9 +255,9 @@ void AbstractTableGenerator::generate_and_store() {
 
       auto binary_file_path = std::filesystem::path{};
       if (table_info.binary_file_path) {
-        binary_file_path = *table_info.binary_file_path;
+        binary_file_path = *table_info.binary_file_path;  // NOLINT(bugprone-unchecked-optional-access)
       } else {
-        binary_file_path = *table_info.text_file_path;
+        binary_file_path = *table_info.text_file_path;  // NOLINT(bugprone-unchecked-optional-access)
         binary_file_path.replace_extension(".bin");
       }
 

@@ -18,7 +18,7 @@ const std::vector<BenchmarkItemID>& TPCCBenchmarkItemRunner::items() const {
 }
 
 bool TPCCBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, BenchmarkSQLExecutor& sql_executor) {
-  bool successful;
+  auto successful = false;
   switch (item_id) {
     case 0:
       successful = TPCCDelivery{_num_warehouses, sql_executor}.execute();

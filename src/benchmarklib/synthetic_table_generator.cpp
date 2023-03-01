@@ -50,11 +50,9 @@ namespace hyrise {
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(const size_t num_columns, const size_t num_rows,
                                                                const ChunkOffset chunk_size,
                                                                const SegmentEncodingSpec segment_encoding_spec) const {
-  ColumnSpecification column_specification = {
+  const auto column_specification = ColumnSpecification{
       {ColumnDataDistribution::make_uniform_config(0.0, _max_different_value)}, DataType::Int, segment_encoding_spec};
-  auto table = generate_table({num_columns, column_specification}, num_rows, chunk_size, UseMvcc::No);
-
-  return table;
+  return generate_table({num_columns, column_specification}, num_rows, chunk_size, UseMvcc::No);
 }
 
 std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
@@ -74,30 +72,33 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
       static_cast<size_t>(std::ceil(static_cast<double>(num_rows) / static_cast<double>(chunk_size)));
 
   // add column definitions and initialize each value vector
-  TableColumnDefinitions column_definitions;
+  auto column_definitions = TableColumnDefinitions{};
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
+    // NOLINTBEGIN(bugprone-unchecked-optional-access)
+    // False positive, we literally check that the optional holds a value in the same line.
     const auto column_name = column_specifications[column_id].name ? *column_specifications[column_id].name
                                                                    : "column_" + std::to_string(column_id + 1);
+    // NOLINTEND(bugprone-unchecked-optional-access)
     column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
-  std::shared_ptr<Table> table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
+  auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);
 
   for (auto chunk_index = ChunkOffset{0}; chunk_index < num_chunks; ++chunk_index) {
-    std::vector<std::shared_ptr<AbstractTask>> jobs;
+    auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
     jobs.reserve(static_cast<size_t>(num_chunks));
 
-    Segments segments(num_columns);
+    auto segments = Segments(num_columns);
 
     for (auto column_index = ColumnID{0}; column_index < num_columns; ++column_index) {
       jobs.emplace_back(std::make_shared<JobTask>([&, column_index]() {
         resolve_data_type(column_specifications[column_index].data_type, [&](const auto column_data_type) {
           using ColumnDataType = typename decltype(column_data_type)::type;
 
-          std::vector<int> values;
+          auto values = std::vector<int>{};
           values.reserve(chunk_size);
           const auto& column_data_distribution = column_specifications[column_index].data_distribution;
 
-          std::random_device random_device;
+          auto random_device = std::random_device{};
           auto pseudorandom_engine = std::mt19937{};
 
           pseudorandom_engine.seed(random_device());
@@ -137,7 +138,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             }
           }
 
-          pmr_vector<bool> null_values;
+          auto null_values = pmr_vector<bool>{};
 
           /**
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
@@ -169,7 +170,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
             values.push_back(generate_value_by_distribution_type());
           }
 
-          std::shared_ptr<ValueSegment<ColumnDataType>> value_segment;
+          auto value_segment = std::shared_ptr<ValueSegment<ColumnDataType>>{};
           if (column_specifications[column_index].null_ratio > 0.0f) {
             value_segment = std::make_shared<ValueSegment<ColumnDataType>>(
                 create_typed_segment_values<ColumnDataType>(values), std::move(null_values));
