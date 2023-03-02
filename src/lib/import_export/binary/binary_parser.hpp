@@ -80,7 +80,7 @@ class BinaryParser {
       std::ifstream& file, ChunkOffset row_count);
 
   template <typename T>
-  static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset row_count);
+  static std::shared_ptr<RunLengthSegment<T>> _import_run_length_segment(std::ifstream& file, ChunkOffset /*row_count*/);
 
   template <typename T>
   static std::shared_ptr<FrameOfReferenceSegment<T>> _import_frame_of_reference_segment(std::ifstream& file,
