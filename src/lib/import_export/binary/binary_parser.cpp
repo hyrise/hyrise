@@ -214,7 +214,7 @@ std::shared_ptr<FixedStringDictionarySegment<pmr_string>> BinaryParser::_import_
 
 template <typename T>
 std::shared_ptr<RunLengthSegment<T>> BinaryParser::_import_run_length_segment(std::ifstream& file,
-                                                                              ChunkOffset row_count) {
+                                                                              ChunkOffset /*row_count*/) {
   const auto size = _read_value<uint32_t>(file);
   const auto values = std::make_shared<pmr_vector<T>>(_read_values<T>(file, size));
   const auto null_values = std::make_shared<pmr_vector<bool>>(_read_values<bool>(file, size));
