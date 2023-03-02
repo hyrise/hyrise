@@ -113,7 +113,7 @@ void BinaryParser::_import_chunk(std::ifstream& file, std::shared_ptr<Table>& ta
   for (ColumnID sorted_column_id{0}; sorted_column_id < num_sorted_columns; ++sorted_column_id) {
     const auto column_id = _read_value<ColumnID>(file);
     const auto sort_mode = _read_value<SortMode>(file);
-    sorted_columns.emplace_back(SortColumnDefinition{column_id, sort_mode});
+    sorted_columns.emplace_back(column_id, sort_mode);
   }
 
   Segments output_segments;
