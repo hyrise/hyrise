@@ -131,53 +131,49 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
 
     // We need to get a predicate node with a BinaryPredicateExpression.
     const auto candidate = std::static_pointer_cast<PredicateNode>(current_node);
-    if (const auto& candidate_expression = std::dynamic_pointer_cast<BetweenExpression>(candidate->predicate())) {
-      if (!expression_evaluable_on_lqp(candidate_expression->operand(), *removable_subtree) ||
-          !qualifies_for_od_rewrite(candidate, candidate_expression->operand(), exchangeable_column_expression,
-                                    join_node, *prunable_side)) {
-        return LQPVisitation::VisitInputs;
-      }
+    const auto candidate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(candidate->predicate());
+    Assert(candidate_expression, "PredicateNode must have a predicate.");
 
-      perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
-                         exchangeable_column_expression);
-      performed_rewrite = true;
-      return LQPVisitation::DoNotVisitInputs;
-    }
-
-    const auto candidate_expression = std::dynamic_pointer_cast<BinaryPredicateExpression>(candidate->predicate());
-    if (!candidate_expression) {
+    // Only predicates in the form `column = value` or `column BETWEEN value1 AND value2` are useful to our
+    // optimization. With these conditions, we have the potential (given filtered columns has a UCC or there is an OD between
+    // join column and filtered column) to rewrite the join to a scan.
+    const auto predicate_condition = candidate_expression->predicate_condition;
+    const auto is_equals_predicate = predicate_condition == PredicateCondition::Equals;
+    if (!is_equals_predicate && !is_between_predicate_condition(predicate_condition)) {
       return LQPVisitation::VisitInputs;
     }
-
-    // Only predicates in the form `column = value` are useful to our optimization. These conditions have the potential
-    // (given filtered column is a UCC) to emit at most one result tuple.
-    if (candidate_expression->predicate_condition != PredicateCondition::Equals)
-      return LQPVisitation::VisitInputs;
 
     auto candidate_column_expression = std::shared_ptr<AbstractExpression>{};
-    auto candidate_value_expression = std::shared_ptr<AbstractExpression>{};
+    if (is_equals_predicate) {
+      // Check that this is a value scan.
+      auto candidate_value_expression = std::shared_ptr<AbstractExpression>{};
 
-    for (const auto& predicate_operand : candidate_expression->arguments) {
-      if (predicate_operand->type == ExpressionType::LQPColumn) {
-        candidate_column_expression = predicate_operand;
-      } else if (predicate_operand->type == ExpressionType::Value) {
-        candidate_value_expression = predicate_operand;
+      for (const auto& predicate_operand : candidate_expression->arguments) {
+        if (predicate_operand->type == ExpressionType::LQPColumn) {
+          candidate_column_expression = predicate_operand;
+        } else if (predicate_operand->type == ExpressionType::Value) {
+          candidate_value_expression = predicate_operand;
+        }
       }
+
+      // There should not be a case where we run into no column, but there may be a case where we have no value but
+      // compare columns.
+      if (!candidate_value_expression || !candidate_column_expression) {
+        return LQPVisitation::VisitInputs;
+      }
+    } else {
+      // For between predicates, the column is always the first argument.
+      candidate_column_expression = candidate_expression->arguments[0];
     }
 
-    // There should not be a case where we run into no column, but there may be a case where we have no value but
-    // compare columns.
-    if (!candidate_value_expression || !candidate_column_expression) {
-      return LQPVisitation::VisitInputs;
-    }
 
-    // Check whether the referenced column is available for the subtree root node and unique. Checking whether the
-    // column is unique on the current node is not sufficient. There could be unions or joins in between the subtree
-    // root and the current node, invalidating the unique column combination.
+    // Check whether the referenced column is available for the subtree root node.
     if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
       return LQPVisitation::VisitInputs;
     }
 
+    // Check if candidate column is unique. Checking on the current node is not sufficient. There could be unions or
+    // joins in between the subtree root and the current node, invalidating the unique column combination.
     if (removable_subtree->has_matching_ucc({candidate_column_expression})) {
       perform_ucc_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
                           exchangeable_column_expression);
@@ -185,6 +181,8 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
       return LQPVisitation::DoNotVisitInputs;
     }
 
+
+    // Check if we can performan an OD-based rewrite.
     if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, join_node,
                                  *prunable_side)) {
       perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
