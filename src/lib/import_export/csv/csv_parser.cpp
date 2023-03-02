@@ -225,7 +225,7 @@ size_t CsvParser::_parse_into_chunk(std::string_view csv_chunk, const std::vecto
 
   // Transform the field_offsets to segments and add segments to chunk.
   {
-    std::lock_guard<std::mutex> lock(append_chunk_mutex);
+    const auto lock = std::lock_guard<std::mutex>(append_chunk_mutex);
     for (auto& converter : converters) {
       segments.push_back(converter->finish());
     }
