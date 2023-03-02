@@ -145,7 +145,7 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   // Iterating over all segments of this chunk and exporting them
   for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); column_id++) {
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
-                                  [&](const auto data_type_t, const auto& resolved_segment) {
+                                  [&](const auto /*data_type_t*/, const auto& resolved_segment) {
                                     _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
                                   });
   }
@@ -217,7 +217,7 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 
 template <typename T>
 void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                                  bool column_is_nullable, std::ofstream& ofstream) {
+                                  bool /*column_is_nullable*/, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
   // Write attribute vector compression id
@@ -278,7 +278,8 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*column_is_nullable*/,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
   // Write num elements (rows in segment)
