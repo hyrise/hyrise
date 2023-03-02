@@ -24,10 +24,10 @@ std::shared_ptr<Table> CsvParser::parse(const std::string& filename, const Chunk
                                         const std::optional<CsvMeta>& csv_meta) {
   // If no meta info is given as a parameter, look for a json file
   auto meta = CsvMeta{};
-  if (csv_meta == std::nullopt) {
-    meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
-  } else {
+  if (csv_meta) {
     meta = *csv_meta;
+  } else {
+    meta = process_csv_meta_file(filename + CsvMeta::META_FILE_EXTENSION);
   }
 
   auto escaped_linebreak = std::string(1, meta.config.delimiter_escape) + std::string(1, meta.config.delimiter);
