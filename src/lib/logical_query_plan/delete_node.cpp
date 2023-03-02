@@ -15,7 +15,7 @@ std::string DeleteNode::description(const DescriptionMode /*mode*/) const {
   return "[Delete]";
 }
 
-bool DeleteNode::is_column_nullable(const ColumnID column_id) const {
+bool DeleteNode::is_column_nullable(const ColumnID /*column_id*/) const {
   Fail("Delete does not output any columns");
 }
 
