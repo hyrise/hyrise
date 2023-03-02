@@ -23,11 +23,11 @@ std::vector<std::shared_ptr<AbstractExpression>> DeleteNode::output_expressions(
   return {};
 }
 
-std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> DeleteNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return DeleteNode::make();
 }
 
-bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool DeleteNode::_on_shallow_equals(const AbstractLQPNode& /*rhs*/, const LQPNodeMapping& /*node_mapping*/) const {
   return true;
 }
 
