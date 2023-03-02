@@ -35,8 +35,8 @@ class CorrelatedParameterExpression : public AbstractExpression {
 
   bool requires_computation() const override;
   std::shared_ptr<AbstractExpression> _on_deep_copy(
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
-  std::string description(const DescriptionMode mode) const override;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
+  std::string description(const DescriptionMode /*mode*/) const override;
   DataType data_type() const override;
 
   const ParameterID parameter_id;
@@ -44,7 +44,7 @@ class CorrelatedParameterExpression : public AbstractExpression {
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
-  bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
+  bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
 
  private:
   const ReferencedExpressionInfo _referenced_expression_info;

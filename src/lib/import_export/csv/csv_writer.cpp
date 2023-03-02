@@ -26,7 +26,7 @@ void CsvWriter::_generate_meta_info_file(const Table& table, const std::string& 
     meta.columns.push_back(column_meta);
   }
 
-  nlohmann::json meta_json = meta;
+  const auto meta_json = nlohmann::json{meta};
 
   std::ofstream meta_file_stream(filename);
   meta_file_stream << std::setw(4) << meta_json << std::endl;
