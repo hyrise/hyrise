@@ -74,11 +74,8 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
   // add column definitions and initialize each value vector
   auto column_definitions = TableColumnDefinitions{};
   for (auto column_id = size_t{0}; column_id < num_columns; ++column_id) {
-    // NOLINTBEGIN(bugprone-unchecked-optional-access)
-    // False positive, we literally check that the optional holds a value in the same line.
     const auto column_name = column_specifications[column_id].name ? *column_specifications[column_id].name
                                                                    : "column_" + std::to_string(column_id + 1);
-    // NOLINTEND(bugprone-unchecked-optional-access)
     column_definitions.emplace_back(column_name, column_specifications[column_id].data_type, false);
   }
   auto table = std::make_shared<Table>(column_definitions, TableType::Data, chunk_size, use_mvcc);

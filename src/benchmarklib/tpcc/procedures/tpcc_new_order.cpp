@@ -53,9 +53,6 @@ bool TPCCNewOrder::_on_execute() {
   const auto& warehouse_table = warehouse_select_pair.second;
   Assert(warehouse_table && warehouse_table->row_count() == 1, "Did not find warehouse (or found more than one)");
 
-  // NOLINTBEGIN(bugprone-unchecked-optional-access)
-  // All values we access in this method via `get_value` are from non-nullable columns. Thus, we cannot get an
-  // std::nullopt and dereference the optionals without an additional check.
   const auto w_tax = *warehouse_table->get_value<float>(ColumnID{0}, 0);
   Assert(w_tax >= 0.f && w_tax <= .2f, "Invalid warehouse tax rate encountered");
 
@@ -149,7 +146,6 @@ bool TPCCNewOrder::_on_execute() {
     const auto s_ytd = *stock_table->get_value<int32_t>(ColumnID{3}, 0);
     const auto s_order_cnt = *stock_table->get_value<int32_t>(ColumnID{4}, 0);
     const auto s_remote_cnt = *stock_table->get_value<int32_t>(ColumnID{4}, 0);
-    // NOLINTEND(bugprone-unchecked-optional-access)
 
     // Calculate the new values for S_QUANTITY, S_YTD, S_ORDER_CNT
     auto new_s_quantity = 0;

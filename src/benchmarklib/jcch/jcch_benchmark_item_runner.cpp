@@ -122,7 +122,6 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
       // In some cases, we still need to do the date calculations that SQLite (used for verification) does not
       // support yet. When parsing a date, we expect the generator to provide sound date strings and omit checks when
       // dereferencing the optionals.
-      // NOLINTBEGIN(bugprone-unchecked-optional-access)
       const auto date = date_interval(boost::gregorian::date{1998, 12, 01}, -std::stoi(raw_params_iter->at(0)),
                                       DatetimeComponent::Day);
       parameters.emplace_back("'"s + date_to_string(date) + "'");
@@ -344,7 +343,6 @@ bool JCCHBenchmarkItemRunner::_on_execute_item(const BenchmarkItemID item_id, Be
     default:
       Fail("There are only 22 JCC-H queries");
   }
-  // NOLINTEND(bugprone-unchecked-optional-access)
 
   if (sql.empty()) {
     sql = _substitute_placeholders(item_id, parameters);

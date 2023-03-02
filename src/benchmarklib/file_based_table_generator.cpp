@@ -66,8 +66,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
    */
   for (auto& [table_name, table_info] : table_info_by_name) {
     if (table_info.binary_file_path && table_info.text_file_path) {
-      // NOLINTBEGIN(bugprone-unchecked-optional-access)
-      // False positive, we checked that the optionals hold a value one line earlier.
       const auto last_binary_write = std::filesystem::last_write_time(*table_info.binary_file_path);
       const auto last_text_write = std::filesystem::last_write_time(*table_info.text_file_path);
 
@@ -76,7 +74,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
                   << "' is out of date and needs to be re-exported" << std::endl;
         table_info.binary_file_out_of_date = true;
       }
-      // NOLINTEND(bugprone-unchecked-optional-access)
     }
   }
 
@@ -90,8 +87,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
 
     // Pick a source file to load a table from, prefer the binary version
     if (table_info.binary_file_path && !table_info.binary_file_out_of_date) {
-      // NOLINTBEGIN(bugprone-unchecked-optional-access)
-      // False positive, we checked that the optional holds a value one line earlier.
       std::cout << "from " << *table_info.binary_file_path << std::flush;
       table_info.table = BinaryParser::parse(*table_info.binary_file_path);
       table_info.loaded_from_binary = true;
@@ -105,7 +100,6 @@ std::unordered_map<std::string, BenchmarkTableInfo> FileBasedTableGenerator::gen
       } else {
         Fail("Unknown textual file format. This should have been caught earlier.");
       }
-      // NOLINTEND(bugprone-unchecked-optional-access)
     }
 
     std::cout << " (" << table_info.table->row_count() << " rows; " << timer.lap_formatted() << ")" << std::endl;
