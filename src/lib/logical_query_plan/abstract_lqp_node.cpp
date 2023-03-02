@@ -515,7 +515,7 @@ OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
     // Check whether output expressions are missing
     const auto& output_expressions = this->output_expressions();
     for (const auto& od : input_order_dependencies) {
-      Assert(contains_all_expressions(od.expressions, output_expressions) &&
+      Assert(contains_all_expressions(od.ordering_expressions, output_expressions) &&
                  contains_all_expressions(od.ordered_expressions, output_expressions),
              "Forwarding of OD is illegal because node misses output expressions.");
     }

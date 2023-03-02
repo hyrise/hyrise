@@ -69,16 +69,16 @@ std::shared_ptr<AbstractTableConstraint> AbstractDependencyValidationRule::_cons
     }
     case DependencyType::Order: {
       const auto& od_candidate = static_cast<const OdCandidate&>(candidate);
-      return std::make_shared<TableOrderConstraint>(std::vector<ColumnID>{od_candidate.column_id},
+      return std::make_shared<TableOrderConstraint>(std::vector<ColumnID>{od_candidate.ordering_column_id},
                                                     std::vector<ColumnID>{od_candidate.ordered_column_id});
     }
     case DependencyType::Inclusion: {
       const auto& ind_candidate = static_cast<const IndCandidate&>(candidate);
-      const auto& table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
-      const auto& foreign_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.foreign_key_table);
-      return std::make_shared<ForeignKeyConstraint>(std::vector<ColumnID>{ind_candidate.foreign_key_column_id},
-                                                    std::vector<ColumnID>{ind_candidate.column_id}, foreign_key_table,
-                                                    table);
+      const auto& foreign_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
+      const auto& primary_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);
+      return std::make_shared<ForeignKeyConstraint>(std::vector<ColumnID>{ind_candidate.primary_key_column_id},
+                                                    std::vector<ColumnID>{ind_candidate.foreign_key_column_id},
+                                                    primary_key_table, foreign_key_table);
     }
   }
 

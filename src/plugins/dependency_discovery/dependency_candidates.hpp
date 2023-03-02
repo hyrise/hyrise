@@ -14,8 +14,7 @@ enum class DependencyType { UniqueColumn, Order, Inclusion };
 
 class AbstractDependencyCandidate : public Noncopyable {
  public:
-  AbstractDependencyCandidate(const std::string& init_table_name, const ColumnID init_column_id,
-                              const DependencyType init_type);
+  AbstractDependencyCandidate(const std::string& init_table_name, const DependencyType init_type);
 
   AbstractDependencyCandidate() = delete;
   virtual ~AbstractDependencyCandidate() = default;
@@ -27,7 +26,6 @@ class AbstractDependencyCandidate : public Noncopyable {
   virtual std::string description() const = 0;
 
   const std::string table_name;
-  const ColumnID column_id;
   const DependencyType type;
 
  protected:
@@ -43,37 +41,43 @@ class UccCandidate : public AbstractDependencyCandidate {
 
   std::string description() const final;
 
+  const ColumnID column_id;
+
  protected:
-  virtual size_t _on_hash() const final;
-  virtual bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
+  size_t _on_hash() const final;
+  bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
 };
 
 class OdCandidate : public AbstractDependencyCandidate {
  public:
-  OdCandidate(const std::string& init_table_name, const ColumnID init_column_id, const ColumnID init_ordered_column_id);
+  OdCandidate(const std::string& init_table_name, const ColumnID init_ordering_column_id,
+              const ColumnID init_ordered_column_id);
 
   std::string description() const final;
 
+  const ColumnID ordering_column_id;
   const ColumnID ordered_column_id;
 
  protected:
-  virtual size_t _on_hash() const final;
-  virtual bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
+  size_t _on_hash() const final;
+  bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
 };
 
 class IndCandidate : public AbstractDependencyCandidate {
  public:
-  IndCandidate(const std::string& init_table_name, const ColumnID init_column_id,
-               const std::string& init_foreign_key_table, const ColumnID init_foreign_key_column_id);
+  IndCandidate(const std::string& foreign_key_table, const ColumnID init_foreign_key_column_id,
+               const std::string& init_primary_key_table, const ColumnID init_primary_key_column_id);
 
   std::string description() const final;
 
-  const std::string foreign_key_table;
   const ColumnID foreign_key_column_id;
 
+  const std::string primary_key_table;
+  const ColumnID primary_key_column_id;
+
  protected:
-  virtual size_t _on_hash() const final;
-  virtual bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
+  size_t _on_hash() const final;
+  bool _on_equals(const AbstractDependencyCandidate& rhs) const final;
 };
 
 // Wrapper around dependency_candidate->hash(), to enable hash based containers containing

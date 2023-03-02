@@ -320,7 +320,7 @@ TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
     PredicateNode::make(equals_(c_u, correlated_parameter),
       PredicateNode::make(greater_than_(c_v, max_a_subquery),
         node_c));
-    const auto correlated_subquery = lqp_subquery_(correlated_subquery_lqp, std::make_pair(ParameterID{0}, correlated_parameter));
+    const auto correlated_subquery = lqp_subquery_(correlated_subquery_lqp, std::make_pair(ParameterID{0}, correlated_parameter));  // NOLINT(whitespace/line_length)
 
 
     const auto subquery_lqp =

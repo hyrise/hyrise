@@ -76,20 +76,20 @@ bool fill_sample_consecutive(const std::shared_ptr<const Table>& table, const Co
   return true;
 }
 
-template <typename T, typename U>
-bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID column_id,
+template <typename OrderingType, typename OrderedType>
+bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID ordering_column_id,
                     const ColumnID ordered_column_id, const uint64_t row_count) {
   const auto sample_size = std::min(row_count, OdValidationRule::SAMPLE_SIZE);
 
-  auto lhs_sample_values = std::vector<U>{};
-  auto rhs_sample_values = std::vector<T>{};
-  lhs_sample_values.reserve(sample_size);
-  rhs_sample_values.reserve(sample_size);
+  auto ordering_sample_values = std::vector<OrderingType>{};
+  auto ordered_sample_values = std::vector<OrderedType>{};
+  ordering_sample_values.reserve(sample_size);
+  ordered_sample_values.reserve(sample_size);
 
   // Just take first SAMPLE_SIZE rows if table is small (and drawing random sample is likely slower).
   if (row_count < OdValidationRule::MIN_SIZE_FOR_RANDOM_SAMPLE) {
-    if (!fill_sample_consecutive(table, column_id, sample_size, lhs_sample_values) ||
-        !fill_sample_consecutive(table, ordered_column_id, sample_size, rhs_sample_values)) {
+    if (!fill_sample_consecutive(table, ordering_column_id, sample_size, ordering_sample_values) ||
+        !fill_sample_consecutive(table, ordered_column_id, sample_size, ordered_sample_values)) {
       return false;
     }
   } else {
@@ -102,20 +102,20 @@ bool sample_ordered(const std::shared_ptr<const Table>& table, const ColumnID co
 
     auto performance_warning_disabler = PerformanceWarningDisabler{};
     for (const auto random_row : random_rows) {
-      const auto& random_value = table->get_value<U>(column_id, random_row);
-      const auto& random_ordered_value = table->get_value<T>(ordered_column_id, random_row);
-      if (!random_value || !random_ordered_value) {
+      const auto& random_ordering_value = table->get_value<OrderingType>(ordering_column_id, random_row);
+      const auto& random_ordered_value = table->get_value<OrderedType>(ordered_column_id, random_row);
+      if (!random_ordering_value || !random_ordered_value) {
         return false;
       }
-      lhs_sample_values.emplace_back(*random_value);
-      rhs_sample_values.emplace_back(*random_ordered_value);
+      ordering_sample_values.emplace_back(*random_ordering_value);
+      ordered_sample_values.emplace_back(*random_ordered_value);
     }
   }
 
-  const auto& permutation = sort_permutation<U>(lhs_sample_values);
-  const auto& ordered_values = apply_permutation<T>(rhs_sample_values, permutation);
+  const auto& permutation = sort_permutation<OrderingType>(ordering_sample_values);
+  const auto& ordered_values = apply_permutation<OrderedType>(ordered_sample_values, permutation);
   bool is_initialized = false;
-  auto last_value = T{};
+  auto last_value = OrderedType{};
   for (const auto& current_value : ordered_values) {
     if (is_initialized && last_value > current_value) {
       return false;
@@ -136,17 +136,17 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
   const auto& od_candidate = static_cast<const OdCandidate&>(candidate);
 
   const auto& table = Hyrise::get().storage_manager.get_table(od_candidate.table_name);
-  const auto column_id = od_candidate.column_id;
+  const auto ordering_column_id = od_candidate.ordering_column_id;
   const auto ordered_column_id = od_candidate.ordered_column_id;
 
   auto status = ValidationStatus::Uncertain;
   const auto row_count = table->row_count();
-  resolve_data_type(table->column_data_type(column_id), [&](const auto data_type_t) {
-    using ColumnDataType = typename decltype(data_type_t)::type;
-    resolve_data_type(table->column_data_type(ordered_column_id), [&](const auto data_type_t2) {
-      using OrderedColumnDataType = typename decltype(data_type_t2)::type;
-      const auto ordered =
-          sample_ordered<OrderedColumnDataType, ColumnDataType>(table, column_id, ordered_column_id, row_count);
+  resolve_data_type(table->column_data_type(ordering_column_id), [&](const auto ordering_data_type_t) {
+    using OrderingColumnDataType = typename decltype(ordering_data_type_t)::type;
+    resolve_data_type(table->column_data_type(ordered_column_id), [&](const auto ordered_data_type_t) {
+      using OrderedColumnDataType = typename decltype(ordered_data_type_t)::type;
+      const auto ordered = sample_ordered<OrderingColumnDataType, OrderedColumnDataType>(table, ordering_column_id,
+                                                                                         ordered_column_id, row_count);
       if (!ordered) {
         status = ValidationStatus::Invalid;
         return;
@@ -168,14 +168,14 @@ ValidationResult OdValidationRule::_on_validate(const AbstractDependencyCandidat
 
   auto pruned_column_ids = std::vector<ColumnID>{};
   const auto column_count = table->column_count();
-  pruned_column_ids.reserve(column_count);
+  pruned_column_ids.reserve(std::max(column_count - 2, 0));
   for (auto pruned_column_id = ColumnID{0}; pruned_column_id < column_count; ++pruned_column_id) {
-    if (pruned_column_id != column_id && pruned_column_id != ordered_column_id) {
+    if (pruned_column_id != ordering_column_id && pruned_column_id != ordered_column_id) {
       pruned_column_ids.emplace_back(pruned_column_id);
     }
   }
 
-  const auto ordered_column_last = ordered_column_id > column_id;
+  const auto ordered_column_last = ordered_column_id > ordering_column_id;
   const auto sort_column_id = ordered_column_last ? ColumnID{0} : ColumnID{1};
   const auto check_column_id = ordered_column_last ? ColumnID{1} : ColumnID{0};
 

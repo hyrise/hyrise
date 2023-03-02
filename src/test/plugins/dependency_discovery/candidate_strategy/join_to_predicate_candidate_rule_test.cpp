@@ -89,8 +89,8 @@ TEST_F(JoinToPredicateCandidateRuleTest, CandidatesEqualsPredicate) {
 
     const auto& dependency_candidates = _apply_rule(lqp);
     SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
-
-    EXPECT_EQ(dependency_candidates.size(), 4);
+    const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 3;
+    EXPECT_EQ(dependency_candidates.size(), expected_candidate_count);
 
     const auto ucc_candidate_join_column = std::make_shared<UccCandidate>(_table_name_b, _x->original_column_id);
     const auto ucc_candidate_predicate_column = std::make_shared<UccCandidate>(_table_name_b, _z->original_column_id);
@@ -99,10 +99,13 @@ TEST_F(JoinToPredicateCandidateRuleTest, CandidatesEqualsPredicate) {
     const auto od_candidate =
         std::make_shared<OdCandidate>(_table_name_b, _x->original_column_id, _z->original_column_id);
 
-    EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_join_column));
     EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_predicate_column));
     EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
     EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+
+    if (join_mode == JoinMode::Inner) {
+      EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_join_column));
+    }
   }
 }
 
@@ -120,9 +123,10 @@ TEST_F(JoinToPredicateCandidateRuleTest, CandidatesBetweenPredicate) {
     _prune(lqp);
 
     const auto& dependency_candidates = _apply_rule(lqp);
-    SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
 
-    EXPECT_EQ(dependency_candidates.size(), 3);
+    SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
+    const auto expected_candidate_count = join_mode == JoinMode::Inner ? 3 : 2;
+    EXPECT_EQ(dependency_candidates.size(), expected_candidate_count);
 
     const auto ucc_candidate_join_column = std::make_shared<UccCandidate>(_table_name_b, _x->original_column_id);
     const auto ind_candidate =
@@ -130,47 +134,80 @@ TEST_F(JoinToPredicateCandidateRuleTest, CandidatesBetweenPredicate) {
     const auto od_candidate =
         std::make_shared<OdCandidate>(_table_name_b, _x->original_column_id, _z->original_column_id);
 
-    EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_join_column));
     EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
     EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+
+    if (join_mode == JoinMode::Inner) {
+      EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_join_column));
+    }
   }
 }
 
-TEST_P(JoinToPredicateCandidateRuleTest, CandidatesPredicateRightInput) {
-  for (const auto join_mode : {JoinMode::Inner, JoinMode::Semi}) {
-    const auto predicate = _create_predicate(_z, GetParam());
-    // clang-format off
+TEST_P(JoinToPredicateCandidateRuleTest, CandidatesPredicateRightInputInnerJoin) {
+  const auto predicate = _create_predicate(_z, GetParam());
+  // clang-format off
     const auto lqp =
-    JoinNode::make(join_mode, equals_(_a, _x),
+    JoinNode::make(JoinMode::Inner, equals_(_a, _x),
       PredicateNode::make(equals_(_b, 10),
         _table_a),
       PredicateNode::make(predicate,
         _table_b));
-    // clang-format on
+  // clang-format on
 
-    _prune(lqp);
+  _prune(lqp);
 
-    const auto& dependency_candidates = _apply_rule(lqp);
+  const auto& dependency_candidates = _apply_rule(lqp);
 
-    const auto is_equals_predicate = predicate->predicate_condition == PredicateCondition::Equals;
-    const auto candidate_count = is_equals_predicate ? 4 : 3;
-    EXPECT_EQ(dependency_candidates.size(), candidate_count);
+  const auto is_equals_predicate = predicate->predicate_condition == PredicateCondition::Equals;
+  const auto candidate_count = is_equals_predicate ? 4 : 3;
+  EXPECT_EQ(dependency_candidates.size(), candidate_count);
 
-    const auto ucc_candidate_join_column = std::make_shared<UccCandidate>(_table_name_b, _x->original_column_id);
-    const auto ind_candidate =
-        std::make_shared<IndCandidate>(_table_name_a, _a->original_column_id, _table_name_b, _x->original_column_id);
-    const auto od_candidate =
-        std::make_shared<OdCandidate>(_table_name_b, _x->original_column_id, _z->original_column_id);
+  const auto ucc_candidate_join_column = std::make_shared<UccCandidate>(_table_name_b, _x->original_column_id);
+  const auto ind_candidate =
+      std::make_shared<IndCandidate>(_table_name_a, _a->original_column_id, _table_name_b, _x->original_column_id);
+  const auto od_candidate =
+      std::make_shared<OdCandidate>(_table_name_b, _x->original_column_id, _z->original_column_id);
 
-    SCOPED_TRACE("With JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
-    EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_join_column));
-    EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
-    EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+  EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_join_column));
+  EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
+  EXPECT_TRUE(dependency_candidates.contains(od_candidate));
 
-    if (is_equals_predicate) {
-      const auto ucc_candidate_predicate_column = std::make_shared<UccCandidate>(_table_name_b, _z->original_column_id);
-      EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_predicate_column));
-    }
+  if (is_equals_predicate) {
+    const auto ucc_candidate_predicate_column = std::make_shared<UccCandidate>(_table_name_b, _z->original_column_id);
+    EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_predicate_column));
+  }
+}
+
+TEST_P(JoinToPredicateCandidateRuleTest, CandidatesPredicateRightInputSemiJoin) {
+  const auto predicate = _create_predicate(_z, GetParam());
+  // clang-format off
+    const auto lqp =
+    JoinNode::make(JoinMode::Semi, equals_(_a, _x),
+      PredicateNode::make(equals_(_b, 10),
+        _table_a),
+      PredicateNode::make(predicate,
+        _table_b));
+  // clang-format on
+
+  _prune(lqp);
+
+  const auto& dependency_candidates = _apply_rule(lqp);
+
+  const auto is_equals_predicate = predicate->predicate_condition == PredicateCondition::Equals;
+  const auto candidate_count = is_equals_predicate ? 3 : 2;
+  EXPECT_EQ(dependency_candidates.size(), candidate_count);
+
+  const auto ind_candidate =
+      std::make_shared<IndCandidate>(_table_name_a, _a->original_column_id, _table_name_b, _x->original_column_id);
+  const auto od_candidate =
+      std::make_shared<OdCandidate>(_table_name_b, _x->original_column_id, _z->original_column_id);
+
+  EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
+  EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+
+  if (is_equals_predicate) {
+    const auto ucc_candidate_predicate_column = std::make_shared<UccCandidate>(_table_name_b, _z->original_column_id);
+    EXPECT_TRUE(dependency_candidates.contains(ucc_candidate_predicate_column));
   }
 }
 

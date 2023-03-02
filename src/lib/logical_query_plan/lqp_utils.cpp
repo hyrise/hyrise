@@ -562,7 +562,7 @@ FunctionalDependencies fds_from_order_dependencies(const std::shared_ptr<const A
   }
 
   for (const auto& od : order_dependencies) {
-    auto determinants = ExpressionUnorderedSet{od.expressions.cbegin(), od.expressions.cend()};
+    auto determinants = ExpressionUnorderedSet{od.ordering_expressions.cbegin(), od.ordering_expressions.cend()};
 
     // (1) Verify whether we can create an FD from the given OD (non-nullable expressions).
     if (!std::all_of(determinants.cbegin(), determinants.cend(), [&](const auto& determinant_expression) {
@@ -697,18 +697,18 @@ bool contains_matching_order_dependency(const OrderDependencies& order_dependenc
                                         const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
                                         const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) {
   DebugAssert(!order_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
-  DebugAssert(!expressions.empty(), "Invalid input: List of expressions should not be empty.");
+  DebugAssert(!expressions.empty(), "Invalid input: List of ordering expressions should not be empty.");
   DebugAssert(!ordered_expressions.empty(), "Invalid input: List of ordered expressions should not be empty.");
 
   for (const auto& od : order_dependencies) {
     // Continue if OD requires more expressions to guarantee sortedness than provided.
-    if (od.expressions.size() > expressions.size()) {
+    if (od.ordering_expressions.size() > expressions.size()) {
       continue;
     }
 
-    // Continue if the OD's expression are not the first of the provided expressions. It is totally fine if the OD
-    // requires fewer expressions than given.
-    if (!first_expressions_match(od.expressions, expressions)) {
+    // Continue if the OD's ordering expression are not the first of the provided expressions. It is totally fine if
+    // the OD requires fewer expressions than given.
+    if (!first_expressions_match(od.ordering_expressions, expressions)) {
       continue;
     }
 

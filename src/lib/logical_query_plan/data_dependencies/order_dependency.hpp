@@ -14,14 +14,14 @@ namespace hyrise {
  *       been a ValidateNode before or where MVCC is disabled).
  */
 struct OrderDependency final {
-  explicit OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_expressions,
+  explicit OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_ordering_expressions,
                            std::vector<std::shared_ptr<AbstractExpression>> init_ordered_expessions);
 
   bool operator==(const OrderDependency& rhs) const;
   bool operator!=(const OrderDependency& rhs) const;
   size_t hash() const;
 
-  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  std::vector<std::shared_ptr<AbstractExpression>> ordering_expressions;
   std::vector<std::shared_ptr<AbstractExpression>> ordered_expressions;
 };
 

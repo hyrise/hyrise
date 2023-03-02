@@ -67,7 +67,7 @@ OrderDependencies ProjectionNode::order_dependencies() const {
 
   for (const auto& input_order_dependency : input_order_dependencies) {
     // As is the case for UCCs, we have opportunities for creating ODs from different projections in the future.
-    if (!(contains_all_expressions(input_order_dependency.expressions, output_expressions) &&
+    if (!(contains_all_expressions(input_order_dependency.ordering_expressions, output_expressions) &&
           contains_all_expressions(input_order_dependency.ordered_expressions, output_expressions))) {
       continue;
     }

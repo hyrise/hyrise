@@ -1,7 +1,6 @@
-#include "base_test.hpp"
-
 #include <numeric>
 
+#include "base_test.hpp"
 #include "storage/constraints/foreign_key_constraint.hpp"
 #include "storage/table.hpp"
 

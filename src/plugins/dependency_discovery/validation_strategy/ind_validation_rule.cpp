@@ -77,10 +77,10 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
   const auto& ind_candidate = static_cast<const IndCandidate&>(candidate);
 
   const auto& included_table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
-  const auto included_column_id = ind_candidate.column_id;
+  const auto included_column_id = ind_candidate.foreign_key_column_id;
 
-  const auto& including_table = Hyrise::get().storage_manager.get_table(ind_candidate.foreign_key_table);
-  const auto including_column_id = ind_candidate.foreign_key_column_id;
+  const auto& including_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);
+  const auto including_column_id = ind_candidate.primary_key_column_id;
 
   if (including_table->column_data_type(including_column_id) != included_table->column_data_type(included_column_id)) {
     return ValidationResult{ValidationStatus::Invalid};
