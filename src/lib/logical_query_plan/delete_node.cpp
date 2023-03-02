@@ -11,7 +11,7 @@ namespace hyrise {
 
 DeleteNode::DeleteNode() : AbstractNonQueryNode(LQPNodeType::Delete) {}
 
-std::string DeleteNode::description(const DescriptionMode mode) const {
+std::string DeleteNode::description(const DescriptionMode /*mode*/) const {
   return "[Delete]";
 }
 
