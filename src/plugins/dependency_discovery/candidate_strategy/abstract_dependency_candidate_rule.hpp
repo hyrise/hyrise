@@ -7,7 +7,7 @@ namespace hyrise {
 
 class AbstractDependencyCandidateRule {
  public:
-  AbstractDependencyCandidateRule(const LQPNodeType init_target_node_type) : target_node_type{init_target_node_type} {}
+  explicit AbstractDependencyCandidateRule(const LQPNodeType init_target_node_type) : target_node_type{init_target_node_type} {}
 
   AbstractDependencyCandidateRule() = delete;
   virtual ~AbstractDependencyCandidateRule() = default;

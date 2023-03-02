@@ -11,12 +11,12 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 
 bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID search_column_id) {
   return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
-};
+}
 
 bool contains_any_column(const std::vector<ColumnID>& column_ids, const std::vector<ColumnID>& search_column_ids) {
   return std::any_of(search_column_ids.cbegin(), search_column_ids.cend(),
                      [&](const auto column_id) { return contains_column(column_ids, column_id); });
-};
+}
 
 }  // namespace
 

@@ -13,7 +13,7 @@ enum class ValidationStatus { Uncertain, Valid, Invalid, AlreadyKnown };
 
 struct ValidationResult {
  public:
-  ValidationResult(const ValidationStatus init_status);
+  explicit ValidationResult(const ValidationStatus init_status);
   ValidationResult() = delete;
 
   ValidationStatus status;
@@ -23,7 +23,7 @@ struct ValidationResult {
 
 class AbstractDependencyValidationRule {
  public:
-  AbstractDependencyValidationRule(const DependencyType init_dependency_type);
+  explicit AbstractDependencyValidationRule(const DependencyType init_dependency_type);
 
   AbstractDependencyValidationRule() = delete;
   virtual ~AbstractDependencyValidationRule() = default;

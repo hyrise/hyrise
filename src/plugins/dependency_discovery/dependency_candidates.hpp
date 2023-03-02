@@ -1,8 +1,8 @@
 #pragma once
 
-#include "types.hpp"
-
 #include <unordered_set>
+
+#include "types.hpp"
 
 namespace hyrise {
 /**
