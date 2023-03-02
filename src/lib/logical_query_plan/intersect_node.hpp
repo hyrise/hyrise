@@ -25,7 +25,7 @@ class IntersectNode : public EnableMakeForLQPNode<IntersectNode>, public Abstrac
  public:
   explicit IntersectNode(const SetOperationMode init_operation_mode);
 
-  std::string description(const DescriptionMode /*mode*/) const override;
+  std::string description(const DescriptionMode mode = DescriptionMode::Short) const override;
   std::vector<std::shared_ptr<AbstractExpression>> output_expressions() const override;
   bool is_column_nullable(const ColumnID column_id) const override;
 

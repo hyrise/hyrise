@@ -19,7 +19,7 @@ class AbstractNonQueryNode : public AbstractLQPNode {
 
   FunctionalDependencies non_trivial_functional_dependencies() const override;
 
-  bool is_column_nullable(const ColumnID column_id) const override;
+  bool is_column_nullable(const ColumnID /*column_id*/) const override;
 };
 
 }  // namespace hyrise
