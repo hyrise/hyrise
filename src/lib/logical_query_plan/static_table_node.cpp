@@ -11,7 +11,7 @@ namespace hyrise {
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
     : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
 
-std::string StaticTableNode::description(const DescriptionMode mode) const {
+std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
   std::ostringstream stream;
 
   stream << "[StaticTable]:"
@@ -81,11 +81,11 @@ size_t StaticTableNode::_on_shallow_hash() const {
   return boost::hash_value(hash - soft_key_constraints.size());
 }
 
-std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return StaticTableNode::make(table);
 }
 
-bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
   return table->column_definitions() == static_table_node.table->column_definitions() &&
          table->soft_key_constraints() == static_table_node.table->soft_key_constraints();
