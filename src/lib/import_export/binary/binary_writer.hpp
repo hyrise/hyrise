@@ -161,7 +161,7 @@ class BinaryWriter {
    * The type of the column can be found in the global header of the file.
    */
   template <typename T>
-  static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+  static void _write_segment(const RunLengthSegment<T>& run_length_segment, bool /*column_is_nullable*/,
                              std::ofstream& ofstream);
 
   /**
@@ -188,7 +188,7 @@ class BinaryWriter {
    * ³: This field is only written if the vector compression is FixedWidthInteger
    */
   template <typename T>
-  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, bool column_is_nullable,
+  static void _write_segment(const FrameOfReferenceSegment<T>& frame_of_reference_segment, bool /*column_is_nullable*/,
                              std::ofstream& ofstream);
 
   /**

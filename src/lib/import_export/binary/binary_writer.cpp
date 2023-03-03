@@ -198,7 +198,7 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
+void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Dictionary);
 
@@ -237,7 +237,7 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, bool /*column_is_nullable*/,
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::RunLength);
 
@@ -254,7 +254,7 @@ void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment,
 
 template <>
 void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
-                                  bool column_is_nullable, std::ofstream& ofstream) {
+                                  bool /*column_is_nullable*/, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
   // Write attribute vector compression id
