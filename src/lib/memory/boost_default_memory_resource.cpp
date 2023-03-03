@@ -40,6 +40,7 @@ memory_resource* new_delete_resource() BOOST_NOEXCEPT {
   return get_default_resource();
 }
 
+// NOLINTNEXTLINE: lint.sh thinks thrre is a C-style cast in the next line.
 memory_resource* set_default_resource(memory_resource* /*resource*/) BOOST_NOEXCEPT {
   // Do nothing
   return get_default_resource();

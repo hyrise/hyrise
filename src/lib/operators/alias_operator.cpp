@@ -32,8 +32,8 @@ std::string AliasOperator::description(DescriptionMode description_mode) const {
 
 std::shared_ptr<AbstractOperator> AliasOperator::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<AliasOperator>(copied_left_input, _column_ids, _aliases);
 }
 
@@ -92,7 +92,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
             std::find_if(input_sorted_by.cbegin(), input_sorted_by.cend(),
                          [&](const auto& sorted_information) { return column_id == sorted_information.column; });
         if (it != input_sorted_by.cend()) {
-          sort_definitions.emplace_back(SortColumnDefinition(output_column_id, it->sort_mode));
+          sort_definitions.emplace_back(output_column_id, it->sort_mode);
         }
       }
       Assert(input_sorted_by.size() == sort_definitions.size(),
