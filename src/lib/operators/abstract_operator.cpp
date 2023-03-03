@@ -143,9 +143,10 @@ void AbstractOperator::execute() {
         // Check that LQP expressions and PQP columns match. If they do not, this is a severe bug as the operators might
         // be operating on the wrong column. This should not only be caught here, but also by more detailed tests.
         // We cannot check the name of the column as LQP expressions do not know their alias.
-        Assert(_output->column_count() == lqp_expressions.size(),
+        const auto column_count = _output->column_count();
+        Assert(column_count == lqp_expressions.size(),
                std::string{"Mismatching number of output columns for "} + name());
-        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           if (_type != OperatorType::Alias) {
             const auto lqp_type = lqp_expressions[column_id]->data_type();
             const auto pqp_type = _output->column_data_type(column_id);
@@ -160,8 +161,10 @@ void AbstractOperator::execute() {
     // Verify that nullability of columns and segments match for ValueSegments. Only ValueSegments have an individual
     // `is_nullable` attribute.
     if (_output && _output->type() == TableType::Data) {
-      for (auto chunk_id = ChunkID{0}; chunk_id < _output->chunk_count(); ++chunk_id) {
-        for (auto column_id = ColumnID{0}; column_id < _output->column_count(); ++column_id) {
+      const auto chunk_count = _output->chunk_count();
+      const auto column_count = _output->column_count();
+      for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
+        for (auto column_id = ColumnID{0}; column_id < ; ++column_id) {
           const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
           resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
             using ColumnDataType = typename decltype(data_type_t)::type;
@@ -194,7 +197,7 @@ void AbstractOperator::clear_output() {
   _output = nullptr;
 }
 
-std::string AbstractOperator::description(DescriptionMode description_mode) const {
+std::string AbstractOperator::description(DescriptionMode /*description_mode*/) const {
   return name();
 }
 
@@ -436,8 +439,8 @@ std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_
   return stream;
 }
 
-void AbstractOperator::_transition_to(OperatorState new_state) {
-  OperatorState previous_state = _state.exchange(new_state);
+void AbstractOperator::_transition_to(const OperatorState new_state) {
+  const auto previous_state = _state.exchange(new_state);
 
   // Check the validity of the state transition
   switch (new_state) {
