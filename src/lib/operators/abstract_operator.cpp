@@ -164,7 +164,7 @@ void AbstractOperator::execute() {
       const auto chunk_count = _output->chunk_count();
       const auto column_count = _output->column_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-        for (auto column_id = ColumnID{0}; column_id < ; ++column_id) {
+        for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
           resolve_data_and_segment_type(*abstract_segment, [&](const auto data_type_t, const auto& segment) {
             using ColumnDataType = typename decltype(data_type_t)::type;
