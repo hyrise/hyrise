@@ -10,9 +10,9 @@ namespace hyrise {
 
 class BitPackingVector;
 
-std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const pmr_vector<uint32_t>& vector,
-                                                                           const PolymorphicAllocator<size_t>& alloc,
-                                                                           const UncompressedVectorInfo& /*meta_info*/) {
+std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(
+    const pmr_vector<uint32_t>& vector, const PolymorphicAllocator<size_t>& alloc,
+    const UncompressedVectorInfo& /*meta_info*/) {
   const auto max_element_it = std::max_element(vector.cbegin(), vector.cend());
 
   auto required_bits = size_t{1};

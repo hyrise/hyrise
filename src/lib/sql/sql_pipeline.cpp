@@ -218,7 +218,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::g
               "SQLPipeline::get_result_table() should either return Success or Failure");
 
   if (pipeline_status == SQLPipelineStatus::Failure) {
-    static const auto null_table =  std::shared_ptr<const Table>{};
+    static const auto null_table = std::shared_ptr<const Table>{};
     return {pipeline_status, null_table};
   }
 

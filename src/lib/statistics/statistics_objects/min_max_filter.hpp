@@ -29,7 +29,8 @@ class MinMaxFilter : public AbstractStatisticsObject {
  public:
   explicit MinMaxFilter(T init_min, T init_max);
 
-  Cardinality estimate_cardinality(const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
+  Cardinality estimate_cardinality(const PredicateCondition /*predicate_condition*/,
+                                   const AllTypeVariant& /*variant_value*/,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced(
