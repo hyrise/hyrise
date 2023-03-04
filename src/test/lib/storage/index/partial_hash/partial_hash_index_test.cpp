@@ -545,7 +545,7 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
 
-  auto segments = Segments{};
+  auto segments = Segments{segment};
   auto chunk = std::make_shared<Chunk>(segments);
 
   auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
