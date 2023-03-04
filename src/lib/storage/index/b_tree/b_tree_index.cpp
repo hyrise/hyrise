@@ -5,8 +5,8 @@
 
 namespace hyrise {
 
-size_t BTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
-                                               uint32_t value_bytes) {
+size_t BTreeIndex::estimate_memory_consumption(ChunkOffset /*row_count*/, ChunkOffset /*distinct_count*/,
+                                               uint32_t /*value_bytes*/) {
   Fail("BTreeIndex::estimate_memory_consumption() is not implemented yet");
 }
 

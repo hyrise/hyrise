@@ -39,7 +39,7 @@ class RangeFilter : public AbstractStatisticsObject {
   static std::unique_ptr<RangeFilter<T>> build_filter(const pmr_vector<T>& dictionary,
                                                       uint32_t max_ranges_count = DEFAULT_MAX_RANGES_COUNT);
 
-  Cardinality estimate_cardinality(const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
+  Cardinality estimate_cardinality(const PredicateCondition /*predicate_condition*/, const AllTypeVariant& /*variant_value*/,
                                    const std::optional<AllTypeVariant>& variant_value2 = std::nullopt) const;
 
   std::shared_ptr<AbstractStatisticsObject> sliced(

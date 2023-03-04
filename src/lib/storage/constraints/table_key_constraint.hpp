@@ -47,7 +47,7 @@ namespace std {
 
 template <>
 struct hash<hyrise::TableKeyConstraint> {
-  size_t operator()(const hyrise::TableKeyConstraint& table_constraint) const;
+  size_t operator()(const hyrise::TableKeyConstraint& table_key_constraint) const;
 };
 
 }  // namespace std

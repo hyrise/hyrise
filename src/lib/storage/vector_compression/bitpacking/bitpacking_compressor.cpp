@@ -12,10 +12,10 @@ class BitPackingVector;
 
 std::unique_ptr<const BaseCompressedVector> BitPackingCompressor::compress(const pmr_vector<uint32_t>& vector,
                                                                            const PolymorphicAllocator<size_t>& alloc,
-                                                                           const UncompressedVectorInfo& meta_info) {
+                                                                           const UncompressedVectorInfo& /*meta_info*/) {
   const auto max_element_it = std::max_element(vector.cbegin(), vector.cend());
 
-  auto required_bits = 1u;
+  auto required_bits = size_t{1};
   if (max_element_it != vector.cend() && *max_element_it != 0) {
     // add 1 to the maximum value because log2(1) = 0 but we need one bit to represent it.
     required_bits = static_cast<uint32_t>(std::ceil(log2(*max_element_it + 1u)));

@@ -16,8 +16,8 @@
 
 namespace hyrise {
 
-size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
-                                                           uint32_t value_bytes) {
+size_t AdaptiveRadixTreeIndex::estimate_memory_consumption(ChunkOffset /*row_count*/, ChunkOffset /*distinct_count*/,
+                                                           uint32_t /*value_bytes*/) {
   Fail("AdaptiveRadixTreeIndex::estimate_memory_consumption() is not implemented yet");
 }
 
@@ -32,14 +32,14 @@ AdaptiveRadixTreeIndex::AdaptiveRadixTreeIndex(
 
   // For each value ID in the attribute vector, create a pair consisting of a BinaryComparable of
   // this value ID and its ChunkOffset (needed for bulk-inserting).
-  std::vector<std::pair<BinaryComparable, ChunkOffset>> pairs_to_insert;
+  auto pairs_to_insert = std::vector<std::pair<BinaryComparable, ChunkOffset>>{};
   pairs_to_insert.reserve(_indexed_segment->attribute_vector()->size());
 
   const auto null_value_id = _indexed_segment->null_value_id();
   _null_positions.reserve(_indexed_segment->attribute_vector()->size());
 
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](const auto& attribute_vector) {
-    auto chunk_offset = ChunkOffset{0u};
+    auto chunk_offset = ChunkOffset{0};
     auto value_id_iter = attribute_vector.cbegin();
     for (; value_id_iter != attribute_vector.cend(); ++value_id_iter, ++chunk_offset) {
       if (static_cast<ValueID>(*value_id_iter) == null_value_id) {
@@ -59,7 +59,7 @@ AbstractChunkIndex::Iterator AdaptiveRadixTreeIndex::_lower_bound(const std::vec
   // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
-  ValueID value_id = _indexed_segment->lower_bound(values[0]);
+  const auto value_id = _indexed_segment->lower_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   }
@@ -77,7 +77,7 @@ AbstractChunkIndex::Iterator AdaptiveRadixTreeIndex::_upper_bound(const std::vec
   // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
-  ValueID value_id = _indexed_segment->upper_bound(values[0]);
+  const auto value_id = _indexed_segment->upper_bound(values[0]);
   if (value_id == INVALID_VALUE_ID) {
     return _chunk_offsets.end();
   }

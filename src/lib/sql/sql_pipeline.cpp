@@ -30,7 +30,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
   DebugAssert(!_transaction_context || !_transaction_context->is_auto_commit(),
               "Auto-commit transactions are created internally and should not be passed in.");
 
-  hsql::SQLParserResult parse_result;
+  auto parse_result = hsql::SQLParserResult{};
 
   const auto start = std::chrono::steady_clock::now();
   hsql::SQLParser::parse(sql, &parse_result);
@@ -43,7 +43,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
 
   _sql_pipeline_statements.reserve(parse_result.size());
 
-  std::vector<std::shared_ptr<hsql::SQLParserResult>> parsed_statements;
+  auto parsed_statements = std::vector<std::shared_ptr<hsql::SQLParserResult>>{};
   for (auto* statement : parse_result.releaseStatements()) {
     parsed_statements.emplace_back(std::make_shared<hsql::SQLParserResult>(statement));
   }
@@ -53,7 +53,7 @@ SQLPipeline::SQLPipeline(const std::string& sql, const std::shared_ptr<Transacti
   // We want to split the (multi-) statement SQL string into the strings for each statement. We can then use those
   // statement strings to cache query plans.
   // The sql parser only offers us the length of the string, so we need to split it manually.
-  auto sql_string_offset = 0u;
+  auto sql_string_offset = size_t{0};
 
   for (auto& parsed_statement : parsed_statements) {
     parsed_statement->setIsValid(true);
@@ -218,7 +218,7 @@ std::pair<SQLPipelineStatus, const std::shared_ptr<const Table>&> SQLPipeline::g
               "SQLPipeline::get_result_table() should either return Success or Failure");
 
   if (pipeline_status == SQLPipelineStatus::Failure) {
-    static std::shared_ptr<const Table> null_table;
+    static const auto null_table =  std::shared_ptr<const Table>{};
     return {pipeline_status, null_table};
   }
 
