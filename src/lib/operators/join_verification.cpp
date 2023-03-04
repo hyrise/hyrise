@@ -110,7 +110,7 @@ std::shared_ptr<const Table> JoinVerification::_on_execute() {
         }
       }
 
-      // Add tuples without matches to output table      
+      // Add tuples without matches to output table.
       for (auto left_tuple_idx = size_t{0}; left_tuple_idx < left_row_count; ++left_tuple_idx) {
         if (!left_matches[left_tuple_idx]) {
           output_table->append(concatenate(left_tuples[left_tuple_idx], null_tuple_right));
