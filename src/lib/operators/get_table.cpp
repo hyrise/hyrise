@@ -41,7 +41,7 @@ const std::string& GetTable::name() const {
 std::string GetTable::description(DescriptionMode description_mode) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(_name);
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
   stream << "(" << table_name() << ")" << separator;
@@ -173,7 +173,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 
   auto excluded_chunk_ids_iter = excluded_chunk_ids.begin();
 
-  for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
+  for (auto stored_chunk_id = ChunkID{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Skip `stored_chunk_id` if it is in the sorted vector `excluded_chunk_ids`
     if (excluded_chunk_ids_iter != excluded_chunk_ids.end() && *excluded_chunk_ids_iter == stored_chunk_id) {
       ++excluded_chunk_ids_iter;
@@ -186,17 +186,18 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
     // Make a copy of the order-by information of the current chunk. This information is adapted when columns are
     // pruned and will be set on the output chunk.
     const auto& input_chunk_sorted_by = stored_chunk->individually_sorted_by();
-    std::optional<SortColumnDefinition> output_chunk_sorted_by;
+    auto output_chunk_sorted_by = std::optional<SortColumnDefinition>{};
 
     if (_pruned_column_ids.empty()) {
       *output_chunks_iter = stored_chunk;
     } else {
-      auto output_segments = Segments{stored_table->column_count() - _pruned_column_ids.size()};
+      const auto column_count = stored_table->column_count();
+      auto output_segments = Segments{column_count - _pruned_column_ids.size()};
       auto output_segments_iter = output_segments.begin();
       auto output_indexes = Indexes{};
 
       auto pruned_column_ids_iter = _pruned_column_ids.begin();
-      for (auto stored_column_id = ColumnID{0}; stored_column_id < stored_table->column_count(); ++stored_column_id) {
+      for (auto stored_column_id = ColumnID{0}; stored_column_id < column_count; ++stored_column_id) {
         // Skip `stored_column_id` if it is in the sorted vector `_pruned_column_ids`
         if (pruned_column_ids_iter != _pruned_column_ids.end() && stored_column_id == *pruned_column_ids_iter) {
           ++pruned_column_ids_iter;

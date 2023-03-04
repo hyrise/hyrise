@@ -138,7 +138,7 @@ bool is_trivial_join_predicate(const AbstractExpression& expression, const Abstr
     auto left_argument_found = false;
     auto right_argument_found = false;
 
-    input.iterate_output_expressions([&](const auto column_id, const auto& expression) {
+    input.iterate_output_expressions([&](const auto /*column_id*/, const auto& expression) {
       if (*expression == *binary_predicate_expression->left_operand()) {
         left_argument_found = true;
       } else if (*expression == *binary_predicate_expression->right_operand()) {
@@ -660,7 +660,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
 
       for (const auto& expression : lqp->output_expressions()) {
         const auto identifiers = sql_identifier_resolver->get_expression_identifiers(expression);
-        select_list_elements.emplace_back(SelectListElement{expression, identifiers});
+        select_list_elements.emplace_back(expression, identifiers);
       }
     } break;
 
@@ -992,12 +992,12 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
   auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
   for (const auto& hsql_select_expr : select_list) {
     if (hsql_select_expr->type == hsql::kExprStar) {
-      select_list_elements.emplace_back(SelectListElement{nullptr});
+      select_list_elements.emplace_back(nullptr);
     } else if (hsql_select_expr->type == hsql::kExprLiteralInterval) {
       FailInput("Interval can only be added to or substracted from a date");
     } else {
       auto expression = _translate_hsql_expr(*hsql_select_expr, _sql_identifier_resolver);
-      select_list_elements.emplace_back(SelectListElement{expression});
+      select_list_elements.emplace_back(expression);
       if (hsql_select_expr->name && hsql_select_expr->type != hsql::kExprFunctionRef &&
           hsql_select_expr->type != hsql::kExprExtract) {
         select_list_elements.back().identifiers.emplace_back(hsql_select_expr->name);
@@ -1148,7 +1148,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
             const auto identifiers = _sql_identifier_resolver->get_expression_identifiers(group_by_expression);
             for (const auto& identifier : identifiers) {
               if (identifier.table_name == hsql_expr->table) {
-                _inflated_select_list_elements.emplace_back(SelectListElement{group_by_expression});
+                _inflated_select_list_elements.emplace_back(group_by_expression);
               }
             }
           }
@@ -1166,7 +1166,7 @@ void SQLTranslator::_translate_select_groupby_having(const hsql::SelectStatement
         if (is_aggregate) {
           // Select all GROUP BY columns
           for (const auto& expression : group_by_expressions) {
-            _inflated_select_list_elements.emplace_back(SelectListElement{expression});
+            _inflated_select_list_elements.emplace_back(expression);
           }
         } else {
           // Select all columns from the FROM elements

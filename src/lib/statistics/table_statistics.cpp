@@ -15,7 +15,8 @@
 namespace hyrise {
 
 std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table) {
-  std::vector<std::shared_ptr<BaseAttributeStatistics>> column_statistics(table.column_count());
+  const auto column_count = table.column_count();
+  auto column_statistics = std::vector<std::shared_ptr<BaseAttributeStatistics>>(column_count);
 
   /**
    * Determine bin count, within mostly arbitrarily chosen bounds: 5 (for tables with <=2k rows) up to 100 bins
@@ -29,9 +30,9 @@ std::shared_ptr<TableStatistics> TableStatistics::from_table(const Table& table)
    */
 
   auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
-  jobs.reserve(table.column_count());
+  jobs.reserve(column_count);
 
-  for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto generate_column_statistics = [&, column_id]() {
       const auto column_data_type = table.column_data_type(column_id);
       resolve_data_type(column_data_type, [&](auto type) {

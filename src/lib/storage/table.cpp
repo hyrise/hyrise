@@ -51,6 +51,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
   if constexpr (HYRISE_DEBUG) {
     const auto chunk_count = _chunks.size();
+    const auto column_count = column_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
       if (!chunk) {
@@ -60,9 +61,9 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
              "Empty chunk other than mutable chunk at the end was found");
       Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
-      Assert(chunk->column_count() == column_count(), "Invalid Chunk column count");
+      Assert(chunk->column_count() == column_count, "Invalid Chunk column count");
 
-      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType");
       }
     }
@@ -91,7 +92,7 @@ const std::string& Table::column_name(const ColumnID column_id) const {
 }
 
 std::vector<std::string> Table::column_names() const {
-  std::vector<std::string> names;
+  auto names = std::vector<std::string>{};
   names.reserve(_column_definitions.size());
   for (const auto& column_definition : _column_definitions) {
     names.emplace_back(column_definition.name);
@@ -105,7 +106,7 @@ DataType Table::column_data_type(const ColumnID column_id) const {
 }
 
 std::vector<DataType> Table::column_data_types() const {
-  std::vector<DataType> types;
+  auto types = std::vector<DataType>{};
   types.reserve(_column_definitions.size());
   for (const auto& column_definition : _column_definitions) {
     types.emplace_back(column_definition.data_type);
@@ -119,7 +120,7 @@ bool Table::column_is_nullable(const ColumnID column_id) const {
 }
 
 std::vector<bool> Table::columns_are_nullable() const {
-  std::vector<bool> nullable(column_count());
+  auto nullable = std::vector<bool>(column_count());
   for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
     nullable[column_id] = _column_definitions[column_id].nullable;
   }
@@ -158,7 +159,7 @@ void Table::append_mutable_chunk() {
     });
   }
 
-  std::shared_ptr<MvccData> mvcc_data;
+  auto mvcc_data = std::shared_ptr<MvccData>{};
   if (_use_mvcc == UseMvcc::Yes) {
     mvcc_data = std::make_shared<MvccData>(_target_chunk_size, MvccData::MAX_COMMIT_ID);
   }
@@ -171,7 +172,7 @@ uint64_t Table::row_count() const {
     return *_cached_row_count;
   }
 
-  uint64_t row_count = 0;
+  auto row_count = uint64_t{0};
   const auto chunk_count = _chunks.size();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
@@ -193,7 +194,7 @@ uint64_t Table::row_count() const {
 }
 
 bool Table::empty() const {
-  return row_count() == 0u;
+  return row_count() == 0;
 }
 
 ChunkID Table::chunk_count() const {
@@ -284,6 +285,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   PerformanceWarning("get_row() used");
   const auto chunk_count = _chunks.size();
+  const auto column_count = column_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) {
@@ -291,9 +293,9 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
     }
 
     if (row_idx < chunk->size()) {
-      auto row = std::vector<AllTypeVariant>(column_count());
+      auto row = std::vector<AllTypeVariant>(column_count);
 
-      for (auto column_id = ColumnID{0}; column_id < column_count(); ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
       }
 
@@ -369,8 +371,7 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
     Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
     chunk->create_index<Index>(column_ids);
   }
-  ChunkIndexStatistics indexes_statistics = {column_ids, name, chunk_index_type};
-  _chunk_indexes_statistics.emplace_back(indexes_statistics);
+  _chunk_indexes_statistics.emplace_back(column_ids, name, chunk_index_type);
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
@@ -507,8 +508,7 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
 
   _table_indexes.emplace_back(table_index);
 
-  auto table_indexes_statistics = TableIndexStatistics{{column_id}, chunks_to_index};
-  _table_indexes_statistics.emplace_back(table_indexes_statistics);
+  _table_indexes_statistics.emplace_back({column_id}, chunks_to_index);
 }
 
 template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,

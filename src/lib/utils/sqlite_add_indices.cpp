@@ -18,7 +18,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   Assert(sqlite_wrapper, "sqlite_wrapper should be set");
 
   std::cout << "- Adding indexes to SQLite" << std::endl;
-  Timer timer;
+  auto timer = Timer{};
 
   // SQLite does not support adding primary keys to non-empty tables, so we rename the table, create an empty one from
   // the provided schema and copy the data.
@@ -35,10 +35,10 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   }
 
   // Recreate tables using the passed schema sql file
-  std::ifstream schema_file(schema_file_path);
+  auto schema_file = std::ifstream{schema_file_path};
   Assert(schema_file.good(), std::string{"Schema file "} + schema_file_path +
                                  " not found - try running the binary from the Hyrise root or the build directory");
-  std::string schema_sql((std::istreambuf_iterator<char>(schema_file)), std::istreambuf_iterator<char>());
+  const auto schema_sql = std::string(std::istreambuf_iterator<char>(schema_file), std::istreambuf_iterator<char>());
   sqlite_wrapper->main_connection.raw_execute_query(schema_sql);
 
   // If indices are not part of the schema file, add them here
@@ -47,14 +47,14 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
     Assert(create_indices_file.good(),
            std::string{"Index file "} + create_indices_file_path +
                " not found - try running the binary from the Hyrise root or the build directory");
-    std::string create_indices_sql((std::istreambuf_iterator<char>(create_indices_file)),
-                                   std::istreambuf_iterator<char>());
+    const auto create_indices_sql =
+        std::string(std::istreambuf_iterator<char>(create_indices_file), std::istreambuf_iterator<char>());
     sqlite_wrapper->main_connection.raw_execute_query(create_indices_sql);
   }
 
   // Copy over data
   for (const auto& table_name : Hyrise::get().storage_manager.table_names()) {
-    Timer per_table_time;
+    auto per_table_time = Timer{};
     std::cout << "-  Adding indexes to SQLite table " << table_name << std::flush;
 
     const auto escaped_table_name = std::string{"\""} + table_name + "\"";

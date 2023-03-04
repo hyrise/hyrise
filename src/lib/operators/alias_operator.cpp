@@ -23,7 +23,7 @@ const std::string& AliasOperator::name() const {
 
 std::string AliasOperator::description(DescriptionMode description_mode) const {
   const auto separator = (description_mode == DescriptionMode::SingleLine ? ' ' : '\n');
-  std::stringstream stream;
+  auto stream = std::stringstream{};
 
   stream << AbstractOperator::description(description_mode) << separator;
   stream << "[" << boost::algorithm::join(_aliases, ", ") << "]";
@@ -41,14 +41,15 @@ void AliasOperator::_on_set_parameters(const std::unordered_map<ParameterID, All
 
 std::shared_ptr<const Table> AliasOperator::_on_execute() {
   const auto& input_table = *left_input_table();
+  const auto column_count = input_table.column_count();
 
   /**
    * Generate the new TableColumnDefinitions, that is, setting the new names for the columns
    */
   auto output_column_definitions = std::vector<TableColumnDefinition>{};
-  output_column_definitions.reserve(input_table.column_count());
+  output_column_definitions.reserve(column_count);
 
-  for (auto column_id = ColumnID{0}; column_id < input_table.column_count(); ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     const auto& input_column_definition = input_table.column_definitions()[_column_ids[column_id]];
 
     output_column_definitions.emplace_back(_aliases[column_id], input_column_definition.data_type,
@@ -66,7 +67,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
     auto output_segments = Segments{};
-    output_segments.reserve(input_table.column_count());
+    output_segments.reserve(column_count);
 
     for (const auto& column_id : _column_ids) {
       output_segments.emplace_back(input_chunk->get_segment(column_id));
@@ -81,7 +82,7 @@ std::shared_ptr<const Table> AliasOperator::_on_execute() {
       sort_definitions.reserve(input_sorted_by.size());
 
       // Adapt column ids of chunk sort definitions
-      for (auto output_column_id = ColumnID{0}; output_column_id < input_table.column_count(); ++output_column_id) {
+      for (auto output_column_id = ColumnID{0}; output_column_id < column_count; ++output_column_id) {
         const auto column_id = _column_ids[output_column_id];
         // In some edge cases, an input table might be sorted by a column that is not included in the list of columns.
         // This can happen when an expression occurs repeatedly (e.g., `SELECT a as a1, a as a2`) and the LQP
