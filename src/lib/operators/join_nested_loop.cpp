@@ -72,7 +72,7 @@ join_two_typed_segments(const BinaryFunctor& func, LeftIterator left_it, LeftIte
 
 namespace hyrise {
 
-bool JoinNestedLoop::supports(const JoinConfiguration config) {
+bool JoinNestedLoop::supports(const JoinConfiguration /*config*/) {
   return true;
 }
 
@@ -92,7 +92,7 @@ const std::string& JoinNestedLoop::name() const {
 std::shared_ptr<AbstractOperator> JoinNestedLoop::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinNestedLoop>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                           _secondary_predicates);
 }
