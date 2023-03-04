@@ -149,7 +149,7 @@ void Table::append(const std::vector<AllTypeVariant>& values) {
 }
 
 void Table::append_mutable_chunk() {
-  Segments segments;
+  auto segments = Segments{};
   for (const auto& column_definition : _column_definitions) {
     resolve_data_type(column_definition.data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;

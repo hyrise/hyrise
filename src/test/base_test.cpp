@@ -214,11 +214,11 @@ std::shared_ptr<const Table> to_simple_reference_table(const std::shared_ptr<con
   }
 
   const auto column_count = table->column_count();
-  Segments segments;
+  auto segments = Segments{};
   segments.reserve(column_count);
   TableColumnDefinitions column_definitions;
 
-  for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     column_definitions.emplace_back(table->column_name(column_id), table->column_data_type(column_id),
                                     table->column_is_nullable(column_id));
 

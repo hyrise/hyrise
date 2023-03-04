@@ -233,7 +233,7 @@ std::shared_ptr<const Table> JoinNestedLoop::_on_execute() {
   }
 
   // Write output Chunk based on the PosList(s) we created during the Join
-  Segments segments;
+  auto segments = Segments{};
 
   if (semi_or_anti_join) {
     _write_output_chunk(segments, left_table, pos_list_left);

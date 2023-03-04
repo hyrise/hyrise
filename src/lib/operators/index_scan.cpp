@@ -87,7 +87,7 @@ std::shared_ptr<AbstractTask> IndexScan::_create_job(const ChunkID chunk_id, std
       return;
     }
 
-    Segments segments;
+    auto segments = Segments{};
     const auto column_count = _in_table->column_count();
     for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
