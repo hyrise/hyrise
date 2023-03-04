@@ -154,7 +154,8 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
     condition_was_flipped = true;
   }
 
-  auto conditionally_erase_comparator_type = [](auto comparator, const auto& /*it1*/, const auto& /*it2*/) {
+  // NOLINTNEXTLINE(misc-unused-parameters): false positive for it1 and it2 being unused.
+  auto conditionally_erase_comparator_type = [](auto comparator, const auto& it1, const auto& it2) {
     if constexpr (erase_comparator_type == EraseTypes::OnlyInDebugBuild) {
       return comparator;
     } else {
