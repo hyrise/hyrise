@@ -51,7 +51,7 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
 
   if constexpr (HYRISE_DEBUG) {
     const auto chunk_count = _chunks.size();
-    const auto column_count = column_count();
+    const auto num_columns = column_count();
     for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
       const auto chunk = get_chunk(chunk_id);
       if (!chunk) {
@@ -61,9 +61,9 @@ Table::Table(const TableColumnDefinitions& column_definitions, const TableType t
       Assert(chunk->size() > 0 || (type == TableType::Data && chunk_id == chunk_count - 1 && chunk->is_mutable()),
              "Empty chunk other than mutable chunk at the end was found");
       Assert(chunk->has_mvcc_data() == (_use_mvcc == UseMvcc::Yes), "Supply MvccData for Chunks iff Table uses MVCC");
-      Assert(chunk->column_count() == column_count, "Invalid Chunk column count");
+      Assert(chunk->column_count() == num_columns, "Invalid Chunk column count");
 
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
         Assert(chunk->get_segment(column_id)->data_type() == column_data_type(column_id), "Invalid Segment DataType");
       }
     }
@@ -285,7 +285,7 @@ void Table::append_chunk(const Segments& segments, std::shared_ptr<MvccData> mvc
 std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
   PerformanceWarning("get_row() used");
   const auto chunk_count = _chunks.size();
-  const auto column_count = column_count();
+  const auto num_columns = column_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     const auto chunk = get_chunk(chunk_id);
     if (!chunk) {
@@ -293,9 +293,9 @@ std::vector<AllTypeVariant> Table::get_row(size_t row_idx) const {
     }
 
     if (row_idx < chunk->size()) {
-      auto row = std::vector<AllTypeVariant>(column_count);
+      auto row = std::vector<AllTypeVariant>(num_columns);
 
-      for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
+      for (auto column_id = ColumnID{0}; column_id < num_columns; ++column_id) {
         row[column_id] = chunk->get_segment(column_id)->operator[](static_cast<ChunkOffset>(row_idx));
       }
 
@@ -371,7 +371,7 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
     Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
     chunk->create_index<Index>(column_ids);
   }
-  _chunk_indexes_statistics.emplace_back(column_ids, name, chunk_index_type);
+  _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
 const TableKeyConstraints& Table::soft_key_constraints() const {
@@ -489,15 +489,15 @@ size_t Table::memory_usage(const MemoryUsageCalculationMode mode) const {
 }
 
 void Table::create_partial_hash_index(const ColumnID column_id, const std::vector<ChunkID>& chunk_ids) {
-  std::shared_ptr<PartialHashIndex> table_index = nullptr;
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-
   if (chunk_ids.empty()) {
     Fail("Creating a partial hash index with no chunks being indexed is not supported.");
   }
 
+  auto table_index = std::shared_ptr<PartialHashIndex>{};
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+
   chunks_to_index.reserve(chunk_ids.size());
-  for (const auto& chunk_id : chunk_ids) {
+  for (const auto chunk_id : chunk_ids) {
     const auto& chunk = get_chunk(chunk_id);
     Assert(chunk, "Requested index on deleted chunk.");
     Assert(!chunk->is_mutable(), "Cannot index mutable chunk.");
@@ -508,7 +508,7 @@ void Table::create_partial_hash_index(const ColumnID column_id, const std::vecto
 
   _table_indexes.emplace_back(table_index);
 
-  _table_indexes_statistics.emplace_back({column_id}, chunks_to_index);
+  _table_indexes_statistics.emplace_back(TableIndexStatistics{{column_id}, chunks_to_index});
 }
 
 template void Table::create_chunk_index<GroupKeyIndex>(const std::vector<ColumnID>& column_ids,

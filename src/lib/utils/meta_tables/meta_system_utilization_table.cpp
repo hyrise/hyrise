@@ -63,7 +63,7 @@ std::shared_ptr<Table> MetaSystemUtilizationTable::_on_generate() const {
   * Returns the load average values for 1min, 5min, and 15min.
  */
 MetaSystemUtilizationTable::LoadAvg MetaSystemUtilizationTable::_get_load_avg() {
-  auto load_avg{} = std::array<double, 3>{};
+  auto load_avg = std::array<double, 3>{};
   const int nelem = getloadavg(load_avg.data(), 3);
   Assert(nelem == 3, "Failed to read load averages");
   return {static_cast<float>(load_avg[0]), static_cast<float>(load_avg[1]), static_cast<float>(load_avg[2])};
