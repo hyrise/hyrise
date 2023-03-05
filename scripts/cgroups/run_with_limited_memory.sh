@@ -46,4 +46,4 @@ sudo cgget -r memory.max $CGROUP_NAME
 
 # Execute within cgroup with limited memory.
 sudo cgexec -g memory:$CGROUP_NAME sudo $executable
-echo "Finished execution of $executable with memory limit of $memory_limit GB"
+echo "Finished execution of $executable with memory limit of $memory_limit bytes"
