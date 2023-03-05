@@ -18,5 +18,7 @@ for limit in "${memory_limits[@]}"
 do
   echo "Running $executable with memory limit of $limit GB"
   source $SCRIPT_DIR/run_with_limited_memory.sh $limit $executable -o "benchmark_memory_limit_$limit.json"
+  #hot fix as binary file removal is not yet working
+  sudo rm -f *.bin
 done
 
