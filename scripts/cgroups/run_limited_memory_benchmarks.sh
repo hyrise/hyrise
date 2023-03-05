@@ -17,6 +17,6 @@ SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 for limit in "${memory_limits[@]}"
 do
   echo "Running $executable with memory limit of $limit GB"
-  source $SCRIPT_DIR/run_with_limited_memory.sh $limit $executable --benchmark_format=json > "benchmark_memory_limit_$limit.json"
+  source $SCRIPT_DIR/run_with_limited_memory.sh $limit $executable -o "benchmark_memory_limit_$limit.json"
 done
 
