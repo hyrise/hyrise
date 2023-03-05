@@ -39,7 +39,7 @@ sudo cgcreate -g memory:$CGROUP_NAME
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 # Set memory.max
-sudo cgset -r memory.max=$limit $CGROUP_NAME
+sudo cgset -r memory.max=$memory_limit $CGROUP_NAME
 
 # Get the result of setting operation.
 sudo cgget -r memory.max $CGROUP_NAME
