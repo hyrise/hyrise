@@ -165,7 +165,7 @@ SQLTranslator::SQLTranslator(const UseMvcc use_mvcc)
 SQLTranslationResult SQLTranslator::translate_parser_result(const hsql::SQLParserResult& result) {
   _cacheable = true;
 
-  std::vector<std::shared_ptr<AbstractLQPNode>> result_nodes;
+  auto result_nodes = std::vector<std::shared_ptr<AbstractLQPNode>>{};
   const std::vector<hsql::SQLStatement*>& statements = result.getStatements();
 
   for (const hsql::SQLStatement* stmt : statements) {
@@ -341,11 +341,11 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_select_statement(cons
 }
 
 void SQLTranslator::_translate_hsql_with_description(hsql::WithDescription& desc) {
-  SQLTranslator with_translator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions, _meta_tables};
+  auto with_translator = SQLTranslator{_use_mvcc, nullptr, _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto lqp = with_translator._translate_select_statement(*desc.select);
 
   // Save mappings: ColumnID -> ColumnName
-  std::unordered_map<ColumnID, std::string> column_names;
+  auto column_names = std::unordered_map<ColumnID, std::string>{};
   const auto output_expressions = lqp->output_expressions();
   const auto output_expression_count = output_expressions.size();
   for (auto column_id = ColumnID{0}; column_id < output_expression_count; ++column_id) {
@@ -373,7 +373,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_insert(const hsql::In
 
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
-  std::shared_ptr<Table> target_table;
+  auto target_table = std::shared_ptr<Table>{};
   if (is_meta_table) {
     auto sql_identifier_resolver =
         _sql_identifier_resolver ? _sql_identifier_resolver : std::make_shared<SQLIdentifierResolver>();
@@ -493,7 +493,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_delete(const hsql::De
   const auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
-  std::shared_ptr<AbstractLQPNode> data_to_delete_node;
+  auto data_to_delete_node = std::shared_ptr<AbstractLQPNode>{};
 
   if (is_meta_table) {
     data_to_delete_node = _translate_meta_table(delete_statement.tableName, sql_identifier_resolver);
@@ -524,7 +524,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_update(const hsql::Up
 
   const bool is_meta_table = MetaTableManager::is_meta_table_name(table_name);
 
-  std::shared_ptr<Table> target_table;
+  auto target_table = std::shared_ptr<Table>{};
   if (is_meta_table) {
     AssertInput(Hyrise::get().meta_table_manager.can_update(table_name), "Cannot update " + table_name);
     target_table = _meta_tables->at(_trim_meta_table_name(table_name));
@@ -602,7 +602,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
   // Each element in the FROM list needs to have a unique table name (i.e. Subqueries are required to have an ALIAS)
   auto table_name = std::string{};
   auto sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>();
-  std::vector<SelectListElement> select_list_elements;
+  auto select_list_elements = std::vector<SelectListElement>{};
 
   switch (hsql_table_ref.type) {
     case hsql::kTableName: {
@@ -668,15 +668,16 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
       AssertInput(hsql_table_ref.alias && hsql_table_ref.alias->name, "Every nested SELECT must have its own alias");
       table_name = hsql_table_ref.alias->name;
 
-      SQLTranslator subquery_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
-                                        _with_descriptions, _meta_tables};
+      auto subquery_translator = SQLTranslator{_use_mvcc, _external_sql_identifier_resolver_proxy,
+                                               _parameter_id_allocator, _with_descriptions, _meta_tables};
       lqp = subquery_translator._translate_select_statement(*hsql_table_ref.select);
 
       // If this statement or any of the subquery's statements is not cacheable (because of meta tables),
       // this statement should not be cacheable.
       _cacheable &= subquery_translator._cacheable;
 
-      std::vector<std::vector<SQLIdentifier>> identifiers;
+      auto identifiers = std::vector<std::vector<SQLIdentifier>>{};
+      identifiers.reserve(subquery_translator._inflated_select_list_elements.size());
       for (const auto& element : subquery_translator._inflated_select_list_elements) {
         identifiers.emplace_back(element.identifiers);
       }
@@ -697,7 +698,7 @@ SQLTranslator::TableSourceState SQLTranslator::_translate_table_origin(const hsq
           sql_identifier_resolver->add_column_name(subquery_expression, identifier.column_name);
         }
 
-        select_list_elements.emplace_back(SelectListElement{subquery_expression, identifiers[select_list_element_idx]});
+        select_list_elements.emplace_back(subquery_expression, identifiers[select_list_element_idx]);
       }
 
       table_name = hsql_table_ref.alias->name;
@@ -988,7 +989,7 @@ std::vector<SQLTranslator::SelectListElement> SQLTranslator::_translate_select_l
   // Build the select_list_elements
   // Each expression of a select_list_element is either an Expression or nullptr if the element is a Wildcard
   // Create an SQLIdentifierResolver that knows the aliases
-  std::vector<SelectListElement> select_list_elements;
+  auto select_list_elements = std::vector<SelectListElement>{};
   auto post_select_sql_identifier_resolver = std::make_shared<SQLIdentifierResolver>(*_sql_identifier_resolver);
   for (const auto& hsql_select_expr : select_list) {
     if (hsql_select_expr->type == hsql::kExprStar) {
@@ -1199,8 +1200,8 @@ void SQLTranslator::_translate_set_operation(const hsql::SetOperation& set_opera
 
   // The right-hand side of the set operation has to be translated independently and must not access SQL identifiers
   // from the left-hand side. To ensure this, we create a new SQLTranslator with its own SQLIdentifierResolver.
-  SQLTranslator nested_set_translator{_use_mvcc, _external_sql_identifier_resolver_proxy, _parameter_id_allocator,
-                                      _with_descriptions, _meta_tables};
+  auto nested_set_translator = SQLTranslator{_use_mvcc, _external_sql_identifier_resolver_proxy,
+                                             _parameter_id_allocator, _with_descriptions, _meta_tables};
   const auto right_input_lqp = nested_set_translator._translate_select_statement(*set_operator.nestedSelectStatement);
   const auto right_output_expressions = right_input_lqp->output_expressions();
 
@@ -1311,7 +1312,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
   auto lqp = _translate_select_statement(static_cast<const hsql::SelectStatement&>(*create_statement.select));
   const auto output_expressions = lqp->output_expressions();
 
-  std::unordered_map<ColumnID, std::string> column_names;
+  auto column_names = std::unordered_map<ColumnID, std::string>{};
 
   if (create_statement.viewColumns) {
     // The CREATE VIEW statement has renamed the columns: CREATE VIEW myview (foo, bar) AS SELECT ...
@@ -1338,7 +1339,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_view(const hsq
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_create_table(const hsql::CreateStatement& create_statement) {
   Assert(create_statement.columns || create_statement.select, "CREATE TABLE: No columns specified. Parser bug?");
 
-  std::shared_ptr<AbstractLQPNode> input_node;
+  auto input_node = std::shared_ptr<AbstractLQPNode>{};
 
   if (create_statement.select) {
     input_node = _translate_select_statement(*create_statement.select);
@@ -1493,7 +1494,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_drop(const hsql::Drop
 }
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_translate_prepare(const hsql::PrepareStatement& prepare_statement) {
-  hsql::SQLParserResult parse_result;
+  auto parse_result = hsql::SQLParserResult{};
   hsql::SQLParser::parse(prepare_statement.query, &parse_result);
 
   AssertInput(parse_result.isValid(), create_sql_parser_error_message(prepare_statement.query, parse_result));
@@ -1614,7 +1615,7 @@ std::shared_ptr<AbstractLQPNode> SQLTranslator::_prune_expressions(
 
 std::shared_ptr<AbstractLQPNode> SQLTranslator::_add_expressions_if_unavailable(
     const std::shared_ptr<AbstractLQPNode>& node, const std::vector<std::shared_ptr<AbstractExpression>>& expressions) {
-  std::vector<std::shared_ptr<AbstractExpression>> projection_expressions;
+  auto projection_expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
 
   for (const auto& expression : expressions) {
     // The required expression is already available or doesn't need to be computed (e.g. when it is a literal)
@@ -2114,7 +2115,7 @@ std::shared_ptr<AbstractExpression> SQLTranslator::_inverse_predicate(const Abst
 
 std::vector<std::shared_ptr<AbstractExpression>> SQLTranslator::_unwrap_elements(
     const std::vector<SelectListElement>& select_list_elements) {
-  std::vector<std::shared_ptr<AbstractExpression>> expressions;
+  auto expressions = std::vector<std::shared_ptr<AbstractExpression>>{};
   expressions.reserve(select_list_elements.size());
   for (const auto& element : select_list_elements) {
     expressions.emplace_back(element.expression);

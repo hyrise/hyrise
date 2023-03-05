@@ -193,11 +193,11 @@ void LZ4Segment<T>::_decompress_block(const size_t block_index, std::vector<T>& 
      * dictionary) since the blocks were compressed independently.
      * This decoder needs to be reset via LZ4_setStreamDecode since LZ4 reuses the previous state instead.
      */
-    auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>();
-    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), nullptr, 0);
+    auto lz4_stream_decoder = std::make_unique<LZ4_streamDecode_t>();
+    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder.get(), nullptr, 0);
     Assert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.");
 
-    decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder_ptr.get(), compressed_block.data(),
+    decompressed_result = LZ4_decompress_safe_continue(lz4_stream_decoder.get(), compressed_block.data(),
                                                        reinterpret_cast<char*>(decompressed_data.data()) + write_offset,
                                                        static_cast<int>(compressed_block_size),
                                                        static_cast<int>(decompressed_block_size));
@@ -251,13 +251,12 @@ void LZ4Segment<T>::_decompress_block_to_bytes(const size_t block_index, std::ve
      * dictionary) since the blocks were compressed independently.
      * This decoder needs to be reset via LZ4_setStreamDecode since LZ4 reuses the previous state instead.
      */
-    auto lz4_stream_decoder = LZ4_streamDecode_t{};
-    auto lz4_stream_decoder_ptr = std::make_unique<LZ4_streamDecode_t>(lz4_stream_decoder);
-    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder_ptr.get(), nullptr, 0);
+    auto lz4_stream_decoder = std::make_unique<LZ4_streamDecode_t>();
+    const auto reset_decoder_status = LZ4_setStreamDecode(lz4_stream_decoder.get(), nullptr, 0);
     Assert(reset_decoder_status == 1, "LZ4 decompression failed to reset stream decoder.");
 
     decompressed_result = LZ4_decompress_safe_continue(
-        lz4_stream_decoder_ptr.get(), compressed_block.data(), decompressed_data.data() + write_offset,
+        lz4_stream_decoder.get(), compressed_block.data(), decompressed_data.data() + write_offset,
         static_cast<int>(compressed_block_size), static_cast<int>(decompressed_block_size));
   } else {
     decompressed_result = LZ4_decompress_safe_usingDict(
@@ -494,7 +493,7 @@ std::optional<CompressedVectorType> LZ4Segment<T>::compressed_vector_type() cons
 // compression type. So if the vector compression becomes configurable, this method does not need to be touched.
 template <>
 std::optional<CompressedVectorType> LZ4Segment<pmr_string>::compressed_vector_type() const {
-  std::optional<CompressedVectorType> type;
+  auto type = std::optional<CompressedVectorType>{};
   if (_string_offsets) {
     return _string_offsets->type();
   }

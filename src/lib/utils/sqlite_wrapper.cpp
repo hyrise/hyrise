@@ -225,7 +225,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
   return result_table;
 }
 
-void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql, const bool allow_failure) const {
+void SQLiteWrapper::Connection::raw_execute_query(const std::string& sql) const {
   char* err_msg = nullptr;
   auto return_code = sqlite3_exec(db, sql.c_str(), nullptr, nullptr, &err_msg);
 
