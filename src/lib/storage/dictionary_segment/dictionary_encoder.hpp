@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "storage/base_segment_encoder.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/fixed_string_dictionary_segment.hpp"
 #include "storage/segment_iterables/any_segment_iterable.hpp"
@@ -61,13 +62,20 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     });
 
     auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
+    auto initial_dictionary_pin_guard = PinGuard<T>::create(*dictionary, true);
+    // TODO: pinning should also happen here
+
     std::sort(dictionary->begin(), dictionary->end());
     dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
     dictionary->shrink_to_fit();
+    // Resizing might allocate new memory. Therefore, we just pin another time just to be sure.
+    auto new_dictionary_pin_guard = PinGuard<T>::create(*dictionary, true);
 
     const auto null_value_id = static_cast<uint32_t>(dictionary->size());
 
     auto uncompressed_attribute_vector = pmr_vector<uint32_t>{null_values.size(), allocator};
+    auto uncompressed_attribute_vector_pin_guard = PinGuard<uint32_t>::create(uncompressed_attribute_vector, true);
+
     auto values_iter = dense_values.cbegin();
     const auto null_values_size = null_values.size();
     for (auto current_position = size_t{0}; current_position < null_values_size; ++current_position) {
