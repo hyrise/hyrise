@@ -58,6 +58,8 @@ class BufferManagedPtr {
     set_from_ptr(ptr);
   }
 
+  ~BufferManagedPtr() {}
+
   BufferManagedPtr(const BufferManagedPtr& ptr) : _addressing(ptr._addressing) {}
 
   template <typename U>
@@ -220,13 +222,17 @@ class BufferManagedPtr {
 
   // TODO: Return a guard to ensure unpinning. check pointer type
   void pin() const {
-    const auto page_id = PageID{std::get<UnswizzledAddress>(_addressing).page_id};
-    BufferManager::get_global_buffer_manager().pin_page(page_id);
+    if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
+      const auto page_id = PageID{unswizzled->page_id};
+      BufferManager::get_global_buffer_manager().pin_page(page_id);
+    }
   }
 
   void unpin(bool dirty) const {
-    const auto page_id = PageID{std::get<UnswizzledAddress>(_addressing).page_id};
-    BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
+    if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
+      const auto page_id = PageID{unswizzled->page_id};
+      BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
+    }
   }
 
   PageID get_page_id() const {
@@ -252,7 +258,7 @@ class BufferManagedPtr {
       if (page_id == INVALID_PAGE_ID) {
         _addressing = OutsideAddress(ptr);
       } else {
-        _addressing = UnswizzledAddress{page_id, static_cast<size_t>(offset)};
+        _addressing = UnswizzledAddress{static_cast<size_t>(PageSizeType::KiB32), page_id, static_cast<size_t>(offset)};
       }
     } else {
       _addressing = EmptyAddress{};
@@ -293,25 +299,6 @@ inline void swap(BufferManagedPtr<T>& ptr1, BufferManagedPtr<T>& ptr2) {
   ptr1 = ptr2;
   ptr2 = temp;
 }
-
-/**
- * A Pin Guard ensure that that a pointer/page is unpinned when it goes out of scope. This garantuees exceptions safetiness. It works like std::lock_guard.
-*/
-template <class T>
-class PinGuard {
- public:
-  explicit PinGuard(BufferManagedPtr<T>& ptr, const bool dirty) : _dirty(dirty), _ptr(ptr) {
-    _ptr.pin();
-  }
-
-  ~PinGuard() {
-    _ptr.unpin(_dirty);
-  }
-
- private:
-  BufferManagedPtr<T>& _ptr;
-  const bool _dirty;
-};
 
 }  // namespace hyrise
 
