@@ -40,10 +40,11 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 #elif __linux__
   int flags = O_RDWR | O_CREAT | O_DIRECT | O_DSYNC;
 #endif
-  int fd = open(std::string(file_name).c_str(), flags, 0666);
+  int fd = open(file_name.string().c_str(), flags, 0666);
   if (fd < 0) {
+    const auto error = errno;
     close(fd);
-    Fail("Error while opening backing file at " + std::string(file_name) + ": " + strerror(errno) +
+    Fail("Error while opening backing file at " + file_name.string().c_str() + ": " + strerror(error) +
          ". Did you open a file on tmpfs or a network mount?");
   }
 // Set F_NOCACHE on OS X, which is equivalent to O_DIRECT on Linux
@@ -63,7 +64,7 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source) {
   const off_t page_pos = page_id * bytes_for_size_type(MIN_PAGE_SIZE_TYPE);
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  // DebugAssert(source % 512 == 0, "Source is not properly aligned to 512, but " + std::to_string(source % 512));
+  // TODO: DebugAssert(static_cast<const std::uintptr_t>(source) % 512 == 0, "Source is not properly aligned to 512");
   const auto result = pwrite(_fd, source, bytes_for_size_type(size_type), page_pos);
   if (result < 0) {
     const auto error = errno;
@@ -81,4 +82,7 @@ void SSDRegion::read_page(const PageID page_id, const PageSizeType size_type, st
   }
 }
 
+std::filesystem::path SSDRegion::get_file_name() {
+  return _backing_file_name;
+}
 }  // namespace hyrise
