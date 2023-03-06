@@ -6,6 +6,7 @@ set(
     lib/sql/sqlite_testrunner/sqlite_testrunner.hpp
     testing_assert.cpp
     testing_assert.hpp
+    gtest_printers.hpp
 )
 
 set(
@@ -177,6 +178,7 @@ set(
     lib/storage/buffer/buffer_pool_allocator_test.cpp
     lib/storage/buffer/clock_replacement_strategy_test.cpp
     lib/storage/buffer/ssd_region_test.cpp
+    lib/storage/buffer/volatile_region_test.cpp
     lib/storage/chunk_encoder_test.cpp
     lib/storage/chunk_test.cpp
     lib/storage/compressed_vector_test.cpp
