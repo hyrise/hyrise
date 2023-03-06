@@ -126,16 +126,22 @@ class BufferManager {
 
   BufferManager& operator=(BufferManager&& other);
 
+  /**
+   * Reset all data in the internal data structures
+  */
+  void soft_reset();
+
  protected:
   friend class Hyrise;
 
  private:
   BufferManager();
   std::pair<FrameID, Frame*> allocate_frame();
+  Frame* get_frame(const PageID page_id);
 
   Frame* find_in_page_table(const PageID page_id);
 
-  PageID new_page();
+  Frame* new_page();
   void flush_page(const PageID page_id);
   void remove_page(const PageID page_id);
 
