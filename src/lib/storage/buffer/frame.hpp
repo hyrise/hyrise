@@ -11,6 +11,7 @@ struct Frame {
   FrameID frame_id = INVALID_FRAME_ID;
   std::atomic_bool dirty{false};
   std::atomic_uint32_t pin_count{0};
+  // TODO std::shared_muex ecxulive lock
   PageSizeType size_type;
   std::byte* data = nullptr;
 };
