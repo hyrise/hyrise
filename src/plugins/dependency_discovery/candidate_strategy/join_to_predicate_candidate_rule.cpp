@@ -74,64 +74,47 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     // When we find a predicate node, we check whether the searched column is filtered in this predicate. If so, it is a
     // valid UCC candidate; if not, continue searching.
     const auto& predicate_node = static_cast<const PredicateNode&>(*node);
+    const auto& predicate_expression =
+        std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate_node.predicate());
 
-    if (const auto& predicate = std::dynamic_pointer_cast<BetweenExpression>(predicate_node.predicate())) {
-      const auto& predicate_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->operand());
-      if (!predicate_column_expression || !join_key_column_expression || !other_stored_table_node) {
+    const auto predicate_condition = predicate_expression->predicate_condition;
+    const auto is_equals_predicate = predicate_condition == PredicateCondition::Equals;
+    if (!is_equals_predicate && !is_between_predicate_condition(predicate_condition)) {
+      return LQPVisitation::VisitInputs;
+    }
+
+    auto column_expression = std::shared_ptr<LQPColumnExpression>{};
+
+    if (is_equals_predicate) {
+      // Get the column expression, which is not always the left operand.
+      auto value_expression = std::shared_ptr<AbstractExpression>{};
+
+      for (const auto& predicate_operand : predicate_expression->arguments) {
+        if (predicate_operand->type == ExpressionType::LQPColumn) {
+          column_expression = std::static_pointer_cast<LQPColumnExpression>(predicate_operand);
+        } else if (predicate_operand->type == ExpressionType::Value) {
+          value_expression = predicate_operand;
+        }
+      }
+
+      if (!column_expression || !value_expression || stored_table_node != *column_expression->original_node.lock()) {
+        // The predicate needs to look like column = value or value = column; if not, move on.
         return LQPVisitation::VisitInputs;
       }
 
-      const auto& other_stored_table_node =
-          std::dynamic_pointer_cast<const StoredTableNode>(join_key_column_expression->original_node.lock());
-      if (!other_stored_table_node || original_node != predicate_column_expression->original_node.lock()) {
+      candidates.emplace(
+          std::make_shared<UccCandidate>(stored_table_node.table_name, column_expression->original_column_id));
+
+    } else {
+      column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate_expression->arguments.front());
+      if (!column_expression || !join_key_column_expression || !other_stored_table_node ||
+          stored_table_node != *column_expression->original_node.lock()) {
         return LQPVisitation::VisitInputs;
       }
 
-      if (join_node.join_mode != JoinMode::Semi) {
-        candidates.emplace(std::make_shared<UccCandidate>(stored_table_node.table_name,
-                                                          join_lqp_column_expression->original_column_id));
-      }
-
-      candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
-                                                       join_lqp_column_expression->original_column_id,
-                                                       predicate_column_expression->original_column_id));
-
-      candidates.emplace(std::make_shared<IndCandidate>(
-          other_stored_table_node->table_name, join_key_column_expression->original_column_id,
-          stored_table_node.table_name, join_lqp_column_expression->original_column_id));
-
-      return LQPVisitation::VisitInputs;
+      // Candidates will also be generated for equals predicate.
     }
 
-    // Ensure that we look at a binary predicate expression checking for equality (e.g., a = 'x').
-    const auto predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(predicate_node.predicate());
-    if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    // Get the column expression, which is not always the left operand.
-    auto column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->left_operand());
-    auto value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->right_operand());
-    if (!column_expression) {
-      column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(predicate->right_operand());
-      value_expression = std::dynamic_pointer_cast<ValueExpression>(predicate->left_operand());
-    }
-
-    if (!column_expression || !value_expression) {
-      // The predicate needs to look like column = value or value = column; if not, move on.
-      return LQPVisitation::VisitInputs;
-    }
-
-    const auto expression_table_node =
-        std::dynamic_pointer_cast<const StoredTableNode>(column_expression->original_node.lock());
-
-    // Both columns should be in the same table.
-    if (!expression_table_node || *expression_table_node != stored_table_node) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    candidates.emplace(
-        std::make_shared<UccCandidate>(expression_table_node->table_name, column_expression->original_column_id));
     if (join_node.join_mode != JoinMode::Semi) {
       candidates.emplace(
           std::make_shared<UccCandidate>(stored_table_node.table_name, join_lqp_column_expression->original_column_id));
@@ -141,7 +124,6 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
       return LQPVisitation::VisitInputs;
     }
 
-    Assert(*join_lqp_column_expression->original_node.lock() == *column_expression->original_node.lock(), "invalid");
     candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
                                                      join_lqp_column_expression->original_column_id,
                                                      column_expression->original_column_id));

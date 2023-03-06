@@ -163,9 +163,8 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
       }
     } else {
       // For between predicates, the column is always the first argument.
-      candidate_column_expression = candidate_expression->arguments[0];
+      candidate_column_expression = candidate_expression->arguments.front();
     }
-
 
     // Check whether the referenced column is available for the subtree root node.
     if (!expression_evaluable_on_lqp(candidate_column_expression, *removable_subtree)) {
@@ -180,7 +179,6 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
       performed_rewrite = true;
       return LQPVisitation::DoNotVisitInputs;
     }
-
 
     // Check if we can performan an OD-based rewrite.
     if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, join_node,

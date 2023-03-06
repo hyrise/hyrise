@@ -145,21 +145,25 @@ TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
     const auto& dependency_candidates = _identify_dependency_candidates();
     SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
 
-    EXPECT_EQ(dependency_candidates.size(), 4);
+    const auto expected_candidate_count = join_mode == JoinMode::Semi ? 3 : 4;
+    EXPECT_EQ(dependency_candidates.size(), expected_candidate_count);
 
     const auto ucc_join_column_B_candidate =
         std::make_shared<UccCandidate>(_table_name_B, _join_columnB->original_column_id);
     const auto ucc_predicate_column_B_candidate =
         std::make_shared<UccCandidate>(_table_name_B, _predicate_column_B->original_column_id);
-    const auto ind_candidate = std::make_shared<IndCandidate>(_table_name_B, _join_columnB->original_column_id,
-                                                              _table_name_A, _join_columnA->original_column_id);
+    const auto ind_candidate = std::make_shared<IndCandidate>(_table_name_A, _join_columnB->original_column_id,
+                                                              _table_name_B, _join_columnB->original_column_id);
     const auto od_candidate = std::make_shared<OdCandidate>(_table_name_B, _join_columnB->original_column_id,
                                                             _predicate_column_B->original_column_id);
 
-    EXPECT_TRUE(dependency_candidates.contains(ucc_join_column_B_candidate));
     EXPECT_TRUE(dependency_candidates.contains(ucc_predicate_column_B_candidate));
     EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
     EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+
+    if (join_mode == JoinMode::Inner) {
+      EXPECT_TRUE(dependency_candidates.contains(ucc_join_column_B_candidate));
+    }
   }
 }
 
