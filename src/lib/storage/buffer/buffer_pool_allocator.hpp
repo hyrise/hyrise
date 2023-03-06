@@ -62,7 +62,7 @@ class BufferPoolAllocator {
   }
 
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
-    return BufferPoolAllocator();
+    return BufferPoolAllocator(_buffer_manager);
   }
 
   template <typename U, class... Args>
