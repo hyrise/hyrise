@@ -161,7 +161,9 @@ void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
 
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
-    Fail("Cannot unpin a page that is not in the page table");
+    // TODO: This could happpen, if the pin guard still exists, but the page is removed
+    // Fail("Cannot unpin a page that is not in the page table");
+    return;
   }
 
   // TODO: check

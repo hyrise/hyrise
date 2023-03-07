@@ -3,6 +3,7 @@
 #include <utility>
 #include <vector>
 
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/pos_lists/abstract_pos_list.hpp"
 #include "storage/segment_iterables.hpp"
 #include "storage/value_segment.hpp"
@@ -20,12 +21,21 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
     if (_segment.is_nullable()) {
-      auto begin = Iterator{_segment.values().cbegin(), _segment.values().cbegin(), _segment.null_values().cbegin()};
-      auto end = Iterator{_segment.values().cbegin(), _segment.values().cend(), _segment.null_values().cend()};
+      auto values = _segment.values();
+      auto null_values = _segment.null_values();
+
+      auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
+      auto null_pin_guard = PinGuard<typename decltype(null_values)::value_type>::create(null_values, false);
+
+      auto begin = Iterator{values.cbegin(), values.cbegin(), null_values.cbegin()};
+      auto end = Iterator{values.cbegin(), values.cend(), null_values.cend()};
       functor(begin, end);
     } else {
-      auto begin = NonNullIterator{_segment.values().cbegin(), _segment.values().cbegin()};
-      auto end = NonNullIterator{_segment.values().cbegin(), _segment.values().cend()};
+      auto values = _segment.values();
+      auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
+
+      auto begin = NonNullIterator{values.cbegin(), values.cbegin()};
+      auto end = NonNullIterator{values.cbegin(), values.cend()};
       functor(begin, end);
     }
   }
@@ -109,7 +119,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
-    using ValueIterator = typename pmr_vector<T>::const_iterator;
+    using ValueIterator = typename pmr_vector<T>::const_iterator;  // TODO: Convert
     using NullValueIterator = pmr_vector<bool>::const_iterator;
 
    public:

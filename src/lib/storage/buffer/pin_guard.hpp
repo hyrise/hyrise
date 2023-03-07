@@ -15,7 +15,7 @@ class PinGuard {
   }
 
   ~PinGuard() {
-    _ptr.unpin(_dirty);  // TODO: This could actually happen without page table lookup
+    _ptr.unpin(_dirty);  // TODO: This could actually happen without page table lookup.
   }
 
   static PinGuard create(const pmr_vector<T>& vector, const bool dirty) {
@@ -23,12 +23,14 @@ class PinGuard {
   }
 
   static PinGuard create(const std::shared_ptr<T>& ptr, const bool dirty) {
-    return PinGuard(ptr.get(), dirty);  // TODO: Benchmark this access pattern
+    return PinGuard(ptr.get(), dirty);  // TODO: Benchmark this access pattern,
   }
 
  private:
   BufferManagedPtr<T> _ptr;  // TODO: Could this be a reference?
   const bool _dirty;
 };
+
+// TODO: Add pinguard with reference to vector instead of shared ptr. Or from other pointer.
 
 }  // namespace hyrise
