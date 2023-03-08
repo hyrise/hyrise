@@ -450,6 +450,7 @@ set(
     storage/buffer/clock_replacement_strategy.hpp
     storage/buffer/frame.hpp
     storage/buffer/page.hpp
+    storage/buffer/pin_guard.hpp
     storage/buffer/ssd_region.cpp
     storage/buffer/ssd_region.hpp
     storage/buffer/types.hpp
