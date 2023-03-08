@@ -34,7 +34,7 @@ constexpr size_t MAX_PAGE_OFFSET = boost::static_log2<bytes_for_size_type(MAX_PA
 constexpr size_t BITS_PAGE_SIZE_TYPES = std::bit_width(NUM_PAGE_SIZE_TYPES);
 
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
-constexpr size_t REQUIRED_PAGE_ALIGNMENT = 512;
+constexpr size_t PAGE_ALIGNMENT = 512;
 
 // Copied from boost::interprocess, because #include <boost/type_traits/add_reference.hpp> was not enough
 // I guess, because of "typedef nat &type" that can be used as reference dummy type

@@ -6,13 +6,13 @@ namespace hyrise {
 
 /**
  * @brief Page wraps binary data to be written or read. It's aligned to 512 bytes in order to work with the O_DIRECT flag and SSDs. 
- * O_DIRECT is often used in databases when they implement their own caching/buffer management like in our case.
+ * O_DIRECT is often used in databases when they implement their own caching/buffer management like in our case. The page size should also be a multiple of the OS' page size.
  */
 template <PageSizeType SizeType>
-struct alignas(REQUIRED_PAGE_ALIGNMENT) Page {
-  static_assert(bytes_for_size_type(SizeType) % REQUIRED_PAGE_ALIGNMENT == 0,
+struct alignas(PAGE_ALIGNMENT) Page {
+  static_assert(bytes_for_size_type(SizeType) % PAGE_ALIGNMENT == 0,
                 "SizeType needs to be a multiple of 512 for optimal SSD reads and writes");
-  static_assert(bytes_for_size_type(SizeType) >= REQUIRED_PAGE_ALIGNMENT,
+  static_assert(bytes_for_size_type(SizeType) >= PAGE_ALIGNMENT,
                 "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
   constexpr static std::size_t size() {
