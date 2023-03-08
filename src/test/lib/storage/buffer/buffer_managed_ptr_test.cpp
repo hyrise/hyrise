@@ -6,6 +6,7 @@
 #include "gtest_printers.hpp"
 #include "storage/buffer/buffer_managed_ptr.hpp"
 #include "storage/buffer/buffer_manager.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "types.hpp"
 
 namespace hyrise {

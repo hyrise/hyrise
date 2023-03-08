@@ -9,7 +9,7 @@
 
 namespace hyrise {
 
-static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& state) {
+static void BM_allocate_pages_boost_vector_buffer_pool_allocator(benchmark::State& state) {
   auto ssd_region = std::make_unique<SSDRegion>(ssd_region_scratch_path() / "pool_allocator_benchmark.data");
   auto volatile_region = std::make_unique<VolatileRegion>(1 << 20, PageSizeType::KiB32);
   auto buffer_manager = BufferManager(std::move(volatile_region), std::move(ssd_region));
@@ -21,7 +21,7 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
   const auto vector_size = Page32KiB::size() / sizeof(int);
   for (auto _ : state) {
     state.PauseTiming();
-    // TODO: Perform a reset here
+    buffer_manager.soft_reset();
     state.ResumeTiming();
 
     for (auto index = size_t{0}; index < allocation_count; index++) {
@@ -31,10 +31,10 @@ static void BM_allocate_pages_buffer_pool_allocator_empty(benchmark::State& stat
     }
   }
 
-  state.SetLabel("Multiple allocations of page-sized vector with BufferPoolAllocator");
+  state.SetLabel("Multiple allocations of page-sized boost::container::vector with BufferPoolAllocator");
 }
 
-static void BM_allocate_pages_std_allocator(benchmark::State& state) {
+static void BM_allocate_pages_boost_vector_std_allocator(benchmark::State& state) {
   auto allocation_count = static_cast<size_t>(state.range(0));
   const auto vector_size = Page32KiB::size() / sizeof(int);
   for (auto _ : state) {
@@ -49,9 +49,33 @@ static void BM_allocate_pages_std_allocator(benchmark::State& state) {
     }
   }
 
-  state.SetLabel("Multiple allocations of page-sized vector with std::allocator");
+  state.SetLabel("Multiple allocations of page-sized boost::container::vector with std::allocator");
 }
 
-BENCHMARK(BM_allocate_pages_buffer_pool_allocator_empty)->Range(8, 8 << 9);
-BENCHMARK(BM_allocate_pages_std_allocator)->Range(8, 8 << 9);
+static void BM_allocate_pages_std_vector_buffer_pool_allocator(benchmark::State& state) {
+  auto ssd_region = std::make_unique<SSDRegion>(ssd_region_scratch_path() / "pool_allocator_benchmark.data");
+  auto volatile_region = std::make_unique<VolatileRegion>(1 << 20, PageSizeType::KiB32);
+  auto buffer_manager = BufferManager(std::move(volatile_region), std::move(ssd_region));
+  auto allocator = BufferPoolAllocator<void>(&buffer_manager);
+
+  auto allocation_count = static_cast<size_t>(state.range(0));
+  const auto vector_size = Page32KiB::size() / sizeof(int);
+  for (auto _ : state) {
+    state.PauseTiming();
+    buffer_manager.soft_reset();
+    state.ResumeTiming();
+
+    for (auto index = size_t{0}; index < allocation_count; index++) {
+      auto array = std::vector<int, BufferPoolAllocator<int>>{vector_size, allocator};
+      auto size = array.size();
+      benchmark::DoNotOptimize(size);
+    }
+  }
+
+  state.SetLabel("Multiple allocations of page-sized std::vector with BufferPoolAllocator");
+}
+
+BENCHMARK(BM_allocate_pages_boost_vector_buffer_pool_allocator)->Range(8, 8 << 9);
+BENCHMARK(BM_allocate_pages_boost_vector_std_allocator)->Range(8, 8 << 9);
+BENCHMARK(BM_allocate_pages_std_vector_buffer_pool_allocator)->Range(8, 8 << 9);
 }  // namespace hyrise

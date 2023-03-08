@@ -55,10 +55,10 @@ TEST_F(VolatileRegionTest, TestGetPage) {
 TEST_F(VolatileRegionTest, TestGetFrameIDFromPtr) {
   auto volatile_region = VolatileRegion(sizeof(Page32KiB) * 2, PageSizeType::KiB32);
   auto [frame_id, page_0] = volatile_region.allocate();
-  EXPECT_EQ(volatile_region.get_frame_id_from_ptr(page_0 - 1), INVALID_FRAME_ID);
-  EXPECT_EQ(volatile_region.get_frame_id_from_ptr(page_0), 0);
-  EXPECT_EQ(volatile_region.get_frame_id_from_ptr(page_0 + 1), 1);
-  EXPECT_EQ(volatile_region.get_frame_id_from_ptr(page_0 + 2), INVALID_FRAME_ID);
+  EXPECT_EQ(volatile_region.to_frame_id(page_0 - 1), INVALID_FRAME_ID);
+  EXPECT_EQ(volatile_region.to_frame_id(page_0), 0);
+  EXPECT_EQ(volatile_region.to_frame_id(page_0 + 1), 1);
+  EXPECT_EQ(volatile_region.to_frame_id(page_0 + 2), INVALID_FRAME_ID);
 }
 
 }  // namespace hyrise
