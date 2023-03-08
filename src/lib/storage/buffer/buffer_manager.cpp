@@ -278,7 +278,11 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
 void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align) {
   std::lock_guard<std::mutex> lock(_page_table_mutex);
 
+  // TODO: Do not deallocate, if page is still pinned
+
   _metrics.current_bytes_used -= bytes;
+  _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
+
   // TODO: What happens to page on SSD
   remove_page(ptr.get_page_id());
 }
