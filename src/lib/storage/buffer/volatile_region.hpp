@@ -23,7 +23,7 @@ class VolatileRegion {
   VolatileRegion(const size_t num_bytes, const PageSizeType size_type);
   ~VolatileRegion();
 
-  FrameID get_frame_id_from_ptr(const void* ptr) const;
+  FrameID to_frame_id(const void* ptr) const;
   std::byte* get_page(const FrameID frame_id);
 
   std::pair<FrameID, std::byte*> allocate();
@@ -35,6 +35,8 @@ class VolatileRegion {
   PageSizeType get_size_type() const;
 
  private:
+  static std::byte* allocate_aligned_frames(const size_t num_frames, const PageSizeType size_type);
+
   // Total number of bytes allocated in data
   const size_t _num_frames;
 
