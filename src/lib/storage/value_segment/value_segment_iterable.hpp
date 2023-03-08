@@ -21,18 +21,18 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
   void _on_with_iterators(const Functor& functor) const {
     _segment.access_counter[SegmentAccessCounter::AccessType::Sequential] += _segment.size();
     if (_segment.is_nullable()) {
-      auto values = _segment.values();
-      auto null_values = _segment.null_values();
+      const auto values = _segment.values();
+      const auto null_values = _segment.null_values();
 
-      auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
-      auto null_pin_guard = PinGuard<typename decltype(null_values)::value_type>::create(null_values, false);
+      const auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
+      const auto null_pin_guard = PinGuard<typename decltype(null_values)::value_type>::create(null_values, false);
 
       auto begin = Iterator{values.cbegin(), values.cbegin(), null_values.cbegin()};
       auto end = Iterator{values.cbegin(), values.cend(), null_values.cend()};
       functor(begin, end);
     } else {
-      auto values = _segment.values();
-      auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
+      const auto values = _segment.values();
+      const auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
 
       auto begin = NonNullIterator{values.cbegin(), values.cbegin()};
       auto end = NonNullIterator{values.cbegin(), values.cend()};
@@ -74,11 +74,12 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
+    using RawValueIterator = typename ValueIterator::pointer;
 
    public:
     explicit NonNullIterator(ValueIterator begin_value_it, ValueIterator value_it)
-        : _value_it{std::move(value_it)},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
+        : _value_it{value_it.get_ptr().operator->()},
+          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -111,7 +112,7 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
    private:
-    ValueIterator _value_it;
+    RawValueIterator _value_it;
     ChunkOffset _chunk_offset;
   };
 
@@ -119,14 +120,17 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
    public:
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
-    using ValueIterator = typename pmr_vector<T>::const_iterator;  // TODO: Convert
+    using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = pmr_vector<bool>::const_iterator;
+
+    using RawValueIterator = typename ValueIterator::pointer;
+    using RawNullValueIterator = typename NullValueIterator::pointer;
 
    public:
     explicit Iterator(ValueIterator begin_value_it, ValueIterator value_it, NullValueIterator null_value_it)
-        : _value_it(std::move(value_it)),
-          _null_value_it{std::move(null_value_it)},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, _value_it))} {}
+        : _value_it(value_it.get_ptr().operator->()),
+          _null_value_it{std::move(null_value_it).get_ptr().operator->()},
+          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -162,8 +166,8 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     }
 
    private:
-    ValueIterator _value_it;
-    NullValueIterator _null_value_it;
+    RawValueIterator _value_it;
+    RawNullValueIterator _null_value_it;
     ChunkOffset _chunk_offset;
   };
 

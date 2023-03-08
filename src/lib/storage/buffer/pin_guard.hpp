@@ -8,7 +8,7 @@ namespace hyrise {
  * A Pin Guard ensure that that a pointer/page is unpinned when it goes out of scope. This garantuees exceptions safetiness. It works like std::lock_guard.
 */
 template <class T>
-class PinGuard {
+class PinGuard : public Noncopyable {
  public:
   explicit PinGuard(BufferManagedPtr<T> ptr, const bool dirty) : _dirty(dirty), _ptr(ptr) {
     _ptr.pin();

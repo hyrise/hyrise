@@ -14,6 +14,7 @@
 #include "statistics/statistics_objects/null_value_ratio_statistics.hpp"
 #include "statistics/statistics_objects/range_filter.hpp"
 #include "statistics/table_statistics.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/table.hpp"
 
@@ -24,6 +25,8 @@ using namespace hyrise;  // NOLINT
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
                                            const pmr_vector<T>& dictionary) {
+  auto pin_guard = PinGuard<T>::create(dictionary, true);
+
   std::shared_ptr<AbstractStatisticsObject> pruning_statistics;
   if constexpr (std::is_arithmetic_v<T>) {
     pruning_statistics = RangeFilter<T>::build_filter(dictionary);
@@ -63,7 +66,6 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
       if constexpr (std::is_same_v<SegmentType, DictionarySegment<ColumnDataType>>) {
         // we can use the fact that dictionary segments have an accessor for the dictionary
         const auto& dictionary = *typed_segment.dictionary();
-        auto pin_guard = PinGuard(dictionary.begin().get_ptr(), false);
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       } else {
         // if we have a generic segment we create the dictionary ourselves
@@ -76,7 +78,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
           }
         });
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        auto pin_guard = PinGuard(dictionary.begin().get_ptr(), true);
+        auto pin_guard = PinGuard<ColumnDataType>::create(dictionary, true);
         std::sort(dictionary.begin().get_ptr().get(), dictionary.end().get_ptr().get());
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
