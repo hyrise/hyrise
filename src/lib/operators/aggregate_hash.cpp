@@ -1033,7 +1033,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       auto values = pmr_vector<ColumnDataType>{};
       values.reserve(pos_list.size());
       auto null_values = pmr_vector<bool>{};
-      null_values.reserve(column_is_nullable ? pos_list.size() : 0);
+      null_values.reserve(pos_list.size());
 
       auto accessors =
           std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_table->chunk_count());
