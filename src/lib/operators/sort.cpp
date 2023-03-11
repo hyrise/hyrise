@@ -29,7 +29,7 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
   // Vector of segments for each chunk
-  auto output_segments_by_chunk = std::vector<Segments>(output_chunk_count);
+  auto output_segments_by_chunk = std::vector<Segments>{output_chunk_count};
 
   // Materialize column by column, starting a new ValueSegment whenever output_chunk_size is reached
   const auto input_chunk_count = unsorted_table->chunk_count();

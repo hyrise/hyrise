@@ -169,6 +169,8 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
     // If we are validating a reference segment, this is the table referenced by ref_segment_in.
     auto referenced_table = std::shared_ptr<const Table>{};
 
+    const auto column_count = chunk_in->column_count();
+
     // If the segments in this chunk reference a segment, build a poslist for a reference segment.
     if (ref_segment_in) {
       DebugAssert(chunk_in->references_exactly_one_table(),
@@ -242,7 +244,6 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       }
 
       // Construct the actual ReferenceSegment objects and add them to the chunk.
-      const auto column_count = chunk_in->column_count();
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         const auto reference_segment =
             std::static_pointer_cast<const ReferenceSegment>(chunk_in->get_segment(column_id));
@@ -276,7 +277,6 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
       }
 
       // Create actual ReferenceSegment objects.
-      const auto column_count = chunk_in->column_count();
       for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
         auto ref_segment_out = std::make_shared<ReferenceSegment>(referenced_table, column_id, pos_list_out);
         output_segments.push_back(ref_segment_out);
@@ -284,7 +284,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
     }
 
     if (!pos_list_out->empty()) {
-      const auto lock = std::lock_guard<std::mutex>(output_mutex);
+      const auto lock = std::lock_guard<std::mutex>{output_mutex};
       // The validate operator does not affect the sorted_by property. If a chunk has been sorted before, it still is
       // after the validate operator.
       const auto chunk = std::make_shared<Chunk>(output_segments);

@@ -114,7 +114,7 @@ void AbstractTask::schedule(NodeID preferred_node_id) {
 }
 
 void AbstractTask::_join() {
-  auto lock = std::unique_lock<std::mutex>(_done_condition_variable_mutex);
+  auto lock = std::unique_lock<std::mutex>{_done_condition_variable_mutex};
   if (is_done()) {
     return;
   }
@@ -153,7 +153,7 @@ void AbstractTask::execute() {
   }
 
   {
-    const auto lock = std::lock_guard<std::mutex>(_done_condition_variable_mutex);
+    const auto lock = std::lock_guard<std::mutex>{_done_condition_variable_mutex};
     _done_condition_variable.notify_all();
   }
 }
@@ -206,7 +206,7 @@ bool AbstractTask::_try_transition_to(TaskState new_state) {
    * This function must be locked to prevent race conditions. A different thread might be able to change _state
    * successfully while this thread is still between the validity check and _state.exchange(new_state).
    */
-  const auto lock = std::lock_guard<std::mutex>(_transition_to_mutex);
+  const auto lock = std::lock_guard<std::mutex>{_transition_to_mutex};
   switch (new_state) {
     case TaskState::Scheduled:
       if (_state >= TaskState::Scheduled) {

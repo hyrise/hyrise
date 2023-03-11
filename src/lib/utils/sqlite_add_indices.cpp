@@ -38,7 +38,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
   auto schema_file = std::ifstream{schema_file_path};
   Assert(schema_file.good(), std::string{"Schema file "} + schema_file_path +
                                  " not found - try running the binary from the Hyrise root or the build directory");
-  const auto schema_sql = std::string(std::istreambuf_iterator<char>(schema_file), std::istreambuf_iterator<char>());
+  const auto schema_sql = std::string{std::istreambuf_iterator<char>(schema_file), std::istreambuf_iterator<char>()};
   sqlite_wrapper->main_connection.raw_execute_query(schema_sql);
 
   // If indices are not part of the schema file, add them here
@@ -48,7 +48,7 @@ void add_indices_to_sqlite(const std::string& schema_file_path, const std::strin
            std::string{"Index file "} + create_indices_file_path +
                " not found - try running the binary from the Hyrise root or the build directory");
     const auto create_indices_sql =
-        std::string(std::istreambuf_iterator<char>(create_indices_file), std::istreambuf_iterator<char>());
+        std::string{std::istreambuf_iterator<char>(create_indices_file), std::istreambuf_iterator<char>()};
     sqlite_wrapper->main_connection.raw_execute_query(create_indices_sql);
   }
 

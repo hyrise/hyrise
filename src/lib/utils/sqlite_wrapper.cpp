@@ -181,7 +181,7 @@ std::shared_ptr<Table> SQLiteWrapper::Connection::execute_query(const std::strin
 
   // We need to split the queries such that we only create columns/add rows from the final SELECT query
   const auto queries_before_select = std::vector<std::string>(queries.begin(), queries.end() - 1);
-  const auto select_query = queries.back();
+  const auto& select_query = queries.back();
 
   auto return_code = int{0};
   for (const auto& query : queries_before_select) {
