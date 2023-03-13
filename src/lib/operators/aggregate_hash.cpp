@@ -1080,7 +1080,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       };  // NOLINT: cpplint does not recognize the templated lambda here and wants the semicolon removed.
 
       if (column_is_nullable) {
-        // Explanation why the templated lambda is called like this: https://stackoverflow.com/a/66182481/1147726 
+        // Explanation why the templated lambda is called like this: https://stackoverflow.com/a/66182481/1147726
         process_pos_list.template operator()<true>();
       } else {
         process_pos_list.template operator()<false>();
