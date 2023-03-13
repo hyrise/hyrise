@@ -565,9 +565,8 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCCTableGenerator::generate
   if (_benchmark_config->cache_binary_tables) {
     std::filesystem::create_directories(cache_directory);
     for (auto& [table_name, table_info] : table_info_by_name) {
-      // NOLINTBEGIN(performance-inefficient-string-concatenation)
+      // NOLINTNEXTLINE(performance-inefficient-string-concatenation)
       table_info.binary_file_path = cache_directory + "/" + table_name + ".bin";
-      // NOLINTEND(performance-inefficient-string-concatenation)
     }
   }
 

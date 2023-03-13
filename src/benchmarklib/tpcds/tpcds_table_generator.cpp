@@ -123,9 +123,8 @@ pmr_string boolean_to_string(bool boolean) {
 
 pmr_string zip_to_string(int32_t zip) {
   auto result = pmr_string(5, '?');
-  // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   const auto snprintf_rc = std::snprintf(result.data(), result.size() + 1, "%05d", zip);
-  // NOLINTEND(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   Assert(snprintf_rc > 0, "Unexpected string to parse.");
   return result;
 }
@@ -1154,9 +1153,8 @@ std::shared_ptr<Table> TPCDSTableGenerator::generate_web_site(ds_key_t max_rows)
 
   auto web_site = W_WEB_SITE_TBL{};
   static_assert(sizeof(web_site.web_class) == 51);
-  // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   const auto snprintf_rc = std::snprintf(web_site.web_class, sizeof(web_site.web_class), "%s", "Unknown");
-  // NOLINTEND(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
   Assert(snprintf_rc > 0, "Unexpected string to parse.");
   for (auto web_site_index = ds_key_t{0}; web_site_index < web_site_count; ++web_site_index) {
     // mk_w_web_site needs a pointer to the previous result because it expects values set previously to still be there

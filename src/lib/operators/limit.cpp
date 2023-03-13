@@ -66,7 +66,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
 
   auto chunk_id = ChunkID{0};
   const auto chunk_count = input_table->chunk_count();
-  for (size_t index = 0; index < num_rows && chunk_id < chunk_count; ++chunk_id) {
+  for (auto index = size_t{0}; index < num_rows && chunk_id < chunk_count; ++chunk_id) {
     const auto input_chunk = input_table->get_chunk(chunk_id);
     Assert(input_chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
 
@@ -91,7 +91,7 @@ std::shared_ptr<const Table> Limit::_on_execute() {
       } else {
         referenced_table = input_table;
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(output_chunk_row_count);
-             chunk_offset++) {
+             ++chunk_offset) {
           (*output_pos_list)[chunk_offset] = RowID{chunk_id, chunk_offset};
         }
       }

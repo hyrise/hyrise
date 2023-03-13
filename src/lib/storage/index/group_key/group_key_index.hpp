@@ -58,7 +58,8 @@ class GroupKeyIndex : public AbstractChunkIndex {
    * Predicts the memory consumption in bytes of creating this index.
    * See AbstractChunkIndex::estimate_memory_consumption()
    */
-  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t /*value_bytes*/);
+  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
+                                            uint32_t /*value_bytes*/);
 
   GroupKeyIndex() = delete;
 

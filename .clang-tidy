@@ -13,7 +13,6 @@ Checks: '
          -hicpp-no-array-decay,
          -cert-dcl58-cpp,
          -modernize-avoid-bind,
-         -hicpp-no-assembler,
          -cert-env33-c,
          -misc-macro-parentheses,
          -fuchsia-overloaded-operator,
@@ -55,7 +54,7 @@ WarningsAsErrors: '*'
 #   - cppcoreguidelines-pro-type-reinterpret-cast               We use reinterpret_cast
 #   - modernize-pass-by-value                                   We don't trust people to properly use std::move
 #   - cppcoreguidelines-pro-bounds-constant-array-index         "Do not use array subscript when the index is not an integer constant expression"?!
-#   - cppcoreguidelines-pro-type-static-cast-downcast           We do allow static downcasts for performance reasons
+#   - cppcoreguidelines-pro-type-static-cast-downcast           We use static downcasts when we can safely obtain the type (e.g., static casts of LQPNodes via node->type)
 #   - cppcoreguidelines-pro-bounds-array-to-pointer-decay       Weird stuff - it doesn't like `description_mode == DescriptionMode::MultiLine`
 #   - hicpp-no-array-decay                                       (same)
 #   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std

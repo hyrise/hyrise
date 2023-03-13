@@ -400,7 +400,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
   }
 
   // Create aggregate column definitions
-  ColumnID aggregate_idx{0};
+  auto aggregate_idx = ColumnID{0};
   for (const auto& aggregate : _aggregates) {
     const auto& pqp_column = static_cast<const PQPColumnExpression&>(*aggregate->argument());
     const auto column_id = pqp_column.column_id;
@@ -452,7 +452,7 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
     return result_table;
   }
 
-  std::shared_ptr<const Table> sorted_table = input_table;
+  auto sorted_table = input_table;
   if (!_groupby_column_ids.empty()) {
     /**
     * If there is a value clustering for a column, it means that all tuples with the same value in that column are in
@@ -569,7 +569,8 @@ std::shared_ptr<const Table> AggregateSort::_on_execute() {
       auto values = pmr_vector<ColumnDataType>(group_boundaries.size() + 1);
       auto null_values = pmr_vector<bool>(column_is_nullable ? group_boundaries.size() + 1 : 0);
 
-      for (size_t value_index = 0; value_index < values.size(); value_index++) {
+      const auto value_count = values.size();
+      for (size_t value_index = 0; value_index < value_count; ++value_index) {
         RowID group_start;
         if (value_index == 0) {
           // First group starts in the first row, but there is no corresponding entry in the set. See above for reasons.

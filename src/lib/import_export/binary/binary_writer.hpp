@@ -144,7 +144,7 @@ class BinaryWriter {
    */
   template <typename T>
   static void _write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                             bool column_is_nullable, std::ofstream& ofstream);
+                             bool /*column_is_nullable*/, std::ofstream& ofstream);
 
   /**
    * RunLengthSegments are dumped with the following layout:

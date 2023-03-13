@@ -34,7 +34,7 @@ void NodeQueueScheduler::begin() {
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
 
-  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
+  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
     _queues.emplace_back(queue);
