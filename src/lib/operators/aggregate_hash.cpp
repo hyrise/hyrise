@@ -1037,7 +1037,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
       auto accessors =
           std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_table->chunk_count());
 
-      auto process_pos_list = [&]<bool ColumnIsNullable>() {
+      const auto process_pos_list = [&]<bool ColumnIsNullable>() {
         if constexpr (ColumnIsNullable) {
           null_values.reserve(pos_list.size());
         }
@@ -1077,7 +1077,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
         }
 
         _output_segments[output_column_id] = value_segment;
-      };
+      };  // NOLINT: cpplint does not recognize the templated lambda here and wants the semicolon removed.
 
       if (column_is_nullable) {
         // Explanation why the templated lambda is called like this: https://stackoverflow.com/a/66182481/1147726 
