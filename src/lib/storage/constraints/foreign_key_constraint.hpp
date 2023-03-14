@@ -22,7 +22,8 @@ class Table;
  * (e.g., nation.n_regionkey) whereas @param primary_key_columns and @param primary_key_table reference the table with
  * the primary key (e.g., region.r_regionkey).
  *
- * Foreign key constraints are translated to inclusion dependencies (INDs) in the LQP.
+ * Foreign key constraints are translated to inclusion dependencies (INDs) in the LQP. An inclusion dependency states
+ * that all values for a combination of attributes are also present in a combination of attributes of another table.
  */
 class ForeignKeyConstraint final : public AbstractTableConstraint {
  public:

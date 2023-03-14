@@ -4,7 +4,7 @@
 
 namespace hyrise {
 
-TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, KeyConstraintType key_type)
+TableKeyConstraint::TableKeyConstraint(const std::set<ColumnID>& columns, const KeyConstraintType key_type)
     : _key_type{key_type}, _columns{columns} {}
 
 KeyConstraintType TableKeyConstraint::key_type() const {
@@ -44,8 +44,8 @@ bool TableKeyConstraint::operator<(const TableKeyConstraint& rhs) const {
 
 namespace std {
 
-size_t hash<hyrise::TableKeyConstraint>::operator()(const hyrise::TableKeyConstraint& key_constraint) const {
-  return key_constraint.hash();
+size_t hash<hyrise::TableKeyConstraint>::operator()(const hyrise::TableKeyConstraint& table_key_constraint) const {
+  return table_key_constraint.hash();
 }
 
 }  // namespace std

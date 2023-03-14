@@ -6,7 +6,14 @@ namespace hyrise {
 
 TableOrderConstraint::TableOrderConstraint(const std::vector<ColumnID>& ordering_columns,
                                            const std::vector<ColumnID>& ordered_columns)
-    : _ordering_columns(ordering_columns), _ordered_columns(ordered_columns) {}
+    : _ordering_columns(ordering_columns), _ordered_columns(ordered_columns) {
+  if constexpr (HYRISE_DEBUG) {
+    for (const auto column : ordering_columns) {
+      Assert(std::find(ordered_columns.begin(), ordered_columns.end(), column) == ordered_columns.end(),
+             "Ordering and ordered columns must be disjoint.");
+    }
+  }
+}
 
 const std::vector<ColumnID>& TableOrderConstraint::ordering_columns() const {
   return _ordering_columns;
@@ -33,8 +40,9 @@ bool TableOrderConstraint::_on_equals(const AbstractTableConstraint& table_const
 
 namespace std {
 
-size_t hash<hyrise::TableOrderConstraint>::operator()(const hyrise::TableOrderConstraint& order_constraint) const {
-  return order_constraint.hash();
+size_t hash<hyrise::TableOrderConstraint>::operator()(
+    const hyrise::TableOrderConstraint& table_order_constraint) const {
+  return table_order_constraint.hash();
 }
 
 }  // namespace std

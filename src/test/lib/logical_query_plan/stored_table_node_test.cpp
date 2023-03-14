@@ -211,12 +211,12 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");  // int_int_float.tbl
   table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
-  table->add_soft_key_constraint({{_a->original_column_id, _b->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_key_constraint({{_b->original_column_id}, KeyConstraintType::UNIQUE});
 
   const auto& fds = _stored_table_node->functional_dependencies();
 
   const auto fd1_expected = FunctionalDependency{{_a}, {_b, _c}};
-  const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
+  const auto fd2_expected = FunctionalDependency{{_b}, {_a, _c}};
 
   EXPECT_EQ(fds.size(), 2);
   EXPECT_TRUE(fds.contains(fd1_expected));
@@ -311,17 +311,15 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   // Prepare UCCs.
-  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _table_a->add_soft_key_constraint(key_constraint_a);
   _table_a->add_soft_key_constraint(key_constraint_a_b);
   _table_a->add_soft_key_constraint(key_constraint_c);
   const auto& table_key_constraints = _table_a->soft_key_constraints();
-  EXPECT_EQ(table_key_constraints.size(), 3);
-  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 3);
+  EXPECT_EQ(table_key_constraints.size(), 2);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
 
-  // Prune column a, which should remove two UCCs.
+  // Prune column a, which should remove one UCC.
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // Basic check.

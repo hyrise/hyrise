@@ -11,7 +11,7 @@ using namespace hyrise;  // NOLINT(build/namespaces)
 // ForeignKeyConstraints with swapped columns are equivalent. To ensure they are represented the same way, we determine
 // the permutation that sorts `foreign_key_columns` and apply it to `foreign_key_columns` and `primary_key_columns`.
 // Idea taken from https://stackoverflow.com/a/17074810
-std::vector<size_t> sort_permutation(const std::vector<ColumnID>& column_ids) {
+std::vector<size_t> sort_indexes(const std::vector<ColumnID>& column_ids) {
   auto permutation = std::vector<size_t>(column_ids.size());
   // Fill permutation with [0, 1, ..., n - 1] and order the permutation by sorting column_ids.
   std::iota(permutation.begin(), permutation.end(), 0);
@@ -42,17 +42,34 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_
       _primary_key_table{primary_key_table} {
   Assert(_foreign_key_columns.size() == _primary_key_columns.size(),
          "Invalid number of columns for ForeignKeyConstraint.");
+  // In general, ForeignKeyConstraints should always reference the foreign key table and the primary key table. However,
   // MockNodes can hold ForeignKeyConstraints that do not reference a primary key table (since they mock the node
-  // representing this table). When added to a table, Table::add_soft_foreign_key_constraint(...) checks that the
-  // pointer is set and valid.
+  // representing this table). This is fine and we allow such constraints. When we actually add a ForeignKeyConstraint
+  // to a table, we ensure that the constraint references a primary key table:
+  // Table::add_soft_foreign_key_constraint(...) checks that the pointer is set and valid (i.e., the primary key table
+  // exists).
   Assert(foreign_key_table, "ForeignKeyConstraint must reference a table.");
 
-  // For foreign key constraints / INDs with the same columns, the order of the expressions is relevant. For instance,
-  // [A.a, A.b] in [B.x, B.y] is equal to [A.b, A.a] in [B.y, B.x], but not equal to [A.a, A.b] in [B.y, B.x]. To
-  // guarantee unambiguous dependencies, we order the columns and apply the same permutation to the included columns.
+  // For foreign key constraints with the same columns, the order of the columns is relevant since it determines which
+  // foreign key column references which primary key columns. For instance, [A.a, A.b] in [B.x, B.y] is equal to
+  // [A.b, A.a] in [B.y, B.x], but not equal to [A.a, A.b] in [B.y, B.x]. See the following example:
+  //
+  //      A           B
+  //    a | b       x | y
+  //   -------     -------
+  //    1 | u       1 | u
+  //    2 | u       2 | u
+  //
+  // In this case, [A.a, A.b] in [B.x, B.y]/[A.b, A.a] in [B.y, B.x] holds: We find the tuples (1,u) and (2,u) in A and
+  // in B. If we project both tables s.t. the columns are flipped (so A has columns a,b and B has columns x,y), we
+  // preserve this property: (u,1) and (u,2) are part of both (projected) relations. However, it is a difference when we
+  // flip table A but not table B: Now, the tuples from a look like (u,1) and (u,2) and the tuples from B are (1,u)
+  // and (2,u). Obviously, they are not the same tuples anymore.
+  //
+  // To guarantee unambiguous dependencies, we order the columns and apply the same permutation to the included columns.
   // Doing so, we obtain the same costraint for [A.a, A.b] in [B.x, B.y] and [A.b, A.a] in [B.y, B.x].
   if (_foreign_key_columns.size() > 1) {
-    const auto& permutation = sort_permutation(_foreign_key_columns);
+    const auto& permutation = sort_indexes(_foreign_key_columns);
     _foreign_key_columns = apply_permutation(_foreign_key_columns, permutation);
     _primary_key_columns = apply_permutation(_primary_key_columns, permutation);
   }

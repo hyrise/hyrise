@@ -45,6 +45,7 @@ TEST_F(ChangeMetaTableNodeTest, Copy) {
 }
 
 TEST_F(ChangeMetaTableNodeTest, NoUniqueColumnCombinations) {
+  // Non-query nodes should not be asked for data dependencies.
   EXPECT_THROW(_change_meta_table_node->unique_column_combinations(), std::logic_error);
 }
 

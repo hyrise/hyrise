@@ -72,18 +72,16 @@ TEST_F(TableKeyConstraintTest, AddKeyConstraintsInvalid) {
                std::logic_error);
 
   _table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY});
-  _table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE});
 
   // Invalid, because PRIMARY KEY already exists.
-  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}), std::logic_error);
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{1}}, KeyConstraintType::PRIMARY_KEY}), std::logic_error);
 
   // Invalid, because key constraints for the given column sets already exist
   EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::UNIQUE}), std::logic_error);
   EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}}, KeyConstraintType::PRIMARY_KEY}), std::logic_error);
   EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::UNIQUE}),
                std::logic_error);
-  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{0}, ColumnID{2}}, KeyConstraintType::PRIMARY_KEY}),
-               std::logic_error);
+  EXPECT_THROW(_table->add_soft_key_constraint({{ColumnID{2}}, KeyConstraintType::UNIQUE}), std::logic_error);
 }
 
 TEST_F(TableKeyConstraintTest, Equals) {

@@ -41,6 +41,8 @@ TEST_F(DummyTableNodeTest, NodeExpressions) {
 }
 
 TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
+  // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies (though a
+  // single row is obviously unique).
   EXPECT_TRUE(_dummy_table_node->unique_column_combinations().empty());
 }
 

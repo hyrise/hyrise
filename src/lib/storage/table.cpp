@@ -38,16 +38,13 @@ bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<Colum
   return false;
 }
 
-// Checks if @param lhs is a sublist of @param rhs, e.g., lhs = [0, 2, 1] and rhs = [0, 2, 1, 3, 4], or vice versa.
-bool columns_overlap(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
-  const auto column_count = std::min(lhs.size(), rhs.size());
-  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
-    if (lhs[column_id] != rhs[column_id]) {
-      return false;
+bool columns_intersect(const std::set<ColumnID>& lhs, const std::set<ColumnID>& rhs) {
+  for (const auto column_id : lhs) {
+    if (rhs.contains(column_id)) {
+      return true;
     }
   }
-
-  return true;
+  return false;
 }
 
 }  // namespace
@@ -425,9 +422,10 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
                table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
            "Another primary TableKeyConstraint exists for this table.");
 
-    // Ensure there is only one key constraint per column set.
-    Assert(table_key_constraint.columns() != existing_constraint.columns(),
-           "Another TableKeyConstraint for the same column set has already been defined.");
+    // Ensure there is only one key constraint per column(s). Though, e.g., two unique constraints {a, b} and {b, c}
+    // could be set, we make sure we definitely notice these cases.
+    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+           "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
 
   _table_key_constraints.insert(table_key_constraint);
@@ -459,7 +457,7 @@ void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_
 
   const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _foreign_key_constraints) {
-    // Do not allow overlapping foreign key constraints. Though a table may have unlimited inclusion dependencies for
+    // Do not allow intersecting foreign key constraints. Though a table may have unlimited inclusion dependencies for
     // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
     // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
     Assert(!columns_intersect(existing_constraint.foreign_key_columns(), foreign_key_constraint.foreign_key_columns()),
@@ -494,14 +492,13 @@ void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_co
 
   const auto append_lock = acquire_append_mutex();
   for (const auto& existing_constraint : _table_order_constraints) {
-    // Do not allow order constraints that can be represented by existing constraints (and vice versa). For instance,
-    // we do not allow constraints that (i) order the same ordered columns but require fewer or more ordering columns
-    // or (ii) have the same ordering columns but order fewer or more ordered columns.
+    // Do not allow intersecting key constraints. Though they can be valid, we are pessimistic for now and notice if we
+    // run into intricate cases.
     const auto ordering_columns_invalid =
-        columns_overlap(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
+        columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
         existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
     const auto ordered_columns_invalid =
-        columns_overlap(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
+        columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
         existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
     Assert(!ordering_columns_invalid && !ordered_columns_invalid,
            "TableOrderConstraint for required columns has already been set.");

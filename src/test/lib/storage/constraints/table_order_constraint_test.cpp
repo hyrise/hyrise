@@ -81,6 +81,11 @@ TEST_F(TableOrderConstraintTest, AddOrderConstraintsInvalid) {
   // Invalid because the order constraint with same required columns, but fewer ordered columns already exists.
   EXPECT_THROW(_table->add_soft_order_constraint({{ColumnID{0}, ColumnID{1}}, {ColumnID{2}, ColumnID{3}, ColumnID{4}}}),
                std::logic_error);
+
+  if constexpr (HYRISE_DEBUG) {
+    // Ordering and ordered columns must be disjoint.
+    EXPECT_THROW(TableOrderConstraint({ColumnID{0}, ColumnID{1}}, {ColumnID{1}, ColumnID{2}}), std::logic_error);
+  }
 }
 
 TEST_F(TableOrderConstraintTest, Equals) {

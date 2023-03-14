@@ -39,7 +39,7 @@ namespace std {
 
 template <>
 struct hash<hyrise::TableOrderConstraint> {
-  size_t operator()(const hyrise::TableOrderConstraint& order_constraint) const;
+  size_t operator()(const hyrise::TableOrderConstraint& table_order_constraint) const;
 };
 
 }  // namespace std
