@@ -59,7 +59,6 @@ WarningsAsErrors: '*'
 #   - hicpp-no-array-decay                                       (same)
 #   - cert-dcl58-cpp                                            Adding a hash function to std is perfectly legal: https://en.cppreference.com/w/cpp/language/extending_std
 #   - modernize-avoid-bind                                      meh, bind isn't thaaaat bad
-#   - hicpp-no-assembler                                        Sometimes we need assembler...
 #   - cert-env33-c                                              Yes, we do call system()
 #   - misc-macro-parentheses                                    Causes weird problems with BOOST_PP_TUPLE_ELEM
 #   - fuchsia-overloaded-operator                               We are not supposed to overload operator()?!
