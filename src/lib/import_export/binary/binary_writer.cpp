@@ -31,11 +31,12 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
 void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values) {
-  pmr_vector<size_t> string_lengths(values.size());
-  size_t total_length = 0;
+  const auto value_count = values.size();
+  auto string_lengths = pmr_vector<size_t>(value_count);
+  auto total_length = size_t{0};
 
   // Save the length of each string.
-  for (size_t i = 0; i < values.size(); ++i) {
+  for (auto i = size_t{0}; i < value_count; ++i) {
     string_lengths[i] = values[i].size();
     total_length += values[i].size();
   }
@@ -48,8 +49,8 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   }
 
   // Write all string contents into to buffer.
-  pmr_vector<char> buffer(total_length);
-  size_t start = 0;
+  auto buffer = pmr_vector<char>(total_length);
+  auto start = size_t{0};
   for (const auto& str : values) {
     std::memcpy(buffer.data() + start, str.data(), str.size());
     start += str.size();
@@ -104,7 +105,7 @@ void BinaryWriter::write(const Table& table, const std::string& filename) {
   _write_header(table, ofstream);
 
   const auto chunk_count = table.chunk_count();
-  for (ChunkID chunk_id{0}; chunk_id < chunk_count; ++chunk_id) {
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     _write_chunk(table, ofstream, chunk_id);
   }
 }
@@ -115,9 +116,9 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  pmr_vector<pmr_string> column_types(table.column_count());
-  pmr_vector<pmr_string> column_names(table.column_count());
-  pmr_vector<bool> columns_are_nullable(table.column_count());
+  auto column_types = pmr_vector<pmr_string>(table.column_count());
+  auto column_names = pmr_vector<pmr_string>(table.column_count());
+  auto columns_are_nullable = pmr_vector<bool>(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
   const auto column_count = table.column_count();

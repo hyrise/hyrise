@@ -8,17 +8,16 @@
 #include <utility>
 #include <vector>
 
+#include "tsl/robin_set.h"
+
 #include "aggregate/aggregate_traits.hpp"
 #include "expression/pqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
-#include "storage/create_iterable_from_segment.hpp"
 #include "storage/segment_iterate.hpp"
-#include "utils/aligned_size.hpp"
 #include "utils/assert.hpp"
-#include "utils/performance_warning.hpp"
 #include "utils/timer.hpp"
 
 namespace {
