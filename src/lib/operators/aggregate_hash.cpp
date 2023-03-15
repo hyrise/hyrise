@@ -8,7 +8,7 @@
 #include <utility>
 #include <vector>
 
-#include "tsl/robin_set.h"
+#include "tsl/robin_map.h"
 
 #include "aggregate/aggregate_traits.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -1029,10 +1029,11 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 
       const auto column_is_nullable = input_table->column_is_nullable(input_column_id);
 
+      const auto pos_list_size = pos_list.size();
       auto values = pmr_vector<ColumnDataType>{};
-      values.reserve(pos_list.size());
+      values.reserve(pos_list_size);
       auto null_values = pmr_vector<bool>{};
-      null_values.reserve(column_is_nullable ? pos_list.size() : 0);
+      null_values.reserve(pos_list_size);
 
       auto accessors =
           std::vector<std::unique_ptr<AbstractSegmentAccessor<ColumnDataType>>>(input_table->chunk_count());

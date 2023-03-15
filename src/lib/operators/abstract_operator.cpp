@@ -85,7 +85,7 @@ void AbstractOperator::execute() {
     Assert(!_right_input || _right_input->get_output(), "Right input has no output data.");
   }
 
-  Timer performance_timer;
+  auto performance_timer = Timer{};
 
   auto transaction_context = this->transaction_context();
   if (transaction_context) {
@@ -161,8 +161,8 @@ void AbstractOperator::execute() {
     // Verify that nullability of columns and segments match for ValueSegments. Only ValueSegments have an individual
     // `is_nullable` attribute.
     if (_output && _output->type() == TableType::Data) {
-      const auto chunk_count = _output->chunk_count();
       const auto column_count = _output->column_count();
+      const auto chunk_count = _output->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
           const auto& abstract_segment = _output->get_chunk(chunk_id)->get_segment(column_id);
@@ -408,7 +408,7 @@ void AbstractOperator::_search_and_register_uncorrelated_subqueries(
 
 std::ostream& operator<<(std::ostream& stream, const AbstractOperator& abstract_operator) {
   const auto get_children_fn = [](const auto& op) {
-    std::vector<std::shared_ptr<const AbstractOperator>> children;
+    auto children = std::vector<std::shared_ptr<const AbstractOperator>>{};
     if (op->left_input()) {
       children.emplace_back(op->left_input());
     }

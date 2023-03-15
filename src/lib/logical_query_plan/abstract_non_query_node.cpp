@@ -17,8 +17,8 @@ FunctionalDependencies AbstractNonQueryNode::non_trivial_functional_dependencies
 }
 
 bool AbstractNonQueryNode::is_column_nullable(const ColumnID /*column_id*/) const {
-  // The majority of non-query nodes output no column (CreateTable, DropTable, ...)
-  // Non-query nodes that do return columns (ShowColumns, ...) need to override this function
+  // The majority of non-query nodes output no column (CreateTable, DropTable, ...). Non-query nodes that return
+  // columns (ShowColumns, ...) need to override this function.
   Fail("Node does not return any column");
 }
 
