@@ -58,7 +58,7 @@ void PredicateReorderingRule::_apply_to_plan_without_subqueries(
   Assert(lqp_root->type == LQPNodeType::Root, "PredicateReorderingRule needs root to hold onto");
 
   // We keep track of reordered predicate nodes, so that this rule touches predicate nodes once only.
-  std::unordered_set<std::shared_ptr<AbstractLQPNode>> reordered_predicate_nodes;
+  auto reordered_predicate_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
   visit_lqp(lqp_root, [&](const auto& node) {
     if (is_predicate_style_node(node) && !reordered_predicate_nodes.contains(node)) {
       std::vector<std::shared_ptr<AbstractLQPNode>> predicate_nodes;
@@ -126,11 +126,13 @@ void PredicateReorderingRule::_reorder_predicates(
   // Ensure that nodes are chained correctly
   nodes_and_cardinalities.back().first->set_left_input(input);
 
-  for (size_t output_idx = 0; output_idx < outputs.size(); ++output_idx) {
+  const auto output_count = outputs.size();
+  for (auto output_idx = size_t{0}; output_idx < output_count; ++output_idx) {
     outputs[output_idx]->set_input(input_sides[output_idx], nodes_and_cardinalities.front().first);
   }
 
-  for (size_t predicate_index = 0; predicate_index + 1 < nodes_and_cardinalities.size(); predicate_index++) {
+  const auto nodes_and_cardinalities_count = nodes_and_cardinalities.size();
+  for (auto predicate_index = size_t{0}; predicate_index + 1 < nodes_and_cardinalities_count; ++predicate_index) {
     nodes_and_cardinalities[predicate_index].first->set_left_input(nodes_and_cardinalities[predicate_index + 1].first);
   }
 }

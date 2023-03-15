@@ -40,7 +40,7 @@ bool PQPSubqueryExpression::is_correlated() const {
   return !parameters.empty();
 }
 
-std::string PQPSubqueryExpression::description(const DescriptionMode mode) const {
+std::string PQPSubqueryExpression::description(const DescriptionMode /*mode*/) const {
   std::stringstream stream;
   stream << "SUBQUERY (PQP, " << pqp.get() << ")";
   return stream.str();
@@ -64,7 +64,7 @@ size_t PQPSubqueryExpression::_shallow_hash() const {
   return hash;
 }
 
-bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool PQPSubqueryExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   Fail("Nullability 'on lqp' should never be queried from a PQPSelect");
 }
 

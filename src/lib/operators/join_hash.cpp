@@ -110,8 +110,8 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
                    !_secondary_predicates.empty(), left_input_table()->type(), right_input_table()->type()}),
          "JoinHash doesn't support these parameters");
 
-  std::shared_ptr<const Table> build_input_table;
-  std::shared_ptr<const Table> probe_input_table;
+  auto build_input_table = std::shared_ptr<const Table>{};
+  auto probe_input_table = std::shared_ptr<const Table>{};
   auto build_column_id = ColumnID{};
   auto probe_column_id = ColumnID{};
 
@@ -276,17 +276,17 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
 
     // Containers used to store histograms for (potentially subsequent) radix partitioning step (in cases
     // _radix_bits > 0). Created during materialization step.
-    std::vector<std::vector<size_t>> histograms_build_column;
-    std::vector<std::vector<size_t>> histograms_probe_column;
+    auto histograms_build_column = std::vector<std::vector<size_t>>{};
+    auto histograms_probe_column = std::vector<std::vector<size_t>>{};
 
     // Output containers of materialization step. Uses the same output type as the radix partitioning step to allow
     // shortcut for _radix_bits == 0 (in this case, we can skip the partitioning altogether).
-    RadixContainer<BuildColumnType> materialized_build_column;
-    RadixContainer<ProbeColumnType> materialized_probe_column;
+    auto materialized_build_column = RadixContainer<BuildColumnType>{};
+    auto materialized_probe_column = RadixContainer<ProbeColumnType>{};
 
     // Containers for potential (skipped when build side small) radix partitioning step
-    RadixContainer<BuildColumnType> radix_build_column;
-    RadixContainer<ProbeColumnType> radix_probe_column;
+    auto radix_build_column = RadixContainer<BuildColumnType>{};
+    auto radix_probe_column = RadixContainer<ProbeColumnType>{};
 
     // HashTables for the build column, one for each partition
     std::vector<std::optional<PosHashTable<HashedType>>> hash_tables;
@@ -350,7 +350,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       }
     };
 
-    Timer timer_materialization;
+    auto timer_materialization = Timer{};
     if (_build_input_table->row_count() < _probe_input_table->row_count()) {
       // When materializing the first side (here: the build side), we do not yet have a Bloom filter. To keep the number
       // of code paths low, materialize_*_side always expects a Bloom filter. For the first step, we thus pass in a
@@ -385,7 +385,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    within partition_by_radix.
      */
     if (_radix_bits > 0) {
-      Timer timer_clustering;
+      auto timer_clustering = Timer{};
       auto jobs = std::vector<std::shared_ptr<AbstractTask>>{};
 
       jobs.emplace_back(std::make_shared<JobTask>([&]() {
@@ -436,7 +436,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
      *    We use the probe side's Bloom filter to exclude values from the hash table that will not be accessed in the
      *    probe step.
      */
-    Timer timer_hash_map_building;
+    auto timer_hash_map_building = Timer{};
     if (_secondary_predicates.empty() && is_semi_or_anti_join(_mode)) {
       hash_tables = build<BuildColumnType, HashedType>(radix_build_column, JoinHashBuildMode::ExistenceOnly,
                                                        _radix_bits, probe_side_bloom_filter);
@@ -473,7 +473,7 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
       for (const auto& build_side_partition : radix_build_column) {
         for (const auto null_value : build_side_partition.null_values) {
           if (null_value) {
-            Timer timer_output_writing;
+            auto timer_output_writing = Timer{};
             const auto result = _join_hash._build_output_table({});
             _performance_data.set_step_runtime(OperatorSteps::OutputWriting, timer_output_writing.lap());
             return result;
@@ -487,8 +487,8 @@ class JoinHash::JoinHashImpl : public AbstractReadOnlyOperatorImpl {
     /**
      * 4. Probe step
      */
-    std::vector<RowIDPosList> build_side_pos_lists;
-    std::vector<RowIDPosList> probe_side_pos_lists;
+    auto build_side_pos_lists = std::vector<RowIDPosList>{};
+    auto probe_side_pos_lists = std::vector<RowIDPosList>{};
     const size_t partition_count = radix_probe_column.size();
     build_side_pos_lists.resize(partition_count);
     probe_side_pos_lists.resize(partition_count);

@@ -19,7 +19,7 @@ class IsNullExpression : public AbstractPredicateExpression {
 
  protected:
   ExpressionPrecedence _precedence() const override;
-  bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
+  bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
 };
 
 }  // namespace hyrise

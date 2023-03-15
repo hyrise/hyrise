@@ -108,13 +108,12 @@ class NodeQueueScheduler : public AbstractScheduler {
                 SchedulePriority priority = SchedulePriority::Default) override;
 
   /**
-   * @param task
    * @param preferred_node_id
    * @return `preferred_node_id` if a non-default preferred node ID is passed. When the node is the default of
    *         CURRENT_NODE_ID but no current node (where the task is executed) can be obtained, the node ID of the node
    *         with the lowest queue pressure is returned.
    */
-  NodeID determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task, const NodeID preferred_node_id) const;
+  NodeID determine_queue_id(const NodeID preferred_node_id) const;
 
   void wait_for_all_tasks() override;
 

@@ -28,7 +28,7 @@ class PQPSubqueryExpression : public AbstractExpression {
   std::shared_ptr<AbstractExpression> _on_deep_copy(
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
 
-  std::string description(const DescriptionMode mode) const override;
+  std::string description(const DescriptionMode /*mode*/) const override;
   DataType data_type() const override;
 
   // Returns whether this query is correlated, i.e., uses external parameters
@@ -40,7 +40,7 @@ class PQPSubqueryExpression : public AbstractExpression {
  protected:
   bool _shallow_equals(const AbstractExpression& expression) const override;
   size_t _shallow_hash() const override;
-  bool _on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const override;
+  bool _on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const override;
 
  private:
   // If the PQPSubqueryExpression returns precisely one column, it "has" this column's data type and nullability.

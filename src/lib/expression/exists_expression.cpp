@@ -47,7 +47,7 @@ size_t ExistsExpression::_shallow_hash() const {
   return exists_expression_type == ExistsExpressionType::Exists;
 }
 
-bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& lqp) const {
+bool ExistsExpression::_on_is_nullable_on_lqp(const AbstractLQPNode& /*lqp*/) const {
   return false;
 }
 

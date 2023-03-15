@@ -327,12 +327,10 @@ TEST_F(SchedulerTest, DetermineQueueIDForTask) {
   const auto node_queue_scheduler = std::make_shared<NodeQueueScheduler>();
   Hyrise::get().set_scheduler(node_queue_scheduler);
 
-  const auto task = std::static_pointer_cast<AbstractTask>(std::make_shared<JobTask>([&]() {}));
-
-  EXPECT_EQ(node_queue_scheduler->determine_queue_id_for_task(task, NodeID{1}), NodeID{1});
+  EXPECT_EQ(node_queue_scheduler->determine_queue_id(NodeID{1}), NodeID{1});
 
   // For the case of no load on node ID 0 (which is the case here), tasks are always scheduled on this node.
-  EXPECT_EQ(node_queue_scheduler->determine_queue_id_for_task(task, CURRENT_NODE_ID), NodeID{0});
+  EXPECT_EQ(node_queue_scheduler->determine_queue_id(CURRENT_NODE_ID), NodeID{0});
 
   // The distribution of tasks under high load is tested in the concurrency stress tests.
 }

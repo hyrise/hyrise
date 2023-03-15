@@ -133,7 +133,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{0}, pos_list);
     auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{1}, pos_list);
 
-    Segments segments({segment_a, segment_b});
+    const auto segments = Segments({segment_a, segment_b});
 
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -145,7 +145,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
-    TableColumnDefinitions table_column_definitions;
+    auto table_column_definitions = TableColumnDefinitions{};
     table_column_definitions.emplace_back("a", DataType::Int, false);
 
     const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, ChunkOffset{100'000});
@@ -187,7 +187,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     column_definitions.emplace_back("b", DataType::Int, true);
     auto ref_table = std::make_shared<Table>(column_definitions, TableType::References);
 
-    Segments segments({ref_segment_a, ref_segment_b});
+    const auto segments = Segments({ref_segment_a, ref_segment_b});
 
     ref_table->append_chunk(segments);
 

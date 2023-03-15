@@ -28,7 +28,7 @@ bool TPCCStockLevel::_on_execute() {
   Assert(district_table && district_table->row_count() == 1, "Did not find district (or found more than one)");
 
   // We check the stock levels for the 20 orders before that next order ID
-  auto first_o_id = *district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
+  const auto first_o_id = *district_table->get_value<int32_t>(ColumnID{0}, 0) - 20;
 
   // Retrieve the distict item ids of those orders
   const auto order_line_table_pair = _sql_executor.execute(

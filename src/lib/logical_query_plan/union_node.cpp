@@ -13,7 +13,7 @@ namespace hyrise {
 UnionNode::UnionNode(const SetOperationMode init_set_operation_mode)
     : AbstractLQPNode(LQPNodeType::Union), set_operation_mode(init_set_operation_mode) {}
 
-std::string UnionNode::description(const DescriptionMode mode) const {
+std::string UnionNode::description(const DescriptionMode /*mode*/) const {
   return "[UnionNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
@@ -100,11 +100,11 @@ size_t UnionNode::_on_shallow_hash() const {
   return boost::hash_value(set_operation_mode);
 }
 
-std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> UnionNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return UnionNode::make(set_operation_mode);
 }
 
-bool UnionNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool UnionNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& union_node = static_cast<const UnionNode&>(rhs);
   return set_operation_mode == union_node.set_operation_mode;
 }

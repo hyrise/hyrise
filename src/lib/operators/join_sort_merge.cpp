@@ -50,7 +50,7 @@ JoinSortMerge::JoinSortMerge(const std::shared_ptr<const AbstractOperator>& left
 std::shared_ptr<AbstractOperator> JoinSortMerge::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinSortMerge>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                          _secondary_predicates);
 }
@@ -546,8 +546,8 @@ class JoinSortMerge::JoinSortMergeImpl : public AbstractReadOnlyOperatorImpl {
 
       const auto compare_result = _compare(left_value, right_value);
 
-      TableRange left_run(cluster_id, left_run_start, left_run_end);
-      TableRange right_run(cluster_id, right_run_start, right_run_end);
+      const auto left_run = TableRange(cluster_id, left_run_start, left_run_end);
+      const auto right_run = TableRange(cluster_id, right_run_start, right_run_end);
       _join_runs(left_run, right_run, compare_result, multi_predicate_join_evaluator, cluster_id);
 
       // Advance to the next run on the smaller side or both if equal

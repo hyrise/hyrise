@@ -1,15 +1,16 @@
 #include "pagination.hpp"
 
-#include <ncurses.h>
 #include <string>
 #include <vector>
+
+#include "ncurses.h"
 
 constexpr auto CURSES_CTRL_C = static_cast<uint32_t>('c') & uint32_t{31};
 
 namespace hyrise {
 
 Pagination::Pagination(std::stringstream& input) {
-  std::string line;
+  auto line = std::string{};
   while (std::getline(input, line, '\n')) {
     _lines.push_back(line);
     _max_width = std::max(_max_width, line.length());
@@ -31,16 +32,16 @@ void Pagination::display() {
   // Last line on the screen should show instructions
   --_size_y;
 
-  size_t line_count = _lines.size();
-  size_t end_line = line_count > _size_y ? line_count - _size_y : 0;
-  size_t current_line = 0;
-  size_t current_column = 0;
+  auto line_count = _lines.size();
+  auto end_line = line_count > _size_y ? line_count - _size_y : 0;
+  auto current_line = size_t{0};
+  auto current_column = size_t{0};
 
   // Indicator if the display should be reprinted after a keyboard input
-  bool reprint = false;
+  auto reprint = false;
   _print_page(current_line, current_column);
 
-  int key_pressed;
+  auto key_pressed = int{};
   while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {
     switch (key_pressed) {
       case 'j':
@@ -63,7 +64,7 @@ void Pagination::display() {
 
       case ' ':
       case KEY_NPAGE: {
-        size_t new_line = current_line + _size_y;
+        auto new_line = current_line + _size_y;
         while ((new_line + _size_y) > line_count && new_line > 0) {
           --new_line;
         }
@@ -161,7 +162,7 @@ void Pagination::display() {
 void Pagination::_print_page(size_t first_line, size_t first_column) {
   clear();
 
-  for (size_t i = first_line; i < first_line + _size_y; ++i) {
+  for (auto i = first_line; i < first_line + _size_y; ++i) {
     if (i >= _lines.size()) {
       break;
     }
@@ -179,7 +180,7 @@ void Pagination::_print_page(size_t first_line, size_t first_column) {
 }
 
 void Pagination::_print_help_screen() {
-  WINDOW* help_screen = newwin(0, 0, 0, 0);
+  auto help_screen = newwin(0, 0, 0, 0);
 
   wclear(help_screen);
 
@@ -199,7 +200,7 @@ void Pagination::_print_help_screen() {
 
   wrefresh(help_screen);
 
-  int key_pressed;
+  auto key_pressed = int{};
   while ((key_pressed = getch()) != 'q' && key_pressed != CURSES_CTRL_C) {}
 
   delwin(help_screen);

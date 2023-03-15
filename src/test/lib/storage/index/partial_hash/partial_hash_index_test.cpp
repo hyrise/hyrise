@@ -22,8 +22,8 @@ class PartialHashIndexTest : public BaseTest {
     segment1 = std::make_shared<ValueSegment<pmr_string>>(std::move(values1), std::move(null_values_1));
     segment2 = std::make_shared<ValueSegment<pmr_string>>(std::move(values2), std::move(null_values_2));
 
-    Segments segments1 = {segment1};
-    Segments segments2 = {segment2};
+    auto segments1 = Segments{segment1};
+    auto segments2 = Segments{segment2};
 
     table->append_chunk(segments1);
     table->append_chunk(segments2);
@@ -545,11 +545,11 @@ TEST_F(PartialHashIndexTest, MemoryUsageNoNulls) {
   auto local_values = pmr_vector<pmr_string>{"h", "d", "f", "d", "a", "c", "c", "i", "b", "z", "x"};
   auto segment = std::make_shared<ValueSegment<pmr_string>>(std::move(local_values));
 
-  Segments segments = {segment};
+  auto segments = Segments{segment};
   auto chunk = std::make_shared<Chunk>(segments);
 
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+  chunks_to_index.emplace_back(ChunkID{0}, chunk);
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
@@ -589,11 +589,11 @@ TEST_F(PartialHashIndexTest, MemoryUsageNulls) {
   const auto& dict_segment_string_nulls =
       create_dict_segment_by_type<pmr_string>(DataType::String, {std::nullopt, std::nullopt});
 
-  Segments segments = {dict_segment_string_nulls};
+  const auto segments = Segments{dict_segment_string_nulls};
   auto chunk = std::make_shared<Chunk>(segments);
 
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+  chunks_to_index.emplace_back(ChunkID{0}, chunk);
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
@@ -634,11 +634,11 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
       DataType::String, {std::nullopt, "h", "d", "f", "d", "a", std::nullopt, std::nullopt, "c", std::nullopt, "c", "i",
                          "b", "z", "x", std::nullopt});
 
-  Segments segments = {dict_segment_string_mixed};
+  const auto segments = Segments{dict_segment_string_mixed};
   auto chunk = std::make_shared<Chunk>(segments);
 
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+  chunks_to_index.emplace_back(ChunkID{0}, chunk);
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
@@ -677,11 +677,11 @@ TEST_F(PartialHashIndexTest, MemoryUsageMixed) {
 TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
-  Segments segments = {dict_segment_string_empty};
+  const auto segments = Segments{dict_segment_string_empty};
   auto chunk = std::make_shared<Chunk>(segments);
 
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+  chunks_to_index.emplace_back(ChunkID{0}, chunk);
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
 
@@ -719,11 +719,11 @@ TEST_F(PartialHashIndexTest, MemoryUsageEmpty) {
 TEST_F(PartialHashIndexTest, MemoryUsageNoChunk) {
   const auto& dict_segment_string_empty = create_dict_segment_by_type<pmr_string>(DataType::String, {});
 
-  Segments segments = {dict_segment_string_empty};
+  const auto segments = Segments{dict_segment_string_empty};
   auto chunk = std::make_shared<Chunk>(segments);
 
-  std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>> chunks_to_index;
-  chunks_to_index.push_back(std::make_pair(ChunkID{0}, chunk));
+  auto chunks_to_index = std::vector<std::pair<ChunkID, std::shared_ptr<Chunk>>>{};
+  chunks_to_index.emplace_back(ChunkID{0}, chunk);
 
   index = std::make_shared<PartialHashIndex>(chunks_to_index, ColumnID{0});
   EXPECT_EQ(index->remove(std::vector<ChunkID>{ChunkID{0}}), 1);
