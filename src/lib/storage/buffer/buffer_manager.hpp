@@ -2,8 +2,7 @@
 
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <memory>
-#include <utility>
-#include "storage/buffer/clock_replacement_strategy.hpp"
+#include <tuple>
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/types.hpp"
@@ -13,6 +12,14 @@ namespace hyrise {
 
 template <typename PointedType>
 class BufferManagedPtr;
+
+// Eviction Queue
+struct EvictionItem {
+  Frame* frame;
+  uint64_t timestamp;
+};
+
+using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 /**
  * @brief 
@@ -63,7 +70,8 @@ class BufferManager {
     // TODO: Number of pages used, fragmentation rate
   };
 
-  BufferManager(std::unique_ptr<VolatileRegion> volatile_region, std::unique_ptr<SSDRegion> ssd_region);
+  BufferManager();
+  BufferManager(const size_t num_bytes, std::filesystem::path path);
 
   /**
    * @brief Get the page object
@@ -71,7 +79,7 @@ class BufferManager {
    * @param page_id 
    * @return std::unique_ptr<Page> 
    */
-  Page32KiB* get_page(const PageID page_id);
+  std::byte* get_page(const PageID page_id);
 
   /**
    * @brief Pin a page marks a page unavailable for replacement. It needs to be unpinned before it can be replaced.
@@ -99,7 +107,7 @@ class BufferManager {
    * @param ptr 
    * @return std::pair<PageID, PageOffset> 
    */
-  std::pair<PageID, std::ptrdiff_t> get_page_id_and_offset_from_ptr(const void* ptr);
+  std::tuple<PageID, PageSizeType, std::ptrdiff_t> unswizzle(const void* ptr);
 
   /**
    * Allocates pages to fullfil allocation request of the given bytes and alignment 
@@ -135,37 +143,33 @@ class BufferManager {
   friend class Hyrise;
 
  private:
-  BufferManager();
-  std::pair<FrameID, Frame*> allocate_frame();
+  Frame* allocate_frame(const PageSizeType size_type);
   Frame* get_frame(const PageID page_id);
 
   Frame* find_in_page_table(const PageID page_id);
 
-  Frame* new_page();
-  void flush_page(const PageID page_id);
+  Frame* new_page(const PageSizeType size_type);
   void remove_page(const PageID page_id);
 
-  void read_page(const PageID page_id, Page32KiB& destination);
-  void write_page(const PageID page_id, Page32KiB& source);
+  void read_page(Frame* frame);
+  void write_page(const Frame* frame);
 
-  size_t _num_pages;
+  std::atomic_uint64_t _num_pages;
+
+  const size_t _total_bytes;
+  std::atomic_uint64_t _used_bytes;
 
   // Memory Region for pages on SSD
   std::unique_ptr<SSDRegion> _ssd_region;
 
-  // Memory Region for the main memory aka buffer pool
-  std::unique_ptr<VolatileRegion> _volatile_region;
-
   // Page Table that contains frames (= pages) which are currently in the buffer pool
   boost::unordered_flat_map<PageID, Frame*> _page_table;
 
+  std::array<VolatileRegion, NUM_PAGE_SIZE_TYPES> _buffer_pools;
+
   std::mutex _page_table_mutex;
 
-  // Metadata storage of frames
-  std::vector<Frame> _frames;
-
-  // The replacement strategy used then the page table is full and the to be evicted frame needs to be selected
-  std::unique_ptr<ClockReplacementStrategy> _replacement_strategy;
+  EvictionQueue _eviction_queue;
 
   // Metrics of buffer manager
   Metrics _metrics{};

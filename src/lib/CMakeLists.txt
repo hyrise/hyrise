@@ -446,8 +446,6 @@ set(
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
     storage/buffer/buffer_pool_allocator.hpp
-    storage/buffer/clock_replacement_strategy.cpp
-    storage/buffer/clock_replacement_strategy.hpp
     storage/buffer/frame.hpp
     storage/buffer/page.hpp
     storage/buffer/pin_guard.hpp

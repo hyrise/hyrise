@@ -14,7 +14,7 @@ namespace hyrise {
 namespace detail {
 
 struct UnswizzledAddress {
-  size_t size_type : BITS_PAGE_SIZE_TYPES = static_cast<size_t>(PageSizeType::KiB32);   // 3 bits for size type
+  size_t size_type : BITS_PAGE_SIZE_TYPES;                                              // 3 bits for size type
   size_t page_id : sizeof(size_t) * CHAR_BIT - BITS_PAGE_SIZE_TYPES - MAX_PAGE_OFFSET;  // 44 bits for the page_id
   size_t offset : MAX_PAGE_OFFSET;  // 17 bits for the maximum offset
 };
@@ -55,10 +55,10 @@ class BufferManagedPtr {
   // https://www.youtube.com/watch?v=_nIET46ul6E
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
   BufferManagedPtr(pointer ptr = 0) {
-    set_from_ptr(ptr);
+    unswizzle(ptr);
   }
 
-  ~BufferManagedPtr() {}
+  // ~BufferManagedPtr() {}
 
   BufferManagedPtr(const BufferManagedPtr& ptr) : _addressing(ptr._addressing) {}
 
@@ -67,11 +67,10 @@ class BufferManagedPtr {
 
   template <typename T>
   BufferManagedPtr(T* ptr) {
-    set_from_ptr(ptr);
+    unswizzle(ptr);
   }
 
-  explicit BufferManagedPtr(const PageID page_id, const difference_type offset,
-                            const PageSizeType size_type = PageSizeType::KiB32) {
+  explicit BufferManagedPtr(const PageID page_id, const difference_type offset, const PageSizeType size_type) {
     _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
   }
 
@@ -138,7 +137,7 @@ class BufferManagedPtr {
   }
 
   BufferManagedPtr& operator=(pointer from) {
-    set_from_ptr(from);
+    unswizzle(from);
     return *this;
   }
 
@@ -212,7 +211,7 @@ class BufferManagedPtr {
       // TODO: If pinned, this is not needed
       // TODO: What happens if page is deleted? Pointer should become null
       const auto page = BufferManager::get_global_buffer_manager().get_page(page_id);
-      return page->data() + page_id_offset->offset;
+      return page + page_id_offset->offset;
     } else if (std::holds_alternative<EmptyAddress>(_addressing)) {
       return nullptr;
     } else {
@@ -251,14 +250,14 @@ class BufferManagedPtr {
   Addressing _addressing;
 
   template <typename T>
-  void set_from_ptr(T* ptr) {
+  void unswizzle(T* ptr) {
     if (ptr) {
-      const auto [page_id, offset] = BufferManager::get_global_buffer_manager().get_page_id_and_offset_from_ptr(
-          reinterpret_cast<const void*>(ptr));
+      const auto [page_id, size_type, offset] =
+          BufferManager::get_global_buffer_manager().unswizzle(reinterpret_cast<const void*>(ptr));
       if (page_id == INVALID_PAGE_ID) {
         _addressing = OutsideAddress(ptr);
       } else {
-        _addressing = UnswizzledAddress{static_cast<size_t>(PageSizeType::KiB32), page_id, static_cast<size_t>(offset)};
+        _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
       }
     } else {
       _addressing = EmptyAddress{};

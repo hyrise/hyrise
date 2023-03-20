@@ -23,9 +23,9 @@ class BufferPoolAllocator {
   // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
   BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {}
 
-  explicit BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
+  BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
 
-  explicit BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _buffer_manager(nullptr) {
+  BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _buffer_manager(nullptr) {
     Fail("The current BufferPoolAllocator cannot take a boost memory_resource");
   }
 

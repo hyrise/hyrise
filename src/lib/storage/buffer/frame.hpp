@@ -7,13 +7,21 @@
 namespace hyrise {
 
 struct Frame {
+  // Metadata used for identifcation of a buffer frame
   PageID page_id = INVALID_PAGE_ID;
-  FrameID frame_id = INVALID_FRAME_ID;
+  PageSizeType size_type;
+
+  // Dirty and pin state
   std::atomic_bool dirty{false};
   std::atomic_uint32_t pin_count{0};
-  // TODO std::shared_muex ecxulive lock
-  PageSizeType size_type;
-  std::byte* data = nullptr;
+
+  // Used for eviction_queue
+  std::atomic_uint64_t eviction_timestamp{0};
+
+  // Pointer to raw data in volatile region
+  std::byte* data;
+
+  Frame* next_free_frame;
 };
 
 }  // namespace hyrise

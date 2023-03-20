@@ -1,25 +1,14 @@
 #include "buffer_manager.hpp"
 #include <algorithm>
-#include <boost/uuid/uuid.hpp>
 #include <chrono>
-#include <cstdlib>
 #include <utility>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_managed_ptr.hpp"
+#include "storage/buffer/ssd_region.hpp"
+#include "storage/buffer/volatile_region.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-constexpr PageSizeType find_fitting_page_size_type(const std::size_t value) {
-  if (value <= bytes_for_size_type(PageSizeType::KiB32)) {
-    return PageSizeType::KiB32;
-  } else if (value <= bytes_for_size_type(PageSizeType::KiB64)) {
-    return PageSizeType::KiB64;
-  } else if (value <= bytes_for_size_type(PageSizeType::KiB128)) {
-    return PageSizeType::KiB128;
-  }
-  Fail("Cannot fit input value to a PageSizeType");
-}
 
 std::size_t get_volatile_capacity_from_env() {
   if (const auto volatile_capacity = std::getenv("HYRISE_BUFFER_MANAGER_VOLATILE_CAPACITY")) {
@@ -44,135 +33,182 @@ std::filesystem::path get_ssd_region_file_from_env() {
   }
 }
 
-BufferManager::BufferManager() : _num_pages(0), _frames(get_volatile_capacity_from_env() / Page32KiB::size()) {
-  _ssd_region = std::make_unique<SSDRegion>(get_ssd_region_file_from_env());
-  _volatile_region = std::make_unique<VolatileRegion>(get_volatile_capacity_from_env(), PageSizeType::KiB32);
-  Assert(_frames.size() == _volatile_region->capacity(), "Frames size need to be equal to volatile region capacity");
-  _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
+std::array<VolatileRegion, NUM_PAGE_SIZE_TYPES> make_buffer_pools(const size_t num_bytes) {
+  return {
+      VolatileRegion(PageSizeType::KiB8, num_bytes),   VolatileRegion(PageSizeType::KiB16, num_bytes),
+      VolatileRegion(PageSizeType::KiB32, num_bytes),  VolatileRegion(PageSizeType::KiB64, num_bytes),
+      VolatileRegion(PageSizeType::KiB128, num_bytes),
+  };
 }
 
-BufferManager::BufferManager(std::unique_ptr<VolatileRegion> volatile_region, std::unique_ptr<SSDRegion> ssd_region)
+BufferManager::BufferManager(const size_t num_bytes, std::filesystem::path path)
     : _num_pages(0),
-      _ssd_region(std::move(ssd_region)),
-      _volatile_region(std::move(volatile_region)),
-      _frames(_volatile_region->capacity()) {
-  _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
-}
+      _used_bytes(0),
+      _total_bytes(num_bytes),
+      _ssd_region(std::make_unique<SSDRegion>(path)),
+      _buffer_pools(make_buffer_pools(num_bytes)) {}
 
-std::pair<FrameID, Frame*> BufferManager::allocate_frame() {
-  auto [frame_id, allocated_page] = _volatile_region->allocate();
-  if (frame_id == INVALID_PAGE_ID) {
-    const auto victim_frame_id = _replacement_strategy->find_victim();
-    Assert(victim_frame_id != INVALID_FRAME_ID, "Returned invalid frame id");
-    auto victim_page = _volatile_region->get_page(victim_frame_id);
-    auto& victim_frame = _frames[victim_frame_id];
+BufferManager::BufferManager() : BufferManager(get_volatile_capacity_from_env(), get_ssd_region_file_from_env()) {}
 
-    // TODO: Pinc count is wrong
-    // DebugAssert(victim_frame.pin_count.load() == 0, "The victim frame cannot be unpinned");
-    if (victim_frame.dirty) {
-      write_page(victim_frame.page_id, *reinterpret_cast<Page32KiB*>(victim_page));  // TODO
+Frame* BufferManager::allocate_frame(const PageSizeType size_type) {
+  const auto bytes_required = bytes_for_size_type(size_type);
+  auto freed_bytes = size_t{0};
+  const auto current_bytes = _used_bytes.load();
+
+  Frame* frame = nullptr;
+  auto item = EvictionItem{};
+
+  while ((current_bytes + bytes_required - freed_bytes) > _total_bytes) {
+    if (!_eviction_queue.try_pop(item)) {
+      Fail("Cannot pop item from queue");
     }
-    _page_table.erase(victim_frame.page_id);
-    frame_id = victim_frame_id;
-    allocated_page = victim_page;
+
+    // If the timestamp does not match, the frame is too old and we just check the next one
+    if (item.timestamp < item.frame->eviction_timestamp.load() || item.frame->pin_count.load() > 0) {
+      continue;
+    }
+
+    // Remove from page table
+    {
+      std::lock_guard<std::mutex> lock(_page_table_mutex);
+      _page_table.erase(item.frame->page_id);
+    }
+
+    // Write out the frame if it's dirty
+    if (item.frame->dirty) {
+      write_page(item.frame);
+      item.frame->dirty = false;
+    }
+
+    // TODO: Acquire Page Lock for frame
+
+    const auto frame_size_type = item.frame->size_type;
+    freed_bytes += bytes_for_size_type(frame_size_type);
+
+    if (frame_size_type == size_type) {
+      // If the evicted frame is of the same page type, we should just use it directly.
+      frame = item.frame;
+      break;
+    } else {
+      // Otherwise, Unmap the current frame and continue evicting
+      _buffer_pools[static_cast<size_t>(frame_size_type)].free(item.frame);
+    }
   }
 
-  _frames[frame_id].data = allocated_page;
-  _frames[frame_id].frame_id = frame_id;  // TODO: Maybe move it somewhere else
-  _frames[frame_id].size_type = PageSizeType::KiB32;
+  _used_bytes.fetch_add(bytes_required - freed_bytes);
+  DebugAssert(_used_bytes.load() <= _total_bytes, "Used bytes exceeds total bytes");
 
-  return std::make_pair(frame_id, &_frames[frame_id]);
+  // If we did not find a frame of the correct size, we allocate a new one
+  if (!frame) {
+    frame = _buffer_pools[static_cast<size_t>(size_type)].allocate();
+    DebugAssert(frame, "Could not allocate frame");
+  }
+  frame->eviction_timestamp.store(0);
+
+  return frame;
 }
 
 Frame* BufferManager::find_in_page_table(const PageID page_id) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
-  // std::thread::id this_id = std::this_thread::get_id();
+
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+
+  DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
+
   const auto frame_in_page_table_it = _page_table.find(page_id);
   if (frame_in_page_table_it != _page_table.end()) {
     _metrics.page_table_hits++;
     auto [_, frame] = *frame_in_page_table_it;
-    _replacement_strategy->record_frame_access(frame->frame_id);
     return frame;
   }
   _metrics.page_table_misses++;
   return nullptr;
 }
 
-void BufferManager::read_page(const PageID page_id, Page32KiB& destination) {
-  _ssd_region->read_page(page_id, PageSizeType::KiB32, destination.data());
-  _metrics.total_bytes_read += Page32KiB::size();
+void BufferManager::read_page(Frame* frame) {
+  _ssd_region->read_page(frame->page_id, frame->size_type, frame->data);
+  _metrics.total_bytes_read += bytes_for_size_type(frame->size_type);
 }
 
-void BufferManager::write_page(const PageID page_id, Page32KiB& source) {
-  _ssd_region->write_page(page_id, PageSizeType::KiB32, source.data());
-  _metrics.total_bytes_written += Page32KiB::size();
+void BufferManager::write_page(const Frame* frame) {
+  _ssd_region->write_page(frame->page_id, frame->size_type, frame->data);
+  _metrics.total_bytes_written += bytes_for_size_type(frame->size_type);
 }
 
 Frame* BufferManager::get_frame(const PageID page_id) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
+
   if (const auto frame = find_in_page_table(page_id)) {
     return frame;
   }
 
-  auto [frame_id, allocated_frame] = allocate_frame();
+  const auto size_type = _ssd_region->get_size_type(page_id);
+  if (!size_type) {
+    Fail("Cannot find page id in page directory");
+  }
+  auto allocated_frame = allocate_frame(*size_type);
 
   // Update the frame metadata and read the page data
   allocated_frame->page_id = page_id;
   allocated_frame->dirty = false;
   allocated_frame->pin_count.store(0);
-  read_page(page_id, *reinterpret_cast<Page32KiB*>(allocated_frame->data));
-
-  // Save the frame to the replacement strategy
-  _replacement_strategy->record_frame_access(frame_id);
+  read_page(allocated_frame);
 
   // Update the page table and metadata
-  _page_table[allocated_frame->page_id] = allocated_frame;
-
+  {
+    std::lock_guard<std::mutex> lock(_page_table_mutex);
+    _page_table[allocated_frame->page_id] = allocated_frame;
+  }
   return allocated_frame;
 }
 
-Page32KiB* BufferManager::get_page(const PageID page_id) {
-  return reinterpret_cast<Page32KiB*>(get_frame(page_id)->data);
+std::byte* BufferManager::get_page(const PageID page_id) {
+  return get_frame(page_id)->data;
 }
 
-Frame* BufferManager::new_page() {
-  auto [frame_id, allocated_frame] = allocate_frame();
+Frame* BufferManager::new_page(const PageSizeType size_type) {
+  auto frame = allocate_frame(size_type);
+  DebugAssert(frame != nullptr, "Frame is null");
+  DebugAssert(frame->data != nullptr, "Frame data is null");
 
   // Update the frame metadata
-  allocated_frame->page_id = _num_pages;
-  allocated_frame->dirty = true;
-  allocated_frame->pin_count.store(0);
-  allocated_frame->size_type = PageSizeType::KiB32;
+  frame->page_id = _num_pages;
+  frame->dirty = true;
+  frame->pin_count.store(0);
 
-  // Save the frame to the replacement strategy
-  _replacement_strategy->record_frame_access(frame_id);
+  _ssd_region->register_page(frame->page_id, size_type);
 
-  // Update the page table and metadata
-  _page_table[allocated_frame->page_id] = allocated_frame;
+  // Add the frame to the page table with lock guard in new scope
+  {
+    std::lock_guard<std::mutex> lock(_page_table_mutex);
+    _page_table[frame->page_id] = frame;
+  }
 
+  // TODO: remove
+  _eviction_queue.push({frame, 0});
+
+  // TODO: Atomic
   _num_pages++;
 
-  return allocated_frame;
+  return frame;
 }
 
 void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
-  Assert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
+  DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
-    // TODO: This could happpen, if the pin guard still exists, but the page is removed
-    // Fail("Cannot unpin a page that is not in the page table");
+    // TODO This could happpen, if the pin guard still exists, but the page is removed
+    Fail("Cannot unpin a page that is not in the page table. Check if the PinGuard is properly used.");
     return;
   }
 
-  // TODO: check
   frame->dirty = frame->dirty.load() || dirty;
   frame->pin_count--;
-
-  if (frame->pin_count.load() == 0) {  // TODO: Check atomics
-    // TODO: Maybe inefficient, restructure?
-    _replacement_strategy->unpin(frame->frame_id);
+  if (frame->pin_count.load() == 0) {
+    const auto timestamp_before_eviction = frame->eviction_timestamp++;
+    // Emplace timestamp and frame into eviction queue
+    _eviction_queue.push({frame, timestamp_before_eviction + 1});
   }
 }
 
@@ -183,11 +219,9 @@ void BufferManager::pin_page(const PageID page_id) {
 
   // TODO: Maybe inefficient, restructure?
   // auto frame_id = _volatile_region->to_frame_id(reinterpret_cast<void*>(frame->data));
-  _replacement_strategy->pin(frame->frame_id);
 }
 
 uint32_t BufferManager::get_pin_count(const PageID page_id) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return 0;
@@ -196,7 +230,6 @@ uint32_t BufferManager::get_pin_count(const PageID page_id) {
 }
 
 bool BufferManager::is_dirty(const PageID page_id) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return false;
@@ -204,82 +237,54 @@ bool BufferManager::is_dirty(const PageID page_id) {
   return frame->dirty.load();
 }
 
-void BufferManager::flush_page(const PageID page_id) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
-  const auto frame = find_in_page_table(page_id);
-  if (frame == nullptr) {
-    return;
-  }
-
-  if (frame->dirty) {
-    write_page(page_id, *reinterpret_cast<Page32KiB*>(frame->data));
-    frame->dirty = false;
-  }
-};
-
 void BufferManager::remove_page(const PageID page_id) {
-  // TODO: Add pages back to a pool
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return;
   }
 
-  _volatile_region->deallocate(frame->frame_id);
+  DebugAssert(!frame->pin_count, "Page cannot be removed while pinned. This can be used to debug resizes.");
 
-  if (frame->dirty) {
-    write_page(page_id, *reinterpret_cast<Page32KiB*>(frame->data));
-    frame->dirty = false;
-  }
-  // TODO: Remove from clock
-  _replacement_strategy->unpin(frame->frame_id);
-  // TODO: Remove from disk
-  // TODO: numpage--
-  _page_table.erase(page_id);
+  frame->dirty = false;
+  frame->eviction_timestamp.store(0);
+  frame->pin_count.store(0);
+
+  _eviction_queue.push({frame, 0});
 }
 
-std::pair<PageID, std::ptrdiff_t> BufferManager::get_page_id_and_offset_from_ptr(const void* ptr) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
-
-  auto frame_id = _volatile_region->to_frame_id(ptr);
-  if (frame_id == INVALID_FRAME_ID) {
-    return std::make_pair(INVALID_PAGE_ID, 0);
+std::tuple<PageID, PageSizeType, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
+  for (auto& buffer_pool : _buffer_pools) {
+    if (const auto frame = buffer_pool.unswizzle(ptr)) {
+      return std::make_tuple(frame->page_id, frame->size_type, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+    }
   }
-  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _frames[frame_id].data;
-  return std::make_pair(_frames[frame_id].page_id, std::ptrdiff_t{offset});
+
+  return std::make_tuple(INVALID_PAGE_ID, PageSizeType::KiB8, 0);
 };
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
+  // TODO: check Alignment
 
   const auto page_size_type = find_fitting_page_size_type(bytes);
-  Assert(page_size_type == PageSizeType::KiB32, "Cannot allocate " + std::to_string(bytes) +
-                                                    " bytes with maximum page size of " +
-                                                    std::to_string(static_cast<std::size_t>(PageSizeType::KiB32)));
 
   // Update metrics
-  // _metrics.allocations_in_bytes.push_back(bytes);
   _metrics.current_bytes_used += bytes;
-  _metrics.total_unused_bytes += bytes_for_size_type(page_size_type) - bytes;  // TODO: Aligment
+  _metrics.total_unused_bytes += bytes_for_size_type(page_size_type) - bytes;
   _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
   _metrics.total_allocated_bytes += bytes;
   _metrics.num_allocs++;
 
   // TODO: Do Alignment with aligner, https://www.boost.org/doc/libs/1_62_0/doc/html/align.html
-  const auto frame = new_page();
+  const auto frame = new_page(page_size_type);
 
   // TODO: Pin the page
   // frame->pin_count++;
-  // _replacement_strategy->pin(frame->frame_id);
 
   return BufferManagedPtr<void>(frame->page_id, 0,
-                                page_size_type);  // TODO: Use easier constrcutor without offset, no! alignment
+                                frame->size_type);  // TODO: Use easier constrcutor without offset, no! alignment
 }
 
 void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align) {
-  std::lock_guard<std::mutex> lock(_page_table_mutex);
-
-  // TODO: Do not deallocate, if page is still pinned
-
   _metrics.current_bytes_used -= bytes;
   _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
 
@@ -298,12 +303,8 @@ BufferManager::Metrics& BufferManager::metrics() {
 void BufferManager::soft_reset() {
   _num_pages = 0;
   _page_table = {};
-  _frames = std::vector<Frame>(_frames.size());
-  _replacement_strategy = std::make_unique<ClockReplacementStrategy>(_volatile_region->capacity());
+  // _buffer_pools = std::move(make_buffer_pools(0));  // TODO
   _ssd_region = std::make_unique<SSDRegion>(_ssd_region->get_file_name());
-  _volatile_region = std::make_unique<VolatileRegion>(
-      _volatile_region->capacity() * bytes_for_size_type(_volatile_region->get_size_type()),
-      _volatile_region->get_size_type());
 }
 
 BufferManager& BufferManager::operator=(BufferManager&& other) {
@@ -312,12 +313,10 @@ BufferManager& BufferManager::operator=(BufferManager&& other) {
     std::unique_lock other_lock(other._page_table_mutex, std::defer_lock);
     std::lock(this_lock, other_lock);
 
-    _num_pages = other._num_pages;
+    _num_pages = other._num_pages.load();
     _ssd_region = std::move(other._ssd_region);
-    _volatile_region = std::move(other._volatile_region);
+    // _buffer_pools = std::move(other._buffer_pools); TODO
     _page_table = std::move(other._page_table);
-    _frames = std::move(other._frames);
-    _replacement_strategy = std::move(other._replacement_strategy);
     _metrics = other._metrics;
   }
   return *this;

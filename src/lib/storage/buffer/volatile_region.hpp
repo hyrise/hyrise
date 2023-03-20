@@ -1,5 +1,7 @@
 #pragma once
 
+#include <boost/dynamic_bitset.hpp>
+#include <boost/noncopyable.hpp>
 #include <forward_list>
 #include <memory>
 #include <mutex>
@@ -18,38 +20,31 @@ namespace hyrise {
  * TODO: Pin Complete pool to not swap out e.g. mlock
  */
 
-class VolatileRegion {
+class VolatileRegion : private boost::noncopyable {
  public:
-  VolatileRegion(const size_t num_bytes, const PageSizeType size_type);
+  VolatileRegion(const PageSizeType size_type, const size_t num_bytes);
   ~VolatileRegion();
 
-  FrameID to_frame_id(const void* ptr) const;
-  std::byte* get_page(const FrameID frame_id);
+  Frame* unswizzle(const void* ptr);
 
-  std::pair<FrameID, std::byte*> allocate();
-  void deallocate(FrameID frame_id);
-
-  size_t capacity() const;
-  size_t size() const;
-
-  PageSizeType get_size_type() const;
+  Frame* allocate();
+  void deallocate(Frame* frame);
+  void free(Frame* frame);
 
  private:
-  static std::byte* allocate_aligned_frames(const size_t num_frames, const PageSizeType size_type);
+  void to_numa(std::byte* address);
 
-  // Total number of bytes allocated in data
-  const size_t _num_frames;
-
+  const size_t _total_bytes;
   const PageSizeType _size_type;
 
-  // The raw memory region that is preallocated for the frames
-  std::byte* _frames;  // CONST
+  std::byte* _mapped_memory;
 
-  // Linked List for free pages
-  std::byte* _free_list;
+  Frame* _free_list;
 
-  // Number of free frames to be used
-  size_t _num_free_frames;
+  std::vector<Frame> _frames;
+
+  // TODO: replace Mutex with lockfree
+  std::mutex _mutex;
 };
 
 }  // namespace hyrise
