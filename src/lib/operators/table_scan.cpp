@@ -278,7 +278,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       });
     }
 
-    new_arguments.emplace_back(value_(std::move(subquery_result)));
+    new_arguments.emplace_back(value_(subquery_result));
     ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");

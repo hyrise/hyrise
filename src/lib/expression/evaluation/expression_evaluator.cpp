@@ -909,10 +909,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
     if (row_count == 0) {
       Assert(!subquery_expression.is_correlated(), "Correlated subqueries must return one row for each tuple.");
       return std::make_shared<ExpressionResult<Result>>();
-    } else {
-      Assert(row_count == 1, "Expected precisely one row to be returned from SelectExpression.");
-      result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
     }
+
+    Assert(row_count == 1, "Expected precisely one row to be returned from SelectExpression.");
+    result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
   }
 
   // Optionally materialize nulls if any row returned a nullable result.
