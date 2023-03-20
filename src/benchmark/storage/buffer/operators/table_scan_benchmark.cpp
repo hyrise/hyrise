@@ -38,7 +38,7 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
   }
 
   // TODO: Separe per iteration, not total
-  add_buffer_manager_counters(state, BufferManager::get_global_buffer_manager());
+  // TODO:add_buffer_manager_counters(state, BufferManager::get_global_buffer_manager());
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_TableScanConstant)(benchmark::State& state) {

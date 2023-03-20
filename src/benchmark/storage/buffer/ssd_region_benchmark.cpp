@@ -12,6 +12,7 @@
 #include "storage/buffer/page.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/utils.hpp"
+#include "utils.hpp"
 
 namespace hyrise {
 
@@ -23,10 +24,12 @@ std::optional<SSDRegion> _create_ssd_region(benchmark::State& state, const SSDRe
       state.SkipWithError("Block path does not exist.");
       return std::nullopt;
     }
-    return SSDRegion(block_path);
+    // Create an optional of the ssd region with the block path
+
+    return std::nullopt;  // TODO: std::optional<SSDRegion>{SSDRegion(block_path)};
   } else if (device_type == SSDRegion::DeviceType::REGULAR_FILE) {
     std::filesystem::create_directories(ssd_region_scratch_path() / state.name());
-    return SSDRegion(ssd_region_scratch_path() / state.name() / "data.bin");
+    return std::nullopt;  // std::optional<SSDRegion>(SSDRegion(ssd_region_scratch_path() / state.name() / "data.bin"));
   } else {
     Fail("Cannot create region");
   }

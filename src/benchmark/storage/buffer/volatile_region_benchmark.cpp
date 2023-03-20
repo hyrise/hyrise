@@ -9,33 +9,33 @@
 namespace hyrise {
 
 static void BM_VolatileRegionAllocator(benchmark::State& state) {
-  const auto num_frames = state.range(0);
+  const auto num_pages = state.range(0);
 
-  auto volatile_region = std::make_unique<VolatileRegion>(num_frames * sizeof(Page32KiB), PageSizeType::KiB32);
+  auto volatile_region = std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * sizeof(Page32KiB));
 
   for (auto _ : state) {
-    for (auto i = size_t{0}; i < num_frames; i++) {
+    for (auto i = size_t{0}; i < num_pages; i++) {
       auto frame = volatile_region->allocate();
       benchmark::DoNotOptimize(frame);
     }
     state.PauseTiming();
-    volatile_region = std::make_unique<VolatileRegion>(num_frames * sizeof(Page32KiB), PageSizeType::KiB32);
+    volatile_region = std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * sizeof(Page32KiB));
     state.ResumeTiming();
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_frames) * sizeof(Page32KiB));
-  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * sizeof(Page32KiB));
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
   state.SetLabel("Allocations with VolatileRegion (Buffer Pool)");
 }
 
 static void BM_VolatileRegionAllocatorCompareToBoostAlignedAllocator(benchmark::State& state) {
-  const auto num_frames = state.range(0);
+  const auto num_pages = state.range(0);
   auto allocator = boost::alignment::aligned_allocator<Page32KiB>{};
 
-  auto allocations = std::vector<Page32KiB*>(num_frames);
+  auto allocations = std::vector<Page32KiB*>(num_pages);
 
   for (auto _ : state) {
-    for (auto i = size_t{0}; i < num_frames; i++) {
+    for (auto i = size_t{0}; i < num_pages; i++) {
       auto page = allocator.allocate(1);
       allocations[i] = page;
     }
@@ -49,8 +49,8 @@ static void BM_VolatileRegionAllocatorCompareToBoostAlignedAllocator(benchmark::
     state.ResumeTiming();
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_frames) * sizeof(Page32KiB));
-  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_frames));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * sizeof(Page32KiB));
+  state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
   state.SetLabel("Allocations with Boost Aligned Allocator (malloc)");
 }
 

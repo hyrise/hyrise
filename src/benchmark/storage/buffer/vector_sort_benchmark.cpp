@@ -7,6 +7,7 @@
 #include "benchmark/benchmark.h"
 #include "storage/buffer/buffer_pool_allocator.hpp"
 #include "storage/buffer/utils.hpp"
+#include "utils.hpp"
 
 namespace hyrise {
 
