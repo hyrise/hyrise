@@ -33,6 +33,18 @@ std::filesystem::path get_ssd_region_file_from_env() {
   }
 }
 
+size_t get_numa_node_from_env() {
+#if HYRISE_NUMA_SUPPORT
+  if (const auto numa_node = std::getenv("HYRISE_NUMA_NODE")) {
+    return boost::lexical_cast<size_t>(numa_node);
+  } else {
+    Fail("HYRISE_NUMA_NODE not found in environment");
+  }
+#else
+  return NO_NUMA_MEMORY_NODE;
+#endif
+}
+
 std::array<VolatileRegion, NUM_PAGE_SIZE_TYPES> make_buffer_pools(const size_t num_bytes) {
   return {
       VolatileRegion(PageSizeType::KiB8, num_bytes),   VolatileRegion(PageSizeType::KiB16, num_bytes),
@@ -41,14 +53,15 @@ std::array<VolatileRegion, NUM_PAGE_SIZE_TYPES> make_buffer_pools(const size_t n
   };
 }
 
-BufferManager::BufferManager(const size_t num_bytes, std::filesystem::path path)
+BufferManager::BufferManager(const size_t num_bytes, std::filesystem::path path, const size_t memory_numa_node)
     : _num_pages(0),
       _used_bytes(0),
       _total_bytes(num_bytes),
       _ssd_region(std::make_unique<SSDRegion>(path)),
       _buffer_pools(make_buffer_pools(num_bytes)) {}
 
-BufferManager::BufferManager() : BufferManager(get_volatile_capacity_from_env(), get_ssd_region_file_from_env()) {}
+BufferManager::BufferManager()
+    : BufferManager(get_volatile_capacity_from_env(), get_ssd_region_file_from_env(), get_numa_node_from_env()) {}
 
 Frame* BufferManager::allocate_frame(const PageSizeType size_type) {
   const auto bytes_required = bytes_for_size_type(size_type);

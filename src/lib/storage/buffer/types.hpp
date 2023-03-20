@@ -48,6 +48,8 @@ constexpr PageSizeType MAX_PAGE_SIZE_TYPE = PageSizeType::KiB128;
 constexpr size_t MAX_PAGE_OFFSET = boost::static_log2<bytes_for_size_type(MAX_PAGE_SIZE_TYPE)>::value;
 constexpr size_t BITS_PAGE_SIZE_TYPES = std::bit_width(NUM_PAGE_SIZE_TYPES);
 
+constexpr auto NO_NUMA_MEMORY_NODE = -1;
+
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
 constexpr size_t PAGE_ALIGNMENT = 512;
 

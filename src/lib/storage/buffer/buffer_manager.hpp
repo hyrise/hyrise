@@ -71,7 +71,8 @@ class BufferManager {
   };
 
   BufferManager();
-  BufferManager(const size_t num_bytes, std::filesystem::path path);
+  BufferManager(const size_t num_bytes, std::filesystem::path path,
+                const size_t memory_numa_node = NO_NUMA_MEMORY_NODE);
 
   /**
    * @brief Get the page object
