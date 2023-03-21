@@ -833,7 +833,7 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
     resolve_data_type(data_type, [&, aggregate_idx](auto type) {
-      using ColumnDataType = typename decltype(type)::type; 
+      using ColumnDataType = typename decltype(type)::type;
       _write_aggregate_output<ColumnDataType>(aggregate_idx, aggregate->aggregate_function);
     });
 
@@ -1076,8 +1076,7 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 }
 
 template <typename ColumnDataType>
-void AggregateHash::_write_aggregate_output(const ColumnID column_index,
-                                            const AggregateFunction aggregate_function) {
+void AggregateHash::_write_aggregate_output(const ColumnID column_index, const AggregateFunction aggregate_function) {
   switch (aggregate_function) {
     case AggregateFunction::Min:
       write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);

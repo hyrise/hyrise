@@ -147,7 +147,8 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
+bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shared_ptr<const Table>& table,
+                                                                 const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
   // tes that at least one duplicate value or a NULL value is contained.
@@ -179,7 +180,8 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shar
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table, const ColumnID column_id) {
+bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table,
+                                                           const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = std::unordered_set<ColumnDataType>{};
@@ -324,8 +326,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<co
 }
 
 void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
-    const std::shared_ptr<const AbstractLQPNode>& root_node, const std::shared_ptr<const LQPColumnExpression>& column_candidate,
-    UccCandidates& ucc_candidates) {
+    const std::shared_ptr<const AbstractLQPNode>& root_node,
+    const std::shared_ptr<const LQPColumnExpression>& column_candidate, UccCandidates& ucc_candidates) {
   // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
   // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
   if (!root_node || !column_candidate) {
