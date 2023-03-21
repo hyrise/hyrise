@@ -832,9 +832,34 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
     const auto data_type =
         input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
-    resolve_data_type(data_type, [&, aggregate_idx](auto type) {
+    resolve_data_type(data_type, [&](auto type) {
       using ColumnDataType = typename decltype(type)::type;
-      _write_aggregate_output<ColumnDataType>(aggregate_idx, aggregate->aggregate_function);
+      switch (aggregate->aggregate_function) {
+        case AggregateFunction::Min:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Min>(aggregate_idx);
+          break;
+        case AggregateFunction::Max:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Max>(aggregate_idx);
+          break;
+        case AggregateFunction::Sum:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Sum>(aggregate_idx);
+          break;
+        case AggregateFunction::Avg:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Avg>(aggregate_idx);
+          break;
+        case AggregateFunction::Count:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::Count>(aggregate_idx);
+          break;
+        case AggregateFunction::CountDistinct:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(aggregate_idx);
+          break;
+        case AggregateFunction::StandardDeviationSample:
+          _write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(aggregate_idx);
+          break;
+        case AggregateFunction::Any:
+          // Pseudo-aggregates are written by _write_groupby_output.
+          break;
+      }
     });
 
     ++aggregate_idx;
@@ -1075,38 +1100,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
   groupby_columns_writing_duration += timer.lap();
 }
 
-template <typename ColumnDataType>
-void AggregateHash::_write_aggregate_output(const ColumnID column_index, const AggregateFunction aggregate_function) {
-  switch (aggregate_function) {
-    case AggregateFunction::Min:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);
-      break;
-    case AggregateFunction::Max:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Max>(column_index);
-      break;
-    case AggregateFunction::Sum:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Sum>(column_index);
-      break;
-    case AggregateFunction::Avg:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Avg>(column_index);
-      break;
-    case AggregateFunction::Count:
-      write_aggregate_output<ColumnDataType, AggregateFunction::Count>(column_index);
-      break;
-    case AggregateFunction::CountDistinct:
-      write_aggregate_output<ColumnDataType, AggregateFunction::CountDistinct>(column_index);
-      break;
-    case AggregateFunction::StandardDeviationSample:
-      write_aggregate_output<ColumnDataType, AggregateFunction::StandardDeviationSample>(column_index);
-      break;
-    case AggregateFunction::Any:
-      // written by _write_groupby_output
-      break;
-  }
-}
-
 template <typename ColumnDataType, AggregateFunction aggregate_function>
-void AggregateHash::write_aggregate_output(ColumnID aggregate_index) {
+void AggregateHash::_write_aggregate_output(ColumnID aggregate_index) {
   // Used to track the duration of groupby columns writing, which is done for the first aggregate column only. Value is
   // subtracted from the runtime of this method (thus, it's either non-zero for the first aggregate column or zero for
   // the remaining columns).

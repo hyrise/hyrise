@@ -144,10 +144,6 @@ class AggregateHash : public AbstractAggregateOperator {
 
   const std::string& name() const override;
 
-  // write the aggregated output for a given aggregate column
-  template <typename ColumnDataType, AggregateFunction aggregate_function>
-  void write_aggregate_output(ColumnID aggregate_index);
-
   enum class OperatorSteps : uint8_t {
     GroupByKeyPartitioning,
     Aggregating,
@@ -174,10 +170,10 @@ class AggregateHash : public AbstractAggregateOperator {
 
   void _on_cleanup() override;
 
-  template <typename ColumnDataType>
-  void _write_aggregate_output(const ColumnID column_index, const AggregateFunction aggregate_function);
-
   void _write_groupby_output(RowIDPosList& pos_list);
+
+  template <typename ColumnDataType, AggregateFunction aggregate_function>
+  void _write_aggregate_output(ColumnID aggregate_index);
 
   template <typename ColumnDataType, AggregateFunction aggregate_function, typename AggregateKey>
   void _aggregate_segment(ChunkID chunk_id, ColumnID column_index, const AbstractSegment& abstract_segment,
