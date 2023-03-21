@@ -47,7 +47,7 @@ typename Results::reference get_or_add_result(CacheResultIds /*cache_result_ids*
     // As described above, we may store the index into the results vector in the AggregateKey. If the AggregateKey
     // contains multiple entries, we use the first one. As such, we store a (non-owning, raw) pointer to either the only
     // or the first entry in first_key_entry. We need a raw pointer as a reference cannot be null or reset.
-    AggregateKeyEntry* first_key_entry;
+    AggregateKeyEntry* first_key_entry = nullptr;
     if constexpr (std::is_same_v<AggregateKey, AggregateKeyEntry>) {
       first_key_entry = &key;
     } else {
@@ -158,8 +158,8 @@ const std::string& AggregateHash::name() const {
 
 std::shared_ptr<AbstractOperator> AggregateHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<AggregateHash>(copied_left_input, _aggregates, _groupby_column_ids);
 }
 
@@ -833,7 +833,8 @@ std::shared_ptr<const Table> AggregateHash::_on_execute() {
         input_column_id == INVALID_COLUMN_ID ? DataType::Long : input_table->column_data_type(input_column_id);
 
     resolve_data_type(data_type, [&, aggregate_idx](auto type) {
-      _write_aggregate_output(type, aggregate_idx, aggregate->aggregate_function);
+      using ColumnDataType = typename decltype(type)::type; 
+      _write_aggregate_output<ColumnDataType>(aggregate_idx, aggregate->aggregate_function);
     });
 
     ++aggregate_idx;
@@ -891,7 +892,7 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 // COUNT writes the aggregate counter
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& /*null_values*/,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
 
@@ -909,7 +910,7 @@ std::enable_if_t<aggregate_func == AggregateFunction::Count, void> write_aggrega
 // COUNT(DISTINCT) writes the number of distinct values
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::CountDistinct, void> write_aggregate_values(
-    pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
+    pmr_vector<AggregateType>& values, pmr_vector<bool>& /*null_values*/,
     const AggregateResults<ColumnDataType, aggregate_func>& results) {
   values.reserve(results.size());
 
@@ -952,8 +953,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 // AVG is not defined for non-arithmetic types. Avoiding compiler errors.
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::Avg && !std::is_arithmetic_v<AggregateType>, void>
-write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
+write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& /*null_values*/,
+                       const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
   Fail("Invalid aggregate");
 }
 
@@ -988,8 +989,8 @@ write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null
 template <typename ColumnDataType, typename AggregateType, AggregateFunction aggregate_func>
 std::enable_if_t<aggregate_func == AggregateFunction::StandardDeviationSample && !std::is_arithmetic_v<AggregateType>,
                  void>
-write_aggregate_values(pmr_vector<AggregateType>& values, pmr_vector<bool>& null_values,
-                       const AggregateResults<ColumnDataType, aggregate_func>& results) {
+write_aggregate_values(pmr_vector<AggregateType>& /*values*/, pmr_vector<bool>& /*null_values*/,
+                       const AggregateResults<ColumnDataType, aggregate_func>& /*results*/) {
   Fail("Invalid aggregate");
 }
 
@@ -1075,8 +1076,8 @@ void AggregateHash::_write_groupby_output(RowIDPosList& pos_list) {
 }
 
 template <typename ColumnDataType>
-void AggregateHash::_write_aggregate_output(boost::hana::basic_type<ColumnDataType> type, ColumnID column_index,
-                                            AggregateFunction aggregate_function) {
+void AggregateHash::_write_aggregate_output(const ColumnID column_index,
+                                            const AggregateFunction aggregate_function) {
   switch (aggregate_function) {
     case AggregateFunction::Min:
       write_aggregate_output<ColumnDataType, AggregateFunction::Min>(column_index);

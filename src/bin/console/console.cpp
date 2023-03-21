@@ -148,8 +148,8 @@ Console::Console()
   register_command("script", std::bind(&Console::_exec_script, this, std::placeholders::_1));
   register_command("print", std::bind(&Console::_print_table, this, std::placeholders::_1));
   register_command("visualize", std::bind(&Console::_visualize, this, std::placeholders::_1));
-  register_command("txinfo", std::bind(&Console::_print_transaction_info, this, std::placeholders::_1));
-  register_command("pwd", std::bind(&Console::_print_current_working_directory, this, std::placeholders::_1));
+  register_command("txinfo", std::bind(&Console::_print_transaction_info, this));
+  register_command("pwd", std::bind(&Console::_print_current_working_directory, this));
   register_command("setting", std::bind(&Console::_change_runtime_setting, this, std::placeholders::_1));
   register_command("load_plugin", std::bind(&Console::_load_plugin, this, std::placeholders::_1));
   register_command("unload_plugin", std::bind(&Console::_unload_plugin, this, std::placeholders::_1));
@@ -168,7 +168,7 @@ Console::~Console() {
 }
 
 int Console::read() {
-  char* buffer;
+  char* buffer = nullptr;
 
   // Prompt user for input
   buffer = readline(_prompt.c_str());
@@ -347,7 +347,7 @@ void Console::load_history(const std::string& history_file) {
   _history_file = history_file;
 
   // Check if history file exist, create empty history file if not
-  std::ifstream file(_history_file);
+  auto file = std::ifstream{_history_file};
   if (!file.good()) {
     out("Creating history file: " + _history_file + "\n");
     if (write_history(_history_file.c_str()) != 0) {
@@ -371,16 +371,16 @@ void Console::out(const std::string& output, bool console_print) {
 }
 
 void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags flags) {
-  int size_y;
-  int size_x;
+  auto size_y = int{0};
+  auto size_x = int{0};
   rl_get_screen_size(&size_y, &size_x);
 
-  std::stringstream stream;
+  auto stream = std::stringstream{};
   Print::print(table, flags, stream);
 
-  bool fits_on_one_page = true;
+  auto fits_on_one_page = true;
   auto stream_backup = stream.str();
-  std::string line;
+  auto line = std::string{};
   size_t line_count = 0;
   while (std::getline(stream, line, '\n')) {
     ++line_count;
@@ -888,7 +888,7 @@ void Console::handle_signal(int sig) {
   }
 }
 
-int Console::_print_transaction_info(const std::string& input) {
+int Console::_print_transaction_info() {
   if (!_explicitly_created_transaction_context) {
     out("Console is in auto-commit mode. Type `begin` to start a manual transaction.\n");
     return ReturnCode::Error;
@@ -901,7 +901,7 @@ int Console::_print_transaction_info(const std::string& input) {
   return ReturnCode::Ok;
 }
 
-int Console::_print_current_working_directory(const std::string& /*args*/) {
+int Console::_print_current_working_directory() {
   out(std::filesystem::current_path().string() + "\n");
   return ReturnCode::Ok;
 }
@@ -952,15 +952,15 @@ int Console::_unload_plugin(const std::string& input) {
 
 // GNU readline interface to our commands
 
-char** Console::_command_completion(const char* text, int start, int end) {
+char** Console::_command_completion(const char* text, const int start, const int /*end*/) {
   char** completion_matches = nullptr;
 
-  std::string input(rl_line_buffer);
+  const auto input = std::string{rl_line_buffer};
 
   const auto tokens = tokenize(input);
 
   // Choose completion function depending on the input.
-  const std::string& first_word = tokens[0];
+  const auto& first_word = tokens[0];
   if (first_word == "visualize") {
     // Completion only for three words, "visualize", and at most two options
     if (tokens.size() <= 3) {
@@ -1001,6 +1001,7 @@ char* Console::_command_generator(const char* text, int state, const std::vector
     const auto& command = *it;
     if (command.find(text) != std::string::npos) {
       auto completion = new char[command.size()];  // NOLINT (legacy API)
+      // NOLINTNEXTLINE(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
       static_cast<void>(snprintf(completion, command.size() + 1, "%s", command.c_str()));
       return completion;
     }
