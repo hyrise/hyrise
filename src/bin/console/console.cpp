@@ -124,8 +124,8 @@ Console::Console()
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
-  rl_completer_word_break_characters =
-      const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT(cppcoreguidelines-pro-type-const-cast)
+  // NOLINTNEXTLINE(cppcoreguidelines-pro-type-const-cast)
+  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
 
   // Set Hyrise caches
   Hyrise::get().default_pqp_cache = _pqp_cache;

@@ -108,12 +108,11 @@ TEST_F(OperatorsJoinHashTest, DeepCopy) {
 
 TEST_F(OperatorsJoinHashTest, RadixBitCalculation) {
   // Simple tests to check that side switching and zero-sizes work.
-  EXPECT_EQ(JoinHash::calculate_radix_bits(1, 0), 0ul);
-  EXPECT_EQ(JoinHash::calculate_radix_bits(0, 1), 0ul);
-  EXPECT_EQ(JoinHash::calculate_radix_bits(0, 0), 0ul);
-  EXPECT_EQ(JoinHash::calculate_radix_bits(1, 1), 0ul);
-  EXPECT_GT(JoinHash::calculate_radix_bits(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()),
-            0ul);
+  EXPECT_EQ(JoinHash::calculate_radix_bits(1, 0), 0);
+  EXPECT_EQ(JoinHash::calculate_radix_bits(0, 1), 0);
+  EXPECT_EQ(JoinHash::calculate_radix_bits(0, 0), 0);
+  EXPECT_EQ(JoinHash::calculate_radix_bits(1, 1), 0);
+  EXPECT_GT(JoinHash::calculate_radix_bits(std::numeric_limits<size_t>::max(), std::numeric_limits<size_t>::max()), 0);
 }
 
 }  // namespace hyrise
