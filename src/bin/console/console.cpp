@@ -10,11 +10,7 @@
 #include <ctime>
 #include <filesystem>
 #include <iomanip>
-#include <iostream>
-#include <memory>
 #include <regex>
-#include <string>
-#include <vector>
 
 #include <boost/algorithm/string/join.hpp>
 
@@ -51,13 +47,13 @@
 #include "visualization/lqp_visualizer.hpp"
 #include "visualization/pqp_visualizer.hpp"
 
-#define ANSI_COLOR_RED "\x1B[31m"
-#define ANSI_COLOR_GREEN "\x1B[32m"
-#define ANSI_COLOR_RESET "\x1B[0m"
+#define ANSI_COLOR_RED "\x1B[31m"    // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN "\x1B[32m"  // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET "\x1B[0m"   // NOLINT(cppcoreguidelines-macro-usage)
 
-#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"
-#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"
-#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"
+#define ANSI_COLOR_RED_RL "\001\x1B[31m\002"    // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_GREEN_RL "\001\x1B[32m\002"  // NOLINT(cppcoreguidelines-macro-usage)
+#define ANSI_COLOR_RESET_RL "\001\x1B[0m\002"   // NOLINT(cppcoreguidelines-macro-usage)
 
 namespace {
 
@@ -128,7 +124,8 @@ Console::Console()
       _lqp_cache(std::make_shared<SQLLogicalPlanCache>()) {
   // Init readline basics, tells readline to use our custom command completion function
   rl_attempted_completion_function = &Console::_command_completion;
-  rl_completer_word_break_characters = const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");
+  rl_completer_word_break_characters =
+      const_cast<char*>(" \t\n\"\\'`@$><=;|&{(");  // NOLINT(cppcoreguidelines-pro-type-const-cast)
 
   // Set Hyrise caches
   Hyrise::get().default_pqp_cache = _pqp_cache;
@@ -391,7 +388,7 @@ void Console::out(const std::shared_ptr<const Table>& table, const PrintFlags fl
   stream.str(stream_backup);
 
   static bool pagination_disabled = false;
-  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {  // NULL_VALUE(concurrency-mt-unsafe)
+  if (!fits_on_one_page && !std::getenv("TERM") && !pagination_disabled) {  // NOLINT(concurrency-mt-unsafe)
     out("Your TERM environment variable is not set - most likely because you are running the console from an IDE. "
         "Pagination is disabled.\n\n");
     pagination_disabled = true;
