@@ -44,9 +44,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   const auto& indexes = _in_table->get_table_indexes();
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
-  if (indexes.size() > 1) {
-    PerformanceWarning("There are multiple indexes available, but only the first one is used.");
-  }
+    Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
   const auto index = indexes.front();
 
   auto append_matches = [&](const PartialHashIndex::Iterator& begin,
