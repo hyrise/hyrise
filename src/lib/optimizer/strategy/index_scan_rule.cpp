@@ -22,8 +22,8 @@ namespace {
 // Access Path Selection in Main-Memory Optimized Data Systems: Should I Scan or Should I Probe?
 constexpr float INDEX_SCAN_SELECTIVITY_THRESHOLD = 0.01f;
 
-// Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan.
-// The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
+// // Only if the number of input rows exceeds num_input_rows, the ScanType can be set to IndexScan.
+// // The number is taken from: Fast Lookups for In-Memory Column Stores: Group-Key Indices, Lookup and Maintenance.
 constexpr float INDEX_SCAN_ROW_COUNT_THRESHOLD = 1000.0f;
 }  // namespace
 
@@ -46,7 +46,7 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
         const auto predicate_node = std::dynamic_pointer_cast<PredicateNode>(node);
         const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(child);
 
-        const auto indexes_statistics = stored_table_node->chunk_indexes_statistics();
+        const auto indexes_statistics = stored_table_node->table_indexes_statistics();
         for (const auto& index_statistics : indexes_statistics) {
           if (_is_index_scan_applicable(index_statistics, predicate_node)) {
             predicate_node->scan_type = ScanType::IndexScan;
@@ -59,15 +59,12 @@ void IndexScanRule::_apply_to_plan_without_subqueries(const std::shared_ptr<Abst
   });
 }
 
-bool IndexScanRule::_is_index_scan_applicable(const ChunkIndexStatistics& index_statistics,
+bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_statistics,
                                               const std::shared_ptr<PredicateNode>& predicate_node) const {
   if (!_is_single_segment_index(index_statistics)) {
     return false;
   }
 
-  if (index_statistics.type != ChunkIndexType::GroupKey) {
-    return false;
-  }
 
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
@@ -77,7 +74,7 @@ bool IndexScanRule::_is_index_scan_applicable(const ChunkIndexStatistics& index_
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
-  // Currently, we do not support two-column predicates
+  // // Currently, we do not support two-column predicates
   if (is_column_id(operator_predicate.value)) {
     return false;
   }
@@ -98,7 +95,7 @@ bool IndexScanRule::_is_index_scan_applicable(const ChunkIndexStatistics& index_
   return selectivity <= INDEX_SCAN_SELECTIVITY_THRESHOLD;
 }
 
-bool IndexScanRule::_is_single_segment_index(const ChunkIndexStatistics& index_statistics) {
+bool IndexScanRule::_is_single_segment_index(const TableIndexStatistics& index_statistics) {
   return index_statistics.column_ids.size() == 1;
 }
 
