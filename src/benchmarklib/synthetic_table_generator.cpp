@@ -36,7 +36,7 @@ template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
   pmr_vector<T> result(values.size());
 
-  auto pin_guard = PinGuard<T>::create(result, true);
+  auto pin_guard = PinGuard{result, true};
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {
@@ -142,7 +142,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           }
 
           pmr_vector<bool> null_values;
-          auto null_values_pin_guard = PinGuard<bool>::create(null_values, true);
+          auto null_values_pin_guard = PinGuard{null_values, true};
 
           /**
            * If a ratio of to-be-created NULL values is given, fill the null_values vector used in the ValueSegment
@@ -151,7 +151,7 @@ std::shared_ptr<Table> SyntheticTableGenerator::generate_table(
           if (column_specifications[column_index].null_ratio > 0.0f) {
             null_values.resize(chunk_size, false);
             // Resize might lead to a new page allocation
-            auto resize_pin_guard = PinGuard<bool>::create(null_values, true);
+            null_values_pin_guard.repin(true);
 
             const double step_size = 1.0 / column_specifications[column_index].null_ratio;
             double current_row_offset = 0.0;

@@ -2,16 +2,18 @@
 
 #include <boost/align/aligned_allocator.hpp>
 #include "benchmark/benchmark.h"
-#include "storage/buffer/page.hpp"
 #include "storage/buffer/volatile_region.hpp"
 #include "storage/value_segment.hpp"
 
 namespace hyrise {
 
+// TODO: Benchmark Deallocate vs Free
+
 static void BM_VolatileRegionAllocator(benchmark::State& state) {
   const auto num_pages = state.range(0);
 
-  auto volatile_region = std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * sizeof(Page32KiB));
+  auto volatile_region =
+      std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * bytes_for_size_type(PageSizeType::KiB32));
 
   for (auto _ : state) {
     for (auto i = size_t{0}; i < num_pages; i++) {
@@ -19,20 +21,22 @@ static void BM_VolatileRegionAllocator(benchmark::State& state) {
       benchmark::DoNotOptimize(frame);
     }
     state.PauseTiming();
-    volatile_region = std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * sizeof(Page32KiB));
+    volatile_region =
+        std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * bytes_for_size_type(PageSizeType::KiB32));
     state.ResumeTiming();
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * sizeof(Page32KiB));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * bytes_for_size_type(PageSizeType::KiB32));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
   state.SetLabel("Allocations with VolatileRegion (Buffer Pool)");
 }
 
 static void BM_VolatileRegionAllocatorCompareToBoostAlignedAllocator(benchmark::State& state) {
   const auto num_pages = state.range(0);
-  auto allocator = boost::alignment::aligned_allocator<Page32KiB>{};
+  using Array = std::array<char, bytes_for_size_type(PageSizeType::KiB32)>;
+  auto allocator = boost::alignment::aligned_allocator<Array>{};
 
-  auto allocations = std::vector<Page32KiB*>(num_pages);
+  auto allocations = std::vector<Array*>(num_pages);
 
   for (auto _ : state) {
     for (auto i = size_t{0}; i < num_pages; i++) {
@@ -49,7 +53,7 @@ static void BM_VolatileRegionAllocatorCompareToBoostAlignedAllocator(benchmark::
     state.ResumeTiming();
   }
 
-  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * sizeof(Page32KiB));
+  state.SetBytesProcessed(int64_t(state.iterations()) * int64_t(num_pages) * bytes_for_size_type(PageSizeType::KiB32));
   state.SetItemsProcessed(int64_t(state.iterations()) * int64_t(num_pages));
   state.SetLabel("Allocations with Boost Aligned Allocator (malloc)");
 }

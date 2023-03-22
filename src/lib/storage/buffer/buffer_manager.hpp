@@ -56,6 +56,12 @@ class BufferManager {
     // Tracks the number of bytes read from SSD
     std::size_t total_bytes_read = 0;
 
+    std::size_t num_eviction_queue_purges = 0;
+
+    std::size_t num_eviction_queue_item_purges = 0;
+
+    std::size_t num_eviction_queue_adds = 0;
+
     // TODO: Number of pages used, fragmentation rate, make atomic
   };
 
@@ -110,6 +116,11 @@ class BufferManager {
   void deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
 
   /**
+   * @brief Iterates through eviction queue to remove outdated items. This is called by the eviction worker.
+  */
+  void purge_eviction_queue();
+
+  /**
    * @brief Helper function to get the BufferManager singleton. This avoids issues with circular dependencies as the implementation in the .cpp file.
    * 
    * @return BufferManager& 
@@ -151,6 +162,8 @@ class BufferManager {
 
   // Write out a page to disk
   void write_page(const Frame* frame);
+
+  void add_to_eviction_queue(Frame* frame);
 
   // Total number of pages currently in the buffer pool
   std::atomic_uint64_t _num_pages;

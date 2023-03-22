@@ -14,8 +14,6 @@ namespace hyrise {
  * @brief Main-Memory pool consisting of chunks (= pages) of memory. A frame acts as a slot 
  * for pages. In order to allocate multiple, contiguous pages. The memory region keeps a sorted list
  * of free frames that can be popped.
- * 
- * TODO: Evaluate best-fit, first-fit etc
  */
 
 class VolatileRegion : private boost::noncopyable {
@@ -29,6 +27,8 @@ class VolatileRegion : private boost::noncopyable {
   Frame* allocate();
   void deallocate(Frame* frame);
   void free(Frame* frame);
+
+  size_t capacity() const;
 
   void clear();
 

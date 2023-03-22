@@ -70,6 +70,7 @@ void VolatileRegion::map_memory() {
 
 void VolatileRegion::assign_memory_to_frames() {
   for (auto frame_id = size_t{0}; frame_id < _frames.size(); frame_id++) {
+    _frames[frame_id].size_type = _size_type;
     _frames[frame_id].data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
   }
 }
@@ -111,7 +112,7 @@ void VolatileRegion::deallocate(Frame* frame) {
 }
 
 Frame* VolatileRegion::unswizzle(const void* ptr) {
-  // TODO: Try to make this banchless
+  // TODO: Try to make this branchless
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return nullptr;
   }
@@ -120,4 +121,9 @@ Frame* VolatileRegion::unswizzle(const void* ptr) {
   const auto frame_id = offset / bytes_for_size_type(_size_type);
   return &_frames[frame_id];
 }
+
+size_t VolatileRegion::capacity() const {
+  return _total_bytes;
+}
+
 }  // namespace hyrise

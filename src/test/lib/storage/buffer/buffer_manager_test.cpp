@@ -11,9 +11,7 @@ namespace hyrise {
 class BufferManagerTest : public BaseTest {
  public:
   BufferManager create_buffer_manager(const size_t num_bytes = 1 << 10) {
-    auto ssd_region = std::make_unique<SSDRegion>(db_file);
-    auto volatile_region = std::make_unique<VolatileRegion>(num_bytes, PageSizeType::KiB32);
-    return BufferManager(std::move(volatile_region), std::move(ssd_region));
+    return BufferManager(num_bytes, db_file);
   }
 
   void TearDown() override {
@@ -25,7 +23,7 @@ class BufferManagerTest : public BaseTest {
 
 TEST_F(BufferManagerTest, TestPinAndUnpinPage) {
   // We create a really small buffer manager with a single frame to test pin and unpin
-  auto buffer_manager = create_buffer_manager(static_cast<size_t>(PageSizeType::KiB32));
+  auto buffer_manager = create_buffer_manager(bytes_for_size_type(PageSizeType::KiB8));
   const auto ptr = buffer_manager.allocate(512);
   const auto page_id = ptr.get_page_id();
 
@@ -40,7 +38,7 @@ TEST_F(BufferManagerTest, TestPinAndUnpinPage) {
 }
 
 TEST_F(BufferManagerTest, TestFlushDirtyPage) {
-  auto buffer_manager = create_buffer_manager(static_cast<size_t>(PageSizeType::KiB32));
+  auto buffer_manager = create_buffer_manager(static_cast<size_t>(PageSizeType::KiB8));
   auto ssd_region = SSDRegion(db_file);
   const auto ptr = buffer_manager.allocate(512);
   const auto page_id = ptr.get_page_id();
@@ -54,21 +52,25 @@ TEST_F(BufferManagerTest, TestFlushDirtyPage) {
 
   // Unpin the page and mark it as dirty. There should be nothing on the SSD yet.
   buffer_manager.unpin_page(page_id, true);
-  auto page_read = Page32KiB{};
-  ssd_region.read_page(page_id, page_read.size_type(), page_read.data());
-  EXPECT_NE(memcmp(page, &page_read, sizeof(Page32KiB)), 0) << "The page should not have been written to SSD";
+  auto page_read = std::array<std::byte, bytes_for_size_type(PageSizeType::KiB8)>{};
+  ssd_region.read_page(page_id, PageSizeType::KiB8, page_read.data());
+  EXPECT_NE(memcmp(page, &page_read, bytes_for_size_type(PageSizeType::KiB8)), 0)
+      << "The page should not have been written to SSD";
+
+  // TODO: Fix
 
   // Allocate a new page, which should replace the old one and write it to SSD.
   EXPECT_NO_THROW(buffer_manager.allocate(512));
-  ssd_region.read_page(page_id, page_read.size_type(), page_read.data());
-  EXPECT_EQ(memcmp(page, &page_read, sizeof(Page32KiB)), 0) << "The page should have been written to SSD";
+  ssd_region.read_page(page_id, PageSizeType::KiB32, page_read.data());
+  EXPECT_EQ(memcmp(page, &page_read, bytes_for_size_type(PageSizeType::KiB8)), 0)
+      << "The page should have been written to SSD";
 }
 
 TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
-  auto buffer_manager = create_buffer_manager(static_cast<size_t>(PageSizeType::KiB32));
+  auto buffer_manager = create_buffer_manager(bytes_for_size_type(PageSizeType::KiB32));
 
   auto ptr = buffer_manager.allocate(1024);
-  EXPECT_EQ(ptr, BufferManagedPtr<void>(PageID{0}, 0));
+  EXPECT_EQ(ptr, BufferManagedPtr<void>(PageID{0}, 0, PageSizeType::KiB8));
 
   // TODO: If the page is deallocated, the pointer should be set to 0
   EXPECT_NE(ptr.operator->(), nullptr);
@@ -76,7 +78,7 @@ TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
   EXPECT_EQ(ptr.operator->(), nullptr);
 
   auto ptr2 = buffer_manager.allocate(1024);
-  EXPECT_EQ(ptr2, BufferManagedPtr<void>(PageID{1}, 0));
+  EXPECT_EQ(ptr2, BufferManagedPtr<void>(PageID{1}, 0, PageSizeType::KiB8));
 
   buffer_manager.deallocate(ptr2, 1024);
   EXPECT_NE(ptr2.operator->(), nullptr);
@@ -90,10 +92,5 @@ TEST_F(BufferManagerTest, TestAllocateDifferentSizes) {
   // auto buffer_manager = create_buffer_manager(static_cast<size_t>(PageSizeType::KiB32));
   // auto ptr = buffer_manager.allocate(static_cast<size_t>(PageSizeType::KiB32));
 }
-
-// void flush_page(const PageID page_id);
-// void remove_page(const PageID page_id);
-// void read_page(const PageID page_id, Page32KiB& destination);
-// void write_page(const PageID page_id, Page32KiB& source);
 
 }  // namespace hyrise

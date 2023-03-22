@@ -198,8 +198,7 @@ Frame* BufferManager::new_page(const PageSizeType size_type) {
     _page_table[frame->page_id] = frame;
   }
 
-  // TODO: remove
-  _eviction_queue->push({frame, 0});
+  add_to_eviction_queue(frame);
 
   _num_pages++;
 
@@ -219,9 +218,7 @@ void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
   frame->dirty = frame->dirty.load() || dirty;
   frame->pin_count--;
   if (frame->pin_count.load() == 0) {
-    const auto timestamp_before_eviction = frame->eviction_timestamp++;
-    // Emplace timestamp and frame into eviction queue
-    _eviction_queue->push({frame, timestamp_before_eviction + 1});
+    add_to_eviction_queue(frame);
   }
 }
 
@@ -262,7 +259,7 @@ void BufferManager::remove_page(const PageID page_id) {
   frame->eviction_timestamp.store(0);
   frame->pin_count.store(0);
 
-  _eviction_queue->push({frame, 0});
+  add_to_eviction_queue(frame);
 }
 
 std::tuple<PageID, PageSizeType, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
@@ -274,6 +271,28 @@ std::tuple<PageID, PageSizeType, std::ptrdiff_t> BufferManager::unswizzle(const 
 
   return std::make_tuple(INVALID_PAGE_ID, PageSizeType::KiB8, 0);
 };
+
+void BufferManager::purge_eviction_queue() {
+  auto item = EvictionItem{};
+
+  _metrics.num_eviction_queue_purges++;
+
+  while (true) {
+    // Check if the queue is empty
+    if (!_eviction_queue->try_pop(item)) {
+      break;
+    }
+
+    // Remove old items with an outdated timestamp
+    if (item.timestamp < item.frame->eviction_timestamp.load()) {
+      _metrics.num_eviction_queue_item_purges++;
+      continue;
+    }
+
+    // Requeue the item
+    _eviction_queue->push(item);
+  }
+}
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   // TODO: check Alignment
@@ -303,6 +322,14 @@ void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, st
 
   // TODO: What happens to page on SSD
   remove_page(ptr.get_page_id());
+}
+
+void BufferManager::add_to_eviction_queue(Frame* frame) {
+  _metrics.num_eviction_queue_adds++;
+
+  const auto timestamp_before_eviction = frame->eviction_timestamp++;
+  // Emplace timestamp and frame into eviction queue
+  _eviction_queue->push({frame, timestamp_before_eviction + 1});
 }
 
 BufferManager& BufferManager::get_global_buffer_manager() {

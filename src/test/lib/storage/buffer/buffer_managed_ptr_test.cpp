@@ -24,7 +24,7 @@ TEST_F(BufferManagedPtrTest, TestSize) {
 
 TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
   // Test type conversion
-  EXPECT_EQ(PtrInt(PtrFloat(PageID{0}, 8)), PtrInt(PageID{0}, 8));
+  EXPECT_EQ(PtrInt(PtrFloat(PageID{2}, 8, PageSizeType::KiB128)), PtrInt(PageID{2}, 8, PageSizeType::KiB128));
 
   // Test nullptr
   auto nullPtr = PtrInt(nullptr);
@@ -52,35 +52,38 @@ TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
 }
 
 TEST_F(BufferManagedPtrTest, TestArithmetic) {
-  auto preIncrementPtr = PtrInt(PageID{0}, 4);
+  auto preIncrementPtr = PtrInt(PageID{0}, 4, PageSizeType::KiB8);
   EXPECT_EQ((++preIncrementPtr).get_offset(), 8);
   EXPECT_EQ(preIncrementPtr.get_offset(), 8);
 
-  auto postIncrementPtr = PtrInt(PageID{0}, 4);
+  auto postIncrementPtr = PtrInt(PageID{0}, 4, PageSizeType::KiB8);
   EXPECT_EQ((postIncrementPtr++).get_offset(), 4);
   EXPECT_EQ(postIncrementPtr.get_offset(), 8);
 
-  auto preDecrementPtr = PtrInt(PageID{0}, 8);
+  auto preDecrementPtr = PtrInt(PageID{0}, 8, PageSizeType::KiB8);
   EXPECT_EQ((++preDecrementPtr).get_offset(), 4);
   EXPECT_EQ(preDecrementPtr.get_offset(), 4);
 
-  EXPECT_EQ(PtrInt(PageID{0}, 8) - 1, PtrInt(PageID{0}, 4));
-  EXPECT_EQ(PtrInt(PageID{0}, 8) + 4, PtrInt(PageID{0}, 24));
+  EXPECT_EQ(PtrInt(PageID{0}, 8, PageSizeType::KiB8) - 1, PtrInt(PageID{0}, 4, PageSizeType::KiB8));
+  EXPECT_EQ(PtrInt(PageID{0}, 8, PageSizeType::KiB8) + 4, PtrInt(PageID{0}, 24, PageSizeType::KiB8));
 
-  auto incrementAssignPtr = PtrInt(PageID{0}, 8);
+  auto incrementAssignPtr = PtrInt(PageID{0}, 8, PageSizeType::KiB8);
   incrementAssignPtr += 3;
   EXPECT_EQ((incrementAssignPtr).get_offset(), 20);
 
-  auto decrementAssignPtr = PtrInt(PageID{0}, 20);
+  auto decrementAssignPtr = PtrInt(PageID{0}, 20, PageSizeType::KiB8);
   decrementAssignPtr -= 2;
   EXPECT_EQ((decrementAssignPtr).get_offset(), 12);
 }
 
 TEST_F(BufferManagedPtrTest, TestComparisons) {
-  EXPECT_TRUE(PtrInt(PageID{0}, 8) < PtrInt(PageID{0}, 12));
-  EXPECT_FALSE(PtrInt(PageID{0}, 12) < PtrInt(PageID{0}, 8));
+  EXPECT_TRUE(PtrInt(PageID{0}, 8, PageSizeType::KiB8) < PtrInt(PageID{0}, 12, PageSizeType::KiB8));
+  EXPECT_FALSE(PtrInt(PageID{0}, 12, PageSizeType::KiB8) < PtrInt(PageID{0}, 8, PageSizeType::KiB8));
 
-  EXPECT_TRUE(PtrInt(PageID{0}, 12) == PtrInt(PageID{0}, 12));
+  EXPECT_TRUE(PtrInt(PageID{0}, 12, PageSizeType::KiB8) == PtrInt(PageID{0}, 12, PageSizeType::KiB8));
+  // EXPECT_NE(PtrInt(PtrFloat(PageID{3}, PageSizeType::KiB128, 8)), PtrInt(PageID{2}, PageSizeType::KiB128, 8));
+  // EXPECT_NE(PtrInt(PtrFloat(PageID{2}, PageSizeType::KiB64, 8)), PtrInt(PageID{2}, PageSizeType::KiB128, 8));
+  // EXPECT_NE(PtrInt(PtrFloat(PageID{2}, PageSizeType::KiB128, 16)), PtrInt(PageID{2}, PageSizeType::KiB128, 16));
 }
 
 TEST_F(BufferManagedPtrTest, TestPinUnpin) {
@@ -106,11 +109,11 @@ TEST_F(BufferManagedPtrTest, TestPinUnpin) {
 
 TEST_F(BufferManagedPtrTest, TestPinGuardNotDirty) {
   // Test PinGuard with non-dirty flag
-  auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
-  auto page_id = ptr.get_page_id();
+  pmr_vector<int> vec{1, 2, 3, 4, 5};
+  auto page_id = vec.begin().get_ptr().get_page_id();
   {
     EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
-    auto pin_guard = PinGuard(ptr, false);
+    auto pin_guard = PinGuard(vec, false);
     EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 1);
   }
   EXPECT_FALSE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
@@ -119,11 +122,11 @@ TEST_F(BufferManagedPtrTest, TestPinGuardNotDirty) {
 
 TEST_F(BufferManagedPtrTest, TestPinGuardDirty) {
   // Test PinGuard with non-dirty flag
-  auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
-  auto page_id = ptr.get_page_id();
+  pmr_vector<int> vec{1, 2, 3, 4, 5};
+  auto page_id = vec.begin().get_ptr().get_page_id();
   {
     EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
-    auto pin_guard = PinGuard(ptr, true);
+    auto pin_guard = PinGuard(vec, true);
     EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 1);
   }
   EXPECT_TRUE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
@@ -132,10 +135,11 @@ TEST_F(BufferManagedPtrTest, TestPinGuardDirty) {
 
 TEST_F(BufferManagedPtrTest, TestGetPageIDAndOffset) {
   // TODO: Get Page should nor create a new page
-  auto ptr = PtrInt(PageID{5}, 12);
+  auto ptr = PtrInt(PageID{5}, 12, PageSizeType::KiB16);
 
   EXPECT_EQ(ptr.get_page_id(), PageID{5});
   EXPECT_EQ(ptr.get_offset(), 12);
+  EXPECT_EQ(ptr.get_size_type(), PageSizeType::KiB16);
 }
 
 // TODO: Work with outside ptr
@@ -147,7 +151,7 @@ TEST_F(BufferManagedPtrTest, TestPointerTraits) {
   static_assert(std::is_same<std::pointer_traits<PtrInt>::rebind<float>, PtrFloat>::value);
 
   // TODO_ TEst with inside and outside address
-  auto ptr = PtrInt(PageID{5}, 12);
+  auto ptr = PtrInt(PageID{5}, 12, PageSizeType::KiB16);
   EXPECT_EQ(std::pointer_traits<PtrInt>::pointer_to(*ptr), ptr);
 }
 

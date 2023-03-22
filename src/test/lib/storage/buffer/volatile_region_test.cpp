@@ -11,54 +11,94 @@ namespace hyrise {
 class VolatileRegionTest : public BaseTest {};
 
 TEST_F(VolatileRegionTest, TestAllocateDeallocate) {
-  auto volatile_region = VolatileRegion(sizeof(Page32KiB) * 3, PageSizeType::KiB32);
+  auto size_type = PageSizeType::KiB32;
 
-  EXPECT_EQ(volatile_region.capacity(), 3);
-  EXPECT_EQ(volatile_region.size(), 0);
+  auto volatile_region = VolatileRegion(size_type, bytes_for_size_type(size_type) * 3 + 10);
 
-  // Allocate three times
-  auto [frame_id_0, page_0] = volatile_region.allocate();
-  auto [frame_id_1, page_1] = volatile_region.allocate();
-  auto [frame_id_2, page_2] = volatile_region.allocate();
-  auto [invalid_frame_id, invalid_page] = volatile_region.allocate();
-  EXPECT_EQ(volatile_region.size(), 3);
-  EXPECT_EQ(frame_id_0, 0);
-  EXPECT_EQ(frame_id_1, 1);
-  EXPECT_EQ(frame_id_2, 2);
-  EXPECT_EQ(invalid_frame_id, INVALID_FRAME_ID);
+  EXPECT_EQ(volatile_region.capacity(), bytes_for_size_type(size_type) * 3);
+
+  // Allocate three
+  auto frame_1 = volatile_region.allocate();
+  EXPECT_EQ(frame_1->size_type, size_type);
+  EXPECT_NE(frame_1->data, nullptr);
+  EXPECT_NO_THROW(memset(frame_1->data, 1, bytes_for_size_type(size_type)));
+
+  auto frame_2 = volatile_region.allocate();
+  EXPECT_EQ(frame_2->size_type, size_type);
+  EXPECT_NE(frame_2->data, nullptr);
+  EXPECT_NO_THROW(memset(frame_2->data, 1, bytes_for_size_type(size_type)));
+
+  auto frame_3 = volatile_region.allocate();
+  EXPECT_EQ(frame_3->size_type, size_type);
+  EXPECT_NE(frame_3->data, nullptr);
+  EXPECT_NO_THROW(memset(frame_3->data, 1, bytes_for_size_type(size_type)));
+
+  auto invalid_frame = volatile_region.allocate();
+  EXPECT_EQ(invalid_frame, nullptr);
 
   // Deallocate two times
-  volatile_region.deallocate(frame_id_0);
-  volatile_region.deallocate(frame_id_2);
-  EXPECT_EQ(volatile_region.size(), 1);
+  volatile_region.deallocate(frame_3);
+  volatile_region.deallocate(frame_1);
 
-  // Allocate two times again
-  auto [new_frame_id_2, new_page_2] = volatile_region.allocate();
-  auto [new_frame_id_0, new_page_1] = volatile_region.allocate();
-  auto [new_invalid_frame_id, new_invalid_page] = volatile_region.allocate();
-  EXPECT_EQ(volatile_region.size(), 3);
-  EXPECT_EQ(new_frame_id_2, 2);
-  EXPECT_EQ(new_frame_id_0, 0);
-  EXPECT_EQ(new_invalid_frame_id, INVALID_FRAME_ID);
+  // Allocate 3 times again
+  auto new_frame_3 = volatile_region.allocate();
+  EXPECT_NE(new_frame_3, nullptr);
+  auto new_frame_1 = volatile_region.allocate();
+  EXPECT_NE(new_frame_1, nullptr);
+  auto new_invalid_frame = volatile_region.allocate();
+  EXPECT_EQ(new_invalid_frame, nullptr);
 }
 
-TEST_F(VolatileRegionTest, TestGetPage) {
-  auto volatile_region = VolatileRegion(sizeof(Page32KiB) * 3, PageSizeType::KiB32);
-  // TODO memcompare
-  auto [frame_id, page_0] = volatile_region.allocate();
-  EXPECT_EQ(volatile_region.get_page(FrameID{0}), page_0);
-  // EXPECT_EQ(volatile_region.get_page(FrameID{1}), page_0 + Site);
-  // EXPECT_EQ(volatile_region.get_page(FrameID{2}), 0);
-  EXPECT_ANY_THROW(volatile_region.get_page(FrameID{3}));
+TEST_F(VolatileRegionTest, TestAllocateFree) {
+  auto size_type = PageSizeType::KiB32;
+
+  auto volatile_region = VolatileRegion(size_type, bytes_for_size_type(size_type) * 3 + 10);
+
+  EXPECT_EQ(volatile_region.capacity(), bytes_for_size_type(size_type) * 3);
+
+  // Allocate three
+  auto frame_1 = volatile_region.allocate();
+  EXPECT_EQ(frame_1->size_type, size_type);
+  EXPECT_NE(frame_1->data, nullptr);
+  EXPECT_NO_THROW(memset(frame_1->data, 1, bytes_for_size_type(size_type)));
+
+  auto frame_2 = volatile_region.allocate();
+  EXPECT_EQ(frame_2->size_type, size_type);
+  EXPECT_NE(frame_2->data, nullptr);
+  EXPECT_NO_THROW(memset(frame_2->data, 1, bytes_for_size_type(size_type)));
+
+  auto frame_3 = volatile_region.allocate();
+  EXPECT_EQ(frame_3->size_type, size_type);
+  EXPECT_NE(frame_3->data, nullptr);
+  EXPECT_NO_THROW(memset(frame_3->data, 1, bytes_for_size_type(size_type)));
+
+  auto invalid_frame = volatile_region.allocate();
+  EXPECT_EQ(invalid_frame, nullptr);
+
+  // Free two times
+  volatile_region.free(frame_3);
+  volatile_region.free(frame_1);
+
+  // Allocate 3 times again
+  auto new_frame_3 = volatile_region.allocate();
+  EXPECT_NE(new_frame_3, nullptr);
+  auto new_frame_1 = volatile_region.allocate();
+  EXPECT_NE(new_frame_1, nullptr);
+  auto new_invalid_frame = volatile_region.allocate();
+  EXPECT_EQ(new_invalid_frame, nullptr);
 }
 
-TEST_F(VolatileRegionTest, TestGetFrameIDFromPtr) {
-  auto volatile_region = VolatileRegion(sizeof(Page32KiB) * 2, PageSizeType::KiB32);
-  auto [frame_id, page_0] = volatile_region.allocate();
-  EXPECT_EQ(volatile_region.to_frame_id(page_0 - 1), INVALID_FRAME_ID);
-  EXPECT_EQ(volatile_region.to_frame_id(page_0), 0);
-  EXPECT_EQ(volatile_region.to_frame_id(page_0 + 1), 1);
-  EXPECT_EQ(volatile_region.to_frame_id(page_0 + 2), INVALID_FRAME_ID);
+TEST_F(VolatileRegionTest, TestUnswizzle) {
+  auto size_type = PageSizeType::KiB32;
+
+  auto volatile_region = VolatileRegion(size_type, bytes_for_size_type(size_type) * 3 + 10);
+  auto frame_1 = volatile_region.allocate();
+  auto frame_2 = volatile_region.allocate();
+  auto frame_3 = volatile_region.allocate();
+
+  EXPECT_EQ(volatile_region.unswizzle(frame_1->data + 10), frame_1);
+  EXPECT_EQ(volatile_region.unswizzle(frame_3->data + 512), frame_3);
+  EXPECT_EQ(volatile_region.unswizzle(frame_2->data + 25), frame_2);
 }
 
 }  // namespace hyrise

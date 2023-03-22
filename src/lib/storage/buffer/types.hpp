@@ -8,7 +8,6 @@
 #include <boost/mp11/list.hpp>
 #include <limits>
 #include "boost/integer/static_log2.hpp"
-#include "storage/buffer/types.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
 
@@ -77,6 +76,8 @@ struct add_reference<const void> {
   typedef const nat& type;
 };
 
+class Frame;
+
 // Eviction Queue
 struct EvictionItem {
   Frame* frame;
@@ -86,10 +87,10 @@ struct EvictionItem {
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 enum BufferManagerMode {
-  DramDramSSD,       // Use 2 Volatile Regions and SSD
-  DramSSD,           // Use 1 Volatile Region and SSD
-  DramNumaRgionSSD,  // Use 1 Volatile Region, 1 NUMA Region and SSD
-  NumaRegionSSD      // Use 1 NUMA Region and SSD
+  DramDramSSD,        // Use 2 Volatile Regions and SSD
+  DramSSD,            // Use 1 Volatile Region and SSD
+  DramNumaRegionSSD,  // Use 1 Volatile Region, 1 NUMA Region and SSD
+  NumaRegionSSD       // Use 1 NUMA Region and SSD
 };
 
 }  // namespace hyrise
