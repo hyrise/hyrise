@@ -80,7 +80,7 @@ class BufferPoolAllocator {
     ptr->~U();
   }
 
- private:
+ protected:
   BufferManager* _buffer_manager;
 };
 }  // namespace hyrise

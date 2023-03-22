@@ -1,6 +1,5 @@
 #include "ssd_region.hpp"
 #include <unistd.h>
-#include "page.hpp"
 
 namespace hyrise {
 
@@ -79,6 +78,11 @@ void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, c
       page_pos = _page_directory[page_id].first;
     }
   }
+  DebugAssert(reinterpret_cast<const std::uintptr_t>(source) % PAGE_ALIGNMENT == 0,
+              "Destination is not properly aligned to 512");
+  DebugAssert(bytes_for_size_type(size_type) >= PAGE_ALIGNMENT,
+              "SizeType needs to be larger than 512 for optimal SSD reads and writes");
+
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
   // TODO: DebugAssert(static_cast<const std::uintptr_t>(source) % 512 == 0, "Source is not properly aligned to 512");
   const auto result = pwrite(_fd, source, num_bytes, page_pos);
@@ -122,6 +126,11 @@ void SSDRegion::read_page(const PageID page_id, const PageSizeType size_type, st
     DebugAssert(size_type == _page_directory[page_id].second, "Should have the same size type");
     page_pos = _page_directory[page_id].first;
   }
+  DebugAssert(reinterpret_cast<std::uintptr_t>(destination) % PAGE_ALIGNMENT == 0,
+              "Destination is not properly aligned to 512");
+  DebugAssert(bytes_for_size_type(size_type) >= PAGE_ALIGNMENT,
+              "SizeType needs to be larger than 512 for optimal SSD reads and writes");
+
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
   const auto result = pread(_fd, destination, num_bytes, page_pos);
   if (result < 0) {

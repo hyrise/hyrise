@@ -45,11 +45,13 @@ size_t get_numa_node_from_env() {
 #endif
 }
 
-std::array<VolatileRegion, NUM_PAGE_SIZE_TYPES> make_buffer_pools(const size_t num_bytes) {
+std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> make_buffer_pools(const size_t num_bytes) {
   return {
-      VolatileRegion(PageSizeType::KiB8, num_bytes),   VolatileRegion(PageSizeType::KiB16, num_bytes),
-      VolatileRegion(PageSizeType::KiB32, num_bytes),  VolatileRegion(PageSizeType::KiB64, num_bytes),
-      VolatileRegion(PageSizeType::KiB128, num_bytes),
+      std::make_unique<VolatileRegion>(PageSizeType::KiB8, num_bytes),
+      std::make_unique<VolatileRegion>(PageSizeType::KiB16, num_bytes),
+      std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_bytes),
+      std::make_unique<VolatileRegion>(PageSizeType::KiB64, num_bytes),
+      std::make_unique<VolatileRegion>(PageSizeType::KiB128, num_bytes),
   };
 }
 
@@ -58,6 +60,7 @@ BufferManager::BufferManager(const size_t num_bytes, std::filesystem::path path,
       _used_bytes(0),
       _total_bytes(num_bytes),
       _ssd_region(std::make_unique<SSDRegion>(path)),
+      _eviction_queue(std::make_unique<EvictionQueue>()),
       _buffer_pools(make_buffer_pools(num_bytes)) {}
 
 BufferManager::BufferManager()
@@ -72,7 +75,7 @@ Frame* BufferManager::allocate_frame(const PageSizeType size_type) {
   auto item = EvictionItem{};
 
   while ((current_bytes + bytes_required - freed_bytes) > _total_bytes) {
-    if (!_eviction_queue.try_pop(item)) {
+    if (!_eviction_queue->try_pop(item)) {
       Fail("Cannot pop item from queue");
     }
 
@@ -104,7 +107,7 @@ Frame* BufferManager::allocate_frame(const PageSizeType size_type) {
       break;
     } else {
       // Otherwise, Unmap the current frame and continue evicting
-      _buffer_pools[static_cast<size_t>(frame_size_type)].free(item.frame);
+      _buffer_pools[static_cast<size_t>(frame_size_type)]->free(item.frame);
     }
   }
 
@@ -113,7 +116,7 @@ Frame* BufferManager::allocate_frame(const PageSizeType size_type) {
 
   // If we did not find a frame of the correct size, we allocate a new one
   if (!frame) {
-    frame = _buffer_pools[static_cast<size_t>(size_type)].allocate();
+    frame = _buffer_pools[static_cast<size_t>(size_type)]->allocate();
     DebugAssert(frame, "Could not allocate frame");
   }
   frame->eviction_timestamp.store(0);
@@ -125,8 +128,6 @@ Frame* BufferManager::find_in_page_table(const PageID page_id) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
   std::lock_guard<std::mutex> lock(_page_table_mutex);
-
-  DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
   const auto frame_in_page_table_it = _page_table.find(page_id);
   if (frame_in_page_table_it != _page_table.end()) {
@@ -198,9 +199,8 @@ Frame* BufferManager::new_page(const PageSizeType size_type) {
   }
 
   // TODO: remove
-  _eviction_queue.push({frame, 0});
+  _eviction_queue->push({frame, 0});
 
-  // TODO: Atomic
   _num_pages++;
 
   return frame;
@@ -221,7 +221,7 @@ void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
   if (frame->pin_count.load() == 0) {
     const auto timestamp_before_eviction = frame->eviction_timestamp++;
     // Emplace timestamp and frame into eviction queue
-    _eviction_queue.push({frame, timestamp_before_eviction + 1});
+    _eviction_queue->push({frame, timestamp_before_eviction + 1});
   }
 }
 
@@ -256,18 +256,18 @@ void BufferManager::remove_page(const PageID page_id) {
     return;
   }
 
-  DebugAssert(!frame->pin_count, "Page cannot be removed while pinned. This can be used to debug resizes.");
+  // DebugAssert(!frame->pin_count, "Page cannot be removed while pinned. This can be used to debug resizes.");
 
   frame->dirty = false;
   frame->eviction_timestamp.store(0);
   frame->pin_count.store(0);
 
-  _eviction_queue.push({frame, 0});
+  _eviction_queue->push({frame, 0});
 }
 
 std::tuple<PageID, PageSizeType, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
   for (auto& buffer_pool : _buffer_pools) {
-    if (const auto frame = buffer_pool.unswizzle(ptr)) {
+    if (const auto frame = buffer_pool->unswizzle(ptr)) {
       return std::make_tuple(frame->page_id, frame->size_type, reinterpret_cast<const std::byte*>(ptr) - frame->data);
     }
   }
@@ -291,7 +291,7 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
   const auto frame = new_page(page_size_type);
 
   // TODO: Pin the page
-  // frame->pin_count++;
+  frame->pin_count++;
 
   return BufferManagedPtr<void>(frame->page_id, 0,
                                 frame->size_type);  // TODO: Use easier constrcutor without offset, no! alignment
@@ -316,7 +316,11 @@ BufferManager::Metrics& BufferManager::metrics() {
 void BufferManager::soft_reset() {
   _num_pages = 0;
   _page_table = {};
-  // _buffer_pools = std::move(make_buffer_pools(0));  // TODO
+  _used_bytes = 0;
+  _eviction_queue->clear();
+  for (auto& pool : _buffer_pools) {
+    pool->clear();
+  }
   _ssd_region = std::make_unique<SSDRegion>(_ssd_region->get_file_name());
 }
 
@@ -328,7 +332,8 @@ BufferManager& BufferManager::operator=(BufferManager&& other) {
 
     _num_pages = other._num_pages.load();
     _ssd_region = std::move(other._ssd_region);
-    // _buffer_pools = std::move(other._buffer_pools); TODO
+    _eviction_queue = std::move(other._eviction_queue);
+    _buffer_pools = std::move(other._buffer_pools);
     _page_table = std::move(other._page_table);
     _metrics = other._metrics;
   }

@@ -8,12 +8,16 @@
 #include <mutex>
 #include <unordered_map>
 #include "boost/noncopyable.hpp"
-#include "storage/buffer/page.hpp"
 #include "storage/buffer/types.hpp"
 
 namespace hyrise {
 
 // TODO: Use extra object called SSDHandle to avoid page lockups
+/**
+  * TODO
+ * @brief Page wraps binary data to be written or read. It's aligned to 512 bytes in order to work with the O_DIRECT flag and SSDs. 
+ * O_DIRECT is often used in databases when they implement their own caching/buffer management like in our case. The page size should also be a multiple of the OS' page size.
+ */
 class SSDRegion : private boost::noncopyable {
  public:
   enum class DeviceType { BLOCK, REGULAR_FILE };

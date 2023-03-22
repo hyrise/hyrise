@@ -13,14 +13,6 @@ namespace hyrise {
 template <typename PointedType>
 class BufferManagedPtr;
 
-// Eviction Queue
-struct EvictionItem {
-  Frame* frame;
-  uint64_t timestamp;
-};
-
-using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
-
 /**
  * @brief 
  * 
@@ -37,9 +29,6 @@ class BufferManager {
    * TODO: Make values atomic
   */
   struct Metrics {
-    // Tracks all allocation that are happening on the buffer manager through the BufferPoolAllocator
-    // std::vector<std::size_t> allocations_in_bytes{};
-
     // The maximum amount of bytes being allocated with with subsequent calls of alloc and dealloc
     std::size_t max_bytes_used;
 
@@ -67,7 +56,7 @@ class BufferManager {
     // Tracks the number of bytes read from SSD
     std::size_t total_bytes_read = 0;
 
-    // TODO: Number of pages used, fragmentation rate
+    // TODO: Number of pages used, fragmentation rate, make atomic
   };
 
   BufferManager();
@@ -106,7 +95,7 @@ class BufferManager {
    * if the page there was no page found
    * 
    * @param ptr 
-   * @return std::pair<PageID, PageOffset> 
+   * @return std::tuple<PageID, PageSizeType, std::ptrdiff_t>
    */
   std::tuple<PageID, PageSizeType, std::ptrdiff_t> unswizzle(const void* ptr);
 
@@ -145,32 +134,45 @@ class BufferManager {
 
  private:
   Frame* allocate_frame(const PageSizeType size_type);
+
   Frame* get_frame(const PageID page_id);
 
+  // Find a page in the buffer pool
   Frame* find_in_page_table(const PageID page_id);
 
+  // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
   Frame* new_page(const PageSizeType size_type);
+
+  // Remove a page from the buffer pool
   void remove_page(const PageID page_id);
 
+  // Read a page from disk into the buffer pool
   void read_page(Frame* frame);
+
+  // Write out a page to disk
   void write_page(const Frame* frame);
 
+  // Total number of pages currently in the buffer pool
   std::atomic_uint64_t _num_pages;
 
+  // The maximum number of bytes that can be allocated
   const size_t _total_bytes;
+
+  // The number of bytes that are currently used
   std::atomic_uint64_t _used_bytes;
+
+  // Page Table that contains frames (= pages) which are currently in the buffer pool
+  boost::unordered_flat_map<PageID, Frame*> _page_table;
+  std::mutex _page_table_mutex;
 
   // Memory Region for pages on SSD
   std::unique_ptr<SSDRegion> _ssd_region;
 
-  // Page Table that contains frames (= pages) which are currently in the buffer pool
-  boost::unordered_flat_map<PageID, Frame*> _page_table;
+  // Memory Regions for each page size type
+  std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _buffer_pools;
 
-  std::array<VolatileRegion, NUM_PAGE_SIZE_TYPES> _buffer_pools;
-
-  std::mutex _page_table_mutex;
-
-  EvictionQueue _eviction_queue;
+  // Eviction Queue for pages that are not pinned
+  std::unique_ptr<EvictionQueue> _eviction_queue;
 
   // Metrics of buffer manager
   Metrics _metrics{};

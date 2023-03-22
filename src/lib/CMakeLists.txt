@@ -447,7 +447,6 @@ set(
     storage/buffer/buffer_manager.hpp
     storage/buffer/buffer_pool_allocator.hpp
     storage/buffer/frame.hpp
-    storage/buffer/page.hpp
     storage/buffer/pin_guard.hpp
     storage/buffer/ssd_region.cpp
     storage/buffer/ssd_region.hpp
