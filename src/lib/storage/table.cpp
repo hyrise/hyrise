@@ -355,6 +355,10 @@ std::vector<ChunkIndexStatistics> Table::chunk_indexes_statistics() const {
   return _chunk_indexes_statistics;
 }
 
+std::vector<TableIndexStatistics> Table::table_indexes_statistics() const {
+  return _table_indexes_statistics;
+}
+
 template <typename Index>
 void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const std::string& name) {
   static_assert(std::is_base_of<AbstractChunkIndex, Index>::value,
