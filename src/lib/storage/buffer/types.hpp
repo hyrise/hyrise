@@ -77,4 +77,19 @@ struct add_reference<const void> {
   typedef const nat& type;
 };
 
+// Eviction Queue
+struct EvictionItem {
+  Frame* frame;
+  uint64_t timestamp;
+};
+
+using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
+
+enum BufferManagerMode {
+  DramDramSSD,       // Use 2 Volatile Regions and SSD
+  DramSSD,           // Use 1 Volatile Region and SSD
+  DramNumaRgionSSD,  // Use 1 Volatile Region, 1 NUMA Region and SSD
+  NumaRegionSSD      // Use 1 NUMA Region and SSD
+};
+
 }  // namespace hyrise
