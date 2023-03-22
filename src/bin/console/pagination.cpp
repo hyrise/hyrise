@@ -168,6 +168,7 @@ void Pagination::_print_page(size_t first_line, size_t first_column) {
     }
 
     if (_lines[i].length() > first_column) {
+      // NOLINTBEGIN(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
       printw("%s\n", _lines[i].substr(first_column, _size_x - 1).c_str());
     } else {
       printw("\n");
@@ -180,7 +181,7 @@ void Pagination::_print_page(size_t first_line, size_t first_column) {
 }
 
 void Pagination::_print_help_screen() {
-  auto help_screen = newwin(0, 0, 0, 0);
+  auto* help_screen = newwin(0, 0, 0, 0);
 
   wclear(help_screen);
 
@@ -197,6 +198,7 @@ void Pagination::_print_help_screen() {
   wprintw(help_screen, "  %-17s- Go to first column.\n", "a");
   wprintw(help_screen, "  %-17s- Go to last column.\n\n", "e");
   wprintw(help_screen, "  %-17s- Quit.\n", "q");
+  // NOLINTEND(cppcoreguidelines-pro-type-vararg,hicpp-vararg)
 
   wrefresh(help_screen);
 

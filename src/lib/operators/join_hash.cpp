@@ -48,14 +48,14 @@ const std::string& JoinHash::name() const {
 std::shared_ptr<AbstractOperator> JoinHash::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinHash>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                     _secondary_predicates, _radix_bits);
 }
 
 void JoinHash::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
 
-size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode) {
+size_t JoinHash::calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size) {
   /*
     The number of radix bits is used to determine the number of build partitions. The idea is to size the partitions in
     a way that keeps the whole hash map cache resident. We aim for the largest unshared cache (for most Intel systems
@@ -185,7 +185,7 @@ std::shared_ptr<const Table> JoinHash::_on_execute() {
 
       if constexpr (BOTH_ARE_STRING || NEITHER_IS_STRING) {
         if (!_radix_bits) {
-          _radix_bits = calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count(), _mode);
+          _radix_bits = calculate_radix_bits(build_input_table->row_count(), probe_input_table->row_count());
         }
 
         // It needs to be ensured that the build partitions do not get too large, because the used offsets in the
