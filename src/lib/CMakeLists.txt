@@ -448,6 +448,8 @@ set(
     storage/buffer/buffer_pool_allocator.hpp
     storage/buffer/frame.hpp
     storage/buffer/pin_guard.hpp
+    storage/buffer/migration_policy.cpp
+    storage/buffer/migration_policy.hpp
     storage/buffer/ssd_region.cpp
     storage/buffer/ssd_region.hpp
     storage/buffer/types.hpp
