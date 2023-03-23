@@ -337,7 +337,7 @@ void AbstractTableGenerator::_create_chunk_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   Timer timer;
   std::cout << "- Creating chunk indexes" << std::endl;
-  const auto& indexes_by_table = _indexes_by_table();
+  const auto& indexes_by_table = _indexes_by_table(table_info_by_name);
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
     return;
@@ -373,7 +373,7 @@ void AbstractTableGenerator::_create_table_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   Timer timer;
   std::cout << "- Creating table indexes" << std::endl;
-  const auto& indexes_by_table = _indexes_by_table();
+  const auto& indexes_by_table = _indexes_by_table(table_info_by_name);
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
     return;
@@ -401,9 +401,23 @@ void AbstractTableGenerator::_create_table_indexes(
   std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
 }
 
-AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {
-  // Indexes can be specified in a derived concrete class by overriding this function.
-  return {};
+AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+  auto indexes_by_table = std::map<std::string, std::vector<std::vector<std::string>>>{};
+
+  for (const auto& table_info_by_name_pair : table_info_by_name) {
+    const auto& table_name = table_info_by_name_pair.first;
+    const auto& table_info = table_info_by_name_pair.second;
+    const auto table = table_info.table;
+    const auto& column_names = table->column_names();
+
+    auto column_vectors = std::vector<std::vector<std::string>>{};
+    for (const auto& column_name : column_names) {
+      column_vectors.emplace_back(std::vector<std::string>{column_name});
+    }
+    indexes_by_table[table_name] = column_vectors;
+  }
+
+  return indexes_by_table;
 }
 
 AbstractTableGenerator::SortOrderByTable AbstractTableGenerator::_sort_order_by_table() const {

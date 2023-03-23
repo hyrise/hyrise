@@ -22,7 +22,9 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operat
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       _left_column_id{left_column_id},
       _predicate_condition{predicate_condition},
-      _right_value{right_value} {}
+      _right_value{right_value} {
+        std::cout << "########## IndexScan used ##########" << std::endl;
+      }
 
 const std::string& IndexScan::name() const {
   static const auto name = std::string{"IndexScan"};
