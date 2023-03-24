@@ -1,36 +1,64 @@
 #pragma once
 
+#include <type_traits>
 #include "storage/buffer/buffer_managed_ptr.hpp"
+#include "storage/buffer/buffer_pool_allocator.hpp"
 #include "types.hpp"
 
 namespace hyrise {
+
 /**
- * A Pin Guard ensure that that a pointer/page is unpinned when it goes out of scope. This garantuees exceptions safetiness. It works like std::lock_guard.
+ * A Pin Guard ensure that that a pointer/page is unpinned when it goes out of scope. This garantuees exceptions safetiness usinf the RAII pattern.
 */
-template <class T>
-class PinGuard : public Noncopyable {
+
+template <class PinnableType>
+class PinGuard {  // TODO: Non copy
  public:
-  explicit PinGuard(BufferManagedPtr<T> ptr, const bool dirty) : _dirty(dirty), _ptr(ptr) {
+  explicit PinGuard(PinnableType& object, const bool dirty)
+      : _object(object), _dirty(dirty), _ptr(_object.begin().get_ptr()) {
     _ptr.pin();
   }
+
+  void repin(const bool dirty) {
+    _ptr.unpin(_dirty);
+    _dirty = dirty;
+    _ptr = _object.begin().get_ptr();
+  }
+
+  void track_page(const PageID page_id){
+
+  };
 
   ~PinGuard() {
     _ptr.unpin(_dirty);  // TODO: This could actually happen without page table lookup.
   }
 
-  static PinGuard create(const pmr_vector<T>& vector, const bool dirty) {
-    return PinGuard(vector.begin().get_ptr(), dirty);  // TODO: Benchmark this access pattern
+ private:
+  PinnableType& _object;
+  BufferManagedPtr<typename PinnableType::value_type> _ptr;
+  bool _dirty;
+};
+
+template <typename T>
+class AllocatorPinGuard {
+ public:
+  AllocatorPinGuard(BufferPoolAllocator<T>& allocator) : _pins(std::make_shared<std::vector<PageID>>()) {
+    // _buffer_manager = allocator.register_pin_guard(_pins);
   }
 
-  static PinGuard create(const std::shared_ptr<T>& ptr, const bool dirty) {
-    return PinGuard(ptr.get(), dirty);  // TODO: Benchmark this access pattern,
+  // AllocatorPinGuard(BufferPoolAllocator<T> allocator) : _pins(std::make_shared<BufferManagerPins>()) {
+  //   _buffer_manager = allocator->register_pin_guard(_pins);
+  // }
+
+  ~AllocatorPinGuard() {
+    // for (const auto page_id : *_pins) {
+    //   _buffer_manager->unpin_page(page_id);
+    // }
   }
 
  private:
-  BufferManagedPtr<T> _ptr;  // TODO: Could this be a reference?
-  const bool _dirty;
+  BufferManager* _buffer_manager;
+  std::shared_ptr<std::vector<PageID>> _pins;
 };
-
-// TODO: Add pinguard with reference to vector instead of shared ptr. Or from other pointer.
 
 }  // namespace hyrise

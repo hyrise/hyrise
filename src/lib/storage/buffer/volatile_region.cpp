@@ -9,7 +9,6 @@
 #include <numa.h>
 #endif
 
-// TODO: Assert page sizes with getpagesize()
 namespace hyrise {
 
 VolatileRegion::VolatileRegion(const PageSizeType size_type, const size_t total_bytes, const size_t memory_numa_node)
@@ -50,14 +49,13 @@ void VolatileRegion::unmap_memory() {
 }
 
 void VolatileRegion::map_memory() {
-  Assert(_total_bytes != 0, "Volatile Region needs at least the size of the largest page size type");
+  Assert(_total_bytes != 0, "Volatile Region cannot be empty");
 #ifdef __APPLE__
   const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
 #elif __linux__
   const int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
 #endif
   _mapped_memory = static_cast<std::byte*>(mmap(NULL, _total_bytes, PROT_READ | PROT_WRITE, flags, -1, 0));
-
 #ifdef __linux__
   madvise(_mapped_memory, _total_bytes, MADV_DONTFORK);
 #endif
@@ -71,7 +69,12 @@ void VolatileRegion::map_memory() {
 void VolatileRegion::assign_memory_to_frames() {
   for (auto frame_id = size_t{0}; frame_id < _frames.size(); frame_id++) {
     _frames[frame_id].size_type = _size_type;
+    _frames[frame_id].page_type = PageType::Dram;
     _frames[frame_id].data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
+    if (_memory_numa_node != NO_NUMA_MEMORY_NODE) {
+      // TODO: We might only need to do this once, but it is not worth the effort to find out right now
+      to_numa(_mapped_memory);
+    }
   }
 }
 
@@ -90,8 +93,10 @@ void VolatileRegion::free(Frame* frame) {
 
 void VolatileRegion::to_numa(std::byte* address) {
 #if HYRISE_NUMA_SUPPORT
-  Assert(_numa_node != -1, "Numa node has not been set.");
-  numa_tonode_memory(address, bytes_for_size_type(_size_type), _numa_node);
+  Assert(_numa_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
+  numa_tonode_memory(address, _total_bytes, _numa_node);
+#else
+  Fail("Current build does not support NUMA.");
 #endif
 }
 
@@ -112,7 +117,6 @@ void VolatileRegion::deallocate(Frame* frame) {
 }
 
 Frame* VolatileRegion::unswizzle(const void* ptr) {
-  // TODO: Try to make this branchless
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return nullptr;
   }

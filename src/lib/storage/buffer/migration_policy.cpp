@@ -11,22 +11,22 @@ MigrationPolicy::MigrationPolicy(double dram_read_ratio, double dram_write_ratio
       _numa_write_ratio(numa_write_ratio) {}
 
 bool MigrationPolicy::bypass_dram_during_read() {
-  auto rand = random();
+  const auto rand = random();
   return rand > 0 ? rand > _dram_read_ratio : true;
 }
 
 bool MigrationPolicy::bypass_dram_during_write() {
-  auto rand = random();
+  const auto rand = random();
   return rand > 0 ? rand > _dram_write_ratio : true;
 }
 
-bool MigrationPolicy::bypass_numa_during_write() {
-  auto rand = random();
+bool MigrationPolicy::bypass_numa_during_read() {
+  const auto rand = random();
   return rand > 0 ? rand > _numa_read_ratio : true;
 }
 
 bool MigrationPolicy::bypass_numa_during_write() {
-  auto rand = random();
+  const auto rand = random();
   return rand > 0 ? rand > _numa_write_ratio : true;
 }
 

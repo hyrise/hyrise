@@ -13,7 +13,7 @@ namespace hyrise {
 /**
  * @brief Main-Memory pool consisting of chunks (= pages) of memory. A frame acts as a slot 
  * for pages. In order to allocate multiple, contiguous pages. The memory region keeps a sorted list
- * of free frames that can be popped.
+ * of free frames that can be popped. The idea of reducing external fragmentation using MADVISE is taken from Umbra.
  */
 
 class VolatileRegion : private boost::noncopyable {
@@ -28,8 +28,10 @@ class VolatileRegion : private boost::noncopyable {
   void deallocate(Frame* frame);
   void free(Frame* frame);
 
+  // Total number of bytes in the region
   size_t capacity() const;
 
+  // Unmap and remap memory region and reassign memory to frames
   void clear();
 
  private:
@@ -50,7 +52,6 @@ class VolatileRegion : private boost::noncopyable {
 
   std::vector<Frame> _frames;
 
-  // TODO: replace Mutex with lockfree
   std::mutex _mutex;
 };
 

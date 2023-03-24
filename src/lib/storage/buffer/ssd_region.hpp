@@ -28,7 +28,7 @@ class SSDRegion : private boost::noncopyable {
   void write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source);
   void read_page(const PageID page_id, const PageSizeType size_type, std::byte* destination);
 
-  void register_page(const PageID page_id, const PageSizeType size_type);
+  void allocate(const PageID page_id, const PageSizeType size_type);
   std::optional<PageSizeType> get_size_type(const PageID page_id);
 
   DeviceType get_device_type() const;

@@ -54,15 +54,14 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
 #ifdef __APPLE__
   int res = fcntl(fd, F_NOCACHE, 1);
   if (res == -1) {
+    const auto error = errno;
     close(fd);
-    Fail("Error while setting F_NOCACHE on __APPLE__: " + strerror(errno));
+    Fail("Error while setting F_NOCACHE on __APPLE__: " + strerror(error));
   }
 #endif
 
   return fd;
 }
-
-// TODO: Write test for reinterpret, maybe use custom operaor
 
 void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source) {
   const auto num_bytes = bytes_for_size_type(size_type);
@@ -84,7 +83,6 @@ void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, c
               "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  // TODO: DebugAssert(static_cast<const std::uintptr_t>(source) % 512 == 0, "Source is not properly aligned to 512");
   const auto result = pwrite(_fd, source, num_bytes, page_pos);
   if (result < 0) {
     const auto error = errno;
@@ -92,7 +90,7 @@ void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, c
   }
 }
 
-void SSDRegion::register_page(const PageID page_id, const PageSizeType size_type) {
+void SSDRegion::allocate(const PageID page_id, const PageSizeType size_type) {
   std::lock_guard<std::mutex> lock(_page_directory_mutex);
 
   if (page_id >= _page_directory.size()) {
@@ -119,7 +117,8 @@ void SSDRegion::read_page(const PageID page_id, const PageSizeType size_type, st
     std::lock_guard<std::mutex> lock(_page_directory_mutex);
 
     if (page_id >= _page_directory.size()) {
-      Fail("PageId cannot be found in page directory");
+      return;  // TODO
+      // Fail("PageId cannot be found in page directory");
     }
 
     num_bytes = bytes_for_size_type(size_type);

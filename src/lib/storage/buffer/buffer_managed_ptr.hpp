@@ -17,7 +17,19 @@ struct UnswizzledAddress {
   size_t size_type : BITS_PAGE_SIZE_TYPES;                                              // 3 bits for size type
   size_t page_id : sizeof(size_t) * CHAR_BIT - BITS_PAGE_SIZE_TYPES - MAX_PAGE_OFFSET;  // 44 bits for the page_id
   size_t offset : MAX_PAGE_OFFSET;  // 17 bits for the maximum offset
+
+  PageID get_page_id() const {
+    return PageID{page_id};
+  }
+
+  PageSizeType get_size_type() const {
+    return static_cast<PageSizeType>(size_type);
+  }
 };
+
+inline bool operator==(const UnswizzledAddress& lhs, const UnswizzledAddress& rhs) {
+  return lhs.page_id == rhs.page_id && lhs.offset == rhs.offset && lhs.size_type == rhs.size_type;
+}
 
 // The unswizzled address should have only 64 bits
 static_assert(sizeof(UnswizzledAddress) == 8);
@@ -54,23 +66,30 @@ class BufferManagedPtr {
   // https://github.com/darwin/boost/blob/master/boost/interprocess/offset_ptr.hpp
   // https://www.youtube.com/watch?v=_nIET46ul6E
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
-  BufferManagedPtr(pointer ptr = 0) {
+  BufferManagedPtr(pointer ptr = 0) : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
     unswizzle(ptr);
   }
 
-  // ~BufferManagedPtr() {}
-
-  BufferManagedPtr(const BufferManagedPtr& ptr) : _addressing(ptr._addressing) {}
+  BufferManagedPtr(const BufferManagedPtr& other)
+      : _addressing(other._addressing), _buffer_manager(other._buffer_manager) {}
 
   template <typename U>
-  BufferManagedPtr(const BufferManagedPtr<U>& other) : _addressing(other._addressing) {}
+  BufferManagedPtr(const BufferManagedPtr<U>& other)
+      : _addressing(other._addressing), _buffer_manager(other._buffer_manager) {}
 
   template <typename T>
-  BufferManagedPtr(T* ptr) {
+  BufferManagedPtr(T* ptr) : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
     unswizzle(ptr);
   }
 
-  explicit BufferManagedPtr(const PageID page_id, const difference_type offset, const PageSizeType size_type) {
+  explicit BufferManagedPtr(const PageID page_id, const difference_type offset, const PageSizeType size_type)
+      : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
+    _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
+  }
+
+  explicit BufferManagedPtr(BufferManager* buffer_manager, const PageID page_id, const difference_type offset,
+                            const PageSizeType size_type)
+      : _buffer_manager(buffer_manager) {
     _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
   }
 
@@ -160,7 +179,7 @@ class BufferManagedPtr {
   }
 
   friend bool operator==(const BufferManagedPtr& ptr1, const BufferManagedPtr& ptr2) noexcept {
-    return ptr1.get() == ptr2.get();
+    return ptr1._addressing == ptr2._addressing;
   }
 
   friend bool operator==(pointer ptr1, const BufferManagedPtr& ptr2) noexcept {
@@ -207,10 +226,9 @@ class BufferManagedPtr {
     if (const auto outside_addressing = std::get_if<OutsideAddress>(&_addressing)) {
       return (void*)*outside_addressing;
     } else if (const auto page_id_offset = std::get_if<UnswizzledAddress>(&_addressing)) {
-      const auto page_id = PageID{page_id_offset->page_id};
       // TODO: If pinned, this is not needed
       // TODO: What happens if page is deleted? Pointer should become null
-      const auto page = BufferManager::get_global_buffer_manager().get_page(page_id);
+      const auto page = _buffer_manager->get_page(page_id_offset->get_page_id(), page_id_offset->get_size_type());
       return page + page_id_offset->offset;
     } else if (std::holds_alternative<EmptyAddress>(_addressing)) {
       return nullptr;
@@ -222,15 +240,13 @@ class BufferManagedPtr {
   // TODO: Return a guard to ensure unpinning. check pointer type
   void pin() const {
     if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
-      const auto page_id = PageID{unswizzled->page_id};
-      BufferManager::get_global_buffer_manager().pin_page(page_id);
+      _buffer_manager->pin_page(unswizzled->get_page_id(), unswizzled->get_size_type());
     }
   }
 
   void unpin(bool dirty) const {
     if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
-      const auto page_id = PageID{unswizzled->page_id};
-      BufferManager::get_global_buffer_manager().unpin_page(page_id, dirty);
+      _buffer_manager->unpin_page(unswizzled->get_page_id(), unswizzled->get_size_type(), dirty);
     }
   }
 
@@ -248,6 +264,13 @@ class BufferManagedPtr {
 
  private:
   Addressing _addressing;
+  BufferManager* _buffer_manager;
+
+  template <class T1, class T2>
+  friend bool operator!=(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2);
+
+  template <class T1, class T2>
+  friend bool operator==(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2);
 
   template <typename T>
   void unswizzle(T* ptr) {
@@ -269,12 +292,12 @@ class BufferManagedPtr {
 
 template <class T1, class T2>
 inline bool operator==(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2) {
-  return ptr1.get() == ptr2.get();
+  return ptr1._addressing == ptr2._addressing;
 }
 
 template <class T1, class T2>
 inline bool operator!=(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2) {
-  return ptr1.get() != ptr2.get();
+  return ptr1._addressing != ptr2._addressing;
 }
 
 template <class T>
@@ -302,7 +325,6 @@ inline void swap(BufferManagedPtr<T>& ptr1, BufferManagedPtr<T>& ptr2) {
 }  // namespace hyrise
 
 namespace std {
-
 template <class T>
 struct hash<hyrise::BufferManagedPtr<T>> {
   size_t operator()(const hyrise::BufferManagedPtr<T>& ptr) const noexcept {
