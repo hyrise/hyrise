@@ -24,15 +24,15 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
       const auto values = _segment.values();
       const auto null_values = _segment.null_values();
 
-      const auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
-      const auto null_pin_guard = PinGuard<typename decltype(null_values)::value_type>::create(null_values, false);
+      const auto values_pin_guard = PinGuard{values, false};
+      const auto null_pin_guard = PinGuard{null_values, false};
 
       auto begin = Iterator{values.cbegin(), values.cbegin(), null_values.cbegin()};
       auto end = Iterator{values.cbegin(), values.cend(), null_values.cend()};
       functor(begin, end);
     } else {
       const auto values = _segment.values();
-      const auto values_pin_guard = PinGuard<typename decltype(values)::value_type>::create(values, false);
+      const auto values_pin_guard = PinGuard{values, false};
 
       auto begin = NonNullIterator{values.cbegin(), values.cbegin()};
       auto end = NonNullIterator{values.cbegin(), values.cend()};
