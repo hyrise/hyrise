@@ -18,7 +18,7 @@ namespace hyrise {
 
 class VolatileRegion : private boost::noncopyable {
  public:
-  VolatileRegion(const PageSizeType size_type, const size_t num_bytes,
+  VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t num_bytes,
                  const size_t memory_numa_node = NO_NUMA_MEMORY_NODE);
   ~VolatileRegion();
 
@@ -42,6 +42,7 @@ class VolatileRegion : private boost::noncopyable {
 
   void to_numa(std::byte* address);
 
+  const PageType _page_type;
   const size_t _memory_numa_node;
   const size_t _total_bytes;
   const PageSizeType _size_type;
@@ -54,5 +55,8 @@ class VolatileRegion : private boost::noncopyable {
 
   std::mutex _mutex;
 };
+
+std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions_for_size_types(
+    const PageType page_type, const size_t num_bytes);
 
 }  // namespace hyrise

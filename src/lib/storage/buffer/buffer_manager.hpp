@@ -3,6 +3,7 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <memory>
 #include <tuple>
+#include "noncopyayble.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/migration_policy.hpp"
 #include "storage/buffer/ssd_region.hpp"
@@ -16,14 +17,9 @@ template <typename PointedType>
 class BufferManagedPtr;
 
 /**
- * @brief 
- * 
- * HYRISE_BUFFER_BLOCK_PATH="/dev/nvme3n1"
- * HYRISE_BUFFER_SCRATCH_PATH="/scratch/niklas.riekenbrauck"
- * HYRISE_BUFFER_MANAGER_PATH=$HYRISE_BUFFER_BLOCK_PATH
- * 
- */
-class BufferManager {
+ * TODO
+*/
+class BufferManager : public Noncopyable {
  public:
   /**
    * Metrics are storing metric data that happens during allocation and access of the buffer manager.
@@ -54,18 +50,21 @@ class BufferManager {
     // Tracks the number of hits in the page_table
     std::size_t page_table_misses = 0;
 
-    // Tracks the number of bytes written to SSD
-    std::size_t total_bytes_written = 0;
-
     // Tracks the number of bytes read from SSD
-    std::size_t total_bytes_read = 0;
+    std::size_t total_bytes_read_from_ssd = 0;
+
+    // Tracks the number of bytes written to SSD
+    std::size_t total_bytes_written_to_ssd = 0;
+
+    std::size_t num_ssd_reads = 0;
+
+    std::size_t num_ssd_writes = 0;
 
     std::size_t num_dram_eviction_queue_purges = 0;
-
     std::size_t num_dram_eviction_queue_item_purges = 0;
-
     std::size_t num_dram_eviction_queue_adds = 0;
 
+    // Use different metrics for DRAM and NUMA
     // TODO: Number of pages used, fragmentation rate, make atomic, Duplication Rate from Spitfire, Numa
   };
 
@@ -79,7 +78,7 @@ class BufferManager {
 
     std::filesystem::path ssd_path = "~/.hyrise";
 
-    bool enable_eviction_worker = true;
+    bool enable_eviction_worker = false;
 
     BufferManagerMode mode = BufferManagerMode::DramSSD;
 
@@ -89,6 +88,8 @@ class BufferManager {
   BufferManager();
 
   BufferManager(const Config config);
+
+  ~BufferManager();
 
   /**
    * @brief Get the page object
@@ -140,8 +141,7 @@ class BufferManager {
   static BufferManager& get_global_buffer_manager();
 
   /**
-   * @brief Returns a metrics struture holding information about allocations, page table hits etc. of the current buffer manager instance. Can be reset by
-   * assigning a new instance
+   * @brief Returns a snapshot of metrics holding information about allocations, page table hits etc. of the current buffer manager instance.
   */
   Metrics metrics();
 
@@ -152,12 +152,10 @@ class BufferManager {
   */
   void clear();
 
-  uint32_t get_pin_count(const PageID page_id);
-  bool is_dirty(const PageID page_id);
-  std::shared_ptr<SSDRegion> get_ssd_region();
-
  protected:
   friend class Hyrise;
+  friend class BufferManagedPtrTest;
+  friend class BufferManagerTest;
 
  private:
   /**
@@ -178,8 +176,10 @@ class BufferManager {
     // Write out a page to disk
     void write_page(const Frame* frame);
 
+    void clear();
+
     BufferPools(const PageType page_type, const size_t pool_size, const bool enable_eviction_worker,
-                const std::shared_ptr<SSDRegion> ssd_region);
+                const std::shared_ptr<SSDRegion> ssd_region, const std::shared_ptr<BufferManager::Metrics> metrics);
 
     BufferPools& operator=(BufferPools&& other);
 
@@ -199,8 +199,13 @@ class BufferManager {
 
     std::unique_ptr<PausableLoopThread> _eviction_worker;
 
+    std::shared_ptr<BufferManager::Metrics> _metrics;
+
     const PageType _page_type;
   };
+
+  uint32_t get_pin_count(const PageID page_id);
+  bool is_dirty(const PageID page_id);
 
   Frame* get_frame(const PageID page_id, const PageSizeType size_type);
 
@@ -217,9 +222,9 @@ class BufferManager {
   std::atomic_uint64_t _num_pages;
 
   // Metrics of buffer manager
-  Metrics _metrics{};
+  std::shared_ptr<Metrics> _metrics{};
 
-  // Migration Policy to decide when to migrate pages to DRAM or NUMA
+  // Migration Policy to decide when to migrate pages to DRAM or NUMA buffer pools
   MigrationPolicy _migration_policy;
 
   // Memory Region for pages on SSD
@@ -227,6 +232,9 @@ class BufferManager {
 
   // Memory Region for pages in DRAM using multiple volatile region for each page size type
   BufferPools _dram_buffer_pools;
+
+  // Memory Region for pages on a NUMA nodes (preferrably memory only) using multiple volatile region for each page size type
+  // TODO BufferPools _numa_buffer_pools;
 
   // Page Table that contains shared frames which are currently in the buffer pool
   boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>> _page_table;

@@ -11,11 +11,17 @@
 
 namespace hyrise {
 
-VolatileRegion::VolatileRegion(const PageSizeType size_type, const size_t total_bytes, const size_t memory_numa_node)
+VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t total_bytes,
+                               const size_t memory_numa_node)
     : _frames(total_bytes / bytes_for_size_type(size_type)),
       _size_type(size_type),
+      _page_type(page_type),
       _memory_numa_node(memory_numa_node),
       _total_bytes(total_bytes / bytes_for_size_type(size_type) * bytes_for_size_type(size_type)) {
+  if (page_type == PageType::Numa && memory_numa_node == NO_NUMA_MEMORY_NODE) {
+    Fail("Cannot allocate NUMA memory without specifying a NUMA node");
+  }
+
   map_memory();
   assign_memory_to_frames();
   create_free_list();
@@ -71,7 +77,7 @@ void VolatileRegion::assign_memory_to_frames() {
     _frames[frame_id].size_type = _size_type;
     _frames[frame_id].page_type = PageType::Dram;
     _frames[frame_id].data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
-    if (_memory_numa_node != NO_NUMA_MEMORY_NODE) {
+    if (_page_type == PageType::Numa) {
       // TODO: We might only need to do this once, but it is not worth the effort to find out right now
       to_numa(_mapped_memory);
     }
@@ -80,6 +86,7 @@ void VolatileRegion::assign_memory_to_frames() {
 
 void VolatileRegion::free(Frame* frame) {
   deallocate(frame);
+  // https://bugs.chromium.org/p/chromium/issues/detail?id=823915
 #ifdef __APPLE__
   const int flags = MADV_FREE_REUSABLE;
 #elif __linux__
@@ -87,7 +94,7 @@ void VolatileRegion::free(Frame* frame) {
 #endif
   if (madvise(frame->data, bytes_for_size_type(_size_type), flags) < 0) {
     const auto error = errno;
-    Fail("Failed to unmap region: " + strerror(errno));
+    Fail("Failed to madvice region: " + strerror(errno));
   }
 }
 
@@ -128,6 +135,15 @@ Frame* VolatileRegion::unswizzle(const void* ptr) {
 
 size_t VolatileRegion::capacity() const {
   return _total_bytes;
+}
+
+std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> create_volatile_regions_for_size_types(
+    const PageType page_type, const size_t num_bytes) {
+  auto array = std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES>{};
+  for (auto i = size_t{0}; i < NUM_PAGE_SIZE_TYPES; i++) {
+    array[i] = std::make_unique<VolatileRegion>(magic_enum::enum_value<PageSizeType>(i), page_type, num_bytes);
+  }
+  return array;
 }
 
 }  // namespace hyrise

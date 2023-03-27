@@ -55,7 +55,6 @@ class BufferManagedPtr {
   template <typename U>
   friend class BufferManagedPtr;
 
-  // TODO: This does not compile when unordered map/set iteratorsare used
   // using iterator_category = std::contiguous_iterator_tag;
   // it seems like boost iterator_enable_if_tag does not it up
   // using iterator_concept = std::random_access_iterator_tag;  // TODO: contiguous_iterator_tag
@@ -251,15 +250,24 @@ class BufferManagedPtr {
   }
 
   PageID get_page_id() const {
-    return PageID{std::get<UnswizzledAddress>(_addressing).page_id};
+    if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
+      return PageID{unswizzled->page_id};
+    }
+    return INVALID_PAGE_ID;
   }
 
   difference_type get_offset() const {
-    return std::get<UnswizzledAddress>(_addressing).offset;
+    if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
+      return unswizzled->offset;
+    }
+    Fail("Cannot get offset from non-swizzled pointer");
   }
 
   PageSizeType get_size_type() const {
-    return static_cast<PageSizeType>(std::get<UnswizzledAddress>(_addressing).size_type);
+    if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
+      return static_cast<PageSizeType>(unswizzled->size_type);
+    }
+    Fail("Cannot get offset from non-swizzled pointer");
   }
 
  private:

@@ -14,17 +14,6 @@ namespace hyrise {
 //----------------------------------------------------
 // Helper Functions
 
-std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> make_dram_buffer_pools(const size_t num_bytes) {
-  return {
-      std::make_unique<VolatileRegion>(PageSizeType::KiB8, num_bytes),
-      std::make_unique<VolatileRegion>(PageSizeType::KiB16, num_bytes),
-      std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_bytes),
-      std::make_unique<VolatileRegion>(PageSizeType::KiB64, num_bytes),
-      std::make_unique<VolatileRegion>(PageSizeType::KiB128, num_bytes),
-      std::make_unique<VolatileRegion>(PageSizeType::KiB256, num_bytes),
-  };
-}
-
 BufferManager::Config BufferManager::Config::from_env() {
   auto config = BufferManager::Config{};
   config.dram_buffer_pool_size = get_dram_capacity_from_env();
@@ -39,13 +28,15 @@ BufferManager::Config BufferManager::Config::from_env() {
 //----------------------------------------------------
 
 BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t pool_size,
-                                        const bool enable_eviction_worker, const std::shared_ptr<SSDRegion> ssd_region)
+                                        const bool enable_eviction_worker, const std::shared_ptr<SSDRegion> ssd_region,
+                                        const std::shared_ptr<BufferManager::Metrics> metrics)
     : _used_bytes(0),
       _total_bytes(pool_size),
       _page_type(page_type),
       _ssd_region(std::move(ssd_region)),
+      _metrics(metrics),
       _eviction_queue(std::make_shared<EvictionQueue>()),
-      _buffer_pools(make_dram_buffer_pools(pool_size)) {
+      _buffer_pools(create_volatile_regions_for_size_types(PageType::Dram, pool_size)) {
   Assert(_page_type != PageType::Invalid, "Invalid page type");
   if (enable_eviction_worker) {
     _eviction_worker =
@@ -145,14 +136,14 @@ void BufferManager::BufferPools::purge_eviction_queue() {
 
     // Remove old items with an outdated timestamp
     if (item.timestamp < item.frame->eviction_timestamp.load()) {
-      // TODO: _metrics.num_eviction_queue_item_purges++;
+      _metrics->num_dram_eviction_queue_item_purges++;
       continue;
     }
 
     // Requeue the item
     eviction_queue->push(item);
   }
-  // TODO: _metrics.num_eviction_queue_purges++;
+  _metrics->num_dram_eviction_queue_purges++;
 }
 
 void BufferManager::BufferPools::add_to_eviction_queue(Frame* frame) {
@@ -163,21 +154,32 @@ void BufferManager::BufferPools::add_to_eviction_queue(Frame* frame) {
   const auto timestamp_before_eviction = frame->eviction_timestamp++;
   _eviction_queue->push({frame, timestamp_before_eviction + 1});
 
-  // TODO: _metrics.num_eviction_queue_adds++;
+  _metrics->num_dram_eviction_queue_adds++;
 }
 
 void BufferManager::BufferPools::read_page(Frame* frame) {
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
 
   _ssd_region->read_page(frame->page_id, frame->size_type, frame->data);
-  // TODO: _metrics.total_bytes_read += bytes_for_size_type(frame->size_type);
+  _metrics->num_ssd_reads++;
+  _metrics->total_bytes_read_from_ssd += bytes_for_size_type(frame->size_type);
 }
 
 void BufferManager::BufferPools::write_page(const Frame* frame) {
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
 
   _ssd_region->write_page(frame->page_id, frame->size_type, frame->data);
-  // TODO:_metrics.total_bytes_written += bytes_for_size_type(frame->size_type);
+  _metrics->num_ssd_writes++;
+  _metrics->total_bytes_written_to_ssd += bytes_for_size_type(frame->size_type);
+}
+
+// Write clear method for BufferPools
+void BufferManager::BufferPools::clear() {
+  _used_bytes = 0;
+  _eviction_queue->clear();
+  for (auto& pool : _buffer_pools) {
+    pool->clear();
+  }
 }
 
 //----------------------------------------------------
@@ -188,8 +190,19 @@ BufferManager::BufferManager(const Config config)
     : _num_pages(0),
       _migration_policy(config.migration_policy),
       _ssd_region(std::make_shared<SSDRegion>(config.ssd_path)),
-      _dram_buffer_pools(PageType::Dram, config.dram_buffer_pool_size, config.enable_eviction_worker, _ssd_region) {
+      _metrics(std::make_shared<Metrics>()),
+      _dram_buffer_pools(PageType::Dram, config.dram_buffer_pool_size, config.enable_eviction_worker, _ssd_region,
+                         _metrics) {
   Assert(config.mode == BufferManagerMode::DramSSD, "Only DRAM/SSD mode is supported at the moment");
+  if constexpr (HYRISE_DEBUG) {
+    std::cout << "Init Buffer Manager (" << this << ") - " << std::endl;
+  }
+}
+
+BufferManager::~BufferManager() {
+  if constexpr (HYRISE_DEBUG) {
+    std::cout << "Destroy Buffer Manager (" << this << ")" << std::endl;
+  }
 }
 
 BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
@@ -228,11 +241,11 @@ std::shared_ptr<SharedFrame> BufferManager::find_in_page_table(const PageID page
 
   const auto frame_in_page_table_it = _page_table.find(page_id);
   if (frame_in_page_table_it != _page_table.end()) {
-    _metrics.page_table_hits++;
+    _metrics->page_table_hits++;
     auto [_, frame] = *frame_in_page_table_it;
     return frame;
   }
-  _metrics.page_table_misses++;
+  _metrics->page_table_misses++;
   return nullptr;
 }
 
@@ -338,11 +351,11 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
   const auto page_size_type = find_fitting_page_size_type(bytes);
 
   // Update metrics
-  _metrics.current_bytes_used += bytes;
-  _metrics.total_unused_bytes += bytes_for_size_type(page_size_type) - bytes;
-  _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
-  _metrics.total_allocated_bytes += bytes;
-  _metrics.num_allocs++;
+  _metrics->current_bytes_used += bytes;
+  _metrics->total_unused_bytes += bytes_for_size_type(page_size_type) - bytes;
+  _metrics->max_bytes_used = std::max(_metrics->max_bytes_used, _metrics->current_bytes_used);
+  _metrics->total_allocated_bytes += bytes;
+  _metrics->num_allocs++;
 
   // TODO: Do Alignment with aligner, https://www.boost.org/doc/libs/1_62_0/doc/html/align.html
   const auto frame = new_page(page_size_type);
@@ -353,9 +366,10 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
 void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align) {
   remove_page(ptr.get_page_id());
 
-  _metrics.current_bytes_used -= bytes;
-  _metrics.max_bytes_used = std::max(_metrics.max_bytes_used, _metrics.current_bytes_used);
-  _metrics.num_deallocs++;
+  _metrics->current_bytes_used -= bytes;
+  // TODO: May be missing some metrics
+  _metrics->max_bytes_used = std::max(_metrics->max_bytes_used, _metrics->current_bytes_used);
+  _metrics->num_deallocs++;
 }
 
 BufferManager& BufferManager::get_global_buffer_manager() {
@@ -363,21 +377,13 @@ BufferManager& BufferManager::get_global_buffer_manager() {
 }
 
 BufferManager::Metrics BufferManager::metrics() {
-  return _metrics;
-}
-
-std::shared_ptr<SSDRegion> BufferManager::get_ssd_region() {
-  return _ssd_region;
+  return *_metrics;
 }
 
 void BufferManager::clear() {
   _num_pages = 0;
   _page_table = {};
-  // _used_bytes = 0; TODO
-  // _eviction_queue->clear();
-  // for (auto& pool : _dram_buffer_pools) {
-  //   pool->clear();
-  // }
+  _dram_buffer_pools.clear();
   _ssd_region = std::make_shared<SSDRegion>(_ssd_region->get_file_name());
 }
 

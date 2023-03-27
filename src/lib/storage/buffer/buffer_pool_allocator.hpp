@@ -51,7 +51,6 @@ class BufferPoolAllocator {
 
   [[nodiscard]] pointer allocate(std::size_t n) {
     auto ptr = static_cast<pointer>(_buffer_manager->allocate(sizeof(value_type) * n, alignof(T)));
-    pin(ptr);
     return ptr;
   }
 
@@ -82,23 +81,7 @@ class BufferPoolAllocator {
     ptr->~U();
   }
 
-  BufferManager* register_pin_guard(std::shared_ptr<std::vector<PageID>> pins) {
-    _pins = std::weak_ptr<std::vector<PageID>>(pins);
-    return _buffer_manager;
-  }
-
  private:
-  void pin(BufferManagedPtr<T>& ptr) {
-    if (const auto pins = _pins.lock()) {
-      const auto page_id = ptr.get_page_id();
-      const auto size_type = ptr.get_size_type();
-      pins->push_back(page_id);
-      _buffer_manager->pin_page(page_id, size_type);
-    }
-  }
-
   BufferManager* _buffer_manager;
-
-  std::weak_ptr<std::vector<PageID>> _pins;
 };
 }  // namespace hyrise
