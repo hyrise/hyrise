@@ -21,7 +21,7 @@ TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateVector) {
   data->operator[](3) = 4;
   data->operator[](4) = 5;
 
-  auto page = Hyrise::get().buffer_manager.get_page(PageID{0});
+  auto page = Hyrise::get().buffer_manager.get_page(PageID{0}, PageSizeType::KiB8);
   ASSERT_TRUE(page != nullptr);
   auto raw_data = reinterpret_cast<int*>(page);
   EXPECT_EQ(raw_data[0], 1);
@@ -31,7 +31,7 @@ TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateVector) {
   EXPECT_EQ(raw_data[4], 5);
 
   data = nullptr;
-  ASSERT_TRUE(Hyrise::get().buffer_manager.get_page(PageID{0}) == nullptr);
+  ASSERT_TRUE(Hyrise::get().buffer_manager.get_page(PageID{0}, PageSizeType::KiB8) == nullptr);
 }
 
 TEST_F(BufferPoolAllocatorTest, TestPolymorphism) {

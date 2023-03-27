@@ -20,6 +20,7 @@
 #include <boost/operators.hpp>
 #include <boost/version.hpp>
 
+#include "noncopyayble.hpp"
 #include "storage/buffer/buffer_pool_allocator.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
@@ -263,16 +264,6 @@ struct SortColumnDefinition final {
 inline bool operator==(const SortColumnDefinition& lhs, const SortColumnDefinition& rhs) {
   return lhs.column == rhs.column && lhs.sort_mode == rhs.sort_mode;
 }
-
-class Noncopyable {
- protected:
-  Noncopyable() = default;
-  Noncopyable(Noncopyable&&) noexcept = default;
-  Noncopyable& operator=(Noncopyable&&) noexcept = default;
-  ~Noncopyable() = default;
-  Noncopyable(const Noncopyable&) = delete;
-  const Noncopyable& operator=(const Noncopyable&) = delete;
-};
 
 // Dummy type, can be used to overload functions with a variant accepting a Null value
 struct Null {};

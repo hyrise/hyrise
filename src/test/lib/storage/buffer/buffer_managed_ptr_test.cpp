@@ -15,11 +15,29 @@ class BufferManagedPtrTest : public BaseTest {
  public:
   using PtrInt = BufferManagedPtr<int32_t>;
   using PtrFloat = BufferManagedPtr<float>;
+
+  BufferManager create_buffer_manager(const size_t buffer_pool_size) {
+    auto config = BufferManager::Config{};
+    config.dram_buffer_pool_size = buffer_pool_size;
+    config.ssd_path = db_file;
+    config.enable_eviction_worker = false;
+    return BufferManager(config);
+  }
+
+  const std::string db_file = test_data_path + "buffer_manager.data";
+
+  int get_pin_count(BufferManager& buffer_manager, const PageID page_id) {
+    return buffer_manager.get_pin_count(page_id);
+  }
+
+  bool is_page_dirty(BufferManager& buffer_manager, const PageID page_id) {
+    return buffer_manager.is_dirty(page_id);
+  }
 };
 
 TEST_F(BufferManagedPtrTest, TestSize) {
-  static_assert(sizeof(PtrInt) == 16);
-  static_assert(sizeof(PtrFloat) == 16);
+  static_assert(sizeof(PtrInt) == 24);
+  static_assert(sizeof(PtrFloat) == 24);
 }
 
 TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
@@ -36,16 +54,14 @@ TEST_F(BufferManagedPtrTest, TestTypesAndConversions) {
   auto outsidePtr = PtrInt((int*)0x1);
   EXPECT_TRUE(outsidePtr);
   EXPECT_FALSE(!outsidePtr);
-  EXPECT_EQ(outsidePtr.get_page_id(), 0);
-  EXPECT_EQ(outsidePtr.get_offset(), 0);
+  EXPECT_EQ(outsidePtr.get_page_id(), INVALID_PAGE_ID);
+  EXPECT_ANY_THROW(outsidePtr.get_offset());
   EXPECT_EQ(outsidePtr.operator->(), (int*)0x1);
 
   // Test Address in Buffer Manager
-  auto allocatedPtr = BufferManager::get_global_buffer_manager().allocate(1024);
-  EXPECT_TRUE(allocatedPtr);
-  EXPECT_FALSE(!allocatedPtr);
-  EXPECT_EQ(allocatedPtr.get_page_id(), 0);
-  EXPECT_EQ(allocatedPtr.get_offset(), 0);
+  auto allocatedPtr = PtrInt(PageID{6}, 30, PageSizeType::KiB8);
+  EXPECT_EQ(allocatedPtr.get_page_id(), 6);
+  EXPECT_EQ(allocatedPtr.get_offset(), 30);
   EXPECT_NE(allocatedPtr.operator->(), nullptr);
 
   // TODO: Test for some more properties
@@ -87,50 +103,58 @@ TEST_F(BufferManagedPtrTest, TestComparisons) {
 }
 
 TEST_F(BufferManagedPtrTest, TestPinUnpin) {
-  auto ptr = BufferManager::get_global_buffer_manager().allocate(1024);
+  auto buffer_manager = create_buffer_manager(1024 * 1024);
+
+  auto ptr = buffer_manager.allocate(1024);
   auto page_id = ptr.get_page_id();
 
-  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+  EXPECT_EQ(get_pin_count(buffer_manager, page_id), 0);
 
   ptr.pin();
   ptr.pin();
   ptr.pin();
-  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 3);
+  EXPECT_EQ(get_pin_count(buffer_manager, page_id), 3);
 
   ptr.unpin(false);
-  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 2);
-  EXPECT_FALSE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
+  EXPECT_EQ(get_pin_count(buffer_manager, page_id), 2);
+  EXPECT_FALSE(is_page_dirty(buffer_manager, page_id));
 
   ptr.unpin(true);
   ptr.unpin(false);
-  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
-  EXPECT_TRUE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
+  EXPECT_EQ(get_pin_count(buffer_manager, page_id), 0);
+  EXPECT_TRUE(is_page_dirty(buffer_manager, page_id));
 }
 
 TEST_F(BufferManagedPtrTest, TestPinGuardNotDirty) {
   // Test PinGuard with non-dirty flag
-  pmr_vector<int> vec{1, 2, 3, 4, 5};
+  auto buffer_manager = create_buffer_manager(1024 * 1024);
+  auto allocator = BufferPoolAllocator<int>(&buffer_manager);
+  pmr_vector<int> vec{{1, 2, 3, 4, 5}, allocator};
+
   auto page_id = vec.begin().get_ptr().get_page_id();
   {
-    EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+    EXPECT_EQ(get_pin_count(buffer_manager, page_id), 0);
     auto pin_guard = PinGuard(vec, false);
-    EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 1);
+    EXPECT_EQ(get_pin_count(buffer_manager, page_id), 1);
   }
-  EXPECT_FALSE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
-  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+  EXPECT_FALSE(is_page_dirty(buffer_manager, page_id));
+  EXPECT_EQ(get_pin_count(buffer_manager, page_id), 0);
 }
 
 TEST_F(BufferManagedPtrTest, TestPinGuardDirty) {
   // Test PinGuard with non-dirty flag
-  pmr_vector<int> vec{1, 2, 3, 4, 5};
+  auto buffer_manager = create_buffer_manager(1024 * 1024);
+  auto allocator = BufferPoolAllocator<int>(&buffer_manager);
+  pmr_vector<int> vec{{1, 2, 3, 4, 5}, allocator};
+
   auto page_id = vec.begin().get_ptr().get_page_id();
   {
-    EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+    EXPECT_EQ(get_pin_count(buffer_manager, page_id), 0);
     auto pin_guard = PinGuard(vec, true);
-    EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 1);
+    EXPECT_EQ(get_pin_count(buffer_manager, page_id), 1);
   }
-  EXPECT_TRUE(BufferManager::get_global_buffer_manager().is_dirty(page_id));
-  EXPECT_EQ(BufferManager::get_global_buffer_manager().get_pin_count(page_id), 0);
+  EXPECT_TRUE(is_page_dirty(buffer_manager, page_id));
+  EXPECT_EQ(get_pin_count(buffer_manager, page_id), 0);
 }
 
 TEST_F(BufferManagedPtrTest, TestGetPageIDAndOffset) {
@@ -151,7 +175,8 @@ TEST_F(BufferManagedPtrTest, TestPointerTraits) {
   static_assert(std::is_same<std::pointer_traits<PtrInt>::rebind<float>, PtrFloat>::value);
 
   // TODO_ TEst with inside and outside address
-  auto ptr = PtrInt(PageID{5}, 12, PageSizeType::KiB16);
+  auto buffer_manager = create_buffer_manager(1024 * 1024);
+  auto ptr = static_cast<PtrInt>(buffer_manager.allocate(4));
   EXPECT_EQ(std::pointer_traits<PtrInt>::pointer_to(*ptr), ptr);
 }
 

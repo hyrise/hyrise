@@ -16,10 +16,10 @@ void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_
   state.counters["page_table_hits"] = static_cast<double>(metrics.page_table_hits);
   state.counters["page_table_misses"] = static_cast<double>(metrics.page_table_misses);
   state.counters["total_bytes_read"] =
-      benchmark::Counter(static_cast<double>(metrics.total_bytes_read), benchmark::Counter::Flags::kDefaults,
+      benchmark::Counter(static_cast<double>(metrics.total_bytes_read_from_ssd), benchmark::Counter::Flags::kDefaults,
                          benchmark::Counter::OneK::kIs1024);
   state.counters["total_bytes_written"] =
-      benchmark::Counter(static_cast<double>(metrics.total_bytes_written), benchmark::Counter::Flags::kDefaults,
+      benchmark::Counter(static_cast<double>(metrics.total_bytes_written_to_ssd), benchmark::Counter::Flags::kDefaults,
                          benchmark::Counter::OneK::kIs1024);
 
   // TODO: read and write rate,

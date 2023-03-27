@@ -2,18 +2,18 @@
 
 #include <boost/align/aligned_allocator.hpp>
 #include "benchmark/benchmark.h"
+#include "hyrise.hpp"
 #include "storage/buffer/volatile_region.hpp"
 #include "storage/value_segment.hpp"
+#include "utils/meta_tables/meta_system_utilization_table.hpp"
 
 namespace hyrise {
-
-// TODO: Benchmark Deallocate vs Free
 
 static void BM_VolatileRegionAllocator(benchmark::State& state) {
   const auto num_pages = state.range(0);
 
-  auto volatile_region =
-      std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * bytes_for_size_type(PageSizeType::KiB32));
+  auto volatile_region = std::make_unique<VolatileRegion>(PageSizeType::KiB32, PageType::Dram,
+                                                          num_pages * bytes_for_size_type(PageSizeType::KiB32));
 
   for (auto _ : state) {
     for (auto i = size_t{0}; i < num_pages; i++) {
@@ -21,8 +21,8 @@ static void BM_VolatileRegionAllocator(benchmark::State& state) {
       benchmark::DoNotOptimize(frame);
     }
     state.PauseTiming();
-    volatile_region =
-        std::make_unique<VolatileRegion>(PageSizeType::KiB32, num_pages * bytes_for_size_type(PageSizeType::KiB32));
+    volatile_region = std::make_unique<VolatileRegion>(PageSizeType::KiB32, PageType::Dram,
+                                                       num_pages * bytes_for_size_type(PageSizeType::KiB32));
     state.ResumeTiming();
   }
 

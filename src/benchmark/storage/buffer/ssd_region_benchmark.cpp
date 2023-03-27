@@ -15,7 +15,7 @@
 
 namespace hyrise {
 
-struct alignas(512) Page {
+struct alignas(PAGE_ALIGNMENT) Page {
   std::array<std::byte, bytes_for_size_type(PageSizeType::KiB32)> data;
   const PageSizeType size_type = PageSizeType::KiB32;
 };
