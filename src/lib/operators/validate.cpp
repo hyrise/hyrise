@@ -40,9 +40,9 @@ bool Validate::is_row_visible(TransactionID our_tid, CommitID snapshot_commit_id
 
 bool Validate::_is_entire_chunk_visible(const std::shared_ptr<const Chunk>& chunk,
                                         const CommitID snapshot_commit_id) const {
-  Assert(
-      _can_use_chunk_shortcut,
-      "This call to _is_entire_chunk_visible is not allowed. Are there any DeleteOperators in the same transaction?");
+  if (!_can_use_chunk_shortcut) {
+    return false;
+  }
   DebugAssert(!std::dynamic_pointer_cast<const ReferenceSegment>(chunk->get_segment(ColumnID{0})),
               "_is_entire_chunk_visible cannot be called on reference chunks.");
 
@@ -190,7 +190,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
         const auto referenced_chunk = referenced_table->get_chunk(pos_list_in->common_chunk_id());
         auto mvcc_data = referenced_chunk->mvcc_data();
 
-        if (_can_use_chunk_shortcut && _is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
+        if (_is_entire_chunk_visible(referenced_chunk, snapshot_commit_id)) {
           // We can reuse the old PosList since it is entirely visible. Not using the entirely_visible_chunks cache for
           // this shortcut to keep the code short.
           pos_list_out = pos_list_in;
@@ -256,7 +256,7 @@ void Validate::_validate_chunks(const std::shared_ptr<const Table>& input_table,
 
       DebugAssert(chunk_in->has_mvcc_data(), "Trying to use Validate on a table that has no MVCC data");
 
-      if (_can_use_chunk_shortcut && _is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
+      if (_is_entire_chunk_visible(chunk_in, snapshot_commit_id)) {
         // Not using the entirely_visible_chunks cache here as for data tables, we only look at chunks once anyway.
         pos_list_out = std::make_shared<EntireChunkPosList>(chunk_id, chunk_in->size());
       } else {
