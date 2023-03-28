@@ -34,9 +34,9 @@ using namespace hyrise;  // NOLINT
 
 template <typename T>
 pmr_vector<T> create_typed_segment_values(const std::vector<int>& values) {
-  pmr_vector<T> result(values.size());
-
-  auto pin_guard = PinGuard{result, true};
+  auto allocator = PolymorphicAllocator<T>{};
+  auto dictionary_pin_guard = AllocatorPinGuard<T>{allocator.inner_allocator()};
+  pmr_vector<T> result(values.size(), allocator);
 
   auto insert_position = size_t{0};
   for (const auto& value : values) {

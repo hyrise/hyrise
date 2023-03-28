@@ -13,6 +13,8 @@ namespace hyrise {
 
 namespace detail {
 
+// TODUse BufferFrame* and PageID as union fields
+
 struct UnswizzledAddress {
   size_t size_type : BITS_PAGE_SIZE_TYPES;                                              // 3 bits for size type
   size_t page_id : sizeof(size_t) * CHAR_BIT - BITS_PAGE_SIZE_TYPES - MAX_PAGE_OFFSET;  // 44 bits for the page_id
@@ -67,28 +69,40 @@ class BufferManagedPtr {
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
   BufferManagedPtr(pointer ptr = 0) : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
     unswizzle(ptr);
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
   }
 
   BufferManagedPtr(const BufferManagedPtr& other)
-      : _addressing(other._addressing), _buffer_manager(other._buffer_manager) {}
+      : _addressing(other._addressing),
+        _buffer_manager(other._buffer_manager ? other._buffer_manager : &BufferManager::get_global_buffer_manager()) {
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
+  }
 
   template <typename U>
   BufferManagedPtr(const BufferManagedPtr<U>& other)
-      : _addressing(other._addressing), _buffer_manager(other._buffer_manager) {}
+      : _addressing(other._addressing),
+        _buffer_manager(other._buffer_manager ? other._buffer_manager : &BufferManager::get_global_buffer_manager()) {
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
+  }
 
   template <typename T>
   BufferManagedPtr(T* ptr) : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
     unswizzle(ptr);
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
   }
 
   explicit BufferManagedPtr(const PageID page_id, const difference_type offset, const PageSizeType size_type)
       : _buffer_manager(&BufferManager::get_global_buffer_manager()) {
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
+
     _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
   }
 
   explicit BufferManagedPtr(BufferManager* buffer_manager, const PageID page_id, const difference_type offset,
                             const PageSizeType size_type)
       : _buffer_manager(buffer_manager) {
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
+
     _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
   }
 
@@ -151,17 +165,23 @@ class BufferManagedPtr {
 
   BufferManagedPtr& operator=(const BufferManagedPtr& ptr) {
     _addressing = ptr._addressing;
+    _buffer_manager = ptr._buffer_manager;
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
+
     return *this;
   }
 
   BufferManagedPtr& operator=(pointer from) {
     unswizzle(from);
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
     return *this;
   }
 
   template <typename T2>
   BufferManagedPtr& operator=(const BufferManagedPtr<T2>& ptr) {
     _addressing = ptr._addressing;
+    _buffer_manager = ptr._buffer_manager;
+    DebugAssert(_buffer_manager != nullptr, "BufferManager is null");
     return *this;
   }
 
@@ -271,8 +291,8 @@ class BufferManagedPtr {
   }
 
  private:
-  Addressing _addressing;
-  BufferManager* _buffer_manager;
+  Addressing _addressing = EmptyAddress{};
+  BufferManager* _buffer_manager = nullptr;
 
   template <class T1, class T2>
   friend bool operator!=(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2);
@@ -283,16 +303,18 @@ class BufferManagedPtr {
   template <typename T>
   void unswizzle(T* ptr) {
     if (ptr) {
-      const auto [page_id, size_type, offset] =
-          BufferManager::get_global_buffer_manager().unswizzle(reinterpret_cast<const void*>(ptr));
-      if (page_id == INVALID_PAGE_ID) {
-        _addressing = OutsideAddress(ptr);
+      const auto [frame, offset] = _buffer_manager->unswizzle(reinterpret_cast<const void*>(ptr));
+      if (frame) {
+        _addressing =
+            UnswizzledAddress{static_cast<size_t>(frame->size_type), frame->page_id, static_cast<size_t>(offset)};
+        return;
       } else {
-        _addressing = UnswizzledAddress{static_cast<size_t>(size_type), page_id, static_cast<size_t>(offset)};
+        _addressing = OutsideAddress(ptr);
+        return;
       }
-    } else {
-      _addressing = EmptyAddress{};
     }
+
+    _addressing = EmptyAddress{};
   }
 
   BufferManagedPtr(const Addressing& addressing) : _addressing(addressing) {}

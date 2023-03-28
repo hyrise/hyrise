@@ -20,7 +20,7 @@
 #include <boost/operators.hpp>
 #include <boost/version.hpp>
 
-#include "noncopyayble.hpp"
+#include "noncopyable.hpp"
 #include "storage/buffer/buffer_pool_allocator.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"

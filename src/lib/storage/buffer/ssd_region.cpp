@@ -38,8 +38,9 @@ SSDRegion::DeviceType SSDRegion::get_device_type() const {
 }
 
 int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
+  // TODO: https://github.com/google/leveldb/commit/296de8d5b8e4e57bd1e46c981114dfbe58a8c4fa
 #ifdef __APPLE__
-  int flags = O_RDWR | O_CREAT;
+  int flags = O_RDWR | O_CREAT | O_DSYNC;
 #elif __linux__
   int flags = O_RDWR | O_CREAT | O_DIRECT | O_DSYNC;
 #endif
@@ -83,11 +84,13 @@ void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, c
               "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
+  // TODO: Use multiple?
   const auto result = pwrite(_fd, source, num_bytes, page_pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
+  // TODO Needs flush
 }
 
 void SSDRegion::allocate(const PageID page_id, const PageSizeType size_type) {
@@ -117,8 +120,7 @@ void SSDRegion::read_page(const PageID page_id, const PageSizeType size_type, st
     std::lock_guard<std::mutex> lock(_page_directory_mutex);
 
     if (page_id >= _page_directory.size()) {
-      return;  // TODO
-      // Fail("PageId cannot be found in page directory");
+      Fail("PageId cannot be found in page directory");
     }
 
     num_bytes = bytes_for_size_type(size_type);

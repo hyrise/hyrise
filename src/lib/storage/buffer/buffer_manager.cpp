@@ -31,23 +31,25 @@ BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t p
                                         const bool enable_eviction_worker, const std::shared_ptr<SSDRegion> ssd_region,
                                         const std::shared_ptr<BufferManager::Metrics> metrics)
     : _used_bytes(0),
+      enabled(_page_type != PageType::Invalid),
       _total_bytes(pool_size),
       _page_type(page_type),
       _ssd_region(std::move(ssd_region)),
-      _metrics(metrics),
-      _eviction_queue(std::make_shared<EvictionQueue>()),
-      _buffer_pools(create_volatile_regions_for_size_types(PageType::Dram, pool_size)) {
-  Assert(_page_type != PageType::Invalid, "Invalid page type");
-  if (enable_eviction_worker) {
-    _eviction_worker =
-        std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE, [&](size_t) { this->purge_eviction_queue(); });
+      _metrics(metrics) {
+  if (enabled) {
+    _eviction_queue = std::make_shared<EvictionQueue>();
+    _buffer_pools = create_volatile_regions_for_size_types(page_type, pool_size);
+    if (enable_eviction_worker) {
+      _eviction_worker = std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE,
+                                                              [&](size_t) { this->purge_eviction_queue(); });
+    }
   }
 }
 
 BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager::BufferPools&& other) {
   _used_bytes = other._used_bytes.load();
-  // _total_bytes = other._total_bytes;
-  // _page_type = other._page_type;
+  Assert(_total_bytes == other._total_bytes, "Cannot move buffer pools with different sizes");
+  Assert(_page_type == other._page_type, "Cannot move buffer pools with different page types");
   _ssd_region = std::move(other._ssd_region);
   _eviction_queue = std::move(other._eviction_queue);
   _buffer_pools = std::move(other._buffer_pools);
@@ -86,7 +88,7 @@ Frame* BufferManager::BufferPools::allocate_frame(const PageSizeType size_type) 
 
     // Write out the frame if it's dirty
     if (item.frame->dirty) {
-      write_page(item.frame);
+      write_page(item.frame);  // TODO: Write to Numa or SSD?
       item.frame->dirty = false;
     }
 
@@ -191,18 +193,19 @@ BufferManager::BufferManager(const Config config)
       _migration_policy(config.migration_policy),
       _ssd_region(std::make_shared<SSDRegion>(config.ssd_path)),
       _metrics(std::make_shared<Metrics>()),
-      _dram_buffer_pools(PageType::Dram, config.dram_buffer_pool_size, config.enable_eviction_worker, _ssd_region,
-                         _metrics) {
-  Assert(config.mode == BufferManagerMode::DramSSD, "Only DRAM/SSD mode is supported at the moment");
-  if constexpr (HYRISE_DEBUG) {
-    std::cout << "Init Buffer Manager (" << this << ") - " << std::endl;
-  }
+      _dram_buffer_pools(page_type_for_dram_buffer_pools(config.mode), config.dram_buffer_pool_size,
+                         config.enable_eviction_worker, _ssd_region, _metrics),
+      _numa_buffer_pools(page_type_for_numa_buffer_pools(config.mode), config.numa_buffer_pool_size,
+                         config.enable_eviction_worker, _ssd_region, _metrics) {
+  // if constexpr (HYRISE_DEBUG) {
+  //   std::cout << "Init Buffer Manager (" << this << ") - " << std::endl;
+  // }
 }
 
 BufferManager::~BufferManager() {
-  if constexpr (HYRISE_DEBUG) {
-    std::cout << "Destroy Buffer Manager (" << this << ")" << std::endl;
-  }
+  // if constexpr (HYRISE_DEBUG) {
+  //   std::cout << "Destroy Buffer Manager (" << this << ")" << std::endl;
+  // }
 }
 
 BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
@@ -210,24 +213,47 @@ BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 Frame* BufferManager::get_frame(const PageID page_id, const PageSizeType size_type) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
-  if (const auto frame = find_in_page_table(page_id)) {
-    return frame->dram_frame;
+  const auto shared_frame = find_in_page_table(page_id);
+  if (shared_frame) {
+    if (_dram_buffer_pools.enabled && shared_frame->dram_frame) {
+      // 1. Found the frame in DRAM
+      return shared_frame->dram_frame;
+    } else if (_numa_buffer_pools.enabled && shared_frame->numa_frame) {
+      // 2. Found the frame on NUMA and we want to migrate it to DRAM TODO: read or write intent?!
+      const auto bypass_dram = _migration_policy.bypass_dram_during_read();
+      if (bypass_dram) {
+        // 3. We want to bypass dram
+        return shared_frame->numa_frame;
+      }
+
+      // 4. Lets not bypass dram and continue
+      auto allocated_dram_frame = _dram_buffer_pools.allocate_frame(size_type);
+      allocated_dram_frame->init(page_id);
+
+      // TODO: Allocate latches for the frame
+      std::memcpy(allocated_dram_frame->data, shared_frame->numa_frame->data, bytes_for_size_type(size_type));
+      shared_frame->link_dram_frame(allocated_dram_frame);
+      return allocated_dram_frame;
+    } else {
+      Fail("Found a page in the page table that is neither in DRAM nor on NUMA.");
+    }
   }
-  auto allocated_frame = _dram_buffer_pools.allocate_frame(size_type);
+
+  // 5. The page is neither in DRAM nor on NUMA, we need to load it from SSD
+  auto allocated_dram_frame = _dram_buffer_pools.allocate_frame(size_type);
 
   // Update the frame metadata and read the page data
-  allocated_frame->page_id = page_id;
-  allocated_frame->dirty = false;
-  allocated_frame->pin_count.store(0);
-  // TODO: This is a bit ugly
-  _dram_buffer_pools.read_page(allocated_frame);
+  allocated_dram_frame->init(page_id);
 
+  // We make a full read from SSD
+  _dram_buffer_pools.read_page(allocated_dram_frame);
   // Update the page table and metadata
   {
     std::lock_guard<std::mutex> lock(_page_table_mutex);
-    _page_table[allocated_frame->page_id] = std::make_shared<SharedFrame>(allocated_frame);
+    _page_table[allocated_dram_frame->page_id] = std::make_shared<SharedFrame>(allocated_dram_frame);
   }
-  return allocated_frame;
+
+  return allocated_dram_frame;
 }
 
 std::byte* BufferManager::get_page(const PageID page_id, const PageSizeType size_type) {
@@ -253,9 +279,10 @@ Frame* BufferManager::new_page(const PageSizeType size_type) {
   auto frame = _dram_buffer_pools.allocate_frame(size_type);
   DebugAssert(frame != nullptr, "Frame is null");
   DebugAssert(frame->data != nullptr, "Frame data is null");
+  const auto page_id = _num_pages++;
 
   // Update the frame metadata
-  frame->page_id = _num_pages;
+  frame->page_id = page_id;
   frame->dirty = true;
   frame->pin_count.store(0);
 
@@ -269,7 +296,7 @@ Frame* BufferManager::new_page(const PageSizeType size_type) {
 
   _dram_buffer_pools.add_to_eviction_queue(frame);
 
-  _num_pages++;
+  _metrics.num_pages++;
 
   return frame;
 }
@@ -279,7 +306,7 @@ void BufferManager::unpin_page(const PageID page_id, const PageSizeType size_typ
 
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
-    Fail("Cannot unpin a page that is not in the page table. Check if the PinGuard is properly used.");
+    // Fail("Cannot unpin a page that is not in the page table. Check if the PinGuard is properly used.");
     return;
   }
 
@@ -300,22 +327,39 @@ void BufferManager::pin_page(const PageID page_id, const PageSizeType size_type)
 }
 
 uint32_t BufferManager::get_pin_count(const PageID page_id) {
-  const auto frame = find_in_page_table(page_id);
-  if (frame == nullptr) {
+  const auto shared_frame = find_in_page_table(page_id);
+  if (shared_frame == nullptr) {
     return 0;
   }
-  return frame->dram_frame->pin_count.load();
+  if (shared_frame->dram_frame) {
+    return shared_frame->dram_frame->pin_count.load();
+  }
+
+  if (shared_frame->numa_frame) {
+    return shared_frame->numa_frame->pin_count.load();
+  }
+
+  return 0;
 }
 
 bool BufferManager::is_dirty(const PageID page_id) {
-  const auto frame = find_in_page_table(page_id);
-  if (frame == nullptr) {
+  const auto shared_frame = find_in_page_table(page_id);
+  if (shared_frame == nullptr) {
     return false;
   }
-  return frame->dram_frame->dirty.load();
+  if (shared_frame->dram_frame) {
+    return shared_frame->dram_frame->dirty.load();
+  }
+
+  if (shared_frame->numa_frame) {
+    return shared_frame->numa_frame->dirty.load();
+  }
+
+  return false;
 }
 
 void BufferManager::remove_page(const PageID page_id) {
+  // TODO: If else here
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
     return;
@@ -337,14 +381,23 @@ void BufferManager::remove_page(const PageID page_id) {
   _dram_buffer_pools.add_to_eviction_queue(dram_frame);
 }
 
-std::tuple<PageID, PageSizeType, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
-  for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
-    if (const auto frame = buffer_pool->unswizzle(ptr)) {
-      return std::make_tuple(frame->page_id, frame->size_type, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+std::pair<Frame*, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
+  if (_dram_buffer_pools.enabled) {
+    for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
+      if (const auto frame = buffer_pool->unswizzle(ptr)) {
+        return std::make_tuple(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+      }
+    }
+  }
+  if (_numa_buffer_pools.enabled) {
+    for (auto& buffer_pool : _numa_buffer_pools._buffer_pools) {
+      if (const auto frame = buffer_pool->unswizzle(ptr)) {
+        return std::make_tuple(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+      }
     }
   }
 
-  return std::make_tuple(INVALID_PAGE_ID, PageSizeType::KiB8, 0);
+  return std::make_tuple(nullptr, 0);
 };
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
@@ -384,7 +437,41 @@ void BufferManager::clear() {
   _num_pages = 0;
   _page_table = {};
   _dram_buffer_pools.clear();
+  _numa_buffer_pools.clear();
   _ssd_region = std::make_shared<SSDRegion>(_ssd_region->get_file_name());
+}
+
+void BufferManager::flush_all_pages() {
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
+
+  // TODO: Acquire locks?
+  for (auto [page_id, shared_frame] : _page_table) {
+    if (shared_frame->dram_frame) {
+      Assert(shared_frame->dram_frame->pin_count == 0, "Cannot flush page while pinned.");
+      if (shared_frame->dram_frame->dirty) {
+        _dram_buffer_pools.write_page(shared_frame->dram_frame);
+      }
+      _dram_buffer_pools.clear();
+    }
+
+    if (shared_frame->numa_frame) {
+      Assert(shared_frame->numa_frame->pin_count == 0, "Cannot flush page while pinned.");
+      if (shared_frame->numa_frame->dirty) {
+        _numa_buffer_pools.write_page(shared_frame->numa_frame);
+      }
+      _numa_buffer_pools.clear();
+    }
+  }
+
+  _page_table.clear();
+}
+
+std::size_t BufferManager::numa_bytes_used() const {
+  return _numa_buffer_pools._used_bytes.load();
+}
+
+std::size_t BufferManager::dram_bytes_used() const {
+  return _dram_buffer_pools._used_bytes.load();
 }
 
 BufferManager& BufferManager::operator=(BufferManager&& other) {
@@ -396,6 +483,7 @@ BufferManager& BufferManager::operator=(BufferManager&& other) {
     _num_pages = other._num_pages.load();
     _page_table = std::move(other._page_table);
     _dram_buffer_pools = std::move(other._dram_buffer_pools);
+    _numa_buffer_pools = std::move(other._numa_buffer_pools);
     _ssd_region = std::move(other._ssd_region);
     _metrics = other._metrics;
   }

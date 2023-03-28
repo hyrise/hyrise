@@ -1,11 +1,9 @@
 #pragma once
 
-#include <boost/dynamic_bitset.hpp>
-#include <boost/noncopyable.hpp>
-#include <forward_list>
 #include <memory>
 #include <mutex>
 #include "frame.hpp"
+#include "noncopyable.hpp"
 #include "storage/buffer/types.hpp"
 
 namespace hyrise {
@@ -16,7 +14,9 @@ namespace hyrise {
  * of free frames that can be popped. The idea of reducing external fragmentation using MADVISE is taken from Umbra.
  */
 
-class VolatileRegion : private boost::noncopyable {
+// TODO: Reduce usage of frames with LeakyBuffer from Spitfire
+
+class VolatileRegion : public Noncopyable {
  public:
   VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t num_bytes,
                  const size_t memory_numa_node = NO_NUMA_MEMORY_NODE);

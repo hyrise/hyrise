@@ -3,7 +3,7 @@
 #include <boost/unordered/unordered_flat_map.hpp>
 #include <memory>
 #include <tuple>
-#include "noncopyayble.hpp"
+#include "noncopyable.hpp"
 #include "storage/buffer/frame.hpp"
 #include "storage/buffer/migration_policy.hpp"
 #include "storage/buffer/ssd_region.hpp"
@@ -23,7 +23,6 @@ class BufferManager : public Noncopyable {
  public:
   /**
    * Metrics are storing metric data that happens during allocation and access of the buffer manager.
-   * TODO: Make values atomic
   */
   struct Metrics {
     // The maximum amount of bytes being allocated with with subsequent calls of alloc and dealloc
@@ -61,11 +60,26 @@ class BufferManager : public Noncopyable {
     std::size_t num_ssd_writes = 0;
 
     std::size_t num_dram_eviction_queue_purges = 0;
+
     std::size_t num_dram_eviction_queue_item_purges = 0;
+
     std::size_t num_dram_eviction_queue_adds = 0;
 
-    // Use different metrics for DRAM and NUMA
-    // TODO: Number of pages used, fragmentation rate, make atomic, Duplication Rate from Spitfire, Numa
+    std::size_t num_numa_eviction_queue_purges = 0;
+
+    std::size_t num_numa_eviction_queue_item_purges = 0;
+
+    std::size_t num_numa_eviction_queue_adds = 0;
+
+    // TODO: ratio is defined in Spitfire paper. Lower values signfies lower duplication.
+    std::size_t dram_numa_inclusivity_ratio = 0;
+
+    // TODO: Internal fragmentation rate over all page sizes (lower is better)
+    std::size_t internal_framentation_rate = 0;
+
+    std::size_t num_madvice_free_call = 0;  //TODO
+
+    // TODO: read and write rates for all paths, dram, numa
   };
 
   struct Config {
@@ -90,6 +104,8 @@ class BufferManager : public Noncopyable {
   BufferManager(const Config config);
 
   ~BufferManager();
+
+  // TODO: Get page should not have page size type as parameter
 
   /**
    * @brief Get the page object
@@ -119,9 +135,9 @@ class BufferManager : public Noncopyable {
    * if the page there was no page found. TODO: Return Buffer Managed Ptr
    * 
    * @param ptr 
-   * @return std::tuple<PageID, PageSizeType, std::ptrdiff_t>
+   * @return std::pair<Frame*, std::ptrdiff_t> Pointer  to the frame and the offset in the frame
    */
-  std::tuple<PageID, PageSizeType, std::ptrdiff_t> unswizzle(const void* ptr);
+  std::pair<Frame*, std::ptrdiff_t> unswizzle(const void* ptr);
 
   /**
    * Allocates pages to fullfil allocation request of the given bytes and alignment 
@@ -146,6 +162,21 @@ class BufferManager : public Noncopyable {
   Metrics metrics();
 
   BufferManager& operator=(BufferManager&& other);
+
+  /**
+   * Flush all pages to disk and clear the page table. The volatile regions are cleared by purging the eviction queue and unmapping the VM.
+  */
+  void flush_all_pages();
+
+  /**
+   * Get the current number of bytes used by the buffer manager on NUMA.
+  */
+  std::size_t numa_bytes_used() const;
+
+  /**
+   * Get the current number of bytes used by the buffer manager on DRAM.
+  */
+  std::size_t dram_bytes_used() const;
 
   /**
    * Reset all data in the internal data structures. TODO: Move to private
@@ -202,6 +233,8 @@ class BufferManager : public Noncopyable {
     std::shared_ptr<BufferManager::Metrics> _metrics;
 
     const PageType _page_type;
+
+    const bool enabled;
   };
 
   uint32_t get_pin_count(const PageID page_id);
@@ -234,7 +267,7 @@ class BufferManager : public Noncopyable {
   BufferPools _dram_buffer_pools;
 
   // Memory Region for pages on a NUMA nodes (preferrably memory only) using multiple volatile region for each page size type
-  // TODO BufferPools _numa_buffer_pools;
+  BufferPools _numa_buffer_pools;
 
   // Page Table that contains shared frames which are currently in the buffer pool
   boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>> _page_table;

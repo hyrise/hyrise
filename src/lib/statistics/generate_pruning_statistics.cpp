@@ -25,7 +25,7 @@ using namespace hyrise;  // NOLINT
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
                                            const pmr_vector<T>& dictionary) {
-  auto pin_guard = PinGuard<T>::create(dictionary, true);
+  auto pin_guard = PinGuard{dictionary, false};
 
   std::shared_ptr<AbstractStatisticsObject> pruning_statistics;
   if constexpr (std::is_arithmetic_v<T>) {
@@ -77,9 +77,15 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
             values.insert(value.value());
           }
         });
-        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend()};
-        auto pin_guard = PinGuard<ColumnDataType>::create(dictionary, true);
+
+        auto allocator = PolymorphicAllocator<ColumnDataType>{};
+        auto dictionary_pin_guard = AllocatorPinGuard<ColumnDataType>{allocator.outer_allocator()};
+
+        pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
+
         std::sort(dictionary.begin().get_ptr().get(), dictionary.end().get_ptr().get());
+        DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()),
+                    "Dictionary must be sorted in ascending order.");
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

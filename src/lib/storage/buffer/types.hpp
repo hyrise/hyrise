@@ -7,14 +7,16 @@
 #include "boost/integer/static_log2.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
+#if HYRISE_NUMA_SUPPORT
+#include <numa.h>
+#endif
 
 // Declare types here to avoid problems with circular dependency
+
 STRONG_TYPEDEF(uint32_t, PageID);
-STRONG_TYPEDEF(uint32_t, FrameID);
 
 namespace hyrise {
 constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
-constexpr FrameID INVALID_FRAME_ID{std::numeric_limits<FrameID::base_type>::max()};
 
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256 };
 
@@ -79,12 +81,47 @@ struct EvictionItem {
 
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
+enum class PageType { Invalid, Dram, Numa };
+
+size_t numa_memory_size(const size_t memory_node) {
+#if HYRISE_NUMA_SUPPORT
+  return numa_node_size(memory_node, NULL);
+#else
+  Fail("NUMA support is not enabled");
+#endif
+}
+
 enum BufferManagerMode {
-  DramDramSSD,  // TODO Use two volatile regions (DRAM and DRAM for emulation purposes) and SSD
-  DramSSD,      // Use one volatile region (DRAM) and SSD
-  DramNumaSSD,  // TODO Use two volatile regions, one with DRAM and one NUMA, and SSD
-  NumaSSD       // TODO Use one volatile region (NUMA) and SSD
+  DramNumaEmulationSSD,  // TODO Use two volatile regions (DRAM and DRAM for emulation purposes) and SSD
+  DramSSD,               // Use one volatile region (DRAM) and SSD
+  DramNumaSSD,           // TODO Use two volatile regions, one with DRAM and one NUMA, and SSD
+  NumaSSD                // TODO Use one volatile region (NUMA) and SSD
 };
 
-enum class PageType { Invalid, Dram, Numa };
+constexpr PageType page_type_for_dram_buffer_pools(const BufferManagerMode mode) {
+  switch (mode) {
+    case BufferManagerMode::DramNumaEmulationSSD:
+    case BufferManagerMode::DramSSD:
+    case BufferManagerMode::DramNumaSSD:
+      return PageType::Dram;
+    case BufferManagerMode::NumaSSD:
+      return PageType::Invalid;
+  }
+  Fail("Unknown BufferManagerMode");
+}
+
+constexpr PageType page_type_for_numa_buffer_pools(const BufferManagerMode mode) {
+  switch (mode) {
+    case BufferManagerMode::DramNumaEmulationSSD:
+      return PageType::Dram;
+    case BufferManagerMode::DramNumaSSD:
+      return PageType::Numa;
+    case BufferManagerMode::DramSSD:
+      return PageType::Invalid;
+    case BufferManagerMode::NumaSSD:
+      return PageType::Numa;
+  }
+  Fail("Unknown BufferManagerMode");
+}
+
 }  // namespace hyrise

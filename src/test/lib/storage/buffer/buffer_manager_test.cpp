@@ -168,12 +168,20 @@ TEST_F(BufferManagerTest, TestUnswizzle) {
   auto buffer_manager = create_buffer_manager(bytes_for_size_type(PageSizeType::KiB256));
 
   auto ptr1 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB32));
-  EXPECT_EQ(buffer_manager.unswizzle(static_cast<char*>(ptr1.get_pointer()) + 30),
-            std::make_tuple(PageID{0}, PageSizeType::KiB32, 30));
+  auto [frame1, offset1] = buffer_manager.unswizzle(static_cast<char*>(ptr1.get_pointer()) + 30);
+  EXPECT_EQ(offset1, 30);
+  EXPECT_EQ(frame1->page_id, PageID{0});
+  EXPECT_EQ(frame1->size_type, PageSizeType::KiB32);
+  EXPECT_EQ(frame1->page_type, PageType::Dram);
 
   auto ptr2 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB64));
-  EXPECT_EQ(buffer_manager.unswizzle(static_cast<char*>(ptr2.get_pointer()) + 1000),
-            std::make_tuple(PageID{1}, PageSizeType::KiB64, 1000));
+  auto [frame2, offset2] = buffer_manager.unswizzle(static_cast<char*>(ptr2.get_pointer()) + 30);
+  EXPECT_EQ(offset2, 30);
+  EXPECT_EQ(frame2->page_id, PageID{0});
+  EXPECT_EQ(frame2->size_type, PageSizeType::KiB32);
+  EXPECT_EQ(frame2->page_type, PageType::Dram);
 }
+
+// TODO: TEsts different modes (DRAM, NVM, Hybrid)
 
 }  // namespace hyrise

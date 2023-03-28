@@ -32,6 +32,8 @@ void benchmark_tablescan_impl(benchmark::State& state, const std::shared_ptr<con
 
   auto warm_up = std::make_shared<TableScan>(in, predicate);
   warm_up->execute();
+  auto sampler =
+      MetricsSampler{std::filesystem::path("/tmp") / (state.name() + ".json"), &Hyrise::get().buffer_manager};
   for (auto _ : state) {
     auto table_scan = std::make_shared<TableScan>(in, predicate);
     table_scan->execute();

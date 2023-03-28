@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <fstream>
 #include <memory>
 #include "benchmark/benchmark.h"
 #include "hyrise.hpp"
@@ -47,59 +48,21 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
   BufferManager* _buffer_manager;
 };
 
-/// TODO: Move into impl file
 class MetricsSampler {
  public:
-  MetricsSampler(const std::filesystem::path& output_path, BufferManager* buffer_manager)
-      : _buffer_manager(buffer_manager), _output_path(output_path) {
-    start();
-  }
+  MetricsSampler(const std::filesystem::path& output_path, BufferManager* buffer_manager);
+  ~MetricsSampler();
 
-  ~MetricsSampler() {
-    stop();
-  }
+  void start();
+  void stop();
 
-  void start() {
-    if (_sample_thread) {
-      Fail("MetricsSampler is already running");
-    }
-    _sample_thread = std::make_unique<PausableLoopThread>(_interval, [this](size_t) { sample(); });
-  }
-
-  void stop() {
-    export_metrics();
-    _sample_thread = nullptr;
-    _metrics.clear();
-  }
+  void export_metrics();
 
  private:
-  void export_metrics() {
-    // TODO: Add context
-    auto metrics_json = nlohmann::json::array();
-    for (auto& metric : _metrics) {
-      auto metric_json = nlohmann::json::object();
-      to_json(metric_json, metric);
-      metrics_json.push_back(metric_json);
-    }
-    nlohmann::json report{{"metrics", metrics_json}};
+  void to_json(nlohmann::json& json, const BufferManager::Metrics& metrics);
+  void sample();
 
-    std::ofstream{_output_path} << std::setw(2) << report << std::endl;
-  }
-
-  void to_json(nlohmann::json& json, const BufferManager::Metrics& metrics) {
-    json = {
-        {"max_bytes_used", metrics.max_bytes_used},
-        {"total_allocated_bytes", metrics.total_allocated_bytes},
-        {"num_allocs", metrics.num_allocs},
-        {"num_deallocs", metrics.num_deallocs},
-    };
-  }
-
-  void sample() {
-    _metrics.push_back(_buffer_manager->metrics());
-  }
-
-  std::chrono::milliseconds _interval = std::chrono::milliseconds(100);
+  std::chrono::milliseconds _interval = std::chrono::milliseconds(10);
   std::unique_ptr<PausableLoopThread> _sample_thread;
   BufferManager* _buffer_manager;
   std::vector<BufferManager::Metrics> _metrics;

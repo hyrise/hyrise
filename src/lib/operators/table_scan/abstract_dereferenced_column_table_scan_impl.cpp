@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "resolve_type.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/chunk.hpp"
 #include "storage/dictionary_segment.hpp"
 #include "storage/reference_segment.hpp"
@@ -24,6 +25,7 @@ std::shared_ptr<RowIDPosList> AbstractDereferencedColumnTableScanImpl::scan_chun
   const auto& segment = chunk->get_segment(_column_id);
 
   auto matches = std::make_shared<RowIDPosList>();
+  auto matches_pin_guard = PinGuard{*matches, true};
 
   if (const auto& reference_segment = std::dynamic_pointer_cast<ReferenceSegment>(segment)) {
     _scan_reference_segment(*reference_segment, chunk_id, *matches);

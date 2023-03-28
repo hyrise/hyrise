@@ -1,8 +1,6 @@
 #include "volatile_region.hpp"
 #include <sys/mman.h>
 #include <unistd.h>
-#include <boost/describe.hpp>
-#include <boost/mp11.hpp>
 #include "utils/assert.hpp"
 
 #if HYRISE_NUMA_SUPPORT
@@ -32,6 +30,8 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page
 VolatileRegion::~VolatileRegion() {
   unmap_memory();
 }
+
+// TODO: Get numa node size
 
 void VolatileRegion::clear() {
   std::lock_guard<std::mutex> lock(_mutex);
