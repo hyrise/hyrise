@@ -404,10 +404,8 @@ void AbstractTableGenerator::_create_table_indexes(
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   auto indexes_by_table = std::map<std::string, std::vector<std::vector<std::string>>>{};
 
-  for (const auto& table_info_by_name_pair : table_info_by_name) {
-    const auto& table_name = table_info_by_name_pair.first;
-    const auto& table_info = table_info_by_name_pair.second;
-    const auto table = table_info.table;
+  for (const auto& [table_name, table_info] : table_info_by_name) {
+    const auto& table = table_info.table;
     const auto& column_names = table->column_names();
 
     auto column_vectors = std::vector<std::vector<std::string>>{};

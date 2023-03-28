@@ -83,6 +83,10 @@ bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_
     return false;
   }
 
+  if (!(operator_predicate.predicate_condition == PredicateCondition::Equals || operator_predicate.predicate_condition == PredicateCondition::NotEquals)) {
+    return false;
+  }
+
   const auto row_count_table =
       cost_estimator->cardinality_estimator->estimate_cardinality(predicate_node->left_input());
   if (row_count_table < INDEX_SCAN_ROW_COUNT_THRESHOLD) {

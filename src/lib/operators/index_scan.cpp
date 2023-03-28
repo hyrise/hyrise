@@ -43,7 +43,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   auto matches_out = std::make_shared<RowIDPosList>();
 
-  const auto& indexes = _in_table->get_table_indexes();
+  const auto& indexes = _in_table->get_table_indexes(_left_column_id);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
     Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
