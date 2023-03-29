@@ -21,18 +21,12 @@ class JoinNodeTest : public BaseTest {
     _mock_node_a = MockNode::make(
         MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}, {DataType::Int, "c"}}, "t_a");
     _mock_node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Float, "y"}}, "t_b");
-    _mock_node_c = MockNode::make(
-        MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}, {DataType::Int, "w"}}, "t_c");
 
     _t_a_a = _mock_node_a->get_column("a");
     _t_a_b = _mock_node_a->get_column("b");
     _t_a_c = _mock_node_a->get_column("c");
     _t_b_x = _mock_node_b->get_column("x");
     _t_b_y = _mock_node_b->get_column("y");
-
-    _t_c_u = _mock_node_c->get_column("u");
-    _t_c_v = _mock_node_c->get_column("v");
-    _t_c_w = _mock_node_c->get_column("w");
 
     _cross_join_node = JoinNode::make(JoinMode::Cross, _mock_node_a, _mock_node_b);
     _inner_join_node = JoinNode::make(JoinMode::Inner, equals_(_t_a_a, _t_b_y), _mock_node_a, _mock_node_b);
@@ -52,7 +46,7 @@ class JoinNodeTest : public BaseTest {
   std::shared_ptr<MockNode> _mock_node_a, _mock_node_b, _mock_node_c;
   std::shared_ptr<JoinNode> _inner_join_node, _semi_join_node, _semi_join_reduction_node, _anti_join_node,
       _cross_join_node;
-  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z, _t_c_u, _t_c_v, _t_c_w;
+  std::shared_ptr<LQPColumnExpression> _t_a_a, _t_a_b, _t_a_c, _t_b_x, _t_b_y, _t_b_z;
   std::optional<TableKeyConstraint> _key_constraint_a, _key_constraint_b_c, _key_constraint_x, _key_constraint_y;
 };
 

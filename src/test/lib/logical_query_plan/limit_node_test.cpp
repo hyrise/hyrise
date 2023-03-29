@@ -31,7 +31,7 @@ TEST_F(LimitNodeTest, Description) {
 
 TEST_F(LimitNodeTest, HashingAndEqualityCheck) {
   _limit_node->set_left_input(nullptr);
-  EXPECT_EQ(*_limit_node, *_limit_node);
+
   EXPECT_EQ(*LimitNode::make(value_(10)), *_limit_node);
   EXPECT_NE(*LimitNode::make(value_(11)), *_limit_node);
 

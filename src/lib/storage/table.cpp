@@ -422,8 +422,8 @@ void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constrai
                table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
            "Another primary TableKeyConstraint exists for this table.");
 
-    // Ensure there is only one key constraint per column(s). Though, e.g., two unique constraints {a, b} and {b, c}
-    // could be set, we make sure we definitely notice these cases.
+    // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
+    // {a, b} and {b, c}, but for now we prohibit these cases.
     Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
            "Another TableKeyConstraint for the same column(s) has already been defined.");
   }

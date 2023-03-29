@@ -42,12 +42,15 @@ ForeignKeyConstraint::ForeignKeyConstraint(const std::vector<ColumnID>& foreign_
       _primary_key_table{primary_key_table} {
   Assert(_foreign_key_columns.size() == _primary_key_columns.size(),
          "Invalid number of columns for ForeignKeyConstraint.");
-  // In general, ForeignKeyConstraints should always reference the foreign key table and the primary key table. However,
-  // MockNodes can hold ForeignKeyConstraints that do not reference a primary key table (since they mock the node
-  // representing this table). This is fine and we allow such constraints. When we actually add a ForeignKeyConstraint
-  // to a table, we ensure that the constraint references a primary key table:
-  // Table::add_soft_foreign_key_constraint(...) checks that the pointer is set and valid (i.e., the primary key table
-  // exists).
+  // In general, ForeignKeyConstraints should reference the foreign key table and the primary key table. They are
+  // attached to the foreign key table and also hold a pointer to the primary key table.
+  // ForeignKeyConstraints are translated to inclusion dependencies (INDs) in the LQP, which are tracked by the
+  // StoredTableNode of the primary key table and its subsequent LQP nodes. For test cases that test IND handling, we
+  // enforce specific INDs by adding a ForeignKeyConstraint to a MockNode. Since this MockNode does not relate to an
+  // actual table object, we do not enforce a TableKeyConstraint to reference a primary key table. In contrast, this
+  // check is subject to the (stored) foreign key table when we add a constraint in
+  // `Table::add_soft_foreign_key_constraint(...)` and only assert that the foreign key table is set, which we need to
+  // verify if an IND exists in the LQP.
   Assert(foreign_key_table, "ForeignKeyConstraint must reference a table.");
 
   // For foreign key constraints with the same columns, the order of the columns is relevant since it determines which

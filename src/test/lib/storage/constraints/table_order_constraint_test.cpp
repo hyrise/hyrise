@@ -34,19 +34,19 @@ TEST_F(TableOrderConstraintTest, AddOrderConstraints) {
   EXPECT_EQ(_table->soft_order_constraints().size(), 0);
 
   const auto order_constraint_1 = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
-  _table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{1}}});
+  _table->add_soft_order_constraint(order_constraint_1);
   EXPECT_EQ(_table->soft_order_constraints().size(), 1);
 
   const auto order_constraint_2 = TableOrderConstraint{{ColumnID{0}}, {ColumnID{3}}};
-  _table->add_soft_order_constraint({{ColumnID{0}}, {ColumnID{3}}});
+  _table->add_soft_order_constraint(order_constraint_2);
   EXPECT_EQ(_table->soft_order_constraints().size(), 2);
 
   const auto order_constraint_3 = TableOrderConstraint{{ColumnID{1}}, {ColumnID{0}}};
-  _table->add_soft_order_constraint({{ColumnID{1}}, {ColumnID{0}}});
+  _table->add_soft_order_constraint(order_constraint_3);
   EXPECT_EQ(_table->soft_order_constraints().size(), 3);
 
   const auto order_constraint_4 = TableOrderConstraint{{ColumnID{2}}, {ColumnID{1}}};
-  _table->add_soft_order_constraint({{ColumnID{2}}, {ColumnID{1}}});
+  _table->add_soft_order_constraint(order_constraint_4);
   EXPECT_EQ(_table->soft_order_constraints().size(), 4);
 
   EXPECT_TRUE(_table->soft_order_constraints().contains(order_constraint_1));

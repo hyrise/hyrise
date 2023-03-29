@@ -39,35 +39,36 @@ TEST_F(ForeignKeyConstraintTest, OrderedColumnIDs) {
   EXPECT_EQ(foreign_key_constraint.primary_key_table(), _table_a);
 
   // Try a larger one.
-  auto column_ids = std::vector<ColumnID>(100);
-  std::iota(column_ids.begin(), column_ids.end(), ColumnID{0});
-  auto reverse_column_ids = column_ids;
-  std::sort(reverse_column_ids.begin(), reverse_column_ids.end(), std::greater<ColumnID>{});
+  const auto ordered_column_ids =
+      std::vector<ColumnID>{ColumnID{0}, ColumnID{1}, ColumnID{2}, ColumnID{3}, ColumnID{4}, ColumnID{5},
+                            ColumnID{6}, ColumnID{7}, ColumnID{8}, ColumnID{9}, ColumnID{10}};
+  const auto random_column_ids =
+      std::vector<ColumnID>{ColumnID{4}, ColumnID{9},  ColumnID{5}, ColumnID{7}, ColumnID{2}, ColumnID{8},
+                            ColumnID{1}, ColumnID{10}, ColumnID{0}, ColumnID{3}, ColumnID{6}};
   const auto large_foreign_key_constraint =
-      ForeignKeyConstraint{reverse_column_ids, _table_a, reverse_column_ids, _table_b};
-  EXPECT_EQ(large_foreign_key_constraint.foreign_key_columns(), column_ids);
-  EXPECT_EQ(large_foreign_key_constraint.primary_key_columns(), column_ids);
+      ForeignKeyConstraint{random_column_ids, _table_a, random_column_ids, _table_b};
+  EXPECT_EQ(large_foreign_key_constraint.foreign_key_columns(), ordered_column_ids);
+  EXPECT_EQ(large_foreign_key_constraint.primary_key_columns(), ordered_column_ids);
 }
 
 TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraints) {
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 0);
 
   const auto foreign_key_constraint_1 = ForeignKeyConstraint{{ColumnID{0}}, _table_a, {ColumnID{0}}, _table_b};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, _table_a, {ColumnID{0}}, _table_b});
+  _table_a->add_soft_foreign_key_constraint(foreign_key_constraint_1);
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 1);
 
   const auto foreign_key_constraint_2 = ForeignKeyConstraint{{ColumnID{1}}, _table_a, {ColumnID{1}}, _table_b};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{1}}, _table_a, {ColumnID{1}}, _table_b});
+  _table_a->add_soft_foreign_key_constraint(foreign_key_constraint_2);
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 2);
 
   const auto foreign_key_constraint_3 = ForeignKeyConstraint{{ColumnID{2}}, _table_a, {ColumnID{0}}, _table_c};
-  _table_a->add_soft_foreign_key_constraint({{ColumnID{2}}, _table_a, {ColumnID{0}}, _table_c});
+  _table_a->add_soft_foreign_key_constraint(foreign_key_constraint_3);
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 3);
 
   const auto foreign_key_constraint_4 =
       ForeignKeyConstraint{{ColumnID{3}, ColumnID{4}}, _table_a, {ColumnID{1}, ColumnID{0}}, _table_b};
-  _table_a->add_soft_foreign_key_constraint(
-      {{ColumnID{3}, ColumnID{4}}, _table_a, {ColumnID{1}, ColumnID{0}}, _table_b});
+  _table_a->add_soft_foreign_key_constraint(foreign_key_constraint_4);
   EXPECT_EQ(_table_a->soft_foreign_key_constraints().size(), 4);
 
   // Ensure all constraints were added.
@@ -98,7 +99,7 @@ TEST_F(ForeignKeyConstraintTest, AddForeignKeyConstraintsInvalid) {
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, _table_a, {ColumnID{1}}, _table_b}),
                std::logic_error);
 
-  // Invalid,because the primary key table does not exist.
+  // Invalid because the primary key table does not exist.
   EXPECT_THROW(_table_a->add_soft_foreign_key_constraint({{ColumnID{1}}, _table_a, {ColumnID{1}}, nullptr}),
                std::logic_error);
 
