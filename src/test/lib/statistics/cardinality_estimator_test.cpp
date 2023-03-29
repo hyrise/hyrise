@@ -916,8 +916,8 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
 
 // Usually, we assume that we know nothing about predicates getting their values from uncorrelated subqueries and we
 // simply forward the input estimations. However, special predicates with subqueries can stem from join rewrites (e.g.,
-// JoinToPredicateRewriteRule). We estimate the resulting plans just like we would have done it for the original semi-
-// joins. The following two test cases ensure the correct behavior for the possible rewrites.
+// JoinToPredicateRewriteRule). We estimate the resulting plans just like we would have done it for a semi-join. The
+// following two test cases ensure the correct behavior for the possible rewrites.
 TEST_F(CardinalityEstimatorTest, ValueScanWithUncorrelatedSubquery) {
   // Case (i): Predicate column = <subquery>
   // Example query:
