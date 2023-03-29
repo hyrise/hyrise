@@ -316,7 +316,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
-    const ValidateNode& validate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+    const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // Currently no statistics available to base ValidateNode on
   return input_table_statistics;
 }
@@ -562,71 +562,71 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 
   if (join_node.join_mode == JoinMode::Cross) {
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
-  } else {
-    // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #1560
-    const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
-        *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
+  }
 
-    if (primary_operator_join_predicate) {
-      switch (join_node.join_mode) {
-        // For now, handle outer joins just as inner joins
-        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
-        case JoinMode::Left:
-        case JoinMode::Right:
-        case JoinMode::FullOuter:
-        case JoinMode::Inner:
-          switch (primary_operator_join_predicate->predicate_condition) {
-            case PredicateCondition::Equals:
-              return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
-                                              primary_operator_join_predicate->column_ids.second,
-                                              *left_input_table_statistics, *right_input_table_statistics);
+  // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #1560
+  const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
+      *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
-            // TODO(anybody) Implement estimation for non-equi joins. #1830
-            case PredicateCondition::NotEquals:
-            case PredicateCondition::LessThan:
-            case PredicateCondition::LessThanEquals:
-            case PredicateCondition::GreaterThan:
-            case PredicateCondition::GreaterThanEquals:
-            case PredicateCondition::BetweenInclusive:
-            case PredicateCondition::BetweenUpperExclusive:
-            case PredicateCondition::BetweenLowerExclusive:
-            case PredicateCondition::BetweenExclusive:
-            case PredicateCondition::In:
-            case PredicateCondition::NotIn:
-            case PredicateCondition::Like:
-            case PredicateCondition::NotLike:
-              return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
+  if (primary_operator_join_predicate) {
+    switch (join_node.join_mode) {
+      // For now, handle outer joins just as inner joins
+      // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
+      case JoinMode::Left:
+      case JoinMode::Right:
+      case JoinMode::FullOuter:
+      case JoinMode::Inner:
+        switch (primary_operator_join_predicate->predicate_condition) {
+          case PredicateCondition::Equals:
+            return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
+                                            primary_operator_join_predicate->column_ids.second,
+                                            *left_input_table_statistics, *right_input_table_statistics);
 
-            case PredicateCondition::IsNull:
-            case PredicateCondition::IsNotNull:
-              Fail("IS NULL is an invalid join predicate");
-          }
-          Fail("Invalid enum value");
+          // TODO(anybody) Implement estimation for non-equi joins. #1830
+          case PredicateCondition::NotEquals:
+          case PredicateCondition::LessThan:
+          case PredicateCondition::LessThanEquals:
+          case PredicateCondition::GreaterThan:
+          case PredicateCondition::GreaterThanEquals:
+          case PredicateCondition::BetweenInclusive:
+          case PredicateCondition::BetweenUpperExclusive:
+          case PredicateCondition::BetweenLowerExclusive:
+          case PredicateCondition::BetweenExclusive:
+          case PredicateCondition::In:
+          case PredicateCondition::NotIn:
+          case PredicateCondition::Like:
+          case PredicateCondition::NotLike:
+            return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
-        case JoinMode::Cross:
-          // Should have been forwarded to estimate_cross_join()
-          Fail("Cross join is not a predicated join");
+          case PredicateCondition::IsNull:
+          case PredicateCondition::IsNotNull:
+            Fail("IS NULL is an invalid join predicate");
+        }
+        Fail("Invalid enum value");
 
-        case JoinMode::Semi:
-          return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
-                                    primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
-                                    *right_input_table_statistics);
+      case JoinMode::Cross:
+        // Should have been forwarded to estimate_cross_join()
+        Fail("Cross join is not a predicated join");
 
-        case JoinMode::AntiNullAsTrue:
-        case JoinMode::AntiNullAsFalse:
-          return left_input_table_statistics;
-      }
-    } else {
-      // TODO(anybody) For now, estimate a selectivity of one. #1830
-      return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
+      case JoinMode::Semi:
+        return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
+                                  primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
+                                  *right_input_table_statistics);
+
+      case JoinMode::AntiNullAsTrue:
+      case JoinMode::AntiNullAsFalse:
+        return left_input_table_statistics;
     }
   }
+
+  // TODO(anybody) For now, estimate a selectivity of one. #1830
+  return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
   Fail("Invalid enum value");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
-    const UnionNode& union_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+    const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
   // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
   // seems unjustified. For now, we just concatenate the two statistics objects

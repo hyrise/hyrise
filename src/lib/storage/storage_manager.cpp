@@ -222,6 +222,7 @@ void StorageManager::export_all_tables_as_csv(const std::string& path) {
       auto table_wrapper = std::make_shared<TableWrapper>(table);
       table_wrapper->execute();
 
+      // NOLINTNEXTLINE(performance-inefficient-string-concatenation): not worth it, no performance-critical path.
       auto export_csv = std::make_shared<Export>(table_wrapper, path + "/" + name + ".csv", FileType::Csv);
       export_csv->execute();
     });

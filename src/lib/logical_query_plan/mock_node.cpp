@@ -78,7 +78,7 @@ const std::vector<ColumnID>& MockNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
-std::string MockNode::description(const DescriptionMode mode) const {
+std::string MockNode::description(const DescriptionMode /*mode*/) const {
   std::ostringstream stream;
   stream << "[MockNode '"s << name.value_or("Unnamed") << "'] Columns:";
 
@@ -159,7 +159,7 @@ size_t MockNode::_on_shallow_hash() const {
   return hash;
 }
 
-std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   const auto mock_node = MockNode::make(_column_definitions, name);
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_key_constraints(_table_key_constraints);
@@ -168,7 +168,7 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& node
   return mock_node;
 }
 
-bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool MockNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& mock_node = static_cast<const MockNode&>(rhs);
 
   return _column_definitions == mock_node._column_definitions && _pruned_column_ids == mock_node._pruned_column_ids &&

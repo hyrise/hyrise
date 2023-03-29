@@ -64,7 +64,7 @@ std::vector<SQLIdentifier> SQLIdentifierResolver::get_expression_identifiers(
     return identifiers;
   }
   for (const auto& column_name : entry_iter->column_names) {
-    identifiers.emplace_back(SQLIdentifier(column_name, entry_iter->table_name));
+    identifiers.emplace_back(column_name, entry_iter->table_name);
   }
   return identifiers;
 }
@@ -91,7 +91,7 @@ SQLIdentifierContextEntry& SQLIdentifierResolver::_find_or_create_expression_ent
 
   // If there is no entry for this Expression, just add one
   if (entry_iter == _entries.end()) {
-    SQLIdentifierContextEntry entry{expression, std::nullopt, {}};
+    const auto entry = SQLIdentifierContextEntry{expression, std::nullopt, {}};
     entry_iter = _entries.emplace(_entries.end(), entry);
   }
 

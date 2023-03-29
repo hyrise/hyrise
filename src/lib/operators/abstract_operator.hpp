@@ -276,7 +276,7 @@ class AbstractOperator : public std::enable_shared_from_this<AbstractOperator>, 
 
   // State management
   std::atomic<OperatorState> _state{OperatorState::Created};
-  void _transition_to(OperatorState new_state);
+  void _transition_to(const OperatorState new_state);
 
   /**
    * OperatorTasks wrap operators for scheduling. Since operator results are shared between uncorrelated subqueries

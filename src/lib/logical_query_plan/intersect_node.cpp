@@ -13,7 +13,7 @@ namespace hyrise {
 IntersectNode::IntersectNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Intersect), set_operation_mode(init_operation_mode) {}
 
-std::string IntersectNode::description(const DescriptionMode mode) const {
+std::string IntersectNode::description(const DescriptionMode /*mode*/) const {
   return "[IntersectNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
@@ -46,11 +46,11 @@ size_t IntersectNode::_on_shallow_hash() const {
   return boost::hash_value(set_operation_mode);
 }
 
-std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> IntersectNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return IntersectNode::make(set_operation_mode);
 }
 
-bool IntersectNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool IntersectNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& intersect_node = static_cast<const IntersectNode&>(rhs);
   return set_operation_mode == intersect_node.set_operation_mode;
 }

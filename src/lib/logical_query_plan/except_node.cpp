@@ -13,7 +13,7 @@ namespace hyrise {
 ExceptNode::ExceptNode(const SetOperationMode init_operation_mode)
     : AbstractLQPNode(LQPNodeType::Except), set_operation_mode(init_operation_mode) {}
 
-std::string ExceptNode::description(const DescriptionMode mode) const {
+std::string ExceptNode::description(const DescriptionMode /*mode*/) const {
   return "[ExceptNode] Mode: " + std::string{magic_enum::enum_name(set_operation_mode)};
 }
 
@@ -42,11 +42,11 @@ size_t ExceptNode::_on_shallow_hash() const {
   return boost::hash_value(set_operation_mode);
 }
 
-std::shared_ptr<AbstractLQPNode> ExceptNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> ExceptNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return ExceptNode::make(set_operation_mode);
 }
 
-bool ExceptNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool ExceptNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& except_node = static_cast<const ExceptNode&>(rhs);
   return set_operation_mode == except_node.set_operation_mode;
 }
