@@ -83,13 +83,15 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
   EXPECT_EQ(operator_predicate_a.value, AllParameterVariant{5});
 }
 
-TEST_F(OperatorScanPredicateTest, SimpleBetweenInclusive) {
+TEST_F(OperatorScanPredicateTest, SimpleBetween) {
+  // 5 <= a <= 7.
   const auto between_inclusive = OperatorScanPredicate::from_expression(*between_inclusive_(a, 5, 7), *node);
   ASSERT_TRUE(between_inclusive);
   ASSERT_EQ(between_inclusive->size(), 1u);
 
   EXPECT_EQ(between_inclusive->at(0), OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenInclusive, 5, 7));
 
+  // 5 <= a < 7.
   const auto between_upper_exclusive =
       OperatorScanPredicate::from_expression(*between_upper_exclusive_(a, 5, 7), *node);
   ASSERT_TRUE(between_upper_exclusive);
@@ -98,6 +100,7 @@ TEST_F(OperatorScanPredicateTest, SimpleBetweenInclusive) {
   EXPECT_EQ(between_upper_exclusive->at(0),
             OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenUpperExclusive, 5, 7));
 
+  // 5 < a <= 7.
   const auto between_lower_exclusive =
       OperatorScanPredicate::from_expression(*between_lower_exclusive_(a, 5, 7), *node);
   ASSERT_TRUE(between_lower_exclusive);
@@ -106,18 +109,13 @@ TEST_F(OperatorScanPredicateTest, SimpleBetweenInclusive) {
   EXPECT_EQ(between_lower_exclusive->at(0),
             OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenLowerExclusive, 5, 7));
 
+  // 5 < a < 7.
   const auto between_exclusive = OperatorScanPredicate::from_expression(*between_exclusive_(a, 5, 7), *node);
   ASSERT_TRUE(between_exclusive);
   ASSERT_EQ(between_exclusive->size(), 1u);
 
   EXPECT_EQ(between_exclusive->at(0), OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenExclusive, 5, 7));
 }
-
-TEST_F(OperatorScanPredicateTest, SimpleBetweenUpperExclusive) {}
-
-TEST_F(OperatorScanPredicateTest, SimpleBetweenLowerExclusive) {}
-
-TEST_F(OperatorScanPredicateTest, SimpleBetweenExclusive) {}
 
 TEST_F(OperatorScanPredicateTest, ComplicatedBetween) {
   // `5 BETWEEN INCLUSIVE a AND b` becomes `a <= 5 AND b >= 5`

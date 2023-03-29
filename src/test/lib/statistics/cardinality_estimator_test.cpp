@@ -920,6 +920,8 @@ TEST_F(CardinalityEstimatorTest, NonQueryNodes) {
 // joins. The following two test cases ensure the correct behavior for the possible rewrites.
 TEST_F(CardinalityEstimatorTest, ValueScanWithUncorrelatedSubquery) {
   // Case (i): Predicate column = <subquery>
+  // Example query:
+  //     SELECT n_name FROM nation WHERE n_regionkey = (SELECT r_regionkey FROM region WHERE r_name = 'ASIA');
   // clang-format off
   const auto subquery =
   ProjectionNode::make(expression_vector(c_y),
@@ -953,6 +955,10 @@ TEST_F(CardinalityEstimatorTest, ValueScanWithUncorrelatedSubquery) {
 
 TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   // Case (ii): Predicate column BETWEEN min(<subquery>) and max(<subquery>)
+  // Example query:
+  //     SELECT SUM(ws_ext_sales_price) FROM web_sales
+  //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
+  //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
   const auto subquery = PredicateNode::make(between_inclusive_(c_y, value_(0), value_(2)), node_c);
 
   const auto min_c_y = AggregateNode::make(expression_vector(), expression_vector(min_(c_y)), subquery);
@@ -985,12 +991,14 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_x), lqp_subquery_(max_c_y)), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
-  // Aggregate functions must not group the tuples.
+  // Aggregate functions must not group the tuples. Otherwise, we do not get the minimum and maximum value for the join
+  // key for the underlying node.
   const auto min_c_y_grouped = AggregateNode::make(expression_vector(c_x), expression_vector(min_(c_y)), subquery);
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_grouped), lqp_subquery_(max_c_y)), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
-  // There must not be another operator in between aggregate and origin node.
+  // There must not be another operator in between aggregate and origin node. Otherwise, further join keys might be
+  // filtered and the predicate is not equivalent to a semi-join with the origin node anymore.
   // clang-format off
   const auto min_c_y_filtered =
   AggregateNode::make(expression_vector(), expression_vector(min_(c_y)),
@@ -1012,7 +1020,11 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
 }
 
 TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjections) {
-  // Similar to BetweenScanWithUncorrelatedSubquery, but with a single AggregateNode and two projections.
+  // Similar to BetweenScanWithUncorrelatedSubquery, but with a single AggregateNode for MIN/MAX and two projections.
+  // Example query is the same as for that test case:
+  //     SELECT SUM(ws_ext_sales_price) FROM web_sales
+  //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
+  //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
   // clang-format off
   const auto subquery =
   AggregateNode::make(expression_vector(), expression_vector(min_(c_y), max_(c_y)),
