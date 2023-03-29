@@ -61,6 +61,31 @@ TEST_F(BufferPoolAllocatorTest, TestConstructRawPointer) {
   EXPECT_EQ(dummy._value2, 1.0);
 }
 
+// template <typename T>
+// class CustomBufferPoolAllocator : public BufferPoolAllocator<T> {
+//  public:
+//   using pointer = typename BufferPoolAllocator<T>::pointer;
+//   using value_type = T;
+
+//   [[nodiscard]] pointer allocate(std::size_t n) override {
+//     auto ptr =
+//         static_cast<pointer>(BufferManager::get_global_buffer_manager().allocate(sizeof(value_type) * n, alignof(T)));
+//     std::cout << "TEst" << std::endl;
+//     return ptr;
+//   }
+// };
+
+// TEST_F(BufferPoolAllocatorTest, TestSubclass) {
+//   auto allocator = BufferPoolAllocator<int>{};
+//   auto custom = CustomBufferPoolAllocator<int>{};
+//   auto new_vector = boost::container::vector<int, BufferPoolAllocator<int>>{100, allocator};
+
+//   new_vector.get_stored_allocator() = custom;
+//   new_vector.resize(1000);
+
+//   // TODO: resource test
+// }
+
 // TODO
 // TEST_F(BufferPoolAllocatorTest, TestConstructRawPointer) {
 //   auto allocator = BufferPoolAllocator<size_t>();

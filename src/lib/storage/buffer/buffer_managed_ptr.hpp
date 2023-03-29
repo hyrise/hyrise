@@ -292,7 +292,7 @@ class BufferManagedPtr {
 
  private:
   Addressing _addressing = EmptyAddress{};
-  BufferManager* _buffer_manager = nullptr;
+  BufferManager* _buffer_manager = &BufferManager::get_global_buffer_manager();
 
   template <class T1, class T2>
   friend bool operator!=(const BufferManagedPtr<T1>& ptr1, const BufferManagedPtr<T2>& ptr2);

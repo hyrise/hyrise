@@ -1,6 +1,5 @@
 #pragma once
 
-#include <boost/unordered/unordered_flat_map.hpp>
 #include <memory>
 #include <tuple>
 #include "noncopyable.hpp"
@@ -77,7 +76,7 @@ class BufferManager : public Noncopyable {
     // TODO: Internal fragmentation rate over all page sizes (lower is better)
     std::size_t internal_framentation_rate = 0;
 
-    std::size_t num_madvice_free_call = 0;  //TODO
+    std::size_t num_madvice_free_calls = 0;  //TODO
 
     // TODO: read and write rates for all paths, dram, numa
   };
@@ -193,7 +192,8 @@ class BufferManager : public Noncopyable {
    * Holds multiple sized buffer pools on either DRAM or NUMA memory.
   */
   struct BufferPools {
-    Frame* allocate_frame(const PageSizeType size_type);
+    template <typename EvictionCallback>
+    Frame* allocate_frame(const PageSizeType size_type, EvictionCallback&& eviction_callback);
 
     // Purge the eviction queue
     void purge_eviction_queue();
@@ -241,6 +241,7 @@ class BufferManager : public Noncopyable {
   bool is_dirty(const PageID page_id);
 
   Frame* get_frame(const PageID page_id, const PageSizeType size_type);
+  void remove_frame(Frame* frame);
 
   // Find a page in the buffer pool
   std::shared_ptr<SharedFrame> find_in_page_table(const PageID page_id);
@@ -270,7 +271,7 @@ class BufferManager : public Noncopyable {
   BufferPools _numa_buffer_pools;
 
   // Page Table that contains shared frames which are currently in the buffer pool
-  boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>> _page_table;
+  PageTable _page_table;
   std::mutex _page_table_mutex;
 };
 

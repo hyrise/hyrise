@@ -2,11 +2,13 @@
 
 #include <tbb/concurrent_queue.h>
 #include <bit>
+#include <boost/unordered/unordered_flat_map.hpp>
 #include <limits>
 #include <magic_enum.hpp>
 #include "boost/integer/static_log2.hpp"
 #include "strong_typedef.hpp"
 #include "utils/assert.hpp"
+
 #if HYRISE_NUMA_SUPPORT
 #include <numa.h>
 #endif
@@ -72,6 +74,7 @@ struct add_reference<const void> {
 };
 
 class Frame;
+class SharedFrame;
 
 // Eviction Queue
 struct EvictionItem {
@@ -79,17 +82,19 @@ struct EvictionItem {
   uint64_t timestamp;
 };
 
+using PageTable = boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>>;
+
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
 enum class PageType { Invalid, Dram, Numa };
 
-size_t numa_memory_size(const size_t memory_node) {
-#if HYRISE_NUMA_SUPPORT
-  return numa_node_size(memory_node, NULL);
-#else
-  Fail("NUMA support is not enabled");
-#endif
-}
+// size_t numa_memory_size(const size_t memory_node) {
+// #if HYRISE_NUMA_SUPPORT
+//   return numa_node_size(memory_node, NULL);
+// #else
+//   Fail("NUMA support is not enabled");
+// #endif
+// }
 
 enum BufferManagerMode {
   DramNumaEmulationSSD,  // TODO Use two volatile regions (DRAM and DRAM for emulation purposes) and SSD
