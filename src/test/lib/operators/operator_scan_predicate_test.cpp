@@ -84,37 +84,16 @@ TEST_F(OperatorScanPredicateTest, FromExpressionColumnRight) {
 }
 
 TEST_F(OperatorScanPredicateTest, SimpleBetween) {
-  // 5 <= a <= 7.
-  const auto between_inclusive = OperatorScanPredicate::from_expression(*between_inclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_inclusive);
-  ASSERT_EQ(between_inclusive->size(), 1u);
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenInclusive, PredicateCondition::BetweenLowerExclusive,
+        PredicateCondition::BetweenUpperExclusive, PredicateCondition::BetweenExclusive}) {
+    const auto predicate_expression = std::make_shared<BetweenExpression>(predicate_condition, a, value_(5), value_(7));
+    const auto operator_predicates = OperatorScanPredicate::from_expression(*predicate_expression, *node);
+    ASSERT_TRUE(operator_predicates);
+    ASSERT_EQ(operator_predicates->size(), 1);
 
-  EXPECT_EQ(between_inclusive->at(0), OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenInclusive, 5, 7));
-
-  // 5 <= a < 7.
-  const auto between_upper_exclusive =
-      OperatorScanPredicate::from_expression(*between_upper_exclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_upper_exclusive);
-  ASSERT_EQ(between_upper_exclusive->size(), 1u);
-
-  EXPECT_EQ(between_upper_exclusive->at(0),
-            OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenUpperExclusive, 5, 7));
-
-  // 5 < a <= 7.
-  const auto between_lower_exclusive =
-      OperatorScanPredicate::from_expression(*between_lower_exclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_lower_exclusive);
-  ASSERT_EQ(between_lower_exclusive->size(), 1u);
-
-  EXPECT_EQ(between_lower_exclusive->at(0),
-            OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenLowerExclusive, 5, 7));
-
-  // 5 < a < 7.
-  const auto between_exclusive = OperatorScanPredicate::from_expression(*between_exclusive_(a, 5, 7), *node);
-  ASSERT_TRUE(between_exclusive);
-  ASSERT_EQ(between_exclusive->size(), 1u);
-
-  EXPECT_EQ(between_exclusive->at(0), OperatorScanPredicate(ColumnID{0}, PredicateCondition::BetweenExclusive, 5, 7));
+    EXPECT_EQ(operator_predicates->at(0), OperatorScanPredicate(ColumnID{0}, predicate_condition, 5, 7));
+  }
 }
 
 TEST_F(OperatorScanPredicateTest, ComplicatedBetween) {
