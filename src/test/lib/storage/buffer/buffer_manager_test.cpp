@@ -42,7 +42,7 @@ TEST_F(BufferManagerTest, TestPinAndUnpinPage) {
   EXPECT_ANY_THROW(buffer_manager.allocate(512));
 
   // Unpin the page. And try again. No the allocation works.
-  buffer_manager.unpin_page(page_id, PageSizeType::KiB256, false);
+  buffer_manager.unpin_page(page_id, false);
   EXPECT_NO_THROW(buffer_manager.allocate(512));
 }
 
@@ -61,7 +61,7 @@ TEST_F(BufferManagerTest, TestFlushDirtyPage) {
   char_page[1] = 2;
 
   // Unpin the page and mark it as dirty. There should be nothing on the SSD yet.
-  buffer_manager.unpin_page(page_id, PageSizeType::KiB256, true);
+  buffer_manager.unpin_page(page_id, true);
   alignas(512) std::array<uint8_t, bytes_for_size_type(PageSizeType::KiB256)> read_buffer1;
   ssd_region->read_page(page_id, PageSizeType::KiB256, reinterpret_cast<std::byte*>(read_buffer1.data()));
   EXPECT_NE(memcmp(page, read_buffer1.data(), bytes_for_size_type(PageSizeType::KiB256)), 0)

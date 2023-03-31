@@ -79,7 +79,7 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         });
 
         auto allocator = PolymorphicAllocator<ColumnDataType>{};
-        auto dictionary_pin_guard = AllocatorPinGuard<ColumnDataType>{allocator.outer_allocator()};
+        auto dictionary_pin_guard = make_allocator_pin_guard(allocator);
 
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
 

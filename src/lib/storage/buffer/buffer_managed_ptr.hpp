@@ -59,6 +59,7 @@ class BufferManagedPtr {
 
   // using iterator_category = std::contiguous_iterator_tag;
   // it seems like boost iterator_enable_if_tag does not it up
+  // TODO: Rename
   // using iterator_concept = std::random_access_iterator_tag;  // TODO: contiguous_iterator_tag
   // TODO: introduce custom iterator type, that keeps the pointer/page in mem all the time, but works with raw pointer
   // Check offset pointer for alignment
@@ -265,7 +266,7 @@ class BufferManagedPtr {
 
   void unpin(bool dirty) const {
     if (const auto unswizzled = std::get_if<UnswizzledAddress>(&_addressing)) {
-      _buffer_manager->unpin_page(unswizzled->get_page_id(), unswizzled->get_size_type(), dirty);
+      _buffer_manager->unpin_page(unswizzled->get_page_id(), dirty);
     }
   }
 

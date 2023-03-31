@@ -196,4 +196,16 @@ TEST_F(VolatileRegionTest, TestFreeReducesPhysicalMemoryUsage) {
     volatile_region2.free(frame);
   }
 }
+
+TEST_F(VolatileRegionTest, TestNumaRegionAllocateDeallocate) {
+#if !HYRISE_NUMA_SUPPORT
+  GTEST_SKIP();
+#endif
+
+  auto size_type = PageSizeType::KiB32;
+  const auto region_size = 1 << 30;  // 1 GiB
+
+  auto volatile_region1 = VolatileRegion(size_type, PageType::Numa, region_size);
+}
+
 }  // namespace hyrise

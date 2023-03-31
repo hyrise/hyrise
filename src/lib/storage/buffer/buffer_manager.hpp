@@ -24,23 +24,20 @@ class BufferManager : public Noncopyable {
    * Metrics are storing metric data that happens during allocation and access of the buffer manager.
   */
   struct Metrics {
-    // The maximum amount of bytes being allocated with with subsequent calls of alloc and dealloc
-    std::size_t max_bytes_used;
-
     // The current amount of bytes being allocated
-    std::size_t current_bytes_used;
+    std::size_t current_bytes_used = 0;
 
     // The total number of bytes being allocates
-    std::size_t total_allocated_bytes;
+    std::size_t total_allocated_bytes = 0;
 
     // The total number of bytes that is unused when allocating memory on a page. Can be used to calculate internal fragmentation.
-    std::size_t total_unused_bytes;
+    std::size_t total_unused_bytes = 0;
 
     // The number of allocation
-    std::size_t num_allocs;
+    std::size_t num_allocs = 0;
 
     // The number of deallocation
-    std::size_t num_deallocs;
+    std::size_t num_deallocs = 0;
 
     // Tracks the number of hits in the page_table
     std::size_t page_table_hits = 0;
@@ -53,6 +50,10 @@ class BufferManager : public Noncopyable {
 
     // Tracks the number of bytes written to SSD
     std::size_t total_bytes_written_to_ssd = 0;
+
+    std::size_t total_pins = 0;
+
+    std::size_t current_pins = 0;
 
     std::size_t num_ssd_reads = 0;
 
@@ -127,7 +128,7 @@ class BufferManager : public Noncopyable {
    * 
    * @param page_id 
    */
-  void unpin_page(const PageID page_id, const PageSizeType size_type, const bool dirty = false);
+  void unpin_page(const PageID page_id, const bool dirty = false);
 
   /**
    * @brief Get the page id and offset from ptr object. PageID is on its max 
@@ -153,12 +154,17 @@ class BufferManager : public Noncopyable {
    * 
    * @return BufferManager& 
    */
-  static BufferManager& get_global_buffer_manager();
+  static BufferManager& get_global_buffer_manager();  // TODO: Inline?
 
   /**
    * @brief Returns a snapshot of metrics holding information about allocations, page table hits etc. of the current buffer manager instance.
   */
   Metrics metrics();
+
+  /**
+   * @brief Reset the metrics of the buffer manager e.g. when starting a benchmark run.
+  */
+  void reset_metrics();
 
   BufferManager& operator=(BufferManager&& other);
 
@@ -186,14 +192,16 @@ class BufferManager : public Noncopyable {
   friend class Hyrise;
   friend class BufferManagedPtrTest;
   friend class BufferManagerTest;
+  friend class BufferPoolAllocatorTest;
 
  private:
   /**
    * Holds multiple sized buffer pools on either DRAM or NUMA memory.
   */
   struct BufferPools {
-    template <typename EvictionCallback>
-    Frame* allocate_frame(const PageSizeType size_type, EvictionCallback&& eviction_callback);
+    template <typename RemoveFrameCallback>
+    Frame* allocate_frame(const PageSizeType size_type, RemoveFrameCallback&& remove_frame_callback);
+    void deallocate_frame(Frame* frame);
 
     // Purge the eviction queue
     void purge_eviction_queue();
@@ -245,6 +253,7 @@ class BufferManager : public Noncopyable {
 
   // Find a page in the buffer pool
   std::shared_ptr<SharedFrame> find_in_page_table(const PageID page_id);
+  std::shared_ptr<SharedFrame> find_or_create_in_page_table(const PageID page_id);
 
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
   Frame* new_page(const PageSizeType size_type);

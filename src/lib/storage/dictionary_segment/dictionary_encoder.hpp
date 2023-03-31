@@ -62,17 +62,14 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     });
 
     auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
-    auto pin_guard = PinGuard{*dictionary, true};
 
     std::sort(dictionary->begin().get_ptr().get(), dictionary->end().get_ptr().get());
 
     dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
     dictionary->shrink_to_fit();
-    pin_guard.repin(true);
 
     const auto null_value_id = static_cast<uint32_t>(dictionary->size());
     auto uncompressed_attribute_vector = pmr_vector<uint32_t>{static_cast<uint32_t>(null_values.size()), allocator};
-    auto attribute_vector_pin_guard = PinGuard{uncompressed_attribute_vector, true};
 
     auto values_iter = dense_values.cbegin();
     const auto null_values_size = null_values.size();

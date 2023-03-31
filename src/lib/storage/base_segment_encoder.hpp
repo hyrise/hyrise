@@ -9,6 +9,7 @@
 #include "resolve_type.hpp"
 #include "storage/abstract_encoded_segment.hpp"
 #include "storage/abstract_segment.hpp"
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/create_iterable_from_segment.hpp"
 #include "storage/encoding_type.hpp"
 #include "storage/vector_compression/vector_compression.hpp"
@@ -141,8 +142,10 @@ class SegmentEncoder : public BaseSegmentEncoder {
     static_assert(decltype(supports(data_type_c))::value);
     const auto iterable = create_any_segment_iterable<ColumnDataType>(*abstract_segment);
 
-    // For now, we allocate without a specific memory source.
-    return _self()._on_encode(iterable, PolymorphicAllocator<ColumnDataType>{});
+    // Pin everything in the allocator using the AllocatorPinGuard
+    auto allocator = PolymorphicAllocator<ColumnDataType>{};
+    auto allocator_pin_guard = make_allocator_pin_guard(allocator);
+    return _self()._on_encode(iterable, allocator);
   }
 
   /**@}*/

@@ -43,7 +43,7 @@ class VolatileRegion : public Noncopyable {
   void to_numa(std::byte* address);
 
   const PageType _page_type;
-  const size_t _memory_numa_node;
+  const size_t _numa_memory_node;
   const size_t _total_bytes;
   const PageSizeType _size_type;
 

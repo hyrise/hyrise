@@ -1,12 +1,19 @@
 #pragma once
 
 #include <boost/container/pmr/memory_resource.hpp>
+#include <boost/container/small_vector.hpp>
 #include <boost/move/utility.hpp>
 #include "storage/buffer/buffer_managed_ptr.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
+
+class BufferPoolAllocatorObserver {
+ public:
+  virtual void on_allocate(const PageID page_id, const PageSizeType size_type) = 0;
+  virtual void on_deallocate(const PageID page_id) = 0;
+};
 
 // Interface is taken from here: https://www.modernescpp.com/index.php/memory-management-with-std-allocator
 // https://en.cppreference.com/w/cpp/named_req/Allocator
@@ -51,10 +58,19 @@ class BufferPoolAllocator {
 
   [[nodiscard]] pointer allocate(std::size_t n) {
     auto ptr = static_cast<pointer>(_buffer_manager->allocate(sizeof(value_type) * n, alignof(T)));
+    if (auto observer = _observer.lock()) {
+      const auto page_id = ptr.get_page_id();
+      const auto size_type = ptr.get_size_type();
+      observer->on_allocate(page_id, size_type);
+    }
     return ptr;
   }
 
-  constexpr void deallocate(pointer const ptr, std::size_t n) const noexcept {
+  void deallocate(pointer const ptr, std::size_t n) {
+    if (auto observer = _observer.lock()) {
+      const auto page_id = ptr.get_page_id();
+      observer->on_deallocate(page_id);
+    }
     _buffer_manager->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }
 
@@ -81,7 +97,13 @@ class BufferPoolAllocator {
     ptr->~U();
   }
 
+  void register_observer(std::shared_ptr<BufferPoolAllocatorObserver> observer) {
+    _observer = observer;
+  }
+
  private:
+  std::weak_ptr<BufferPoolAllocatorObserver> _observer;
+  // std::mutex _page_ids_mutex;
   BufferManager* _buffer_manager;
 };
 }  // namespace hyrise

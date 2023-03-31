@@ -24,10 +24,9 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
   }
 
   void Stop(Result& result) override {
-    const auto metrics = _buffer_manager->metrics();
-    result.num_allocs = metrics.num_allocs - _metrics_snapshot.num_allocs;
-    result.max_bytes_used = std::max(metrics.max_bytes_used, _metrics_snapshot.num_allocs);
-    result.total_allocated_bytes = metrics.total_allocated_bytes - _metrics_snapshot.total_allocated_bytes;
+    // const auto metrics = _buffer_manager->metrics();
+    // result.num_allocs = metrics.num_allocs - _metrics_snapshot.num_allocs;
+    // result.total_allocated_bytes = metrics.total_allocated_bytes - _metrics_snapshot.total_allocated_bytes;
     // TODO: result->net_heap_growth
     // The net changes in memory, in bytes, between Start and Stop.
     // ie., total_allocated_bytes - total_deallocated_bytes.
@@ -59,7 +58,8 @@ class MetricsSampler {
   void export_metrics();
 
  private:
-  void to_json(nlohmann::json& json, const BufferManager::Metrics& metrics);
+  using Duration = std::chrono::duration<float, std::milli>;
+  void to_json(nlohmann::json& json, Duration timestamp, const BufferManager::Metrics& metrics);
   void sample();
 
   std::chrono::milliseconds _interval = std::chrono::milliseconds(10);

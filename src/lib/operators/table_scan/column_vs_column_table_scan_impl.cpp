@@ -145,6 +145,7 @@ ColumnVsColumnTableScanImpl::_typed_scan_chunk_with_iterators(ChunkID chunk_id, 
                                                               const LeftIterator& left_end, RightIterator& right_it,
                                                               const RightIterator& right_end) const {
   auto matches_out = std::make_shared<RowIDPosList>();
+  auto matches_pin_guard = make_allocator_pin_guard(matches_out->get_allocator().outer_allocator());
 
   bool condition_was_flipped = false;
   auto maybe_flipped_condition = _predicate_condition;

@@ -4,9 +4,6 @@ namespace hyrise {
 
 void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_manager) {
   const auto metrics = buffer_manager.metrics();
-  state.counters["peak_bytes_used"] =
-      benchmark::Counter(static_cast<double>(metrics.max_bytes_used), benchmark::Counter::Flags::kDefaults,
-                         benchmark::Counter::OneK::kIs1024);
   state.counters["total_allocated_bytes"] =
       benchmark::Counter(static_cast<double>(metrics.total_allocated_bytes), benchmark::Counter::Flags::kDefaults,
                          benchmark::Counter::OneK::kIs1024);
@@ -66,10 +63,12 @@ void MetricsSampler::stop() {
 void MetricsSampler::export_metrics() {
   // TODO: Add context
   auto metrics_json = nlohmann::json::array();
+  auto timestamp = Duration::zero();
   for (auto& metric : _metrics) {
     auto metric_json = nlohmann::json::object();
-    to_json(metric_json, metric);
+    to_json(metric_json, timestamp, metric);
     metrics_json.push_back(metric_json);
+    timestamp += _interval;
   }
   auto context = nlohmann::json::object();
   context["interval"] = _interval.count();
@@ -77,10 +76,11 @@ void MetricsSampler::export_metrics() {
   std::ofstream{_output_path} << std::setw(2) << report << std::endl;
 }
 
-void MetricsSampler::to_json(nlohmann::json& json, const BufferManager::Metrics& metrics) {
+void MetricsSampler::to_json(nlohmann::json& json, Duration timestamp, const BufferManager::Metrics& metrics) {
   json = {
+      {"timestamp", timestamp.count()},
       {"current_bytes_used", metrics.current_bytes_used},
-      {"max_bytes_used", metrics.max_bytes_used},
+      {"current_pins", metrics.current_pins},
       {"total_allocated_bytes", metrics.total_allocated_bytes},
       {"num_allocs", metrics.num_allocs},
       {"num_deallocs", metrics.num_deallocs},

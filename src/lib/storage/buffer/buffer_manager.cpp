@@ -58,8 +58,9 @@ BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager:
   return *this;
 }
 
-template <typename EvictionCallback>
-Frame* BufferManager::BufferPools::allocate_frame(const PageSizeType size_type, EvictionCallback&& eviction_callback) {
+template <typename RemoveFrameCallback>
+Frame* BufferManager::BufferPools::allocate_frame(const PageSizeType size_type,
+                                                  RemoveFrameCallback&& remove_frame_callback) {
   const auto bytes_required = bytes_for_size_type(size_type);
   auto freed_bytes = size_t{0};
   const auto current_bytes = _used_bytes.load();
@@ -67,19 +68,23 @@ Frame* BufferManager::BufferPools::allocate_frame(const PageSizeType size_type, 
   Frame* frame = nullptr;
   auto item = EvictionItem{};
 
+  // Find potential victim frame if we don't have enough space left
   while ((current_bytes + bytes_required - freed_bytes) > _total_bytes) {
     if (!_eviction_queue->try_pop(item)) {
-      Fail("Cannot pop item from queue. No way to alloc new memory.");
+      Fail("Cannot pop item from queue. No way to alloc new memory. Please increase the memory size.");
     }
 
+    // TODO: atomically Lock if pin_count == 0
+
     // If the timestamp does not match, the frame is too old and we just check the next one
-    if (item.timestamp < item.frame->eviction_timestamp.load() || item.frame->pin_count.load() > 0) {
+    if (item.timestamp < item.frame->eviction_timestamp.load() || item.frame->pin_count.load() > 0 ||
+        item.frame->page_id == INVALID_PAGE_ID) {
       continue;
     }
 
-    // Check if the frame was already released earlier (e.g. when the page was removed)
+    // We might be able to steal a frame from a shared frame
     if (item.frame->shared_frame) {
-      eviction_callback(item.frame);
+      remove_frame_callback(item.frame);
     }
 
     // Write out the frame if it's dirty
@@ -113,6 +118,13 @@ Frame* BufferManager::BufferPools::allocate_frame(const PageSizeType size_type, 
   frame->eviction_timestamp.store(0);
 
   return frame;
+}
+
+void BufferManager::BufferPools::deallocate_frame(Frame* frame) {
+  const auto size_type = frame->size_type;
+  frame->clear();
+  _buffer_pools[static_cast<size_t>(size_type)]->deallocate(frame);
+  _used_bytes.fetch_sub(bytes_for_size_type(size_type));
 }
 
 void BufferManager::BufferPools::purge_eviction_queue() {
@@ -205,6 +217,8 @@ BufferManager::BufferManager(const Config config)
                          config.enable_eviction_worker, _ssd_region, _metrics),
       _numa_buffer_pools(page_type_for_numa_buffer_pools(config.mode), config.numa_buffer_pool_size,
                          config.enable_eviction_worker, _ssd_region, _metrics) {
+  Assert(_dram_buffer_pools.enabled || _numa_buffer_pools.enabled, "No Buffer Pool is enabled");
+
   // if constexpr (HYRISE_DEBUG) {
   //   std::cout << "Init Buffer Manager (" << this << ") - " << std::endl;
   // }
@@ -221,60 +235,61 @@ BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 Frame* BufferManager::get_frame(const PageID page_id, const PageSizeType size_type) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
-  const auto shared_frame = find_in_page_table(page_id);
-  if (shared_frame) {
-    if (_dram_buffer_pools.enabled && shared_frame->dram_frame) {
-      // 1. Found the frame in DRAM
-      return shared_frame->dram_frame;
-    } else if (_numa_buffer_pools.enabled && shared_frame->numa_frame) {
-      // 2. Found the frame on NUMA and we want to migrate it to DRAM TODO: read or write intent?!
-      const auto bypass_dram = _migration_policy.bypass_dram_during_read();
-      if (bypass_dram) {
-        // 3. We want to bypass dram
-        return shared_frame->numa_frame;
-      }
+  const auto shared_frame = find_or_create_in_page_table(page_id);
 
-      // 4. Lets not bypass dram and init a new DRAM frame
+  if (_dram_buffer_pools.enabled && shared_frame->dram_frame) {
+    // 1. Found the frame in DRAM
+    return shared_frame->dram_frame;
+  } else if (_numa_buffer_pools.enabled && shared_frame->numa_frame) {
+    // 2. Found the frame on NUMA and we want to migrate it to DRAM TODO: read or write intent?!
+    const auto bypass_dram = _migration_policy.bypass_dram_during_read();
+    if (bypass_dram) {
+      // 3. We want to bypass dram
+      return shared_frame->numa_frame;
+    }
+
+    // 4. Lets not bypass dram and init a new DRAM frame
+    auto allocated_dram_frame = _dram_buffer_pools.allocate_frame(
+        size_type, std::bind(&BufferManager::remove_frame, this, std::placeholders::_1));
+    allocated_dram_frame->init(page_id);
+
+    // TODO: Allocate latches for the frame
+    std::memcpy(allocated_dram_frame->data, shared_frame->numa_frame->data, bytes_for_size_type(size_type));
+    shared_frame->link_dram_frame(allocated_dram_frame);
+    return allocated_dram_frame;
+  } else {
+    // 5. The page is neither in DRAM nor on NUMA, we need to load it from SSD
+    // Use DRAM is enabled and if we want to bypass, or if NUMA is disabled
+    const auto use_dram =
+        !_numa_buffer_pools.enabled || (_dram_buffer_pools.enabled && _migration_policy.bypass_numa_during_read());
+    // TODO: Require lock of tier
+    if (use_dram) {
+      // 6. We want to bypass NUMA (= use DRAM) and read from SSD
       auto allocated_dram_frame = _dram_buffer_pools.allocate_frame(
           size_type, std::bind(&BufferManager::remove_frame, this, std::placeholders::_1));
+      // Update the frame metadata and read the page data
       allocated_dram_frame->init(page_id);
-
-      // TODO: Allocate latches for the frame
-      std::memcpy(allocated_dram_frame->data, shared_frame->numa_frame->data, bytes_for_size_type(size_type));
+      _dram_buffer_pools.read_page(allocated_dram_frame);
       shared_frame->link_dram_frame(allocated_dram_frame);
       return allocated_dram_frame;
     } else {
-      Fail("Found a page in the page table that is neither in DRAM nor on NUMA.");
+      // 7. We want to use NUMA and read from SSD
+      auto allocated_numa_frame = _numa_buffer_pools.allocate_frame(
+          size_type, std::bind(&BufferManager::remove_frame, this, std::placeholders::_1));
+      allocated_numa_frame->init(page_id);
+      _numa_buffer_pools.read_page(allocated_numa_frame);
+      shared_frame->link_numa_frame(allocated_numa_frame);
+      return allocated_numa_frame;
     }
-  } else {
-    // 5. The page is neither in DRAM nor on NUMA, we need to load it from SSD
-    auto allocated_dram_frame = _dram_buffer_pools.allocate_frame(
-        size_type, std::bind(&BufferManager::remove_frame, this, std::placeholders::_1));
-
-    // Update the frame metadata and read the page data
-    allocated_dram_frame->init(page_id);
-
-    // We make a full read from SSD
-    _dram_buffer_pools.read_page(allocated_dram_frame);
-
-    // Update the page table and metadata
-    {
-      std::lock_guard<std::mutex> lock(_page_table_mutex);
-      _page_table[page_id] = std::make_shared<SharedFrame>(allocated_dram_frame);
-    }
-
-    return allocated_dram_frame;
   }
 }
 
 void BufferManager::remove_frame(Frame* frame) {
-  // TODO: This can be templated potentially
   DebugAssert(frame != nullptr, "Frame is null");
   DebugAssert(frame->shared_frame != nullptr, "Shared frame is null");
-
   DebugAssert(frame->page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
-  // TODO: We might need a lock
+  // TODO: We might need a lock, readd to eviction queue?
   auto shared_frame = frame->shared_frame;
 
   if (frame->page_type == PageType::Dram) {
@@ -299,7 +314,6 @@ std::byte* BufferManager::get_page(const PageID page_id, const PageSizeType size
 
 std::shared_ptr<SharedFrame> BufferManager::find_in_page_table(const PageID page_id) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
-
   std::lock_guard<std::mutex> lock(_page_table_mutex);
 
   const auto frame_in_page_table_it = _page_table.find(page_id);
@@ -312,40 +326,49 @@ std::shared_ptr<SharedFrame> BufferManager::find_in_page_table(const PageID page
   return nullptr;
 }
 
-Frame* BufferManager::new_page(const PageSizeType size_type) {
-  auto frame = _dram_buffer_pools.allocate_frame(size_type,
-                                                 std::bind(&BufferManager::remove_frame, this, std::placeholders::_1));
-  DebugAssert(frame != nullptr, "Frame is null");
-  DebugAssert(frame->data != nullptr, "Frame data is null");
-  const auto page_id = _num_pages++;
+std::shared_ptr<SharedFrame> BufferManager::find_or_create_in_page_table(const PageID page_id) {
+  DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
+  std::lock_guard<std::mutex> lock(_page_table_mutex);
 
-  // Update the frame metadata
-  frame->page_id = page_id;
-  frame->dirty = true;
-  frame->pin_count.store(0);
-
-  _ssd_region->allocate(frame->page_id, size_type);
-
-  // Add the frame to the page table with lock guard in new scope
-  {
-    std::lock_guard<std::mutex> lock(_page_table_mutex);
-    _page_table[frame->page_id] = std::make_shared<SharedFrame>(frame);
+  auto [shared_frame_it, inserted] = _page_table.emplace(page_id, std::make_shared<SharedFrame>());
+  if (inserted) {
+    _metrics->page_table_misses++;
+  } else {
+    _metrics->page_table_hits++;
   }
 
-  _dram_buffer_pools.add_to_eviction_queue(frame);
+  return shared_frame_it->second;
+}
 
+Frame* BufferManager::new_page(const PageSizeType size_type) {
+  // TODO: This is easy, but we might read a page from SDD even if not needed
+  const auto page_id = PageID{_num_pages++};
+  _ssd_region->allocate(page_id, size_type);
+
+  auto frame = get_frame(page_id, size_type);
+
+  if (frame->page_type == PageType::Dram) {
+    _dram_buffer_pools.add_to_eviction_queue(frame);
+  } else if (frame->page_type == PageType::Numa) {
+    _numa_buffer_pools.add_to_eviction_queue(frame);
+  } else {
+    Fail("Invalid page type");
+  }
   return frame;
 }
 
-void BufferManager::unpin_page(const PageID page_id, const PageSizeType size_type, const bool dirty) {
+void BufferManager::unpin_page(const PageID page_id, const bool dirty) {
   DebugAssert(page_id != INVALID_PAGE_ID, "Page ID is invalid");
 
   const auto frame = find_in_page_table(page_id);
   if (frame == nullptr) {
-    // Fail("Cannot unpin a page that is not in the page table. Check if the PinGuard is properly used.");
+    Fail("Cannot unpin a page that is not in the page table. Check if the PinGuard is properly used.");
     return;
   }
 
+  _metrics->current_pins--;
+
+  // TODO: How to decide for page type?
   const auto dram_frame = frame->dram_frame;
   // DebugAssert(frame->pin_count.load() > 0, "Cannot unpin a page that is not pinned");
 
@@ -360,6 +383,9 @@ void BufferManager::pin_page(const PageID page_id, const PageSizeType size_type)
   auto frame = get_frame(page_id, size_type);
 
   frame->pin_count++;
+
+  _metrics->current_pins++;
+  _metrics->total_pins++;
 }
 
 uint32_t BufferManager::get_pin_count(const PageID page_id) {
@@ -401,39 +427,52 @@ void BufferManager::remove_page(const PageID page_id) {
     return;
   }
 
-  auto dram_frame = frame->dram_frame;
-
   {
     std::lock_guard<std::mutex> lock(_page_table_mutex);
-    _page_table.erase(dram_frame->page_id);
+    if (auto dram_frame = frame->dram_frame) {
+      _metrics->current_pins -= dram_frame->pin_count.load();  // TODO: Remove this later
+      _page_table.erase(dram_frame->page_id);
+    } else if (auto numa_frame = frame->numa_frame) {
+      _metrics->current_pins -= numa_frame->pin_count.load();  // TODO: Remove this later
+      _page_table.erase(numa_frame->page_id);
+    } else {
+      Fail("Somehow the frame is neither in DRAM nor in NUMA");
+    }
   }
 
-  // TODO: DebugAssert(!frame->pin_count, "Page cannot be removed while pinned. This can be used to debug resizes.");
-
-  dram_frame->dirty = false;
-  dram_frame->eviction_timestamp.store(0);
-  dram_frame->pin_count.store(0);
-
-  _dram_buffer_pools.add_to_eviction_queue(dram_frame);
+  if (auto dram_frame = frame->dram_frame) {
+    // DebugAssert(!dram_frame->pin_count,
+    //             "Page cannot be removed while pinned. Use a debugger and introduce an AllocatorPinGuard at the point "
+    //             "where the allocator is created.");
+    // TODO: Check if this is correct
+    _dram_buffer_pools.deallocate_frame(dram_frame);
+  }
+  if (auto numa_frame = frame->numa_frame) {
+    // DebugAssert(!numa_frame->pin_count,
+    //             "Page cannot be removed while pinned. Use a debugger and introduce an AllocatorPinGuard at the point "
+    //             "where the allocator is created");
+    // TODO: Check if this is correct
+    _numa_buffer_pools.deallocate_frame(numa_frame);
+  }
 }
 
 std::pair<Frame*, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
   if (_dram_buffer_pools.enabled) {
     for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
       if (const auto frame = buffer_pool->unswizzle(ptr)) {
-        return std::make_tuple(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+        return std::make_pair(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
       }
     }
   }
   if (_numa_buffer_pools.enabled) {
     for (auto& buffer_pool : _numa_buffer_pools._buffer_pools) {
       if (const auto frame = buffer_pool->unswizzle(ptr)) {
-        return std::make_tuple(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+        return std::make_pair(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
       }
     }
   }
 
-  return std::make_tuple(nullptr, 0);
+  return std::make_pair(nullptr, 0);
 };
 
 BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
@@ -442,7 +481,6 @@ BufferManagedPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t al
   // Update metrics
   _metrics->current_bytes_used += bytes;
   _metrics->total_unused_bytes += bytes_for_size_type(page_size_type) - bytes;
-  _metrics->max_bytes_used = std::max(_metrics->max_bytes_used, _metrics->current_bytes_used);
   _metrics->total_allocated_bytes += bytes;
   _metrics->num_allocs++;
 
@@ -457,7 +495,6 @@ void BufferManager::deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, st
 
   _metrics->current_bytes_used -= bytes;
   // TODO: May be missing some metrics
-  _metrics->max_bytes_used = std::max(_metrics->max_bytes_used, _metrics->current_bytes_used);
   _metrics->num_deallocs++;
 }
 
@@ -467,6 +504,10 @@ BufferManager& BufferManager::get_global_buffer_manager() {
 
 BufferManager::Metrics BufferManager::metrics() {
   return *_metrics;
+}
+
+void BufferManager::reset_metrics() {
+  _metrics = std::make_shared<Metrics>();
 }
 
 void BufferManager::clear() {

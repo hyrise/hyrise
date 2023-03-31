@@ -10,13 +10,13 @@
 namespace hyrise {
 
 VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t total_bytes,
-                               const size_t memory_numa_node)
+                               const size_t numa_memory_node)
     : _frames(total_bytes / bytes_for_size_type(size_type)),
       _size_type(size_type),
       _page_type(page_type),
-      _memory_numa_node(memory_numa_node),
+      _numa_memory_node(numa_memory_node),
       _total_bytes(total_bytes / bytes_for_size_type(size_type) * bytes_for_size_type(size_type)) {
-  if (page_type == PageType::Numa && memory_numa_node == NO_NUMA_MEMORY_NODE) {
+  if (_page_type == PageType::Numa && _numa_memory_node == NO_NUMA_MEMORY_NODE) {
     Fail("Cannot allocate NUMA memory without specifying a NUMA node");
   }
 
@@ -70,6 +70,10 @@ void VolatileRegion::map_memory() {
     const auto error = errno;
     Fail("Failed to map volatile pool region: " + strerror(errno));
   }
+
+  if (_page_type == PageType::Numa) {
+    to_numa(_mapped_memory);
+  }
 }
 
 void VolatileRegion::assign_memory_to_frames() {
@@ -77,10 +81,6 @@ void VolatileRegion::assign_memory_to_frames() {
     _frames[frame_id].size_type = _size_type;
     _frames[frame_id].page_type = PageType::Dram;
     _frames[frame_id].data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
-    if (_page_type == PageType::Numa) {
-      // TODO: We might only need to do this once, but it is not worth the effort to find out right now
-      to_numa(_mapped_memory);
-    }
   }
 }
 
@@ -100,8 +100,8 @@ void VolatileRegion::free(Frame* frame) {
 
 void VolatileRegion::to_numa(std::byte* address) {
 #if HYRISE_NUMA_SUPPORT
-  Assert(_numa_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
-  numa_tonode_memory(address, _total_bytes, _numa_node);
+  Assert(_numa_memory_node != NO_NUMA_MEMORY_NODE, "Numa node has not been set.");
+  numa_tonode_memory(address, _total_bytes, _numa_memory_node);
 #else
   Fail("Current build does not support NUMA.");
 #endif
@@ -127,6 +127,8 @@ Frame* VolatileRegion::unswizzle(const void* ptr) {
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return nullptr;
   }
+  // TODO: Check if active or not
+
   // Find the offset in the mapped region of the ptr and find the matching frame
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _mapped_memory;
   const auto frame_id = offset / bytes_for_size_type(_size_type);

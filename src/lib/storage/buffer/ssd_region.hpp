@@ -10,6 +10,7 @@
 namespace hyrise {
 
 // TODO: Use extra object called SSDHandle to avoid page lockups
+// TODO: Use flag for O_DIRECT
 /**
   * TODO
  * @brief Page wraps binary data to be written or read. It's aligned to 512 bytes in order to work with the O_DIRECT flag and SSDs. 
