@@ -65,7 +65,6 @@ bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_
     return false;
   }
 
-
   const auto operator_predicates =
       OperatorScanPredicate::from_expression(*predicate_node->predicate(), *predicate_node);
   if (!operator_predicates || operator_predicates->size() != 1) {
@@ -83,7 +82,8 @@ bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_
     return false;
   }
 
-  if (!(operator_predicate.predicate_condition == PredicateCondition::Equals || operator_predicate.predicate_condition == PredicateCondition::NotEquals)) {
+  if (!(operator_predicate.predicate_condition == PredicateCondition::Equals ||
+        operator_predicate.predicate_condition == PredicateCondition::NotEquals)) {
     return false;
   }
 

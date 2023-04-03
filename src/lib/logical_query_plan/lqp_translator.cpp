@@ -247,8 +247,8 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, column_id,
-                                                predicate->predicate_condition, value_variant);
+  auto index_scan =
+      std::make_shared<IndexScan>(input_operator, column_id, predicate->predicate_condition, value_variant);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 

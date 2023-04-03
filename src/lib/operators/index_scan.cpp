@@ -16,9 +16,8 @@
 
 namespace hyrise {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator,
-                     const ColumnID left_column_id, const PredicateCondition predicate_condition,
-                     const AllTypeVariant right_value)
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID left_column_id,
+                     const PredicateCondition predicate_condition, const AllTypeVariant right_value)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       _left_column_id{left_column_id},
       _predicate_condition{predicate_condition},
@@ -47,8 +46,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
   const auto index = indexes.front();
 
-  auto append_matches = [&](const PartialHashIndex::Iterator& begin,
-                                            const PartialHashIndex::Iterator& end) {
+  auto append_matches = [&](const PartialHashIndex::Iterator& begin, const PartialHashIndex::Iterator& end) {
     auto current_iter = begin;
 
     const auto current_matches_size = matches_out->size();
@@ -75,7 +73,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   }
 
   if (matches_out->empty()) {
-      return _out_table;
+    return _out_table;
   }
 
   Segments segments;
@@ -92,8 +90,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
-  return std::make_shared<IndexScan>(copied_left_input, _left_column_id, _predicate_condition,
-                                     _right_value);
+  return std::make_shared<IndexScan>(copied_left_input, _left_column_id, _predicate_condition, _right_value);
 }
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}

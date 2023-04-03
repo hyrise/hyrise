@@ -457,7 +457,7 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
   const auto index_column_id = ColumnID{1};
-  const auto index_chunk_ids = std::vector<ChunkID> {ChunkID{0}, ChunkID{2}};
+  const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
   table->create_partial_hash_index(index_column_id, index_chunk_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));

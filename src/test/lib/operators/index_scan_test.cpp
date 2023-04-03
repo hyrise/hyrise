@@ -93,7 +93,6 @@ class OperatorsIndexScanTest : public BaseTest {
   ColumnID _column_id;
 };
 
-
 TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
 
@@ -104,13 +103,12 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
   tests[PredicateCondition::NotEquals] = {100, 102, 106, 108, 110, 112, 100, 102, 106, 108, 110, 112};
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first,
-                                            right_value);
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
-                                                        this->_column_id, test.first, right_value);
+    auto scan_small_chunk =
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
 
     scan_small_chunk->execute();
 
@@ -133,13 +131,12 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValu
   tests[PredicateCondition::NotEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first,
-                                            right_value);
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
-                                                        this->_column_id, test.first, right_value);
+    auto scan_small_chunk =
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
 
     scan_small_chunk->execute();
 
@@ -160,13 +157,12 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
   tests[PredicateCondition::NotEquals] = all_rows;
 
   for (const auto& test : tests) {
-    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first,
-                                            right_value);
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
 
     scan->execute();
 
-    auto scan_small_chunk = std::make_shared<IndexScan>(this->_int_int_small_chunk,
-                                                        this->_column_id, test.first, right_value);
+    auto scan_small_chunk =
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
 
     scan_small_chunk->execute();
 
@@ -178,8 +174,8 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
 TEST_F(OperatorsIndexScanTest, OperatorName) {
   const auto right_value = AllTypeVariant{0};
 
-  auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id,
-                                          PredicateCondition::GreaterThanEquals, right_value);
+  auto scan =
+      std::make_shared<IndexScan>(this->_int_int, this->_column_id, PredicateCondition::GreaterThanEquals, right_value);
 
   EXPECT_EQ(scan->name(), "IndexScan");
 }
