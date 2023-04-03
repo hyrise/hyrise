@@ -10,7 +10,10 @@
 
 namespace hyrise {
 
-void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& /*state*/) {
+void MicroBenchmarkBasicFixture::SetUp(::benchmark::State& state) {
+  _sampler = std::make_shared<MetricsSampler>(std::filesystem::path("/tmp") / (state.name() + ".json"),
+                                              &Hyrise::get().buffer_manager);
+
   const auto chunk_size = ChunkOffset{2'000};
   const auto row_count = size_t{40'000};
 
@@ -36,6 +39,7 @@ void MicroBenchmarkBasicFixture::TearDown(::benchmark::State& /*state*/) {
   _table_wrapper_a = nullptr;
   _table_wrapper_b = nullptr;
   _table_dict_wrapper = nullptr;
+  _sampler = nullptr;
 
   Hyrise::reset();
 }
