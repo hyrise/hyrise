@@ -73,7 +73,8 @@ class AbstractTableGenerator {
 
   // Returns a set of index specifications.
   using IndexesByTable = std::map<std::string, std::vector<std::vector<std::string>>>;
-  IndexesByTable _indexes_by_table(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
+  virtual IndexesByTable _indexes_by_table() const;
+  IndexesByTable _index_everything(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const;
 
   // Optionally, the benchmark may define tables (left side) that are sorted (aka. clustered) by one of their columns
   // (right side).

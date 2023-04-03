@@ -337,11 +337,19 @@ void AbstractTableGenerator::_create_chunk_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   Timer timer;
   std::cout << "- Creating chunk indexes" << std::endl;
-  const auto& indexes_by_table = _indexes_by_table(table_info_by_name);
-  if (indexes_by_table.empty()) {
-    std::cout << "-  No indexes defined by benchmark" << std::endl;
-    return;
+  AbstractTableGenerator::IndexesByTable indexes_by_table;
+
+  if (_benchmark_config->index_everything) {
+    indexes_by_table = _index_everything(table_info_by_name);
+  } else {
+    indexes_by_table = _indexes_by_table();
+
+    if (indexes_by_table.empty()) {
+      std::cout << "-  No indexes defined by benchmark" << std::endl;
+      return;
+    }
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -373,11 +381,19 @@ void AbstractTableGenerator::_create_table_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   Timer timer;
   std::cout << "- Creating table indexes" << std::endl;
-  const auto& indexes_by_table = _indexes_by_table(table_info_by_name);
-  if (indexes_by_table.empty()) {
-    std::cout << "-  No indexes defined by benchmark" << std::endl;
-    return;
+  AbstractTableGenerator::IndexesByTable indexes_by_table;
+
+  if (_benchmark_config->index_everything) {
+    indexes_by_table = _index_everything(table_info_by_name);
+  } else {
+    indexes_by_table = _indexes_by_table();
+
+    if (indexes_by_table.empty()) {
+      std::cout << "-  No indexes defined by benchmark" << std::endl;
+      return;
+    }
   }
+
   for (const auto& [table_name, indexes] : indexes_by_table) {
     const auto& table = table_info_by_name[table_name].table;
 
@@ -401,7 +417,12 @@ void AbstractTableGenerator::_create_table_indexes(
   std::cout << "- Creating table indexes done (" << format_duration(metrics.table_index_duration) << ")" << std::endl;
 }
 
-AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table() const {
+  // Indexes can be specified in a derived concrete class by overriding this function.
+  return {};
+}
+
+AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_index_everything(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
   auto indexes_by_table = std::map<std::string, std::vector<std::vector<std::string>>>{};
 
   for (const auto& [table_name, table_info] : table_info_by_name) {
