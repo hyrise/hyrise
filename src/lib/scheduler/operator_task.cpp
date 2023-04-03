@@ -1,17 +1,18 @@
 #include "operator_task.hpp"
 
-#include <memory>
 #include <unordered_set>
 #include <utility>
+#include <queue>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-
+#include "operators/get_table.hpp"
 #include "scheduler/job_task.hpp"
+
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
@@ -49,6 +50,68 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   return task;
 }
 
+enum class TaskVisitation { VisitSuccessors, DoNotVisitSuccessors };
+
+template <typename Visitor>
+void visit_tasks_upwards(const std::shared_ptr<OperatorTask>& task, Visitor visitor) {
+
+  std::queue<std::shared_ptr<OperatorTask>> node_queue;
+  node_queue.push(task);
+
+  std::unordered_set<std::shared_ptr<OperatorTask>> visited_nodes;
+
+  while (!node_queue.empty()) {
+    auto node = node_queue.front();
+    node_queue.pop();
+
+    if (!visited_nodes.emplace(node).second) {
+      continue;
+    }
+
+    if (visitor(node) == TaskVisitation::VisitSuccessors) {
+      for (const auto& successor : node->successors()) {
+        node_queue.push(std::static_pointer_cast<OperatorTask>(successor));
+      }
+    }
+  }
+}
+
+void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
+  for (const auto& task : tasks) {
+    const auto& op = task->get_operator();
+    if (op->type() != OperatorType::GetTable) {
+      continue;
+    }
+    const auto& get_table = static_cast<GetTable&>(*op);
+
+    for (const auto& table_scan_ref : get_table.prunable_subquery_predicates) {
+      const auto& table_scan = table_scan_ref.lock();
+      Assert(table_scan, "Expected correct table scan.");
+
+      for (const auto& subquery : table_scan->uncorrelated_subqueries()) {
+        const auto& t = subquery->get_or_create_operator_task();
+      Assert(tasks.contains(t), "Unknown OperatorTask.");
+      auto is_acyclic = true;
+      visit_tasks_upwards(task, [&](const auto& successor){
+        if (successor == t) {
+          is_acyclic = false;
+          return TaskVisitation::DoNotVisitSuccessors;
+        }
+        return TaskVisitation::VisitSuccessors;
+      });
+
+      if (is_acyclic) {
+        t->set_as_predecessor_of(task);
+        std::cout << "linked " << t->get_operator()->description() << " and " << task->get_operator()->description() << std::endl;
+      }
+
+      }
+
+    }
+
+    }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -61,8 +124,12 @@ std::string OperatorTask::description() const {
 
 std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>
 OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op) {
-  std::unordered_set<std::shared_ptr<OperatorTask>> operator_tasks_set;
+  auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
+
+  std::cout << *root_operator_task->get_operator()->lqp_node << std::endl << std::endl << *root_operator_task->get_operator() << std::endl;
+
+  link_tasks_for_subquery_pruning(operator_tasks_set);
 
   return std::make_pair(
       std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end()),

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <optional>
-#include <vector>
 
 #include "abstract_lqp_node.hpp"
 #include "expression/abstract_expression.hpp"
@@ -12,6 +10,7 @@ namespace hyrise {
 
 class LQPColumnExpression;
 class TableStatistics;
+class PredicateNode;
 
 /**
  * Represents a Table from the StorageManager in an LQP
@@ -35,6 +34,9 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   void set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids);
   const std::vector<ColumnID>& pruned_column_ids() const;
+
+  void set_prunable_subquery_predicates(const std::vector<std::weak_ptr<PredicateNode>>& predicate_nodes);
+  const std::vector<std::weak_ptr<PredicateNode>>& prunable_subquery_predicates() const;
   /** @} */
 
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
@@ -61,6 +63,7 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
   std::vector<ChunkID> _pruned_chunk_ids;
   std::vector<ColumnID> _pruned_column_ids;
+  std::vector<std::weak_ptr<PredicateNode>> _prunable_subquery_predicates;
 };
 
 }  // namespace hyrise

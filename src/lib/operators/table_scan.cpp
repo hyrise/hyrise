@@ -244,7 +244,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
    *      - resolve arguments of type uncorrelated subquery, and create ValueExpressions from the results
    *      - create deep copies for all other arguments
    */
-  auto arguments_count = predicate->arguments.size();
+  const auto arguments_count = predicate->arguments.size();
   auto new_arguments = std::vector<std::shared_ptr<AbstractExpression>>();
   new_arguments.reserve(arguments_count);
   auto computed_subqueries_count = size_t{0};

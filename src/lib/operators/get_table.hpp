@@ -1,12 +1,9 @@
 #pragma once
 
 #include <memory>
-#include <string>
-#include <vector>
 
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -32,6 +29,7 @@ class GetTable : public AbstractReadOnlyOperator {
 
   const std::string& table_name() const;
   const std::vector<ChunkID>& pruned_chunk_ids() const;
+  const std::set<ChunkID>& pruned_chunk_ids_by_subqueries() const;
   const std::vector<ColumnID>& pruned_column_ids() const;
 
   std::shared_ptr<AbstractOperator> _on_deep_copy(
@@ -40,6 +38,8 @@ class GetTable : public AbstractReadOnlyOperator {
       std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
+  std::vector<std::weak_ptr<AbstractOperator>> prunable_subquery_predicates{};
+
  protected:
   std::shared_ptr<const Table> _on_execute() override;
 
@@ -47,5 +47,6 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::string _name;
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
+  std::set<ChunkID> _overall_pruned_chunk_ids;
 };
 }  // namespace hyrise

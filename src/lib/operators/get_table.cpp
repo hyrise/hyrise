@@ -3,24 +3,32 @@
 #include <algorithm>
 #include <memory>
 #include <sstream>
-#include <string>
 #include <unordered_set>
-#include <vector>
 
 #include "hyrise.hpp"
 #include "storage/index/partial_hash/partial_hash_index.hpp"
-#include "types.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "expression/lqp_subquery_expression.hpp"
+#include "resolve_type.hpp"
+#include "expression/expression_functional.hpp"
+#include "utils/chunk_pruning_utils.hpp"
+#include "storage/segment_iterate.hpp"
+#include "operators/table_scan.hpp"
+
 
 namespace hyrise {
 
-GetTable::GetTable(const std::string& name) : GetTable(name, {}, {}) {}
+using namespace expression_functional;  // NOLINT(build/namespaces)
+
+GetTable::GetTable(const std::string& name) : GetTable{name, {}, {}} {}
 
 GetTable::GetTable(const std::string& name, const std::vector<ChunkID>& pruned_chunk_ids,
                    const std::vector<ColumnID>& pruned_column_ids)
-    : AbstractReadOnlyOperator(OperatorType::GetTable),
-      _name(name),
-      _pruned_chunk_ids(pruned_chunk_ids),
-      _pruned_column_ids(pruned_column_ids) {
+    : AbstractReadOnlyOperator{OperatorType::GetTable},
+      _name{name},
+      _pruned_chunk_ids{pruned_chunk_ids},
+      _pruned_column_ids{pruned_column_ids} {
   // Check pruned_chunk_ids
   DebugAssert(std::is_sorted(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()), "Expected sorted vector of ChunkIDs");
   DebugAssert(std::adjacent_find(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end()) == _pruned_chunk_ids.end(),
@@ -102,12 +110,80 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // Currently, value_clustered_by is only used for temporary tables. If tables in the StorageManager start using that
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
   DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by");
+  auto overall_pruned_chunk_ids = std::set<ChunkID>{};
+
+  if (!prunable_subquery_predicates.empty()) {
+    const auto& stored_table_node = std::static_pointer_cast<StoredTableNode>(std::const_pointer_cast<AbstractLQPNode>(lqp_node->deep_copy()));
+    auto prunable_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
+    prunable_predicate_nodes.reserve(prunable_subquery_predicates.size());
+    for (const auto& table_scan_ptr : prunable_subquery_predicates) {
+      const auto& table_scan = static_cast<const TableScan&>(*table_scan_ptr.lock());
+      const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
+      const auto adjusted_predicate = predicate_node.predicate()->deep_copy();
+
+      const auto& subquery_ops = table_scan.uncorrelated_subqueries();
+
+      for (auto& argument : adjusted_predicate->arguments) {
+        if (const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(argument)) {
+          argument = lqp_column_(stored_table_node, lqp_column->original_column_id);
+        }
+
+        const auto subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(argument);
+        if (!subquery || subquery->is_correlated()) {
+          continue;
+        }
+
+
+        auto subquery_op = std::shared_ptr<AbstractOperator>{};
+        for (const auto& op : subquery_ops) {
+          if (*op->lqp_node == *subquery->lqp) {
+            subquery_op = op;
+          }
+        }
+        Assert(subquery_op, "no subquery_op found");
+        if (subquery_op->state() != OperatorState::ExecutedAndAvailable) {
+          continue;
+        }
+
+        auto subquery_result = NULL_VALUE;
+        const auto& subquery_result_table = subquery_op->get_output();
+        const auto row_count = subquery_result_table->row_count();
+        Assert(subquery_result_table->column_count() == 1 && row_count <= 1,
+               "Uncorrelated subqueries may return at most one single value.");
+
+        if (row_count == 1) {
+          const auto chunk = subquery_result_table->get_chunk(ChunkID{0});
+          Assert(chunk, "Subquery results cannot be physically deleted.");
+          resolve_data_type(subquery->data_type(), [&](const auto data_type_t) {
+            using ColumnDataType = typename decltype(data_type_t)::type;
+            segment_iterate<ColumnDataType>(*chunk->get_segment(ColumnID{0}), [&](const auto& position) {
+              if (!position.is_null()) {
+                subquery_result = position.value();
+              }
+            });
+          });
+        }
+
+        argument = value_(subquery_result);
+    }
+
+    prunable_predicate_nodes.emplace_back(PredicateNode::make(adjusted_predicate, stored_table_node));
+    }
+
+    auto bar = std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+                                              boost::hash<StoredTableNodePredicateNodePair>>{};
+    overall_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicate_nodes, stored_table_node, bar);
+  }
 
   auto excluded_chunk_ids = std::vector<ChunkID>{};
-  auto pruned_chunk_ids_iter = _pruned_chunk_ids.begin();
+  overall_pruned_chunk_ids.insert(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
+  if (overall_pruned_chunk_ids.size() > _pruned_chunk_ids.size()) {
+    std::cout << description(DescriptionMode::SingleLine) << " can now prune " << overall_pruned_chunk_ids.size() << " chunks" << std::endl;
+  }
+  auto pruned_chunk_ids_iter = overall_pruned_chunk_ids.begin();
   for (ChunkID stored_chunk_id{0}; stored_chunk_id < chunk_count; ++stored_chunk_id) {
     // Check whether the Chunk is pruned
-    if (pruned_chunk_ids_iter != _pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
+    if (pruned_chunk_ids_iter != overall_pruned_chunk_ids.end() && *pruned_chunk_ids_iter == stored_chunk_id) {
       ++pruned_chunk_ids_iter;
       excluded_chunk_ids.emplace_back(stored_chunk_id);
       continue;

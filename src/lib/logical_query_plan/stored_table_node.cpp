@@ -70,6 +70,13 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
+void StoredTableNode::set_prunable_subquery_predicates(const std::vector<std::weak_ptr<PredicateNode>>& predicate_nodes) {
+  _prunable_subquery_predicates = predicate_nodes;
+}
+const std::vector<std::weak_ptr<PredicateNode>>& StoredTableNode::prunable_subquery_predicates() const {
+  return _prunable_subquery_predicates;
+}
+
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 

@@ -410,29 +410,41 @@ TEST_F(LQPTranslatorTest, LQPNodeAccess) {
     const auto lqp_node = op->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const AggregateNode>(lqp_node);
     EXPECT_EQ(recovered_node, aggregate_node);
+    ASSERT_EQ(lqp_node->operators.size(), 1);
+    EXPECT_EQ(lqp_node->operators.front().lock(), op);
   }
   {
     const auto lqp_node = op->left_input()->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const JoinNode>(lqp_node);
     EXPECT_EQ(recovered_node, join_node);
+    ASSERT_EQ(lqp_node->operators.size(), 1);
+    EXPECT_EQ(lqp_node->operators.front().lock(), op->left_input());
   }
   {
     const auto lqp_node_left = op->left_input()->left_input()->lqp_node;
     const auto recovered_node_left = std::dynamic_pointer_cast<const ValidateNode>(lqp_node_left);
     EXPECT_EQ(recovered_node_left, validate_node);
+    ASSERT_EQ(lqp_node_left->operators.size(), 1);
+    EXPECT_EQ(lqp_node_left->operators.front().lock(), op->left_input()->left_input());
     const auto lqp_node_right = op->left_input()->right_input()->lqp_node;
     const auto recovered_node_right = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node_right);
     EXPECT_EQ(recovered_node_right, int_float2_node);
+    ASSERT_EQ(lqp_node_right->operators.size(), 1);
+    EXPECT_EQ(lqp_node_right->operators.front().lock(), op->left_input()->right_input());
   }
   {
     const auto lqp_node = op->left_input()->left_input()->left_input()->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const PredicateNode>(lqp_node);
     EXPECT_EQ(recovered_node, predicate_node);
+    ASSERT_EQ(lqp_node->operators.size(), 1);
+    EXPECT_EQ(lqp_node->operators.front().lock(), op->left_input()->left_input()->left_input());
   }
   {
     const auto lqp_node = op->left_input()->left_input()->left_input()->left_input()->lqp_node;
     const auto recovered_node = std::dynamic_pointer_cast<const StoredTableNode>(lqp_node);
     EXPECT_EQ(recovered_node, int_float_node);
+    ASSERT_EQ(lqp_node->operators.size(), 1);
+    EXPECT_EQ(lqp_node->operators.front().lock(), op->left_input()->left_input()->left_input()->left_input());
   }
 }
 

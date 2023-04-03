@@ -239,6 +239,7 @@ set(
     operators/operator_performance_data.hpp
     operators/operator_scan_predicate.cpp
     operators/operator_scan_predicate.hpp
+    operators/pqp_utils.cpp
     operators/pqp_utils.hpp
     operators/print.cpp
     operators/print.hpp
@@ -579,6 +580,8 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
+    utils/chunk_pruning_utils.cpp
+    utils/chunk_pruning_utils.hpp
     utils/column_pruning_utils.cpp
     utils/column_pruning_utils.hpp
     utils/copyable_atomic.hpp

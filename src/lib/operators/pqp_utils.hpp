@@ -57,4 +57,10 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
   }
 }
 
+/**
+ * Traverses @param pqp from the top to the bottom and returns all operators of the given @param type.
+ */
+std::vector<std::shared_ptr<AbstractOperator>> pqp_find_operators_by_type(const std::shared_ptr<AbstractOperator>& pqp,
+                                                                          const OperatorType type);
+
 }  // namespace hyrise
