@@ -83,7 +83,7 @@ TEST_F(BufferPoolAllocatorTest, TestAllocatorPinGuardWithBufferPoolAllocator) {
   auto& buffer_manager = BufferManager::get_global_buffer_manager();
 
   auto allocator = BufferPoolAllocator<int>{&buffer_manager};
-  auto pin_guard = make_allocator_pin_guard(allocator);
+  auto pin_guard = AllocatorPinGuard{allocator};
   auto vector = boost::container::vector<int, BufferPoolAllocator<int>>{100, allocator};
 
   // The page id 0 should be pinned
@@ -111,7 +111,7 @@ TEST_F(BufferPoolAllocatorTest, TestAllocatorPinGuardWithPolymorphicAllocator) {
   auto& buffer_manager = BufferManager::get_global_buffer_manager();
 
   auto allocator = PolymorphicAllocator<int>{&buffer_manager};
-  auto pin_guard = make_allocator_pin_guard(allocator);
+  auto pin_guard = AllocatorPinGuard{allocator};
   auto vector = pmr_vector<int>{100, allocator};
 
   // The page id 0 should be pinned

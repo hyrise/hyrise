@@ -80,6 +80,7 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   using Vector::assign;
   using Vector::get_allocator;
+  using Vector::get_stored_allocator;
 
   // Element access
   RowID operator[](const size_t index) const final {
@@ -127,14 +128,13 @@ class RowIDPosList final : public AbstractPosList, private pmr_vector<RowID> {
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const final;
 
-  // The double inheritance from AbstractPosList and pmr_vector requires an explicit 
+  // The double inheritance from AbstractPosList and pmr_vector requires an explicit
   // selection of the == operator, otherwise it is ambiguous.
   friend bool operator==(const RowIDPosList& lhs, const RowIDPosList& rhs);
 
  private:
   bool _references_single_chunk = false;
 };
-
 
 inline bool operator==(const RowIDPosList& lhs, const RowIDPosList& rhs) {
   PerformanceWarning("Using slow PosList comparison.");

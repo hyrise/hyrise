@@ -39,6 +39,7 @@ class BufferPoolAllocator {
   template <class U>
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
     _buffer_manager = other.buffer_manager();
+    _observer = other.current_observer();
   }
 
   template <class U>
@@ -48,12 +49,12 @@ class BufferPoolAllocator {
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
-    return _buffer_manager == other.buffer_manager();
+    return _buffer_manager == other.buffer_manager() && _observer.lock() == other.current_observer().lock();
   }
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _buffer_manager != other.buffer_manager();
+    return _buffer_manager != other.buffer_manager() || _observer.lock() != other.current_observer().lock();
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
@@ -99,6 +100,10 @@ class BufferPoolAllocator {
 
   void register_observer(std::shared_ptr<BufferPoolAllocatorObserver> observer) {
     _observer = observer;
+  }
+
+  std::weak_ptr<BufferPoolAllocatorObserver> current_observer() const {
+    return _observer;
   }
 
  private:

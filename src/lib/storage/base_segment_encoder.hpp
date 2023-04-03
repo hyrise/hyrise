@@ -144,7 +144,7 @@ class SegmentEncoder : public BaseSegmentEncoder {
 
     // Pin everything in the allocator using the AllocatorPinGuard
     auto allocator = PolymorphicAllocator<ColumnDataType>{};
-    auto allocator_pin_guard = make_allocator_pin_guard(allocator);
+    auto allocator_pin_guard = AllocatorPinGuard{allocator};
     return _self()._on_encode(iterable, allocator);
   }
 

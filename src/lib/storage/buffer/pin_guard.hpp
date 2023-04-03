@@ -10,13 +10,10 @@
 namespace hyrise {
 
 /**
- * A Pin Guard ensure that that a pointer/page is unpinned when it goes out of scope. This garantuees exceptions safetiness usinf the RAII pattern.
+ * A Pin Guard ensure that that a pointer/page is unpinned when it goes out of scope. This garantuees exceptions safetiness using the RAII pattern.
 */
-
-// TODO: Signify read/write intent of PinGuard, AllocatorPinGuard is always "Write"
-
 template <class PinnableType>
-class PinGuard {  // TODO: Non copy
+class PinGuard : public Noncopyable {
  public:
   explicit PinGuard(PinnableType& object, const bool dirty)
       : _object(object), _dirty(dirty), _ptr(_object.begin().get_ptr()) {
@@ -39,39 +36,45 @@ class PinGuard {  // TODO: Non copy
   bool _dirty;
 };
 
-class AllocatorPinGuard : public BufferPoolAllocatorObserver {
+/**
+ * The AllocatorPinGuard observes all allocations and deallocations of a given allocator and pins the allocated pages during the life-time of the
+ * AllocatorPinGuard including resizes of a data strcutures. All pages are unpinned when the AllocatorPinGuard is destroyed. The AllocatorPinGuard is not thread-safe.
+*/
+template <typename Allocator>
+class AllocatorPinGuard : public Noncopyable {
+  struct Observer : Noncopyable, BufferPoolAllocatorObserver {
+    void on_allocate(const PageID page_id, const PageSizeType size_type) override {
+      Hyrise::get().buffer_manager.pin_page(page_id, size_type);
+      _pinned_pages.push_back(page_id);
+    }
+
+    void on_deallocate(const PageID page_id) override {
+      Hyrise::get().buffer_manager.unpin_page(page_id, false);
+      _pinned_pages.erase(std::remove(_pinned_pages.begin(), _pinned_pages.end(), page_id), _pinned_pages.end());
+    }
+
+    ~Observer() {
+      for (const auto& page_id : _pinned_pages) {
+        Hyrise::get().buffer_manager.unpin_page(page_id, false);
+      }
+    }
+
+    boost::container::small_vector<PageID, 5> _pinned_pages;
+  };
+
  public:
-  ~AllocatorPinGuard() {
-    for (const auto& page_id : _pinned_pages) {
-      Hyrise::get().buffer_manager.unpin_page(page_id, true);
+  AllocatorPinGuard(Allocator& allocator) : _observer(std::make_shared<Observer>()) {
+    if constexpr (std::is_same_v<Allocator, BufferPoolAllocator<typename Allocator::value_type>>) {
+      allocator.register_observer(_observer);
+    } else if constexpr (std::is_same_v<Allocator, PolymorphicAllocator<typename Allocator::value_type>>) {
+      allocator.outer_allocator().register_observer(_observer);
+    } else {
+      Fail("AllocatorPinGuard is not implemented for given allocator");
     }
   }
 
-  void on_allocate(const PageID page_id, const PageSizeType size_type) override {
-    Hyrise::get().buffer_manager.pin_page(page_id, size_type);
-    _pinned_pages.push_back(page_id);
-  }
-
-  void on_deallocate(const PageID page_id) override {
-    Hyrise::get().buffer_manager.unpin_page(page_id, false);
-    _pinned_pages.erase(std::remove(_pinned_pages.begin(), _pinned_pages.end(), page_id), _pinned_pages.end());
-  }
-
  private:
-  boost::container::small_vector<PageID, 5> _pinned_pages;
+  std::shared_ptr<Observer> _observer;
 };
 
-template <typename Allocator>
-std::shared_ptr<AllocatorPinGuard> make_allocator_pin_guard(Allocator& allocator) {
-  auto guard = std::make_shared<AllocatorPinGuard>();
-  if constexpr (std::is_same_v<Allocator, BufferPoolAllocator<typename Allocator::value_type>>) {
-    allocator.register_observer(guard);
-  } else if constexpr (std::is_same_v<Allocator, PolymorphicAllocator<typename Allocator::value_type>>) {
-    allocator.outer_allocator().register_observer(guard);
-  } else {
-    Fail("AllocatorPinGuard is not implemented for allocator");
-  }
-
-  return guard;
-}
 }  // namespace hyrise
