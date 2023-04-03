@@ -4,14 +4,14 @@
 #include <iostream>
 
 #include "all_parameter_variant.hpp"
+#include "expression/expression_utils.hpp"
+#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/join_node.hpp"
+#include "logical_query_plan/lqp_utils.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/stored_table_node.hpp"
 #include "utils/assert.hpp"
-#include "expression/expression_utils.hpp"
-#include "logical_query_plan/lqp_utils.hpp"
-#include "expression/lqp_subquery_expression.hpp"
 
 namespace {
 
@@ -136,7 +136,8 @@ std::string ChunkPruningRule::name() const {
 }
 
 void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  auto predicate_pruning_chains_by_stored_table_node = std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>{};
+  auto predicate_pruning_chains_by_stored_table_node =
+      std::unordered_map<std::shared_ptr<StoredTableNode>, std::vector<PredicatePruningChain>>{};
 
   // (1) Collect all StoredTableNodes and find the chains of PredicateNodes that sit on top of them.
   const auto nodes = lqp_find_nodes_by_type(lqp_root, LQPNodeType::StoredTable);
@@ -155,27 +156,28 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     // (2.1) Determine set of pruned chunks per predicate pruning chain.
     auto pruned_chunk_id_sets = std::vector<std::set<ChunkID>>{};
     for (const auto& predicate_pruning_chain : predicate_pruning_chains) {
-      auto exclusions = compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node, _excluded_chunk_ids_by_predicate_node_cache);
+      auto exclusions = compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
+                                                   _excluded_chunk_ids_by_predicate_node_cache);
       pruned_chunk_id_sets.emplace_back(std::move(exclusions));
     }
 
     // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains.
     const auto& pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
     if (!pruned_chunk_ids.empty()) {
-
-    // (2.3) Set the pruned chunk ids of stored_table_node.
-    DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
-                "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
-    // Wanted side effect of using std::set: pruned_chunk_ids vector is already sorted.
-    stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
-  }
+      // (2.3) Set the pruned chunk ids of stored_table_node.
+      DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
+                  "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
+      // Wanted side effect of using std::set: pruned_chunk_ids vector is already sorted.
+      stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
+    }
 
     // (2.4) Get and set predicates with uncorrelated subqueries.
     auto chain_count_per_subquery_predicate = std::unordered_map<std::shared_ptr<PredicateNode>, uint64_t>{};
     for (const auto& predicate_chain : predicate_pruning_chains) {
       for (const auto& predicate_node : predicate_chain) {
         for (auto& argument : predicate_node->predicate()->arguments) {
-          if (argument->type == ExpressionType::LQPSubquery && !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
+          if (argument->type == ExpressionType::LQPSubquery &&
+              !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
             ++chain_count_per_subquery_predicate[predicate_node];
           }
         }
@@ -187,7 +189,7 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     }
 
     const auto chain_count = predicate_pruning_chains.size();
-    auto prunable_subquery_predicates = std::vector<std::weak_ptr<PredicateNode>>{};
+    auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
 
     for (const auto& [predicate_node, predicate_chain_count] : chain_count_per_subquery_predicate) {
       if (predicate_chain_count == chain_count) {
@@ -196,7 +198,6 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     }
 
     stored_table_node->set_prunable_subquery_predicates(prunable_subquery_predicates);
-
   }
 }
 

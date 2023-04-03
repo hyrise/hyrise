@@ -63,4 +63,6 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
 std::vector<std::shared_ptr<AbstractOperator>> pqp_find_operators_by_type(const std::shared_ptr<AbstractOperator>& pqp,
                                                                           const OperatorType type);
 
+AllTypeVariant resolve_uncorrelated_subquery(const std::shared_ptr<const AbstractOperator>& subquery_operator);
+
 }  // namespace hyrise

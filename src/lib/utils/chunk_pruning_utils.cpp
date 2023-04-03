@@ -1,12 +1,12 @@
 #include "chunk_pruning_utils.hpp"
 
-#include "logical_query_plan/stored_table_node.hpp"
-#include "logical_query_plan/predicate_node.hpp"
 #include "expression/expression_functional.hpp"
-#include "hyrise.hpp"
 #include "expression/expression_utils.hpp"
-#include "operators/operator_scan_predicate.hpp"
+#include "hyrise.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "lossless_cast.hpp"
+#include "operators/operator_scan_predicate.hpp"
 #include "resolve_type.hpp"
 #include "statistics/attribute_statistics.hpp"
 #include "statistics/statistics_objects/min_max_filter.hpp"
@@ -18,9 +18,8 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-bool can_prune(const BaseAttributeStatistics& base_segment_statistics,
-                                  const PredicateCondition predicate_condition, const AllTypeVariant& variant_value,
-                                  const std::optional<AllTypeVariant>& variant_value2) {
+bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
+               const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) {
   auto can_prune = false;
 
   resolve_data_type(base_segment_statistics.data_type, [&](const auto data_type_t) {
@@ -57,9 +56,9 @@ namespace hyrise {
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
 std::set<ChunkID> compute_chunk_exclude_list(
-    const PredicatePruningChain& predicate_pruning_chain,
-    const std::shared_ptr<StoredTableNode>& stored_table_node, std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                                              boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node) {
+    const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,
+    std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+                       boost::hash<StoredTableNodePredicateNodePair>>& excluded_chunk_ids_by_predicate_node) {
   auto excluded_chunk_ids = std::set<ChunkID>{};
   for (const auto& predicate_node : predicate_pruning_chain) {
     // Determine the set of chunks that can be excluded for the given PredicateNode's predicate.
@@ -176,7 +175,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
 
     // Cache result.
     excluded_chunk_ids_by_predicate_node.emplace(std::make_pair(stored_table_node, predicate_node),
-                                                        current_excluded_chunk_ids);
+                                                 current_excluded_chunk_ids);
     // Add to global excluded list because we collect excluded chunks for the whole predicate pruning chain.
     excluded_chunk_ids.insert(current_excluded_chunk_ids.begin(), current_excluded_chunk_ids.end());
   }
@@ -185,8 +184,7 @@ std::set<ChunkID> compute_chunk_exclude_list(
 }
 
 std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& old_statistics,
-                                                                           OperatorScanPredicate predicate,
-                                                                           size_t num_rows_pruned) {
+                                                        OperatorScanPredicate predicate, size_t num_rows_pruned) {
   // If a chunk is pruned, we update the table statistics. This is so that the selectivity of the predicate that was
   // used for pruning can be correctly estimated. Example: For a table that has sorted values from 1 to 100 and a chunk
   // size of 10, the predicate `x > 90` has a selectivity of 10%. However, if the ChunkPruningRule removes nine chunks
@@ -223,6 +221,5 @@ std::shared_ptr<TableStatistics> prune_table_statistics(const TableStatistics& o
   return std::make_shared<TableStatistics>(
       std::move(column_statistics), std::max(0.0f, old_statistics.row_count - static_cast<float>(num_rows_pruned)));
 }
-
 
 }  // namespace hyrise

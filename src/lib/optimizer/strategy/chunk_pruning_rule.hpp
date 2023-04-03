@@ -27,7 +27,6 @@ class ChunkPruningRule : public AbstractRule {
   static std::vector<PredicatePruningChain> _find_predicate_pruning_chains_by_stored_table_node(
       const std::shared_ptr<StoredTableNode>& stored_table_node);
 
-
   static std::set<ChunkID> _intersect_chunk_ids(const std::vector<std::set<ChunkID>>& chunk_id_sets);
 
  private:

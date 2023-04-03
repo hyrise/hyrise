@@ -266,7 +266,7 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   static AbstractExpression::DescriptionMode _expression_description_mode(const DescriptionMode mode);
 
  private:
-  std::shared_ptr<AbstractLQPNode> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
+  std::pair<std::shared_ptr<AbstractLQPNode>, LQPNodeMapping> _deep_copy_impl(LQPNodeMapping& node_mapping) const;
   std::shared_ptr<AbstractLQPNode> _shallow_copy(LQPNodeMapping& node_mapping) const;
 
   /**

@@ -1,15 +1,11 @@
 #include "abstract_operator.hpp"
 
-#include <chrono>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/pqp_subquery_expression.hpp"
 #include "logical_query_plan/abstract_non_query_node.hpp"
 #include "logical_query_plan/dummy_table_node.hpp"
+#include "operators/get_table.hpp"
 #include "resolve_type.hpp"
 #include "scheduler/operator_task.hpp"
 #include "storage/table.hpp"
@@ -202,8 +198,32 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
-  std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>> copied_ops;
-  return deep_copy(copied_ops);
+  auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
+  const auto& copy = deep_copy(copied_ops);
+
+  for (const auto& [op, op_copy] : copied_ops) {
+    if (op->type() != OperatorType::GetTable) {
+      continue;
+    }
+
+    const auto& get_table = static_cast<const GetTable&>(*op);
+    const auto& prunable_subquery_scans = get_table.prunable_subquery_scans();
+    if (prunable_subquery_scans.empty()) {
+      continue;
+    }
+
+    auto prunable_subquery_scans_copy = std::vector<std::weak_ptr<const AbstractOperator>>{};
+    prunable_subquery_scans_copy.reserve(prunable_subquery_scans.size());
+
+    for (const auto& table_scan : prunable_subquery_scans) {
+      DebugAssert(copied_ops.contains(table_scan.get()), "Could not find referenced operator. PQP is invalid.");
+      prunable_subquery_scans_copy.emplace_back(copied_ops.at(table_scan.get()));
+    }
+
+    static_cast<GetTable&>(*op_copy).set_prunable_subquery_scans(prunable_subquery_scans_copy);
+  }
+
+  return copy;
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(

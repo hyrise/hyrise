@@ -12,13 +12,14 @@
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
 #include "join_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"
 #include "update_node.hpp"
 #include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
 
-using namespace std::string_literals;  // NOLINT
+//using namespace std::string_literals;  // NOLINT
 
 namespace {
 
@@ -241,7 +242,29 @@ size_t AbstractLQPNode::output_count() const {
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {
-  return _deep_copy_impl(input_node_mapping);
+  const auto& [copy, node_mapping] = _deep_copy_impl(input_node_mapping);
+
+  for (const auto& [node, node_copy] : node_mapping) {
+    if (node->type != LQPNodeType::StoredTable) {
+      continue;
+    }
+
+    const auto& stored_table_node = static_cast<const StoredTableNode&>(*node);
+    const auto& prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
+    if (prunable_subquery_predicates.empty()) {
+      continue;
+    }
+
+    auto prunable_subquery_predicates_copy = std::vector<std::weak_ptr<AbstractLQPNode>>{};
+    prunable_subquery_predicates_copy.reserve(prunable_subquery_predicates.size());
+    for (const auto& predicate_node : prunable_subquery_predicates) {
+      DebugAssert(node_mapping.contains(predicate_node), "Could not find referenced node. LQP is invalid.");
+      prunable_subquery_predicates_copy.emplace_back(node_mapping.at(predicate_node));
+    }
+    static_cast<StoredTableNode&>(*node_copy).set_prunable_subquery_predicates(prunable_subquery_predicates_copy);
+  }
+
+  return copy;
 }
 
 bool AbstractLQPNode::shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
@@ -264,7 +287,7 @@ std::optional<ColumnID> AbstractLQPNode::find_column_id(const AbstractExpression
 
 ColumnID AbstractLQPNode::get_column_id(const AbstractExpression& expression) const {
   const auto column_id = find_column_id(expression);
-  Assert(column_id, "This node has no column '"s + expression.as_column_name() + "'");
+  Assert(column_id, "This node has no column '" + expression.as_column_name() + "'");
   return *column_id;
 }
 
@@ -353,23 +376,24 @@ bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
   return !operator==(rhs);
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
+std::pair<std::shared_ptr<AbstractLQPNode>, LQPNodeMapping> AbstractLQPNode::_deep_copy_impl(
+    LQPNodeMapping& node_mapping) const {
   auto copied_left_input = std::shared_ptr<AbstractLQPNode>{};
   auto copied_right_input = std::shared_ptr<AbstractLQPNode>{};
 
   if (left_input()) {
-    copied_left_input = left_input()->_deep_copy_impl(node_mapping);
+    copied_left_input = left_input()->_deep_copy_impl(node_mapping).first;
   }
 
   if (right_input()) {
-    copied_right_input = right_input()->_deep_copy_impl(node_mapping);
+    copied_right_input = right_input()->_deep_copy_impl(node_mapping).first;
   }
 
   auto copy = _shallow_copy(node_mapping);
   copy->set_left_input(copied_left_input);
   copy->set_right_input(copied_right_input);
 
-  return copy;
+  return std::make_pair(copy, node_mapping);
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& node_mapping) const {
