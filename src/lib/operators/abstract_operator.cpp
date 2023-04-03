@@ -238,7 +238,8 @@ std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(
   const auto copied_right_input =
       right_input() ? right_input()->deep_copy(copied_ops) : std::shared_ptr<AbstractOperator>{};
 
-  auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  const auto copied_op = _on_deep_copy(copied_left_input, copied_right_input, copied_ops);
+  copied_op->lqp_node = lqp_node;
 
   /**
    * Set the transaction context so that we can execute the copied plan in the current transaction

@@ -305,7 +305,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
 }
 
 std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
-  if (!_prunable_subquery_scans.empty()) {
+  if (_prunable_subquery_scans.empty()) {
     return {};
   }
 
