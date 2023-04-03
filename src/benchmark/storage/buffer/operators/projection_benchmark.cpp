@@ -23,8 +23,8 @@ void benchmark_projection_impl(benchmark::State& state, const std::shared_ptr<co
     auto projection = std::make_shared<Projection>(in, expressions);
     projection->execute();
   }
-  // TODO: Separe per iteration, not total
-  add_buffer_manager_counters(state, BufferManager::get_global_buffer_manager());
+  // // TODO: Separe per iteration, not total
+  // add_buffer_manager_counters(state, BufferManager::get_global_buffer_manager());
 }
 
 BENCHMARK_F(MicroBenchmarkBasicFixture, BM_Projection_Simple)(benchmark::State& state) {
