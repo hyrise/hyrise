@@ -55,8 +55,9 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   stream << "pruned:" << separator;
   auto overall_pruned_chunk_ids = _dynamically_pruned_chunk_ids;
   overall_pruned_chunk_ids.insert(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end());
+  const auto additional_dynamically_pruned_chunk_count = overall_pruned_chunk_ids.size() - _pruned_column_ids.size();
   stream << overall_pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s) ("
-         << _pruned_chunk_ids.size() << " static, " << _dynamically_pruned_chunk_ids.size() << " dynamic)";
+         << _pruned_chunk_ids.size() << " static, " << additional_dynamically_pruned_chunk_count << " dynamic)";
   if (description_mode == DescriptionMode::SingleLine) {
     stream << ",";
   }
