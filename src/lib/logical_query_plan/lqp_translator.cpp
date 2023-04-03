@@ -66,6 +66,7 @@
 #include "projection_node.hpp"
 #include "sort_node.hpp"
 #include "static_table_node.hpp"
+#include "storage/index/partial_hash/partial_hash_index.hpp"
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
@@ -221,7 +222,14 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   auto pruned_table_chunk_id = ChunkID{0};
   auto pruned_chunk_ids_iter = pruned_chunk_ids.cbegin();
 
-  // Create a vector of chunk ids that have a GroupKey index and are not pruned.
+  // Create a vector of chunk ids that have an index and are not pruned.
+  const auto& indexes = table->get_table_indexes(column_id);
+  Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
+
+  Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
+  const auto& index = indexes.front();
+  const auto& indexed_chunk_ids = index->get_indexed_chunk_ids();
+
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     // Check if chunk is pruned
@@ -229,9 +237,9 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
       ++pruned_chunk_ids_iter;
       continue;
     }
-    // Check if chunk has GroupKey index
-    const auto chunk = table->get_chunk(chunk_id);
-    if (chunk && chunk->get_index(ChunkIndexType::GroupKey, column_ids)) {
+
+    // Check if chunk is indexed
+    if (indexed_chunk_ids.find(chunk_id) != indexed_chunk_ids.end()) {
       indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
     ++pruned_table_chunk_id;

@@ -22,9 +22,7 @@ IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operat
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       _left_column_id{left_column_id},
       _predicate_condition{predicate_condition},
-      _right_value{right_value} {
-        std::cout << "########## IndexScan used ##########" << std::endl;
-      }
+      _right_value{right_value} {}
 
 const std::string& IndexScan::name() const {
   static const auto name = std::string{"IndexScan"};
@@ -46,7 +44,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   const auto& indexes = _in_table->get_table_indexes(_left_column_id);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
-    Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
+  Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
   const auto index = indexes.front();
 
   auto append_matches = [&](const PartialHashIndex::Iterator& begin,
