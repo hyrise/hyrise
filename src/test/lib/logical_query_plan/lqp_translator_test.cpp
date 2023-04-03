@@ -456,10 +456,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
-  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  const auto index_column_id = ColumnID{1};
+  const auto index_chunk_ids = std::vector<ChunkID> {ChunkID{0}, ChunkID{2}};
+  table->create_partial_hash_index(index_column_id, index_chunk_ids);
 
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
   predicate_node->set_left_input(stored_table_node);
@@ -495,11 +494,10 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
-  auto index_column_ids = std::vector{ColumnID{1}};
-  auto index_chunk_ids = std::vector{ChunkID{0}, ChunkID{2}};
-  auto pruned_chunk_ids = std::vector{ChunkID{0}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  const auto index_column_id = ColumnID{1};
+  const auto index_chunk_ids = std::vector{ChunkID{0}, ChunkID{2}};
+  const auto pruned_chunk_ids = std::vector{ChunkID{0}};
+  table->create_partial_hash_index(index_column_id, index_chunk_ids);
 
   stored_table_node->set_pruned_chunk_ids(pruned_chunk_ids);
   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
@@ -541,10 +539,9 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
 
   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
-  std::vector<ColumnID> index_column_ids = {ColumnID{1}};
-  std::vector<ChunkID> index_chunk_ids = {ChunkID{0}, ChunkID{2}};
-  table->get_chunk(index_chunk_ids[0])->create_index<GroupKeyIndex>(index_column_ids);
-  table->get_chunk(index_chunk_ids[1])->create_index<GroupKeyIndex>(index_column_ids);
+  const auto index_column_id = ColumnID{1};
+  const auto index_chunk_ids = std::vector<ChunkID>{ChunkID{0}, ChunkID{2}};
+  table->create_partial_hash_index(index_column_id, index_chunk_ids);
 
   auto predicate_node = PredicateNode::make(between_inclusive_(stored_table_node->get_column("b"), 42, 1337));
   predicate_node->set_left_input(stored_table_node);
