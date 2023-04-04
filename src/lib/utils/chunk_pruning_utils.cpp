@@ -18,6 +18,7 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
+// Check whether any of the statistics objects available for this Segment identify the predicate as prunable.
 bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const PredicateCondition predicate_condition,
                const AllTypeVariant& variant_value, const std::optional<AllTypeVariant>& variant_value2) {
   auto can_prune = false;
@@ -54,6 +55,16 @@ bool can_prune(const BaseAttributeStatistics& base_segment_statistics, const Pre
 namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
+
+std::set<ChunkID> compute_chunk_exclude_list(const PredicatePruningChain& predicate_pruning_chain,
+                                             const std::shared_ptr<StoredTableNode>& stored_table_node) {
+  auto pruned_chunk_ids_by_predicate_node_cache =
+      std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
+                         boost::hash<StoredTableNodePredicateNodePair>>{};
+
+  return compute_chunk_exclude_list(predicate_pruning_chain, stored_table_node,
+                                    pruned_chunk_ids_by_predicate_node_cache);
+}
 
 std::set<ChunkID> compute_chunk_exclude_list(
     const PredicatePruningChain& predicate_pruning_chain, const std::shared_ptr<StoredTableNode>& stored_table_node,

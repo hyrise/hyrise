@@ -4,20 +4,8 @@
 
 namespace hyrise {
 
-std::vector<std::shared_ptr<AbstractOperator>> pqp_find_operators_by_type(const std::shared_ptr<AbstractOperator>& pqp,
-                                                                          const OperatorType type) {
-  auto operators = std::vector<std::shared_ptr<AbstractOperator>>{};
-  visit_pqp(pqp, [&](const auto& op) {
-    if (op->type() == type) {
-      operators.emplace_back(op);
-    }
-    return PQPVisitation::VisitInputs;
-  });
-
-  return operators;
-}
-
 AllTypeVariant resolve_uncorrelated_subquery(const std::shared_ptr<const AbstractOperator>& subquery_operator) {
+  Assert(subquery_operator->state() == OperatorState::ExecutedAndAvailable, "Subquery was not executed yet.");
   auto subquery_result = NULL_VALUE;
   const auto& subquery_result_table = subquery_operator->get_output();
   const auto row_count = subquery_result_table->row_count();

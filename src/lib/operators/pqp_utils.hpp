@@ -56,11 +56,9 @@ void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
 }
 
 /**
- * Traverses @param pqp from the top to the bottom and returns all operators of the given @param type.
+ * Gets the value provided by an uncorrelated subquery. Ensures that the subquery was executed and does not return too
+ * many values.
  */
-std::vector<std::shared_ptr<AbstractOperator>> pqp_find_operators_by_type(const std::shared_ptr<AbstractOperator>& pqp,
-                                                                          const OperatorType type);
-
 AllTypeVariant resolve_uncorrelated_subquery(const std::shared_ptr<const AbstractOperator>& subquery_operator);
 
 }  // namespace hyrise

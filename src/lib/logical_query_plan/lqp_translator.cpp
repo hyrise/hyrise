@@ -1,9 +1,5 @@
 #include "lqp_translator.hpp"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
 
@@ -72,16 +68,26 @@
 #include "update_node.hpp"
 #include "utils/column_pruning_utils.hpp"
 
-using namespace std::string_literals;  // NOLINT
-
 namespace hyrise {
+
+using namespace std::string_literals;  // NOLINT(build/namespaces)
 
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto& pqp = _translate_node_recursively(node);
-  const auto& get_table_ops = pqp_find_operators_by_type(pqp, OperatorType::GetTable);
 
-  for (const auto& get_table : get_table_ops) {
-    const auto& stored_table_node = static_cast<const StoredTableNode&>(*get_table->lqp_node);
+  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
+  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
+  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
+  // to the GetTable operators so they can use them for pruning during execution, when the subqueries might have already
+  // been executed and the predicate value is known. We must set the PredicateNodes after translation: Due to the
+  // recursion into the inputs of each LQP node, the PredicateNodes are translated after the StoredTableNodes.
+  for (const auto& [_, op] : _operator_by_lqp_node) {
+    if (op->type() != OperatorType::GetTable) {
+      continue;
+    }
+
+    DebugAssert(op->lqp_node->type == LQPNodeType::StoredTable, "Traslated GetTable operator from wrong LQP node.");
+    const auto& stored_table_node = static_cast<const StoredTableNode&>(*op->lqp_node);
     const auto& prunable_lqp_predicates = stored_table_node.prunable_subquery_predicates();
     if (prunable_lqp_predicates.empty()) {
       continue;
@@ -90,10 +96,11 @@ std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::share
     auto prunable_pqp_predicates = std::vector<std::weak_ptr<const AbstractOperator>>{};
     prunable_pqp_predicates.reserve(prunable_lqp_predicates.size());
     for (const auto& predicate : prunable_lqp_predicates) {
+      DebugAssert(_operator_by_lqp_node.contains(predicate), "Could not find referenced node. LQP/PQP is invalid.");
       prunable_pqp_predicates.emplace_back(_operator_by_lqp_node.at(predicate));
     }
 
-    static_cast<GetTable&>(*get_table).set_prunable_subquery_scans(prunable_pqp_predicates);
+    static_cast<GetTable&>(*op).set_prunable_subquery_scans(prunable_pqp_predicates);
   }
 
   return pqp;

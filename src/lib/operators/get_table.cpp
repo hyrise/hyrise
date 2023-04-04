@@ -55,9 +55,14 @@ std::string GetTable::description(DescriptionMode description_mode) const {
   stream << "pruned:" << separator;
   auto overall_pruned_chunk_ids = _dynamically_pruned_chunk_ids;
   overall_pruned_chunk_ids.insert(_pruned_chunk_ids.begin(), _pruned_chunk_ids.end());
-  const auto additional_dynamically_pruned_chunk_count = overall_pruned_chunk_ids.size() - _pruned_column_ids.size();
-  stream << overall_pruned_chunk_ids.size() << "/" << stored_table->chunk_count() << " chunk(s) ("
-         << _pruned_chunk_ids.size() << " static, " << additional_dynamically_pruned_chunk_count << " dynamic)";
+  const auto overall_pruned_chunk_count = overall_pruned_chunk_ids.size();
+  const auto dynamically_pruned_chunk_count = overall_pruned_chunk_count - _pruned_chunk_ids.size();
+
+  stream << overall_pruned_chunk_count << "/" << stored_table->chunk_count() << " chunk(s)";
+  if (overall_pruned_chunk_count > 0) {
+    stream << " (" << _pruned_chunk_ids.size() << " static, " << dynamically_pruned_chunk_count << " dynamic)";
+  }
+
   if (description_mode == DescriptionMode::SingleLine) {
     stream << ",";
   }
@@ -310,34 +315,51 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
     return {};
   }
 
-  auto excluded_chunk_ids = std::set<ChunkID>{};
-  const auto& stored_table_node = StoredTableNode::make(_name);
+  // Create a dummy StoredTableNode from the table to retrieve. `compute_chunk_exclude_list` modifies the node's
+  // statistics and we want to avoid that. We cannot use `deep_copy()` here since it would complain that the referenced
+  // prunable PredicateNodes are not part of the LQP.
+  const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_node);
+  const auto dummy_stored_table_node = StoredTableNode::make(_name);
+
+  // Create a dummy PredicateNode for each predicate containing a subquery that has already been executed. We do not use
+  // the original predicate to ignore any other nodes in between. Since the ChunkPruningRule already took care to add
+  // only predicates that are safe to prune with, we can act as if there were no other LQP nodes.
   auto prunable_predicate_nodes = std::vector<std::shared_ptr<PredicateNode>>{};
   prunable_predicate_nodes.reserve(_prunable_subquery_scans.size());
   for (const auto& op : prunable_subquery_scans()) {
     const auto& table_scan = static_cast<const TableScan&>(*op);
     const auto& predicate_node = static_cast<const PredicateNode&>(*table_scan.lqp_node);
     const auto adjusted_predicate = predicate_node.predicate()->deep_copy();
-
     const auto& subquery_ops = table_scan.uncorrelated_subqueries();
 
+    // Adjust predicates with the dummy StoredTableNode and the subquery result, if available.
     for (auto& argument : adjusted_predicate->arguments) {
+      // Replace any column with the respective column from our dummy StoredTableNode.
       if (const auto lqp_column = std::dynamic_pointer_cast<LQPColumnExpression>(argument)) {
-        argument = lqp_column_(stored_table_node, lqp_column->original_column_id);
+        Assert(*lqp_column->original_node.lock() == stored_table_node,
+               "Predicate is performed on wrong StoredTableNode");
+        argument = lqp_column_(dummy_stored_table_node, lqp_column->original_column_id);
       }
 
+      // Check if expression is a subquery.
       const auto subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(argument);
       if (!subquery || subquery->is_correlated()) {
         continue;
       }
 
+      // Match the subquery with the correct operator. We do not use table_scan->predicate()->arguments[...]->pqp since
+      // the arguments might have a different order in the LQP and th PQP.
       auto subquery_op = std::shared_ptr<AbstractOperator>{};
       for (const auto& op : subquery_ops) {
         if (*op->lqp_node == *subquery->lqp) {
           subquery_op = op;
         }
       }
-      Assert(subquery_op, "no subquery_op found");
+      Assert(subquery_op, "Cannot match the LQP and PQP of the subquery.");
+
+      // Ignore the subquery if it has not been executed yet. A reason might be that scheduling the subquery before the
+      // GetTable operator would create a cycle. E.g., this can happen for a query like this:
+      // SELECT ... FROM a_table WHERE x > (SELECT AVG(x) FROM a_table);
       if (subquery_op->state() != OperatorState::ExecutedAndAvailable) {
         continue;
       }
@@ -345,14 +367,20 @@ std::set<ChunkID> GetTable::_prune_chunks_dynamically() {
       argument = value_(resolve_uncorrelated_subquery(subquery_op));
     }
 
-    prunable_predicate_nodes.emplace_back(PredicateNode::make(adjusted_predicate, stored_table_node));
+    // Add a new PredicateNode to the pruning chain.
+    auto input_node = static_pointer_cast<AbstractLQPNode>(dummy_stored_table_node);
+    if (!prunable_predicate_nodes.empty()) {
+      input_node = prunable_predicate_nodes.back();
+    }
+    prunable_predicate_nodes.emplace_back(PredicateNode::make(adjusted_predicate, input_node));
   }
 
-  auto excluded_chunk_ids_by_predicate_node_cache =
-      std::unordered_map<StoredTableNodePredicateNodePair, std::set<ChunkID>,
-                         boost::hash<StoredTableNodePredicateNodePair>>{};
-  _dynamically_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicate_nodes, stored_table_node,
-                                                             excluded_chunk_ids_by_predicate_node_cache);
+  // Return if no predicate could be resolved, i.e., no subquery has been executed yet.
+  if (prunable_predicate_nodes.empty()) {
+    return {};
+  }
+
+  _dynamically_pruned_chunk_ids = compute_chunk_exclude_list(prunable_predicate_nodes, dummy_stored_table_node);
   return _dynamically_pruned_chunk_ids;
 }
 
