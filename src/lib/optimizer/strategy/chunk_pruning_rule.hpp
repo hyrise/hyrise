@@ -16,8 +16,8 @@ namespace hyrise {
  * For a given LQP, this rule determines the set of chunks that can be pruned from a table. To calculate the sets of
  * pruned chunks, it analyzes the predicates of PredicateNodes in a given LQP. The resulting pruning information is
  * stored inside the StoredTableNode objects.
- * PredicateNodes may have predicates that contain the results of uncorrelated subquery (e.g.,
- * `x = (SELECT MIN(y) FROM... )`). We cannot prune chunks with these predicates during optimization since we do not
+ * PredicateNodes may have predicates that contain the results of uncorrelated subqueries (e.g.,
+ * `x = (SELECT MIN(y) FROM ...)`). We cannot prune chunks with these predicates during optimization since we do not
  * know the predicate value yet. However, we collect such predicates using subquery results that are safe to prune with
  * and also add this information to the StoredTableNode. During execution, the subquery might have already been executed
  * and the table can be pruned dynamically.

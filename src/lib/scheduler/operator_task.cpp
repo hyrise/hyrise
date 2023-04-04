@@ -1,7 +1,5 @@
 #include "operator_task.hpp"
 
-#include <utility>
-
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/get_table.hpp"
@@ -107,7 +105,7 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   if constexpr (HYRISE_DEBUG) {
     visit_tasks(root_operator_task, [](const auto& task) {
       for (const auto& direct_successor : task->successors()) {
-        visit_tasks_upwards(direct_successor, [&](const auto successor) {
+        visit_tasks_upwards(direct_successor, [&](const auto& successor) {
           Assert(task != successor, "Task graph cointains a cycle.");
           return TaskUpwardVisitation::VisitSuccessors;
         });

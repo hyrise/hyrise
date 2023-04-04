@@ -176,7 +176,7 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
 TEST_F(OperatorTaskTest, DetectsCycles) {
   // Ensure that we cannot create tasks that have cyclic dependencies and, thus,  would end up in a deadlock during
   // execution. In this test case, we achieve this with an ivalid PQP that consists of one cycle. During task creation,
-  // it is more likely to create cycles by incorrectly setting the tasks' predecessors. This test ensures that notice
+  // it is more likely to create cycles by incorrectly setting the tasks' predecessors. This test ensures that we notice
   // when this happens.
   if constexpr (!HYRISE_DEBUG) {
     GTEST_SKIP();
