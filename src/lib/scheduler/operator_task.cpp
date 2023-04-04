@@ -103,6 +103,20 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   // reaching the GetTable tasks, we cannot traverse the tasks to ensure an acyclic graph.
   link_tasks_for_subquery_pruning(operator_tasks_set);
 
+  // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself.
+  if constexpr (HYRISE_DEBUG) {
+    visit_tasks(root_operator_task, [](const auto& task) {
+      for (const auto& direct_successor : task->successors()) {
+        visit_tasks_upwards(direct_successor, [&](const auto successor) {
+          Assert(task != successor, "Task graph cointains a cycle.");
+          return TaskUpwardVisitation::VisitSuccessors;
+        });
+      }
+
+      return TaskVisitation::VisitPredecessors;
+    });
+  }
+
   return std::make_pair(
       std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end()),
       root_operator_task);
