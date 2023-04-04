@@ -10,25 +10,23 @@ namespace hyrise {
 enum class PQPVisitation { VisitInputs, DoNotVisitInputs };
 
 /**
- * Calls the passed @param visitor on @param pqp and recursively on its INPUTS.
- * The visitor returns `PQPVisitation`, indicating whether the current operator's input should be visited
- * as well. The algorithm is breadth-first search.
+ * Calls the passed @param visitor on @param pqp and recursively on its INPUTS. The visitor returns `PQPVisitation`,
+ * indicating whether the current operator's input should be visited as well. The algorithm is breadth-first search.
  * Each operator is visited exactly once.
  *
- * @tparam Visitor      Functor called with every operator as a param.
- *                      Returns `PQPVisitation`
+ * @tparam Visitor      Functor called with every operator as a param. Returns `PQPVisitation`.
  */
 template <typename Operator, typename Visitor>
 void visit_pqp(const std::shared_ptr<Operator>& pqp, Visitor visitor) {
   using AbstractOperatorType = std::conditional_t<std::is_const_v<Operator>, const AbstractOperator, AbstractOperator>;
 
-  std::queue<std::shared_ptr<AbstractOperatorType>> operator_queue;
+  auto operator_queue = std::queue<std::shared_ptr<AbstractOperatorType>>{};
   operator_queue.push(pqp);
 
-  std::unordered_set<std::shared_ptr<AbstractOperatorType>> visited_operators;
+  auto visited_operators = std::unordered_set<std::shared_ptr<AbstractOperatorType>>{};
 
   while (!operator_queue.empty()) {
-    auto op = operator_queue.front();
+    const auto op = operator_queue.front();
     operator_queue.pop();
 
     if (!visited_operators.emplace(op).second) {

@@ -348,6 +348,7 @@ set(
     scheduler/operator_task.hpp
     scheduler/task_queue.cpp
     scheduler/task_queue.hpp
+    scheduler/task_utils.hpp
     scheduler/topology.cpp
     scheduler/topology.hpp
     scheduler/worker.cpp

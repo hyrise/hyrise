@@ -1,13 +1,11 @@
 #include "operator_task.hpp"
 
-#include <queue>
-#include <unordered_set>
 #include <utility>
 
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
 #include "operators/get_table.hpp"
-#include "scheduler/job_task.hpp"
+#include "scheduler/task_utils.hpp"
 
 namespace {
 
@@ -49,31 +47,6 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   return task;
 }
 
-enum class TaskVisitation { VisitSuccessors, DoNotVisitSuccessors };
-
-template <typename Visitor>
-void visit_tasks_upwards(const std::shared_ptr<OperatorTask>& task, Visitor visitor) {
-  std::queue<std::shared_ptr<OperatorTask>> node_queue;
-  node_queue.push(task);
-
-  std::unordered_set<std::shared_ptr<OperatorTask>> visited_nodes;
-
-  while (!node_queue.empty()) {
-    auto node = node_queue.front();
-    node_queue.pop();
-
-    if (!visited_nodes.emplace(node).second) {
-      continue;
-    }
-
-    if (visitor(node) == TaskVisitation::VisitSuccessors) {
-      for (const auto& successor : node->successors()) {
-        node_queue.push(std::static_pointer_cast<OperatorTask>(successor));
-      }
-    }
-  }
-}
-
 void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
   for (const auto& task : tasks) {
     const auto& op = task->get_operator();
@@ -91,9 +64,9 @@ void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<Op
         visit_tasks_upwards(task, [&](const auto& successor) {
           if (successor == subquery_root) {
             is_acyclic = false;
-            return TaskVisitation::DoNotVisitSuccessors;
+            return TaskUpwardVisitation::DoNotVisitSuccessors;
           }
-          return TaskVisitation::VisitSuccessors;
+          return TaskUpwardVisitation::VisitSuccessors;
         });
 
         if (is_acyclic) {
