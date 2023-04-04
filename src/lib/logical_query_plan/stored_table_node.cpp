@@ -207,6 +207,9 @@ size_t StoredTableNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
+  // We cannot copy _prunable_subquery_predicated here since deep_copy() recurses into the input nodes and the
+  // StoredTableNodes are the first ones to be copied. Instead, AbstractLQPNode::deep_copy() sets the copied
+  // PredicateNodes after the whole LQP has been copied.
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);

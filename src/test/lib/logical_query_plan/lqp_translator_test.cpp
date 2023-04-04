@@ -1152,8 +1152,8 @@ TEST_F(LQPTranslatorTest, ChangeMetaTable) {
 TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {
   // clang-format off
   const auto subquery =
-  ProjectionNode::make(min_(int_float_a),
-    AggregateNode::make(expression_vector(), expression_vector(min(int_float_a)),
+  ProjectionNode::make(expression_vector(min_(int_float_a)),
+    AggregateNode::make(expression_vector(), expression_vector(min_(int_float_a)),
       int_float_node));
 
   const auto lqp =
@@ -1164,11 +1164,11 @@ TEST_F(LQPTranslatorTest, TranslatePrunableSubqueries) {
   int_float2_node->set_prunable_subquery_predicates({lqp});
 
   const auto pqp = LQPTranslator{}.translate_node(lqp);
-  const auto& get_table = std::dynamic_pointer_cast<GetTable>(pqp->left_input());
+  const auto& get_table = std::dynamic_pointer_cast<const GetTable>(pqp->left_input());
   ASSERT_TRUE(get_table);
   const auto& prunable_subquery_scans = get_table->prunable_subquery_scans();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
-  EXPECT_EQ(prunable_subquery_scans.front(), lqp);
+  EXPECT_EQ(prunable_subquery_scans.front(), pqp);
 }
 
 }  // namespace hyrise
