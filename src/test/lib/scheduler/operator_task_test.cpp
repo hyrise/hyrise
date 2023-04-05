@@ -174,7 +174,7 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
 }
 
 TEST_F(OperatorTaskTest, DetectsCycles) {
-  // Ensure that we cannot create tasks that have cyclic dependencies and, thus,  would end up in a deadlock during
+  // Ensure that we cannot create tasks that have cyclic dependencies and, thus, would end up in a deadlock during
   // execution. In this test case, we achieve this with an ivalid PQP that consists of one cycle. During task creation,
   // it is more likely to create cycles by incorrectly setting the tasks' predecessors. This test ensures that we notice
   // when this happens.
@@ -186,7 +186,7 @@ TEST_F(OperatorTaskTest, DetectsCycles) {
   class MockOperator : public AbstractReadOnlyOperator {
    public:
     MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
-        : AbstractReadOnlyOperator(OperatorType::Mock, input_operator) {}
+        : AbstractReadOnlyOperator{OperatorType::Mock, input_operator} {}
 
     const std::string& name() const override {
       const static auto name = std::string{"MockOperator"};
@@ -203,13 +203,13 @@ TEST_F(OperatorTaskTest, DetectsCycles) {
     }
 
     std::shared_ptr<AbstractOperator> _on_deep_copy(
-        const std::shared_ptr<AbstractOperator>& copied_left_input,
+        const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
         const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
         std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override {
       return nullptr;
     }
 
-    void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override {}
+    void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) override {}
   };
 
   // Create some operators that are an input of the next one.
