@@ -1,8 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <set>
-
 #include "abstract_read_only_operator.hpp"
 #include "concurrency/transaction_context.hpp"
 
@@ -31,12 +28,6 @@ class GetTable : public AbstractReadOnlyOperator {
   const std::vector<ChunkID>& pruned_chunk_ids() const;
   const std::vector<ColumnID>& pruned_column_ids() const;
 
-  // We cannot use predicates with uncorrelated subqueries to get pruned ChunkIDs during optimization. However, we can
-  // reference these predicates and keep track of them in the plan. Once we execute the plan, the subqueries might have
-  // already been executed, so we can use them for pruning during execution.
-  void set_prunable_subquery_scans(std::vector<std::weak_ptr<const AbstractOperator>> subquery_scans) const;
-  std::vector<std::shared_ptr<const AbstractOperator>> prunable_subquery_scans() const;
-
  protected:
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
@@ -46,16 +37,10 @@ class GetTable : public AbstractReadOnlyOperator {
 
   std::shared_ptr<const Table> _on_execute() override;
 
-  // Resolve the predicate values for uncorrelated subqueries if they have already been executed. If so, perform chunk
-  // pruning with the predicates and return the pruned ChunkIDs.
-  std::set<ChunkID> _prune_chunks_dynamically();
-
   // Name of the table to retrieve.
   const std::string _name;
   const std::vector<ChunkID> _pruned_chunk_ids;
   const std::vector<ColumnID> _pruned_column_ids;
-
-  mutable std::vector<std::weak_ptr<const AbstractOperator>> _prunable_subquery_scans{};
-  std::set<ChunkID> _dynamically_pruned_chunk_ids{};
 };
+
 }  // namespace hyrise

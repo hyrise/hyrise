@@ -111,34 +111,6 @@ TEST_F(StoredTableNodeTest, Copy) {
   _stored_table_node->set_pruned_chunk_ids({ChunkID{2}});
   _stored_table_node->set_pruned_column_ids({ColumnID{1}});
   EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
-
-  const auto stored_table_node_b = StoredTableNode::make("t_b");
-  const auto x = stored_table_node_b->get_column("a");
-
-  // clang-format off
-  const auto subquery =
-  ProjectionNode::make(expression_vector(min_(x)),
-    AggregateNode::make(expression_vector(), expression_vector(min_(x)),
-      stored_table_node_b));
-
-  const auto lqp =
-  PredicateNode::make(equals_(_a, lqp_subquery_(subquery)),
-    _stored_table_node);
-  // clang-format on
-
-  _stored_table_node->set_prunable_subquery_predicates({lqp});
-
-  const auto& lqp_deep_copy = lqp->deep_copy();
-  EXPECT_EQ(*lqp, *lqp_deep_copy);
-  EXPECT_EQ(*_stored_table_node, *lqp_deep_copy->left_input());
-
-  const auto& prunable_subquery_predicates =
-      static_cast<StoredTableNode&>(*lqp_deep_copy->left_input()).prunable_subquery_predicates();
-  ASSERT_EQ(prunable_subquery_predicates.size(), 1);
-  EXPECT_EQ(prunable_subquery_predicates.front(), lqp_deep_copy);
-
-  // Do not allow deep copies where prunable subquery predicates are not part of the LQP.
-  EXPECT_THROW(_stored_table_node->deep_copy(), std::logic_error);
 }
 
 TEST_F(StoredTableNodeTest, NodeExpressions) {

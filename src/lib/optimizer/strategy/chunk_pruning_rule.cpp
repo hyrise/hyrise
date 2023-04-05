@@ -162,55 +162,16 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     }
 
     // (2.2) Calculate the intersection of pruned chunks across all predicate pruning chains.
-    const auto& pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
-    if (!pruned_chunk_ids.empty()) {
-      // (2.3) Set the pruned chunk ids of stored_table_node.
-      DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
-                  "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
-      // Wanted side effect of using std::set: pruned_chunk_ids vector is already sorted.
-      stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
+    auto pruned_chunk_ids = _intersect_chunk_ids(pruned_chunk_id_sets);
+    if (pruned_chunk_ids.empty()) {
+      continue;
     }
 
-    // (2.4) Get and set predicates with uncorrelated subqueries so we can use them for pruning during execution.
-    // (2.4.1) Collect predicates with uncorrelated subqueries that are part of each chain in a new "pseudo" chain. When
-    //         we want to use them for pruning during execution, it is safe to add the chunks pruned by them to the
-    //         already pruned chunks.
-    const auto chain_count = predicate_pruning_chains.size();
-    auto chain_count_per_subquery_predicate = std::unordered_map<std::shared_ptr<PredicateNode>, uint64_t>{};
-    auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
-    for (const auto& predicate_chain : predicate_pruning_chains) {
-      for (const auto& predicate_node : predicate_chain) {
-        // Only use binary and between predicates that can easily be used for pruning. Do not use, e.g, InExpressions
-        // etc., which might end up in the ExpressionEvaluator anyways.
-        const auto& predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
-        if (!predicate) {
-          continue;
-        }
-        const auto predicate_condition = predicate->predicate_condition;
-        if (!is_binary_numeric_predicate_condition(predicate_condition) &&
-            !is_between_predicate_condition(predicate_condition)) {
-          continue;
-        }
-
-        for (auto& argument : predicate->arguments) {
-          if (argument->type == ExpressionType::LQPSubquery &&
-              !static_cast<const LQPSubqueryExpression&>(*argument).is_correlated()) {
-            // Count the number of occurrences and add the predicate when it appears in all chains.
-            const auto occurrence_count = ++chain_count_per_subquery_predicate[predicate_node];
-            if (occurrence_count == chain_count) {
-              prunable_subquery_predicates.emplace_back(predicate_node);
-            }
-            // Make sure we do not count `x BETWEEN (SELECT MIN(y) ...) AND (SELECT (MAX(y) ...)` twice.
-            break;
-          }
-        }
-      }
-    }
-
-    // (2.4.2) Set the predicates that might be used for pruning during execution.
-    if (!prunable_subquery_predicates.empty()) {
-      stored_table_node->set_prunable_subquery_predicates(prunable_subquery_predicates);
-    }
+    // (2.3) Set the pruned chunk ids of stored_table_node.
+    DebugAssert(stored_table_node->pruned_chunk_ids().empty(),
+                "Did not expect a StoredTableNode with an already existing set of pruned chunk ids.");
+    // Wanted side effect of using sets: pruned_chunk_ids vector is already sorted.
+    stored_table_node->set_pruned_chunk_ids(std::vector<ChunkID>(pruned_chunk_ids.begin(), pruned_chunk_ids.end()));
   }
 }
 

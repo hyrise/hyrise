@@ -199,38 +199,7 @@ std::string AbstractOperator::description(DescriptionMode /*description_mode*/) 
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy() const {
   auto copied_ops = std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>{};
-  const auto& copy = deep_copy(copied_ops);
-
-  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
-  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
-  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
-  // to the GetTable operators so they can use them for pruning during execution, when the subqueries might have already
-  // been executed and the predicate value is known. During a deep_copy, we must set the copied TableScan operators as
-  // prunable subquery scans of the GetTable operator after copying: Due to the recursion into the inputs of each
-  // operator, the TableSans are copied after the GetTable operators.
-  for (const auto& [op, op_copy] : copied_ops) {
-    if (op->type() != OperatorType::GetTable) {
-      continue;
-    }
-
-    const auto& get_table = static_cast<const GetTable&>(*op);
-    const auto& prunable_subquery_scans = get_table.prunable_subquery_scans();
-    if (prunable_subquery_scans.empty()) {
-      continue;
-    }
-
-    // Find the copies of the original TableScans and set them as prunable subquery scans of the GetTable copy.
-    auto prunable_subquery_scans_copy = std::vector<std::weak_ptr<const AbstractOperator>>{};
-    prunable_subquery_scans_copy.reserve(prunable_subquery_scans.size());
-    for (const auto& table_scan : prunable_subquery_scans) {
-      DebugAssert(copied_ops.contains(table_scan.get()), "Could not find referenced operator. PQP is invalid.");
-      prunable_subquery_scans_copy.emplace_back(copied_ops.at(table_scan.get()));
-    }
-
-    static_cast<GetTable&>(*op_copy).set_prunable_subquery_scans(prunable_subquery_scans_copy);
-  }
-
-  return copy;
+  return deep_copy(copied_ops);
 }
 
 std::shared_ptr<AbstractOperator> AbstractOperator::deep_copy(

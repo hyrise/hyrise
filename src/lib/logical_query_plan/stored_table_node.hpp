@@ -32,12 +32,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
 
   void set_pruned_column_ids(const std::vector<ColumnID>& pruned_column_ids);
   const std::vector<ColumnID>& pruned_column_ids() const;
-
-  // We cannot use predicates with uncorrelated subqueries to get pruned ChunkIDs during optimization. However, we can
-  // reference these predicates and keep track of them in the plan. Once we execute the plan, the subqueries might have
-  // already been executed, so we can use them for pruning during execution.
-  void set_prunable_subquery_predicates(const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes);
-  std::vector<std::shared_ptr<AbstractLQPNode>> prunable_subquery_predicates() const;
   /** @} */
 
   std::vector<ChunkIndexStatistics> chunk_indexes_statistics() const;
@@ -64,7 +58,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   mutable std::optional<std::vector<std::shared_ptr<AbstractExpression>>> _output_expressions;
   std::vector<ChunkID> _pruned_chunk_ids;
   std::vector<ColumnID> _pruned_column_ids;
-  std::vector<std::weak_ptr<AbstractLQPNode>> _prunable_subquery_predicates;
 };
 
 }  // namespace hyrise

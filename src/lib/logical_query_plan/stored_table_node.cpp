@@ -70,25 +70,6 @@ const std::vector<ColumnID>& StoredTableNode::pruned_column_ids() const {
   return _pruned_column_ids;
 }
 
-void StoredTableNode::set_prunable_subquery_predicates(
-    const std::vector<std::weak_ptr<AbstractLQPNode>>& predicate_nodes) {
-  DebugAssert(std::all_of(predicate_nodes.cbegin(), predicate_nodes.cend(),
-                          [](const auto& node) { return node.lock() && node.lock()->type == LQPNodeType::Predicate; }),
-              "No PredicateNode set as prunable predicate.");
-  _prunable_subquery_predicates = predicate_nodes;
-}
-
-std::vector<std::shared_ptr<AbstractLQPNode>> StoredTableNode::prunable_subquery_predicates() const {
-  auto subquery_predicates = std::vector<std::shared_ptr<AbstractLQPNode>>{};
-  subquery_predicates.reserve(_prunable_subquery_predicates.size());
-  for (const auto& subquery_predicate_ref : _prunable_subquery_predicates) {
-    const auto& subquery_predicate = subquery_predicate_ref.lock();
-    Assert(subquery_predicate, "Referenced PredicateNode expired. LQP is invalid.");
-    subquery_predicates.emplace_back(subquery_predicate);
-  }
-  return subquery_predicates;
-}
-
 std::string StoredTableNode::description(const DescriptionMode /*mode*/) const {
   const auto stored_table = Hyrise::get().storage_manager.get_table(table_name);
 
@@ -207,9 +188,6 @@ size_t StoredTableNode::_on_shallow_hash() const {
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
-  // We cannot copy _prunable_subquery_predicated here since deep_copy() recurses into the input nodes and the
-  // StoredTableNodes are the first ones to be copied. Instead, AbstractLQPNode::deep_copy() sets the copied
-  // PredicateNodes after the whole LQP has been copied.
   const auto copy = make(table_name);
   copy->set_pruned_chunk_ids(_pruned_chunk_ids);
   copy->set_pruned_column_ids(_pruned_column_ids);
