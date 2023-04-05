@@ -10,7 +10,7 @@
 
 namespace hyrise {
 
-using namespace expression_functional;  // NOLIT(build/namespaces)
+using namespace expression_functional;  // NOLINT(build/namespaces)
 
 class PQPUtilsTest : public BaseTest {
  public:

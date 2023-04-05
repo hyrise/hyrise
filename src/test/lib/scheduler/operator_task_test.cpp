@@ -185,11 +185,11 @@ TEST_F(OperatorTaskTest, DetectCycles) {
   // Declare a MockOperator class that allows us to set an input operator after instantiation.
   class MockOperator : public AbstractReadOnlyOperator {
    public:
-    MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
+    explicit MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
         : AbstractReadOnlyOperator{OperatorType::Mock, input_operator} {}
 
     const std::string& name() const override {
-      const static auto name = std::string{"MockOperator"};
+      static const auto name = std::string{"MockOperator"};
       return name;
     }
 
