@@ -49,7 +49,7 @@ class BufferManagerBenchmarkMemoryManager : public benchmark::MemoryManager {
 
 class MetricsSampler {
  public:
-  MetricsSampler(const std::filesystem::path& output_path, BufferManager* buffer_manager);
+  MetricsSampler(const std::string& name, const std::filesystem::path& output_path, BufferManager* buffer_manager);
   ~MetricsSampler();
 
   void start();
@@ -67,6 +67,7 @@ class MetricsSampler {
   BufferManager* _buffer_manager;
   std::vector<BufferManager::Metrics> _metrics;
   const std::filesystem::path _output_path;
+  const std::string _name;
 };
 
 /**

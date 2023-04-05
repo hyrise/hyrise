@@ -133,11 +133,13 @@ add_executable(
     micro_benchmark_utils.cpp
     micro_benchmark_utils.hpp
 
-    storage/buffer/utils.hpp
+    operators/projection_benchmark.cpp
+    operators/table_scan_benchmark.cpp
+    operators/sort_benchmark.cpp
+
     storage/buffer/utils.cpp
+    storage/buffer/utils.hpp
     storage/buffer/allocation_benchmark.cpp
-    storage/buffer/operators/projection_benchmark.cpp
-    storage/buffer/operators/table_scan_benchmark.cpp
     storage/buffer/ssd_region_benchmark.cpp
     storage/buffer/volatile_region_benchmark.cpp
     storage/buffer/vector_sort_benchmark.cpp

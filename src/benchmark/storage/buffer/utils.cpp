@@ -38,8 +38,9 @@ std::filesystem::path ssd_region_block_path() {
   }
 }
 
-MetricsSampler::MetricsSampler(const std::filesystem::path& output_path, BufferManager* buffer_manager)
-    : _buffer_manager(buffer_manager), _output_path(output_path) {
+MetricsSampler::MetricsSampler(const std::string& name, const std::filesystem::path& output_path,
+                               BufferManager* buffer_manager)
+    : _name(name), _buffer_manager(buffer_manager), _output_path(output_path) {
   start();
 }
 
@@ -72,6 +73,7 @@ void MetricsSampler::export_metrics() {
   }
   auto context = nlohmann::json::object();
   context["interval"] = _interval.count();
+  context["name"] = _name;
   auto report = nlohmann::json{{"context", context}, {"metrics", metrics_json}};
   std::ofstream{_output_path} << std::setw(2) << report << std::endl;
 }
