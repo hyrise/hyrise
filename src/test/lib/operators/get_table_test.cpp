@@ -377,14 +377,14 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
 }
 
 TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
-  const auto get_table_c =
-      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  // Prune table with the predicates of linked TableScan using subquery results.
+  const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
   dummy_table->append({9});
   const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
   const auto table_scan =
-      std::make_shared<TableScan>(get_table_c, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
-                                                           pqp_subquery_(table_wrapper, DataType::Int, false)));
+      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
   const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
   const auto stored_table_node = StoredTableNode::make("int_int_float");
   stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
@@ -392,20 +392,52 @@ TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
   const auto predicate_node =
       PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
 
-  get_table_c->lqp_node = stored_table_node;
+  get_table->lqp_node = stored_table_node;
   table_scan->lqp_node = predicate_node;
   stored_table_node->set_prunable_subquery_predicates({predicate_node});
-  get_table_c->set_prunable_subquery_scans({table_scan});
+  get_table->set_prunable_subquery_scans({table_scan});
 
-  execute_all({table_wrapper, get_table_c});
+  execute_all({table_wrapper, get_table});
 
-  const auto& output_table = get_table_c->get_output();
-  EXPECT_EQ(get_table_c->get_output()->chunk_count(), 2);
+  const auto& output_table = get_table->get_output();
+  EXPECT_EQ(get_table->get_output()->chunk_count(), 2);
 
-  EXPECT_EQ(get_table_c->description(DescriptionMode::SingleLine),
+  EXPECT_EQ(get_table->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 2/4 chunk(s) (1 static, 1 dynamic), 1/3 column(s)");
-  EXPECT_EQ(get_table_c->description(DescriptionMode::MultiLine),
+  EXPECT_EQ(get_table->description(DescriptionMode::MultiLine),
             "GetTable\n(int_int_float)\npruned:\n2/4 chunk(s) (1 static, 1 dynamic)\n1/3 column(s)");
+}
+
+TEST_F(OperatorsGetTableTest, DynamicSubqueryPruningSubqueryNotExecuted) {
+  // Same as DynamicSubqueryPruning, but the subquery is not executed. Thus, we cannot prune dynamically.
+  const auto get_table = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
+  dummy_table->append({9});
+  const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
+  const auto table_scan =
+      std::make_shared<TableScan>(get_table, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                         pqp_subquery_(table_wrapper, DataType::Int, false)));
+  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
+  const auto stored_table_node = StoredTableNode::make("int_int_float");
+  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
+  stored_table_node->set_pruned_column_ids({ColumnID{1}});
+  const auto predicate_node =
+      PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
+
+  get_table->lqp_node = stored_table_node;
+  table_scan->lqp_node = predicate_node;
+  stored_table_node->set_prunable_subquery_predicates({predicate_node});
+  get_table->set_prunable_subquery_scans({table_scan});
+
+  get_table->execute();
+
+  const auto& output_table = get_table->get_output();
+  EXPECT_EQ(get_table->get_output()->chunk_count(), 3);
+
+  EXPECT_EQ(get_table->description(DescriptionMode::SingleLine),
+            "GetTable (int_int_float) pruned: 1/4 chunk(s) (1 static, 0 dynamic), 1/3 column(s)");
+  EXPECT_EQ(get_table->description(DescriptionMode::MultiLine),
+            "GetTable\n(int_int_float)\npruned:\n1/4 chunk(s) (1 static, 0 dynamic)\n1/3 column(s)");
 }
 
 }  // namespace hyrise
