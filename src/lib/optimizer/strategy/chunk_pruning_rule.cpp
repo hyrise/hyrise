@@ -180,14 +180,15 @@ void ChunkPruningRule::_apply_to_plan_without_subqueries(const std::shared_ptr<A
     auto prunable_subquery_predicates = std::vector<std::weak_ptr<AbstractLQPNode>>{};
     for (const auto& predicate_chain : predicate_pruning_chains) {
       for (const auto& predicate_node : predicate_chain) {
-        // Only use equals and between predicates that can easily be used for pruning. Do not use, e.g, InExpressions
+        // Only use binary and between predicates that can easily be used for pruning. Do not use, e.g, InExpressions
         // etc., which might end up in the ExpressionEvaluator anyways.
         const auto& predicate = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate_node->predicate());
         if (!predicate) {
           continue;
         }
         const auto predicate_condition = predicate->predicate_condition;
-        if (predicate_condition != PredicateCondition::Equals && !is_between_predicate_condition(predicate_condition)) {
+        if (!is_binary_numeric_predicate_condition(predicate_condition) &&
+            !is_between_predicate_condition(predicate_condition)) {
           continue;
         }
 

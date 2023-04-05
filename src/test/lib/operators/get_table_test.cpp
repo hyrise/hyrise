@@ -5,10 +5,14 @@
 #include "concurrency/transaction_context.hpp"
 #include "expression/expression_functional.hpp"
 #include "hyrise.hpp"
+#include "logical_query_plan/mock_node.hpp"
+#include "logical_query_plan/predicate_node.hpp"
+#include "logical_query_plan/stored_table_node.hpp"
 #include "operators/delete.hpp"
 #include "operators/get_table.hpp"
 #include "operators/projection.hpp"
 #include "operators/table_scan.hpp"
+#include "operators/table_wrapper.hpp"
 #include "operators/validate.hpp"
 #include "storage/chunk.hpp"
 #include "storage/index/group_key/group_key_index.hpp"
@@ -70,13 +74,14 @@ TEST_F(OperatorsGetTableTest, OperatorName) {
 }
 
 TEST_F(OperatorsGetTableTest, Description) {
-  auto get_table_a = std::make_shared<GetTable>("int_int_float");
+  const auto get_table_a = std::make_shared<GetTable>("int_int_float");
   EXPECT_EQ(get_table_a->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 0/4 chunk(s), 0/3 column(s)");
   EXPECT_EQ(get_table_a->description(DescriptionMode::MultiLine),
             "GetTable\n(int_int_float)\npruned:\n0/4 chunk(s)\n0/3 column(s)");
 
-  auto get_table_b = std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  const auto get_table_b =
+      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
   EXPECT_EQ(get_table_b->description(DescriptionMode::SingleLine),
             "GetTable (int_int_float) pruned: 1/4 chunk(s) (1 static, 0 dynamic), 1/3 column(s)");
   EXPECT_EQ(get_table_b->description(DescriptionMode::MultiLine),
@@ -303,7 +308,10 @@ TEST_F(OperatorsGetTableTest, Copy) {
   const auto& get_table_c_copy = std::static_pointer_cast<const GetTable>(pqp_copy->left_input());
   const auto& prunable_subquery_scans = get_table_c_copy->prunable_subquery_scans();
   ASSERT_EQ(prunable_subquery_scans.size(), 1);
-  EXPECT_EQ(prunable_subquery_scans[0], pqp_copy);
+  EXPECT_EQ(prunable_subquery_scans.front(), pqp_copy);
+
+  // Do not allow deep copies where prunable subquery scans are not part of the PQP.
+  EXPECT_THROW(get_table_c->deep_copy(), std::logic_error);
 }
 
 TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
@@ -366,6 +374,38 @@ TEST_F(OperatorsGetTableTest, AdaptOrderByInformation) {
     EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
     EXPECT_TRUE(get_table_output->get_chunk(ChunkID{0})->individually_sorted_by().empty());
   }
+}
+
+TEST_F(OperatorsGetTableTest, DynamicSubqueryPruning) {
+  const auto get_table_c =
+      std::make_shared<GetTable>("int_int_float", std::vector{ChunkID{0}}, std::vector{ColumnID{1}});
+  const auto dummy_table = Table::create_dummy_table({{"x", DataType::Int, false}});
+  dummy_table->append({9});
+  const auto table_wrapper = std::make_shared<TableWrapper>(dummy_table);
+  const auto table_scan =
+      std::make_shared<TableScan>(get_table_c, not_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                           pqp_subquery_(table_wrapper, DataType::Int, false)));
+  const auto mock_node = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}});
+  const auto stored_table_node = StoredTableNode::make("int_int_float");
+  stored_table_node->set_pruned_chunk_ids({ChunkID{0}});
+  stored_table_node->set_pruned_column_ids({ColumnID{1}});
+  const auto predicate_node =
+      PredicateNode::make(not_equals_(stored_table_node->get_column("a"), lqp_subquery_(mock_node)));
+
+  get_table_c->lqp_node = stored_table_node;
+  table_scan->lqp_node = predicate_node;
+  stored_table_node->set_prunable_subquery_predicates({predicate_node});
+  get_table_c->set_prunable_subquery_scans({table_scan});
+
+  execute_all({table_wrapper, get_table_c});
+
+  const auto& output_table = get_table_c->get_output();
+  EXPECT_EQ(get_table_c->get_output()->chunk_count(), 2);
+
+  EXPECT_EQ(get_table_c->description(DescriptionMode::SingleLine),
+            "GetTable (int_int_float) pruned: 2/4 chunk(s) (1 static, 1 dynamic), 1/3 column(s)");
+  EXPECT_EQ(get_table_c->description(DescriptionMode::MultiLine),
+            "GetTable\n(int_int_float)\npruned:\n2/4 chunk(s) (1 static, 1 dynamic)\n1/3 column(s)");
 }
 
 }  // namespace hyrise

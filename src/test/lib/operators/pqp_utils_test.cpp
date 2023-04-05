@@ -124,7 +124,7 @@ TEST_F(PQPUtilsTest, ResolveUncorrelatedSubqueryNullValue) {
 }
 
 TEST_F(PQPUtilsTest, ResolveUncorrelatedSubqueryTooManyTuples) {
-  const auto table_too_wide = Table::create_dummy_table({{"a", DataType::Int, false}, {"a", DataType::Int, false}});
+  const auto table_too_wide = Table::create_dummy_table({{"a", DataType::Int, false}, {"b", DataType::Int, false}});
   table_too_wide->append({1, 2});
   const auto table_wrapper_too_wide = std::make_shared<TableWrapper>(table_too_wide);
   table_wrapper_too_wide->execute();
