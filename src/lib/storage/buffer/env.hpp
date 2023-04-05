@@ -51,6 +51,19 @@ MigrationPolicy get_migration_policy_from_env() {
   }
 }
 
+BufferManagerMode get_mode_from_env() {
+  if (const auto mode_string = std::getenv("HYRISE_BUFFER_MANAGER_MODE")) {
+    auto mode = magic_enum::enum_cast<BufferManagerMode>(mode_string);
+    if (!mode.has_value()) {
+      Fail("HYRISE_BUFFER_MANAGER_MODE has an invalid value");
+    } else {
+      return mode.value();
+    }
+  } else {
+    return BufferManagerMode::DramSSD;
+  }
+}
+
 uint8_t get_numa_node_from_env() {
 #if HYRISE_NUMA_SUPPORT
   if (const auto numa_node = std::getenv("HYRISE_BUFFER_MANAGER_NUMA_MEMORY_NODE")) {
