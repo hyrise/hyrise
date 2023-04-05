@@ -70,8 +70,6 @@
 
 namespace hyrise {
 
-using namespace std::string_literals;  // NOLINT(build/namespaces)
-
 std::shared_ptr<AbstractOperator> LQPTranslator::translate_node(const std::shared_ptr<AbstractLQPNode>& node) const {
   const auto& pqp = _translate_node_recursively(node);
 

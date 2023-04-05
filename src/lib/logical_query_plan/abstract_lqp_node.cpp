@@ -19,11 +19,9 @@
 #include "utils/assert.hpp"
 #include "utils/print_utils.hpp"
 
-//using namespace std::string_literals;  // NOLINT
-
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 void collect_lqps_in_plan(const AbstractLQPNode& lqp, std::unordered_set<std::shared_ptr<AbstractLQPNode>>& lqps);
 
@@ -241,8 +239,8 @@ size_t AbstractLQPNode::output_count() const {
   return _outputs.size();
 }
 
-std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping input_node_mapping) const {
-  const auto& [copy, node_mapping] = _deep_copy_impl(input_node_mapping);
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::deep_copy(LQPNodeMapping node_mapping) const {
+  const auto& copy = _deep_copy_impl(node_mapping);
 
   // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
   // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
@@ -385,24 +383,23 @@ bool AbstractLQPNode::operator!=(const AbstractLQPNode& rhs) const {
   return !operator==(rhs);
 }
 
-std::pair<std::shared_ptr<AbstractLQPNode>, LQPNodeMapping> AbstractLQPNode::_deep_copy_impl(
-    LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_deep_copy_impl(LQPNodeMapping& node_mapping) const {
   auto copied_left_input = std::shared_ptr<AbstractLQPNode>{};
   auto copied_right_input = std::shared_ptr<AbstractLQPNode>{};
 
   if (left_input()) {
-    copied_left_input = left_input()->_deep_copy_impl(node_mapping).first;
+    copied_left_input = left_input()->_deep_copy_impl(node_mapping);
   }
 
   if (right_input()) {
-    copied_right_input = right_input()->_deep_copy_impl(node_mapping).first;
+    copied_right_input = right_input()->_deep_copy_impl(node_mapping);
   }
 
   auto copy = _shallow_copy(node_mapping);
   copy->set_left_input(copied_left_input);
   copy->set_right_input(copied_right_input);
 
-  return std::make_pair(copy, node_mapping);
+  return copy;
 }
 
 std::shared_ptr<AbstractLQPNode> AbstractLQPNode::_shallow_copy(LQPNodeMapping& node_mapping) const {
