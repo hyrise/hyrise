@@ -7,6 +7,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
+#include "storage/index/table_index_statistics.hpp"
 
 namespace hyrise {
 
