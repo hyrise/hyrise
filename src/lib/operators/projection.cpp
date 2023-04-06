@@ -41,7 +41,7 @@ const std::string& Projection::name() const {
 
 std::shared_ptr<AbstractOperator> Projection::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   // Passing copied_ops is essential to allow for global subplan deduplication, including subqueries.
   return std::make_shared<Projection>(copied_left_input, expressions_deep_copy(expressions, copied_ops));
@@ -188,8 +188,8 @@ std::shared_ptr<const Table> Projection::_on_execute() {
   // Determine the TableColumnDefinitions. We can only do this now because column_is_nullable has been filled in the
   // loop above. If necessary, projection_result_column_definitions holds those newly generated columns that the
   // ReferenceSegments point to.
-  TableColumnDefinitions output_column_definitions;
-  TableColumnDefinitions projection_result_column_definitions;
+  auto output_column_definitions = TableColumnDefinitions{};
+  auto projection_result_column_definitions = TableColumnDefinitions{};
   for (auto column_id = ColumnID{0}; column_id < expression_count; ++column_id) {
     const auto definition = TableColumnDefinition{expressions[column_id]->as_column_name(),
                                                   expressions[column_id]->data_type(), column_is_nullable[column_id]};
@@ -278,7 +278,7 @@ std::shared_ptr<const Table> Projection::_on_execute() {
             sorted_by.begin(), sorted_by.end(),
             [input_column_id = input_column_id](const auto sort) { return input_column_id == sort.column; });
         if (iter != sorted_by.end()) {
-          transformed.emplace_back(SortColumnDefinition{output_column_id, iter->sort_mode});
+          transformed.emplace_back(output_column_id, iter->sort_mode);
         }
       }
       if (!transformed.empty()) {

@@ -33,7 +33,7 @@ class JoinHash : public AbstractJoinOperator {
 
   const std::string& name() const override;
 
-  static size_t calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size, const JoinMode mode);
+  static size_t calculate_radix_bits(const size_t build_side_size, const size_t probe_side_size);
 
   enum class OperatorSteps : uint8_t {
     BuildSideMaterializing,
@@ -70,7 +70,7 @@ class JoinHash : public AbstractJoinOperator {
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
       const std::shared_ptr<AbstractOperator>& copied_right_input,
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
   void _on_cleanup() override;
 

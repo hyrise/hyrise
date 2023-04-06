@@ -105,7 +105,7 @@ std::shared_ptr<Table> create_table(const size_t table_size, const pmr_vector<in
         ids_vector.begin() + (chunk_index * chunk_size), ids_vector.begin() + ((chunk_index + 1) * chunk_size)));
     const auto value_segment = std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>(
         values.cbegin() + (chunk_index * chunk_size), values.cbegin() + ((chunk_index + 1) * chunk_size)));
-    Segments segments;
+    auto segments = Segments{};
     segments.push_back(ids_value_segment);
     segments.push_back(value_segment);
 

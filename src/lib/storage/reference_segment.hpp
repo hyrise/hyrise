@@ -33,7 +33,7 @@ class ReferenceSegment : public AbstractSegment {
 
   ColumnID referenced_column_id() const;
 
-  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& alloc) const override;
+  std::shared_ptr<AbstractSegment> copy_using_allocator(const PolymorphicAllocator<size_t>& /*alloc*/) const override;
 
   size_t memory_usage(const MemoryUsageCalculationMode mode) const override;
 

@@ -284,7 +284,7 @@ ExpressionEvaluator::_evaluate_binary_predicate_expression<ExpressionEvaluator::
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_predicate_expression(
-    const BinaryPredicateExpression& expression) {
+    const BinaryPredicateExpression& /*expression*/) {
   Fail("Can only evaluate predicates to bool");
 }
 
@@ -326,7 +326,7 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
     }
   } else if (!left_results->is_literal() && right_results->is_literal()) {
     // E.g., `a LIKE '%hello%'` -- A single matcher for all rows
-    LikeMatcher like_matcher{right_results->values.front()};
+    const auto like_matcher = LikeMatcher{right_results->values.front()};
 
     for (auto row_idx = ChunkOffset{0}; row_idx < result_size; ++row_idx) {
       like_matcher.resolve(invert_results, [&](const auto& matcher) {
@@ -349,7 +349,7 @@ ExpressionEvaluator::_evaluate_like_expression<ExpressionEvaluator::Bool>(const 
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_like_expression(
-    const BinaryPredicateExpression& expression) {
+    const BinaryPredicateExpression& /*expression*/) {
   Fail("Can only evaluate predicates to bool");
 }
 
@@ -378,7 +378,7 @@ ExpressionEvaluator::_evaluate_is_null_expression<ExpressionEvaluator::Bool>(con
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_is_null_expression(
-    const IsNullExpression& expression) {
+    const IsNullExpression& /*expression*/) {
   Fail("Can only evaluate predicates to bool");
 }
 
@@ -452,7 +452,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
         // Above, we have ruled out NULL on the left side, but the compiler does not know this yet
         if constexpr (!std::is_same_v<LeftDataType, NullValue>) {
-          pmr_vector<LeftDataType> right_values(type_compatible_elements.size());
+          auto right_values = pmr_vector<LeftDataType>(type_compatible_elements.size());
           auto right_values_idx = size_t{0};
           for (const auto& expression : type_compatible_elements) {
             const auto& value_expression = std::static_pointer_cast<ValueExpression>(expression);
@@ -571,7 +571,7 @@ ExpressionEvaluator::_evaluate_in_expression<ExpressionEvaluator::Bool>(const In
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_in_expression(
-    const InExpression& in_expression) {
+    const InExpression& /*in_expression*/) {
   Fail("InExpression supports only bool as result");
 }
 
@@ -620,7 +620,7 @@ ExpressionEvaluator::_evaluate_predicate_expression<ExpressionEvaluator::Bool>(
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_predicate_expression(
-    const AbstractPredicateExpression& predicate_expression) {
+    const AbstractPredicateExpression& /*predicate_expression*/) {
   Fail("Can only evaluate predicates to bool");
 }
 
@@ -725,7 +725,7 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
   const auto subquery_result_tables = _evaluate_subquery_expression_to_tables(*subquery_expression);
 
   const auto subquery_result_table_count = static_cast<ChunkOffset>(subquery_result_tables.size());
-  pmr_vector<ExpressionEvaluator::Bool> result_values(subquery_result_table_count);
+  auto result_values = pmr_vector<ExpressionEvaluator::Bool>(subquery_result_table_count);
 
   switch (exists_expression.exists_expression_type) {
     case ExistsExpressionType::Exists:
@@ -746,7 +746,7 @@ ExpressionEvaluator::_evaluate_exists_expression<ExpressionEvaluator::Bool>(cons
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_exists_expression(
-    const ExistsExpression& exists_expression) {
+    const ExistsExpression& /*exists_expression*/) {
   Fail("Exists can only return bool");
 }
 
@@ -909,10 +909,10 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_subquer
     if (row_count == 0) {
       Assert(!subquery_expression.is_correlated(), "Correlated subqueries must return one row for each tuple.");
       return std::make_shared<ExpressionResult<Result>>();
-    } else {
-      Assert(row_count == 1, "Expected precisely one row to be returned from SelectExpression.");
-      result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
     }
+
+    Assert(row_count == 1, "Expected precisely one row to be returned from SelectExpression.");
+    result_values[chunk_offset] = subquery_results[chunk_offset]->value(0);
   }
 
   // Optionally materialize nulls if any row returned a nullable result.
@@ -999,7 +999,7 @@ std::shared_ptr<BaseValueSegment> ExpressionEvaluator::evaluate_expression_to_se
     if constexpr (std::is_same_v<ColumnDataType, NullValue>) {
       Fail("Can't create a Segment from a NULL");
     } else {
-      pmr_vector<ColumnDataType> values(_output_row_count);
+      auto values = pmr_vector<ColumnDataType>(_output_row_count);
 
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
            ++chunk_offset) {
@@ -1076,7 +1076,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
                   ExpressionFunctorType{}(matches, left_result.value(chunk_offset),  // NOLINT
                                           right_result.value(chunk_offset));
                   if (matches != 0) {
-                    result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                    result_pos_list.emplace_back(_chunk_id, chunk_offset);
                   }
                 }
               } else {
@@ -1101,14 +1101,14 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
                 if (result.is_null(chunk_offset)) {
-                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             } else {  // PredicateCondition::IsNotNull
               for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                    ++chunk_offset) {
                 if (!result.is_null(chunk_offset)) {
-                  result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                  result_pos_list.emplace_back(_chunk_id, chunk_offset);
                 }
               }
             }
@@ -1130,7 +1130,7 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
             for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                  ++chunk_offset) {
               if (result_view.value(chunk_offset) != 0 && !result_view.is_null(chunk_offset)) {
-                result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+                result_pos_list.emplace_back(_chunk_id, chunk_offset);
               }
             }
           });
@@ -1169,14 +1169,14 @@ RowIDPosList ExpressionEvaluator::evaluate_expression_to_pos_list(const Abstract
         for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
              ++chunk_offset) {
           if ((subquery_result_tables[chunk_offset]->row_count() > 0) ^ invert) {
-            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
         }
       } else {
         if ((subquery_result_tables.front()->row_count() > 0) ^ invert) {
           for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(_output_row_count);
                ++chunk_offset) {
-            result_pos_list.emplace_back(RowID{_chunk_id, chunk_offset});
+            result_pos_list.emplace_back(_chunk_id, chunk_offset);
           }
         }
       }
@@ -1222,15 +1222,15 @@ ExpressionEvaluator::_evaluate_logical_expression<ExpressionEvaluator::Bool>(con
 
 template <typename Result>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_logical_expression(
-    const LogicalExpression& expression) {
+    const LogicalExpression& /*expression*/) {
   Fail("LogicalExpression can only output bool");
 }
 
 template <typename Result, typename Functor>
 std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_with_default_null_logic(
     const AbstractExpression& left_expression, const AbstractExpression& right_expression) {
-  pmr_vector<Result> values;
-  pmr_vector<bool> nulls;
+  auto values = pmr_vector<Result>{};
+  auto nulls = pmr_vector<bool>{};
 
   _resolve_to_expression_results(left_expression, right_expression, [&](const auto& left, const auto& right) {
     using LeftDataType = typename std::decay_t<decltype(left)>::Type;
@@ -1275,11 +1275,11 @@ std::shared_ptr<ExpressionResult<Result>> ExpressionEvaluator::_evaluate_binary_
     if constexpr (Functor::template supports<Result, LeftDataType, RightDataType>::value) {
       const auto result_row_count = _result_size(left.size(), right.size());
 
-      pmr_vector<bool> nulls(result_row_count);
-      pmr_vector<Result> values(result_row_count);
+      auto nulls = pmr_vector<bool>(result_row_count);
+      auto values = pmr_vector<Result>(result_row_count);
 
       for (auto row_idx = ChunkOffset{0}; row_idx < result_row_count; ++row_idx) {
-        bool null;
+        auto null = false;
         Functor{}(values[row_idx], null, left.value(row_idx), left.is_null(row_idx), right.value(row_idx),
                   right.is_null(row_idx));
         nulls[row_idx] = null;
@@ -1330,7 +1330,7 @@ void ExpressionEvaluator::_resolve_to_expression_result(const AbstractExpression
 
   if (expression.data_type() == DataType::Null) {
     // resolve_data_type() doesn't support Null, so we have handle it explicitly
-    ExpressionResult<NullValue> null_value_result{{NullValue{}}, {true}};
+    const auto null_value_result = ExpressionResult<NullValue>{{NullValue{}}, {true}};
 
     functor(null_value_result);
   } else {
@@ -1366,7 +1366,7 @@ ChunkOffset ExpressionEvaluator::_result_size(const RowCounts... row_counts) {
 pmr_vector<bool> ExpressionEvaluator::_evaluate_default_null_logic(const pmr_vector<bool>& left,
                                                                    const pmr_vector<bool>& right) {
   if (left.size() == right.size()) {
-    pmr_vector<bool> nulls(left.size());
+    auto nulls = pmr_vector<bool>(left.size());
     std::transform(left.begin(), left.end(), right.begin(), nulls.begin(),
                    [](const auto lhs, const auto rhs) { return lhs || rhs; });
     return nulls;
@@ -1415,10 +1415,11 @@ void ExpressionEvaluator::_materialize_segment_if_not_yet_materialized(const Col
         nulls = pmr_vector<bool>{value_segment->null_values()};
       }
     } else {
-      values.resize(segment.size());
+      const auto segment_size = segment.size();
+      values.resize(segment_size);
       auto chunk_offset = ChunkOffset{0};
       if (_table->column_is_nullable(column_id)) {
-        nulls.resize(segment.size());
+        nulls.resize(segment_size);
 
         segment_iterate<ColumnDataType>(segment, [&](const auto& position) {
           if (position.is_null()) {
@@ -1456,8 +1457,8 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_sub
 
   const auto row_count = _result_size(strings->size(), starts->size(), lengths->size());
 
-  pmr_vector<pmr_string> result_values(row_count);
-  pmr_vector<bool> result_nulls(row_count);
+  auto result_values = pmr_vector<pmr_string>(row_count);
+  auto result_nulls = pmr_vector<bool>(row_count);
 
   for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(row_count); ++chunk_offset) {
     result_nulls[chunk_offset] =
@@ -1549,7 +1550,7 @@ std::shared_ptr<ExpressionResult<pmr_string>> ExpressionEvaluator::_evaluate_con
   }
 
   // 3 - Concatenate the values
-  pmr_vector<pmr_string> result_values(result_size);
+  auto result_values = pmr_vector<pmr_string>(result_size);
   for (const auto& argument_result : argument_results) {
     argument_result->as_view([&](const auto& argument_view) {
       for (auto chunk_offset = ChunkOffset{0}; chunk_offset < static_cast<ChunkOffset>(result_size); ++chunk_offset) {
@@ -1599,15 +1600,17 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
     Assert(table->column_data_type(ColumnID{0}) == data_type_from_type<Result>(),
            "Expected different DataType from Subquery");
 
-    pmr_vector<bool> result_nulls;
-    pmr_vector<Result> result_values(table->row_count());
+    const auto row_count = table->row_count();
+    const auto chunk_count = table->chunk_count();
+
+    auto result_nulls = pmr_vector<bool>{};
+    auto result_values = pmr_vector<Result>(row_count);
 
     auto chunk_offset = ChunkOffset{0};
 
     if (table->column_is_nullable(ColumnID{0})) {
-      result_nulls.resize(table->row_count());
+      result_nulls.resize(row_count);
 
-      const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");
@@ -1623,7 +1626,6 @@ std::vector<std::shared_ptr<ExpressionResult<Result>>> ExpressionEvaluator::_pru
         });
       }
     } else {
-      const auto chunk_count = table->chunk_count();
       for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
         const auto chunk = table->get_chunk(chunk_id);
         Assert(chunk, "Physically deleted chunk should not reach this point, see get_chunk / #1686.");

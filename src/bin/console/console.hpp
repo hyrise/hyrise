@@ -119,8 +119,8 @@ class Console : public Singleton<Console> {
   int _visualize(const std::string& input);
   int _change_runtime_setting(const std::string& input);
 
-  int _print_transaction_info(const std::string& input);
-  int _print_current_working_directory(const std::string& /*args*/);
+  int _print_transaction_info();
+  int _print_current_working_directory();
 
   int _load_plugin(const std::string& args);
   int _unload_plugin(const std::string& input);
@@ -134,7 +134,7 @@ class Console : public Singleton<Console> {
   bool _handle_rollback();
 
   // GNU readline interface to our commands
-  static char** _command_completion(const char* text, int start, int end);
+  static char** _command_completion(const char* text, const int start, const int /*end*/);
   static char* _command_generator(const char* text, int state, const std::vector<std::string>& commands);
   static char* _command_generator_default(const char* text, int state);
   static char* _command_generator_visualize(const char* text, int state);

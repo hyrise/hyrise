@@ -147,7 +147,8 @@ void UccDiscoveryPlugin::_validate_ucc_candidates(const UccCandidates& ucc_candi
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr<Table> table, ColumnID column_id) {
+bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(const std::shared_ptr<const Table>& table,
+                                                                 const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // Trigger an early-out if a dictionary-encoded segment's attribute vector is larger than the dictionary. This indica-
   // tes that at least one duplicate value or a NULL value is contained.
@@ -179,7 +180,8 @@ bool UccDiscoveryPlugin::_dictionary_segments_contain_duplicates(std::shared_ptr
 }
 
 template <typename ColumnDataType>
-bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table> table, ColumnID column_id) {
+bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(const std::shared_ptr<const Table>& table,
+                                                           const ColumnID column_id) {
   const auto chunk_count = table->chunk_count();
   // `distinct_values` collects the segment values from all chunks.
   auto distinct_values = std::unordered_set<ColumnDataType>{};
@@ -232,12 +234,12 @@ bool UccDiscoveryPlugin::_uniqueness_holds_across_segments(std::shared_ptr<Table
   return true;
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<AbstractLQPNode> node,
+void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(const std::shared_ptr<const AbstractLQPNode>& node,
                                                              UccCandidates& ucc_candidates) {
-  const auto& aggregate_node = static_cast<AggregateNode&>(*node);
+  const auto& aggregate_node = static_cast<const AggregateNode&>(*node);
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
       aggregate_node.node_expressions.cbegin(),
-      aggregate_node.node_expressions.cbegin() + aggregate_node.aggregate_expressions_begin_idx};
+      aggregate_node.node_expressions.cbegin() + static_cast<int64_t>(aggregate_node.aggregate_expressions_begin_idx)};
 
   for (const auto& column_candidate : column_candidates) {
     const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
@@ -250,9 +252,9 @@ void UccDiscoveryPlugin::_ucc_candidates_from_aggregate_node(std::shared_ptr<Abs
   }
 }
 
-void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<AbstractLQPNode> node,
+void UccDiscoveryPlugin::_ucc_candidates_from_join_node(const std::shared_ptr<const AbstractLQPNode>& node,
                                                         UccCandidates& ucc_candidates) {
-  const auto& join_node = static_cast<JoinNode&>(*node);
+  const auto& join_node = static_cast<const JoinNode&>(*node);
   // Fetch the join predicate to extract the UCC candidates from. Right now, limited to single-predicate equi joins.
   const auto& join_predicates = join_node.join_predicates();
   if (join_predicates.size() != 1) {
@@ -324,8 +326,8 @@ void UccDiscoveryPlugin::_ucc_candidates_from_join_node(std::shared_ptr<Abstract
 }
 
 void UccDiscoveryPlugin::_ucc_candidates_from_removable_join_input(
-    std::shared_ptr<AbstractLQPNode> root_node, std::shared_ptr<LQPColumnExpression> column_candidate,
-    UccCandidates& ucc_candidates) {
+    const std::shared_ptr<const AbstractLQPNode>& root_node,
+    const std::shared_ptr<const LQPColumnExpression>& column_candidate, UccCandidates& ucc_candidates) {
   // The input node may already be a nullptr in case we try to get the right input of node with only one input. The can-
   // didate Column might be a nullptr when the join is not performed on bare columns but, e.g., on aggregates.
   if (!root_node || !column_candidate) {

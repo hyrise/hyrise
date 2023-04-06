@@ -10,7 +10,7 @@
 namespace hyrise {
 
 size_t GroupKeyIndex::estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count,
-                                                  uint32_t value_bytes) {
+                                                  uint32_t /*value_bytes*/) {
   return row_count * sizeof(ChunkOffset) + distinct_count * sizeof(std::size_t);
 }
 
@@ -38,12 +38,12 @@ GroupKeyIndex::GroupKeyIndex(const std::vector<std::shared_ptr<const AbstractSeg
   //    and count the occurrences of each value id at their respective position in the dictionary,
   //    i.e. the position in the value histogram.
   const auto null_value_id = _indexed_segment->null_value_id();
-  auto null_count = 0u;
+  auto null_count = size_t{0};
 
   resolve_compressed_vector_type(*_indexed_segment->attribute_vector(), [&](auto& attribute_vector) {
     for (const auto value_id : attribute_vector) {
       if (static_cast<ValueID>(value_id) != null_value_id) {
-        value_histogram[value_id + 1u]++;
+        ++value_histogram[value_id + 1];
       } else {
         ++null_count;
       }
@@ -92,7 +92,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_lower_bound(const std::vector<AllTypeVar
   // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to lower_bound().");
 
-  ValueID value_id = _indexed_segment->lower_bound(values[0]);
+  const auto value_id = _indexed_segment->lower_bound(values[0]);
   return _get_positions_iterator_at(value_id);
 }
 
@@ -101,7 +101,7 @@ GroupKeyIndex::Iterator GroupKeyIndex::_upper_bound(const std::vector<AllTypeVar
   // the caller is responsible for not passing a NULL value
   Assert(!variant_is_null(values[0]), "Null was passed to upper_bound().");
 
-  ValueID value_id = _indexed_segment->upper_bound(values[0]);
+  const auto value_id = _indexed_segment->upper_bound(values[0]);
   return _get_positions_iterator_at(value_id);
 }
 
@@ -137,7 +137,7 @@ std::vector<std::shared_ptr<const AbstractSegment>> GroupKeyIndex::_get_indexed_
 }
 
 size_t GroupKeyIndex::_memory_consumption() const {
-  size_t bytes = sizeof(_indexed_segment);
+  auto bytes = sizeof(_indexed_segment);
   bytes += sizeof(std::vector<ChunkOffset>);  // _value_start_offsets
   bytes += sizeof(ChunkOffset) * _value_start_offsets.capacity();
   bytes += sizeof(std::vector<ChunkOffset>);  // _positions

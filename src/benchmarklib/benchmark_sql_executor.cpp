@@ -60,6 +60,7 @@ BenchmarkSQLExecutor::~BenchmarkSQLExecutor() {
   // If the benchmark item does not explicitly manage the transaction life time by calling commit or rollback,
   // we automatically commit the sqlite transaction so that the next item can start a new one:
   if (_sqlite_transaction_open) {
+    DebugAssert(_sqlite_connection, "Expected an open connection to SQLite.");
     _sqlite_connection->raw_execute_query("COMMIT TRANSACTION");
   }
 }
@@ -89,6 +90,7 @@ void BenchmarkSQLExecutor::rollback() {
 void BenchmarkSQLExecutor::_verify_with_sqlite(SQLPipeline& pipeline) {
   Assert(pipeline.statement_count() == 1, "Expecting single statement for SQLite verification");
 
+  DebugAssert(_sqlite_connection, "Expected an open connection to SQLite.");
   const auto sqlite_result = _sqlite_connection->execute_query(pipeline.get_sql());
   const auto [pipeline_status, result_table] = pipeline.get_result_table();
   Assert(pipeline_status == SQLPipelineStatus::Success, "Non-successful pipeline should have been caught earlier");
@@ -144,12 +146,12 @@ void BenchmarkSQLExecutor::_compare_tables(const std::shared_ptr<const Table>& a
 }
 
 void BenchmarkSQLExecutor::_visualize(SQLPipeline& pipeline) {
-  GraphvizConfig graphviz_config;
+  auto graphviz_config = GraphvizConfig{};
   graphviz_config.format = "svg";
 
   const auto& lqps = pipeline.get_optimized_logical_plans();
   const auto& pqps = pipeline.get_physical_plans();
-
+  Assert(_visualize_prefix, "Expected a filename prefix when visualization is desired.");
   auto prefix = *_visualize_prefix;
 
   if (_num_visualized_plans == 1) {

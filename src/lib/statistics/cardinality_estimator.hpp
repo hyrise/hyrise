@@ -50,7 +50,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const AggregateNode& aggregate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_validate_node(
-      const ValidateNode& validate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
+      const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_predicate_node(
       const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics);
@@ -60,7 +60,7 @@ class CardinalityEstimator : public AbstractCardinalityEstimator {
       const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_union_node(
-      const UnionNode& union_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+      const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
       const std::shared_ptr<TableStatistics>& right_input_table_statistics);
 
   static std::shared_ptr<TableStatistics> estimate_limit_node(

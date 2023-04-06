@@ -321,7 +321,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_sort_node(
     Assert(pqp_column_expression,
            "Sort Expression '"s + pqp_expression->as_column_name() + "' must be available as column, LQP is invalid");
 
-    column_definitions.emplace_back(SortColumnDefinition{pqp_column_expression->column_id, *sort_mode_iter});
+    column_definitions.emplace_back(pqp_column_expression->column_id, *sort_mode_iter);
   }
   current_pqp = std::make_shared<Sort>(current_pqp, column_definitions);
 
@@ -479,13 +479,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_union_node(
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_intersect_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   FailInput("Hyrise does not yet support set operations");
 }
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_except_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   FailInput("Hyrise does not yet support set operations");
 }
 
@@ -568,7 +568,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_create_prepared_plan
 
 // NOLINTNEXTLINE - while this particular method could be made static, others cannot.
 std::shared_ptr<AbstractOperator> LQPTranslator::_translate_dummy_table_node(
-    const std::shared_ptr<AbstractLQPNode>& node) const {
+    const std::shared_ptr<AbstractLQPNode>& /*node*/) const {
   return std::make_shared<TableWrapper>(Projection::dummy_table());
 }
 

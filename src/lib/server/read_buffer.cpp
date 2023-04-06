@@ -84,7 +84,7 @@ void ReadBuffer<SocketType>::_receive_if_necessary(const size_t bytes_required) 
   // Buffer might contain unread data, so cannot read full buffer size
   const auto maximum_readable_size = maximum_capacity() - size();
 
-  size_t bytes_read;
+  auto bytes_read = size_t{0};
   boost::system::error_code error_code;
   // We cannot forward an iterator to the read system call. Hence, we need to use raw pointers. Therefore, we need to
   // distinguish between reading into continuous memory or partially read the data.

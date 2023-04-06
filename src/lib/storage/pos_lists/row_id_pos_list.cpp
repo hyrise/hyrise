@@ -31,7 +31,7 @@ ChunkID RowIDPosList::common_chunk_id() const {
   return (*this)[0].chunk_id;
 }
 
-size_t RowIDPosList::memory_usage(const MemoryUsageCalculationMode mode) const {
+size_t RowIDPosList::memory_usage(const MemoryUsageCalculationMode /*mode*/) const {
   // Ignoring MemoryUsageCalculationMode because accurate calculation is efficient.
   return size() * sizeof(Vector::value_type);
 }

@@ -131,7 +131,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     auto cmp_vertex_set = JoinGraphVertexSet(_num_vertices);
     cmp_vertex_set.set(*iter);
 
-    _csg_cmp_pairs.emplace_back(std::make_pair(primary_vertex_set, cmp_vertex_set));
+    _csg_cmp_pairs.emplace_back(primary_vertex_set, cmp_vertex_set);
 
     const auto extended_exclusion_set = exclusion_set | (_exclusion_set(*iter) & neighborhood);
 
@@ -139,7 +139,7 @@ void EnumerateCcp::_enumerate_cmp(const JoinGraphVertexSet& primary_vertex_set) 
     _enumerate_csg_recursive(csgs, cmp_vertex_set, extended_exclusion_set);
 
     for (const auto& csg : csgs) {
-      _csg_cmp_pairs.emplace_back(std::make_pair(primary_vertex_set, csg));
+      _csg_cmp_pairs.emplace_back(primary_vertex_set, csg);
     }
   }
 }

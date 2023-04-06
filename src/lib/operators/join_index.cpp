@@ -31,7 +31,7 @@ bool JoinIndex::supports(const JoinConfiguration config) {
   if (!config.left_table_type || !config.right_table_type || !config.index_side) {
     Fail("Table types and index side are required to make support decisions for the index join.");
   } else {
-    TableType index_side_table_type;
+    auto index_side_table_type = TableType::Data;
     if (*config.index_side == IndexSide::Left) {
       index_side_table_type = *config.left_table_type;
     } else {
@@ -77,7 +77,7 @@ std::string JoinIndex::description(DescriptionMode description_mode) const {
 std::shared_ptr<AbstractOperator> JoinIndex::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& copied_right_input,
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   return std::make_shared<JoinIndex>(copied_left_input, copied_right_input, _mode, _primary_predicate,
                                      _secondary_predicates, _index_side);
 }
@@ -365,8 +365,8 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
   if (_mode == JoinMode::AntiNullAsTrue) {
     const auto indexed_null_values = index->null_cbegin() != index->null_cend();
     if (probe_side_position.is_null() || indexed_null_values) {
-      index_ranges.emplace_back(IndexRange{index->cbegin(), index->cend()});
-      index_ranges.emplace_back(IndexRange{index->null_cbegin(), index->null_cend()});
+      index_ranges.emplace_back(index->cbegin(), index->cend());
+      index_ranges.emplace_back(index->null_cbegin(), index->null_cend());
       return index_ranges;
     }
   }
@@ -385,7 +385,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         // first, get all values less than the search value
         range_begin = index->cbegin();
         range_end = index->lower_bound({probe_side_position.value()});
-        index_ranges.emplace_back(IndexRange{range_begin, range_end});
+        index_ranges.emplace_back(range_begin, range_end);
 
         // set range for second half to all values greater than the search value
         range_begin = index->upper_bound({probe_side_position.value()});
@@ -416,7 +416,7 @@ std::vector<IndexRange> JoinIndex::_index_ranges_for_value(const SegmentPosition
         Fail("Unsupported comparison type encountered");
       }
     }
-    index_ranges.emplace_back(IndexRange{range_begin, range_end});
+    index_ranges.emplace_back(range_begin, range_end);
   }
   return index_ranges;
 }
