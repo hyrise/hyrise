@@ -14,7 +14,6 @@
 #include "logical_query_plan/stored_table_node.hpp"
 #include "operators/operator_scan_predicate.hpp"
 #include "statistics/cardinality_estimator.hpp"
-#include "storage/index/table_index_statistics.hpp"
 #include "utils/assert.hpp"
 
 namespace {

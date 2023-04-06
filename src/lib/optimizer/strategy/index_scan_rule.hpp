@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "abstract_rule.hpp"
+#include "storage/index/table_index_statistics.hpp"
 #include "types.hpp"
 
 namespace hyrise {
