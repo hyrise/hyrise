@@ -6,6 +6,8 @@
 
 #include "hyrise.hpp"
 
+#include "operators/get_table.hpp"
+
 #include "scheduler/abstract_task.hpp"
 #include "scheduler/job_task.hpp"
 
@@ -13,6 +15,32 @@
 #include "storage/reference_segment.hpp"
 
 #include "utils/assert.hpp"
+
+namespace {
+
+using namespace hyrise;  // NOLINT
+
+std::vector<std::optional<ChunkID>> chunk_ids_after_pruning(const size_t original_table_chunk_count,
+                                                              const std::vector<ChunkID>& pruned_chunk_ids) {
+  std::vector<std::optional<ChunkID>> chunk_id_mapping(original_table_chunk_count);
+  std::vector<bool> chunk_pruned_bitvector(original_table_chunk_count);
+
+  // Fill the bitvector
+  for (const auto& pruned_chunk_id : pruned_chunk_ids) {
+    chunk_pruned_bitvector[pruned_chunk_id] = true;
+  }
+
+  // Calculate new chunk ids
+  auto next_updated_chunk_id = ChunkID{0};
+  for (auto chunk_index = ChunkID{0}; chunk_index < original_table_chunk_count; ++chunk_index) {
+    if (!chunk_pruned_bitvector[chunk_index]) {
+      chunk_id_mapping[chunk_index] = next_updated_chunk_id++;
+    }
+  }
+  return chunk_id_mapping;
+}
+
+} // namespace
 
 namespace hyrise {
 
@@ -46,16 +74,17 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
   const auto index = indexes.front();
 
+  const auto in_operator = dynamic_pointer_cast<const GetTable>(_left_input);
+  Assert(_left_input->type() == OperatorType::GetTable, "No get table");
+
+  const auto& pruned_chunk_ids = in_operator->pruned_chunk_ids();
+  auto chunk_id_mapping = chunk_ids_after_pruning(pruned_chunk_ids.size() + _in_table->chunk_count(), pruned_chunk_ids);
+
   auto append_matches = [&](const PartialHashIndex::Iterator& begin, const PartialHashIndex::Iterator& end) {
-    auto current_iter = begin;
-
-    const auto current_matches_size = matches_out->size();
-    const auto final_matches_size = current_matches_size + static_cast<size_t>(std::distance(current_iter, end));
-    matches_out->resize(final_matches_size);
-
-    for (auto matches_position = current_matches_size; matches_position < final_matches_size; ++matches_position) {
-      matches_out->operator[](matches_position) = *current_iter;
-      ++current_iter;
+    for (auto current_iter = begin; current_iter != end; ++current_iter) {
+      if (chunk_id_mapping[(*current_iter).chunk_id]) {
+        matches_out->emplace_back(RowID{*chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
+      }
     }
   };
 
@@ -74,6 +103,18 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   if (matches_out->empty()) {
     return _out_table;
+  }
+
+  const auto first_chunk_id = (*matches_out)[0].chunk_id;
+  auto single_chunk_guaranteed = true;
+  for (const auto match : *matches_out) {
+    if (match.chunk_id != first_chunk_id) {
+      single_chunk_guaranteed = false;
+    }
+  }
+
+  if (single_chunk_guaranteed) {
+    matches_out->guarantee_single_chunk();
   }
 
   Segments segments;
