@@ -531,7 +531,7 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   EXPECT_NE(index_scan_op->_chunk_id_mapping, std::nullopt);
 
   // Prevent the tests from segfaulting. The test case above will fail when this if does not execute.
-  if(index_scan_op->_chunk_id_mapping) {
+  if (index_scan_op->_chunk_id_mapping) {
     EXPECT_EQ(*(index_scan_op->_chunk_id_mapping), expected_chunk_id_mapping);
   }
 

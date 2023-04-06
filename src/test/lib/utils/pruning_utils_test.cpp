@@ -28,6 +28,28 @@ TEST_F(PruningUtilsTest, ColumnIDMapping) {
   EXPECT_EQ(actual_column_mapping, expected_column_mapping);
 }
 
+TEST_F(PruningUtilsTest, ChunkIDMapping) {
+  auto actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{1}, ChunkID{2}});
+  auto expected_chunk_mapping =
+      std::vector<std::optional<ChunkID>>{std::nullopt, std::nullopt, std::nullopt, ChunkID{0}, ChunkID{1}, ChunkID{2}};
+  EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
+
+  actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{2}, ChunkID{3}});
+  expected_chunk_mapping =
+      std::vector<std::optional<ChunkID>>{ChunkID{0}, ChunkID{1}, std::nullopt, std::nullopt, ChunkID{2}, ChunkID{3}};
+  EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
+
+  actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{5}});
+  expected_chunk_mapping =
+      std::vector<std::optional<ChunkID>>{ChunkID{0}, ChunkID{1}, ChunkID{2}, ChunkID{3}, ChunkID{4}, std::nullopt};
+  EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
+
+  actual_chunk_mapping = chunk_ids_after_pruning(6, {ChunkID{0}, ChunkID{2}, ChunkID{4}});
+  expected_chunk_mapping =
+      std::vector<std::optional<ChunkID>>{std::nullopt, ChunkID{0}, std::nullopt, ChunkID{1}, std::nullopt, ChunkID{2}};
+  EXPECT_EQ(actual_chunk_mapping, expected_chunk_mapping);
+}
+
 TEST_F(PruningUtilsTest, ColumnIDBeforePruning) {
   const auto pruned_column_ids = {ColumnID{0}, ColumnID{1}, ColumnID{2}};
   const auto column_id_after_pruning = ColumnID{0};
