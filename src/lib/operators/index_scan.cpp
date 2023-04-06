@@ -21,7 +21,7 @@ namespace {
 using namespace hyrise;  // NOLINT
 
 std::vector<std::optional<ChunkID>> chunk_ids_after_pruning(const size_t original_table_chunk_count,
-                                                              const std::vector<ChunkID>& pruned_chunk_ids) {
+                                                            const std::vector<ChunkID>& pruned_chunk_ids) {
   std::vector<std::optional<ChunkID>> chunk_id_mapping(original_table_chunk_count);
   std::vector<bool> chunk_pruned_bitvector(original_table_chunk_count);
 
@@ -40,7 +40,7 @@ std::vector<std::optional<ChunkID>> chunk_ids_after_pruning(const size_t origina
   return chunk_id_mapping;
 }
 
-} // namespace
+}  // namespace
 
 namespace hyrise {
 
