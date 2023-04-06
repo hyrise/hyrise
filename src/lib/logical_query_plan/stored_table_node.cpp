@@ -10,7 +10,7 @@
 #include "storage/storage_manager.hpp"
 #include "storage/table.hpp"
 #include "utils/assert.hpp"
-#include "utils/column_pruning_utils.hpp"
+#include "utils/pruning_utils.hpp"
 
 namespace {
 

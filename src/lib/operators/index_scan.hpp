@@ -21,7 +21,7 @@ class AbstractTask;
 class IndexScan : public AbstractReadOnlyOperator {
  public:
   IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, ColumnID left_column_ids,
-            const PredicateCondition predicate_condition, const AllTypeVariant right_value);
+            const PredicateCondition predicate_condition, const AllTypeVariant right_value, const std::optional<std::vector<std::optional<ChunkID>>> chunk_id_mapping = std::nullopt);
 
   const std::string& name() const final;
 
@@ -46,6 +46,8 @@ class IndexScan : public AbstractReadOnlyOperator {
 
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<Table> _out_table;
+
+  std::optional<std::vector<std::optional<ChunkID>>> _chunk_id_mapping;
 };
 
 }  // namespace hyrise

@@ -579,8 +579,8 @@ set(
     utils/assert.hpp
     utils/check_table_equal.cpp
     utils/check_table_equal.hpp
-    utils/column_pruning_utils.cpp
-    utils/column_pruning_utils.hpp
+    utils/pruning_utils.cpp
+    utils/pruning_utils.hpp
     utils/copyable_atomic.hpp
     utils/date_time_utils.cpp
     utils/date_time_utils.hpp
