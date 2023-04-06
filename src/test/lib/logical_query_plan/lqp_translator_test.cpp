@@ -526,6 +526,15 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   EXPECT_EQ(table_scan_op->excluded_chunk_ids, index_scan_chunk_ids);
   EXPECT_EQ(*table_scan_op->predicate(), *equals_(b, 42));
 
+  // When chunks have been pruned, the pruned ChunkIDs must be mapped to the original indexed ChunkIDs.
+  const auto expected_chunk_id_mapping = std::vector<std::optional<ChunkID>>{std::nullopt, ChunkID{0}, ChunkID{1}};
+  EXPECT_NE(index_scan_op->_chunk_id_mapping, std::nullopt);
+
+  // Prevent the tests from segfaulting. The test case above will fail when this if does not execute.
+  if(index_scan_op->_chunk_id_mapping) {
+    EXPECT_EQ(*(index_scan_op->_chunk_id_mapping), expected_chunk_id_mapping);
+  }
+
   // Check the setting of LQP nodes for index scans
   EXPECT_EQ(union_op->lqp_node, predicate_node);
   EXPECT_EQ(index_scan_op->lqp_node, predicate_node);

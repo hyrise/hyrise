@@ -250,12 +250,12 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto index_column_id = column_id_before_pruning(column_id, pruned_column_ids);
 
   // If chunks have been pruned, calculate a mapping mapping the pruned to the original ChunkIDs.
-  // const auto chunk_id_mapping = chunk_ids_after_pruning(chunk_count, pruned_chunk_ids);
+  const auto chunk_id_mapping = chunk_ids_after_pruning(chunk_count, pruned_chunk_ids);
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
   auto index_scan = std::make_shared<IndexScan>(input_operator, index_column_id, predicate->predicate_condition,
-                                                value_variant);
+                                                value_variant, chunk_id_mapping);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
