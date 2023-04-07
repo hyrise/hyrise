@@ -42,6 +42,7 @@ class IndexScan : public AbstractReadOnlyOperator {
 
  private:
   friend class LQPTranslatorTest_PredicateNodePrunedIndexScan_Test;
+  friend class LQPTranslatorTest_PredicateNodePrunedColumnIndexScan_Test;
 
   const ColumnID _left_column_id;
   const PredicateCondition _predicate_condition;

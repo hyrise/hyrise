@@ -541,6 +541,28 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
   EXPECT_EQ(table_scan_op->lqp_node, predicate_node);
 }
 
+// TEST_F(LQPTranslatorTest, PredicateNodePrunedColumnIndexScan) {
+//   /**
+//    * Build LQP and translate to PQP
+//    */
+//   const auto stored_table_node = StoredTableNode::make("int_float_chunked");
+//   const auto pruned_column_ids = std::vector{ColumnID{0}};
+//   stored_table_node->set_pruned_column_ids(pruned_column_ids);
+
+//   const auto table = Hyrise::get().storage_manager.get_table("int_float_chunked");
+//   const auto index_column_id = ColumnID{1};
+//   const auto index_chunk_ids = std::vector{ChunkID{0}, ChunkID{2}};
+//   table->create_partial_hash_index(index_column_id, index_chunk_ids);
+
+//   auto predicate_node = PredicateNode::make(equals_(stored_table_node->get_column("b"), 42));
+//   predicate_node->set_left_input(stored_table_node);
+//   predicate_node->scan_type = ScanType::IndexScan;
+//   const auto op = LQPTranslator{}.translate_node(predicate_node);
+
+//   // const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
+//   // EXPECT_EQ(index_scan_op->_left_column_id, ColumnID{0});
+// }
+
 TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
   /**
    * Build LQP and translate to PQP
