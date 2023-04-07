@@ -423,7 +423,7 @@ AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_indexes_by_table
 }
 
 AbstractTableGenerator::IndexesByTable AbstractTableGenerator::_index_everything(
-    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const {
+    std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   auto indexes_by_table = std::map<std::string, std::vector<std::vector<std::string>>>{};
 
   for (const auto& [table_name, table_info] : table_info_by_name) {
