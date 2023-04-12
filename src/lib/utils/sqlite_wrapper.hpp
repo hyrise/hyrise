@@ -58,7 +58,7 @@ class SQLiteWrapper final {
      * Execute a SQL string on the wrapped sqlite db and ignores the result (i.e., does not convert the last
      * statement's result into a Hyrise table)
      */
-    void raw_execute_query(const std::string& sql, const bool allow_failure = false) const;
+    void raw_execute_query(const std::string& sql) const;
   };
 
   /**

@@ -143,7 +143,7 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         continue;
       }
 
-      bool success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
+      const auto success = remove_dependent_group_by_columns(fd, aggregate_node, group_by_columns);
       if (success) {
         // Refresh data structures correspondingly.
         group_by_list_changed = true;

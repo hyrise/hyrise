@@ -14,7 +14,11 @@ namespace hyrise {
  * PrintFlags::IgnoreChunkBoundaries:  If set, print a logical view of the Table, i.e., do not print info about Chunks or
  *                              Segment types.
  */
-enum class PrintFlags : uint32_t { None = 0u, Mvcc = 1u << 0u, IgnoreChunkBoundaries = 1u << 1u };
+enum class PrintFlags : uint32_t {
+  None = uint32_t{0},
+  Mvcc = uint32_t{1} << 0,
+  IgnoreChunkBoundaries = uint32_t{1} << 1
+};
 
 /**
  * operator to print the table with its data
@@ -42,8 +46,8 @@ class Print : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _on_execute() override;
   std::shared_ptr<AbstractOperator> _on_deep_copy(
       const std::shared_ptr<AbstractOperator>& copied_left_input,
-      const std::shared_ptr<AbstractOperator>& copied_right_input,
-      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const override;
+      const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+      std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override;
   void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) override;
 
   PrintFlags _flags;

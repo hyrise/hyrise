@@ -12,7 +12,7 @@ namespace hyrise {
 
 DummyTableNode::DummyTableNode() : AbstractLQPNode(LQPNodeType::DummyTable) {}
 
-std::string DummyTableNode::description(const DescriptionMode mode) const {
+std::string DummyTableNode::description(const DescriptionMode /*mode*/) const {
   return "[DummyTable]";
 }
 
@@ -20,7 +20,7 @@ std::vector<std::shared_ptr<AbstractExpression>> DummyTableNode::output_expressi
   return {};
 }
 
-bool DummyTableNode::is_column_nullable(const ColumnID column_id) const {
+bool DummyTableNode::is_column_nullable(const ColumnID /*column_id*/) const {
   Fail("DummyTable does not output any columns");
 }
 
@@ -36,11 +36,11 @@ InclusionDependencies DummyTableNode::inclusion_dependencies() const {
   return InclusionDependencies{};
 }
 
-std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return std::make_shared<DummyTableNode>();
 }
 
-bool DummyTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool DummyTableNode::_on_shallow_equals(const AbstractLQPNode& /*rhs*/, const LQPNodeMapping& /*node_mapping*/) const {
   return true;
 }
 

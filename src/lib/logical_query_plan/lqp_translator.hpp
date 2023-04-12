@@ -45,12 +45,12 @@ class LQPTranslator {
   std::shared_ptr<AbstractOperator> _translate_limit_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_insert_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_delete_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_dummy_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_dummy_table_node(const std::shared_ptr<AbstractLQPNode>& /*node*/) const;
   std::shared_ptr<AbstractOperator> _translate_static_table_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_update_node(const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_union_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_intersect_node(const std::shared_ptr<AbstractLQPNode>& node) const;
-  std::shared_ptr<AbstractOperator> _translate_except_node(const std::shared_ptr<AbstractLQPNode>& node) const;
+  std::shared_ptr<AbstractOperator> _translate_intersect_node(const std::shared_ptr<AbstractLQPNode>& /*node*/) const;
+  std::shared_ptr<AbstractOperator> _translate_except_node(const std::shared_ptr<AbstractLQPNode>& /*node*/) const;
   std::shared_ptr<AbstractOperator> _translate_change_meta_table_node(
       const std::shared_ptr<AbstractLQPNode>& node) const;
   std::shared_ptr<AbstractOperator> _translate_validate_node(const std::shared_ptr<AbstractLQPNode>& node) const;

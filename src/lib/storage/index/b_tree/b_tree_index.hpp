@@ -22,7 +22,8 @@ class BTreeIndex : public AbstractChunkIndex {
    * The introduction of PMR strings increased this significantly (in one test from 320 to 896). If you are interested
    * in reducing the memory footprint of these indexes, this is probably the first place you should look.
    */
-  static size_t estimate_memory_consumption(ChunkOffset row_count, ChunkOffset distinct_count, uint32_t value_bytes);
+  static size_t estimate_memory_consumption(ChunkOffset /*row_count*/, ChunkOffset /*distinct_count*/,
+                                            uint32_t /*value_bytes*/);
 
   BTreeIndex() = delete;
   explicit BTreeIndex(const std::vector<std::shared_ptr<const AbstractSegment>>& segments_to_index);

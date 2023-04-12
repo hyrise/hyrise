@@ -11,8 +11,8 @@ namespace hyrise {
 StaticTableNode::StaticTableNode(const std::shared_ptr<Table>& init_table)
     : AbstractLQPNode(LQPNodeType::StaticTable), table(init_table) {}
 
-std::string StaticTableNode::description(const DescriptionMode mode) const {
-  std::ostringstream stream;
+std::string StaticTableNode::description(const DescriptionMode /*mode*/) const {
+  auto stream = std::ostringstream{};
 
   stream << "[StaticTable]:"
          << " (";
@@ -38,9 +38,10 @@ std::vector<std::shared_ptr<AbstractExpression>> StaticTableNode::output_express
   // Need to initialize the expressions lazily because they will have a weak_ptr to this node and we can't obtain
   // that in the constructor
   if (!_output_expressions) {
-    _output_expressions.emplace(table->column_count());
+    const auto column_count = table->column_count();
+    _output_expressions.emplace(column_count);
 
-    for (auto column_id = ColumnID{0}; column_id < table->column_count(); ++column_id) {
+    for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
       (*_output_expressions)[column_id] = std::make_shared<LQPColumnExpression>(shared_from_this(), column_id);
     }
   }
@@ -77,7 +78,7 @@ bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {
 }
 
 size_t StaticTableNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t{0};
   for (const auto& column_definition : table->column_definitions()) {
     boost::hash_combine(hash, column_definition.hash());
   }
@@ -90,11 +91,11 @@ size_t StaticTableNode::_on_shallow_hash() const {
   return boost::hash_value(hash - soft_key_constraints.size());
 }
 
-std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> StaticTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return StaticTableNode::make(table);
 }
 
-bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool StaticTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& static_table_node = static_cast<const StaticTableNode&>(rhs);
   return table->column_definitions() == static_table_node.table->column_definitions() &&
          table->soft_key_constraints() == static_table_node.table->soft_key_constraints();

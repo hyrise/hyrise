@@ -32,7 +32,7 @@ std::shared_ptr<AbstractExpression> LQPSubqueryExpression::parameter_expression(
 }
 
 std::shared_ptr<AbstractExpression> LQPSubqueryExpression::_on_deep_copy(
-    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
+    std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
   const auto lqp_copy = lqp->deep_copy();
 
   return std::make_shared<LQPSubqueryExpression>(lqp_copy, parameter_ids, expressions_deep_copy(arguments));

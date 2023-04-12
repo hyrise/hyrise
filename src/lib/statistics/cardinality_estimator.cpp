@@ -316,13 +316,13 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_aggregate_node(
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_validate_node(
-    const ValidateNode& validate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+    const ValidateNode& /*validate_node*/, const std::shared_ptr<TableStatistics>& input_table_statistics) {
   // Currently no statistics available to base ValidateNode on
   return input_table_statistics;
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
-    const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) {
+    const PredicateNode& predicate_node, const std::shared_ptr<TableStatistics>& input_table_statistics) const {
   // For PredicateNodes, the statistics of the columns scanned on are sliced and all other columns' statistics are
   // scaled with the estimated selectivity of the predicate.
 
@@ -417,13 +417,135 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
   const auto operator_scan_predicates = OperatorScanPredicate::from_expression(*predicate, predicate_node);
 
   // TODO(anybody) Complex predicates are not processed right now and statistics objects are forwarded.
-  //               That implies estimating a selectivity of 1 for such predicates
+  //               That implies estimating a selectivity of 1 for such predicates.
   if (!operator_scan_predicates) {
-    return input_table_statistics;
+    // We might not have resolved the predicate because it contains subqueries. Unfortunately, we do not know the
+    // values of predicates on uncorrelated subquery results before query execution. However, if the predicate has an
+    // equals or between condition, it acts as a filter comparable to a semi-join with the join key of the subquery
+    // result (see examples below). We obtain such predicates with subquery results from the JoinToPredicateRewriteRule.
+    // This rule also checks that all preconditions are met to ensure correct query results. Thus, we do not check them
+    // here. For more information about this query rewrite, see `join_to_predicate_rewrite_rule.hpp`.
+    const auto predicate_expression = std::dynamic_pointer_cast<AbstractPredicateExpression>(predicate);
+    if (!predicate_expression) {
+      return input_table_statistics;
+    }
+
+    const auto& arguments = predicate_expression->arguments;
+    auto subquery_statistics = std::shared_ptr<TableStatistics>{};
+    auto subquery_column_id = ColumnID{0};
+    auto column_expression = std::shared_ptr<AbstractExpression>{};
+    const auto predicate_condition = predicate_expression->predicate_condition;
+
+    // Case (i): Binary predicate with column = <subquery>. Equivalent to a semi-join with a table containing one row.
+    // Example query:
+    //     SELECT n_name FROM nation WHERE n_regionkey = (SELECT r_regionkey FROM region WHERE r_name = 'ASIA');
+    // We can get the statistics directly from the LQPSubqueryExpression.
+    if (predicate_condition == PredicateCondition::Equals) {
+      // Predicate: <subquery> = column.
+      auto subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[0]);
+      column_expression = arguments[1];
+
+      // Predicate: column = <subquery>.
+      if (!subquery_expression) {
+        subquery_expression = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[1]);
+        column_expression = arguments[0];
+      }
+
+      // Break if the predicate has no subquery as argument or the subquery is correlated. For instance, a predicate
+      // only with value expressions (e.g., 1 = 2).
+      if (!subquery_expression || subquery_expression->is_correlated()) {
+        return input_table_statistics;
+      }
+
+      subquery_statistics = estimate_statistics(subquery_expression->lqp);
+    }
+
+    // Case (ii): Between predicate with column BETWEEN min(<subquery) AND max(<subquery>). Equivalent to a semi-join
+    // with the referenced table, where the min/max aggregates of the join key select the range of matching keys.
+    // Example query:
+    //     SELECT SUM(ws_ext_sales_price) FROM web_sales
+    //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
+    //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
+    // However, we must ensure that we have a min/max aggregate to get the the lower/upper bound of the join key.
+    if (predicate_condition == PredicateCondition::BetweenInclusive) {
+      column_expression = arguments[0];
+      const auto& lower_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[1]);
+      const auto& upper_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[2]);
+      if (!lower_bound_subquery || !upper_bound_subquery || lower_bound_subquery->is_correlated() ||
+          upper_bound_subquery->is_correlated()) {
+        return input_table_statistics;
+      }
+
+      // Check that input nodes provide only a single AggregateExpression.
+      const auto& lower_bound_lqp = *lower_bound_subquery->lqp;
+      const auto& upper_bound_lqp = *upper_bound_subquery->lqp;
+      const auto& lower_bound_node_expressions = lower_bound_lqp.node_expressions;
+      const auto& upper_bound_node_expressions = upper_bound_lqp.node_expressions;
+      if (lower_bound_node_expressions.size() != 1 || upper_bound_node_expressions.size() != 1) {
+        return input_table_statistics;
+      }
+      const auto& lower_bound_aggregate_expression =
+          std::dynamic_pointer_cast<AggregateExpression>(lower_bound_node_expressions.front());
+      const auto& upper_bound_aggregate_expression =
+          std::dynamic_pointer_cast<AggregateExpression>(upper_bound_node_expressions.front());
+      if (!lower_bound_aggregate_expression || !upper_bound_aggregate_expression) {
+        return input_table_statistics;
+      }
+
+      // Check that the AggregateFunctions are as expected and are performed on the same column, and the nodes have the
+      // same input. The predicate must look like `BETWEEN (SELECT MIN(key) ...) AND (SELECT MAX(key) ...))`. The
+      // aggregates guarantee to select the minimal and maximal join key of the underlying subquery. Furthermore, they
+      // must both operate on the same join key and on the same input so preserve all join keys.
+      auto subquery_origin_node = lower_bound_lqp.left_input();
+
+      if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
+          upper_bound_aggregate_expression->aggregate_function != AggregateFunction::Max ||
+          *lower_bound_aggregate_expression->argument() != *upper_bound_aggregate_expression->argument() ||
+          *subquery_origin_node != *upper_bound_lqp.left_input()) {
+        return input_table_statistics;
+      }
+
+      // The lower/upper bound nodes might not be AggregateNodes themselves, but projections on a common AggregateNode.
+      // In this case, check that (i) their input is an AggregateNode and (ii) it aggregates the min/max of the common
+      // column.
+      const auto lower_bound_type = lower_bound_lqp.type;
+      const auto upper_bound_type = upper_bound_lqp.type;
+      if ((lower_bound_type != LQPNodeType::Aggregate || upper_bound_type != LQPNodeType::Aggregate) &&
+          (lower_bound_type != LQPNodeType::Projection || upper_bound_type != LQPNodeType::Projection ||
+           subquery_origin_node->type != LQPNodeType::Aggregate)) {
+        return input_table_statistics;
+      }
+
+      // If the aggregation of the join key is performed by a single AggregateNode, it must only aggregate the min
+      // and max of the join key.
+      if (subquery_origin_node->type == LQPNodeType::Aggregate) {
+        const auto& node_expressions = subquery_origin_node->node_expressions;
+        // Check that the AggregateNode only aggregates the min and max join key. By checking the number of node
+        // expressions, we also ensure the values are not grouped by any column.
+        if (node_expressions.size() != 2 || !find_expression_idx(*lower_bound_aggregate_expression, node_expressions) ||
+            !find_expression_idx(*upper_bound_aggregate_expression, node_expressions)) {
+          return input_table_statistics;
+        }
+
+        subquery_origin_node = subquery_origin_node->left_input();
+      }
+
+      subquery_statistics = estimate_statistics(subquery_origin_node);
+      subquery_column_id = subquery_origin_node->get_column_id(*lower_bound_aggregate_expression->argument());
+    }
+
+    if (!subquery_statistics) {
+      return input_table_statistics;
+    }
+
+    // We do not have to further check if the subqueries return at most one row. This will be ensured during execution
+    // by the TableScan operator.
+    const auto column_id = predicate_node.left_input()->get_column_id(*column_expression);
+    return estimate_semi_join(column_id, subquery_column_id, *input_table_statistics, *subquery_statistics);
   }
 
+  // Scale the input statistics consequently for each predicate, assuming there are no correlations between them.
   auto output_table_statistics = input_table_statistics;
-
   for (const auto& operator_scan_predicate : *operator_scan_predicates) {
     output_table_statistics = estimate_operator_scan_predicate(output_table_statistics, operator_scan_predicate);
   }
@@ -440,71 +562,71 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_join_node(
 
   if (join_node.join_mode == JoinMode::Cross) {
     return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
-  } else {
-    // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #1560
-    const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
-        *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
+  }
 
-    if (primary_operator_join_predicate) {
-      switch (join_node.join_mode) {
-        // For now, handle outer joins just as inner joins
-        // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
-        case JoinMode::Left:
-        case JoinMode::Right:
-        case JoinMode::FullOuter:
-        case JoinMode::Inner:
-          switch (primary_operator_join_predicate->predicate_condition) {
-            case PredicateCondition::Equals:
-              return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
-                                              primary_operator_join_predicate->column_ids.second,
-                                              *left_input_table_statistics, *right_input_table_statistics);
+  // TODO(anybody) Join cardinality estimation is consciously only performed for the primary join predicate. #1560
+  const auto primary_operator_join_predicate = OperatorJoinPredicate::from_expression(
+      *join_node.join_predicates()[0], *join_node.left_input(), *join_node.right_input());
 
-            // TODO(anybody) Implement estimation for non-equi joins. #1830
-            case PredicateCondition::NotEquals:
-            case PredicateCondition::LessThan:
-            case PredicateCondition::LessThanEquals:
-            case PredicateCondition::GreaterThan:
-            case PredicateCondition::GreaterThanEquals:
-            case PredicateCondition::BetweenInclusive:
-            case PredicateCondition::BetweenUpperExclusive:
-            case PredicateCondition::BetweenLowerExclusive:
-            case PredicateCondition::BetweenExclusive:
-            case PredicateCondition::In:
-            case PredicateCondition::NotIn:
-            case PredicateCondition::Like:
-            case PredicateCondition::NotLike:
-              return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
+  if (primary_operator_join_predicate) {
+    switch (join_node.join_mode) {
+      // For now, handle outer joins just as inner joins
+      // TODO(anybody) Handle them more accurately, i.e., estimate how many tuples don't find matches. #1830
+      case JoinMode::Left:
+      case JoinMode::Right:
+      case JoinMode::FullOuter:
+      case JoinMode::Inner:
+        switch (primary_operator_join_predicate->predicate_condition) {
+          case PredicateCondition::Equals:
+            return estimate_inner_equi_join(primary_operator_join_predicate->column_ids.first,
+                                            primary_operator_join_predicate->column_ids.second,
+                                            *left_input_table_statistics, *right_input_table_statistics);
 
-            case PredicateCondition::IsNull:
-            case PredicateCondition::IsNotNull:
-              Fail("IS NULL is an invalid join predicate");
-          }
-          Fail("Invalid enum value");
+          // TODO(anybody) Implement estimation for non-equi joins. #1830
+          case PredicateCondition::NotEquals:
+          case PredicateCondition::LessThan:
+          case PredicateCondition::LessThanEquals:
+          case PredicateCondition::GreaterThan:
+          case PredicateCondition::GreaterThanEquals:
+          case PredicateCondition::BetweenInclusive:
+          case PredicateCondition::BetweenUpperExclusive:
+          case PredicateCondition::BetweenLowerExclusive:
+          case PredicateCondition::BetweenExclusive:
+          case PredicateCondition::In:
+          case PredicateCondition::NotIn:
+          case PredicateCondition::Like:
+          case PredicateCondition::NotLike:
+            return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
-        case JoinMode::Cross:
-          // Should have been forwarded to estimate_cross_join()
-          Fail("Cross join is not a predicated join");
+          case PredicateCondition::IsNull:
+          case PredicateCondition::IsNotNull:
+            Fail("IS NULL is an invalid join predicate");
+        }
+        Fail("Invalid enum value");
 
-        case JoinMode::Semi:
-          return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
-                                    primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
-                                    *right_input_table_statistics);
+      case JoinMode::Cross:
+        // Should have been forwarded to estimate_cross_join()
+        Fail("Cross join is not a predicated join");
 
-        case JoinMode::AntiNullAsTrue:
-        case JoinMode::AntiNullAsFalse:
-          return left_input_table_statistics;
-      }
-    } else {
-      // TODO(anybody) For now, estimate a selectivity of one. #1830
-      return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
+      case JoinMode::Semi:
+        return estimate_semi_join(primary_operator_join_predicate->column_ids.first,
+                                  primary_operator_join_predicate->column_ids.second, *left_input_table_statistics,
+                                  *right_input_table_statistics);
+
+      case JoinMode::AntiNullAsTrue:
+      case JoinMode::AntiNullAsFalse:
+        return left_input_table_statistics;
     }
   }
+
+  // TODO(anybody) For now, estimate a selectivity of one. #1830
+  return estimate_cross_join(*left_input_table_statistics, *right_input_table_statistics);
 
   Fail("Invalid enum value");
 }
 
 std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_union_node(
-    const UnionNode& union_node, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
+    const UnionNode& /*union_node*/, const std::shared_ptr<TableStatistics>& left_input_table_statistics,
     const std::shared_ptr<TableStatistics>& right_input_table_statistics) {
   // Since UnionNodes are not really used right now, implementing an involved algorithm to union two TableStatistics
   // seems unjustified. For now, we just concatenate the two statistics objects

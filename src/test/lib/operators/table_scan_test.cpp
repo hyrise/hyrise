@@ -133,7 +133,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     auto segment_a = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{0}, pos_list);
     auto segment_b = std::make_shared<ReferenceSegment>(test_table_part_compressed, ColumnID{1}, pos_list);
 
-    Segments segments({segment_a, segment_b});
+    const auto segments = Segments({segment_a, segment_b});
 
     table->append_chunk(segments);
     auto table_wrapper = std::make_shared<TableWrapper>(std::move(table));
@@ -145,7 +145,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
 
   std::shared_ptr<TableWrapper> get_table_op_with_n_dict_entries(const int num_entries) {
     // Set up dictionary encoded table with a dictionary consisting of num_entries entries.
-    TableColumnDefinitions table_column_definitions;
+    auto table_column_definitions = TableColumnDefinitions{};
     table_column_definitions.emplace_back("a", DataType::Int, false);
 
     const auto table = std::make_shared<Table>(table_column_definitions, TableType::Data, ChunkOffset{100'000});
@@ -187,7 +187,7 @@ class OperatorsTableScanTest : public BaseTest, public ::testing::WithParamInter
     column_definitions.emplace_back("b", DataType::Int, true);
     auto ref_table = std::make_shared<Table>(column_definitions, TableType::References);
 
-    Segments segments({ref_segment_a, ref_segment_b});
+    const auto segments = Segments({ref_segment_a, ref_segment_b});
 
     ref_table->append_chunk(segments);
 
@@ -331,8 +331,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSortedSegmentNotEquals) {
 TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
   const auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
-  const auto subquery_pqp = std::make_shared<Limit>(
-      std::make_shared<Projection>(get_int_string_op(), expression_vector(value_(1234))), value_(1));
+  const auto subquery_pqp = std::make_shared<Projection>(std::make_shared<TableWrapper>(Projection::dummy_table()),
+                                                         expression_vector(value_(1234)));
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
@@ -346,8 +346,8 @@ TEST_P(OperatorsTableScanTest, SingleScanWithSubquery) {
 TEST_P(OperatorsTableScanTest, BetweenScanWithSubquery) {
   auto expected_result = load_table("resources/test_data/tbl/int_float_filtered2.tbl", ChunkOffset{1});
 
-  const auto subquery_pqp = std::make_shared<Limit>(
-      std::make_shared<Projection>(get_int_string_op(), expression_vector(value_(1234))), value_(1));
+  const auto subquery_pqp = std::make_shared<Projection>(std::make_shared<TableWrapper>(Projection::dummy_table()),
+                                                         expression_vector(value_(1234)));
   execute_all({subquery_pqp->mutable_left_input(), subquery_pqp});
 
   const auto scan = std::make_shared<TableScan>(
@@ -371,6 +371,30 @@ TEST_P(OperatorsTableScanTest, SingleScanWithEmptySubquery) {
   EXPECT_TRUE(dynamic_cast<ExpressionEvaluatorTableScanImpl*>(scan->create_impl().get()));
   scan->execute();
   EXPECT_TABLE_EQ_UNORDERED(scan->get_output(), expected_result);
+}
+
+TEST_P(OperatorsTableScanTest, SingleScanWithInvalidSubquery) {
+  // Uncorrelated subqueries must return one or zero rows.
+  const auto subquery_pqp = std::make_shared<Projection>(get_int_string_op(), expression_vector(value_(1234)));
+  subquery_pqp->execute();
+
+  const auto scan = std::make_shared<TableScan>(
+      get_int_float_op(), greater_than_equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                               pqp_subquery_(subquery_pqp, DataType::Int, false)));
+
+  EXPECT_THROW(scan->create_impl(), std::logic_error);
+}
+
+TEST_P(OperatorsTableScanTest, BetweenScanWithInvalidSubquery) {
+  // Uncorrelated subqueries must return one or zero rows.
+  const auto subquery_pqp = std::make_shared<Projection>(get_int_string_op(), expression_vector(value_(1234)));
+  subquery_pqp->execute();
+
+  const auto scan = std::make_shared<TableScan>(
+      get_int_float_op(), between_inclusive_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                             pqp_subquery_(subquery_pqp, DataType::Int, false), value_(12345)));
+
+  EXPECT_THROW(scan->create_impl(), std::logic_error);
 }
 
 TEST_P(OperatorsTableScanTest, ScanOnCompressedSegments) {

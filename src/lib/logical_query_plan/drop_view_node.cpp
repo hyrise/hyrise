@@ -14,7 +14,7 @@ namespace hyrise {
 DropViewNode::DropViewNode(const std::string& init_view_name, const bool init_if_exists)
     : AbstractNonQueryNode(LQPNodeType::DropView), view_name(init_view_name), if_exists(init_if_exists) {}
 
-std::string DropViewNode::description(const DescriptionMode mode) const {
+std::string DropViewNode::description(const DescriptionMode /*mode*/) const {
   return "[Drop] View: '"s + view_name + "'";
 }
 
@@ -24,11 +24,11 @@ size_t DropViewNode::_on_shallow_hash() const {
   return hash;
 }
 
-std::shared_ptr<AbstractLQPNode> DropViewNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> DropViewNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return DropViewNode::make(view_name, if_exists);
 }
 
-bool DropViewNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool DropViewNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& drop_view_node = static_cast<const DropViewNode&>(rhs);
   return view_name == drop_view_node.view_name && if_exists == drop_view_node.if_exists;
 }
