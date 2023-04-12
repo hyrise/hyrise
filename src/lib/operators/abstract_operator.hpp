@@ -3,14 +3,11 @@
 #include <atomic>
 #include <memory>
 #include <mutex>
-#include <string>
 #include <unordered_map>
-#include <vector>
 
 #include "all_parameter_variant.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "operator_performance_data.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -58,8 +55,8 @@ enum class OperatorType {
 enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCleared };
 
 /**
- * AbstractOperator is the abstract super class for all operators.
- * All operators have up to two input tables and one output table.
+ * AbstractOperator is the abstract super class for all operators. All operators have up to two input tables and one
+ * output table.
  *
  * LIFECYCLE
  *
@@ -74,8 +71,7 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  *       +---------+   execute()   +----------------------+     clear_output()      +--------------------+
  *                     finishes                          (e.g., if consumer_count == 0)
  *
- *  1. The operator is constructed in OperatorState::Created.
- *     Input operators are not guaranteed to have executed.
+ *  1. The operator is constructed in OperatorState::Created. Input operators are not guaranteed to have executed.
  *  2. The execute method is called from the outside (usually by the scheduler). By now, all input operators should
  *     have been executed. The operator transitions to OperatorState::Running and the heavy lifting is done.
  *  3. The operator finishes its execution and thus switches to OperatorState::ExecutedAndAvailable. "Available"
@@ -91,20 +87,16 @@ enum class OperatorState { Created, Running, ExecutedAndAvailable, ExecutedAndCl
  *  an operator registers as a consumer at all of its input operators. After having executed, an operator deregisters
  *  automatically.
  *
- *     WARNING on handling Subqueries:
- *      This abstract class handles consumer registration/deregistration for input operators only.
- *      Operators that consume subqueries, such as TableScan and Projection, have to register and deregister as
- *      consumers of their subqueries manually. For example:
+ *     WARNING on handling subqueries:
+ *      This abstract class handles consumer registration/deregistration for input operators only. Operators that
+ *      consume subqueries, such as TableScan and Projection, have to manually trigger consumer tracking. For example:
  *
- *        1. Projection::Projection
- *            - Collect uncorrelated subqueries from each expression's arguments.
- *            - Call register_consumer and store pointers for all uncorrelated subqueries.
- *        2. Projection::_on_execute
- *            - Compute uncorrelated subqueries using ExpressionEvaluator::populate_uncorrelated_subquery_results_cache
- *            - Call deregister_consumer for each uncorrelated subquery.
+ *        Projection::Projection
+ *            - Call _search_and_register_uncorrelated_subqueries(...) for each argument.
  *
- *      It is crucial to call register_consumer from the constructor, before the execution starts, to prevent subquery
- *      results from being cleared too early. Otherwise, operators may need to re-execute, which is illegal.
+ *      It is crucial to call _search_and_register_uncorrelated_subqueries from the constructor, before the execution
+ *      starts, to prevent subquery results from being cleared too early. Otherwise, operators may need to re-execute,
+ *      which is illegal.
  *
  *      In contrast to uncorrelated subqueries, correlated subqueries are deep-copied for each row that they are
  *      executed on, so the registration happens at execution time in the ExpressionEvaluator.

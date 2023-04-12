@@ -173,4 +173,124 @@ TEST_F(OperatorTaskTest, UncorrelatedSubqueries) {
   }
 }
 
+TEST_F(OperatorTaskTest, DetectsCycles) {
+  // Ensure that we cannot create tasks that have cyclic dependencies and, thus, would end up in a deadlock during
+  // execution. In this test case, we achieve this with an ivalid PQP that consists of one cycle. During task creation,
+  // it is more likely to create cycles by incorrectly setting the tasks' predecessors. This test ensures that we notice
+  // when this happens.
+  if constexpr (!HYRISE_DEBUG) {
+    GTEST_SKIP();
+  }
+
+  // Declare a MockOperator class that allows us to set an input operator after instantiation.
+  class MockOperator : public AbstractReadOnlyOperator {
+   public:
+    MockOperator(const std::shared_ptr<const AbstractOperator>& input_operator)
+        : AbstractReadOnlyOperator{OperatorType::Mock, input_operator} {}
+
+    const std::string& name() const override {
+      const static auto name = std::string{"MockOperator"};
+      return name;
+    }
+
+    void set_input(const std::shared_ptr<const AbstractOperator>& input_operator) {
+      _left_input = input_operator;
+    }
+
+   protected:
+    std::shared_ptr<const Table> _on_execute() override {
+      return nullptr;
+    }
+
+    std::shared_ptr<AbstractOperator> _on_deep_copy(
+        const std::shared_ptr<AbstractOperator>& /*copied_left_input*/,
+        const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
+        std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const override {
+      return nullptr;
+    }
+
+    void _on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& /*parameters*/) override {}
+  };
+
+  // Create some operators that are an input of the next one.
+  const auto& mock_operator_a = std::make_shared<MockOperator>(nullptr);
+  const auto& mock_operator_b = std::make_shared<MockOperator>(mock_operator_a);
+  const auto& mock_operator_c = std::make_shared<MockOperator>(mock_operator_b);
+  const auto& mock_operator_d = std::make_shared<MockOperator>(mock_operator_c);
+
+  // Set the last operator as input of the first one. Now, we have a cycle.
+  mock_operator_a->set_input(mock_operator_d);
+
+  EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
+}
+
+TEST_F(OperatorTaskTest, LinkPrunableSubqueries) {
+  // Add the tasks of prunable subquery scans of a GetTable operator as predecessors of the GetTable task. Thus, the
+  // subquery is executed first and the GetTable operator can use them for pruning during execution.
+  // Example query used in this test case:
+  //     SELECT ... FROM table_a WHERE a = (SELECT MIN(a) FROM table_b);
+  const auto get_table_a = std::make_shared<GetTable>("table_a");
+  const auto get_table_b = std::make_shared<GetTable>("table_b");
+
+  const auto aggregate = std::make_shared<AggregateHash>(
+      get_table_b, std::vector{min_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
+  const auto projection =
+      std::make_shared<Projection>(aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Int, false, "a")));
+
+  const auto table_scan = std::make_shared<TableScan>(
+      get_table_a,
+      equals_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"), pqp_subquery_(projection, DataType::Int, false)));
+
+  get_table_a->set_prunable_subquery_scans({table_scan});
+
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
+
+  ASSERT_EQ(tasks.size(), 5);
+  const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+  EXPECT_TRUE(tasks_set.contains(get_table_a->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(get_table_b->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(aggregate->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(table_scan->get_or_create_operator_task()));
+
+  EXPECT_EQ(root_operator_task, table_scan->get_or_create_operator_task());
+  const auto& projection_task = projection->get_or_create_operator_task();
+  ASSERT_EQ(projection_task->successors().size(), 2);
+  EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
+  EXPECT_EQ(projection_task->successors().back(), get_table_a->get_or_create_operator_task());
+}
+
+TEST_F(OperatorTaskTest, DoNotLinkPrunableSubqueriesWithCycles) {
+  // Do not add the tasks of prunable subquery scans of a GetTable operator as predecessors of the GetTable task when
+  // they would form a cycle. subquery is executed first and the GetTable operator can use them for pruning during execution.
+  // Example query used in this test case:
+  //     SELECT ... FROM table_a WHERE a > (SELECT AVG(a) FROM table_a);
+  const auto get_table = std::make_shared<GetTable>("table_a");
+
+  const auto aggregate = std::make_shared<AggregateHash>(
+      get_table, std::vector{avg_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"))}, std::vector<ColumnID>{});
+  const auto projection = std::make_shared<Projection>(
+      aggregate, expression_vector(pqp_column_(ColumnID{0}, DataType::Double, false, "a")));
+
+  const auto table_scan =
+      std::make_shared<TableScan>(get_table, greater_than_(pqp_column_(ColumnID{0}, DataType::Int, false, "a"),
+                                                           pqp_subquery_(projection, DataType::Double, false)));
+
+  get_table->set_prunable_subquery_scans({table_scan});
+
+  const auto& [tasks, root_operator_task] = OperatorTask::make_tasks_from_operator(table_scan);
+
+  ASSERT_EQ(tasks.size(), 4);
+  const auto tasks_set = std::unordered_set<std::shared_ptr<AbstractTask>>(tasks.begin(), tasks.end());
+  EXPECT_TRUE(tasks_set.contains(get_table->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(aggregate->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(projection->get_or_create_operator_task()));
+  EXPECT_TRUE(tasks_set.contains(table_scan->get_or_create_operator_task()));
+
+  EXPECT_EQ(root_operator_task, table_scan->get_or_create_operator_task());
+  const auto& projection_task = projection->get_or_create_operator_task();
+  ASSERT_EQ(projection_task->successors().size(), 1);
+  EXPECT_EQ(projection_task->successors().front(), table_scan->get_or_create_operator_task());
+}
+
 }  // namespace hyrise

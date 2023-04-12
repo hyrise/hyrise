@@ -1,17 +1,13 @@
 #include "operator_task.hpp"
 
-#include <memory>
-#include <unordered_set>
-#include <utility>
-
 #include "operators/abstract_operator.hpp"
 #include "operators/abstract_read_write_operator.hpp"
-
-#include "scheduler/job_task.hpp"
+#include "operators/get_table.hpp"
+#include "scheduler/task_utils.hpp"
 
 namespace {
 
-using namespace hyrise;  // NOLINT
+using namespace hyrise;  // NOLINT(build/namespaces)
 
 /**
  * Create tasks recursively. Called by `make_tasks_from_operator`.
@@ -49,6 +45,44 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
   return task;
 }
 
+/**
+ * Sets tasks that can be used to prune chunks by predicates with uncorrelated subqueries as successors of the GetTable
+ * tasks. Guarantees that the resulting task graph is still acyclic.
+ */
+void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
+  for (const auto& task : tasks) {
+    const auto& op = task->get_operator();
+    if (op->type() != OperatorType::GetTable) {
+      continue;
+    }
+
+    const auto& get_table = static_cast<GetTable&>(*op);
+    for (const auto& table_scan : get_table.prunable_subquery_scans()) {
+      for (const auto& subquery : table_scan->uncorrelated_subqueries()) {
+        // All tasks have already been created, so we must be able to get the cached task from each operator.
+        const auto& subquery_root = subquery->get_or_create_operator_task();
+        Assert(tasks.contains(subquery_root), "Unknown OperatorTask.");
+
+        // Cycles in the task graph would lead to deadlocks during execution. To make sure we do not introcude cycles,
+        // we only set the subquery task as predecessor of the GetTable task if it is not a successor of the GetTable
+        // task.
+        auto is_acyclic = true;
+        visit_tasks_upwards(task, [&](const auto& successor) {
+          if (successor == subquery_root) {
+            is_acyclic = false;
+            return TaskUpwardVisitation::DoNotVisitSuccessors;
+          }
+          return TaskUpwardVisitation::VisitSuccessors;
+        });
+
+        if (is_acyclic) {
+          subquery_root->set_as_predecessor_of(task);
+        }
+      }
+    }
+  }
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -61,8 +95,33 @@ std::string OperatorTask::description() const {
 
 std::pair<std::vector<std::shared_ptr<AbstractTask>>, std::shared_ptr<OperatorTask>>
 OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& op) {
-  std::unordered_set<std::shared_ptr<OperatorTask>> operator_tasks_set;
+  auto operator_tasks_set = std::unordered_set<std::shared_ptr<OperatorTask>>{};
   const auto& root_operator_task = add_operator_tasks_recursively(op, operator_tasks_set);
+
+  // Predicates that contain uncorrelated subqueries cannot be used for chunk pruning in the optimization phase since we
+  // do not know the predicate value yet. However, the ChunkPruningRule attaches the corresponding PredicateNodes to the
+  // StoreTableNode of the table the predicates are performed on. We attach the translated Predicates (i.e., TableScans)
+  // to the GetTable operators so they can use them for pruning during execution. We set the tasks associated with the
+  // unccorrelated subqueries as predecessors of the GetTable tasks so the GetTable operators can extract the predicate
+  // values and perform dynamic chunk pruning. We cannot link the tasks during the recursive creation of operator tasks.
+  // Since not all tasks might be created when reaching the GetTable tasks, we cannot traverse the tasks to ensure an
+  // acyclic graph.
+  link_tasks_for_subquery_pruning(operator_tasks_set);
+
+  // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
+  // a deadlock during execution, mutually waiting for the other tasks' execution.
+  if constexpr (HYRISE_DEBUG) {
+    visit_tasks(root_operator_task, [](const auto& task) {
+      for (const auto& direct_successor : task->successors()) {
+        visit_tasks_upwards(direct_successor, [&](const auto& successor) {
+          Assert(task != successor, "Task graph cointains a cycle.");
+          return TaskUpwardVisitation::VisitSuccessors;
+        });
+      }
+
+      return TaskVisitation::VisitPredecessors;
+    });
+  }
 
   return std::make_pair(
       std::vector<std::shared_ptr<AbstractTask>>(operator_tasks_set.begin(), operator_tasks_set.end()),
