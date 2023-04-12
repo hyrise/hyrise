@@ -35,6 +35,10 @@ class OperatorTaskTest : public BaseTest {
     Hyrise::get().storage_manager.add_table("table_b", _test_table_b);
   }
 
+  void clear_successors(const std::shared_ptr<AbstractTask>& task) {
+    task->_successors.clear();
+  }
+
   std::shared_ptr<Table> _test_table_a, _test_table_b;
 };
 
@@ -197,6 +201,10 @@ TEST_F(OperatorTaskTest, DetectCycles) {
       _left_input = input_operator;
     }
 
+    std::shared_ptr<AbstractTask> get_task() {
+      return _operator_task.lock();
+    }
+
    protected:
     std::shared_ptr<const Table> _on_execute() override {
       return nullptr;
@@ -222,6 +230,14 @@ TEST_F(OperatorTaskTest, DetectCycles) {
   mock_operator_a->set_input(mock_operator_d);
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
+
+  // Clear the successors of the created tasks. Since the tasks hold shared pointers to their successors, the cyclic
+  // graph leaks memory.
+  for (const auto& op : {mock_operator_a, mock_operator_b, mock_operator_c, mock_operator_d}) {
+    const auto& task = op->get_task();
+    if (task)
+      clear_successors(task);
+  }
 }
 
 }  // namespace hyrise
