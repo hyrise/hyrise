@@ -337,7 +337,26 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousGroupBys) {
     const auto lqp =
     AggregateNode::make(expression_vector(column_a_0), expression_vector(),
       stored_table_node_a);
+
+    const auto expected_lqp =
+    ProjectionNode::make(expression_vector(column_a_0),
+      stored_table_node_a);
     // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // Basic case: Same as before, but no additional ProjectionNode is required as the AggregateNode does not change the
+  // output expressions.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(),
+      stored_table_node_a);
+    // clang-format on
+
+    stored_table_node_a->set_pruned_column_ids({ColumnID{1}, ColumnID{2}, ColumnID{3}});
 
     const auto expected_lqp = stored_table_node_a->deep_copy();
     const auto actual_lqp = apply_rule(rule, lqp);

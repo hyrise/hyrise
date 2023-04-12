@@ -95,7 +95,16 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     // columns are already distinct, remove the whole node.
     if (group_by_columns.size() == node->node_expressions.size() &&
         node->left_input()->has_matching_ucc(group_by_columns)) {
-      lqp_remove_node(node);
+      const auto& output_expressions = aggregate_node.output_expressions();
+      // Remove the AggregateNode if does not change the output expressions.
+      if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
+        lqp_remove_node(node);
+        return LQPVisitation::VisitInputs;
+      }
+
+      // Else, add a ProjectionNode.
+      const auto projection_node = ProjectionNode::make(output_expressions);
+      lqp_replace_node(node, projection_node);
       return LQPVisitation::VisitInputs;
     }
 
@@ -106,9 +115,9 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     }
 
     // Store a copy of the root's output expressions before applying the rule.
-    const auto root_output_expressions = lqp_root->output_expressions();
+    const auto& root_output_expressions = lqp_root->output_expressions();
     // Also store a copy of the aggregate's output expressions to verify the output column order later on.
-    const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
+    const auto& initial_aggregate_output_expressions = aggregate_node.output_expressions();
 
     // Get a sorted list of ColumnIDs from an FD's set of determinants.
     const auto get_column_ids = [&](const auto& determinants) {
