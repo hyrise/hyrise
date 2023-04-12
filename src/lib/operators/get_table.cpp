@@ -138,7 +138,7 @@ std::shared_ptr<const Table> GetTable::_on_execute() {
   // Currently, value_clustered_by is only used for temporary tables. If tables in the StorageManager start using that
   // flag, too, it needs to be forwarded here; otherwise it would be completely invisible in the PQP.
   DebugAssert(stored_table->value_clustered_by().empty(), "GetTable does not forward value_clustered_by");
-  auto overall_pruned_chunk_ids = std::set<ChunkID>{};
+  auto overall_pruned_chunk_ids = _prune_chunks_dynamically();
   auto excluded_chunk_ids = std::vector<ChunkID>{};
   overall_pruned_chunk_ids.insert(_pruned_chunk_ids.cbegin(), _pruned_chunk_ids.cend());
   auto pruned_chunk_ids_iter = overall_pruned_chunk_ids.begin();

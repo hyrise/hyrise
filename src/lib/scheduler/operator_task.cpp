@@ -49,7 +49,7 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
  * Sets tasks that can be used to prune chunks by predicates with uncorrelated subqueries as successors of the GetTable
  * tasks. Guarantees that the resulting task graph is still acyclic.
  */
-/*void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
+void link_tasks_for_subquery_pruning(const std::unordered_set<std::shared_ptr<OperatorTask>>& tasks) {
   for (const auto& task : tasks) {
     const auto& op = task->get_operator();
     if (op->type() != OperatorType::GetTable) {
@@ -81,7 +81,7 @@ std::shared_ptr<OperatorTask> add_operator_tasks_recursively(const std::shared_p
       }
     }
   }
-}*/
+}
 
 }  // namespace
 
@@ -106,7 +106,7 @@ OperatorTask::make_tasks_from_operator(const std::shared_ptr<AbstractOperator>& 
   // values and perform dynamic chunk pruning. We cannot link the tasks during the recursive creation of operator tasks.
   // Since not all tasks might be created when reaching the GetTable tasks, we cannot traverse the tasks to ensure an
   // acyclic graph.
-  // link_tasks_for_subquery_pruning(operator_tasks_set);
+  link_tasks_for_subquery_pruning(operator_tasks_set);
 
   // Ensure the task graph is acyclic, i.e., no task is any (n-th) successor of itself. Tasks in cycles would end up in
   // a deadlock during execution, mutually waiting for the other tasks' execution.
