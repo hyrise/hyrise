@@ -495,7 +495,10 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
       // Check that the AggregateFunctions are as expected and are performed on the same column, and the nodes have the
       // same input. The predicate must look like `BETWEEN (SELECT MIN(key) ...) AND (SELECT MAX(key) ...))`. The
       // aggregates guarantee to select the minimal and maximal join key of the underlying subquery. Furthermore, they
-      // must both operate on the same join key and on the same input so preserve all join keys.
+      // must both operate on the same join key and on the same input so preserve all join keys. A side effect of
+      // enforcing the same input node is that the aggregates must stem from the same subquery, which is only possible
+      // from a query rewrite. If they stem from a user's query, there would be two subqueries (whose operators will be
+      // de-duplicated in the LQPTranslator).
       auto subquery_origin_node = lower_bound_lqp.left_input();
 
       if (lower_bound_aggregate_expression->aggregate_function != AggregateFunction::Min ||
