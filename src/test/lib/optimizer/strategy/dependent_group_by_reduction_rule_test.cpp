@@ -374,6 +374,19 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousGroupBys) {
     const auto actual_lqp = apply_rule(rule, lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
+
+  // Negative case: There are further aggregates.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(min_(column_a_1)),
+      stored_table_node_a);
+    // clang-format on
+
+    const auto expected_lqp = lqp->deep_copy();
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
 }
 
 }  // namespace hyrise
