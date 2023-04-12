@@ -2,7 +2,6 @@
 
 #include <unordered_map>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "hyrise.hpp"
@@ -81,19 +80,8 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     }
     auto& aggregate_node = static_cast<AggregateNode&>(*node);
 
-    // Early exit: If there are no functional dependencies, we can skip this rule.
-    const auto& fds = aggregate_node.functional_dependencies();
-    if (fds.empty()) {
-      return LQPVisitation::VisitInputs;
-    }
-
-    // --- Preparation ---
-    // Store a copy of the root's output expressions before applying the rule.
-    const auto root_output_expressions = lqp_root->output_expressions();
-    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
-    const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
-
-    // Gather group-by columns
+    // --- Preparation --
+    // Gather group-by columns.
     const auto fetch_group_by_columns = [&aggregate_node]() {
       auto group_by_columns = ExpressionUnorderedSet{aggregate_node.aggregate_expressions_begin_idx + 1};
       auto node_expressions_iter = aggregate_node.node_expressions.cbegin();
@@ -102,6 +90,25 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
       return group_by_columns;
     };
     auto group_by_columns = fetch_group_by_columns();
+
+    // Early exit (i): If this is an AggregateNode for SELECT DISTINCT (i.e., it has no aggregates) and the requested
+    // columns are already distinct, remove the whole node.
+    if (group_by_columns.size() == node->node_expressions.size() &&
+        node->left_input()->has_matching_ucc(group_by_columns)) {
+      lqp_remove_node(node);
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Early exit (ii): If there are no functional dependencies, we can skip this rule.
+    const auto& fds = aggregate_node.functional_dependencies();
+    if (fds.empty()) {
+      return LQPVisitation::VisitInputs;
+    }
+
+    // Store a copy of the root's output expressions before applying the rule.
+    const auto root_output_expressions = lqp_root->output_expressions();
+    // Also store a copy of the aggregate's output expressions to verify the output column order later on.
+    const auto initial_aggregate_output_expressions = aggregate_node.output_expressions();
 
     // Get a sorted list of ColumnIDs from an FD's set of determinants.
     const auto get_column_ids = [&](const auto& determinants) {
