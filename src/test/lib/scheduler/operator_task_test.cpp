@@ -231,12 +231,14 @@ TEST_F(OperatorTaskTest, DetectCycles) {
 
   EXPECT_THROW(OperatorTask::make_tasks_from_operator(mock_operator_a), std::logic_error);
 
-  // Clear the successors of the created tasks. Since the tasks hold shared pointers to their successors, the cyclic
-  // graph leaks memory.
+  // Clear the successors of the created tasks and the operator inputs. Since the tasks hold shared pointers to their
+  // successors and the operators a pointer to their input, the cyclic graph leaks memory.
   for (const auto& op : {mock_operator_a, mock_operator_b, mock_operator_c, mock_operator_d}) {
+    op->set_input(nullptr);
     const auto& task = op->get_task();
-    if (task)
+    if (task) {
       clear_successors(task);
+    }
   }
 }
 
