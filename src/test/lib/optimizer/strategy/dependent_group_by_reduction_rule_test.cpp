@@ -285,7 +285,7 @@ TEST_F(DependentGroupByReductionRuleTest, ShortConstraintsFirst) {
 
   const auto expected_lqp =
   ProjectionNode::make(expression_vector(column_e_0, column_e_1, column_e_2, min_(column_e_3)),
-    AggregateNode::make(expression_vector(column_e_2), expression_vector(min_(column_e_3), any_(column_e_1), any_(column_e_0)),
+    AggregateNode::make(expression_vector(column_e_2), expression_vector(min_(column_e_3), any_(column_e_1), any_(column_e_0)),  // NOLINT(whitespace/line_length)
       stored_table_node_e));
   // clang-format on
 
