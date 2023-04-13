@@ -176,8 +176,6 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
 }
 
 std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() const {
-  DebugAssert(!left_input() && !right_input(), "StoredTableNode must be a leaf");
-
   const auto table = Hyrise::get().storage_manager.get_table(table_name);
   auto pruned_indexes_statistics = table->table_indexes_statistics();
 
@@ -187,12 +185,7 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
 
   const auto column_id_mapping = column_ids_after_pruning(table->column_count(), _pruned_column_ids);
 
-  // Update index statistics
-  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
-  // when remove(iterator) invalidates the iterator.
-  // TODO(anyone): Theoretically, we could keep multi-column indexes where only the last column was pruned
-  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
-                                                 [&](auto& statistics) {
+  const auto indexed_column_id_was_pruned = [&](auto& statistics) {
                                                    for (auto& original_column_id : statistics.column_ids) {
                                                      const auto& updated_column_id =
                                                          column_id_mapping[original_column_id];
@@ -205,8 +198,14 @@ std::vector<TableIndexStatistics> StoredTableNode::table_indexes_statistics() co
                                                      original_column_id = *updated_column_id;
                                                    }
                                                    return false;
-                                                 }),
-                                  pruned_indexes_statistics.end());
+                                                 };
+
+  // Update index statistics
+  // Note: The lambda also modifies statistics.column_ids. This is done because a regular for loop runs into issues
+  // when remove(iterator) invalidates the iterator.
+  // TODO(anyone): Theoretically, we could keep multi-column indexes where only the last column was pruned
+  pruned_indexes_statistics.erase(std::remove_if(pruned_indexes_statistics.begin(), pruned_indexes_statistics.end(),
+                                                 indexed_column_id_was_pruned), pruned_indexes_statistics.end());
 
   return pruned_indexes_statistics;
 }

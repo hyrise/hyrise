@@ -19,13 +19,13 @@
 
 namespace hyrise {
 
-IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID left_column_id,
-                     const PredicateCondition predicate_condition, const AllTypeVariant right_value,
+IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
+                     const PredicateCondition predicate_condition, const AllTypeVariant scan_value,
                      const std::optional<std::vector<std::optional<ChunkID>>> chunk_id_mapping)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
-      _left_column_id{left_column_id},
+      _indexed_column_id{indexed_column_id},
       _predicate_condition{predicate_condition},
-      _right_value{right_value},
+      _scan_value{scan_value},
       _chunk_id_mapping{chunk_id_mapping} {}
 
 const std::string& IndexScan::name() const {
@@ -49,7 +49,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
   auto matches_out = std::make_shared<RowIDPosList>();
 
-  const auto& indexes = _in_table->get_table_indexes(_left_column_id);
+  const auto& indexes = _in_table->get_table_indexes(_indexed_column_id);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
@@ -65,11 +65,11 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   switch (_predicate_condition) {
     case PredicateCondition::Equals: {
-      index->range_equals_with_iterators(append_matches, _right_value);
+      index->range_equals_with_iterators(append_matches, _scan_value);
       break;
     }
     case PredicateCondition::NotEquals: {
-      index->range_not_equals_with_iterators(append_matches, _right_value);
+      index->range_not_equals_with_iterators(append_matches, _scan_value);
       break;
     }
     default:
@@ -107,7 +107,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<IndexScan>(copied_left_input, _left_column_id, _predicate_condition, _right_value,
+  return std::make_shared<IndexScan>(copied_left_input, _indexed_column_id, _predicate_condition, _scan_value,
                                      _chunk_id_mapping);
 }
 

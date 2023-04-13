@@ -473,7 +473,6 @@ TEST_F(LQPTranslatorTest, PredicateNodeIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   const auto b = PQPColumnExpression::from_table(*table, "b");
@@ -518,7 +517,6 @@ TEST_F(LQPTranslatorTest, PredicateNodePrunedIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(index_scan_op->included_chunk_ids, index_scan_chunk_ids);
 
   const auto table_scan_op = std::dynamic_pointer_cast<const TableScan>(op->right_input());
   const auto b = PQPColumnExpression::from_table(*table, "b");
@@ -587,7 +585,6 @@ TEST_F(LQPTranslatorTest, PredicateNodeBinaryIndexScan) {
 
   const auto index_scan_op = std::dynamic_pointer_cast<const IndexScan>(op->left_input());
   ASSERT_TRUE(index_scan_op);
-  EXPECT_EQ(index_scan_op->included_chunk_ids, index_chunk_ids);
   EXPECT_EQ(index_scan_op->left_input()->type(), OperatorType::GetTable);
 
   const auto b = PQPColumnExpression::from_table(*table, "b");

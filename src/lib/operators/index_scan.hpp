@@ -20,14 +20,11 @@ class AbstractTask;
  */
 class IndexScan : public AbstractReadOnlyOperator {
  public:
-  IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, ColumnID left_column_ids,
-            const PredicateCondition predicate_condition, const AllTypeVariant right_value,
+  IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
+            const PredicateCondition predicate_condition, const AllTypeVariant scan_value,
             const std::optional<std::vector<std::optional<ChunkID>>> chunk_id_mapping = std::nullopt);
 
   const std::string& name() const final;
-
-  // If set, only the specified chunks will be scanned. See TableScan::excluded_chunk_ids for usage.
-  std::vector<ChunkID> included_chunk_ids;
 
  protected:
   std::shared_ptr<const Table> _on_execute() final;
@@ -44,9 +41,9 @@ class IndexScan : public AbstractReadOnlyOperator {
   friend class LQPTranslatorTest_PredicateNodePrunedIndexScan_Test;
   friend class LQPTranslatorTest_PredicateNodePrunedColumnIndexScan_Test;
 
-  const ColumnID _left_column_id;
+  const ColumnID _indexed_column_id;
   const PredicateCondition _predicate_condition;
-  const AllTypeVariant _right_value;
+  const AllTypeVariant _scan_value;
 
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<Table> _out_table;
