@@ -30,6 +30,8 @@ TEST_F(LimitNodeTest, Description) {
 }
 
 TEST_F(LimitNodeTest, HashingAndEqualityCheck) {
+  // _limit_node has _mock_node as input, so it would not be equal to or have the same hash value as newly created,
+  // equivalent nodes.
   _limit_node->set_left_input(nullptr);
 
   EXPECT_EQ(*LimitNode::make(value_(10)), *_limit_node);
