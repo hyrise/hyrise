@@ -93,10 +93,10 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   }
 
   const auto in_table_column_count = _in_table->column_count();
-  auto segments = Segments(in_table_column_count);
+  auto segments = Segments();
+  segments.reserve(in_table_column_count);
   for (auto column_id = ColumnID{0}; column_id < in_table_column_count; ++column_id) {
-    auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
-    segments[column_id] = ref_segment_out;
+    segments.emplace_back(std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out));
   }
   _out_table->append_chunk(segments, nullptr);
 
