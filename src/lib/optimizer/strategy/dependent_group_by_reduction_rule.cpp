@@ -96,13 +96,13 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     if (group_by_columns.size() == node->node_expressions.size() &&
         node->left_input()->has_matching_ucc(group_by_columns)) {
       const auto& output_expressions = aggregate_node.output_expressions();
-      // Remove the AggregateNode if does not change the output expressions.
+      // Remove the AggregateNode if it does not limit or reorder the output expressions.
       if (expressions_equal(output_expressions, node->left_input()->output_expressions())) {
         lqp_remove_node(node);
         return LQPVisitation::VisitInputs;
       }
 
-      // Else, add a ProjectionNode.
+      // Else, replace it with a ProjectionNode.
       const auto projection_node = ProjectionNode::make(output_expressions);
       lqp_replace_node(node, projection_node);
       return LQPVisitation::VisitInputs;

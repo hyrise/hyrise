@@ -325,30 +325,13 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
   EXPECT_LQP_EQ(actual_lqp, expected_lqp);
 }
 
-TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousGroupBys) {
+TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimple) {
   // To guarantee distinct results for SELECT DISTINCT clauses, the SQLTranslator adds an AggregateNode with the
   // selected attributes as group by columns. If the AggregateNode's input is already unique for these columns,
   // remove the whole node.
 
-  // Basic case: Column is unique due to a constraint (e.g. it is a primary key).
+  // Basic case: Column is unique due to a constraint (e.g., it is a primary key).
   // Example query: SELECT DISTINCT column0 FROM table_a;
-  {
-    // clang-format off
-    const auto lqp =
-    AggregateNode::make(expression_vector(column_a_0), expression_vector(),
-      stored_table_node_a);
-
-    const auto expected_lqp =
-    ProjectionNode::make(expression_vector(column_a_0),
-      stored_table_node_a);
-    // clang-format on
-
-    const auto actual_lqp = apply_rule(rule, lqp);
-    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
-  }
-
-  // Basic case: Same as before, but no additional ProjectionNode is required as the AggregateNode does not change the
-  // output expressions.
   {
     // clang-format off
     const auto lqp =
@@ -380,8 +363,47 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousGroupBys) {
     const auto actual_lqp = apply_rule(rule, lqp);
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
+}
 
-  // Negative case: Column is not unique, only a combination of two columns.
+TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProjectColumns) {
+  // Remove the AggregateNode completely when it is used to for SELECT DISTINCT on a unique column, but add a
+  // ProjectionNode to output only the desired column.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_a_0), expression_vector(),
+      stored_table_node_a);
+
+    const auto expected_lqp =
+    ProjectionNode::make(expression_vector(column_a_0),
+      stored_table_node_a);
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+
+  // All columns are part of the grouped columns, but the order changes. Thus, we need a ProjectionNode that changes the
+  // order.
+  {
+    // clang-format off
+    const auto lqp =
+    AggregateNode::make(expression_vector(column_e_3, column_e_2, column_e_1, column_e_0), expression_vector(),
+      stored_table_node_e);
+
+    const auto expected_lqp =
+    ProjectionNode::make(expression_vector(column_e_3, column_e_2, column_e_1, column_e_0),
+      stored_table_node_e);
+    // clang-format on
+
+    const auto actual_lqp = apply_rule(rule, lqp);
+    EXPECT_LQP_EQ(actual_lqp, expected_lqp);
+  }
+}
+
+TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) {
+  // Do not remove the AggregateNode when the grouped column is not unique (only a combination of two column0 and
+  // column1 is).
   {
     // clang-format off
     const auto lqp =
@@ -394,7 +416,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousGroupBys) {
     EXPECT_LQP_EQ(actual_lqp, expected_lqp);
   }
 
-  // Negative case: There are further aggregates.
+  // Do not remove the AggregateNode when the grouped column is unique but there are further aggregates.
   {
     // clang-format off
     const auto lqp =
