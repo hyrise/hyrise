@@ -1,4 +1,4 @@
-#include "pruning_utils.hpp"
+#include "column_pruning_utils.hpp"
 
 #include <cstdlib>
 #include <optional>
