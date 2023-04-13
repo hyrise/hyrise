@@ -38,29 +38,27 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _validate_input();
 
+  auto chunk_id_mapping = std::vector<std::optional<ChunkID>>{};
   if (!_chunk_id_mapping) {
-    auto chunk_id_mapping = std::vector<std::optional<ChunkID>>(_in_table->chunk_count());
+    chunk_id_mapping = std::vector<std::optional<ChunkID>>(_in_table->chunk_count());
     std::iota(chunk_id_mapping.begin(), chunk_id_mapping.end(), ChunkID{0});
-    _chunk_id_mapping = chunk_id_mapping;
+  } else {
+    chunk_id_mapping = *_chunk_id_mapping;
   }
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);
-
-  PartialHashIndex::Iterator range_begin;
-  // auto range_end = AbstractChunkIndex::Iterator{};
-
   auto matches_out = std::make_shared<RowIDPosList>();
 
   const auto& indexes = _in_table->get_table_indexes(_left_column_id);
   Assert(!indexes.empty(), "No indexes for the requested ColumnID available.");
 
   Assert(indexes.size() == 1, "We do not support the handling of multiple indexes for the same column.");
-  const auto index = indexes.front();
+  const auto& index = indexes.front();
 
-  auto append_matches = [&](const PartialHashIndex::Iterator& begin, const PartialHashIndex::Iterator& end) {
+  const auto append_matches = [&](const auto& begin, const auto& end) {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
-      if ((*_chunk_id_mapping)[(*current_iter).chunk_id]) {
-        matches_out->emplace_back(RowID{*(*_chunk_id_mapping)[(*current_iter).chunk_id], (*current_iter).chunk_offset});
+      if (chunk_id_mapping[(*current_iter).chunk_id]) {
+        matches_out->emplace_back(RowID{*chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
       }
     }
   };
@@ -75,7 +73,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
       break;
     }
     default:
-      Fail("Unsupported comparison type encountered");
+      Fail("Unsupported comparison type, PartialHashIndex only supports Equals and NotEquals.");
   }
 
   if (matches_out->empty()) {
@@ -94,10 +92,11 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     matches_out->guarantee_single_chunk();
   }
 
-  Segments segments;
-  for (ColumnID column_id{0u}; column_id < _in_table->column_count(); ++column_id) {
+  const auto in_table_column_count = _in_table->column_count();
+  auto segments = Segments(in_table_column_count);
+  for (auto column_id = ColumnID{0}; column_id < in_table_column_count; ++column_id) {
     auto ref_segment_out = std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out);
-    segments.push_back(ref_segment_out);
+    segments[column_id] = ref_segment_out;
   }
   _out_table->append_chunk(segments, nullptr);
 

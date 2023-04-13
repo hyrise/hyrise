@@ -51,7 +51,7 @@ class IndexScan : public AbstractReadOnlyOperator {
   std::shared_ptr<const Table> _in_table;
   std::shared_ptr<Table> _out_table;
 
-  std::optional<std::vector<std::optional<ChunkID>>> _chunk_id_mapping;
+  const std::optional<std::vector<std::optional<ChunkID>>> _chunk_id_mapping;
 };
 
 }  // namespace hyrise

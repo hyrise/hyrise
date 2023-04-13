@@ -232,13 +232,13 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto chunk_count = table->chunk_count();
   for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
-    // Check if chunk is pruned
+    // Check if chunk is pruned.
     if (pruned_chunk_ids_iter != pruned_chunk_ids.cend() && chunk_id == *pruned_chunk_ids_iter) {
       ++pruned_chunk_ids_iter;
       continue;
     }
 
-    // Check if chunk is indexed
+    // Check if chunk is indexed.
     if (indexed_chunk_ids.find(chunk_id) != indexed_chunk_ids.end()) {
       indexed_chunks.emplace_back(pruned_table_chunk_id);
     }
@@ -249,7 +249,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
   const auto& pruned_column_ids = stored_table_node->pruned_column_ids();
   const auto index_column_id = column_id_before_pruning(column_id, pruned_column_ids);
 
-  // If chunks have been pruned, calculate a mapping mapping the pruned to the original ChunkIDs.
+  // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
   const auto chunk_id_mapping = chunk_ids_after_pruning(chunk_count, pruned_chunk_ids);
 
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
