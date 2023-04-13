@@ -467,7 +467,7 @@ std::shared_ptr<TableStatistics> CardinalityEstimator::estimate_predicate_node(
     //      WHERE ws_sold_date_sk BETWEEN (SELECT MIN(d_date_sk) FROM date_dim WHERE d_year = 2000)
     //                                AND (SELECT MAX(d_date_sk) FROM date_dim WHERE d_year = 2000);
     // However, we must ensure that we have a min/max aggregate to get the the lower/upper bound of the join key.
-    if (predicate_condition == PredicateCondition::BetweenInclusive) {
+    if (is_between_predicate_condition(predicate_condition)) {
       column_expression = arguments[0];
       const auto& lower_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[1]);
       const auto& upper_bound_subquery = std::dynamic_pointer_cast<LQPSubqueryExpression>(arguments[2]);
