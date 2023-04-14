@@ -27,9 +27,7 @@ class IntersectNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
   std::shared_ptr<IntersectNode> _intersect_node;
-  std::shared_ptr<LQPColumnExpression> _a;
-  std::shared_ptr<LQPColumnExpression> _b;
-  std::shared_ptr<LQPColumnExpression> _c;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
 TEST_F(IntersectNodeTest, Description) {
@@ -68,6 +66,24 @@ TEST_F(IntersectNodeTest, Copy) {
 
 TEST_F(IntersectNodeTest, NodeExpressions) {
   ASSERT_EQ(_intersect_node->node_expressions.size(), 0u);
+}
+
+TEST_F(IntersectNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_mock_node1->unique_column_combinations().empty());
+  EXPECT_TRUE(_intersect_node->unique_column_combinations().empty());
+
+  const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints({key_constraint_a});
+  EXPECT_EQ(_mock_node1->unique_column_combinations().size(), 1);
+
+  const auto& unique_column_combinations = _intersect_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains({UniqueColumnCombination{{_a}}}));
+
+  if constexpr (HYRISE_DEBUG) {
+    _intersect_node->set_right_input(_mock_node2);
+    EXPECT_THROW(_intersect_node->unique_column_combinations(), std::logic_error);
+  }
 }
 
 }  // namespace hyrise

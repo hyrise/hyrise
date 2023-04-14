@@ -3,6 +3,7 @@
 #include "base_test.hpp"
 
 #include "logical_query_plan/aggregate_node.hpp"
+#include "logical_query_plan/join_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
 #include "logical_query_plan/predicate_node.hpp"
 #include "logical_query_plan/projection_node.hpp"
@@ -20,9 +21,7 @@ class UnionNodeTest : public BaseTest {
     _b = _mock_node1->get_column("b");
     _c = _mock_node1->get_column("c");
 
-    _union_node = UnionNode::make(SetOperationMode::Positions);
-    _union_node->set_left_input(_mock_node1);
-    _union_node->set_right_input(_mock_node1);
+    _union_node = UnionNode::make(SetOperationMode::Positions, _mock_node1, _mock_node1);
 
     _mock_node2 = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "t_b");
     _u = _mock_node2->get_column("u");
@@ -31,11 +30,7 @@ class UnionNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2;
   std::shared_ptr<UnionNode> _union_node;
-  std::shared_ptr<LQPColumnExpression> _a;
-  std::shared_ptr<LQPColumnExpression> _b;
-  std::shared_ptr<LQPColumnExpression> _c;
-  std::shared_ptr<LQPColumnExpression> _u;
-  std::shared_ptr<LQPColumnExpression> _v;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c, _u, _v;
 };
 
 TEST_F(UnionNodeTest, Description) {
@@ -93,17 +88,11 @@ TEST_F(UnionNodeTest, NodeExpressions) {
 TEST_F(UnionNodeTest, InvalidInputExpressions) {
   // Ensure to forbid a union of nodes with different expressions, i.e., different columns.
   {
-    auto union_node = UnionNode::make(SetOperationMode::Positions);
-    union_node->set_left_input(_mock_node1);
-    union_node->set_right_input(_mock_node2);
-
+    const auto union_node = UnionNode::make(SetOperationMode::Positions, _mock_node1, _mock_node2);
     EXPECT_THROW(union_node->output_expressions(), std::logic_error);
   }
   {
-    auto union_node = UnionNode::make(SetOperationMode::All);
-    union_node->set_left_input(_mock_node1);
-    union_node->set_right_input(_mock_node2);
-
+    const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node2);
     EXPECT_THROW(union_node->output_expressions(), std::logic_error);
   }
 }
@@ -245,14 +234,29 @@ TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositionsInvalidInput) {
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
 
-  const auto mock_node1_changed = static_pointer_cast<MockNode>(_mock_node1->deep_copy());
-  mock_node1_changed->set_key_constraints({key_constraint_a_b});
-
-  // Input nodes are not allowed to have differing UCCs.
-  EXPECT_EQ(_mock_node1->unique_column_combinations().size(), 2);
-  EXPECT_EQ(mock_node1_changed->unique_column_combinations().size(), 1);
-  _union_node->set_right_input(mock_node1_changed);
+  // Input nodes are not allowed to have differing UCCs. The cross join does not forward any UCCs.
+  // clang-format off
+  const auto projection_node =
+  ProjectionNode::make(expression_vector(_a, _b, _c),
+    JoinNode::make(JoinMode::Cross,
+      _mock_node1,
+      _mock_node1));
+  // clang-format on
+  _union_node->set_right_input(projection_node);
   EXPECT_THROW(_union_node->unique_column_combinations(), std::logic_error);
+}
+
+TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionAll) {
+  // Add two UCCs to _mock_node1.
+  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints({key_constraint_a_b, key_constraint_b});
+  EXPECT_EQ(_mock_node1->unique_column_combinations().size(), 2);
+
+  const auto union_node = UnionNode::make(SetOperationMode::All, _mock_node1, _mock_node1);
+
+  // Check that no UCCs are forwarded.
+  EXPECT_TRUE(union_node->unique_column_combinations().empty());
 }
 
 }  // namespace hyrise

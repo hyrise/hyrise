@@ -407,6 +407,10 @@ std::optional<ColumnID> find_expression_idx(const AbstractExpression& search_exp
 template <typename ExpressionContainer>
 bool contains_all_expressions(const ExpressionContainer& search_expressions,
                               const std::vector<std::shared_ptr<AbstractExpression>>& expression_vector) {
+  if (search_expressions.size() > expression_vector.size()) {
+    return false;
+  }
+
   for (const auto& expression : search_expressions) {
     if (!std::any_of(expression_vector.cbegin(), expression_vector.cend(),
                      [&](const auto& output_expression) { return *output_expression == *expression; })) {
