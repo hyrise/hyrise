@@ -974,6 +974,16 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
   EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
 
+  // Ensure that other between predicate conditions behave the same.
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
+        PredicateCondition::BetweenExclusive}) {
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
+    lqp = PredicateNode::make(predicate, node_a);
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  }
+
   // Ensure correlated subqueries are not considered and we forward the input estimates.
   // clang-format off
   lqp =
@@ -1009,16 +1019,6 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubquery) {
   // clang-format on
   lqp = PredicateNode::make(between_inclusive_(a_a, lqp_subquery_(min_c_y_filtered), lqp_subquery_(max_c_y)), node_a);
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
-
-  // Ensure that other predicate conditions still lead to forwarding the input estimates.
-  for (const auto predicate_condition :
-       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
-        PredicateCondition::BetweenExclusive}) {
-    const auto predicate =
-        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
-    lqp = PredicateNode::make(predicate, node_a);
-    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
-  }
 }
 
 TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjections) {
@@ -1043,6 +1043,16 @@ TEST_F(CardinalityEstimatorTest, BetweenScanWithUncorrelatedSubqueryAndProjectio
 
   EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
   EXPECT_LT(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(node_a));
+
+  // Ensure that other between predicate conditions behave the same.
+  for (const auto predicate_condition :
+       {PredicateCondition::BetweenLowerExclusive, PredicateCondition::BetweenUpperExclusive,
+        PredicateCondition::BetweenExclusive}) {
+    const auto predicate =
+        std::make_shared<BetweenExpression>(predicate_condition, a_a, lqp_subquery_(min_c_y), lqp_subquery_(max_c_y));
+    lqp = PredicateNode::make(predicate, node_a);
+    EXPECT_FLOAT_EQ(estimator.estimate_cardinality(lqp), estimator.estimate_cardinality(semi_join_lqp));
+  }
 
   // Input nodes must be ProjectionNodes.
   const auto min_c_y_alias = AliasNode::make(expression_vector(min_(c_y)), std::vector<std::string>{"foo"}, subquery);
