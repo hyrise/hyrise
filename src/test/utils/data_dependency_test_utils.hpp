@@ -9,8 +9,7 @@ namespace hyrise {
  */
 static bool find_ucc_by_key_constraint(const TableKeyConstraint& table_key_constraint,
                                        const UniqueColumnCombinations& unique_column_combinations) {
-  const auto& column_ids =
-      std::set<ColumnID>{table_key_constraint.columns().cbegin(), table_key_constraint.columns().cend()};
+  const auto& column_ids = table_key_constraint.columns();
 
   for (const auto& ucc : unique_column_combinations) {
     // Basic comparison: Column count.

@@ -59,4 +59,8 @@ TEST_F(CreateTableNodeTest, Copy) {
   EXPECT_EQ(*create_table_node, *create_table_node->deep_copy());
 }
 
+TEST_F(CreateTableNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(create_table_node->unique_column_combinations(), std::logic_error);
+}
+
 }  // namespace hyrise

@@ -5,25 +5,25 @@
 namespace hyrise {
 
 /**
- * Abstract container class for the definition of table constraints based on a set of column ids.
- * Subclasses should leverage the OOP structure to add additional fields. In case of CHECK and FOREIGN KEY constraint
- * implementations, these fields may include check definitions and referenced keys.
+ * Abstract container class for the definition of table constraints. Subclasses should leverage the OOP structure to add
+ * additional fields. Besides columns of a stored table, these fields may include check definitions and referenced keys,
+ * e.g., for CHECK and FOREIGN KEY constraint implementations.
+ * 
+ * We use table constraints to persist data dependencies. They are not enforced on the table data but describe specific
+ * properties of and relationships within data. The main purpose of tracking table constraints is to translate them into
+ * data dependencies on the LQP level. Using these data dependencies, we perform dedicated dependency-based query
+ * optimization techniques (see optimizer.cpp).
  */
 class AbstractTableConstraint {
  public:
-  explicit AbstractTableConstraint(std::vector<ColumnID> columns);
-
-  AbstractTableConstraint() = delete;
+  AbstractTableConstraint() = default;
   AbstractTableConstraint(const AbstractTableConstraint&) = default;
   AbstractTableConstraint(AbstractTableConstraint&&) = default;
-  AbstractTableConstraint& operator=(const AbstractTableConstraint&) = default;
-  AbstractTableConstraint& operator=(AbstractTableConstraint&&) = default;
 
   virtual ~AbstractTableConstraint() = default;
 
-  // Data dependencies might have either set or list semanticss. A list is generally applicable, and a constraint is
-  // responsible for handling columns accordingly when it uses certain semantics see table_key_constraint.hpp).
-  const std::vector<ColumnID>& columns() const;
+  AbstractTableConstraint& operator=(const AbstractTableConstraint&) = default;
+  AbstractTableConstraint& operator=(AbstractTableConstraint&&) = default;
 
   bool operator==(const AbstractTableConstraint& rhs) const;
   bool operator!=(const AbstractTableConstraint& rhs) const;
@@ -32,12 +32,9 @@ class AbstractTableConstraint {
 
  protected:
   /**
-   * Compare two table constraints of the same type. Only additional fields have to be compared since column ids are
-   * already compared by the caller.
+   * Compare two table constraints of the same type.
    */
   virtual bool _on_equals(const AbstractTableConstraint& table_constraint) const = 0;
-
-  std::vector<ColumnID> _columns;
 };
 
 }  // namespace hyrise
