@@ -498,7 +498,7 @@ UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinatio
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     for (const auto& ucc : input_unique_column_combinations) {
       Assert(has_output_expressions(ucc.expressions),
              "Forwarding of UCC is illegal because node misses output expressions.");
@@ -512,11 +512,11 @@ OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
   const auto& input_order_dependencies = left_input()->order_dependencies();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     const auto& output_expressions = this->output_expressions();
     for (const auto& od : input_order_dependencies) {
       Assert(contains_all_expressions(od.ordering_expressions, output_expressions) &&
-                 contains_all_expressions(od.ordered_expressions, output_expressions),
+             contains_all_expressions(od.ordered_expressions, output_expressions),
              "Forwarding of OD is illegal because node misses output expressions.");
     }
   }
@@ -528,7 +528,7 @@ InclusionDependencies AbstractLQPNode::_forward_left_inclusion_dependencies() co
   const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     const auto& output_expressions = this->output_expressions();
     for (const auto& ind : input_inclusion_dependencies) {
       Assert(contains_all_expressions(ind.expressions, output_expressions),

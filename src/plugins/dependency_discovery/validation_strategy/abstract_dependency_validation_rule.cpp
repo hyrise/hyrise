@@ -77,8 +77,8 @@ std::shared_ptr<AbstractTableConstraint> AbstractDependencyValidationRule::_cons
       const auto& foreign_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
       const auto& primary_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);
       return std::make_shared<ForeignKeyConstraint>(
-          std::vector<ColumnID>{ind_candidate.foreign_key_column_id}, foreign_key_table,
-          std::vector<ColumnID>{ind_candidate.primary_key_column_id}, primary_key_table);
+          std::vector{ind_candidate.foreign_key_column_id}, foreign_key_table,
+          std::vector{ind_candidate.primary_key_column_id}, primary_key_table);
     }
   }
 
