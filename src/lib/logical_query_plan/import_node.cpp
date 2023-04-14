@@ -11,7 +11,7 @@ ImportNode::ImportNode(const std::string& init_table_name, const std::string& in
       file_name(init_file_name),
       file_type(init_file_type) {}
 
-std::string ImportNode::description(const DescriptionMode mode) const {
+std::string ImportNode::description(const DescriptionMode /*mode*/) const {
   std::ostringstream stream;
   stream << "[Import] Name: '" << table_name << "'";
   return stream.str();
@@ -24,11 +24,11 @@ size_t ImportNode::_on_shallow_hash() const {
   return hash;
 }
 
-std::shared_ptr<AbstractLQPNode> ImportNode::_on_shallow_copy(LQPNodeMapping& node_mapping) const {
+std::shared_ptr<AbstractLQPNode> ImportNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
   return ImportNode::make(table_name, file_name, file_type);
 }
 
-bool ImportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& node_mapping) const {
+bool ImportNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& import_node = static_cast<const ImportNode&>(rhs);
   return table_name == import_node.table_name && file_name == import_node.file_name &&
          file_type == import_node.file_type;

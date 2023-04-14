@@ -109,7 +109,7 @@ TEST_F(SortNodeTest, ForwardInclusionDependencies) {
   EXPECT_TRUE(_sort_node->inclusion_dependencies().empty());
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_a, dummy_table});
+  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, dummy_table, {ColumnID{0}}, _table_a});
 
   const auto ind = InclusionDependency{{_a_i}, {ColumnID{0}}, dummy_table};
   EXPECT_EQ(_table_node->inclusion_dependencies().size(), 1);

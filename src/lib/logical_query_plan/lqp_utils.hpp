@@ -243,8 +243,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         Conceptually, it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes,
  *         and MockNodes.
  */
-template <typename ExpressionContainer>
-ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
+template <typename ExpressionContainer, typename ColumnIDs>
+ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
 
 /**
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param

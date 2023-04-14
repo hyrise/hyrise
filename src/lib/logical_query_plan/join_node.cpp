@@ -116,10 +116,10 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
   }
 
   // Check uniqueness of join columns.
-  bool left_operand_is_unique =
+  const auto left_operand_is_unique =
       !left_unique_column_combinations.empty() &&
       contains_matching_unique_column_combination(left_unique_column_combinations, {join_predicate->left_operand()});
-  bool right_operand_is_unique =
+  const auto right_operand_is_unique =
       !right_unique_column_combinations.empty() &&
       contains_matching_unique_column_combination(right_unique_column_combinations, {join_predicate->right_operand()});
 
@@ -387,7 +387,7 @@ bool JoinNode::is_column_nullable(const ColumnID column_id) const {
     return left_input()->is_column_nullable(column_id);
   }
 
-  ColumnID right_column_id =
+  const auto right_column_id =
       static_cast<ColumnID>(column_id - static_cast<ColumnID::base_type>(left_input_column_count));
   return right_input()->is_column_nullable(right_column_id);
 }

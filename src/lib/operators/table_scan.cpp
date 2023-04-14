@@ -81,7 +81,7 @@ void TableScan::_on_set_parameters(const std::unordered_map<ParameterID, AllType
 
 std::shared_ptr<AbstractOperator> TableScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
-    const std::shared_ptr<AbstractOperator>& copied_right_input,
+    const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& copied_ops) const {
   return std::make_shared<TableScan>(copied_left_input, _predicate->deep_copy(copied_ops));
 }
@@ -278,7 +278,7 @@ std::shared_ptr<const AbstractExpression> TableScan::_resolve_uncorrelated_subqu
       });
     }
 
-    new_arguments.emplace_back(value_(std::move(subquery_result)));
+    new_arguments.emplace_back(value_(subquery_result));
     ++computed_subqueries_count;
   }
   DebugAssert(new_arguments.size() == predicate->arguments.size(), "Unexpected number of arguments.");

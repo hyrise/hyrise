@@ -163,9 +163,9 @@ TEST_F(MockNodeTest, InclusionDependencies) {
   const auto ind_a = InclusionDependency{{_mock_node_a->get_column("a")}, {ColumnID{0}}, dummy_table};
   const auto ind_a_b = InclusionDependency{
       {_mock_node_a->get_column("a"), _mock_node_a->get_column("b")}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   const auto foreign_key_constraint_a_b =
-      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{0}, ColumnID{1}}, nullptr, dummy_table};
+      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, nullptr};
   _mock_node_a->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
 
   // Forward INDs.

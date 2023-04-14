@@ -33,7 +33,7 @@ bool AbstractDependencyValidationRule::_is_known(const std::string& table_name,
   if (const auto& order_constraint = std::dynamic_pointer_cast<TableOrderConstraint>(constraint)) {
     const auto& current_constraints = table->soft_order_constraints();
     for (const auto& current_constraint : current_constraints) {
-      if (current_constraint.columns() == order_constraint->columns() &&
+      if (current_constraint.ordering_columns() == order_constraint->ordering_columns() &&
           current_constraint.ordered_columns().front() == order_constraint->ordered_columns().front()) {
         return true;
       }
@@ -76,9 +76,9 @@ std::shared_ptr<AbstractTableConstraint> AbstractDependencyValidationRule::_cons
       const auto& ind_candidate = static_cast<const IndCandidate&>(candidate);
       const auto& foreign_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
       const auto& primary_key_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);
-      return std::make_shared<ForeignKeyConstraint>(std::vector<ColumnID>{ind_candidate.primary_key_column_id},
-                                                    std::vector<ColumnID>{ind_candidate.foreign_key_column_id},
-                                                    primary_key_table, foreign_key_table);
+      return std::make_shared<ForeignKeyConstraint>(
+          std::vector<ColumnID>{ind_candidate.foreign_key_column_id}, foreign_key_table,
+          std::vector<ColumnID>{ind_candidate.primary_key_column_id}, primary_key_table);
     }
   }
 

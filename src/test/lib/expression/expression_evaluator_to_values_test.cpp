@@ -71,7 +71,7 @@ class ExpressionEvaluatorToValuesTest : public BaseTest {
     empty_table_columns.emplace_back("s", DataType::String, false);
     table_empty = std::make_shared<Table>(empty_table_columns, TableType::Data);
 
-    Segments segments;
+    auto segments = Segments{};
     segments.emplace_back(std::make_shared<ValueSegment<int32_t>>(pmr_vector<int32_t>{}));
     segments.emplace_back(std::make_shared<ValueSegment<float>>(pmr_vector<float>{}, pmr_vector<bool>{}));
     segments.emplace_back(std::make_shared<ValueSegment<pmr_string>>(pmr_vector<pmr_string>{}));

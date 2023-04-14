@@ -106,7 +106,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
       const auto& key_constraints = including_table->soft_key_constraints();
       for (const auto& key_constraint : key_constraints) {
         // Already checked that min/max values match. If unique, then IND must be valid.
-        if (key_constraint.columns().size() != 1 || key_constraint.columns().front() != including_column_id) {
+        if (key_constraint.columns().size() != 1 || *key_constraint.columns().cbegin() != including_column_id) {
           continue;
         }
         including_unique_by_ucc = true;

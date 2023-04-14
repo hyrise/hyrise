@@ -229,11 +229,7 @@ TEST_F(UnionNodeTest, UniqueColumnCombinationsUnionPositionsInvalidInput) {
   const auto key_constraint_b = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
   _mock_node1->set_key_constraints(TableKeyConstraints{key_constraint_a_b, key_constraint_b});
 
-  // Input are not allowed to have differing output expressions,
-  _union_node->set_right_input(_mock_node2);
-  EXPECT_THROW(_union_node->unique_column_combinations(), std::logic_error);
-
-  // Input nodes are not allowed to have differing UCCs.
+  // Input nodes are not allowed to have differing UCCs. The cross join does not forward any UCCs.
   // clang-format off
   const auto projection_node =
   ProjectionNode::make(expression_vector(_a, _b, _c),
@@ -336,7 +332,7 @@ TEST_F(UnionNodeTest, OrderDependenciesUnionAll) {
 TEST_F(UnionNodeTest, InclusionDependenciesUnionPositions) {
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
 
@@ -348,7 +344,7 @@ TEST_F(UnionNodeTest, InclusionDependenciesUnionPositions) {
 
 TEST_F(UnionNodeTest, InclusionDependenciesUnionPositionsInvalidInput) {
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
 
@@ -361,7 +357,7 @@ TEST_F(UnionNodeTest, InclusionDependenciesUnionAll) {
   // Forward all INDs of both inputs.
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
   const auto ind_u = InclusionDependency{{_u}, {ColumnID{0}}, dummy_table};

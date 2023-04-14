@@ -31,11 +31,12 @@ void export_values(std::ofstream& ofstream, const std::vector<T, Alloc>& values)
  * This approach is indeed faster than a dynamic approach with a stringstream.
  */
 void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>& values) {
-  pmr_vector<size_t> string_lengths(values.size());
-  size_t total_length = 0;
+  const auto value_count = values.size();
+  auto string_lengths = pmr_vector<size_t>(value_count);
+  auto total_length = size_t{0};
 
   // Save the length of each string.
-  for (size_t i = 0; i < values.size(); ++i) {
+  for (auto i = size_t{0}; i < value_count; ++i) {
     string_lengths[i] = values[i].size();
     total_length += values[i].size();
   }
@@ -48,8 +49,8 @@ void export_string_values(std::ofstream& ofstream, const pmr_vector<pmr_string>&
   }
 
   // Write all string contents into to buffer.
-  pmr_vector<char> buffer(total_length);
-  size_t start = 0;
+  auto buffer = pmr_vector<char>(total_length);
+  auto start = size_t{0};
   for (const auto& str : values) {
     std::memcpy(buffer.data() + start, str.data(), str.size());
     start += str.size();
@@ -103,7 +104,8 @@ void BinaryWriter::write(const Table& table, const std::string& filename) {
 
   _write_header(table, ofstream);
 
-  for (ChunkID chunk_id{0}; chunk_id < table.chunk_count(); chunk_id++) {
+  const auto chunk_count = table.chunk_count();
+  for (auto chunk_id = ChunkID{0}; chunk_id < chunk_count; ++chunk_id) {
     _write_chunk(table, ofstream, chunk_id);
   }
 }
@@ -114,12 +116,13 @@ void BinaryWriter::_write_header(const Table& table, std::ofstream& ofstream) {
   export_value(ofstream, static_cast<ChunkID::base_type>(table.chunk_count()));
   export_value(ofstream, static_cast<ColumnID::base_type>(table.column_count()));
 
-  pmr_vector<pmr_string> column_types(table.column_count());
-  pmr_vector<pmr_string> column_names(table.column_count());
-  pmr_vector<bool> columns_are_nullable(table.column_count());
+  auto column_types = pmr_vector<pmr_string>(table.column_count());
+  auto column_names = pmr_vector<pmr_string>(table.column_count());
+  auto columns_are_nullable = pmr_vector<bool>(table.column_count());
 
   // Transform column types and copy column names in order to write them to the file.
-  for (auto column_id = ColumnID{0}; column_id < table.column_count(); ++column_id) {
+  const auto column_count = table.column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     column_types[column_id] = data_type_to_string.left.at(table.column_data_type(column_id));
     column_names[column_id] = table.column_name(column_id);
     columns_are_nullable[column_id] = table.column_is_nullable(column_id);
@@ -143,9 +146,10 @@ void BinaryWriter::_write_chunk(const Table& table, std::ofstream& ofstream, con
   }
 
   // Iterating over all segments of this chunk and exporting them
-  for (auto column_id = ColumnID{0}; column_id < chunk->column_count(); column_id++) {
+  const auto column_count = chunk->column_count();
+  for (auto column_id = ColumnID{0}; column_id < column_count; ++column_id) {
     resolve_data_and_segment_type(*chunk->get_segment(column_id),
-                                  [&](const auto data_type_t, const auto& resolved_segment) {
+                                  [&](const auto /*data_type_t*/, const auto& resolved_segment) {
                                     _write_segment(resolved_segment, table.column_is_nullable(column_id), ofstream);
                                   });
   }
@@ -198,7 +202,7 @@ void BinaryWriter::_write_segment(const ReferenceSegment& reference_segment, boo
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool column_is_nullable,
+void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment, bool /*column_is_nullable*/,
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::Dictionary);
 
@@ -217,7 +221,7 @@ void BinaryWriter::_write_segment(const DictionarySegment<T>& dictionary_segment
 
 template <typename T>
 void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_string_dictionary_segment,
-                                  bool column_is_nullable, std::ofstream& ofstream) {
+                                  bool /*column_is_nullable*/, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FixedStringDictionary);
 
   // Write attribute vector compression id
@@ -237,7 +241,7 @@ void BinaryWriter::_write_segment(const FixedStringDictionarySegment<T>& fixed_s
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, bool column_is_nullable,
+void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment, bool /*column_is_nullable*/,
                                   std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::RunLength);
 
@@ -254,7 +258,7 @@ void BinaryWriter::_write_segment(const RunLengthSegment<T>& run_length_segment,
 
 template <>
 void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_of_reference_segment,
-                                  bool column_is_nullable, std::ofstream& ofstream) {
+                                  bool /*column_is_nullable*/, std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::FrameOfReference);
 
   // Write attribute vector compression id
@@ -278,7 +282,8 @@ void BinaryWriter::_write_segment(const FrameOfReferenceSegment<int32_t>& frame_
 }
 
 template <typename T>
-void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool column_is_nullable, std::ofstream& ofstream) {
+void BinaryWriter::_write_segment(const LZ4Segment<T>& lz4_segment, bool /*column_is_nullable*/,
+                                  std::ofstream& ofstream) {
   export_value(ofstream, EncodingType::LZ4);
 
   // Write num elements (rows in segment)

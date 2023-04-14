@@ -30,8 +30,10 @@ TEST_F(LimitNodeTest, Description) {
 }
 
 TEST_F(LimitNodeTest, HashingAndEqualityCheck) {
+  // _limit_node has _mock_node as input, so it would not be equal to or have the same hash value as newly created,
+  // equivalent nodes.
   _limit_node->set_left_input(nullptr);
-  EXPECT_EQ(*_limit_node, *_limit_node);
+
   EXPECT_EQ(*LimitNode::make(value_(10)), *_limit_node);
   EXPECT_NE(*LimitNode::make(value_(11)), *_limit_node);
 
@@ -81,7 +83,7 @@ TEST_F(LimitNodeTest, NoInclusionDependencies) {
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   _mock_node->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 1);
 

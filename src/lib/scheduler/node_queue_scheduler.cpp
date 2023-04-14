@@ -34,7 +34,7 @@ void NodeQueueScheduler::begin() {
   _queue_count = Hyrise::get().topology.nodes().size();
   _queues.reserve(_queue_count);
 
-  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); node_id++) {
+  for (auto node_id = NodeID{0}; node_id < Hyrise::get().topology.nodes().size(); ++node_id) {
     auto queue = std::make_shared<TaskQueue>(node_id);
 
     _queues.emplace_back(queue);
@@ -118,14 +118,13 @@ void NodeQueueScheduler::schedule(std::shared_ptr<AbstractTask> task, NodeID pre
     return;
   }
 
-  const auto node_id_for_queue = determine_queue_id_for_task(task, preferred_node_id);
+  const auto node_id_for_queue = determine_queue_id(preferred_node_id);
   DebugAssert((static_cast<size_t>(node_id_for_queue) < _queues.size()),
               "Node ID is not within range of available nodes.");
   _queues[node_id_for_queue]->push(task, priority);
 }
 
-NodeID NodeQueueScheduler::determine_queue_id_for_task(const std::shared_ptr<AbstractTask>& task,
-                                                       const NodeID preferred_node_id) const {
+NodeID NodeQueueScheduler::determine_queue_id(const NodeID preferred_node_id) const {
   // Early out: no need to check for preferred node or other queues, if there is only a single node queue.
   if (_queue_count == 1) {
     return NodeID{0};

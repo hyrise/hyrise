@@ -53,16 +53,16 @@ void AbstractMetaTable::_update(const std::vector<AllTypeVariant>& selected_valu
   _on_update(selected_values, update_values);
 }
 
-void AbstractMetaTable::_on_insert(const std::vector<AllTypeVariant>& values) {
+void AbstractMetaTable::_on_insert(const std::vector<AllTypeVariant>& /*values*/) {
   Fail("Cannot insert into " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
-void AbstractMetaTable::_on_remove(const std::vector<AllTypeVariant>& values) {
+void AbstractMetaTable::_on_remove(const std::vector<AllTypeVariant>& /*values*/) {
   Fail("Cannot delete from " + MetaTableManager::META_PREFIX + name() + ".");
 }
 
-void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& selected_values,
-                                   const std::vector<AllTypeVariant>& update_values) {
+void AbstractMetaTable::_on_update(const std::vector<AllTypeVariant>& /*selected_values*/,
+                                   const std::vector<AllTypeVariant>& /*update_values*/) {
   Fail("Cannot update " + MetaTableManager::META_PREFIX + name() + ".");
 }
 

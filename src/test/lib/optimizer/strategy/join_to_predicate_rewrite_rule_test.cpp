@@ -112,7 +112,7 @@ TEST_P(JoinToPredicateRewriteRuleJoinModeTest, PerformOdRewritePredicate) {
   const auto key_constraint = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
   const auto order_constraint = TableOrderConstraint{{u->original_column_id}, {v->original_column_id}};
   const auto foreign_key_constraint =
-      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+      ForeignKeyConstraint{{x->original_column_id}, table_c, {u->original_column_id}, nullptr};
   node_b->set_key_constraints({key_constraint});
   node_b->set_order_constraints({order_constraint});
   node_b->set_foreign_key_constraints({foreign_key_constraint});
@@ -179,7 +179,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingPredicate) {
   const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
   node_b->set_order_constraints({order_constraint});
   const auto foreign_key_constraint =
-      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+      ForeignKeyConstraint{{x->original_column_id}, table_c, {u->original_column_id}, nullptr};
   node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   // clang-format off
@@ -200,7 +200,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingDependencyOnBetweenPredicateColumn
   const auto key_constraint_u = TableKeyConstraint{{u->original_column_id}, KeyConstraintType::UNIQUE};
   node_b->set_key_constraints({key_constraint_u});
   const auto foreign_key_constraint =
-      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+      ForeignKeyConstraint{{x->original_column_id}, table_c, {u->original_column_id}, nullptr};
   node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   // clang-format off
@@ -250,7 +250,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, MissingUccOnJoinColumn) {
   const auto key_constraint_v = TableKeyConstraint{{v->original_column_id}, KeyConstraintType::UNIQUE};
   node_b->set_key_constraints({key_constraint_v});
   const auto foreign_key_constraint =
-      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+      ForeignKeyConstraint{{x->original_column_id}, table_c, {u->original_column_id}, nullptr};
   node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   for (const auto& predicate : expression_vector(equals_(v, 0), between_inclusive_(v, 0, 100))) {
@@ -280,7 +280,7 @@ TEST_F(JoinToPredicateRewriteRuleTest, NoUnusedJoinSide) {
   const auto order_constraint = TableOrderConstraint{{ColumnID{0}}, {ColumnID{1}}};
   node_b->set_order_constraints({order_constraint});
   const auto foreign_key_constraint =
-      ForeignKeyConstraint{{u->original_column_id}, {x->original_column_id}, nullptr, table_c};
+      ForeignKeyConstraint{{x->original_column_id}, table_c, {u->original_column_id}, nullptr};
   node_b->set_foreign_key_constraints({foreign_key_constraint});
 
   // clang-format off
