@@ -343,11 +343,11 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions
 }
 
 bool AbstractLQPNode::has_matching_od(
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
     const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const {
-  Assert(!expressions.empty(), "Invalid input. List of expressions should not be empty.");
-  DebugAssert(has_output_expressions({expressions.cbegin(), expressions.cend()}),
-              "The given expressions are not a subset of the LQP's output expressions.");
+  Assert(!ordering_expressions.empty(), "Invalid input. List of ordering expressions should not be empty.");
+  DebugAssert(has_output_expressions({ordering_expressions.cbegin(), ordering_expressions.cend()}),
+              "The given ordering expressions are not a subset of the LQP's output expressions.");
   Assert(!ordered_expressions.empty(), "Invalid input. List of ordered expressions should not be empty.");
   DebugAssert(has_output_expressions({ordered_expressions.cbegin(), ordered_expressions.cend()}),
               "The given ordered expressions are not a subset of the LQP's output expressions.");
@@ -357,7 +357,7 @@ bool AbstractLQPNode::has_matching_od(
     return false;
   }
 
-  return contains_matching_order_dependency(order_dependencies, expressions, ordered_expressions);
+  return contains_matching_order_dependency(order_dependencies, ordering_expressions, ordered_expressions);
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {

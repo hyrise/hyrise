@@ -16,8 +16,6 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-using ExpressionVector = std::vector<std::shared_ptr<AbstractExpression>>;
-
 template <typename ColumnIDs>
 bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<ColumnID>& columns) {
   return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& column_id) {
@@ -133,7 +131,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
 
     // Search for expressions representing the key constraint's ColumnIDs.
     const auto& column_expressions =
-        find_column_expressions<ExpressionUnorderedSet>(*this, table_key_constraint.columns());
+        find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -160,9 +158,9 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 
     // Search for expressions representing the order constraint's ColumnIDs.
     const auto& column_expressions =
-        find_column_expressions<ExpressionVector>(*this, table_order_constraint.ordering_columns());
+        find_column_expressions(*this, table_order_constraint.ordering_columns());
     const auto& ordered_column_expressions =
-        find_column_expressions<ExpressionVector>(*this, table_order_constraint.ordered_columns());
+        find_column_expressions(*this, table_order_constraint.ordered_columns());
 
     // Create OrderDependency.
     order_dependencies.emplace(column_expressions, ordered_column_expressions);
@@ -195,7 +193,7 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
 
     // Search for expressions representing the inclusion constraint's ColumnIDs.
     const auto& column_expressions =
-        find_column_expressions<ExpressionVector>(*this, foreign_key_constraint.primary_key_columns());
+        find_column_expressions(*this, foreign_key_constraint.primary_key_columns());
 
     // Create InclusionDependency
     inclusion_dependencies.emplace(column_expressions, foreign_key_constraint.foreign_key_columns(), referenced_table);

@@ -9,10 +9,10 @@ namespace hyrise {
 
 using namespace expression_functional;  // NOLINT(build/namespaces)
 
-OrderDependency::OrderDependency(std::vector<std::shared_ptr<AbstractExpression>> init_ordering_expressions,
-                                 std::vector<std::shared_ptr<AbstractExpression>> init_ordered_expessions)
-    : ordering_expressions{std::move(init_ordering_expressions)},
-      ordered_expressions{std::move(init_ordered_expessions)} {
+OrderDependency::OrderDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_ordering_expressions,
+                                 const std::vector<std::shared_ptr<AbstractExpression>>& init_ordered_expessions)
+    : ordering_expressions{init_ordering_expressions},
+      ordered_expressions{init_ordered_expessions} {
   Assert(!ordering_expressions.empty() && !ordered_expressions.empty(), "OrderDependency cannot be empty.");
 }
 
@@ -80,10 +80,10 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
     for (const auto& od : order_dependencies) {
       const auto& ordered_expressions = od.ordered_expressions;
       for (const auto& candidate_od : order_dependencies) {
-        // Given od [a] |-> [b], check if candidate_od looks like [b] |-> [c].
+        // Given od [a] |-> [b, c], check if candidate_od looks like [b] |-> [d].
         const auto& candidate_expressions = candidate_od.ordering_expressions;
-        if (ordered_expressions.size() != candidate_expressions.size() ||
-            !contains_all_expressions(ordered_expressions, candidate_expressions)) {
+        if (ordered_expressions.size() < candidate_expressions.size() ||
+            !first_expressions_match(candidate_expressions, ordered_expressions)) {
           continue;
         }
 
@@ -92,8 +92,7 @@ void build_transitive_od_closure(OrderDependencies& order_dependencies) {
         if (order_dependencies.contains(transitive_od) ||
             std::any_of(transitive_od.ordering_expressions.cbegin(), transitive_od.ordering_expressions.cend(),
                         [&](const auto& expression) {
-                          return contains_all_expressions(expression_vector(expression),
-                                                          candidate_od.ordered_expressions);
+                          return find_expression_idx(*expression, candidate_od.ordered_expressions);
                         })) {
           continue;
         }

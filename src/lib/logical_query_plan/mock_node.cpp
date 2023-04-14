@@ -23,8 +23,6 @@ bool contains_any_column(const std::vector<ColumnID>& column_ids, const ColumnID
 
 namespace hyrise {
 
-using ExpressionVector = std::vector<std::shared_ptr<AbstractExpression>>;
-
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
     : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
 
@@ -120,7 +118,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions<ExpressionUnorderedSet>(*this, key_constraint_column_ids);
+    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -145,8 +143,8 @@ OrderDependencies MockNode::order_dependencies() const {
       continue;
     }
 
-    order_dependencies.emplace(find_column_expressions<ExpressionVector>(*this, ordering_columns),
-                               find_column_expressions<ExpressionVector>(*this, ordered_columns));
+    order_dependencies.emplace(find_column_expressions(*this, ordering_columns),
+                               find_column_expressions(*this, ordered_columns));
   }
   return order_dependencies;
 }
@@ -165,7 +163,7 @@ InclusionDependencies MockNode::inclusion_dependencies() const {
       continue;
     }
 
-    inclusion_dependencies.emplace(find_column_expressions<ExpressionVector>(*this, columns), included_columns, table);
+    inclusion_dependencies.emplace(find_column_expressions(*this, columns), included_columns, table);
   }
   return inclusion_dependencies;
 }

@@ -36,7 +36,7 @@ UniqueColumnCombinations ProjectionNode::unique_column_combinations() const {
   auto unique_column_combinations = UniqueColumnCombinations{};
   unique_column_combinations.reserve(node_expressions.size());
 
-  // Forward unique column combinations, if applicable
+  // Forward unique column combinations, if applicable.
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
   const auto& output_expressions = this->output_expressions();
 
@@ -61,7 +61,7 @@ OrderDependencies ProjectionNode::order_dependencies() const {
   auto order_dependencies = OrderDependencies{};
   order_dependencies.reserve(node_expressions.size());
 
-  // Forward order dependencies, if applicable
+  // Forward order dependencies, if applicable.
   const auto& input_order_dependencies = left_input()->order_dependencies();
   const auto& output_expressions = this->output_expressions();
 
@@ -81,7 +81,7 @@ InclusionDependencies ProjectionNode::inclusion_dependencies() const {
   auto inclusion_dependencies = InclusionDependencies{};
   inclusion_dependencies.reserve(node_expressions.size());
 
-  // Forward inclusion dependencies, if applicable
+  // Forward inclusion dependencies, if applicable.
   const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
   const auto& output_expressions = this->output_expressions();
 

@@ -56,7 +56,7 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
 
   for (const auto& table_key_constraint : table_key_constraints) {
     const auto& column_expressions =
-        find_column_expressions<ExpressionUnorderedSet>(*this, table_key_constraint.columns());
+        find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
     unique_column_combinations.emplace(column_expressions);

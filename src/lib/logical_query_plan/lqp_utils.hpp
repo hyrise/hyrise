@@ -239,12 +239,12 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
 
 /**
  * @return A vector or set of column expressions created by the given @param lqp_node, matching the given @param
- *         column_ids. This is a helper method that maps column ids from tables to the matching output expressions.
+ *         column_ids. These are helper methods that map column ids from tables to the matching output expressions.
  *         Conceptually, it only works on data source nodes. Currently, these are StoredTableNodes, StaticTableNodes,
  *         and MockNodes.
  */
-template <typename ExpressionContainer, typename ColumnIDs>
-ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, const ColumnIDs& column_ids);
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids);
+std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 /**
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
@@ -288,14 +288,14 @@ InclusionDependencies find_matching_inclusion_dependencies(const InclusionDepend
 
 /**
  * @return True if there is an OD in the given set of @param order_dependencies matching the given lists of @param
- *         expressions and @param ordered_expressions. An order dependency matches if it covers at most all of @param
- *         expressions and at least @param ordered_expressions.
- *         Example: - @param expressions: [a, b]
+ *         ordering_expressions and @param ordered_expressions. An order dependency matches if it covers at most all of
+ *         @param ordering_expressions and at least @param ordered_expressions.
+ *         Example: - @param ordering_expressions: [a, b]
  *                  - @param ordered_expressions: [c, d]
  *                  - possible matching ODs: [a] |-> [c, d], [a, b] |-> [c, d], [a, b] |-> [c, d, e]
  */
 bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
                                         const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions);
 
 }  // namespace hyrise
