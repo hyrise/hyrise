@@ -88,16 +88,16 @@ TEST_F(StaticTableNodeTest, UniqueColumnCombinationsEmpty) {
 TEST_F(StaticTableNodeTest, UniqueColumnCombinations) {
   // Prepare two unique constraints.
   const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
-  const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
+  const auto key_constraint_b = TableKeyConstraint{{ColumnID{1}}, KeyConstraintType::UNIQUE};
   dummy_table->add_soft_key_constraint(key_constraint_a);
-  dummy_table->add_soft_key_constraint(key_constraint_a_b);
+  dummy_table->add_soft_key_constraint(key_constraint_b);
 
   // Basic check.
   const auto& unique_column_combinations = static_table_node->unique_column_combinations();
   EXPECT_EQ(unique_column_combinations.size(), 2);
   // In-depth check.
   EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a, unique_column_combinations));
-  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_a_b, unique_column_combinations));
+  EXPECT_TRUE(find_ucc_by_key_constraint(key_constraint_b, unique_column_combinations));
 }
 
 }  // namespace hyrise

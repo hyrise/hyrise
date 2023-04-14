@@ -22,6 +22,33 @@
 #include "utils/assert.hpp"
 #include "value_segment.hpp"
 
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+// Checks if the two vectors have common elements, e.g., lhs = [0, 2] and rhs = [2, 1, 3]. We expect very short
+// vectors, so we use a simple but quadratic solution. For larger vectors, we could create sets and check set
+// containment.
+bool columns_intersect(const std::vector<ColumnID>& lhs, const std::vector<ColumnID>& rhs) {
+  for (const auto column_id : lhs) {
+    if (std::find(rhs.cbegin(), rhs.cend(), column_id) != rhs.cend()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool columns_intersect(const std::set<ColumnID>& lhs, const std::set<ColumnID>& rhs) {
+  for (const auto column_id : lhs) {
+    if (rhs.contains(column_id)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+}  // namespace
+
 namespace hyrise {
 
 std::shared_ptr<Table> Table::create_dummy_table(const TableColumnDefinitions& column_definitions) {
@@ -374,39 +401,114 @@ void Table::create_chunk_index(const std::vector<ColumnID>& column_ids, const st
   _chunk_indexes_statistics.emplace_back(ChunkIndexStatistics{column_ids, name, chunk_index_type});
 }
 
-const TableKeyConstraints& Table::soft_key_constraints() const {
-  return _table_key_constraints;
-}
-
 void Table::add_soft_key_constraint(const TableKeyConstraint& table_key_constraint) {
-  Assert(_type == TableType::Data, "Key constraints are not tracked for reference tables across the PQP.");
+  Assert(_type == TableType::Data, "TableKeyConstraints are not tracked for reference tables across the PQP.");
 
-  // Check validity of specified columns
+  // Check validity of specified columns.
+  const auto column_count = this->column_count();
   for (const auto& column_id : table_key_constraint.columns()) {
-    Assert(column_id < column_count(), "ColumnID out of range");
+    Assert(column_id < column_count, "ColumnID out of range.");
 
-    // PRIMARY KEY requires non-nullable columns
+    // PRIMARY KEY requires non-nullable columns.
     if (table_key_constraint.key_type() == KeyConstraintType::PRIMARY_KEY) {
       Assert(!column_is_nullable(column_id), "Column must be non-nullable to comply with PRIMARY KEY.");
     }
   }
 
-  {
-    auto scoped_lock = acquire_append_mutex();
+  const auto append_lock = acquire_append_mutex();
 
-    for (const auto& existing_constraint : _table_key_constraints) {
-      // Ensure that no other PRIMARY KEY is defined
-      Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
-                 table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
-             "Another primary key already exists for this table.");
+  for (const auto& existing_constraint : _table_key_constraints) {
+    // Ensure that no other PRIMARY KEY is defined.
+    Assert(existing_constraint.key_type() == KeyConstraintType::UNIQUE ||
+               table_key_constraint.key_type() == KeyConstraintType::UNIQUE,
+           "Another primary TableKeyConstraint exists for this table.");
 
-      // Ensure there is only one key constraint per column set.
-      Assert(table_key_constraint.columns() != existing_constraint.columns(),
-             "Another key constraint for the same column set has already been defined.");
-    }
-
-    _table_key_constraints.insert(table_key_constraint);
+    // Ensure there is only one key constraint per column(s). Theoretically, there could be two unique constraints
+    // {a, b} and {b, c}, but for now we prohibit these cases.
+    Assert(!columns_intersect(existing_constraint.columns(), table_key_constraint.columns()),
+           "Another TableKeyConstraint for the same column(s) has already been defined.");
   }
+
+  _table_key_constraints.insert(table_key_constraint);
+}
+
+const TableKeyConstraints& Table::soft_key_constraints() const {
+  return _table_key_constraints;
+}
+
+void Table::add_soft_foreign_key_constraint(const ForeignKeyConstraint& foreign_key_constraint) {
+  Assert(_type == TableType::Data, "ForeignKeyConstraints are not tracked for reference tables across the PQP.");
+
+  Assert(&*foreign_key_constraint.foreign_key_table() == this, "ForeignKeyConstraint is added to the wrong table.");
+
+  // Check validity of specified columns.
+  const auto column_count = this->column_count();
+  for (const auto& column_id : foreign_key_constraint.foreign_key_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+
+  const auto referenced_table = foreign_key_constraint.primary_key_table();
+  Assert(referenced_table && &*referenced_table != this, "ForeignKeyConstraint must reference another existing table.");
+
+  // Check validity of key columns from other table.
+  const auto referenced_table_column_count = referenced_table->column_count();
+  for (const auto& column_id : foreign_key_constraint.primary_key_columns()) {
+    Assert(column_id < referenced_table_column_count, "ColumnID out of range.");
+  }
+
+  const auto append_lock = acquire_append_mutex();
+  for (const auto& existing_constraint : _foreign_key_constraints) {
+    // Do not allow intersecting foreign key constraints. Though a table may have unlimited inclusion dependencies for
+    // the same columns (and especially the existence of [a] in [x] and [b] in [y] does not mean [a, b] in [x, y]
+    // holds), it is reasonable to assume disjoint (soft) foreign keys for now.
+    Assert(!columns_intersect(existing_constraint.foreign_key_columns(), foreign_key_constraint.foreign_key_columns()),
+           "ForeignKeyConstraint for required columns has already been set.");
+  }
+  _foreign_key_constraints.insert(foreign_key_constraint);
+  const auto referenced_table_append_lock = referenced_table->acquire_append_mutex();
+  referenced_table->_referenced_foreign_key_constraints.insert(foreign_key_constraint);
+}
+
+const ForeignKeyConstraints& Table::soft_foreign_key_constraints() const {
+  return _foreign_key_constraints;
+}
+
+const ForeignKeyConstraints& Table::referenced_foreign_key_constraints() const {
+  return _referenced_foreign_key_constraints;
+}
+
+void Table::add_soft_order_constraint(const TableOrderConstraint& table_order_constraint) {
+  Assert(_type == TableType::Data, "TableOrderConstraints are not tracked for reference tables across the PQP.");
+
+  // Check validity of columns.
+  const auto column_count = this->column_count();
+  for (const auto& column_id : table_order_constraint.ordering_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+
+  // Check validity of ordered columns.
+  for (const auto& column_id : table_order_constraint.ordered_columns()) {
+    Assert(column_id < column_count, "ColumnID out of range.");
+  }
+
+  const auto append_lock = acquire_append_mutex();
+  for (const auto& existing_constraint : _table_order_constraints) {
+    // Do not allow intersecting key constraints. Though they can be valid, we are pessimistic for now and notice if we
+    // run into intricate cases.
+    const auto ordering_columns_invalid =
+        columns_intersect(existing_constraint.ordering_columns(), table_order_constraint.ordering_columns()) &&
+        existing_constraint.ordered_columns() == table_order_constraint.ordered_columns();
+    const auto ordered_columns_invalid =
+        columns_intersect(existing_constraint.ordered_columns(), table_order_constraint.ordered_columns()) &&
+        existing_constraint.ordering_columns() == table_order_constraint.ordering_columns();
+    Assert(!ordering_columns_invalid && !ordered_columns_invalid,
+           "TableOrderConstraint for required columns has already been set.");
+  }
+  _table_order_constraints.insert(table_order_constraint);
+}
+
+const TableOrderConstraints& Table::soft_order_constraints() const {
+  return _table_order_constraints;
 }
 
 const std::vector<ColumnID>& Table::value_clustered_by() const {

@@ -27,9 +27,7 @@ class ExceptNodeTest : public BaseTest {
 
   std::shared_ptr<MockNode> _mock_node1, _mock_node2, _mock_node3;
   std::shared_ptr<ExceptNode> _except_node;
-  std::shared_ptr<LQPColumnExpression> _a;
-  std::shared_ptr<LQPColumnExpression> _b;
-  std::shared_ptr<LQPColumnExpression> _c;
+  std::shared_ptr<LQPColumnExpression> _a, _b, _c;
 };
 
 TEST_F(ExceptNodeTest, Description) {
@@ -68,6 +66,19 @@ TEST_F(ExceptNodeTest, Copy) {
 
 TEST_F(ExceptNodeTest, NodeExpressions) {
   EXPECT_EQ(_except_node->node_expressions.size(), 0u);
+}
+
+TEST_F(ExceptNodeTest, ForwardUniqueColumnCombinations) {
+  EXPECT_TRUE(_mock_node1->unique_column_combinations().empty());
+  EXPECT_TRUE(_except_node->unique_column_combinations().empty());
+
+  const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
+  _mock_node1->set_key_constraints({key_constraint_a});
+  EXPECT_EQ(_mock_node1->unique_column_combinations().size(), 1);
+
+  const auto& unique_column_combinations = _except_node->unique_column_combinations();
+  EXPECT_EQ(unique_column_combinations.size(), 1);
+  EXPECT_TRUE(unique_column_combinations.contains({UniqueColumnCombination{{_a}}}));
 }
 
 }  // namespace hyrise

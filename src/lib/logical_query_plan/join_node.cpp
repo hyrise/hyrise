@@ -59,8 +59,7 @@ std::vector<std::shared_ptr<AbstractExpression>> JoinNode::output_expressions() 
    */
 
   const auto& left_expressions = left_input()->output_expressions();
-  const auto output_both_inputs =
-      join_mode != JoinMode::Semi && join_mode != JoinMode::AntiNullAsTrue && join_mode != JoinMode::AntiNullAsFalse;
+  const auto output_both_inputs = !is_semi_or_anti_join(join_mode);
   if (!output_both_inputs) {
     return left_expressions;
   }
@@ -112,7 +111,7 @@ UniqueColumnCombinations JoinNode::_output_unique_column_combinations(
 
   const auto join_predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(join_predicates().front());
   if (!join_predicate || join_predicate->predicate_condition != PredicateCondition::Equals) {
-    // Also, no guarantees implemented yet for other join predicates than _equals() (Equi Join).
+    // Also, no guarantees implemented yet for other join predicates than equals_() (Equi Join).
     return UniqueColumnCombinations{};
   }
 
