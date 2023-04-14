@@ -40,4 +40,8 @@ TEST_F(ImportNodeTest, Copy) {
   EXPECT_EQ(*_import_node, *_import_node->deep_copy());
 }
 
+TEST_F(ImportNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(_import_node->unique_column_combinations(), std::logic_error);
+}
+
 }  // namespace hyrise

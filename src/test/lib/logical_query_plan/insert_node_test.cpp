@@ -41,4 +41,8 @@ TEST_F(InsertNodeTest, ColumnExpressions) {
   EXPECT_TRUE(_insert_node->output_expressions().empty());
 }
 
+TEST_F(InsertNodeTest, NoUniqueColumnCombinations) {
+  EXPECT_THROW(_insert_node->unique_column_combinations(), std::logic_error);
+}
+
 }  // namespace hyrise

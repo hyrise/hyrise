@@ -21,17 +21,17 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 class StoredTableNodeTest : public BaseTest {
  protected:
   void SetUp() override {
-    Hyrise::get().storage_manager.add_table("t_a",
-                                            load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
+    _table_a = load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1});
+    ChunkEncoder::encode_all_chunks(_table_a);
+
+    Hyrise::get().storage_manager.add_table("t_a", _table_a);
     Hyrise::get().storage_manager.add_table("t_b",
                                             load_table("resources/test_data/tbl/int_int_float.tbl", ChunkOffset{1}));
 
-    const auto& table_t_a = Hyrise::get().storage_manager.get_table("t_a");
-    ChunkEncoder::encode_all_chunks(table_t_a);
-    table_t_a->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
-    table_t_a->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
-    table_t_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}}, "i_a2");
-    table_t_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{0}}, "i_a3");
+    _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{0}}, "i_a1");
+    _table_a->create_chunk_index<GroupKeyIndex>({ColumnID{1}}, "i_b");
+    _table_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{0}, ColumnID{1}}, "i_a2");
+    _table_a->create_chunk_index<CompositeGroupKeyIndex>({ColumnID{1}, ColumnID{0}}, "i_a3");
 
     _stored_table_node = StoredTableNode::make("t_a");
     _a = _stored_table_node->get_column("a");
@@ -43,6 +43,7 @@ class StoredTableNodeTest : public BaseTest {
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
+  std::shared_ptr<Table> _table_a;
 };
 
 TEST_F(StoredTableNodeTest, Description) {
@@ -210,12 +211,12 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");  // int_int_float.tbl
   table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
-  table->add_soft_key_constraint({{_a->original_column_id, _b->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_key_constraint({{_b->original_column_id}, KeyConstraintType::UNIQUE});
 
   const auto& fds = _stored_table_node->functional_dependencies();
 
   const auto fd1_expected = FunctionalDependency{{_a}, {_b, _c}};
-  const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
+  const auto fd2_expected = FunctionalDependency{{_b}, {_a, _c}};
 
   EXPECT_EQ(fds.size(), 2);
   EXPECT_TRUE(fds.contains(fd1_expected));
@@ -285,12 +286,10 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesExcludeNullableColumns) {
 }
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
-  const auto table = Hyrise::get().storage_manager.get_table("t_a");
-
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::PRIMARY_KEY};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  table->add_soft_key_constraint(key_constraint_a_b);
-  table->add_soft_key_constraint(key_constraint_c);
+  _table_a->add_soft_key_constraint(key_constraint_a_b);
+  _table_a->add_soft_key_constraint(key_constraint_c);
 
   const auto& unique_column_combinations = _stored_table_node->unique_column_combinations();
 
@@ -311,20 +310,16 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
 }
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
-  const auto table = Hyrise::get().storage_manager.get_table("t_a");
-
-  // Prepare unique UCCs.
-  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
+  // Prepare UCCs.
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  table->add_soft_key_constraint(key_constraint_a);
-  table->add_soft_key_constraint(key_constraint_a_b);
-  table->add_soft_key_constraint(key_constraint_c);
-  const auto& table_key_constraints = table->soft_key_constraints();
-  EXPECT_EQ(table_key_constraints.size(), 3);
-  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 3);
+  _table_a->add_soft_key_constraint(key_constraint_a_b);
+  _table_a->add_soft_key_constraint(key_constraint_c);
+  const auto& table_key_constraints = _table_a->soft_key_constraints();
+  EXPECT_EQ(table_key_constraints.size(), 2);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
 
-  // Prune column a, which should remove two UCCs.
+  // Prune column a, which should remove one UCC.
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // Basic check.
@@ -335,14 +330,13 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
 }
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsEmpty) {
-  EXPECT_TRUE(Hyrise::get().storage_manager.get_table(_stored_table_node->table_name)->soft_key_constraints().empty());
+  EXPECT_TRUE(_table_a->soft_key_constraints().empty());
   EXPECT_TRUE(_stored_table_node->unique_column_combinations().empty());
 }
 
 TEST_F(StoredTableNodeTest, HasMatchingUniqueColumnCombination) {
-  const auto table = Hyrise::get().storage_manager.get_table("t_a");
   const auto key_constraint_a = TableKeyConstraint{{_a->original_column_id}, KeyConstraintType::UNIQUE};
-  table->add_soft_key_constraint(key_constraint_a);
+  _table_a->add_soft_key_constraint(key_constraint_a);
   EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 1);
 
   // Negative test.
