@@ -104,11 +104,41 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanOnDataTable) {
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+    scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
 
     scan->execute();
 
     auto scan_small_chunk =
         std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+    scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
+
+    scan_small_chunk->execute();
+
+    auto table = scan->get_output();
+
+    this->ASSERT_COLUMN_EQ(scan->get_output(), ColumnID{1u}, test.second);
+    this->ASSERT_COLUMN_EQ(scan_small_chunk->get_output(), ColumnID{1u}, test.second);
+  }
+}
+
+TEST_F(OperatorsIndexScanTest, ScanWithNoChunkIDsIncluded) {
+  // we do not need to check for a non existing value, because that happens automatically when we scan the second chunk
+
+  const auto right_value = AllTypeVariant{4};
+
+  std::map<PredicateCondition, std::vector<AllTypeVariant>> tests;
+  tests[PredicateCondition::Equals] = {};
+  tests[PredicateCondition::NotEquals] = {};
+
+  for (const auto& test : tests) {
+    auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+    scan->included_chunk_ids = std::vector<ChunkID>{};
+
+    scan->execute();
+
+    auto scan_small_chunk =
+        std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+    scan_small_chunk->included_chunk_ids = std::vector<ChunkID>{};
 
     scan_small_chunk->execute();
 
@@ -132,11 +162,13 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueGreaterThanMaxDictionaryValu
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+    scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
 
     scan->execute();
 
     auto scan_small_chunk =
         std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+    scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
 
     scan_small_chunk->execute();
 
@@ -158,11 +190,13 @@ TEST_F(OperatorsIndexScanTest, SingleColumnScanValueLessThanMinDictionaryValue) 
 
   for (const auto& test : tests) {
     auto scan = std::make_shared<IndexScan>(this->_int_int, this->_column_id, test.first, right_value);
+    scan->included_chunk_ids = {ChunkID{0}, ChunkID{1}};
 
     scan->execute();
 
     auto scan_small_chunk =
         std::make_shared<IndexScan>(this->_int_int_small_chunk, this->_column_id, test.first, right_value);
+    scan_small_chunk->included_chunk_ids = {ChunkID{0}, ChunkID{1}, ChunkID{2}};
 
     scan_small_chunk->execute();
 
