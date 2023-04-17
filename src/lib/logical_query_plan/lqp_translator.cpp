@@ -260,6 +260,7 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
+  index_scan->included_chunk_ids = indexed_chunks;
   table_scan->excluded_chunk_ids = indexed_chunks;
 
   // set lqp node
