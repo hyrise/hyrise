@@ -1,11 +1,5 @@
 #include "subquery_to_join_rule.hpp"
 
-#include <algorithm>
-#include <iterator>
-#include <map>
-#include <memory>
-#include <utility>
-
 #include "expression/abstract_expression.hpp"
 #include "expression/abstract_predicate_expression.hpp"
 #include "expression/binary_predicate_expression.hpp"
