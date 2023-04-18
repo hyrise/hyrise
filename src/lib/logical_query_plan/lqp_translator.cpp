@@ -1,13 +1,8 @@
 #include "lqp_translator.hpp"
 
-#include <memory>
-#include <string>
-#include <vector>
-
 #include <boost/hana/for_each.hpp>
 #include <boost/hana/tuple.hpp>
 
-#include "abstract_lqp_node.hpp"
 #include "aggregate_node.hpp"
 #include "alias_node.hpp"
 #include "change_meta_table_node.hpp"

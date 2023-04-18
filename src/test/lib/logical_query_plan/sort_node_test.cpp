@@ -1,6 +1,3 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
 #include "expression/expression_functional.hpp"
 #include "logical_query_plan/lqp_utils.hpp"
@@ -102,22 +99,6 @@ TEST_F(SortNodeTest, ForwardOrderDependencies) {
   const auto& order_dependencies = _sort_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
-}
-
-TEST_F(SortNodeTest, ForwardInclusionDependencies) {
-  EXPECT_TRUE(_table_node->inclusion_dependencies().empty());
-  EXPECT_TRUE(_sort_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, dummy_table, {ColumnID{0}}, _table_a});
-
-  const auto ind = InclusionDependency{{_a_i}, {ColumnID{0}}, dummy_table};
-  EXPECT_EQ(_table_node->inclusion_dependencies().size(), 1);
-  EXPECT_TRUE(_table_node->inclusion_dependencies().contains(ind));
-
-  const auto& inclusion_dependencies = _sort_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 1);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind));
 }
 
 }  // namespace hyrise

@@ -1,15 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "types.hpp"
-
 #include "abstract_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
 
 namespace hyrise {
 
@@ -39,8 +30,6 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
 
   /**
    * (a) Semi- & Anti-Joins:
@@ -128,9 +117,6 @@ class JoinNode : public EnableMakeForLQPNode<JoinNode>, public AbstractLQPNode {
   UniqueColumnCombinations _output_unique_column_combinations(
       const UniqueColumnCombinations& left_unique_column_combinations,
       const UniqueColumnCombinations& right_unique_column_combinations) const;
-
-  InclusionDependencies _output_inclusion_dependencies(const InclusionDependencies& left_inclusion_dependencies,
-                                                       const InclusionDependencies& right_inclusion_dependencies) const;
 
   size_t _on_shallow_hash() const override;
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& node_mapping) const override;

@@ -104,19 +104,4 @@ TEST_F(AliasNodeTest, ForwardOrderDependencies) {
   EXPECT_TRUE(order_dependencies.contains(od));
 }
 
-TEST_F(AliasNodeTest, ForwardInclusionDependencies) {
-  EXPECT_TRUE(mock_node->inclusion_dependencies().empty());
-  EXPECT_TRUE(alias_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind = InclusionDependency{{a}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-  mock_node->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(mock_node->inclusion_dependencies().size(), 1);
-
-  const auto& inclusion_dependencies = alias_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 1);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind));
-}
-
 }  // namespace hyrise

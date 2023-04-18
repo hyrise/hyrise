@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "base_test.hpp"
 
 #include "logical_query_plan/dummy_table_node.hpp"
@@ -49,11 +47,6 @@ TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
 TEST_F(DummyTableNodeTest, NoOrderDependencies) {
   // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies.
   EXPECT_TRUE(_dummy_table_node->order_dependencies().empty());
-}
-
-TEST_F(DummyTableNodeTest, NoInclusionDependencies) {
-  // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies.
-  EXPECT_TRUE(_dummy_table_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise

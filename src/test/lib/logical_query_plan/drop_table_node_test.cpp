@@ -41,8 +41,4 @@ TEST_F(DropTableNodeTest, NoOrderDependencies) {
   EXPECT_THROW(drop_table_node->order_dependencies(), std::logic_error);
 }
 
-TEST_F(DropTableNodeTest, NoInclusionDependencies) {
-  EXPECT_THROW(drop_table_node->inclusion_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

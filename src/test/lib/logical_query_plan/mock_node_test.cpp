@@ -1,6 +1,3 @@
-#include <memory>
-#include <string>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -155,33 +152,6 @@ TEST_F(MockNodeTest, OrderDependencies) {
     _mock_node_a->set_pruned_column_ids({ColumnID{0}, ColumnID{2}});
     const auto& order_dependencies = _mock_node_a->order_dependencies();
     EXPECT_TRUE(order_dependencies.empty());
-  }
-}
-
-TEST_F(MockNodeTest, InclusionDependencies) {
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_mock_node_a->get_column("a")}, {ColumnID{0}}, dummy_table};
-  const auto ind_a_b = InclusionDependency{
-      {_mock_node_a->get_column("a"), _mock_node_a->get_column("b")}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-  const auto foreign_key_constraint_a_b =
-      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, nullptr};
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
-
-  // Forward INDs.
-  {
-    const auto& inclusion_dependencies = _mock_node_a->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 2);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
-  }
-
-  // Discard INDs that involve pruned columns.
-  {
-    _mock_node_a->set_pruned_column_ids({ColumnID{1}});
-    const auto& inclusion_dependencies = _mock_node_a->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 1);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
 }
 

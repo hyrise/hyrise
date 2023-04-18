@@ -11,8 +11,7 @@ using namespace expression_functional;  // NOLINT(build/namespaces)
 
 OrderDependency::OrderDependency(const std::vector<std::shared_ptr<AbstractExpression>>& init_ordering_expressions,
                                  const std::vector<std::shared_ptr<AbstractExpression>>& init_ordered_expessions)
-    : ordering_expressions{init_ordering_expressions},
-      ordered_expressions{init_ordered_expessions} {
+    : ordering_expressions{init_ordering_expressions}, ordered_expressions{init_ordered_expessions} {
   Assert(!ordering_expressions.empty() && !ordered_expressions.empty(), "OrderDependency cannot be empty.");
 }
 

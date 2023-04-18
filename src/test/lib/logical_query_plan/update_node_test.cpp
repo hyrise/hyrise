@@ -1,6 +1,3 @@
-#include <memory>
-#include <vector>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -73,10 +70,6 @@ TEST_F(UpdateNodeTest, NoUniqueColumnCombinations) {
 
 TEST_F(UpdateNodeTest, NoOrderDependencies) {
   EXPECT_THROW(_update_node->order_dependencies(), std::logic_error);
-}
-
-TEST_F(UpdateNodeTest, NoInclusionDependencies) {
-  EXPECT_THROW(_update_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

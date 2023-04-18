@@ -7,7 +7,7 @@
 #include "lib/storage/encoding_test.hpp"
 #include "lib/utils/plugin_test_utils.hpp"
 
-#include "../../plugins/dependency_discovery_plugin.hpp"
+#include "../../plugins/ucc_discovery_plugin.hpp"
 #include "concurrency/transaction_manager.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/pqp_column_expression.hpp"
@@ -29,7 +29,7 @@
 
 namespace hyrise {
 
-class DependencyDiscoveryPluginTest : public BaseTest {
+class UccDiscoveryPluginTest : public BaseTest {
  public:
   void SetUp() override {
     _table_A = load_table("resources/test_data/tbl/uniqueness_test_A.tbl", _chunk_size);
@@ -47,21 +47,19 @@ class DependencyDiscoveryPluginTest : public BaseTest {
 
     Hyrise::get().default_lqp_cache = std::make_shared<SQLLogicalPlanCache>();
     Hyrise::get().default_pqp_cache = std::make_shared<SQLPhysicalPlanCache>();
-
-    _plugin = std::make_unique<DependencyDiscoveryPlugin>();
   }
 
  protected:
-  DependencyCandidates _identify_dependency_candidates() {
-    return _plugin->_identify_dependency_candidates();
+  UccCandidates _identify_ucc_candidates() {
+    return UccDiscoveryPlugin::_identify_ucc_candidates();
   }
 
   void _discover_uccs() {
-    _plugin->_validate_dependency_candidates(_plugin->_identify_dependency_candidates());
+    UccDiscoveryPlugin::_validate_ucc_candidates(UccDiscoveryPlugin::_identify_ucc_candidates());
   }
 
-  void _validate_dependency_candidates(const DependencyCandidates& candidates) {
-    _plugin->_validate_dependency_candidates(candidates);
+  void _validate_ucc_candidates(const UccCandidates& candidates) {
+    UccDiscoveryPlugin::_validate_ucc_candidates(candidates);
   }
 
   void _encode_table(const std::shared_ptr<Table>& table, const SegmentEncodingSpec& encoding_spec) {
@@ -79,8 +77,6 @@ class DependencyDiscoveryPluginTest : public BaseTest {
   const std::string _table_name_B{"uniquenessTestTableB"};
   const ChunkOffset _chunk_size{2};
 
-  std::unique_ptr<DependencyDiscoveryPlugin> _plugin{};
-
   std::shared_ptr<Table> _table_A{};
   std::shared_ptr<Table> _table_B{};
   std::shared_ptr<StoredTableNode> _table_node_A{};
@@ -91,43 +87,43 @@ class DependencyDiscoveryPluginTest : public BaseTest {
   std::shared_ptr<LQPColumnExpression> _predicate_column_B{};
 };
 
-class DependencyDiscoveryPluginMultiEncodingTest : public DependencyDiscoveryPluginTest,
-                                                   public ::testing::WithParamInterface<SegmentEncodingSpec> {};
+class UccDiscoveryPluginMultiEncodingTest : public UccDiscoveryPluginTest,
+                                            public ::testing::WithParamInterface<SegmentEncodingSpec> {};
 
-TEST_F(DependencyDiscoveryPluginTest, LoadUnloadPlugin) {
+TEST_F(UccDiscoveryPluginTest, LoadUnloadPlugin) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
-  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
-  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
 }
 
-TEST_F(DependencyDiscoveryPluginTest, DescriptionAndProvidedFunction) {
-  auto plugin = DependencyDiscoveryPlugin{};
-  EXPECT_EQ(plugin.description(), "Data Dependency Discovery Plugin");
+TEST_F(UccDiscoveryPluginTest, DescriptionAndProvidedFunction) {
+  auto plugin = UccDiscoveryPlugin{};
+  EXPECT_EQ(plugin.description(), "Unary Unique Column Combination Discovery Plugin");
   const auto& provided_functions = plugin.provided_user_executable_functions();
   ASSERT_EQ(provided_functions.size(), 1);
-  EXPECT_EQ(provided_functions.front().first, "DiscoverDependencies");
+  EXPECT_EQ(provided_functions.front().first, "DiscoverUCCs");
 }
 
-TEST_F(DependencyDiscoveryPluginTest, UserCallableFunction) {
+TEST_F(UccDiscoveryPluginTest, UserCallableFunction) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
-  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
-  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseDependencyDiscoveryPlugin", "DiscoverDependencies"));
-  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.exec_user_function("hyriseUccDiscoveryPlugin", "DiscoverUCCs"));
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
 }
 
-TEST_F(DependencyDiscoveryPluginTest, BenchmarkHooks) {
+TEST_F(UccDiscoveryPluginTest, BenchmarkHooks) {
   auto& plugin_manager = Hyrise::get().plugin_manager;
 
-  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseDependencyDiscoveryPlugin")));
+  EXPECT_NO_THROW(plugin_manager.load_plugin(build_dylib_path("libhyriseUccDiscoveryPlugin")));
   // We only check if the plugin has a pre-benchmark hook. Actually executing it requires benchmark items and tables.
-  EXPECT_TRUE(plugin_manager.has_pre_benchmark_hook("hyriseDependencyDiscoveryPlugin"));
-  EXPECT_FALSE(plugin_manager.has_post_benchmark_hook("hyriseDependencyDiscoveryPlugin"));
+  EXPECT_TRUE(plugin_manager.has_pre_benchmark_hook("hyriseUccDiscoveryPlugin"));
+  EXPECT_FALSE(plugin_manager.has_post_benchmark_hook("hyriseUccDiscoveryPlugin"));
   auto report = nlohmann::json{};
-  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseDependencyDiscoveryPlugin", report), std::logic_error);
-  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseDependencyDiscoveryPlugin"));
+  EXPECT_THROW(plugin_manager.exec_post_benchmark_hook("hyriseUccDiscoveryPlugin", report), std::logic_error);
+  EXPECT_NO_THROW(plugin_manager.unload_plugin("hyriseUccDiscoveryPlugin"));
 }
 
-TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
+TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
   for (const auto join_mode : {JoinMode::Inner, JoinMode::Semi}) {
     // clang-format off
     const auto lqp =
@@ -138,36 +134,29 @@ TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForJoin) {
 
     Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-    if (join_mode == JoinMode::Inner) {
-      lqp->mark_input_side_as_prunable(LQPInputSide::Right);
-    }
-
-    const auto& dependency_candidates = _identify_dependency_candidates();
+    const auto& ucc_candidates = _identify_ucc_candidates();
     SCOPED_TRACE("for JoinMode::" + std::string{magic_enum::enum_name(join_mode)});
 
-    const auto expected_candidate_count = join_mode == JoinMode::Semi ? 3 : 4;
-    EXPECT_EQ(dependency_candidates.size(), expected_candidate_count);
+    // For semi joins, the plugin should only look at the right join input.
+    const auto expected_candidate_count = join_mode == JoinMode::Inner ? 4 : 2;
+    EXPECT_EQ(ucc_candidates.size(), expected_candidate_count);
 
-    const auto ucc_join_column_B_candidate =
-        std::make_shared<UccCandidate>(_table_name_B, _join_columnB->original_column_id);
-    const auto ucc_predicate_column_B_candidate =
-        std::make_shared<UccCandidate>(_table_name_B, _predicate_column_B->original_column_id);
-    const auto ind_candidate = std::make_shared<IndCandidate>(_table_name_A, _join_columnB->original_column_id,
-                                                              _table_name_B, _join_columnB->original_column_id);
-    const auto od_candidate = std::make_shared<OdCandidate>(_table_name_B, _join_columnB->original_column_id,
-                                                            _predicate_column_B->original_column_id);
+    const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
+    const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
+    const auto join_column_B_candidate = UccCandidate{_table_name_B, _join_columnB->original_column_id};
+    const auto predicate_column_B_candidate = UccCandidate{_table_name_B, _predicate_column_B->original_column_id};
 
-    EXPECT_TRUE(dependency_candidates.contains(ucc_predicate_column_B_candidate));
-    EXPECT_TRUE(dependency_candidates.contains(ind_candidate));
-    EXPECT_TRUE(dependency_candidates.contains(od_candidate));
+    EXPECT_TRUE(ucc_candidates.contains(join_column_B_candidate));
+    EXPECT_TRUE(ucc_candidates.contains(predicate_column_B_candidate));
 
-    if (join_mode == JoinMode::Inner) {
-      EXPECT_TRUE(dependency_candidates.contains(ucc_join_column_B_candidate));
+    if (join_mode != JoinMode::Semi) {
+      EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate));
+      EXPECT_TRUE(ucc_candidates.contains(predicate_column_A_candidate));
     }
   }
 }
 
-TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinModes) {
   const auto join_modes = {JoinMode::Left,           JoinMode::Right,           JoinMode::FullOuter,
                            JoinMode::AntiNullAsTrue, JoinMode::AntiNullAsFalse, JoinMode::Cross};
   for (const auto join_mode : join_modes) {
@@ -178,12 +167,12 @@ TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForUnsupportedJoinMod
 
     Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-    const auto& dependency_candidates = _identify_dependency_candidates();
-    EXPECT_TRUE(dependency_candidates.empty()) << "for JoinMode::" << join_mode;
+    const auto& ucc_candidates = _identify_ucc_candidates();
+    EXPECT_TRUE(ucc_candidates.empty()) << "for JoinMode::" << join_mode;
   }
 }
 
-TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates) {
   const auto join_modes = {JoinMode::Inner, JoinMode::Semi};
   for (const auto join_mode : join_modes) {
     // clang-format off
@@ -195,12 +184,12 @@ TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForComplexPredicates)
 
     Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-    const auto& dependency_candidates = _identify_dependency_candidates();
-    EXPECT_TRUE(dependency_candidates.empty()) << "for JoinMode::" << join_mode;
+    const auto& ucc_candidates = _identify_ucc_candidates();
+    EXPECT_TRUE(ucc_candidates.empty()) << "for JoinMode::" << join_mode;
   }
 }
 
-TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
+TEST_F(UccDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
 
   // clang-format off
@@ -211,18 +200,17 @@ TEST_F(DependencyDiscoveryPluginTest, CorrectCandidatesGeneratedForAggregate) {
 
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-  auto dependency_candidates = _identify_dependency_candidates();
+  auto ucc_candidates = _identify_ucc_candidates();
 
-  const auto join_column_A_candidate = std::make_shared<UccCandidate>(_table_name_A, _join_columnA->original_column_id);
-  const auto predicate_column_A_candidate =
-      std::make_shared<UccCandidate>(_table_name_A, _predicate_column_A->original_column_id);
+  const auto join_column_A_candidate = UccCandidate{_table_name_A, _join_columnA->original_column_id};
+  const auto predicate_column_A_candidate = UccCandidate{_table_name_A, _predicate_column_A->original_column_id};
 
-  EXPECT_EQ(dependency_candidates.size(), 1);
-  EXPECT_TRUE(dependency_candidates.contains(join_column_A_candidate));
-  EXPECT_TRUE(!dependency_candidates.contains(predicate_column_A_candidate));
+  EXPECT_EQ(ucc_candidates.size(), 1);
+  EXPECT_TRUE(ucc_candidates.contains(join_column_A_candidate));
+  EXPECT_TRUE(!ucc_candidates.contains(predicate_column_A_candidate));
 }
 
-TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
+TEST_F(UccDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
   const auto table_node_A = StoredTableNode::make(_table_name_A);
   const auto table_node_B = StoredTableNode::make(_table_name_B);
 
@@ -235,24 +223,23 @@ TEST_F(DependencyDiscoveryPluginTest, NoCandidatesGeneratedForUnionNode) {
 
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-  auto dependency_candidates = _identify_dependency_candidates();
+  auto ucc_candidates = _identify_ucc_candidates();
 
-  EXPECT_TRUE(dependency_candidates.empty());
+  EXPECT_TRUE(ucc_candidates.empty());
 }
 
-TEST_P(DependencyDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
+TEST_P(UccDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   _encode_table(_table_A, GetParam());
   _encode_table(_table_B, GetParam());
 
   // Insert all columns as candidates
-  auto dependency_candidates =
-      DependencyCandidates{std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{0}),
-                           std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{1}),
-                           std::make_shared<UccCandidate>("uniquenessTestTableA", ColumnID{2}),
-                           std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{0}),
-                           std::make_shared<UccCandidate>("uniquenessTestTableB", ColumnID{1})};
+  auto ucc_candidates = UccCandidates{{"uniquenessTestTableA", ColumnID{0}},
+                                      {"uniquenessTestTableA", ColumnID{1}},
+                                      {"uniquenessTestTableA", ColumnID{2}},
+                                      {"uniquenessTestTableB", ColumnID{0}},
+                                      {"uniquenessTestTableB", ColumnID{1}}};
 
-  _validate_dependency_candidates(dependency_candidates);
+  _validate_ucc_candidates(ucc_candidates);
 
   // Collect constraints known for the tables
   const auto& constraints_A = _table_A->soft_key_constraints();
@@ -269,7 +256,7 @@ TEST_P(DependencyDiscoveryPluginMultiEncodingTest, ValidateCandidates) {
   EXPECT_FALSE(constraints_B.contains({{ColumnID{1}}, KeyConstraintType::UNIQUE}));
 }
 
-TEST_P(DependencyDiscoveryPluginMultiEncodingTest, PluginFullRun) {
+TEST_P(UccDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   // clang-format off
   const auto lqp =
   JoinNode::make(JoinMode::Inner, equals_(_join_columnA, _join_columnB),
@@ -278,12 +265,10 @@ TEST_P(DependencyDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   // clang-format on
   Hyrise::get().default_lqp_cache->set("TestLQP", lqp);
 
-  lqp->mark_input_side_as_prunable(LQPInputSide::Left);
-
   _encode_table(_table_A, GetParam());
   _encode_table(_table_B, GetParam());
 
-  // Run UCC discovery: we expect the join column and the predicate on table A to be identified as unique.
+  // Run UCC discovery: we expect both join columns and the predicate on table A to be identified as unique.
   _discover_uccs();
 
   // Collect constraints known for the tables.
@@ -291,18 +276,20 @@ TEST_P(DependencyDiscoveryPluginMultiEncodingTest, PluginFullRun) {
   const auto& constraints_B = _table_B->soft_key_constraints();
 
   EXPECT_EQ(constraints_A.size(), 2);
-  EXPECT_TRUE(constraints_B.empty());
+  EXPECT_EQ(constraints_B.size(), 1);
 
   EXPECT_TRUE(constraints_A.contains({{_join_columnA->original_column_id}, KeyConstraintType::UNIQUE}));
   EXPECT_TRUE(constraints_A.contains({{_predicate_column_A->original_column_id}, KeyConstraintType::UNIQUE}));
+
+  EXPECT_TRUE(constraints_B.contains({{_join_columnB->original_column_id}, KeyConstraintType::UNIQUE}));
+  EXPECT_FALSE(constraints_B.contains({{_predicate_column_B->original_column_id}, KeyConstraintType::UNIQUE}));
 
   // Ensure we clear the plan caches.
   EXPECT_EQ(Hyrise::get().default_lqp_cache->size(), 0);
   EXPECT_EQ(Hyrise::get().default_pqp_cache->size(), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(DependencyDiscoveryPluginMultiEncodingTestInstances,
-                         DependencyDiscoveryPluginMultiEncodingTest, ::testing::ValuesIn(all_segment_encoding_specs),
-                         all_segment_encoding_specs_formatter);
+INSTANTIATE_TEST_SUITE_P(UccDiscoveryPluginMultiEncodingTestInstances, UccDiscoveryPluginMultiEncodingTest,
+                         ::testing::ValuesIn(all_segment_encoding_specs), all_segment_encoding_specs_formatter);
 
 }  // namespace hyrise

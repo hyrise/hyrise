@@ -16,10 +16,6 @@ OrderDependencies AbstractNonQueryNode::order_dependencies() const {
   Fail("Node does not support order depedencies.");
 }
 
-InclusionDependencies AbstractNonQueryNode::inclusion_dependencies() const {
-  Fail("Node does not support inclusion depedencies.");
-}
-
 FunctionalDependencies AbstractNonQueryNode::non_trivial_functional_dependencies() const {
   Fail("Node does not support functional dependencies.");
 }

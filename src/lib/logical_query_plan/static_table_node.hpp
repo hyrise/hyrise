@@ -3,7 +3,6 @@
 #include "abstract_non_query_node.hpp"
 #include "enable_make_for_lqp_node.hpp"
 #include "storage/table.hpp"
-#include "storage/table_column_definition.hpp"
 
 namespace hyrise {
 
@@ -25,10 +24,8 @@ class StaticTableNode : public EnableMakeForLQPNode<StaticTableNode>, public Abs
   // constraints with CREATE TABLE statements.
   UniqueColumnCombinations unique_column_combinations() const override;
 
-  // ODs and INDs (foreign key constraints) cannot be specified for CREATE TABLE statements yet. Thus, we simply return
-  // empty sets.
+  // ODs cannot be specified for CREATE TABLE statements yet. Thus, we simply return an empty set.
   OrderDependencies order_dependencies() const override;
-  InclusionDependencies inclusion_dependencies() const override;
 
   const std::shared_ptr<Table> table;
 

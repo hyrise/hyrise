@@ -33,36 +33,11 @@ function(add_plugin)
     endif()
 endfunction(add_plugin)
 
-set(
-    DISCOVERY_PLUGIN_SOURCES
-    dependency_discovery_plugin.cpp
-    dependency_discovery_plugin.hpp
-    dependency_discovery/dependency_candidates.cpp
-    dependency_discovery/dependency_candidates.hpp
-    dependency_discovery/candidate_strategy/abstract_dependency_candidate_rule.hpp
-    dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.cpp
-    dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.hpp
-    dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.cpp
-    dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp
-    dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.cpp
-    dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp
-    dependency_discovery/validation_strategy/abstract_dependency_validation_rule.cpp
-    dependency_discovery/validation_strategy/abstract_dependency_validation_rule.hpp
-    dependency_discovery/validation_strategy/ind_validation_rule.cpp
-    dependency_discovery/validation_strategy/ind_validation_rule.hpp
-    dependency_discovery/validation_strategy/od_validation_rule.cpp
-    dependency_discovery/validation_strategy/od_validation_rule.hpp
-    dependency_discovery/validation_strategy/ucc_validation_rule.cpp
-    dependency_discovery/validation_strategy/ucc_validation_rule.hpp
-    dependency_discovery/validation_strategy/validation_utils.cpp
-    dependency_discovery/validation_strategy/validation_utils.hpp
-)
-
 add_plugin(NAME hyriseMvccDeletePlugin SRCS mvcc_delete_plugin.cpp mvcc_delete_plugin.hpp DEPS gtest hyriseBenchmarkLib magic_enum sqlparser)
 add_plugin(NAME hyriseSecondTestPlugin SRCS second_test_plugin.cpp second_test_plugin.hpp DEPS hyriseBenchmarkLib magic_enum sqlparser)
 add_plugin(NAME hyriseTestNonInstantiablePlugin SRCS non_instantiable_plugin.cpp DEPS hyriseBenchmarkLib)
 add_plugin(NAME hyriseTestPlugin SRCS test_plugin.cpp test_plugin.hpp DEPS hyriseBenchmarkLib magic_enum sqlparser)
-add_plugin(NAME hyriseDependencyDiscoveryPlugin SRCS ${DISCOVERY_PLUGIN_SOURCES} DEPS compact_vector hyriseBenchmarkLib magic_enum sqlparser)
+add_plugin(NAME hyriseUccDiscoveryPlugin SRCS ucc_discovery_plugin.cpp ucc_discovery_plugin.hpp DEPS compact_vector hyriseBenchmarkLib magic_enum sqlparser)
 
 # We define TEST_PLUGIN_DIR to always load plugins from the correct directory for testing purposes.
 add_definitions(-DTEST_PLUGIN_DIR="${CMAKE_BINARY_DIR}/lib/")

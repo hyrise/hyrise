@@ -1,11 +1,6 @@
 #include "sort_node.hpp"
 
-#include <sstream>
-#include <string>
-#include <vector>
-
 #include "expression/expression_utils.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -41,10 +36,6 @@ UniqueColumnCombinations SortNode::unique_column_combinations() const {
 
 OrderDependencies SortNode::order_dependencies() const {
   return _forward_left_order_dependencies();
-}
-
-InclusionDependencies SortNode::inclusion_dependencies() const {
-  return _forward_left_inclusion_dependencies();
 }
 
 size_t SortNode::_on_shallow_hash() const {

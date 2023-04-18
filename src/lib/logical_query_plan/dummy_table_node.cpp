@@ -1,11 +1,6 @@
 #include "dummy_table_node.hpp"
 
-#include <optional>
-#include <string>
-#include <vector>
-
 #include "expression/value_expression.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -30,10 +25,6 @@ UniqueColumnCombinations DummyTableNode::unique_column_combinations() const {
 
 OrderDependencies DummyTableNode::order_dependencies() const {
   return OrderDependencies{};
-}
-
-InclusionDependencies DummyTableNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
 }
 
 std::shared_ptr<AbstractLQPNode> DummyTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {

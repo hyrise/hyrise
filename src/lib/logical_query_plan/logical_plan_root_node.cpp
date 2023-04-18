@@ -1,7 +1,5 @@
 #include "logical_plan_root_node.hpp"
 
-#include <string>
-
 #include "abstract_lqp_node.hpp"
 
 namespace hyrise {
@@ -22,10 +20,6 @@ UniqueColumnCombinations LogicalPlanRootNode::unique_column_combinations() const
 
 OrderDependencies LogicalPlanRootNode::order_dependencies() const {
   Fail("LogicalPlanRootNode is not expected to be queried for order depedencies.");
-}
-
-InclusionDependencies LogicalPlanRootNode::inclusion_dependencies() const {
-  Fail("LogicalPlanRootNode is not expected to be queried for inclusion dependencies");
 }
 
 FunctionalDependencies LogicalPlanRootNode::non_trivial_functional_dependencies() const {

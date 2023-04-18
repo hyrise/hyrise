@@ -1,21 +1,13 @@
 #include "join_node.hpp"
 
 #include <limits>
-#include <memory>
 #include <numeric>
-#include <optional>
 #include <sstream>
-#include <string>
-#include <utility>
-#include <vector>
 
-#include "expression/binary_predicate_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 #include "operators/operator_join_predicate.hpp"
-#include "types.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -196,107 +188,6 @@ OrderDependencies JoinNode::order_dependencies() const {
 
   build_transitive_od_closure(order_dependencies);
   return order_dependencies;
-}
-
-InclusionDependencies JoinNode::inclusion_dependencies() const {
-  switch (join_mode) {
-    case JoinMode::Cross:
-    case JoinMode::FullOuter: {
-      // These joins preserve all tuples from the inputs. All values survive and we can forward all INDs of the left and
-      // right input.
-      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
-      const auto& right_inclusion_dependencies = right_input()->inclusion_dependencies();
-      auto inclusion_dependencies =
-          InclusionDependencies{left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend()};
-      inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
-      return inclusion_dependencies;
-    }
-
-    // Anti-joins filter the left input. No INDs remain valid.
-    case JoinMode::AntiNullAsFalse:
-    case JoinMode::AntiNullAsTrue:
-      return InclusionDependencies{};
-
-    // All other joins can only forward INDs of the inputs if all input tuples are forwarded (i.e., (i) they are outer
-    // joins and/or (ii) there is an IND between the join keys of equals_() predicates).
-    case JoinMode::Left:
-    case JoinMode::Right:
-    case JoinMode::Semi:
-    case JoinMode::Inner: {
-      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
-      const auto& right_inclusion_dependencies = right_input()->inclusion_dependencies();
-      return _output_inclusion_dependencies(left_inclusion_dependencies, right_inclusion_dependencies);
-    }
-  }
-  /**
-   * Future work: The join keys of equals_() predicates form a new IND. However, we currently only care about INDs that
-   * result from foreign key constraints.
-   */
-}
-
-InclusionDependencies JoinNode::_output_inclusion_dependencies(
-    // TODO: test!
-    const InclusionDependencies& left_inclusion_dependencies,
-    const InclusionDependencies& right_inclusion_dependencies) const {
-  // Check if there are any INDs that might be forwarded.
-  if (left_inclusion_dependencies.empty() && (join_mode == JoinMode::Semi || right_inclusion_dependencies.empty())) {
-    return InclusionDependencies{};
-  }
-
-  // Left / right outer joins foward all tuples of the repsective input. Its INDs remain valid.
-  auto inclusion_dependencies = InclusionDependencies{};
-  if (join_mode == JoinMode::Left) {
-    inclusion_dependencies.insert(left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend());
-  } else if (join_mode == JoinMode::Right) {
-    inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
-  }
-
-  // Check that all join predicates are equals_() predicates and map the join keys to the input nodes.
-  const auto join_predicates = this->join_predicates();
-  const auto predicate_count = join_predicates.size();
-  auto left_input_join_predicates = ExpressionUnorderedSet{predicate_count};
-  auto right_input_join_predicates = ExpressionUnorderedSet{predicate_count};
-  const auto& left_expressions = left_input()->output_expressions();
-
-  for (const auto& expression : join_predicates) {
-    const auto& predicate = std::dynamic_pointer_cast<BinaryPredicateExpression>(expression);
-    if (!predicate || predicate->predicate_condition != PredicateCondition::Equals) {
-      return InclusionDependencies{};
-    }
-
-    if (find_expression_idx(*predicate->left_operand(), left_expressions)) {
-      DebugAssert(find_expression_idx(*predicate->right_operand(), right_input()->output_expressions()),
-                  "Expected to resolve right operand.");
-      left_input_join_predicates.emplace(predicate->left_operand());
-      right_input_join_predicates.emplace(predicate->right_operand());
-    } else {
-      DebugAssert(find_expression_idx(*predicate->left_operand(), right_input()->output_expressions()),
-                  "Expected to resolve left operand.");
-      DebugAssert(find_expression_idx(*predicate->right_operand(), left_expressions),
-                  "Expected to resolve right operand.");
-      left_input_join_predicates.emplace(predicate->right_operand());
-      right_input_join_predicates.emplace(predicate->left_operand());
-    }
-  }
-
-  Assert(left_input_join_predicates.size() == predicate_count && right_input_join_predicates.size() == predicate_count,
-         "Could not resolve all join predicates.");
-
-  // Add INDs from left input if left join keys are contained in right join keys.
-  if (right_input()->has_matching_ind(right_input_join_predicates, *left_input())) {
-    inclusion_dependencies.insert(left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend());
-  }
-
-  if (join_mode == JoinMode::Semi) {
-    return inclusion_dependencies;
-  }
-
-  // Add INDs from right input if right join keys are contained in left join keys.
-  if (left_input()->has_matching_ind(left_input_join_predicates, *right_input())) {
-    inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
-  }
-
-  return inclusion_dependencies;
 }
 
 FunctionalDependencies JoinNode::non_trivial_functional_dependencies() const {

@@ -67,8 +67,4 @@ TEST_F(CreateTableNodeTest, NoOrderDependencies) {
   EXPECT_THROW(create_table_node->order_dependencies(), std::logic_error);
 }
 
-TEST_F(CreateTableNodeTest, NoInclusionDependencies) {
-  EXPECT_THROW(create_table_node->inclusion_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

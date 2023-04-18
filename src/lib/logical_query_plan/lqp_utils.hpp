@@ -1,12 +1,7 @@
 #pragma once
 
-#include <memory>
-#include <optional>
 #include <queue>
 #include <set>
-#include <unordered_set>
-#include <utility>
-#include <vector>
 
 #include "logical_query_plan/abstract_lqp_node.hpp"
 
@@ -62,11 +57,9 @@ using SubqueryExpressionsByLQP =
     std::unordered_map<std::shared_ptr<AbstractLQPNode>, std::vector<std::weak_ptr<LQPSubqueryExpression>>>;
 
 /**
- * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node. If @param only_correlated is set to true,
- * only LQPs from correlated subqueries are part of the result.
+ * Returns unique LQPs from (nested) LQPSubqueryExpressions of @param node.
  */
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
-                                                                 const bool only_correlated = false);
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node);
 
 /**
  * For two equally structured LQPs lhs and rhs, create a mapping for each node in lhs pointing to its equivalent in rhs.
@@ -244,7 +237,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         and MockNodes.
  */
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids);
-std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
+std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                                         const std::vector<ColumnID>& column_ids);
 
 /**
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param
@@ -278,13 +272,6 @@ void remove_invalid_fds(const std::shared_ptr<const AbstractLQPNode>& lqp, Funct
  * @returns a shared pointer to the diamond's origin node. If it was not found, a null pointer is returned.
  */
 std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<AbstractLQPNode>& union_root_node);
-
-/**
- * @return All INDs in the given set of @param inclusion_dependencies matching the given set of
- *         @param expressions. An inclusion dependency matches if it covers a superset of @param expressions.
- */
-InclusionDependencies find_matching_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies,
-                                                           const ExpressionUnorderedSet& expressions);
 
 /**
  * @return True if there is an OD in the given set of @param order_dependencies matching the given lists of @param

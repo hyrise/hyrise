@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "base_test.hpp"
 
 #include "expression/expression_utils.hpp"
@@ -52,11 +50,6 @@ TEST_F(ChangeMetaTableNodeTest, NoUniqueColumnCombinations) {
 TEST_F(ChangeMetaTableNodeTest, NoOrderDependencies) {
   // Non-query nodes should not be asked for data dependencies.
   EXPECT_THROW(_change_meta_table_node->order_dependencies(), std::logic_error);
-}
-
-TEST_F(ChangeMetaTableNodeTest, NoInclusionDependencies) {
-  // Non-query nodes should not be asked for data dependencies.
-  EXPECT_THROW(_change_meta_table_node->inclusion_dependencies(), std::logic_error);
 }
 
 }  // namespace hyrise

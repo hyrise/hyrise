@@ -4,7 +4,6 @@
 
 #include "enable_make_for_lqp_node.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
-#include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
 
@@ -224,14 +223,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
 
-  virtual InclusionDependencies inclusion_dependencies() const = 0;
-
-  /**
-   * @return True if there is an inclusion dependency (IND) matching the given subset of output expressions whose
-   *         included columns are also part of @param included_node's output expressions.
-   */
-  bool has_matching_ind(const ExpressionUnorderedSet& expressions, const AbstractLQPNode& included_node) const;
-
   /**
    * Perform a deep equality check
    */
@@ -279,8 +270,6 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   UniqueColumnCombinations _forward_left_unique_column_combinations() const;
 
   OrderDependencies _forward_left_order_dependencies() const;
-
-  InclusionDependencies _forward_left_inclusion_dependencies() const;
 
   /*
    * Converts an AbstractLQPNode::DescriptionMode to an AbstractExpression::DescriptionMode

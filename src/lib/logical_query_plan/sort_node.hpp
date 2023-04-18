@@ -1,10 +1,6 @@
 #pragma once
 
-#include <string>
-#include <vector>
-
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -22,8 +18,6 @@ class SortNode : public EnableMakeForLQPNode<SortNode>, public AbstractLQPNode {
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
 
   const std::vector<SortMode> sort_modes;
 

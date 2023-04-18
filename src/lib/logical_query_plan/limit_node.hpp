@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "abstract_lqp_node.hpp"
 
 namespace hyrise {
@@ -19,8 +17,6 @@ class LimitNode : public EnableMakeForLQPNode<LimitNode>, public AbstractLQPNode
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
 
   std::shared_ptr<AbstractExpression> num_rows_expression() const;
 

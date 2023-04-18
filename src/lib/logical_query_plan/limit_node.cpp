@@ -28,10 +28,6 @@ OrderDependencies LimitNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-InclusionDependencies LimitNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
-}
-
 std::shared_ptr<AbstractExpression> LimitNode::num_rows_expression() const {
   return node_expressions[0];
 }

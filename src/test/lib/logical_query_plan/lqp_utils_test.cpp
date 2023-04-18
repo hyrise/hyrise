@@ -301,62 +301,38 @@ TEST_F(LQPUtilsTest, LQPInsertAboveNode) {
 }
 
 TEST_F(LQPUtilsTest, CollectSubqueryExpressionsByLQPNestedSubqueries) {
-  // Prepare an LQP with multiple subqueries in a nested manner.
+  // Prepare an LQP with multiple subqueries in a nested manner
 
-  for (const auto only_correlated_subqueries : {true, false}) {
-    auto message = std::stringstream{};
-    message << "Consider only uncorrelated subqueries: " << std::boolalpha << only_correlated_subqueries;
-    SCOPED_TRACE(message.str());
+  // clang-format off
+  const auto nested_subquery_lqp =
+  AggregateNode::make(expression_vector(), expression_vector(max_(a_a)),
+    node_a);
+  const auto max_a_subquery = lqp_subquery_(nested_subquery_lqp);
 
-    // clang-format off
-    const auto nested_subquery_lqp =
-    AggregateNode::make(expression_vector(), expression_vector(max_(a_a)),
-      node_a);
-    const auto max_a_subquery = lqp_subquery_(nested_subquery_lqp);
+  const auto subquery_lqp =
+  ProjectionNode::make(expression_vector(b_x),
+    PredicateNode::make(greater_than_(b_x, max_a_subquery),
+      node_b));
+  const auto x_greater_than_max_a_subquery = lqp_subquery_(subquery_lqp);
 
+  const auto root_lqp =
+  ProjectionNode::make(expression_vector(add_(a_a, a_b)),
+    PredicateNode::make(in_(a_b, x_greater_than_max_a_subquery),
+      node_a));
+  // clang-format on
 
-    const auto correlated_parameter = correlated_parameter_(ParameterID{0}, b_y);
-    const auto correlated_subquery_lqp =
-    PredicateNode::make(equals_(c_u, correlated_parameter),
-      PredicateNode::make(greater_than_(c_v, max_a_subquery),
-        node_c));
-    const auto correlated_subquery = lqp_subquery_(correlated_subquery_lqp, std::make_pair(ParameterID{0}, correlated_parameter));  // NOLINT(whitespace/line_length)
+  auto subquery_expressions_by_lqp = collect_lqp_subquery_expressions_by_lqp(root_lqp);
+  EXPECT_EQ(subquery_expressions_by_lqp.size(), 2);
 
+  ASSERT_TRUE(subquery_expressions_by_lqp.contains(x_greater_than_max_a_subquery->lqp));
+  EXPECT_EQ(subquery_expressions_by_lqp.find(x_greater_than_max_a_subquery->lqp)->second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.find(x_greater_than_max_a_subquery->lqp)->second.at(0).lock(),
+            x_greater_than_max_a_subquery);
 
-    const auto subquery_lqp =
-    ProjectionNode::make(expression_vector(b_x),
-      PredicateNode::make(greater_than_(b_x, correlated_subquery),
-        node_b));
-    const auto x_greater_than_max_a_subquery = lqp_subquery_(subquery_lqp);
-
-    const auto root_lqp =
-    ProjectionNode::make(expression_vector(add_(a_a, a_b)),
-      PredicateNode::make(in_(a_b, x_greater_than_max_a_subquery),
-        node_a));
-    // clang-format on
-
-    const auto subquery_expressions_by_lqp =
-        collect_lqp_subquery_expressions_by_lqp(root_lqp, only_correlated_subqueries);
-    const auto expected_expression_count = only_correlated_subqueries ? 1 : 3;
-    EXPECT_EQ(subquery_expressions_by_lqp.size(), expected_expression_count);
-
-    ASSERT_TRUE(subquery_expressions_by_lqp.contains(correlated_subquery->lqp));
-    EXPECT_EQ(subquery_expressions_by_lqp.at(correlated_subquery->lqp).size(), 1);
-    EXPECT_EQ(subquery_expressions_by_lqp.at(correlated_subquery->lqp).at(0).lock(), correlated_subquery);
-
-    if (only_correlated_subqueries) {
-      continue;
-    }
-
-    ASSERT_TRUE(subquery_expressions_by_lqp.contains(x_greater_than_max_a_subquery->lqp));
-    EXPECT_EQ(subquery_expressions_by_lqp.at(x_greater_than_max_a_subquery->lqp).size(), 1);
-    EXPECT_EQ(subquery_expressions_by_lqp.at(x_greater_than_max_a_subquery->lqp).at(0).lock(),
-              x_greater_than_max_a_subquery);
-
-    ASSERT_TRUE(subquery_expressions_by_lqp.contains(max_a_subquery->lqp));
-    EXPECT_EQ(subquery_expressions_by_lqp.at(max_a_subquery->lqp).size(), 1);
-    EXPECT_EQ(subquery_expressions_by_lqp.at(max_a_subquery->lqp).at(0).lock(), max_a_subquery);
-  }
+  ASSERT_TRUE(subquery_expressions_by_lqp.contains(max_a_subquery->lqp));
+  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.size(), 1);
+  EXPECT_EQ(subquery_expressions_by_lqp.find(max_a_subquery->lqp)->second.at(0).lock(), max_a_subquery);
 }
 
 TEST_F(LQPUtilsTest, FindDiamondOriginNode) {
@@ -449,36 +425,6 @@ TEST_F(LQPUtilsTest, FindDiamondOriginNodeConsecutiveDiamonds) {
 
   const auto top_diamond_origin_node = find_diamond_origin_node(top_diamond_root_node);
   EXPECT_EQ(top_diamond_origin_node, bottom_diamond_root_node);
-}
-
-TEST_F(LQPUtilsTest, FindMatchingInclusionDependencies) {
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{a_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_a_b = InclusionDependency{{a_a, a_b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  const auto inclusion_dependencies = InclusionDependencies{ind_a, ind_a_b};
-
-  EXPECT_TRUE(find_matching_inclusion_dependencies(inclusion_dependencies, {b_x}).empty());
-
-  if constexpr (HYRISE_DEBUG) {
-    EXPECT_THROW(find_matching_inclusion_dependencies(inclusion_dependencies, {}), std::logic_error);
-    EXPECT_THROW(find_matching_inclusion_dependencies({}, {a_a, a_b}), std::logic_error);
-  }
-
-  // Both INDs match because ind_a_b is a superset of ind_a.
-  const auto actual_inds_a = find_matching_inclusion_dependencies(inclusion_dependencies, {a_a});
-  EXPECT_EQ(actual_inds_a.size(), 2);
-  EXPECT_TRUE(actual_inds_a.contains(ind_a));
-  EXPECT_TRUE(actual_inds_a.contains(ind_a_b));
-
-  // Only ind_a_b matches.
-  const auto actual_inds_b = find_matching_inclusion_dependencies(inclusion_dependencies, {a_a, a_b});
-  EXPECT_EQ(actual_inds_b.size(), 1);
-  EXPECT_TRUE(actual_inds_b.contains(ind_a_b));
-
-  // Again, ind_a_b match because it is a superset of {a_b}.
-  const auto actual_inds_c = find_matching_inclusion_dependencies(inclusion_dependencies, {a_b});
-  EXPECT_EQ(actual_inds_c.size(), 1);
-  EXPECT_TRUE(actual_inds_c.contains(ind_a_b));
 }
 
 }  // namespace hyrise

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <string>
-
 #include "abstract_lqp_node.hpp"
 
 namespace hyrise {
@@ -19,8 +17,6 @@ class ValidateNode : public EnableMakeForLQPNode<ValidateNode>, public AbstractL
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
 
  protected:
   std::shared_ptr<AbstractLQPNode> _on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const override;

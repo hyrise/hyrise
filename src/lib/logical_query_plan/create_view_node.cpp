@@ -1,7 +1,6 @@
 #include "create_view_node.hpp"
 
 #include <sstream>
-#include <string>
 
 #include "lqp_utils.hpp"
 

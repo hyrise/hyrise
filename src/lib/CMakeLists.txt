@@ -115,8 +115,6 @@ set(
     logical_query_plan/create_view_node.hpp
     logical_query_plan/data_dependencies/functional_dependency.cpp
     logical_query_plan/data_dependencies/functional_dependency.hpp
-    logical_query_plan/data_dependencies/inclusion_dependency.cpp
-    logical_query_plan/data_dependencies/inclusion_dependency.hpp
     logical_query_plan/data_dependencies/order_dependency.cpp
     logical_query_plan/data_dependencies/order_dependency.hpp
     logical_query_plan/data_dependencies/unique_column_combination.cpp

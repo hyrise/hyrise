@@ -1,13 +1,7 @@
 #include "abstract_lqp_node.hpp"
 
-#include <algorithm>
-#include <unordered_map>
-#include <unordered_set>
-#include <utility>
-
 #include <boost/container_hash/hash.hpp>
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
@@ -295,53 +289,6 @@ bool AbstractLQPNode::has_matching_ucc(const ExpressionUnorderedSet& expressions
   return contains_matching_unique_column_combination(unique_column_combinations, expressions);
 }
 
-bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions,
-                                       const AbstractLQPNode& included_node) const {
-  Assert(!expressions.empty(), "Invalid input. Set of expressions should not be empty.");
-  DebugAssert(has_output_expressions(expressions),
-              "The given expressions are not a subset of the LQP's output expressions.");
-
-  // Check if there is an IND matching the expressions.
-  const auto& inclusion_dependencies = this->inclusion_dependencies();
-  if (inclusion_dependencies.empty()) {
-    return false;
-  }
-
-  const auto& inds = find_matching_inclusion_dependencies(inclusion_dependencies, expressions);
-  if (inds.empty()) {
-    return false;
-  }
-
-  // Check that all referenced columns are still present in the other LQPNode.
-  const auto& output_expressions = included_node.output_expressions();
-  auto preserved_column_ids =
-      std::unordered_map<std::shared_ptr<Table>, std::unordered_set<ColumnID>>{output_expressions.size()};
-  for (const auto& expression : output_expressions) {
-    if (const auto& lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(expression)) {
-      const auto original_node = lqp_column_expression->original_node.lock();
-      Assert(original_node, "Could not resolve original node. LQP is invalid.");
-      if (original_node->type != LQPNodeType::StoredTable) {
-        continue;
-      }
-
-      const auto& stored_table_node = static_cast<const StoredTableNode&>(*original_node);
-      const auto& table = Hyrise::get().storage_manager.get_table(stored_table_node.table_name);
-      preserved_column_ids[table].emplace(lqp_column_expression->original_column_id);
-    }
-  }
-
-  for (const auto& ind : inds) {
-    const auto& ind_column_ids = ind.included_column_ids;
-    const auto& original_table = ind.included_table;
-    if (std::all_of(ind_column_ids.cbegin(), ind_column_ids.cend(),
-                    [&](const auto column_id) { return preserved_column_ids[original_table].contains(column_id); })) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 bool AbstractLQPNode::has_matching_od(
     const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
     const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const {
@@ -516,26 +463,11 @@ OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
     const auto& output_expressions = this->output_expressions();
     for (const auto& od : input_order_dependencies) {
       Assert(contains_all_expressions(od.ordering_expressions, output_expressions) &&
-             contains_all_expressions(od.ordered_expressions, output_expressions),
+                 contains_all_expressions(od.ordered_expressions, output_expressions),
              "Forwarding of OD is illegal because node misses output expressions.");
     }
   }
   return input_order_dependencies;
-}
-
-InclusionDependencies AbstractLQPNode::_forward_left_inclusion_dependencies() const {
-  Assert(left_input(), "Cannot forward inclusion dependencies without an input node.");
-  const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
-
-  if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing.
-    const auto& output_expressions = this->output_expressions();
-    for (const auto& ind : input_inclusion_dependencies) {
-      Assert(contains_all_expressions(ind.expressions, output_expressions),
-             "Forwarding of OD is illegal because node misses output expressions.");
-    }
-  }
-  return input_inclusion_dependencies;
 }
 
 AbstractExpression::DescriptionMode AbstractLQPNode::_expression_description_mode(const DescriptionMode mode) {

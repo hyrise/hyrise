@@ -1,11 +1,6 @@
 #pragma once
 
-#include <optional>
-#include <vector>
-
 #include "abstract_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "storage/index/chunk_index_statistics.hpp"
 
 namespace hyrise {
@@ -47,8 +42,6 @@ class StoredTableNode : public EnableMakeForLQPNode<StoredTableNode>, public Abs
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
 
   const std::string table_name;
 

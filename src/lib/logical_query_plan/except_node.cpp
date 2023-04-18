@@ -1,10 +1,5 @@
 #include "except_node.hpp"
 
-#include <memory>
-#include <numeric>
-#include <string>
-#include <vector>
-
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -35,10 +30,6 @@ UniqueColumnCombinations ExceptNode::unique_column_combinations() const {
 
 OrderDependencies ExceptNode::order_dependencies() const {
   return _forward_left_order_dependencies();
-}
-
-InclusionDependencies ExceptNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
 }
 
 FunctionalDependencies ExceptNode::non_trivial_functional_dependencies() const {

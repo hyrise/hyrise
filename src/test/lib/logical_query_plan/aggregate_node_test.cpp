@@ -1,14 +1,9 @@
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
 #include "logical_query_plan/aggregate_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
-#include "types.hpp"
 #include "utils/data_dependency_test_utils.hpp"
 
 namespace hyrise {
@@ -299,43 +294,6 @@ TEST_F(AggregateNodeTest, ForwardOrderDependencies) {
     const auto& order_dependencies = aggregate_node->order_dependencies();
     EXPECT_EQ(order_dependencies.size(), 1);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
-  }
-}
-
-TEST_F(AggregateNodeTest, ForwardInclusionDependencies) {
-  EXPECT_TRUE(_mock_node->inclusion_dependencies().empty());
-  EXPECT_TRUE(_aggregate_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_a_b = InclusionDependency{{_a, _b}, {ColumnID{0}, ColumnID{1}}, dummy_table};
-  const auto foreign_key_constraint_a = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-  const auto foreign_key_constraint_a_b =
-      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, dummy_table, {ColumnID{0}, ColumnID{1}}, nullptr};
-  _mock_node->set_foreign_key_constraints({foreign_key_constraint_a, foreign_key_constraint_a_b});
-  EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 2);
-
-  {
-    // All relevant expressions are either grouped or have an ANY aggregate. All INDs should remain valid.
-    const auto& aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(any_(_b)), _mock_node);
-    const auto& inclusion_dependencies = aggregate_node->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 2);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a_b));
-  }
-  {
-    // All columns are aggregated, no INDs remain valid.
-    const auto& aggregate_node =
-        AggregateNode::make(expression_vector(), expression_vector(sum_(_a), max_(_b)), _mock_node);
-    const auto& inclusion_dependencies = aggregate_node->inclusion_dependencies();
-    EXPECT_TRUE(inclusion_dependencies.empty());
-  }
-  {
-    // b is aggregated, a is the group key. Only the first IND remains valid.
-    const auto& aggregate_node = AggregateNode::make(expression_vector(_a), expression_vector(max_(_b)), _mock_node);
-    const auto& inclusion_dependencies = aggregate_node->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 1);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
   }
 }
 

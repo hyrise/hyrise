@@ -48,8 +48,4 @@ TEST_F(DropViewNodeTest, NoOrderDependencies) {
   EXPECT_THROW(_drop_view_node->order_dependencies(), std::logic_error);
 }
 
-TEST_F(DropViewNodeTest, NoInclusionDependencies) {
-  EXPECT_THROW(_drop_view_node->inclusion_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

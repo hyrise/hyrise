@@ -1,10 +1,5 @@
 #include "union_node.hpp"
 
-#include <memory>
-#include <numeric>
-#include <string>
-#include <vector>
-
 #include "expression/expression_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -75,28 +70,6 @@ OrderDependencies UnionNode::order_dependencies() const {
       Assert(left_order_dependencies == right_input()->order_dependencies(),
              "Input tables should have the same order depedencies.");
       return left_order_dependencies;
-    }
-    case SetOperationMode::Unique:
-      Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");
-  }
-  Fail("Unhandled UnionMode");
-}
-
-InclusionDependencies UnionNode::inclusion_dependencies() const {
-  switch (set_operation_mode) {
-    case SetOperationMode::Positions: {
-      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
-      Assert(left_inclusion_dependencies == right_input()->inclusion_dependencies(),
-             "Input tables should have the same inclusion dependencies.");
-      return left_inclusion_dependencies;
-    }
-    case SetOperationMode::All: {
-      const auto& left_inclusion_dependencies = left_input()->inclusion_dependencies();
-      const auto& right_inclusion_dependencies = right_input()->inclusion_dependencies();
-      auto inclusion_dependencies =
-          InclusionDependencies{left_inclusion_dependencies.cbegin(), left_inclusion_dependencies.cend()};
-      inclusion_dependencies.insert(right_inclusion_dependencies.cbegin(), right_inclusion_dependencies.cend());
-      return inclusion_dependencies;
     }
     case SetOperationMode::Unique:
       Fail("ToDo, see discussion https://github.com/hyrise/hyrise/pull/2156#discussion_r452803825");

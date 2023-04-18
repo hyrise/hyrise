@@ -44,10 +44,6 @@ OrderDependencies AliasNode::order_dependencies() const {
   return _forward_left_order_dependencies();
 }
 
-InclusionDependencies AliasNode::inclusion_dependencies() const {
-  return _forward_left_inclusion_dependencies();
-}
-
 size_t AliasNode::_on_shallow_hash() const {
   size_t hash{0};
   for (const auto& alias : aliases) {

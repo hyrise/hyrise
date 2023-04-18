@@ -2,7 +2,6 @@
 
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "lqp_utils.hpp"
 #include "statistics/table_statistics.hpp"
@@ -130,8 +129,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions(*this, table_key_constraint.columns());
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -157,10 +155,8 @@ OrderDependencies StoredTableNode::order_dependencies() const {
     }
 
     // Search for expressions representing the order constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions(*this, table_order_constraint.ordering_columns());
-    const auto& ordered_column_expressions =
-        find_column_expressions(*this, table_order_constraint.ordered_columns());
+    const auto& column_expressions = find_column_expressions(*this, table_order_constraint.ordering_columns());
+    const auto& ordered_column_expressions = find_column_expressions(*this, table_order_constraint.ordered_columns());
 
     // Create OrderDependency.
     order_dependencies.emplace(column_expressions, ordered_column_expressions);
@@ -170,36 +166,6 @@ OrderDependencies StoredTableNode::order_dependencies() const {
   build_transitive_od_closure(order_dependencies);
 
   return order_dependencies;
-}
-
-InclusionDependencies StoredTableNode::inclusion_dependencies() const {
-  auto inclusion_dependencies = InclusionDependencies{};
-
-  // We create inclusion dependencies from foreign constraints.
-  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
-  const auto& foreign_key_constraints = table->referenced_foreign_key_constraints();
-
-  for (const auto& foreign_key_constraint : foreign_key_constraints) {
-    const auto& referenced_table = foreign_key_constraint.foreign_key_table();
-    if (!referenced_table) {
-      // Referenced table was deleted, IND is useless.
-      continue;
-    }
-
-    // Discard inclusion constraints that involve pruned column id(s).
-    if (contains_any_column_id(foreign_key_constraint.primary_key_columns(), _pruned_column_ids)) {
-      continue;
-    }
-
-    // Search for expressions representing the inclusion constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions(*this, foreign_key_constraint.primary_key_columns());
-
-    // Create InclusionDependency
-    inclusion_dependencies.emplace(column_expressions, foreign_key_constraint.foreign_key_columns(), referenced_table);
-  }
-
-  return inclusion_dependencies;
 }
 
 std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() const {

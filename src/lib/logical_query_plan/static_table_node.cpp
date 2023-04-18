@@ -55,8 +55,7 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
   const auto table_key_constraints = table->soft_key_constraints();
 
   for (const auto& table_key_constraint : table_key_constraints) {
-    const auto& column_expressions =
-        find_column_expressions(*this, table_key_constraint.columns());
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
     unique_column_combinations.emplace(column_expressions);
@@ -67,10 +66,6 @@ UniqueColumnCombinations StaticTableNode::unique_column_combinations() const {
 
 OrderDependencies StaticTableNode::order_dependencies() const {
   return OrderDependencies{};
-}
-
-InclusionDependencies StaticTableNode::inclusion_dependencies() const {
-  return InclusionDependencies{};
 }
 
 bool StaticTableNode::is_column_nullable(const ColumnID column_id) const {

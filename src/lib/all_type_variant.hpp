@@ -1,8 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <string>
-#include <vector>
 
 #include <boost/bimap.hpp>
 #include <boost/hana/core/to.hpp>

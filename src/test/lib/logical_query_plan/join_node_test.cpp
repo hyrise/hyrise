@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "base_test.hpp"
 
 #include "expression/expression_functional.hpp"
@@ -858,77 +856,6 @@ TEST_F(JoinNodeTest, OrderDependenciesInnerJoin) {
     EXPECT_EQ(order_dependencies.size(), 2);
     EXPECT_TRUE(order_dependencies.contains(od_a_to_b));
     EXPECT_TRUE(order_dependencies.contains(od_a_to_c));
-  }
-}
-
-TEST_F(JoinNodeTest, InclusionDependenciesCrossAndFullOuterJoin) {
-  // Cross and full outer joins should forward INDs from both inputs.
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_t_a_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_x = InclusionDependency{{_t_b_x}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
-  _mock_node_b->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
-
-  {
-    const auto& inclusion_dependencies = _cross_join_node->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 2);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
-  }
-
-  // clang-format off
-  const auto& outer_join_node =
-  JoinNode::make(JoinMode::FullOuter, equals_(_t_a_a, _t_b_x),
-    _mock_node_a,
-    _mock_node_b);
-  // clang-format on
-
-  const auto& inclusion_dependencies = outer_join_node->inclusion_dependencies();
-  EXPECT_EQ(inclusion_dependencies.size(), 2);
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-  EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
-}
-
-TEST_F(JoinNodeTest, InclusionDependenciesOuterJoin) {
-  // Left and right outer joins should forward INDs from the "outer" input.
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto ind_a = InclusionDependency{{_t_a_a}, {ColumnID{0}}, dummy_table};
-  const auto ind_x = InclusionDependency{{_t_b_x}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-
-  _mock_node_a->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_a->inclusion_dependencies().size(), 1);
-  _mock_node_b->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node_b->inclusion_dependencies().size(), 1);
-
-  {
-    // clang-format off
-    const auto& join_node =
-    JoinNode::make(JoinMode::Left, equals_(_t_a_a, _t_b_x),
-      _mock_node_a,
-      _mock_node_b);
-    // clang-format on
-
-    const auto& inclusion_dependencies = join_node->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 1);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_a));
-  }
-
-  {
-    // clang-format off
-    const auto& join_node =
-    JoinNode::make(JoinMode::Right, equals_(_t_a_a, _t_b_x),
-      _mock_node_a,
-      _mock_node_b);
-    // clang-format on
-
-    const auto& inclusion_dependencies = join_node->inclusion_dependencies();
-    EXPECT_EQ(inclusion_dependencies.size(), 1);
-    EXPECT_TRUE(inclusion_dependencies.contains(ind_x));
   }
 }
 

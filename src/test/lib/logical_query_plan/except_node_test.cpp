@@ -1,5 +1,3 @@
-#include <memory>
-
 #include "base_test.hpp"
 
 #include "logical_query_plan/except_node.hpp"
@@ -93,18 +91,6 @@ TEST_F(ExceptNodeTest, ForwardOrderDependencies) {
   const auto& order_dependencies = _except_node->order_dependencies();
   EXPECT_EQ(order_dependencies.size(), 1);
   EXPECT_TRUE(order_dependencies.contains(od));
-}
-
-TEST_F(ExceptNodeTest, NoInclusionDependencies) {
-  EXPECT_TRUE(_mock_node1->inclusion_dependencies().empty());
-  EXPECT_TRUE(_except_node->inclusion_dependencies().empty());
-
-  const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
-  _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
-  EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
-
-  EXPECT_TRUE(_except_node->inclusion_dependencies().empty());
 }
 
 }  // namespace hyrise

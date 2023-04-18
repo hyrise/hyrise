@@ -1,7 +1,6 @@
 #pragma once
 
 #include "abstract_lqp_node.hpp"
-#include "all_type_variant.hpp"
 
 namespace hyrise {
 
@@ -33,9 +32,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   // Returns stored ODs and pays respect to pruned columns.
   OrderDependencies order_dependencies() const override;
-
-  // Returns stored INDs and pays respect to pruned columns. Pruned columns of the referenced node are not considered.
-  InclusionDependencies inclusion_dependencies() const override;
 
   /**
    * @defgroup ColumnIDs to be pruned from the mocked Table.

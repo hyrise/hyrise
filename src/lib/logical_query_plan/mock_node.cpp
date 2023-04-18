@@ -1,7 +1,6 @@
 #include "mock_node.hpp"
 
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -151,21 +150,6 @@ OrderDependencies MockNode::order_dependencies() const {
 
 void MockNode::set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints) {
   _foreign_key_constraints = foreign_key_constraints;
-}
-
-InclusionDependencies MockNode::inclusion_dependencies() const {
-  auto inclusion_dependencies = InclusionDependencies{};
-  for (const auto& foreign_key_constraint : _foreign_key_constraints) {
-    const auto& table = foreign_key_constraint.foreign_key_table();
-    const auto& columns = foreign_key_constraint.primary_key_columns();
-    const auto& included_columns = foreign_key_constraint.foreign_key_columns();
-    if (contains_any_column(_pruned_column_ids, columns)) {
-      continue;
-    }
-
-    inclusion_dependencies.emplace(find_column_expressions(*this, columns), included_columns, table);
-  }
-  return inclusion_dependencies;
 }
 
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {

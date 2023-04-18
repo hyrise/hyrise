@@ -1,12 +1,6 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-#include <vector>
-
 #include "abstract_lqp_node.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -34,8 +28,6 @@ class AggregateNode : public EnableMakeForLQPNode<AggregateNode>, public Abstrac
   UniqueColumnCombinations unique_column_combinations() const override;
 
   OrderDependencies order_dependencies() const override;
-
-  InclusionDependencies inclusion_dependencies() const override;
 
   // Returns non-trivial FDs from the left input node that remain valid.
   FunctionalDependencies non_trivial_functional_dependencies() const override;

@@ -1,17 +1,6 @@
-#include <memory>
-#include <optional>
-#include <string>
-#include <utility>
-#include <vector>
-
 #include "base_test.hpp"
-#include "expression/aggregate_expression.hpp"
-#include "expression/arithmetic_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_column_expression.hpp"
-#include "expression/pqp_column_expression.hpp"
-#include "expression/pqp_subquery_expression.hpp"
 #include "hyrise.hpp"
 #include "import_export/file_type.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

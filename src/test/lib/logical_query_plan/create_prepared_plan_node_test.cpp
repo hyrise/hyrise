@@ -64,8 +64,4 @@ TEST_F(CreatePreparedPlanNodeTest, NoOrderDependencies) {
   EXPECT_THROW(create_prepared_plan_node->order_dependencies(), std::logic_error);
 }
 
-TEST_F(CreatePreparedPlanNodeTest, NoInclusionDependencies) {
-  EXPECT_THROW(create_prepared_plan_node->inclusion_dependencies(), std::logic_error);
-}
-
 }  // namespace hyrise

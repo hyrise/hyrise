@@ -77,24 +77,6 @@ OrderDependencies ProjectionNode::order_dependencies() const {
   return order_dependencies;
 }
 
-InclusionDependencies ProjectionNode::inclusion_dependencies() const {
-  auto inclusion_dependencies = InclusionDependencies{};
-  inclusion_dependencies.reserve(node_expressions.size());
-
-  // Forward inclusion dependencies, if applicable.
-  const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
-  const auto& output_expressions = this->output_expressions();
-
-  for (const auto& input_inclusion_dependency : input_inclusion_dependencies) {
-    if (!contains_all_expressions(input_inclusion_dependency.expressions, output_expressions)) {
-      continue;
-    }
-    inclusion_dependencies.emplace(input_inclusion_dependency);
-  }
-
-  return inclusion_dependencies;
-}
-
 FunctionalDependencies ProjectionNode::non_trivial_functional_dependencies() const {
   auto non_trivial_fds = left_input()->non_trivial_functional_dependencies();
 

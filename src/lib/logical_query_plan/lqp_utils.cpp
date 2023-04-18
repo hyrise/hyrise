@@ -1,9 +1,7 @@
 #include "lqp_utils.hpp"
 
-#include "expression/abstract_expression.hpp"
 #include "expression/expression_functional.hpp"
 #include "expression/expression_utils.hpp"
-#include "expression/lqp_subquery_expression.hpp"
 #include "logical_query_plan/change_meta_table_node.hpp"
 #include "logical_query_plan/insert_node.hpp"
 #include "logical_query_plan/mock_node.hpp"
@@ -103,7 +101,7 @@ void lqp_find_subplan_roots_impl(std::vector<std::shared_ptr<AbstractLQPNode>>& 
 
 void recursively_collect_lqp_subquery_expressions_by_lqp(
     SubqueryExpressionsByLQP& subquery_expressions_by_lqp, const std::shared_ptr<AbstractLQPNode>& node,
-    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes, const bool only_correlated) {
+    std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
   if (!node || !visited_nodes.emplace(node).second) {
     return;
   }
@@ -115,40 +113,35 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
         return ExpressionVisitation::VisitArguments;
       }
 
-      if (subquery_expression->is_correlated() || !only_correlated) {
-        for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
-          if (*lqp == *subquery_expression->lqp) {
-            subquery_expressions.emplace_back(subquery_expression);
-            return ExpressionVisitation::DoNotVisitArguments;
-          }
+      for (auto& [lqp, subquery_expressions] : subquery_expressions_by_lqp) {
+        if (*lqp == *subquery_expression->lqp) {
+          subquery_expressions.emplace_back(subquery_expression);
+          return ExpressionVisitation::DoNotVisitArguments;
         }
-        subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
-                                            std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
       }
+      subquery_expressions_by_lqp.emplace(subquery_expression->lqp,
+                                          std::vector{std::weak_ptr<LQPSubqueryExpression>(subquery_expression)});
 
       // Subqueries can be nested. We are also interested in the LQPs from deeply nested subqueries.
       recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, subquery_expression->lqp,
-                                                          visited_nodes, only_correlated);
+                                                          visited_nodes);
 
       return ExpressionVisitation::DoNotVisitArguments;
     });
   }
 
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes,
-                                                      only_correlated);
-  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes,
-                                                      only_correlated);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->left_input(), visited_nodes);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subquery_expressions_by_lqp, node->right_input(), visited_nodes);
 }
 
 }  // namespace
 
 namespace hyrise {
 
-SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node,
-                                                                 const bool only_correlated) {
+SubqueryExpressionsByLQP collect_lqp_subquery_expressions_by_lqp(const std::shared_ptr<AbstractLQPNode>& node) {
   auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>();
   auto subqueries_by_lqp = SubqueryExpressionsByLQP{};
-  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes, only_correlated);
+  recursively_collect_lqp_subquery_expressions_by_lqp(subqueries_by_lqp, node, visited_nodes);
 
   return subqueries_by_lqp;
 }
@@ -673,24 +666,6 @@ std::shared_ptr<AbstractLQPNode> find_diamond_origin_node(const std::shared_ptr<
     return *diamond_origin_node;
   }
   return nullptr;
-}
-
-InclusionDependencies find_matching_inclusion_dependencies(const InclusionDependencies& inclusion_dependencies,
-                                                           const ExpressionUnorderedSet& expressions) {
-  DebugAssert(!inclusion_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
-  DebugAssert(!expressions.empty(), "Invalid input: Set of expressions should not be empty.");
-
-  auto matching_inds = InclusionDependencies{};
-
-  // Look for all inclusion dependencies that is based on the given expressions.
-  for (const auto& ind : inclusion_dependencies) {
-    if (contains_all_expressions(expressions, ind.expressions)) {
-      // Found a matching IND.
-      matching_inds.emplace(ind);
-    }
-  }
-
-  return matching_inds;
 }
 
 bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
