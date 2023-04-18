@@ -5,6 +5,7 @@
 #include "expression/abstract_expression.hpp"
 #include "expression/aggregate_expression.hpp"
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "hyrise.hpp"
 #include "logical_query_plan/abstract_lqp_node.hpp"
 #include "logical_query_plan/aggregate_node.hpp"

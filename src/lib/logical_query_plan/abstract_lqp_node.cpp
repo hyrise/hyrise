@@ -5,7 +5,6 @@
 #include "expression/expression_utils.hpp"
 #include "expression/lqp_column_expression.hpp"
 #include "expression/lqp_subquery_expression.hpp"
-#include "hyrise.hpp"
 #include "join_node.hpp"
 #include "lqp_utils.hpp"
 #include "predicate_node.hpp"

@@ -427,7 +427,7 @@ TEST_F(JoinNodeTest, FunctionalDependenciesDeriveLeftOnly) {
   EXPECT_TRUE(non_trivial_fds.contains(generated_fd_a));
 
   const auto generated_fd_x = FunctionalDependency{{_t_b_x}, {_t_a_a, _t_a_b, _t_a_c, _t_b_y}};
-  // The join keys are mutually dependent on each other.
+  // The join keys are mutually dependent on each other since they are equal.
   generated_fd_a = FunctionalDependency{{_t_a_a}, {_t_a_b, _t_a_c, _t_b_y}};
   const auto generated_fd_y = FunctionalDependency{{_t_b_y}, {_t_a_a}};
 

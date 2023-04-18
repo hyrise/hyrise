@@ -32,14 +32,8 @@ class OptimizerTest : public BaseTest {
 
     subquery_lqp_a = LimitNode::make(to_expression(1), node_b);
     subquery_a = lqp_subquery_(subquery_lqp_a);
-    const auto correlated_parameter = correlated_parameter_(ParameterID{0}, b);
-    // clang-format off
-    subquery_lqp_b =
-    LimitNode::make(to_expression(1),
-      PredicateNode::make(greater_than_(u, correlated_parameter),
-        node_c));
-    // clang-format on
-    subquery_b = lqp_subquery_(subquery_lqp_b, std::make_pair(ParameterID{0}, correlated_parameter));
+    subquery_lqp_b = LimitNode::make(to_expression(1), PredicateNode::make(greater_than_(u, 3), node_c));
+    subquery_b = lqp_subquery_(subquery_lqp_b);
   }
 
   std::shared_ptr<MockNode> node_a, node_b, node_c;
@@ -112,14 +106,12 @@ TEST_F(OptimizerTest, VerifiesResults) {
       node_a));
   // clang-format on
 
-  auto optimizer = Optimizer{};
-
-  std::cout << *lqp << std::endl;
+  Optimizer optimizer{};
 
   class LQPBreakingRule : public AbstractRule {
    public:
-    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& out_of_plan_expression)
-        : _out_of_plan_expression(out_of_plan_expression) {}
+    explicit LQPBreakingRule(const std::shared_ptr<AbstractExpression>& init_out_of_plan_expression)
+        : out_of_plan_expression(init_out_of_plan_expression) {}
 
     std::string name() const override {
       return "LQPBreakingRule";
@@ -132,13 +124,13 @@ TEST_F(OptimizerTest, VerifiesResults) {
       if (!projection_node) {
         return;
       }
-      projection_node->node_expressions[0] = _out_of_plan_expression;
+      projection_node->node_expressions[0] = out_of_plan_expression;
     }
 
-    std::shared_ptr<AbstractExpression> _out_of_plan_expression;
+    std::shared_ptr<AbstractExpression> out_of_plan_expression;
   };
 
-  optimizer.add_rule(std::make_unique<LQPBreakingRule>(u));
+  optimizer.add_rule(std::make_unique<LQPBreakingRule>(x));
 
   EXPECT_THROW(optimizer.optimize(std::move(lqp)), std::logic_error);
 }

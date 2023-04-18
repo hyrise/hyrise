@@ -57,8 +57,6 @@ class MockNode : public EnableMakeForLQPNode<MockNode>, public AbstractLQPNode {
 
   void set_order_constraints(const TableOrderConstraints& order_constraints);
 
-  void set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints);
-
   std::optional<std::string> name;
 
  protected:

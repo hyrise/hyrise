@@ -129,7 +129,7 @@ TEST_F(OrderDependencyTest, BuildTransitiveODClosure) {
   const auto od_b_to_y = OrderDependency({_a_b}, {_b_y});
   EXPECT_TRUE(order_dependencies.contains(od_b_to_y));
 
-  // Terminate and do not add ODs with the same expression on both sides if there are circles.
+  // Terminate and do not add ODs with the same expression on both sides if there are cycles.
   const auto od_y_to_a = OrderDependency({_b_y}, {_a_a});
   order_dependencies.emplace(od_y_to_a);
   EXPECT_EQ(order_dependencies.size(), 7);

@@ -1,6 +1,7 @@
 #include "mock_node.hpp"
 
 #include "expression/expression_utils.hpp"
+#include "expression/lqp_column_expression.hpp"
 #include "lqp_utils.hpp"
 #include "utils/assert.hpp"
 
@@ -148,10 +149,6 @@ OrderDependencies MockNode::order_dependencies() const {
   return order_dependencies;
 }
 
-void MockNode::set_foreign_key_constraints(const ForeignKeyConstraints& foreign_key_constraints) {
-  _foreign_key_constraints = foreign_key_constraints;
-}
-
 const std::shared_ptr<TableStatistics>& MockNode::table_statistics() const {
   return _table_statistics;
 }
@@ -193,7 +190,6 @@ std::shared_ptr<AbstractLQPNode> MockNode::_on_shallow_copy(LQPNodeMapping& /*no
   mock_node->set_table_statistics(_table_statistics);
   mock_node->set_key_constraints(_table_key_constraints);
   mock_node->set_order_constraints(_order_constraints);
-  mock_node->set_foreign_key_constraints(_foreign_key_constraints);
   mock_node->set_non_trivial_functional_dependencies(_functional_dependencies);
   mock_node->set_pruned_column_ids(_pruned_column_ids);
   return mock_node;

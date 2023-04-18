@@ -23,18 +23,15 @@ class LQPUtilsTest : public BaseTest {
   void SetUp() override {
     node_a = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "a"}, {DataType::Int, "b"}}, "node_a");
     node_b = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "x"}, {DataType::Int, "y"}}, "node_b");
-    node_c = MockNode::make(MockNode::ColumnDefinitions{{DataType::Int, "u"}, {DataType::Int, "v"}}, "node_c");
 
     a_a = node_a->get_column("a");
     a_b = node_a->get_column("b");
     b_x = node_b->get_column("x");
     b_y = node_b->get_column("y");
-    c_u = node_c->get_column("u");
-    c_v = node_c->get_column("v");
   }
 
-  std::shared_ptr<MockNode> node_a, node_b, node_c;
-  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_x, b_y, c_u, c_v;
+  std::shared_ptr<MockNode> node_a, node_b;
+  std::shared_ptr<LQPColumnExpression> a_a, a_b, b_x, b_y;
 };
 
 TEST_F(LQPUtilsTest, LQPSubplanToBooleanExpression_A) {

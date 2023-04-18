@@ -49,7 +49,7 @@ class AbstractPlugin {
   // Provides an interface to execute plugin functionality before the BenchmarkRunner executes the items. This can be
   // used to, e.g., let workload-driven advisors execute the workload and apply their suggestions. Thus, the
   // pre-benchmark hook gets the BenchmarkRunner's _benchmark_item_runner as an argument to access the workload's
-  // queries. For an example, see the implementation in `dependency_discovery_plugin.cpp`.
+  // queries. For an example, see the implementation in `ucc_discovery_plugin.cpp`.
   virtual std::optional<PreBenchmarkHook> pre_benchmark_hook();
 
   // Provides an interface to execute plugin functionality after the BenchmarkRunner executed the items. We can use this
