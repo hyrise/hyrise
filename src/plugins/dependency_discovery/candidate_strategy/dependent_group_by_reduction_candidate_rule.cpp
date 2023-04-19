@@ -12,10 +12,14 @@ DependentGroupByReductionCandidateRule::DependentGroupByReductionCandidateRule()
 void DependentGroupByReductionCandidateRule::apply_to_node(const std::shared_ptr<const AbstractLQPNode>& lqp_node,
                                                            DependencyCandidates& candidates) const {
   const auto& aggregate_node = static_cast<const AggregateNode&>(*lqp_node);
+  const auto group_by_column_count = aggregate_node.aggregate_expressions_begin_idx;
+  if (group_by_column_count < 2) {
+    return;
+  }
+
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
       aggregate_node.node_expressions.cbegin(),
-      aggregate_node.node_expressions.cbegin() + aggregate_node.aggregate_expressions_begin_idx};
-
+      aggregate_node.node_expressions.cbegin() + group_by_column_count};
   auto candidate_columns = std::unordered_map<std::string, std::unordered_set<ColumnID>>{};
 
   for (const auto& column_candidate : column_candidates) {
