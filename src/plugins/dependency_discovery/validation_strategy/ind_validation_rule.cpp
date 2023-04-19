@@ -76,7 +76,7 @@ IndValidationRule::IndValidationRule() : AbstractDependencyValidationRule{Depend
 ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandidate& candidate) const {
   const auto& ind_candidate = static_cast<const IndCandidate&>(candidate);
 
-  const auto& included_table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
+  const auto& included_table = Hyrise::get().storage_manager.get_table(ind_candidate.foreign_key_table);
   const auto included_column_id = ind_candidate.foreign_key_column_id;
 
   const auto& including_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);

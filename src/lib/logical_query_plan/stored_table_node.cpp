@@ -130,8 +130,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions(*this, table_key_constraint.columns());
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -157,10 +156,8 @@ OrderDependencies StoredTableNode::order_dependencies() const {
     }
 
     // Search for expressions representing the order constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions(*this, table_order_constraint.ordering_columns());
-    const auto& ordered_column_expressions =
-        find_column_expressions(*this, table_order_constraint.ordered_columns());
+    const auto& column_expressions = find_column_expressions(*this, table_order_constraint.ordering_columns());
+    const auto& ordered_column_expressions = find_column_expressions(*this, table_order_constraint.ordered_columns());
 
     // Create OrderDependency.
     order_dependencies.emplace(column_expressions, ordered_column_expressions);
@@ -192,8 +189,7 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
     }
 
     // Search for expressions representing the inclusion constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions(*this, foreign_key_constraint.primary_key_columns());
+    const auto& column_expressions = find_column_expressions(*this, foreign_key_constraint.primary_key_columns());
 
     // Create InclusionDependency
     inclusion_dependencies.emplace(column_expressions, foreign_key_constraint.foreign_key_columns(), referenced_table);

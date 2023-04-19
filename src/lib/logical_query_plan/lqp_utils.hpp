@@ -244,7 +244,8 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
  *         and MockNodes.
  */
 ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids);
-std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
+std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                                         const std::vector<ColumnID>& column_ids);
 
 /**
  * @return True if there is a UCC in the given set of @param unique_column_combinations matching the given set of @param

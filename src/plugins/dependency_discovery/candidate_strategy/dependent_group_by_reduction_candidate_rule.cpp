@@ -16,6 +16,8 @@ void DependentGroupByReductionCandidateRule::apply_to_node(const std::shared_ptr
       aggregate_node.node_expressions.cbegin(),
       aggregate_node.node_expressions.cbegin() + aggregate_node.aggregate_expressions_begin_idx};
 
+  auto candidate_columns = std::unordered_map<std::string, std::unordered_set<ColumnID>>{};
+
   for (const auto& column_candidate : column_candidates) {
     const auto lqp_column_expression = std::dynamic_pointer_cast<LQPColumnExpression>(column_candidate);
     if (!lqp_column_expression) {
@@ -23,8 +25,11 @@ void DependentGroupByReductionCandidateRule::apply_to_node(const std::shared_ptr
     }
     // Every ColumnExpression used as a GroupBy expression should be checked for uniqueness.
     const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_column_expression->original_node.lock());
-    candidates.emplace(
-        std::make_shared<UccCandidate>(stored_table_node.table_name, lqp_column_expression->original_column_id));
+    candidate_columns[stored_table_node.table_name].emplace(lqp_column_expression->original_column_id);
+  }
+
+  for (const auto& [table_name, column_ids] : candidate_columns) {
+    candidates.emplace(std::make_shared<FdCandidate>(table_name, column_ids));
   }
 }
 
