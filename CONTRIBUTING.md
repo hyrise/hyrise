@@ -98,7 +98,7 @@
     int b;
   };
   ```
-  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variables can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
+  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variable can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
   ```c++
   class FooTest : public BaseTest {
     ...
