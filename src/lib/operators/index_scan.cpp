@@ -58,7 +58,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   const auto append_matches = [&](const auto& begin, const auto& end) {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
       // If the matches Chunk is included, its mapped ChunkID is added to the output. The ChunkOffset stays the same.
-      if (binary_search(included_chunk_ids.begin(), included_chunk_ids.end(), chunk_id_mapping[(*current_iter).chunk_id])) {
+      if (binary_search(included_chunk_ids.begin(), included_chunk_ids.end(),
+                        chunk_id_mapping[(*current_iter).chunk_id])) {
         matches_out->emplace_back(RowID{*chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
       }
     }

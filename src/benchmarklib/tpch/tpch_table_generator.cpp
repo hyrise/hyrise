@@ -296,17 +296,15 @@ std::unordered_map<std::string, BenchmarkTableInfo> TPCHTableGenerator::generate
 }
 
 AbstractTableGenerator::IndexesByTable TPCHTableGenerator::_indexes_by_table() const {
-  return {
-      {"part", {{"p_partkey"}}},
-      {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
-      {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
-      // ps_partkey is subset of {ps_partkey, ps_suppkey}
-      {"customer", {{"c_custkey"}, {"c_nationkey"}}},
-      {"orders", {{"o_orderkey"}, {"o_custkey"}}},
-      {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
-      {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
-      {"region", {{"r_regionkey"}}},
-  };
+  return {{"part", {{"p_partkey"}}},
+          {"supplier", {{"s_suppkey"}, {"s_nationkey"}}},
+          {"partsupp", {{"ps_partkey"}, {"ps_suppkey"}}},
+          // ps_partkey is subset of {ps_partkey, ps_suppkey}
+          {"customer", {{"c_custkey"}, {"c_nationkey"}}},
+          {"orders", {{"o_orderkey"}, {"o_custkey"}}},
+          {"lineitem", {{"l_orderkey"}, {"l_partkey"}}},
+          {"nation", {{"n_nationkey"}, {"n_regionkey"}}},
+          {"region", {{"r_regionkey"}}}};
 }
 
 AbstractTableGenerator::SortOrderByTable TPCHTableGenerator::_sort_order_by_table() const {
