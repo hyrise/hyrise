@@ -18,8 +18,7 @@ void DependentGroupByReductionCandidateRule::apply_to_node(const std::shared_ptr
   }
 
   const auto column_candidates = std::vector<std::shared_ptr<AbstractExpression>>{
-      aggregate_node.node_expressions.cbegin(),
-      aggregate_node.node_expressions.cbegin() + group_by_column_count};
+      aggregate_node.node_expressions.cbegin(), aggregate_node.node_expressions.cbegin() + group_by_column_count};
   auto candidate_columns = std::unordered_map<std::string, std::unordered_set<ColumnID>>{};
 
   for (const auto& column_candidate : column_candidates) {
@@ -33,7 +32,11 @@ void DependentGroupByReductionCandidateRule::apply_to_node(const std::shared_ptr
   }
 
   for (const auto& [table_name, column_ids] : candidate_columns) {
-    candidates.emplace(std::make_shared<FdCandidate>(table_name, column_ids));
+    if (column_ids.size() == 1) {
+      candidates.emplace(std::make_shared<UccCandidate>(table_name, *column_ids.cbegin()));
+    } else {
+      candidates.emplace(std::make_shared<FdCandidate>(table_name, column_ids));
+    }
   }
 }
 

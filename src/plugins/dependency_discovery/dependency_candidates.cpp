@@ -135,7 +135,9 @@ bool IndCandidate::_on_equals(const AbstractDependencyCandidate& rhs) const {
 FdCandidate::FdCandidate(const std::string& init_table_name, const std::unordered_set<ColumnID>& init_column_ids)
     : AbstractDependencyCandidate{DependencyType::Functional},
       table_name{init_table_name},
-      column_ids{init_column_ids} {}
+      column_ids{init_column_ids} {
+  Assert(column_ids.size() > 1, "Expected multiple columns.");
+}
 
 std::string FdCandidate::description() const {
   auto stream = std::stringstream{};
