@@ -90,7 +90,7 @@
       `void function(const size_t /* count */) { ... }`). If the context does not provide a good name (such as
       `/* count */`), use `/* unused */`.
 
-* In general, we declare (member) variables of the same type in an own line each ([isolated declaration](https://clang.llvm.org/extra/clang-tidy/checks/readability/isolate-declaration.html)):
+* Prefer declaring (member) variables of the same type in a new line each ([isolated declaration](https://clang.llvm.org/extra/clang-tidy/checks/readability/isolate-declaration.html)):
   ```c++
   class Foo {
     ...
@@ -98,7 +98,7 @@
     int b;
   };
   ```
-  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Thus, we permit violations of isolated declaration in such test cases if the number of variables is high (see below). Please use common sense to decide on which format you use.
+  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variables can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
   ```c++
   class FooTest : public BaseTest {
     ...
