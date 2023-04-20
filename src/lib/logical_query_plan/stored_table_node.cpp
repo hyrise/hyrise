@@ -16,11 +16,10 @@ namespace {
 
 using namespace hyrise;  // NOLINT(build/namespaces)
 
-using ExpressionVector = std::vector<std::shared_ptr<AbstractExpression>>;
-
-bool contains_any_column_id(const std::vector<ColumnID>& search_columns, const std::vector<ColumnID>& columns) {
-  return std::any_of(search_columns.cbegin(), search_columns.cend(), [&](const auto& search_column_id) {
-    return std::find(columns.cbegin(), columns.cend(), search_column_id) != columns.cend();
+template <typename ColumnIDs>
+bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<ColumnID>& columns) {
+  return std::any_of(columns.cbegin(), columns.cend(), [&](const auto& column_id) {
+    return std::find(search_columns.cbegin(), search_columns.cend(), column_id) != search_columns.cend();
   });
 }
 
@@ -150,8 +149,7 @@ UniqueColumnCombinations StoredTableNode::unique_column_combinations() const {
     }
 
     // Search for expressions representing the key constraint's ColumnIDs.
-    const auto& column_expressions =
-        find_column_expressions<ExpressionUnorderedSet>(*this, table_key_constraint.columns());
+    const auto& column_expressions = find_column_expressions(*this, table_key_constraint.columns());
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -171,15 +169,14 @@ OrderDependencies StoredTableNode::order_dependencies() const {
 
   for (const auto& table_order_constraint : table_order_constraints) {
     // Discard order constraints that involve pruned column id(s).
-    if (contains_any_column_id(table_order_constraint.columns(), _pruned_column_ids) ||
+    if (contains_any_column_id(table_order_constraint.ordering_columns(), _pruned_column_ids) ||
         contains_any_column_id(table_order_constraint.ordered_columns(), _pruned_column_ids)) {
       continue;
     }
 
     // Search for expressions representing the order constraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions<ExpressionVector>(*this, table_order_constraint.columns());
-    const auto& ordered_column_expressions =
-        find_column_expressions<ExpressionVector>(*this, table_order_constraint.ordered_columns());
+    const auto& column_expressions = find_column_expressions(*this, table_order_constraint.ordering_columns());
+    const auto& ordered_column_expressions = find_column_expressions(*this, table_order_constraint.ordered_columns());
 
     // Create OrderDependency.
     order_dependencies.emplace(column_expressions, ordered_column_expressions);
@@ -206,12 +203,12 @@ InclusionDependencies StoredTableNode::inclusion_dependencies() const {
     }
 
     // Discard inclusion constraints that involve pruned column id(s).
-    if (contains_any_column_id(foreign_key_constraint.columns(), _pruned_column_ids)) {
+    if (contains_any_column_id(foreign_key_constraint.primary_key_columns(), _pruned_column_ids)) {
       continue;
     }
 
     // Search for expressions representing the inclusion constraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions<ExpressionVector>(*this, foreign_key_constraint.columns());
+    const auto& column_expressions = find_column_expressions(*this, foreign_key_constraint.primary_key_columns());
 
     // Create InclusionDependency
     inclusion_dependencies.emplace(column_expressions, foreign_key_constraint.foreign_key_columns(), referenced_table);

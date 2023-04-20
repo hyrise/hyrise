@@ -113,10 +113,11 @@ TEST_F(IntersectNodeTest, NoInclusionDependencies) {
   EXPECT_TRUE(_intersect_node->inclusion_dependencies().empty());
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   _mock_node1->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node1->inclusion_dependencies().size(), 1);
 
   EXPECT_TRUE(_intersect_node->inclusion_dependencies().empty());
 }
+
 }  // namespace hyrise

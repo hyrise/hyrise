@@ -41,14 +41,18 @@ TEST_F(DummyTableNodeTest, NodeExpressions) {
 }
 
 TEST_F(DummyTableNodeTest, NoUniqueColumnCombinations) {
+  // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies (though a
+  // single row is obviously unique).
   EXPECT_TRUE(_dummy_table_node->unique_column_combinations().empty());
 }
 
 TEST_F(DummyTableNodeTest, NoOrderDependencies) {
+  // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies.
   EXPECT_TRUE(_dummy_table_node->order_dependencies().empty());
 }
 
 TEST_F(DummyTableNodeTest, NoInclusionDependencies) {
+  // A DummyTableNode is just a wrapper for a single value and should not provide meaningful data dependencies.
   EXPECT_TRUE(_dummy_table_node->inclusion_dependencies().empty());
 }
 

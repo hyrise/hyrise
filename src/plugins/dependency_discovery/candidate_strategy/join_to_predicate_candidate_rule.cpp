@@ -62,14 +62,31 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     return;
   }
 
+  // Candidates for the OD-based rewrite also require an IND. This IND will be destroyed if there is another predicate
+  // on the candidate table. Thus, we only add them if the candidate predicate is the only predicate on the table.
+  auto od_candidates = DependencyCandidates{};
+  auto predicate_count = size_t{0};
+
   visit_lqp(subtree_root, [&](const auto& node) {
     if (node->type == LQPNodeType::Union || !expression_evaluable_on_lqp(join_lqp_column_expression, *node)) {
       return LQPVisitation::DoNotVisitInputs;
     }
 
+    // Joins also filter out values in most cases.
+    if (node->type == LQPNodeType::Join) {
+      const auto& join_node = static_cast<const JoinNode&>(*node);
+      if (!is_semi_or_anti_join(join_node.join_mode) || !expression_evaluable_on_lqp(join_lqp_column_expression, *node->right_input())) {
+        ++predicate_count;
+      }
+
+      return LQPVisitation::VisitInputs;
+    }
+
     if (node->type != LQPNodeType::Predicate) {
       return LQPVisitation::VisitInputs;
     }
+
+    ++predicate_count;
 
     // When we find a predicate node, we check whether the searched column is filtered in this predicate. If so, it is a
     // valid UCC candidate; if not, continue searching.
@@ -124,16 +141,20 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
       return LQPVisitation::VisitInputs;
     }
 
-    candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
-                                                     join_lqp_column_expression->original_column_id,
-                                                     column_expression->original_column_id));
+    od_candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
+                                                             join_lqp_column_expression->original_column_id,
+                                                             column_expression->original_column_id));
 
-    candidates.emplace(std::make_shared<IndCandidate>(
+    od_candidates.emplace(std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
         stored_table_node.table_name, join_lqp_column_expression->original_column_id));
 
     return LQPVisitation::VisitInputs;
   });
+
+  if (predicate_count == 1 && !od_candidates.empty()) {
+    candidates.insert(od_candidates.begin(), od_candidates.end());
+  }
 }
 
 }  // namespace hyrise

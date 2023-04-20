@@ -46,7 +46,8 @@ class StoredTableNodeTest : public BaseTest {
 
   std::shared_ptr<StoredTableNode> _stored_table_node;
   std::shared_ptr<LQPColumnExpression> _a, _b, _c;
-  std::shared_ptr<Table> _table_a, _table_b;
+  std::shared_ptr<Table> _table_a;
+  std::shared_ptr<Table> _table_b;
 };
 
 TEST_F(StoredTableNodeTest, Description) {
@@ -242,12 +243,12 @@ TEST_F(StoredTableNodeTest, FunctionalDependenciesPrunedRightColumnSet) {
 TEST_F(StoredTableNodeTest, FunctionalDependenciesMultiple) {
   const auto table = Hyrise::get().storage_manager.get_table("t_a");  // int_int_float.tbl
   table->add_soft_key_constraint({{_a->original_column_id}, KeyConstraintType::UNIQUE});
-  table->add_soft_key_constraint({{_a->original_column_id, _b->original_column_id}, KeyConstraintType::UNIQUE});
+  table->add_soft_key_constraint({{_b->original_column_id}, KeyConstraintType::UNIQUE});
 
   const auto& fds = _stored_table_node->functional_dependencies();
 
   const auto fd1_expected = FunctionalDependency{{_a}, {_b, _c}};
-  const auto fd2_expected = FunctionalDependency{{_a, _b}, {_c}};
+  const auto fd2_expected = FunctionalDependency{{_b}, {_a, _c}};
 
   EXPECT_EQ(fds.size(), 2);
   EXPECT_TRUE(fds.contains(fd1_expected));
@@ -342,17 +343,15 @@ TEST_F(StoredTableNodeTest, UniqueColumnCombinations) {
 
 TEST_F(StoredTableNodeTest, UniqueColumnCombinationsPrunedColumns) {
   // Prepare UCCs.
-  const auto key_constraint_a = TableKeyConstraint{{ColumnID{0}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_a_b = TableKeyConstraint{{ColumnID{0}, ColumnID{1}}, KeyConstraintType::UNIQUE};
   const auto key_constraint_c = TableKeyConstraint{{ColumnID{2}}, KeyConstraintType::UNIQUE};
-  _table_a->add_soft_key_constraint(key_constraint_a);
   _table_a->add_soft_key_constraint(key_constraint_a_b);
   _table_a->add_soft_key_constraint(key_constraint_c);
   const auto& table_key_constraints = _table_a->soft_key_constraints();
-  EXPECT_EQ(table_key_constraints.size(), 3);
-  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 3);
+  EXPECT_EQ(table_key_constraints.size(), 2);
+  EXPECT_EQ(_stored_table_node->unique_column_combinations().size(), 2);
 
-  // Prune column a, which should remove two UCCs.
+  // Prune column a, which should remove one UCC.
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
 
   // Basic check.
@@ -495,9 +494,9 @@ TEST_F(StoredTableNodeTest, InclusionDependenciesSimple) {
 
   // Create INDs from foreign key constraints.
   const auto dummy_table_a = Table::create_dummy_table({{"a", DataType::Int, false}});
-  dummy_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_a, dummy_table_a});
+  dummy_table_a->add_soft_foreign_key_constraint({{ColumnID{0}}, dummy_table_a, {ColumnID{0}}, _table_a});
   const auto dummy_table_b = Table::create_dummy_table({{"b", DataType::Int, false}});
-  dummy_table_b->add_soft_foreign_key_constraint({{ColumnID{1}}, {ColumnID{0}}, _table_a, dummy_table_b});
+  dummy_table_b->add_soft_foreign_key_constraint({{ColumnID{0}}, dummy_table_b, {ColumnID{1}}, _table_a});
 
   const auto ind_a = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table_a};
   const auto ind_b = InclusionDependency{{_b}, {ColumnID{0}}, dummy_table_b};
@@ -510,7 +509,7 @@ TEST_F(StoredTableNodeTest, InclusionDependenciesSimple) {
 TEST_F(StoredTableNodeTest, InclusionDependenciesPrunedColumns) {
   // Discard INDs that involve pruned columns.
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_a, dummy_table});
+  dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, dummy_table, {ColumnID{0}}, _table_a});
 
   _stored_table_node->set_pruned_column_ids({ColumnID{0}});
   EXPECT_TRUE(_stored_table_node->inclusion_dependencies().empty());
@@ -520,7 +519,7 @@ TEST_F(StoredTableNodeTest, InclusionDependenciesTableDeleted) {
   // Discard INDs that reference a table that was deleted.
   {
     const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
-    dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, {ColumnID{0}}, _table_a, dummy_table});
+    dummy_table->add_soft_foreign_key_constraint({{ColumnID{0}}, dummy_table, {ColumnID{0}}, _table_a});
 
     const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
     EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 1);
@@ -536,28 +535,20 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   Hyrise::get().storage_manager.add_table("t_c", table_c);
 
   // [t_b.a] in [t_a.a]
-  const auto foreign_key_a = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, _table_a, _table_b};
-  _table_b->add_soft_foreign_key_constraint(foreign_key_a);
+  _table_b->add_soft_foreign_key_constraint({{ColumnID{0}}, _table_b, {ColumnID{0}}, _table_a});
 
   // [t_b.c] in [t_a.c]
-  const auto foreign_key_b = ForeignKeyConstraint{{ColumnID{2}}, {ColumnID{2}}, _table_a, _table_b};
-  _table_b->add_soft_foreign_key_constraint(foreign_key_b);
-
-  // [t_c.a] in [t_a.a]
-  const auto foreign_key_c = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, _table_a, table_c};
-  table_c->add_soft_foreign_key_constraint(foreign_key_c);
+  _table_b->add_soft_foreign_key_constraint({{ColumnID{2}}, _table_b, {ColumnID{2}}, _table_a});
 
   // [t_c.a, t_c.b] in [t_a.a, t_a.b]
-  const auto foreign_key_d =
-      ForeignKeyConstraint{{ColumnID{0}, ColumnID{1}}, {ColumnID{0}, ColumnID{1}}, _table_a, table_c};
-  table_c->add_soft_foreign_key_constraint(foreign_key_d);
+  table_c->add_soft_foreign_key_constraint({{ColumnID{0}, ColumnID{1}}, table_c, {ColumnID{0}, ColumnID{1}}, _table_a});
 
   const auto stored_table_b = StoredTableNode::make("t_b");
   const auto stored_table_c = StoredTableNode::make("t_c");
 
   _stored_table_node->set_pruned_column_ids({});
-  EXPECT_EQ(_table_a->referenced_foreign_key_constraints().size(), 4);
-  EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 4);
+  EXPECT_EQ(_table_a->referenced_foreign_key_constraints().size(), 3);
+  EXPECT_EQ(_stored_table_node->inclusion_dependencies().size(), 3);
 
   // Negative tests.
   // Columns are empty.
@@ -574,7 +565,6 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   stored_table_b->set_pruned_column_ids({ColumnID{0}});
   stored_table_c->set_pruned_column_ids({ColumnID{0}});
   EXPECT_FALSE(_stored_table_node->has_matching_ind({_a}, *stored_table_b));
-  EXPECT_FALSE(_stored_table_node->has_matching_ind({_a}, *stored_table_c));
   EXPECT_FALSE(_stored_table_node->has_matching_ind({_a, _b}, *stored_table_c));
 
   if constexpr (HYRISE_DEBUG) {
@@ -589,7 +579,6 @@ TEST_F(StoredTableNodeTest, HasMatchingInclusionDependency) {
   stored_table_c->set_pruned_column_ids({});
   EXPECT_TRUE(_stored_table_node->has_matching_ind({_a}, *stored_table_b));
   EXPECT_TRUE(_stored_table_node->has_matching_ind({_c}, *stored_table_b));
-  EXPECT_TRUE(_stored_table_node->has_matching_ind({_a}, *stored_table_c));
   EXPECT_TRUE(_stored_table_node->has_matching_ind({_a, _b}, *stored_table_c));
 
   // Test superset of column ids.

@@ -373,11 +373,11 @@ bool AbstractLQPNode::has_matching_ind(const ExpressionUnorderedSet& expressions
 }
 
 bool AbstractLQPNode::has_matching_od(
-    const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+    const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
     const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const {
-  Assert(!expressions.empty(), "Invalid input. List of expressions should not be empty.");
-  DebugAssert(has_output_expressions({expressions.cbegin(), expressions.cend()}),
-              "The given expressions are not a subset of the LQP's output expressions.");
+  Assert(!ordering_expressions.empty(), "Invalid input. List of ordering expressions should not be empty.");
+  DebugAssert(has_output_expressions({ordering_expressions.cbegin(), ordering_expressions.cend()}),
+              "The given ordering expressions are not a subset of the LQP's output expressions.");
   Assert(!ordered_expressions.empty(), "Invalid input. List of ordered expressions should not be empty.");
   DebugAssert(has_output_expressions({ordered_expressions.cbegin(), ordered_expressions.cend()}),
               "The given ordered expressions are not a subset of the LQP's output expressions.");
@@ -387,7 +387,7 @@ bool AbstractLQPNode::has_matching_od(
     return false;
   }
 
-  return contains_matching_order_dependency(order_dependencies, expressions, ordered_expressions);
+  return contains_matching_order_dependency(order_dependencies, ordering_expressions, ordered_expressions);
 }
 
 FunctionalDependencies AbstractLQPNode::functional_dependencies() const {
@@ -528,7 +528,7 @@ UniqueColumnCombinations AbstractLQPNode::_forward_left_unique_column_combinatio
   const auto& input_unique_column_combinations = left_input()->unique_column_combinations();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     for (const auto& ucc : input_unique_column_combinations) {
       Assert(has_output_expressions(ucc.expressions),
              "Forwarding of UCC is illegal because node misses output expressions.");
@@ -542,7 +542,7 @@ OrderDependencies AbstractLQPNode::_forward_left_order_dependencies() const {
   const auto& input_order_dependencies = left_input()->order_dependencies();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     const auto& output_expressions = this->output_expressions();
     for (const auto& od : input_order_dependencies) {
       Assert(contains_all_expressions(od.ordering_expressions, output_expressions) &&
@@ -558,7 +558,7 @@ InclusionDependencies AbstractLQPNode::_forward_left_inclusion_dependencies() co
   const auto& input_inclusion_dependencies = left_input()->inclusion_dependencies();
 
   if constexpr (HYRISE_DEBUG) {
-    // Check whether output expressions are missing
+    // Check whether output expressions are missing.
     const auto& output_expressions = this->output_expressions();
     for (const auto& ind : input_inclusion_dependencies) {
       Assert(contains_all_expressions(ind.expressions, output_expressions),

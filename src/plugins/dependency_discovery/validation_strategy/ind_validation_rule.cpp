@@ -76,7 +76,7 @@ IndValidationRule::IndValidationRule() : AbstractDependencyValidationRule{Depend
 ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandidate& candidate) const {
   const auto& ind_candidate = static_cast<const IndCandidate&>(candidate);
 
-  const auto& included_table = Hyrise::get().storage_manager.get_table(ind_candidate.table_name);
+  const auto& included_table = Hyrise::get().storage_manager.get_table(ind_candidate.foreign_key_table);
   const auto included_column_id = ind_candidate.foreign_key_column_id;
 
   const auto& including_table = Hyrise::get().storage_manager.get_table(ind_candidate.primary_key_table);
@@ -106,7 +106,7 @@ ValidationResult IndValidationRule::_on_validate(const AbstractDependencyCandida
       const auto& key_constraints = including_table->soft_key_constraints();
       for (const auto& key_constraint : key_constraints) {
         // Already checked that min/max values match. If unique, then IND must be valid.
-        if (key_constraint.columns().size() != 1 || key_constraint.columns().front() != including_column_id) {
+        if (key_constraint.columns().size() != 1 || *key_constraint.columns().cbegin() != including_column_id) {
           continue;
         }
         including_unique_by_ucc = true;

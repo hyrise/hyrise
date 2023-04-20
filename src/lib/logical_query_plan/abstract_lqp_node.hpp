@@ -4,12 +4,10 @@
 #include <unordered_map>
 
 #include "enable_make_for_lqp_node.hpp"
-#include "expression/abstract_expression.hpp"
 #include "logical_query_plan/data_dependencies/functional_dependency.hpp"
 #include "logical_query_plan/data_dependencies/inclusion_dependency.hpp"
 #include "logical_query_plan/data_dependencies/order_dependency.hpp"
 #include "logical_query_plan/data_dependencies/unique_column_combination.hpp"
-#include "types.hpp"
 
 namespace hyrise {
 
@@ -219,11 +217,12 @@ class AbstractLQPNode : public std::enable_shared_from_this<AbstractLQPNode> {
   virtual OrderDependencies order_dependencies() const = 0;
 
   /**
-   * @return True if there is an order dependency (OD) matching the given list of output expressions (i.e., sorting the
-   *         table by @param `expressions` also sorts @param `ordered_expressions`). This is preferred over calling
-   *         contains_matching_order_dependency(order_dependencies(), ...) as it performs additional sanity checks.
+   * @return True if there is an order dependency (OD) matching the given lists of output expressions (i.e., sorting
+   *         the table by @param `ordering_expressions` also sorts @param `ordered_expressions`). This is preferred
+   *         over calling contains_matching_order_dependency(order_dependencies(), ...) as it performs additional
+   *         sanity checks.
    */
-  bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+  bool has_matching_od(const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
                        const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) const;
 
   virtual InclusionDependencies inclusion_dependencies() const = 0;

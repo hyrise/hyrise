@@ -71,9 +71,6 @@ OrderDependencies UnionNode::order_dependencies() const {
       // We can only forward ODs if the two input nodes come from the same table, i.e., they have the same output
       // expressions. This is the case when, e.g., the results of two predicates combined with logical or are merged.
       // Currently, Hyrise does not allow unions of different tables.
-      Assert(left_input()->output_expressions() == right_input()->output_expressions(),
-             "Did not expect inputs from different tables.");
-
       const auto& left_order_dependencies = _forward_left_order_dependencies();
       Assert(left_order_dependencies == right_input()->order_dependencies(),
              "Input tables should have the same order depedencies.");

@@ -33,13 +33,13 @@ class AbstractDependencyValidationRule {
   const DependencyType dependency_type;
 
  protected:
-  bool _is_known(const std::string& table_name, const std::shared_ptr<AbstractTableConstraint>& constraint) const;
-
   virtual ValidationResult _on_validate(const AbstractDependencyCandidate& candidate) const = 0;
 
+  static bool _dependency_already_known(const AbstractDependencyCandidate& candidate);
+
   // Pointer is required for polymorphism.
-  std::shared_ptr<AbstractTableConstraint> _constraint_from_candidate(
-      const AbstractDependencyCandidate& candidate) const;
+  static std::shared_ptr<AbstractTableConstraint> _constraint_from_candidate(
+      const AbstractDependencyCandidate& candidate);
 };
 
 }  // namespace hyrise

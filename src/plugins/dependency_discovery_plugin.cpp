@@ -7,6 +7,7 @@
 #include "dependency_discovery/candidate_strategy/dependent_group_by_reduction_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_predicate_candidate_rule.hpp"
 #include "dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp"
+#include "dependency_discovery/validation_strategy/fd_validation_rule.hpp"
 #include "dependency_discovery/validation_strategy/ind_validation_rule.hpp"
 #include "dependency_discovery/validation_strategy/od_validation_rule.hpp"
 #include "dependency_discovery/validation_strategy/ucc_validation_rule.hpp"
@@ -25,6 +26,7 @@ DependencyDiscoveryPlugin::DependencyDiscoveryPlugin() {
   _add_validation_rule(std::make_unique<UccValidationRule>());
   _add_validation_rule(std::make_unique<OdValidationRule>());
   _add_validation_rule(std::make_unique<IndValidationRule>());
+  _add_validation_rule(std::make_unique<FdValidationRule>());
 }
 
 std::string DependencyDiscoveryPlugin::description() const {

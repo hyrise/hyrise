@@ -140,20 +140,6 @@ void recursively_collect_lqp_subquery_expressions_by_lqp(
                                                       only_correlated);
 }
 
-bool first_expressions_match(const std::vector<std::shared_ptr<AbstractExpression>>& lhs_expressions,
-                             const std::vector<std::shared_ptr<AbstractExpression>>& rhs_expressions) {
-  const auto expression_count = lhs_expressions.size();
-  Assert(expression_count <= rhs_expressions.size(), "Did not expect left-hand side to be longer.");
-
-  for (auto expression_idx = size_t{0}; expression_idx < expression_count; ++expression_idx) {
-    if (*lhs_expressions[expression_idx] != *rhs_expressions[expression_idx]) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
 }  // namespace
 
 namespace hyrise {
@@ -442,15 +428,39 @@ std::vector<std::shared_ptr<AbstractLQPNode>> lqp_find_leaves(const std::shared_
   return nodes;
 }
 
-template <typename ExpressionContainer>
-ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids) {
+ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node, const std::set<ColumnID>& column_ids) {
+  DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
+                  lqp_node.type == LQPNodeType::Mock,
+              "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
+  DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
+  const auto& output_expressions = lqp_node.output_expressions();
+  auto column_expressions = ExpressionUnorderedSet{column_ids.size()};
+
+  for (const auto& output_expression : output_expressions) {
+    const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
+    if (!column_expression) {
+      continue;
+    }
+
+    const auto original_column_id = column_expression->original_column_id;
+    if (column_ids.contains(original_column_id) && *column_expression->original_node.lock() == lqp_node) {
+      [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
+      DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
+    }
+  }
+
+  return column_expressions;
+}
+
+std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(const AbstractLQPNode& lqp_node,
+                                                                         const std::vector<ColumnID>& column_ids) {
   DebugAssert(lqp_node.type == LQPNodeType::StoredTable || lqp_node.type == LQPNodeType::StaticTable ||
                   lqp_node.type == LQPNodeType::Mock,
               "Did not expect other node types than StoredTableNode, StaticTableNode and MockNode.");
   DebugAssert(!lqp_node.left_input(), "Only valid for data source nodes");
 
   const auto& output_expressions = lqp_node.output_expressions();
-  auto column_expressions = ExpressionContainer(column_ids.size());
+  auto column_expressions = std::vector<std::shared_ptr<AbstractExpression>>(column_ids.size());
 
   for (const auto& output_expression : output_expressions) {
     const auto column_expression = dynamic_pointer_cast<LQPColumnExpression>(output_expression);
@@ -461,24 +471,14 @@ ExpressionContainer find_column_expressions(const AbstractLQPNode& lqp_node, con
     const auto original_column_id = column_expression->original_column_id;
     const auto it = std::find(column_ids.cbegin(), column_ids.cend(), original_column_id);
     if (it != column_ids.end() && *column_expression->original_node.lock() == lqp_node) {
-      if constexpr (std::is_same_v<ExpressionContainer, ExpressionUnorderedSet>) {
-        [[maybe_unused]] const auto [_, success] = column_expressions.emplace(column_expression);
-        DebugAssert(success, "Did not expect multiple column expressions for the same column id.");
-      } else {
-        const auto offset = it - column_ids.cbegin();
-        DebugAssert(!column_expressions[offset], "Did not expect multiple column expressions for the same column id.");
-        column_expressions[offset] = column_expression;
-      }
+      const auto offset = it - column_ids.cbegin();
+      DebugAssert(!column_expressions[offset], "Did not expect multiple column expressions for the same column id.");
+      column_expressions[offset] = column_expression;
     }
   }
 
   return column_expressions;
 }
-
-template ExpressionUnorderedSet find_column_expressions(const AbstractLQPNode& lqp_node,
-                                                        const std::vector<ColumnID>& column_ids);
-template std::vector<std::shared_ptr<AbstractExpression>> find_column_expressions(
-    const AbstractLQPNode& lqp_node, const std::vector<ColumnID>& column_ids);
 
 bool contains_matching_unique_column_combination(const UniqueColumnCombinations& unique_column_combinations,
                                                  const ExpressionUnorderedSet& expressions) {
@@ -694,21 +694,21 @@ InclusionDependencies find_matching_inclusion_dependencies(const InclusionDepend
 }
 
 bool contains_matching_order_dependency(const OrderDependencies& order_dependencies,
-                                        const std::vector<std::shared_ptr<AbstractExpression>>& expressions,
+                                        const std::vector<std::shared_ptr<AbstractExpression>>& ordering_expressions,
                                         const std::vector<std::shared_ptr<AbstractExpression>>& ordered_expressions) {
   DebugAssert(!order_dependencies.empty(), "Invalid input: Set of INDs should not be empty.");
-  DebugAssert(!expressions.empty(), "Invalid input: List of ordering expressions should not be empty.");
+  DebugAssert(!ordering_expressions.empty(), "Invalid input: List of ordering expressions should not be empty.");
   DebugAssert(!ordered_expressions.empty(), "Invalid input: List of ordered expressions should not be empty.");
 
   for (const auto& od : order_dependencies) {
-    // Continue if OD requires more expressions to guarantee sortedness than provided.
-    if (od.ordering_expressions.size() > expressions.size()) {
+    // Continue if OD requires more ordering expressions to guarantee sortedness than provided.
+    if (od.ordering_expressions.size() > ordering_expressions.size()) {
       continue;
     }
 
     // Continue if the OD's ordering expression are not the first of the provided expressions. It is totally fine if
-    // the OD requires fewer expressions than given.
-    if (!first_expressions_match(od.ordering_expressions, expressions)) {
+    // the OD requires fewer ordering expressions than given.
+    if (!first_expressions_match(od.ordering_expressions, ordering_expressions)) {
       continue;
     }
 

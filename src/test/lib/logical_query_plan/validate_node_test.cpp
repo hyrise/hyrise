@@ -74,7 +74,7 @@ TEST_F(ValidateNodeTest, ForwardInclusionDependencies) {
 
   const auto dummy_table = Table::create_dummy_table({{"a", DataType::Int, false}});
   const auto ind = InclusionDependency{{_a}, {ColumnID{0}}, dummy_table};
-  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, {ColumnID{0}}, nullptr, dummy_table};
+  const auto foreign_key_constraint = ForeignKeyConstraint{{ColumnID{0}}, dummy_table, {ColumnID{0}}, nullptr};
   _mock_node->set_foreign_key_constraints({foreign_key_constraint});
   EXPECT_EQ(_mock_node->inclusion_dependencies().size(), 1);
 

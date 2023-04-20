@@ -1,11 +1,5 @@
 #pragma once
 
-#include <memory>
-#include <optional>
-#include <string>
-
-#include <boost/variant.hpp>
-
 #include "abstract_lqp_node.hpp"
 #include "all_type_variant.hpp"
 
@@ -13,10 +7,6 @@ namespace hyrise {
 
 class LQPColumnExpression;
 class TableStatistics;
-
-// class TableKeyConstraints;
-// class TableOrderConstraints;
-// class ForeignKeyConstraints;
 
 /**
  * Node that represents a table that has no data backing it, but may provide

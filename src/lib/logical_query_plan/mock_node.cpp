@@ -13,7 +13,8 @@ bool contains_column(const std::vector<ColumnID>& column_ids, const ColumnID sea
   return std::find(column_ids.cbegin(), column_ids.cend(), search_column_id) != column_ids.cend();
 }
 
-bool contains_any_column(const std::vector<ColumnID>& column_ids, const std::vector<ColumnID>& search_column_ids) {
+template <typename ColumnIDs>
+bool contains_any_column(const std::vector<ColumnID>& column_ids, const ColumnIDs& search_column_ids) {
   return std::any_of(search_column_ids.cbegin(), search_column_ids.cend(),
                      [&](const auto column_id) { return contains_column(column_ids, column_id); });
 }
@@ -21,8 +22,6 @@ bool contains_any_column(const std::vector<ColumnID>& column_ids, const std::vec
 }  // namespace
 
 namespace hyrise {
-
-using ExpressionVector = std::vector<std::shared_ptr<AbstractExpression>>;
 
 MockNode::MockNode(const ColumnDefinitions& column_definitions, const std::optional<std::string>& init_name)
     : AbstractLQPNode(LQPNodeType::Mock), name(init_name), _column_definitions(column_definitions) {}
@@ -119,7 +118,7 @@ UniqueColumnCombinations MockNode::unique_column_combinations() const {
     }
 
     // Search for output expressions that represent the TableKeyConstraint's ColumnIDs.
-    const auto& column_expressions = find_column_expressions<ExpressionUnorderedSet>(*this, key_constraint_column_ids);
+    const auto& column_expressions = find_column_expressions(*this, key_constraint_column_ids);
     DebugAssert(column_expressions.size() == table_key_constraint.columns().size(),
                 "Unexpected count of column expressions.");
 
@@ -137,14 +136,15 @@ void MockNode::set_order_constraints(const TableOrderConstraints& order_constrai
 OrderDependencies MockNode::order_dependencies() const {
   auto order_dependencies = OrderDependencies{};
   for (const auto& order_constraint : _order_constraints) {
-    const auto& columns = order_constraint.columns();
+    const auto& ordering_columns = order_constraint.ordering_columns();
     const auto& ordered_columns = order_constraint.ordered_columns();
-    if (contains_any_column(_pruned_column_ids, columns) || contains_any_column(_pruned_column_ids, ordered_columns)) {
+    if (contains_any_column(_pruned_column_ids, ordering_columns) ||
+        contains_any_column(_pruned_column_ids, ordered_columns)) {
       continue;
     }
 
-    order_dependencies.emplace(find_column_expressions<ExpressionVector>(*this, columns),
-                               find_column_expressions<ExpressionVector>(*this, ordered_columns));
+    order_dependencies.emplace(find_column_expressions(*this, ordering_columns),
+                               find_column_expressions(*this, ordered_columns));
   }
   return order_dependencies;
 }
@@ -157,13 +157,13 @@ InclusionDependencies MockNode::inclusion_dependencies() const {
   auto inclusion_dependencies = InclusionDependencies{};
   for (const auto& foreign_key_constraint : _foreign_key_constraints) {
     const auto& table = foreign_key_constraint.foreign_key_table();
-    const auto& columns = foreign_key_constraint.columns();
+    const auto& columns = foreign_key_constraint.primary_key_columns();
     const auto& included_columns = foreign_key_constraint.foreign_key_columns();
     if (contains_any_column(_pruned_column_ids, columns)) {
       continue;
     }
 
-    inclusion_dependencies.emplace(find_column_expressions<ExpressionVector>(*this, columns), included_columns, table);
+    inclusion_dependencies.emplace(find_column_expressions(*this, columns), included_columns, table);
   }
   return inclusion_dependencies;
 }

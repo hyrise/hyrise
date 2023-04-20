@@ -48,6 +48,8 @@ set(
     dependency_discovery/candidate_strategy/join_to_semi_join_candidate_rule.hpp
     dependency_discovery/validation_strategy/abstract_dependency_validation_rule.cpp
     dependency_discovery/validation_strategy/abstract_dependency_validation_rule.hpp
+    dependency_discovery/validation_strategy/fd_validation_rule.cpp
+    dependency_discovery/validation_strategy/fd_validation_rule.hpp
     dependency_discovery/validation_strategy/ind_validation_rule.cpp
     dependency_discovery/validation_strategy/ind_validation_rule.hpp
     dependency_discovery/validation_strategy/od_validation_rule.cpp
