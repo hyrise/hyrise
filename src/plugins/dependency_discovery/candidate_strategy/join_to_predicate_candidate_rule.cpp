@@ -72,9 +72,20 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
       return LQPVisitation::DoNotVisitInputs;
     }
 
+    // Joins also filter out values in most cases.
+    if (node->type == LQPNodeType::Join) {
+      const auto& join_node = static_cast<const JoinNode&>(*node);
+      if (!is_semi_or_anti_join(join_node.join_mode) || !expression_evaluable_on_lqp(join_lqp_column_expression, *node->right_input())) {
+        ++predicate_count;
+      }
+
+      return LQPVisitation::VisitInputs;
+    }
+
     if (node->type != LQPNodeType::Predicate) {
       return LQPVisitation::VisitInputs;
     }
+
     ++predicate_count;
 
     // When we find a predicate node, we check whether the searched column is filtered in this predicate. If so, it is a
