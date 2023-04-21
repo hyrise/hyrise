@@ -90,6 +90,22 @@
       `void function(const size_t /* count */) { ... }`). If the context does not provide a good name (such as
       `/* count */`), use `/* unused */`.
 
+* Prefer declaring (member) variables of the same type in a new line each ([isolated declaration](https://clang.llvm.org/extra/clang-tidy/checks/readability/isolate-declaration.html)):
+  ```c++
+  class Foo {
+    ...
+    int a;
+    int b;
+  };
+  ```
+  However, certain test classes have many member variables of the same type, e.g., `std::shared_ptr<LQPColumnExpression>` for LQP node tests. Declarations with more than one variable can be used in such test classes if the number of variables is high (see below). Please use common sense to decide on which format you use.
+  ```c++
+  class FooTest : public BaseTest {
+    ...
+    std::shared_ptr<LQPColumnExpression> a, b, c, d, e, f, g, h, i, j, k;
+  };
+  ```
+
 * Maintain correct orthography and grammar. Comments should start with a capital letter, sentences should be finished
   with a full stop.
   * Class names within comments are written in PascalCase - e.g., "As the input may be a ReferenceSegment, a valid RowID
