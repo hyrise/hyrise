@@ -9,7 +9,7 @@
 
 namespace hyrise {
 
-// TODO: Use extra object called SSDHandle to avoid page lockups
+// TODO: Use extra object called SSDHandle to avoid page directory lockups
 // TODO: Use flag for O_DIRECT
 /**
   * TODO
@@ -23,8 +23,8 @@ class SSDRegion : public Noncopyable {
   SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes = 1UL << 25);
   ~SSDRegion();
 
-  void write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source);
-  void read_page(const PageID page_id, const PageSizeType size_type, std::byte* destination);
+  void write_page(std::shared_ptr<Frame> frame);
+  void read_page(std::shared_ptr<Frame> frame);
 
   void allocate(const PageID page_id, const PageSizeType size_type);
   std::optional<PageSizeType> get_size_type(const PageID page_id);

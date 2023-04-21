@@ -442,10 +442,11 @@ set(
     storage/create_iterable_from_reference_segment.ipp
     storage/create_iterable_from_segment.hpp
     storage/create_iterable_from_segment.ipp
-    storage/buffer/buffer_managed_ptr.hpp
+    storage/buffer/buffer_ptr.hpp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
     storage/buffer/buffer_pool_allocator.hpp
+    storage/buffer/frame.cpp
     storage/buffer/frame.hpp
     storage/buffer/pin_guard.hpp
     storage/buffer/env.hpp
@@ -453,6 +454,7 @@ set(
     storage/buffer/migration_policy.hpp
     storage/buffer/ssd_region.cpp
     storage/buffer/ssd_region.hpp
+    storage/buffer/types.cpp
     storage/buffer/types.hpp
     storage/buffer/volatile_region.cpp
     storage/buffer/volatile_region.hpp

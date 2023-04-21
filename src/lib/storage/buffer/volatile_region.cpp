@@ -12,6 +12,7 @@ namespace hyrise {
 VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t total_bytes,
                                const size_t numa_memory_node)
     : _frames(total_bytes / bytes_for_size_type(size_type)),
+      _free_slots(_frames.size()),
       _size_type(size_type),
       _page_type(page_type),
       _numa_memory_node(numa_memory_node),
@@ -19,12 +20,8 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page
   if (_page_type == PageType::Numa && _numa_memory_node == NO_NUMA_MEMORY_NODE) {
     Fail("Cannot allocate NUMA memory without specifying a NUMA node");
   }
-
+  _free_slots.set();
   map_memory();
-  assign_memory_to_frames();
-  create_free_list();
-
-  _free_list = &_frames[0];
 }
 
 VolatileRegion::~VolatileRegion() {
@@ -37,14 +34,7 @@ void VolatileRegion::clear() {
   std::lock_guard<std::mutex> lock(_mutex);
   unmap_memory();
   map_memory();
-  create_free_list();
-  _free_list = &_frames[0];
-}
-
-void VolatileRegion::create_free_list() {
-  for (auto frame_id = size_t{0}; frame_id < _frames.size() - 1; frame_id++) {
-    _frames[frame_id].next_free_frame = &_frames[frame_id + 1];
-  }
+  _free_slots.set();
 }
 
 void VolatileRegion::unmap_memory() {
@@ -55,7 +45,7 @@ void VolatileRegion::unmap_memory() {
 }
 
 void VolatileRegion::map_memory() {
-  Assert(_total_bytes != 0, "Volatile Region cannot be empty");
+  Assert(_total_bytes != 0, "Volatile Region cannot be empty. Please increase the size of the region.");
 #ifdef __APPLE__
   const int flags = MAP_PRIVATE | MAP_ANON | MAP_NORESERVE;
 #elif __linux__
@@ -76,15 +66,7 @@ void VolatileRegion::map_memory() {
   }
 }
 
-void VolatileRegion::assign_memory_to_frames() {
-  for (auto frame_id = size_t{0}; frame_id < _frames.size(); frame_id++) {
-    _frames[frame_id].size_type = _size_type;
-    _frames[frame_id].page_type = PageType::Dram;
-    _frames[frame_id].data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
-  }
-}
-
-void VolatileRegion::free(Frame* frame) {
+void VolatileRegion::free(std::shared_ptr<Frame> frame) {
   deallocate(frame);
   // https://bugs.chromium.org/p/chromium/issues/detail?id=823915
 #ifdef __APPLE__
@@ -107,32 +89,53 @@ void VolatileRegion::to_numa(std::byte* address) {
 #endif
 }
 
-Frame* VolatileRegion::allocate() {
+void VolatileRegion::allocate(std::shared_ptr<Frame> frame) {
   std::lock_guard<std::mutex> lock(_mutex);
-  auto frame = _free_list;
-  if (frame) {
-    _free_list = frame->next_free_frame;
-    frame->next_free_frame = nullptr;
-  }
-  return frame;
+  DebugAssert(_free_slots.any(), "No free slots available in region.");
+
+  auto frame_id = _free_slots.find_first();
+  _free_slots.reset(frame_id);
+
+  auto data = _mapped_memory + frame_id * bytes_for_size_type(_size_type);
+  frame->data = data;
+
+  _frames[frame_id] = frame;
 }
 
-void VolatileRegion::deallocate(Frame* frame) {
-  std::lock_guard<std::mutex> lock(_mutex);
-  frame->next_free_frame = _free_list;
-  _free_list = frame;
+void VolatileRegion::move(std::shared_ptr<Frame> from, std::shared_ptr<Frame> to) {
+  DebugAssert(from->data >= _mapped_memory && from->data < _mapped_memory + _total_bytes,
+              "Frame does not belong to this region.");
+
+  const auto offset = reinterpret_cast<const std::byte*>(from->data) - _mapped_memory;
+  const auto frame_id = offset / bytes_for_size_type(_size_type);
+
+  to->data = from->data;
+  from->data = nullptr;
+  _frames[frame_id] = to;
 }
 
-Frame* VolatileRegion::unswizzle(const void* ptr) {
+void VolatileRegion::deallocate(std::shared_ptr<Frame> frame) {
+  DebugAssert(frame->page_type == _page_type, "Frame does not belong to this region.");
+  DebugAssert(frame->size_type == _size_type, "Frame does not belong to this region.");
+  DebugAssert(frame->data >= _mapped_memory && frame->data < _mapped_memory + _total_bytes,
+              "Frame does not belong to this region.");
+
+  // Assert(frame.use_count() == 1, "Cannot deallocate frame with active references.");
+
+  std::lock_guard<std::mutex> lock(_mutex);
+  const auto offset = reinterpret_cast<const std::byte*>(frame->data) - _mapped_memory;
+  const auto frame_id = offset / bytes_for_size_type(_size_type);
+  _free_slots.set(frame_id);
+}
+
+std::shared_ptr<Frame> VolatileRegion::unswizzle(const void* ptr) {
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return nullptr;
   }
-  // TODO: Check if active or not
-
   // Find the offset in the mapped region of the ptr and find the matching frame
   const auto offset = reinterpret_cast<const std::byte*>(ptr) - _mapped_memory;
   const auto frame_id = offset / bytes_for_size_type(_size_type);
-  return &_frames[frame_id];
+  return _frames[frame_id].lock();
 }
 
 size_t VolatileRegion::capacity() const {

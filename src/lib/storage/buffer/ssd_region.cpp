@@ -64,33 +64,60 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
   return fd;
 }
 
-void SSDRegion::write_page(const PageID page_id, const PageSizeType size_type, const std::byte* source) {
-  const auto num_bytes = bytes_for_size_type(size_type);
+void SSDRegion::write_page(std::shared_ptr<Frame> frame) {
+  const auto num_bytes = bytes_for_size_type(frame->size_type);
   off_t page_pos;
   {
     std::lock_guard<std::mutex> lock(_page_directory_mutex);
-    if (page_id < _page_directory.size()) {
+    if (frame->page_id < _page_directory.size()) {
       page_pos = _end_position;
       _end_position += num_bytes;
-      _page_directory[page_id] = std::make_pair(page_pos, size_type);
+      _page_directory[frame->page_id] = std::make_pair(page_pos, frame->size_type);
     } else {
-      _page_directory.resize(page_id + 1);  // TODO: Do that in constructor
-      page_pos = _page_directory[page_id].first;
+      _page_directory.resize(frame->page_id + 1);  // TODO: Do that in constructor
+      page_pos = _page_directory[frame->page_id].first;
     }
   }
-  DebugAssert(reinterpret_cast<const std::uintptr_t>(source) % PAGE_ALIGNMENT == 0,
+  DebugAssert(reinterpret_cast<const std::uintptr_t>(frame->data) % PAGE_ALIGNMENT == 0,
               "Destination is not properly aligned to 512");
-  DebugAssert(bytes_for_size_type(size_type) >= PAGE_ALIGNMENT,
+  DebugAssert(bytes_for_size_type(frame->size_type) >= PAGE_ALIGNMENT,
               "SizeType needs to be larger than 512 for optimal SSD reads and writes");
 
   // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
   // TODO: Use multiple?
-  const auto result = pwrite(_fd, source, num_bytes, page_pos);
+  const auto result = pwrite(_fd, frame->data, num_bytes, page_pos);
   if (result < 0) {
     const auto error = errno;
     Fail("Error while writing to SSDRegion: " + strerror(error));
   }
   // TODO Needs flush
+}
+
+void SSDRegion::read_page(std::shared_ptr<Frame> frame) {
+  size_t num_bytes;
+  size_t page_pos;
+  {
+    std::lock_guard<std::mutex> lock(_page_directory_mutex);
+
+    if (frame->page_id >= _page_directory.size()) {
+      Fail("PageId cannot be found in page directory");
+    }
+
+    num_bytes = bytes_for_size_type(frame->size_type);
+    DebugAssert(frame->size_type == _page_directory[frame->page_id].second, "Should have the same size type");
+    page_pos = _page_directory[frame->page_id].first;
+  }
+  DebugAssert(reinterpret_cast<std::uintptr_t>(frame->data) % PAGE_ALIGNMENT == 0,
+              "Destination is not properly aligned to 512");
+  DebugAssert(bytes_for_size_type(frame->size_type) >= PAGE_ALIGNMENT,
+              "SizeType needs to be larger than 512 for optimal SSD reads and writes");
+
+  // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
+  const auto result = pread(_fd, frame->data, num_bytes, page_pos);
+  if (result < 0) {
+    const auto error = errno;
+    Fail("Error while reading from SSDRegion: " + strerror(error));
+  }
 }
 
 void SSDRegion::allocate(const PageID page_id, const PageSizeType size_type) {
@@ -111,33 +138,6 @@ std::optional<PageSizeType> SSDRegion::get_size_type(const PageID page_id) {
     return _page_directory[page_id].second;
   }
   return std::nullopt;
-}
-
-void SSDRegion::read_page(const PageID page_id, const PageSizeType size_type, std::byte* destination) {
-  size_t num_bytes;
-  size_t page_pos;
-  {
-    std::lock_guard<std::mutex> lock(_page_directory_mutex);
-
-    if (page_id >= _page_directory.size()) {
-      Fail("PageId cannot be found in page directory");
-    }
-
-    num_bytes = bytes_for_size_type(size_type);
-    DebugAssert(size_type == _page_directory[page_id].second, "Should have the same size type");
-    page_pos = _page_directory[page_id].first;
-  }
-  DebugAssert(reinterpret_cast<std::uintptr_t>(destination) % PAGE_ALIGNMENT == 0,
-              "Destination is not properly aligned to 512");
-  DebugAssert(bytes_for_size_type(size_type) >= PAGE_ALIGNMENT,
-              "SizeType needs to be larger than 512 for optimal SSD reads and writes");
-
-  // Using reinterpret_cast is necessary here. Even the C++ StdLib does it in their examples.
-  const auto result = pread(_fd, destination, num_bytes, page_pos);
-  if (result < 0) {
-    const auto error = errno;
-    Fail("Error while reading from SSDRegion: " + strerror(error));
-  }
 }
 
 std::filesystem::path SSDRegion::get_file_name() {

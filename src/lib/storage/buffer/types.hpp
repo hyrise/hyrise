@@ -74,33 +74,39 @@ struct add_reference<const void> {
 };
 
 class Frame;
-class SharedFrame;
 
-// Eviction Queue
+// Item for the Eviction Queue
 struct EvictionItem {
-  Frame* frame;
+  std::weak_ptr<Frame> frame;
+
+  // Insert timestamp for frame into the queue. Is compared with eviction_timestamp of frame.
   uint64_t timestamp;
+
+  bool can_evict(std::shared_ptr<Frame>& frame) const;
 };
 
-using PageTable = boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>>;
+// using PageTable = boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>>;
 
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
+// The page type is used to determine the memory region the page is allocated on
 enum class PageType { Invalid, Dram, Numa };
 
-// size_t numa_memory_size(const size_t memory_node) {
-// #if HYRISE_NUMA_SUPPORT
-//   return numa_node_size(memory_node, NULL);
-// #else
-//   Fail("NUMA support is not enabled");
-// #endif
-// }
+// Hints the buffer manager about the access intent of the caller. AccessIntent.Write is usually used during allocations for example.
+enum class AccessIntent { Read, Write };
 
 enum BufferManagerMode {
-  DramNumaEmulationSSD,  // TODO Use two volatile regions (DRAM and DRAM for emulation purposes) and SSD
-  DramSSD,               // Use one volatile region (DRAM) and SSD
-  DramNumaSSD,           // TODO Use two volatile regions, one with DRAM and one NUMA, and SSD
-  NumaSSD                // TODO Use one volatile region (NUMA) and SSD
+  // Use two volatile regions (DRAM and DRAM for NUMA emulation purposes) and SSD
+  DramNumaEmulationSSD,
+
+  // Use one volatile region (DRAM) and SSD
+  DramSSD,
+
+  // Use two volatile regions, one with DRAM and one NUMA, and SSD
+  DramNumaSSD,
+
+  // Use one volatile region (NUMA) and SSD
+  NumaSSD
 };
 
 constexpr PageType page_type_for_dram_buffer_pools(const BufferManagerMode mode) {

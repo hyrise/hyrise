@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/dynamic_bitset.hpp>
 #include <memory>
 #include <mutex>
 #include "frame.hpp"
@@ -22,11 +23,12 @@ class VolatileRegion : public Noncopyable {
                  const size_t memory_numa_node = NO_NUMA_MEMORY_NODE);
   ~VolatileRegion();
 
-  Frame* unswizzle(const void* ptr);
+  std::shared_ptr<Frame> unswizzle(const void* ptr);
 
-  Frame* allocate();
-  void deallocate(Frame* frame);
-  void free(Frame* frame);
+  void allocate(std::shared_ptr<Frame> frame);
+  void move(std::shared_ptr<Frame> from, std::shared_ptr<Frame> to);
+  void deallocate(std::shared_ptr<Frame> frame);
+  void free(std::shared_ptr<Frame> frame);
 
   // Total number of bytes in the region
   size_t capacity() const;
@@ -35,8 +37,6 @@ class VolatileRegion : public Noncopyable {
   void clear();
 
  private:
-  void create_free_list();
-  void assign_memory_to_frames();
   void unmap_memory();
   void map_memory();
 
@@ -49,9 +49,8 @@ class VolatileRegion : public Noncopyable {
 
   std::byte* _mapped_memory;
 
-  Frame* _free_list;
-
-  std::vector<Frame> _frames;
+  std::vector<std::weak_ptr<Frame>> _frames;
+  boost::dynamic_bitset<> _free_slots;
 
   std::mutex _mutex;
 };

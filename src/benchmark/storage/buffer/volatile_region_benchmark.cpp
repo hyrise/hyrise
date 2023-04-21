@@ -17,7 +17,8 @@ static void BM_VolatileRegionAllocator(benchmark::State& state) {
 
   for (auto _ : state) {
     for (auto i = size_t{0}; i < num_pages; i++) {
-      auto frame = volatile_region->allocate();
+      auto frame = std::make_shared<Frame>(PageSizeType::KiB32, PageType::Dram);
+      volatile_region->allocate(frame);
       benchmark::DoNotOptimize(frame);
     }
     state.PauseTiming();

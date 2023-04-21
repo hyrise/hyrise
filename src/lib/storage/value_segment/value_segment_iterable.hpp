@@ -23,19 +23,23 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     if (_segment.is_nullable()) {
       const auto values = _segment.values();
       const auto null_values = _segment.null_values();
+      auto value_pin_guard = FramePinGuard{};
+      auto null_value_pin_guard = FramePinGuard{};
 
-      const auto values_pin_guard = PinGuard{values, false};
-      const auto null_pin_guard = PinGuard{null_values, false};
-
-      auto begin = Iterator{values.cbegin(), values.cbegin(), null_values.cbegin()};
-      auto end = Iterator{values.cbegin(), values.cend(), null_values.cend()};
+      auto begin =
+          Iterator{values.cbegin().get_ptr().pin(value_pin_guard), values.cbegin().get_ptr().pin(value_pin_guard),
+                   null_values.cbegin().get_ptr().pin(null_value_pin_guard)};
+      auto end = Iterator{values.cbegin().get_ptr().pin(value_pin_guard), values.cend().get_ptr().pin(value_pin_guard),
+                          null_values.cend().get_ptr().pin(null_value_pin_guard)};
       functor(begin, end);
     } else {
       const auto values = _segment.values();
-      const auto values_pin_guard = PinGuard{values, false};
+      auto value_pin_guard = FramePinGuard{};
 
-      auto begin = NonNullIterator{values.cbegin(), values.cbegin()};
-      auto end = NonNullIterator{values.cbegin(), values.cend()};
+      auto begin = NonNullIterator{values.cbegin().get_ptr().pin(value_pin_guard),
+                                   values.cbegin().get_ptr().pin(value_pin_guard)};
+      auto end =
+          NonNullIterator{values.cbegin().get_ptr().pin(value_pin_guard), values.cend().get_ptr().pin(value_pin_guard)};
       functor(begin, end);
     }
   }
@@ -74,12 +78,11 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueType = T;
     using IterableType = ValueSegmentIterable<T>;
     using ValueIterator = typename pmr_vector<T>::const_iterator;
-    using RawValueIterator = typename ValueIterator::pointer;
+    using RawValueIterator = typename ValueIterator::pointer::pointer;
 
    public:
-    explicit NonNullIterator(ValueIterator begin_value_it, ValueIterator value_it)
-        : _value_it{value_it.get_ptr().operator->()},
-          _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
+    explicit NonNullIterator(RawValueIterator begin_value_it, RawValueIterator value_it)
+        : _value_it(value_it), _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:
     friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
@@ -123,13 +126,13 @@ class ValueSegmentIterable : public PointAccessibleSegmentIterable<ValueSegmentI
     using ValueIterator = typename pmr_vector<T>::const_iterator;
     using NullValueIterator = pmr_vector<bool>::const_iterator;
 
-    using RawValueIterator = typename ValueIterator::pointer;
-    using RawNullValueIterator = typename NullValueIterator::pointer;
+    using RawValueIterator = typename ValueIterator::pointer::pointer;
+    using RawNullValueIterator = typename NullValueIterator::pointer::pointer;
 
    public:
-    explicit Iterator(ValueIterator begin_value_it, ValueIterator value_it, NullValueIterator null_value_it)
-        : _value_it(value_it.get_ptr().operator->()),
-          _null_value_it{std::move(null_value_it).get_ptr().operator->()},
+    explicit Iterator(RawValueIterator begin_value_it, RawValueIterator value_it, RawNullValueIterator null_value_it)
+        : _value_it(value_it),
+          _null_value_it{std::move(null_value_it)},
           _chunk_offset{static_cast<ChunkOffset>(std::distance(begin_value_it, value_it))} {}
 
    private:

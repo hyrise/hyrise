@@ -1,5 +1,6 @@
 #include "sort.hpp"
 
+#include "storage/buffer/pin_guard.hpp"
 #include "storage/segment_iterate.hpp"
 #include "utils/timer.hpp"
 
@@ -24,7 +25,6 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
   // After we created the output table and initialized the column structure, we can start adding values. Because the
   // values are not sorted by input chunks anymore, we can't process them chunk by chunk. Instead the values are copied
   // column by column for each output row.
-
   const auto output_chunk_count = div_ceil(pos_list.size(), output_chunk_size);
   Assert(pos_list.size() == unsorted_table->row_count(), "Mismatching size of input table and PosList");
 
@@ -44,8 +44,11 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
       auto chunk_it = output_segments_by_chunk.begin();
       auto current_segment_size = 0u;
 
-      auto value_segment_value_vector = pmr_vector<ColumnDataType>();
-      auto value_segment_null_vector = pmr_vector<bool>();
+      auto allocator = PolymorphicAllocator<ColumnDataType>{};
+      auto pin_guard = AllocatorPinGuard{allocator};
+
+      auto value_segment_value_vector = pmr_vector<ColumnDataType>(allocator);
+      auto value_segment_null_vector = pmr_vector<bool>(allocator);
 
       {
         const auto next_chunk_size = std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count));
@@ -62,8 +65,11 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
       }
 
+      auto pos_list_pin_guard = FramePinGuard{};
+      auto pos_list_ptr = pos_list.begin().get_ptr().pin(pos_list_pin_guard, true);
+
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
-        const auto [chunk_id, chunk_offset] = pos_list[row_index];
+        const auto [chunk_id, chunk_offset] = pos_list_ptr[row_index];
 
         auto& accessor = accessor_by_chunk_id[chunk_id];
         const auto typed_value = accessor->access(chunk_offset);
@@ -88,8 +94,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
           }
 
           chunk_it->push_back(value_segment);
-          value_segment_value_vector = pmr_vector<ColumnDataType>();
-          value_segment_null_vector = pmr_vector<bool>();
+          value_segment_value_vector = pmr_vector<ColumnDataType>(allocator);
+          value_segment_null_vector = pmr_vector<bool>(allocator);
 
           const auto next_chunk_size =
               std::min(static_cast<size_t>(output_chunk_size), static_cast<size_t>(row_count - row_index));
@@ -137,6 +143,8 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   // We have decided against duplicating MVCC data in https://github.com/hyrise/hyrise/issues/408
   auto output_table = std::make_shared<Table>(unsorted_table->column_definitions(), TableType::References);
 
+  auto pos_list_pin_guard = FramePinGuard{input_pos_list};
+
   const auto resolve_indirection = unsorted_table->type() == TableType::References;
   const auto column_count = output_table->column_count();
 
@@ -147,9 +155,12 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
   auto output_segments_by_chunk =
       std::vector<Segments>(output_chunk_count, Segments(static_cast<typename Segments::size_type>(column_count)));
 
+  auto allocator = PolymorphicAllocator<RowIDPosList>{};
+  auto pin_guard = AllocatorPinGuard{allocator};
+
   if (!resolve_indirection && input_pos_list.size() <= output_chunk_size) {
     // Shortcut: No need to copy RowIDs if input_pos_list is small enough and we do not need to resolve the indirection.
-    const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list));
+    const auto output_pos_list = std::make_shared<RowIDPosList>(std::move(input_pos_list), allocator);
     auto& output_segments = output_segments_by_chunk.at(0);
     for (auto column_id = ColumnID{0u}; column_id < column_count; ++column_id) {
       output_segments[column_id] = std::make_shared<ReferenceSegment>(unsorted_table, column_id, output_pos_list);
@@ -161,7 +172,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
       // slightly more expensive to generate and slightly less efficient for following operators, we assume that the
       // lion's share of the work has been done before the Sort operator is executed and that the relative cost of this
       // is acceptable. In the future, this could be improved.
-      auto output_pos_list = std::make_shared<RowIDPosList>();
+      auto output_pos_list = std::make_shared<RowIDPosList>(allocator);
       output_pos_list->reserve(output_chunk_size);
 
       // Collect all input segments for the current column
@@ -184,7 +195,7 @@ std::shared_ptr<Table> write_reference_output_table(const std::shared_ptr<const 
             std::make_shared<ReferenceSegment>(referenced_table, referenced_column_id, output_pos_list);
         ++output_chunk_id;
 
-        output_pos_list = std::make_shared<RowIDPosList>();
+        output_pos_list = std::make_shared<RowIDPosList>(allocator);
         if (output_chunk_id < output_chunk_count) {
           output_pos_list->reserve(output_chunk_size);
         }
@@ -412,7 +423,10 @@ class Sort::SortImpl {
       _row_id_value_vector.insert(_row_id_value_vector.begin(), _null_value_rows.begin(), _null_value_rows.end());
     }
 
-    RowIDPosList pos_list{};
+    auto allocator = PolymorphicAllocator<RowID>{};
+    auto pin_guard = AllocatorPinGuard{allocator};
+
+    RowIDPosList pos_list{allocator};
     pos_list.reserve(_row_id_value_vector.size());
     for (const auto& [row_id, _] : _row_id_value_vector) {
       pos_list.emplace_back(row_id);
@@ -437,6 +451,7 @@ class Sort::SortImpl {
 
         auto abstract_segment = chunk->get_segment(_column_id);
 
+        // TODO: Pin segment
         segment_iterate<SortColumnType>(*abstract_segment, [&](const auto& position) {
           if (position.is_null()) {
             _null_value_rows.emplace_back(RowID{chunk_id, position.chunk_offset()}, SortColumnType{});
@@ -450,6 +465,8 @@ class Sort::SortImpl {
 
   // When there was a preceding sorting run, we materialize by retaining the order of the values in the passed PosList.
   void _materialize_column_from_pos_list(const RowIDPosList& pos_list) {
+    auto pin_guard = FramePinGuard{pos_list};
+
     const auto input_chunk_count = _table_in->chunk_count();
     auto accessor_by_chunk_id =
         std::vector<std::unique_ptr<AbstractSegmentAccessor<SortColumnType>>>(input_chunk_count);

@@ -3,31 +3,34 @@
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/move/utility.hpp>
-#include "storage/buffer/buffer_managed_ptr.hpp"
 #include "storage/buffer/buffer_manager.hpp"
+#include "storage/buffer/buffer_ptr.hpp"
 #include "utils/assert.hpp"
 
 namespace hyrise {
 
+/**
+ * The BufferPoolAllocatorObserver is used to track the allocation and deallocation of pages. A shared_ptr to the object can be registered at a 
+ * BufferPoolAllocator using the register_observer method. Check AllocatorPinGuard for an example.
+*/
 class BufferPoolAllocatorObserver {
  public:
-  virtual void on_allocate(const PageID page_id, const PageSizeType size_type) = 0;
-  virtual void on_deallocate(const PageID page_id) = 0;
+  virtual void on_allocate(std::shared_ptr<Frame> frame) = 0;
+  virtual void on_deallocate(std::shared_ptr<Frame> frame) = 0;
 };
 
-// Interface is taken from here: https://www.modernescpp.com/index.php/memory-management-with-std-allocator
-// https://en.cppreference.com/w/cpp/named_req/Allocator
-// https://theboostcpplibraries.com/boost.pool
+/**
+ * The BufferPoolAllocator is a custom, polymorphic allocator that uses the BufferManager to allocate and deallocate pages.
+*/
 template <class T>
 class BufferPoolAllocator {
  public:
   using value_type = T;
-  using pointer = BufferManagedPtr<T>;
-  using const_pointer = BufferManagedPtr<const T>;
-  using void_pointer = BufferManagedPtr<void>;
+  using pointer = BufferPtr<T>;
+  using const_pointer = BufferPtr<const T>;
+  using void_pointer = BufferPtr<void>;
   using difference_type = typename pointer::difference_type;
 
-  // TODO: Introduce copy constructor and rebind to make it polymorphic, https://stackoverflow.com/questions/59621070/how-to-rebind-a-custom-allocator
   BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {}
 
   BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
@@ -60,17 +63,14 @@ class BufferPoolAllocator {
   [[nodiscard]] pointer allocate(std::size_t n) {
     auto ptr = static_cast<pointer>(_buffer_manager->allocate(sizeof(value_type) * n, alignof(T)));
     if (auto observer = _observer.lock()) {
-      const auto page_id = ptr.get_page_id();
-      const auto size_type = ptr.get_size_type();
-      observer->on_allocate(page_id, size_type);
+      observer->on_allocate(ptr.get_frame());
     }
     return ptr;
   }
 
   void deallocate(pointer const ptr, std::size_t n) {
     if (auto observer = _observer.lock()) {
-      const auto page_id = ptr.get_page_id();
-      observer->on_deallocate(page_id);
+      observer->on_deallocate(ptr.get_frame());
     }
     _buffer_manager->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }
@@ -89,16 +89,19 @@ class BufferPoolAllocator {
   }
 
   template <typename U, class Args>
-  void construct(const BufferManagedPtr<U>& ptr, BOOST_FWD_REF(Args) args) {
+  void construct(const BufferPtr<U>& ptr, BOOST_FWD_REF(Args) args) {
     ::new (static_cast<void*>(ptr.operator->())) U(boost::forward<Args>(args));
   }
 
   template <class U>
-  void destroy(const BufferManagedPtr<U>& ptr) {
+  void destroy(const BufferPtr<U>& ptr) {
     ptr->~U();
   }
 
   void register_observer(std::shared_ptr<BufferPoolAllocatorObserver> observer) {
+    if (!_observer.expired()) {
+      Fail("An observer is already registered");
+    }
     _observer = observer;
   }
 
@@ -108,7 +111,6 @@ class BufferPoolAllocator {
 
  private:
   std::weak_ptr<BufferPoolAllocatorObserver> _observer;
-  // std::mutex _page_ids_mutex;
   BufferManager* _buffer_manager;
 };
 }  // namespace hyrise

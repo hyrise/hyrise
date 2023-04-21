@@ -35,10 +35,8 @@ std::unique_ptr<BaseCompressedVector> FixedWidthIntegerCompressor::_compress_usi
 template <typename UnsignedIntType>
 std::unique_ptr<BaseCompressedVector> FixedWidthIntegerCompressor::_compress_using_uint_type(
     const PolymorphicAllocator<size_t>& alloc, const pmr_vector<uint32_t>& vector) {
-  auto vector_pin_guard = PinGuard{vector, false};
   auto data = pmr_vector<UnsignedIntType>(alloc);
   data.reserve(vector.size());
-  auto data_pin_guard = PinGuard{data, true};
 
   for (auto value : vector) {
     data.push_back(static_cast<UnsignedIntType>(value));

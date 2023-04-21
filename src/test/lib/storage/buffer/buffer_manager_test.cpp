@@ -81,7 +81,7 @@ TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
   auto buffer_manager = create_buffer_manager(bytes_for_size_type(PageSizeType::KiB256));
 
   auto ptr = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256));
-  EXPECT_EQ(ptr, BufferManagedPtr<void>(PageID{0}, 0, PageSizeType::KiB256));
+  EXPECT_EQ(ptr, BufferPtr<void>(PageID{0}, 0, PageSizeType::KiB256));
 
   // TODO: Test Sizes capcaity etc
 
@@ -91,7 +91,7 @@ TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
   EXPECT_EQ(ptr.operator->(), nullptr);
 
   auto ptr2 = buffer_manager.allocate(1024);
-  EXPECT_EQ(ptr2, BufferManagedPtr<void>(PageID{1}, 0, PageSizeType::KiB256));
+  EXPECT_EQ(ptr2, BufferPtr<void>(PageID{1}, 0, PageSizeType::KiB256));
 
   buffer_manager.deallocate(ptr2, 1024);
   EXPECT_NE(ptr2.operator->(), nullptr);
@@ -103,22 +103,22 @@ TEST_F(BufferManagerTest, TestAllocateDifferentPageSizes) {
   auto buffer_manager = create_buffer_manager(5 * bytes_for_size_type(PageSizeType::KiB256));
 
   auto ptr8 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB8));
-  EXPECT_EQ(ptr8, BufferManagedPtr<void>(PageID{0}, 0, PageSizeType::KiB8));
+  EXPECT_EQ(ptr8, BufferPtr<void>(PageID{0}, 0, PageSizeType::KiB8));
 
   auto ptr16 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB16));
-  EXPECT_EQ(ptr16, BufferManagedPtr<void>(PageID{1}, 0, PageSizeType::KiB16));
+  EXPECT_EQ(ptr16, BufferPtr<void>(PageID{1}, 0, PageSizeType::KiB16));
 
   auto ptr32 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB32));
-  EXPECT_EQ(ptr32, BufferManagedPtr<void>(PageID{2}, 0, PageSizeType::KiB32));
+  EXPECT_EQ(ptr32, BufferPtr<void>(PageID{2}, 0, PageSizeType::KiB32));
 
   auto ptr64 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB64));
-  EXPECT_EQ(ptr64, BufferManagedPtr<void>(PageID{3}, 0, PageSizeType::KiB64));
+  EXPECT_EQ(ptr64, BufferPtr<void>(PageID{3}, 0, PageSizeType::KiB64));
 
   auto ptr128 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB128));
-  EXPECT_EQ(ptr128, BufferManagedPtr<void>(PageID{4}, 0, PageSizeType::KiB128));
+  EXPECT_EQ(ptr128, BufferPtr<void>(PageID{4}, 0, PageSizeType::KiB128));
 
   auto ptr256 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256));
-  EXPECT_EQ(ptr256, BufferManagedPtr<void>(PageID{5}, 0, PageSizeType::KiB256));
+  EXPECT_EQ(ptr256, BufferPtr<void>(PageID{5}, 0, PageSizeType::KiB256));
 
   EXPECT_ANY_THROW(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256) + 5));
 }

@@ -13,7 +13,10 @@
 namespace hyrise {
 
 template <typename PointedType>
-class BufferManagedPtr;
+class BufferPtr;
+
+// TODO: Calculate hotness of a values as the inverse of the size so that smaller pages are likely to be evicted
+// TODO: Do not create persistent page directly, but only when it is needed
 
 /**
  * TODO
@@ -21,65 +24,67 @@ class BufferManagedPtr;
 class BufferManager : public Noncopyable {
  public:
   /**
-   * Metrics are storing metric data that happens during allocation and access of the buffer manager.
+   * Metrics are storing count that happen during allocations and access of the buffer manager.
   */
   struct Metrics {
     // The current amount of bytes being allocated
-    std::size_t current_bytes_used = 0;
+    std::size_t current_bytes_used_dram = 0;
+    std::size_t current_bytes_used_numa = 0;
+    std::size_t total_allocated_bytes_dram = 0;
+    std::size_t total_allocated_bytes_numa = 0;
+    std::size_t total_unused_bytes_numa = 0;
+    std::size_t total_unused_bytes_dram = 0;
 
-    // The total number of bytes being allocates
-    std::size_t total_allocated_bytes = 0;
+    double internal_fragmentation_rate_dram() {
+      return (double)total_unused_bytes_dram / (double)total_allocated_bytes_dram;
+    }
 
-    // The total number of bytes that is unused when allocating memory on a page. Can be used to calculate internal fragmentation.
-    std::size_t total_unused_bytes = 0;
+    double internal_fragmentation_rate_numa() {
+      return (double)total_unused_bytes_numa / (double)total_allocated_bytes_numa;
+    }
 
     // The number of allocation
     std::size_t num_allocs = 0;
-
-    // The number of deallocation
     std::size_t num_deallocs = 0;
 
-    // Tracks the number of hits in the page_table
-    std::size_t page_table_hits = 0;
+    // Tracks the number of bytes copied between the different regions, TODO: Maybe add a count
+    std::size_t total_bytes_copied_from_ssd_to_dram = 0;
+    std::size_t total_bytes_copied_from_ssd_to_numa = 0;
+    std::size_t total_bytes_copied_from_numa_to_dram = 0;
+    std::size_t total_bytes_copied_from_dram_to_numa = 0;
+    std::size_t total_bytes_copied_from_dram_to_ssd = 0;
+    std::size_t total_bytes_copied_from_numa_to_ssd = 0;
+    std::size_t total_bytes_copied_to_ssd = 0;
+    std::size_t total_bytes_copied_from_ssd = 0;
 
-    // Tracks the number of hits in the page_table
-    std::size_t page_table_misses = 0;
+    // Track hits and misses on DRAM or Numa
+    std::size_t total_hits_dram = 0;
+    std::size_t total_hits_numa = 0;
+    std::size_t total_misses_dram = 0;
+    std::size_t total_misses_numa = 0;
 
-    // Tracks the number of bytes read from SSD
-    std::size_t total_bytes_read_from_ssd = 0;
+    // Tracks pinning
+    std::size_t total_pins_dram = 0;
+    std::size_t current_pins_dram = 0;
+    std::size_t total_pins_numa = 0;
+    std::size_t current_pins_numa = 0;
 
-    // Tracks the number of bytes written to SSD
-    std::size_t total_bytes_written_to_ssd = 0;
-
-    std::size_t total_pins = 0;
-
-    std::size_t current_pins = 0;
-
-    std::size_t num_ssd_reads = 0;
-
-    std::size_t num_ssd_writes = 0;
-
+    // Tracks the number of evictions
     std::size_t num_dram_eviction_queue_purges = 0;
-
     std::size_t num_dram_eviction_queue_item_purges = 0;
-
     std::size_t num_dram_eviction_queue_adds = 0;
-
     std::size_t num_numa_eviction_queue_purges = 0;
-
     std::size_t num_numa_eviction_queue_item_purges = 0;
-
     std::size_t num_numa_eviction_queue_adds = 0;
+    std::size_t num_dram_evictions;
+    std::size_t num_numa_evictions;
 
-    // TODO: ratio is defined in Spitfire paper. Lower values signfies lower duplication.
+    // TODO: Ratio is defined in Spitfire paper. Lower values signfies lower duplication.
     std::size_t dram_numa_inclusivity_ratio = 0;
 
-    // TODO: Internal fragmentation rate over all page sizes (lower is better)
-    std::size_t internal_framentation_rate = 0;
-
-    std::size_t num_madvice_free_calls = 0;  //TODO
-
-    // TODO: read and write rates for all paths, dram, numa
+    // Number of madvice calls, TODO: track in more places
+    std::size_t num_madvice_free_calls_numa = 0;
+    std::size_t num_madvice_free_calls_dram = 0;
   };
 
   struct Config {
@@ -103,24 +108,12 @@ class BufferManager : public Noncopyable {
 
   BufferManager(const Config config);
 
-  ~BufferManager();
-
-  // TODO: Get page should not have page size type as parameter
-
-  /**
-   * @brief Get the page object
-   * 
-   * @param page_id 
-   * @return std::unique_ptr<Page> 
-   */
-  std::byte* get_page(const PageID page_id, const PageSizeType size_type);
-
   /**
    * @brief Pin a page marks a page unavailable for replacement. It needs to be unpinned before it can be replaced.
    * 
    * @param page_id 
    */
-  void pin_page(const PageID page_id, const PageSizeType size_type);
+  void pin(std::shared_ptr<Frame> frame);
 
   /**
    * @brief Unpinning a page marks a page available for replacement. This acts as a soft-release without flushing
@@ -128,26 +121,33 @@ class BufferManager : public Noncopyable {
    * 
    * @param page_id 
    */
-  void unpin_page(const PageID page_id, const bool dirty = false);
+  void unpin(std::shared_ptr<Frame> frame, const bool dirty = false);
 
   /**
-   * @brief Get the page id and offset from ptr object. PageID is on its max 
-   * if the page there was no page found. TODO: Return Buffer Managed Ptr
+   * @brief Loads a page from disk into the buffer manager. If the page is already in the buffer manager, it might be migrated. 
+   * The returned pointer does not necessarily equal the pointer passed in.
+  */
+  void make_resident(std::shared_ptr<Frame> frame);
+
+  std::shared_ptr<Frame> load_frame(std::shared_ptr<SharedFrame> frame);
+
+  /**
+   * @brief Get the frame and offset for a given pointer.
    * 
    * @param ptr 
-   * @return std::pair<Frame*, std::ptrdiff_t> Pointer  to the frame and the offset in the frame
+   * @return std::pair<std::weak_ptr<Frame>, std::ptrdiff_t> Pointer to the frame and the offset in the frame
    */
-  std::pair<Frame*, std::ptrdiff_t> unswizzle(const void* ptr);
+  std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> unswizzle(const void* ptr);
 
   /**
    * Allocates pages to fullfil allocation request of the given bytes and alignment 
   */
-  BufferManagedPtr<void> allocate(std::size_t bytes, std::size_t align = alignof(std::max_align_t));
+  BufferPtr<void> allocate(std::size_t bytes, std::size_t align = alignof(std::max_align_t));
 
   /**
    * Deallocates a pointer and frees the pages.
   */
-  void deallocate(BufferManagedPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
+  void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
 
   /**
    * @brief Helper function to get the BufferManager singleton. This avoids issues with circular dependencies as the implementation in the .cpp file.
@@ -169,11 +169,6 @@ class BufferManager : public Noncopyable {
   BufferManager& operator=(BufferManager&& other);
 
   /**
-   * Flush all pages to disk and clear the page table. The volatile regions are cleared by purging the eviction queue and unmapping the VM.
-  */
-  void flush_all_pages();
-
-  /**
    * Get the current number of bytes used by the buffer manager on NUMA.
   */
   std::size_t numa_bytes_used() const;
@@ -184,41 +179,43 @@ class BufferManager : public Noncopyable {
   std::size_t dram_bytes_used() const;
 
   /**
+   * Get the current config object.
+  */
+  Config get_config() const;
+
+  /**
    * Reset all data in the internal data structures. TODO: Move to private
   */
   void clear();
 
  protected:
   friend class Hyrise;
-  friend class BufferManagedPtrTest;
+  friend class BufferPtrTest;
   friend class BufferManagerTest;
   friend class BufferPoolAllocatorTest;
+  friend class PinGuardTest;
+  friend class Frame;
 
  private:
   /**
    * Holds multiple sized buffer pools on either DRAM or NUMA memory.
   */
+  // TODO: Introduce page type as template parameter
   struct BufferPools {
-    template <typename RemoveFrameCallback>
-    Frame* allocate_frame(const PageSizeType size_type, RemoveFrameCallback&& remove_frame_callback);
-    void deallocate_frame(Frame* frame);
+    void allocate_frame(std::shared_ptr<Frame> frame);
+    void deallocate_frame(std::shared_ptr<Frame> frame);
 
     // Purge the eviction queue
     void purge_eviction_queue();
 
     // Add a page to the eviction queue
-    void add_to_eviction_queue(Frame* frame);
-
-    // Read a page from disk into the buffer pool
-    void read_page(Frame* frame);
-
-    // Write out a page to disk
-    void write_page(const Frame* frame);
+    void add_to_eviction_queue(std::shared_ptr<Frame> frame);
 
     void clear();
 
-    BufferPools(const PageType page_type, const size_t pool_size, const bool enable_eviction_worker,
-                const std::shared_ptr<SSDRegion> ssd_region, const std::shared_ptr<BufferManager::Metrics> metrics);
+    BufferPools(const PageType page_type, const size_t pool_size,
+                const std::function<void(std::shared_ptr<Frame>)> evict_frame, const bool enable_eviction_worker,
+                const std::shared_ptr<BufferManager::Metrics> metrics);
 
     BufferPools& operator=(BufferPools&& other);
 
@@ -227,8 +224,6 @@ class BufferManager : public Noncopyable {
 
     // The number of bytes that are currently used
     std::atomic_uint64_t _used_bytes;
-
-    std::shared_ptr<SSDRegion> _ssd_region;
 
     // Memory Regions for each page size type
     std::array<std::unique_ptr<VolatileRegion>, NUM_PAGE_SIZE_TYPES> _buffer_pools;
@@ -243,23 +238,23 @@ class BufferManager : public Noncopyable {
     const PageType _page_type;
 
     const bool enabled;
+
+    const std::function<void(std::shared_ptr<Frame>)> _evict_frame;
   };
 
-  uint32_t get_pin_count(const PageID page_id);
-  bool is_dirty(const PageID page_id);
-
-  Frame* get_frame(const PageID page_id, const PageSizeType size_type);
-  void remove_frame(Frame* frame);
-
-  // Find a page in the buffer pool
-  std::shared_ptr<SharedFrame> find_in_page_table(const PageID page_id);
-  std::shared_ptr<SharedFrame> find_or_create_in_page_table(const PageID page_id);
-
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
-  Frame* new_page(const PageSizeType size_type);
+  std::shared_ptr<Frame> new_frame(const PageSizeType size_type);
 
-  // Remove a page from the buffer pool
-  void remove_page(const PageID page_id);
+  // Evict a frame to a lower level buffer pool or to ssd
+  void evict_frame(std::shared_ptr<Frame> frame);
+
+  // Read a page from disk into the buffer pool
+  void read_page_from_ssd(const std::shared_ptr<Frame> frame);
+
+  // Write out a page to disk
+  void write_page_to_ssd(const std::shared_ptr<Frame> frame);
+
+  const Config _config;
 
   // Total number of pages currently in the buffer pool
   std::atomic_uint64_t _num_pages;
@@ -271,17 +266,13 @@ class BufferManager : public Noncopyable {
   MigrationPolicy _migration_policy;
 
   // Memory Region for pages on SSD
-  std::shared_ptr<SSDRegion> _ssd_region;
+  std::shared_ptr<SSDRegion> _ssd_region;  // TODO: Maybe this can become a unique_ptr
 
   // Memory Region for pages in DRAM using multiple volatile region for each page size type
   BufferPools _dram_buffer_pools;
 
   // Memory Region for pages on a NUMA nodes (preferrably memory only) using multiple volatile region for each page size type
   BufferPools _numa_buffer_pools;
-
-  // Page Table that contains shared frames which are currently in the buffer pool
-  PageTable _page_table;
-  std::mutex _page_table_mutex;
 };
 
 }  // namespace hyrise

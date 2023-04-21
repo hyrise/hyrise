@@ -1,23 +1,24 @@
-#include "utils.hpp"
+#include "storage/buffer/utils.hpp"
 
 namespace hyrise {
 
 void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_manager) {
   const auto metrics = buffer_manager.metrics();
-  state.counters["total_allocated_bytes"] =
-      benchmark::Counter(static_cast<double>(metrics.total_allocated_bytes), benchmark::Counter::Flags::kDefaults,
-                         benchmark::Counter::OneK::kIs1024);
-  state.counters["total_unused_bytes"] =
-      benchmark::Counter(static_cast<double>(metrics.total_unused_bytes), benchmark::Counter::Flags::kDefaults,
-                         benchmark::Counter::OneK::kIs1024);
-  state.counters["page_table_hits"] = static_cast<double>(metrics.page_table_hits);
-  state.counters["page_table_misses"] = static_cast<double>(metrics.page_table_misses);
-  state.counters["total_bytes_read"] =
-      benchmark::Counter(static_cast<double>(metrics.total_bytes_read_from_ssd), benchmark::Counter::Flags::kDefaults,
-                         benchmark::Counter::OneK::kIs1024);
-  state.counters["total_bytes_written"] =
-      benchmark::Counter(static_cast<double>(metrics.total_bytes_written_to_ssd), benchmark::Counter::Flags::kDefaults,
-                         benchmark::Counter::OneK::kIs1024);
+  // TODO
+  // state.counters["total_allocated_bytes"] =
+  //     benchmark::Counter(static_cast<double>(metrics.total_allocated_bytes), benchmark::Counter::Flags::kDefaults,
+  //                        benchmark::Counter::OneK::kIs1024);
+  // state.counters["total_unused_bytes"] =
+  //     benchmark::Counter(static_cast<double>(metrics.total_unused_bytes), benchmark::Counter::Flags::kDefaults,
+  //                        benchmark::Counter::OneK::kIs1024);
+  // state.counters["page_table_hits"] = static_cast<double>(metrics.page_table_hits);
+  // state.counters["page_table_misses"] = static_cast<double>(metrics.page_table_misses);
+  // state.counters["total_bytes_read"] =
+  //     benchmark::Counter(static_cast<double>(metrics.total_bytes_read_from_ssd), benchmark::Counter::Flags::kDefaults,
+  //                        benchmark::Counter::OneK::kIs1024);
+  // state.counters["total_bytes_written"] =
+  //     benchmark::Counter(static_cast<double>(metrics.total_bytes_written_to_ssd), benchmark::Counter::Flags::kDefaults,
+  //                        benchmark::Counter::OneK::kIs1024);
 
   // TODO: read and write rate,
 }
@@ -62,7 +63,6 @@ void MetricsSampler::stop() {
 }
 
 void MetricsSampler::export_metrics() {
-  // TODO: Add context
   auto metrics_json = nlohmann::json::array();
   auto timestamp = Duration::zero();
   for (auto& metric : _metrics) {
@@ -74,6 +74,20 @@ void MetricsSampler::export_metrics() {
   auto context = nlohmann::json::object();
   context["interval"] = _interval.count();
   context["name"] = _name;
+  context["bytes_dram_buffer_pools"] = _buffer_manager->get_config().dram_buffer_pool_size;
+  context["bytes_numa_buffer_pools"] = _buffer_manager->get_config().dram_buffer_pool_size;
+  context["mode"] = magic_enum::enum_name(_buffer_manager->get_config().mode);
+  context["eviction_worker_enabled"] = _buffer_manager->get_config().enable_eviction_worker;
+  context["ssd_path"] = _buffer_manager->get_config().ssd_path;
+
+  auto migration_policy = nlohmann::json::object();
+  migration_policy["dram_read_ratio"] = _buffer_manager->get_config().migration_policy.get_dram_read_ratio();
+  migration_policy["dram_write_ratio"] = _buffer_manager->get_config().migration_policy.get_dram_write_ratio();
+  migration_policy["numa_read_ratio"] = _buffer_manager->get_config().migration_policy.get_numa_read_ratio();
+  migration_policy["numa_write_ratio"] = _buffer_manager->get_config().migration_policy.get_numa_write_ratio();
+
+  context["migration_policy"] = migration_policy;
+
   auto report = nlohmann::json{{"context", context}, {"metrics", metrics_json}};
   std::ofstream{_output_path} << std::setw(2) << report << std::endl;
 }
@@ -81,15 +95,21 @@ void MetricsSampler::export_metrics() {
 void MetricsSampler::to_json(nlohmann::json& json, Duration timestamp, const BufferManager::Metrics& metrics) {
   json = {
       {"timestamp", timestamp.count()},
-      {"current_bytes_used", metrics.current_bytes_used},
-      {"current_pins", metrics.current_pins},
-      {"total_allocated_bytes", metrics.total_allocated_bytes},
+      {"current_bytes_used", metrics.current_bytes_used_dram},
+      {"current_pins", metrics.current_pins_dram},
+      {"total_allocated_bytes", metrics.total_allocated_bytes_dram},
+
       {"num_allocs", metrics.num_allocs},
       {"num_deallocs", metrics.num_deallocs},
-      {"total_bytes_written_to_ssd", metrics.total_bytes_written_to_ssd},
-      {"total_bytes_read_from_ssd", metrics.total_bytes_read_from_ssd},
-      {"page_table_hits", metrics.page_table_hits},
-      {"page_table_misses", metrics.page_table_misses},
+
+      {"total_bytes_copied_from_ssd_to_dram", metrics.total_bytes_copied_from_ssd_to_dram},
+      {"total_bytes_copied_from_ssd_to_numa", metrics.total_bytes_copied_from_ssd_to_numa},
+      {"total_bytes_copied_from_numa_to_dram", metrics.total_bytes_copied_from_numa_to_dram},
+      {"total_bytes_copied_from_dram_to_numa", metrics.total_bytes_copied_from_dram_to_numa},
+      {"total_bytes_copied_from_dram_to_ssd", metrics.total_bytes_copied_from_dram_to_ssd},
+      {"total_bytes_copied_from_numa_to_ssd", metrics.total_bytes_copied_from_numa_to_ssd},
+      {"total_bytes_copied_to_ssd", metrics.total_bytes_copied_to_ssd},
+      {"total_bytes_copied_from_ssd", metrics.total_bytes_copied_from_ssd},
   };
 }
 

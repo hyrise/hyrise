@@ -22,7 +22,7 @@ namespace hyrise {
  */
 class LikeMatcher {
   // A faster search algorithm than the typical byte-wise search if we can reuse the searcher
-  using Searcher = boost::algorithm::boyer_moore<pmr_string::const_iterator>;  // TODO: const iterator
+  using Searcher = boost::algorithm::boyer_moore<pmr_string::const_iterator>;
 
  public:
   /**

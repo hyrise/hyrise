@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <fstream>
 #include <memory>
+#include <string>
 #include "benchmark/benchmark.h"
 #include "hyrise.hpp"
 #include "nlohmann/json.hpp"
@@ -72,7 +73,6 @@ class MetricsSampler {
 
 /**
  * Add specific counters for the buffer manager. 
- * TODO: Optionally supply an existing metric struct for save the difference. 
 */
 void add_buffer_manager_counters(benchmark::State& state, BufferManager& buffer_manager);
 
