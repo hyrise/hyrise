@@ -38,12 +38,22 @@ void Frame::set_resident() {
   state.store(State::Resident);
 }
 
+void Frame::set_referenced() {
+  referenced.store(true);
+}
+
+bool Frame::try_second_chance_evictable() {
+  auto was_referenced = referenced.exchange(false);
+  return !was_referenced;
+}
+
 void Frame::clear() {
   page_id = INVALID_PAGE_ID;
   state.store(State::Evicted);
   dirty.store(false);
   pin_count.store(0);
   data = nullptr;
+  referenced = true;
   eviction_timestamp.store(0);
 }
 }  // namespace hyrise

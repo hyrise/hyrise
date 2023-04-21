@@ -26,7 +26,9 @@ struct Frame {
   std::atomic_uint32_t pin_count{0};
   std::atomic<State> state;
   std::atomic_bool dirty{false};
-  std::atomic_bool referenced{false};  // TODO
+
+  // Reference bit that is used for second chance eviction
+  std::atomic_bool referenced{false};
 
   // Used for eviction_queue
   std::atomic_uint64_t eviction_timestamp{0};
@@ -49,6 +51,11 @@ struct Frame {
   void set_resident();
   bool is_pinned() const;
   void clear();
+  /**
+   Check if the frame is second change evicable (reference bit is false). If the reference bit is true, it is set to false
+  */
+  bool try_second_chance_evictable();
+  void set_referenced();
 };
 
 struct SharedFrame {

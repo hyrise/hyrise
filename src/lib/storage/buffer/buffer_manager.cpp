@@ -78,21 +78,27 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
           "pool.");
     }
 
+    // Check if the frame is still valid
     auto current_frame = item.frame.lock();
     if (!current_frame || !current_frame->can_evict()) {
       continue;
     }
 
+    // Lock the frame to prevent it from being evicted while we are evicting it
+    // Check if the frame can be evicted based on the timestamp, the state and the pin count
     std::lock_guard<std::mutex> lock(current_frame->latch);
-
+    DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
     if (!item.can_evict(current_frame)) {
       continue;
     }
 
-    DebugAssert(current_frame->pin_count.load() == 0, "Frame is pinned");
-    DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
+    // Check if the frame is second change evictable. If not, just requeue it and remove the reference bit.
+    if (!current_frame->try_second_chance_evictable()) {
+      _eviction_queue->push(item);
+      continue;
+    }
 
-    // Call the callback to evict the frame
+    // Call the callback to evict the frame. This is handled by the BufferManager
     _evict_frame(current_frame);
 
     const auto current_frame_size_type = current_frame->size_type;
@@ -117,23 +123,32 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
     }
   }
 
+  // We need to subtract the freed bytes from the used bytes again,
+  // since we overshot the _used_bytes in the beginning.
   _used_bytes -= freed_bytes;
 
-  // If we did not find a frame of the correct size, we allocate a new one
+  // If we did not find a frame of the correct size, we allocate a new one.
+  // We freed enough space in the previous steps.
   if (!frame->data) {
     _buffer_pools[static_cast<size_t>(required_size_type)]->allocate(frame);
-    DebugAssert(frame, "Could not allocate frame");
   }
 }
 
 void BufferManager::BufferPools::deallocate_frame(std::shared_ptr<Frame> frame) {
-  // TODO: add_to_eviction_queue(frame); ?
+  // TODO: add_to_eviction_queue(frame); ?, might reduce madvie calls
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   if (frame->is_resident()) {
     std::lock_guard<std::mutex> lock(frame->latch);
     const auto size_type = frame->size_type;
     _buffer_pools[static_cast<size_t>(size_type)]->free(frame);
     _used_bytes -= bytes_for_size_type(size_type);
+    if (_page_type == PageType::Dram) {
+      _metrics->num_madvice_free_calls_dram++;
+    } else if (_page_type == PageType::Numa) {
+      _metrics->num_madvice_free_calls_numa++;
+    } else {
+      Fail("Invalid page type");
+    }
   }
   frame->clear();
 }
@@ -161,7 +176,7 @@ void BufferManager::BufferPools::purge_eviction_queue() {
 
     // Remove old items with an outdated timestamp
     Fail("TODO: Check this again");
-    if (!item.can_evict(frame)) {
+    if (!item.can_evict(frame) && frame->try_second_chance_evictable()) {
       if (_page_type == PageType::Dram) {
         _metrics->num_dram_eviction_queue_item_purges++;
       } else if (_page_type == PageType::Numa) {
@@ -231,8 +246,14 @@ BufferManager::Config BufferManager::get_config() const {
 BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 
 void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
-  // TODO: Track this as hit or miss
   if (frame->is_resident()) {
+    if (frame->page_type == PageType::Dram) {
+      _metrics->total_hits_dram++;
+    } else if (frame->page_type == PageType::Numa) {
+      _metrics->total_hits_numa++;
+    } else {
+      Fail("Invalid page type");
+    }
     return;
   }
   std::lock_guard<std::mutex> frame_lock(frame->latch);
@@ -240,15 +261,16 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
 
   // Read from SSD if its a NUMA frame or if only DRAM is enabled
   if (frame->page_type == PageType::Numa) {
+    _metrics->total_misses_numa++;
     _numa_buffer_pools.allocate_frame(frame);
     read_page_from_ssd(frame);
     frame->set_resident();
     return;
   }
 
-  if ((frame->page_type == PageType::Dram && !_numa_buffer_pools.enabled)) {
+  if (frame->page_type == PageType::Dram && !_numa_buffer_pools.enabled) {
+    _metrics->total_misses_dram++;
     _dram_buffer_pools.allocate_frame(frame);
-
     read_page_from_ssd(frame);
     frame->set_resident();
     return;
@@ -258,17 +280,20 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
   if (!shared_frame) {
     Fail("Frame has no shared frame");
   }
+  _metrics->total_misses_dram++;
 
   // If the numa frame is not there or if the data is not resident in NUMA, we read it from the SSD
   auto numa_frame = shared_frame->numa_frame;
   if (!numa_frame || !numa_frame->is_resident()) {
+    _metrics->total_misses_numa++;
     read_page_from_ssd(frame);
     frame->set_resident();
     return;
   }
+  _metrics->total_hits_numa++;
 
   // TODO: Do we need to pin?, use a spinlock? here until resident
-  Assert(!numa_frame->is_pinned(), "NUMA frame is pinned");
+  DebugAssert(!numa_frame->is_pinned(), "NUMA frame is pinned");
   std::lock_guard<std::mutex> numa_frame_lock(numa_frame->latch);
 
   const auto num_bytes = bytes_for_size_type(frame->size_type);
@@ -433,6 +458,7 @@ void BufferManager::unpin(std::shared_ptr<Frame> frame, const bool dirty) {
     Fail("Invalid page type");
   }
 
+  frame->set_referenced();
   frame->try_set_dirty(dirty);
 
   // Add to eviction queue if the frame is not pinned anymore

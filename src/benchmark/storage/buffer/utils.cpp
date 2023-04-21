@@ -102,6 +102,11 @@ void MetricsSampler::to_json(nlohmann::json& json, Duration timestamp, const Buf
       {"num_allocs", metrics.num_allocs},
       {"num_deallocs", metrics.num_deallocs},
 
+      {"total_hits_dram", metrics.total_hits_dram},
+      {"total_hits_numa", metrics.total_hits_numa},
+      {"total_misses_dram", metrics.total_misses_dram},
+      {"total_misses_numa", metrics.total_misses_numa},
+
       {"total_bytes_copied_from_ssd_to_dram", metrics.total_bytes_copied_from_ssd_to_dram},
       {"total_bytes_copied_from_ssd_to_numa", metrics.total_bytes_copied_from_ssd_to_numa},
       {"total_bytes_copied_from_numa_to_dram", metrics.total_bytes_copied_from_numa_to_dram},
@@ -110,6 +115,10 @@ void MetricsSampler::to_json(nlohmann::json& json, Duration timestamp, const Buf
       {"total_bytes_copied_from_numa_to_ssd", metrics.total_bytes_copied_from_numa_to_ssd},
       {"total_bytes_copied_to_ssd", metrics.total_bytes_copied_to_ssd},
       {"total_bytes_copied_from_ssd", metrics.total_bytes_copied_from_ssd},
+
+      {"num_madvice_free_calls_numa", metrics.num_madvice_free_calls_numa},
+      {"num_madvice_free_calls_dram", metrics.num_madvice_free_calls_dram},
+
   };
 }
 

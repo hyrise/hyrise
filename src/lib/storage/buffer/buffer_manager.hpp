@@ -245,7 +245,7 @@ class BufferManager : public Noncopyable {
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
   std::shared_ptr<Frame> new_frame(const PageSizeType size_type);
 
-  // Evict a frame to a lower level buffer pool or to ssd
+  // Evict a frame to a lower level buffer pool (NUMA) or to SSD
   void evict_frame(std::shared_ptr<Frame> frame);
 
   // Read a page from disk into the buffer pool
