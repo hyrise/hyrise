@@ -87,17 +87,22 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
       case LQPNodeType::Join: {
         // Check whether the predicate pruning chain can continue after the join.
         predicate_pruning_chain_continues = false;
-        auto join_node = std::static_pointer_cast<JoinNode>(current_node);
-        for (const auto& expression : join_node->output_expressions()) {
+        const auto& join_node = static_cast<const JoinNode&>(*current_node);
+        for (const auto& expression : join_node.output_expressions()) {
           if (expression->type != ExpressionType::LQPColumn) {
             continue;
           }
-          const auto column_expression = std::static_pointer_cast<LQPColumnExpression>(expression);
-          if (column_expression->original_node.lock() == stored_table_node) {
+          const auto& column_expression = static_cast<const LQPColumnExpression&>(*expression);
+          if (column_expression.original_node.lock() == stored_table_node) {
             // At least one column expression of stored_table_node survives the join.
             predicate_pruning_chain_continues = true;
             break;
           }
+        }
+
+        if (!predicate_pruning_chain_continues && join_node.is_semi_reduction()) {
+          // Nothing survives, but join only reduction --> do not insert chain.
+          return LQPUpwardVisitation::DoNotVisitOutputs;
         }
       } break;
       default:
@@ -115,8 +120,20 @@ std::vector<PredicatePruningChain> find_predicate_pruning_chains_by_stored_table
      * In case the predicate pruning chain branches, we use recursion to continue the predicate chain for each branch
      * individually.
      */
-    if (current_node->outputs().size() > 1) {
-      for (auto& output_node : current_node->outputs()) {
+    const auto& outputs = current_node->outputs();
+    auto outputs_to_visit = std::vector<std::shared_ptr<AbstractLQPNode>>{};
+    outputs_to_visit.reserve(outputs.size());
+    for (const auto& output : outputs) {
+      if (output->type == LQPNodeType::Join && output->right_input() == current_node &&
+          static_cast<const JoinNode&>(*output).is_semi_reduction()) {
+        continue;
+      }
+      outputs_to_visit.emplace_back(output);
+    }
+    Assert(!outputs_to_visit.empty(), "Did not expect useless node.");
+
+    if (outputs_to_visit.size() > 1) {
+      for (auto& output_node : outputs_to_visit) {
         auto continued_predicate_pruning_chains = find_predicate_pruning_chains_by_stored_table_node_recursively(
             output_node, current_predicate_pruning_chain, stored_table_node, visited_predicate_nodes);
 
