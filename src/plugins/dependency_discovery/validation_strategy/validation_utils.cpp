@@ -41,6 +41,10 @@ typename ValidationUtils<T>::ColumnStatistics gather_segment_statistics(const st
     return statistics;
   }
 
+  if (segment_statistics->distinct_value_count) {
+    statistics.all_segments_unique = segment_statistics->distinct_value_count->count == segment->size();
+  }
+
   if constexpr (std::is_arithmetic_v<T>) {
     if (segment_statistics->range_filter) {
       const auto& ranges = segment_statistics->range_filter->ranges;

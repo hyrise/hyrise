@@ -26,7 +26,7 @@ void DependentGroupByReductionCandidateRule::apply_to_node(const std::shared_ptr
     if (!lqp_column_expression) {
       continue;
     }
-    // Every ColumnExpression used as a GroupBy expression should be checked for uniqueness.
+
     const auto& stored_table_node = static_cast<const StoredTableNode&>(*lqp_column_expression->original_node.lock());
     candidate_columns[stored_table_node.table_name].emplace(lqp_column_expression->original_column_id);
   }

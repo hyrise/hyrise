@@ -75,7 +75,8 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     // Joins also filter out values in most cases.
     if (node->type == LQPNodeType::Join) {
       const auto& join_node = static_cast<const JoinNode&>(*node);
-      if (!is_semi_or_anti_join(join_node.join_mode) || !expression_evaluable_on_lqp(join_lqp_column_expression, *node->right_input())) {
+      if (!is_semi_or_anti_join(join_node.join_mode) ||
+          expression_evaluable_on_lqp(join_lqp_column_expression, *node->left_input())) {
         ++predicate_count;
       }
 
@@ -142,8 +143,8 @@ void JoinToPredicateCandidateRule::apply_to_node(const std::shared_ptr<const Abs
     }
 
     od_candidates.emplace(std::make_shared<OdCandidate>(stored_table_node.table_name,
-                                                             join_lqp_column_expression->original_column_id,
-                                                             column_expression->original_column_id));
+                                                        join_lqp_column_expression->original_column_id,
+                                                        column_expression->original_column_id));
 
     od_candidates.emplace(std::make_shared<IndCandidate>(
         other_stored_table_node->table_name, join_key_column_expression->original_column_id,
