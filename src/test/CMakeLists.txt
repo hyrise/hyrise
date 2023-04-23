@@ -6,7 +6,6 @@ set(
     lib/sql/sqlite_testrunner/sqlite_testrunner.hpp
     testing_assert.cpp
     testing_assert.hpp
-    gtest_printers.hpp
 )
 
 set(
@@ -173,9 +172,10 @@ set(
     lib/statistics/statistics_objects/string_histogram_domain_test.cpp
     lib/statistics/table_statistics_test.cpp
     lib/storage/any_segment_iterable_test.cpp
-    lib/storage/buffer/buffer_managed_ptr_test.cpp
+    lib/storage/buffer/buffer_ptr_test.cpp
     lib/storage/buffer/buffer_manager_test.cpp
     lib/storage/buffer/buffer_pool_allocator_test.cpp
+    lib/storage/buffer/pin_guard_test.cpp
     lib/storage/buffer/ssd_region_test.cpp
     lib/storage/buffer/volatile_region_test.cpp
     lib/storage/chunk_encoder_test.cpp

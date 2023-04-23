@@ -26,7 +26,7 @@ const std::string& MetaSegmentsTable::name() const {
 }
 
 std::shared_ptr<Table> MetaSegmentsTable::_on_generate() const {
-  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
+  auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, ChunkOffset{8192}, UseMvcc::Yes);
   gather_segment_meta_data(output_table, MemoryUsageCalculationMode::Sampled);
 
   return output_table;

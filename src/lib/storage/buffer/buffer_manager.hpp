@@ -28,7 +28,7 @@ class BufferManager : public Noncopyable {
   */
   struct Metrics {
     // The current amount of bytes being allocated
-    std::size_t current_bytes_used_dram = 0;
+    std::size_t current_bytes_used_dram = 0;  // TODO: Add Different one to signify max usage in pool vs allo/delloc
     std::size_t current_bytes_used_numa = 0;
     std::size_t total_allocated_bytes_dram = 0;
     std::size_t total_allocated_bytes_numa = 0;
@@ -50,6 +50,7 @@ class BufferManager : public Noncopyable {
     // Tracks the number of bytes copied between the different regions, TODO: Maybe add a count
     std::size_t total_bytes_copied_from_ssd_to_dram = 0;
     std::size_t total_bytes_copied_from_ssd_to_numa = 0;
+
     std::size_t total_bytes_copied_from_numa_to_dram = 0;
     std::size_t total_bytes_copied_from_dram_to_numa = 0;
     std::size_t total_bytes_copied_from_dram_to_ssd = 0;
@@ -129,7 +130,7 @@ class BufferManager : public Noncopyable {
   */
   void make_resident(std::shared_ptr<Frame> frame);
 
-  std::shared_ptr<Frame> load_frame(std::shared_ptr<SharedFrame> frame);
+  std::shared_ptr<Frame>& load_frame(const std::shared_ptr<SharedFrame>& frame);
 
   /**
    * @brief Get the frame and offset for a given pointer.

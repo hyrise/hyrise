@@ -20,7 +20,7 @@ STRONG_TYPEDEF(uint32_t, PageID);
 namespace hyrise {
 constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
 
-enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256 };
+enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
 
 constexpr size_t bytes_for_size_type(const PageSizeType size) {
   return 1 << (13 + static_cast<size_t>(size));

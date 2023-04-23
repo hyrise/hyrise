@@ -3,6 +3,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(
     hyriseMicroBenchmarks
 
+
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp
     micro_benchmark_main.cpp
@@ -42,6 +43,8 @@ target_link_libraries_system(
 add_executable(
     hyriseBenchmarkPlayground
 
+    storage/buffer/utils.cpp
+    storage/buffer/utils.hpp
     benchmark_playground.cpp
     micro_benchmark_basic_fixture.cpp
     micro_benchmark_basic_fixture.hpp

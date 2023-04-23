@@ -84,8 +84,6 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
 
         std::sort(dictionary.begin().get_ptr().get(), dictionary.end().get_ptr().get());
-        DebugAssert(std::is_sorted(dictionary.cbegin(), dictionary.cend()),
-                    "Dictionary must be sorted in ascending order.");
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

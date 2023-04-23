@@ -92,7 +92,7 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
       continue;
     }
 
-    // Check if the frame is second change evictable. If not, just requeue it and remove the reference bit.
+    // Check if the frame is second chance evictable. If not, just requeue it and remove the reference bit.
     if (!current_frame->try_second_chance_evictable()) {
       _eviction_queue->push(item);
       continue;
@@ -304,7 +304,7 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
 }
 
 // rename to evictBlocks(...)
-std::shared_ptr<Frame> BufferManager::load_frame(std::shared_ptr<SharedFrame> shared_frame) {
+std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFrame>& shared_frame) {
   if (_dram_buffer_pools.enabled && shared_frame->dram_frame) {
     // 1. Found the frame in DRAM
     make_resident(shared_frame->dram_frame);
@@ -534,7 +534,13 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
 }
 
 void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {
+  _metrics->num_deallocs++;
   auto shared_frame = ptr._shared_frame;
+
+  if (!shared_frame) {
+    // TODO: This case happens with the MVCC data structures when running the filebased benchmark
+    return;
+  }
 
   // Deallocate the frames from their buffer pools and free some memory
   if (shared_frame->dram_frame) {
@@ -548,8 +554,6 @@ void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size
     _metrics->current_bytes_used_numa -= bytes;
     _numa_buffer_pools.deallocate_frame(shared_frame->numa_frame);
   }
-
-  _metrics->num_deallocs++;
 }
 
 BufferManager& BufferManager::get_global_buffer_manager() {

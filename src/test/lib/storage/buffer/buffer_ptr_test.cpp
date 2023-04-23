@@ -3,7 +3,6 @@
 #include "base_test.hpp"
 
 #include <filesystem>
-#include "gtest_printers.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/buffer_ptr.hpp"
 #include "storage/buffer/pin_guard.hpp"

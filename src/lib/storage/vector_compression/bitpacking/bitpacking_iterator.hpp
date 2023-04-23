@@ -39,6 +39,10 @@ class BitPackingIterator : public BaseCompressedVectorIterator<BitPackingIterato
 
   ~BitPackingIterator() = default;
 
+  auto get_ptr() const {
+    return _data.get() + _absolute_index;
+  }
+
  private:
   friend class boost::iterator_core_access;  // grants the boost::iterator_facade access to the private interface
 
