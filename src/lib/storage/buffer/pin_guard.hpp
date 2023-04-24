@@ -28,7 +28,7 @@ class AllocatorPinGuard : public Noncopyable {
     }
 
     ~Observer() {
-      for (const auto frame : _pins) {
+      for (const auto& frame : _pins) {
         Hyrise::get().buffer_manager.unpin(frame, true);
       }
     }

@@ -42,7 +42,7 @@ class FramePinGuard : public Noncopyable {
 };
 
 template <typename PointedType>
-struct BufferPtr {
+class BufferPtr {
  public:
   using pointer = PointedType*;
   using reference = typename add_reference<PointedType>::type;
@@ -84,7 +84,7 @@ struct BufferPtr {
     unswizzle(ptr);
   }
 
-  BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
+  explicit BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
       : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {}
 
   pointer operator->() const {
@@ -214,8 +214,8 @@ struct BufferPtr {
   }
 
  private:
-  PtrOrOffset _ptr_or_offset = 0;
   std::shared_ptr<SharedFrame> _shared_frame;
+  PtrOrOffset _ptr_or_offset = 0;
 
   template <class T1, class T2>
   friend bool operator!=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2);

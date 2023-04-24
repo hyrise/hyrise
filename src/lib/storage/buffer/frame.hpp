@@ -9,7 +9,8 @@ namespace hyrise {
 
 class SharedFrame;
 
-struct Frame {
+class Frame {
+ public:
   enum class State { Evicted, Resident };
 
   const PageSizeType size_type;
@@ -58,14 +59,12 @@ struct Frame {
   void set_referenced();
 };
 
-struct SharedFrame {
+class SharedFrame {
+ public:
   std::shared_ptr<Frame> dram_frame;
   std::shared_ptr<Frame> numa_frame;
 
-  SharedFrame() = default;
-  ~SharedFrame() = default;
-
-  explicit SharedFrame(std::shared_ptr<Frame> frame)
+  SharedFrame(std::shared_ptr<Frame> frame)
       : dram_frame(frame->page_type == PageType::Dram ? frame : nullptr),
         numa_frame(frame->page_type == PageType::Numa ? frame : nullptr) {
     DebugAssert(frame->page_type != PageType::Invalid, "Invalid page type");
