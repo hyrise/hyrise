@@ -173,14 +173,14 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
 
     // Check if candidate column is unique. Checking on the current node is not sufficient. There could be unions or
     // joins in between the subtree root and the current node, invalidating the unique column combination.
-    if (removable_subtree->has_matching_ucc({candidate_column_expression})) {
+    if (is_equals_predicate && removable_subtree->has_matching_ucc({candidate_column_expression})) {
       perform_ucc_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
                           exchangeable_column_expression);
       performed_rewrite = true;
       return LQPVisitation::DoNotVisitInputs;
     }
 
-    // Check if we can performan an OD-based rewrite.
+    // Check if we can perform an OD-based rewrite.
     if (qualifies_for_od_rewrite(candidate, candidate_column_expression, exchangeable_column_expression, join_node,
                                  *prunable_side)) {
       perform_od_rewrite(join_node, *prunable_side, removable_subtree, used_join_column_expression,
@@ -191,6 +191,28 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
 
     return LQPVisitation::VisitInputs;
   });
+}
+
+void recursively_rewrite_nodes(const std::shared_ptr<AbstractLQPNode>& node,
+                               std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
+  if (visited_nodes.contains(node)) {
+    return;
+  }
+
+  if (node->left_input()) {
+    recursively_rewrite_nodes(node->left_input(), visited_nodes);
+  }
+
+  if (node->right_input()) {
+    recursively_rewrite_nodes(node->right_input(), visited_nodes);
+  }
+
+  if (node->type == LQPNodeType::Join) {
+    const auto& join_node = std::static_pointer_cast<JoinNode>(node);
+    try_rewrite(join_node);
+  }
+
+  visited_nodes.emplace(node);
 }
 
 }  // namespace
@@ -204,13 +226,10 @@ std::string JoinToPredicateRewriteRule::name() const {
 
 void JoinToPredicateRewriteRule::_apply_to_plan_without_subqueries(
     const std::shared_ptr<AbstractLQPNode>& lqp_root) const {
-  visit_lqp(lqp_root, [&](const auto& node) {
-    if (node->type == LQPNodeType::Join) {
-      const auto join_node = std::static_pointer_cast<JoinNode>(node);
-      try_rewrite(join_node);
-    }
-    return LQPVisitation::VisitInputs;
-  });
+  // We cannot use visit_lqp(...) since we replace nodes in the plan. The visited nodes may be removed from the plan,
+  // will not have inputs anymore, and the LQP traversal would stop after one successful rewrite.
+  auto visited_nodes = std::unordered_set<std::shared_ptr<AbstractLQPNode>>{};
+  recursively_rewrite_nodes(lqp_root, visited_nodes);
 }
 
 }  // namespace hyrise
