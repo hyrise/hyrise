@@ -96,20 +96,20 @@ class BufferPoolAllocator {
     return BufferPoolAllocator(_buffer_manager);
   }
 
-  template <typename U, class... Args>
-  void construct(const U* ptr, BOOST_FWD_REF(Args)... args) {
-    ::new ((void*)ptr) U(boost::forward<Args>(args)...);
-  }
+  // template <typename U, class... Args>
+  // void construct(const U* ptr, BOOST_FWD_REF(Args)... args) {
+  //   ::new ((void*)ptr) U(boost::forward<Args>(args)...);
+  // }
 
-  template <typename U, class Args>
-  void construct(const BufferPtr<U>& ptr, BOOST_FWD_REF(Args) args) {
-    ::new (static_cast<void*>(ptr.operator->())) U(boost::forward<Args>(args));
-  }
+  // template <typename U, class Args>
+  // void construct(const BufferPtr<U>& ptr, BOOST_FWD_REF(Args) args) {
+  //   ::new (static_cast<void*>(ptr.operator->())) U(boost::forward<Args>(args));
+  // }
 
-  template <class U>
-  void destroy(const BufferPtr<U>& ptr) {
-    ptr->~U();
-  }
+  // template <class U>
+  // void destroy(const BufferPtr<U>& ptr) {
+  //   ptr->~U();
+  // }
 
   void register_observer(std::shared_ptr<BufferPoolAllocatorObserver> observer) {
     if (!_observer.expired()) {
