@@ -305,11 +305,11 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
 
 // rename to evictBlocks(...)
 std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFrame>& shared_frame) {
-  if (_dram_buffer_pools.enabled && shared_frame->dram_frame) {
+  if (_dram_buffer_pools.enabled && shared_frame->dram_frame && shared_frame->dram_frame->is_resident()) {
     // 1. Found the frame in DRAM
     make_resident(shared_frame->dram_frame);
     return shared_frame->dram_frame;
-  } else if (_numa_buffer_pools.enabled && shared_frame->numa_frame) {
+  } else if (_numa_buffer_pools.enabled && shared_frame->numa_frame && shared_frame->numa_frame->is_resident()) {
     // 2. Found the frame on NUMA and we want to migrate it to DRAM TODO: read or write intent?!
     const auto bypass_dram = !_dram_buffer_pools.enabled || _migration_policy.bypass_dram_during_read();
     if (bypass_dram) {
@@ -317,52 +317,28 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
       make_resident(shared_frame->numa_frame);
       return shared_frame->numa_frame;
     }
-    // TODO: What happens if DRAM is not eanled
+
     // 4. Lets not bypass dram and init a new DRAM frame
-    auto numa_frame = shared_frame->numa_frame;
-    auto size_type = numa_frame->size_type;
-    DebugAssert(!shared_frame->dram_frame, "DRAM frame is not null");
-    auto allocated_dram_frame = std::make_shared<Frame>(size_type, PageType::Dram);
+    if (shared_frame->dram_frame) {
+      auto numa_frame = shared_frame->numa_frame;
+      auto size_type = numa_frame->size_type;
+      DebugAssert(!shared_frame->dram_frame, "DRAM frame is not null");
+      shared_frame->dram_frame = std::make_shared<Frame>(size_type, PageType::Dram);
+    }
+    make_resident(shared_frame->dram_frame);
 
-    // TODO
-    // _dram_buffer_pools.allocate_frame(
-    //     shared_frame->numa_frame->size_type, std::bind(&BufferManager::evict_frame, this, std::placeholders::_1));
-    // allocated_dram_frame->init(shared_frame->numa_frame->page_id);
-
-    const auto num_bytes = bytes_for_size_type(size_type);
-    std::memcpy(allocated_dram_frame->data, shared_frame->numa_frame->data, num_bytes);
-    _metrics->total_bytes_copied_from_numa_to_dram += num_bytes;
-
-    SharedFrame::link(shared_frame, allocated_dram_frame);
-
-    return allocated_dram_frame;
+    return shared_frame->dram_frame;
   } else {
     Fail("TODO");
-    // // 5. The page is neither resident DRAM nor on NUMA, we need to load it from SSD
-    // // Use DRAM is enabled and if we want to bypass, or if NUMA is disabled
-    // const auto use_dram =
-    //     !_numa_buffer_pools.enabled || (_dram_buffer_pools.enabled && _migration_policy.bypass_numa_during_read());
-    // // TODO: Require lock of tier
-    // // TODO: Only read from SSD if data exists there
-    // if (use_dram) {
-    //   // 6. We want to bypass NUMA (= use DRAM) and read from SSD
-    //   auto allocated_dram_frame = _dram_buffer_pools.allocate_frame(
-    //       frame->size_type, std::bind(&BufferManager::evict_frame, this, std::placeholders::_1));
-    //   // Update the frame metadata and read the page data
-    //   allocated_dram_frame->init(frame->page_id);
-    //   read_page_from_ssd(allocated_dram_frame);
-    //   SharedFrame::link(shared_frame, allocated_dram_frame);
-    //   return allocated_dram_frame;
-    // } else {
-    //   // 7. We want to use NUMA and read from SSD
-    //   auto allocated_numa_frame = _numa_buffer_pools.allocate_frame(
-    //       frame->size_type, std::bind(&BufferManager::evict_frame, this, std::placeholders::_1));
-    //   allocated_numa_frame->init(frame->page_id);
-    //   read_page_from_ssd(allocated_numa_frame);
-    //   SharedFrame::link(shared_frame, allocated_numa_frame);
-
-    //   return allocated_numa_frame;
-    // }
+    // 5. The page is neither resident DRAM nor on NUMA, we need to load it from SSD
+    // Use DRAM is enabled and if we want to bypass, or if NUMA is disabled
+    const auto use_dram =
+        !_numa_buffer_pools.enabled || (_dram_buffer_pools.enabled && _migration_policy.bypass_numa_during_read());
+    // TODO: Require lock of tier
+    // TODO: Only read from SSD if data exists there
+    if (use_dram) {
+    } else {
+    }
   }
 }
 
@@ -438,13 +414,13 @@ std::shared_ptr<Frame> BufferManager::new_frame(const PageSizeType size_type) {
     auto allocated_dram_frame = std::make_shared<Frame>(size_type, PageType::Dram);
     _dram_buffer_pools.allocate_frame(allocated_dram_frame);
     allocated_dram_frame->init(page_id);
-    _dram_buffer_pools.add_to_eviction_queue(allocated_dram_frame);
+    _dram_buffer_pools.add_to_eviction_queue(allocated_dram_frame);  // TODO: remove, rely on pin
     return allocated_dram_frame;
   } else {
     auto allocated_numa_frame = std::make_shared<Frame>(size_type, PageType::Numa);
     _numa_buffer_pools.allocate_frame(allocated_numa_frame);
     allocated_numa_frame->init(page_id);
-    _numa_buffer_pools.add_to_eviction_queue(allocated_numa_frame);
+    _numa_buffer_pools.add_to_eviction_queue(allocated_numa_frame);  // TODO: remove, rely on pin
     return allocated_numa_frame;
   }
 }

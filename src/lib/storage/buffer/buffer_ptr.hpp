@@ -42,7 +42,7 @@ class FramePinGuard : public Noncopyable {
 };
 
 template <typename PointedType>
-class BufferPtr {
+struct BufferPtr {
  public:
   using pointer = PointedType*;
   using reference = typename add_reference<PointedType>::type;
@@ -69,6 +69,7 @@ class BufferPtr {
   // https://github.com/darwin/boost/blob/master/boost/interprocess/offset_ptr.hpp
   // https://www.youtube.com/watch?v=_nIET46ul6E
   // Segment ptr uses pointer swizzlhttps://github.com/boostorg/interprocess/blob/4403b201bef142f07cdc43f67bf6477da5e07fe3/include/boost/interprocess/detail/intersegment_ptr.hpp#L611
+
   BufferPtr(pointer ptr = 0) {
     unswizzle(ptr);
   }
@@ -83,7 +84,7 @@ class BufferPtr {
     unswizzle(ptr);
   }
 
-  explicit BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
+  BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
       : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {}
 
   pointer operator->() const {

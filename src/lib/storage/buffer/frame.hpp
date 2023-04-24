@@ -15,9 +15,9 @@ struct Frame {
   const PageSizeType size_type;
   const PageType page_type;
 
-  Frame(const PageSizeType size_type, const PageType page_type) : size_type(size_type), page_type(page_type) {}
+  explicit Frame(const PageSizeType size_type, const PageType page_type) : size_type(size_type), page_type(page_type) {}
 
-  Frame(const PageSizeType size_type, const PageType page_type, std::byte* data)
+  explicit Frame(const PageSizeType size_type, const PageType page_type, std::byte* data)
       : size_type(size_type), page_type(page_type), data(data) {}
 
   PageID page_id = INVALID_PAGE_ID;
@@ -62,9 +62,10 @@ struct SharedFrame {
   std::shared_ptr<Frame> dram_frame;
   std::shared_ptr<Frame> numa_frame;
 
-  SharedFrame() : dram_frame(nullptr), numa_frame(nullptr) {}
+  SharedFrame() = default;
+  ~SharedFrame() = default;
 
-  SharedFrame(std::shared_ptr<Frame> frame)
+  explicit SharedFrame(std::shared_ptr<Frame> frame)
       : dram_frame(frame->page_type == PageType::Dram ? frame : nullptr),
         numa_frame(frame->page_type == PageType::Numa ? frame : nullptr) {
     DebugAssert(frame->page_type != PageType::Invalid, "Invalid page type");
@@ -83,4 +84,5 @@ struct SharedFrame {
 
   // TODO: Destructor ensure evict
 };
+
 }  // namespace hyrise

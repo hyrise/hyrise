@@ -31,6 +31,8 @@ class BufferPoolAllocator {
   using void_pointer = BufferPtr<void>;
   using difference_type = typename pointer::difference_type;
 
+  // static_assert(std::is_trivially_default_constructible_v<pointer>,
+  
   BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {}
 
   BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
@@ -39,16 +41,28 @@ class BufferPoolAllocator {
     Fail("The current BufferPoolAllocator cannot take a boost memory_resource");
   }
 
+  ~BufferPoolAllocator() = default;
+
+  BufferPoolAllocator(const BufferPoolAllocator& other) noexcept {
+    _buffer_manager = other.buffer_manager();
+    _observer = other.current_observer();
+  }
+
   template <class U>
   BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
     _buffer_manager = other.buffer_manager();
     _observer = other.current_observer();
   }
 
-  template <class U>
-  struct rebind {
-    typedef BufferPoolAllocator<U> other;
-  };
+  BufferPoolAllocator& operator=(const BufferPoolAllocator& other) noexcept {
+    _buffer_manager = other.buffer_manager();
+    return *this;
+  }
+
+  // template <class U>
+  // struct rebind {
+  //   typedef BufferPoolAllocator<U> other;
+  // };
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
@@ -85,7 +99,7 @@ class BufferPoolAllocator {
 
   template <typename U, class... Args>
   void construct(const U* ptr, BOOST_FWD_REF(Args)... args) {
-    ::new ((void*)ptr) U(boost::forward<Args>(args)...);
+    // ::new ((void*)ptr) U(boost::forward<Args>(args)...);
   }
 
   template <typename U, class Args>
@@ -113,4 +127,15 @@ class BufferPoolAllocator {
   std::weak_ptr<BufferPoolAllocatorObserver> _observer;
   BufferManager* _buffer_manager;
 };
+
+template <class T1, class T2>
+bool operator==(const BufferPoolAllocator<T1>& a, const BufferPoolAllocator<T2>& b) noexcept {
+  return true;
+}
+
+template <class T1, class T2>
+bool operator!=(const BufferPoolAllocator<T1>& a, const BufferPoolAllocator<T2>& b) noexcept {
+  return false;
+}
+
 }  // namespace hyrise
