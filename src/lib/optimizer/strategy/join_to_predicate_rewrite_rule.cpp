@@ -195,17 +195,12 @@ void try_rewrite(const std::shared_ptr<JoinNode>& join_node) {
 
 void recursively_rewrite_nodes(const std::shared_ptr<AbstractLQPNode>& node,
                                std::unordered_set<std::shared_ptr<AbstractLQPNode>>& visited_nodes) {
-  if (visited_nodes.contains(node)) {
+  if (!node || visited_nodes.contains(node)) {
     return;
   }
 
-  if (node->left_input()) {
-    recursively_rewrite_nodes(node->left_input(), visited_nodes);
-  }
-
-  if (node->right_input()) {
-    recursively_rewrite_nodes(node->right_input(), visited_nodes);
-  }
+  recursively_rewrite_nodes(node->left_input(), visited_nodes);
+  recursively_rewrite_nodes(node->right_input(), visited_nodes);
 
   if (node->type == LQPNodeType::Join) {
     const auto& join_node = std::static_pointer_cast<JoinNode>(node);
