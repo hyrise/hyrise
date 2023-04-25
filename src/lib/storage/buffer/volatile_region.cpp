@@ -17,9 +17,10 @@ VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page
       _page_type(page_type),
       _numa_memory_node(numa_memory_node),
       _total_bytes(total_bytes / bytes_for_size_type(size_type) * bytes_for_size_type(size_type)) {
-  if (_page_type == PageType::Numa && _numa_memory_node == NO_NUMA_MEMORY_NODE) {
-    Fail("Cannot allocate NUMA memory without specifying a NUMA node");
-  }
+  // TODO: Imrpove for emulation mode
+  // if (_page_type == PageType::Numa && _numa_memory_node == NO_NUMA_MEMORY_NODE) {
+  //   Fail("Cannot allocate NUMA memory without specifying a NUMA node");
+  // }
   _free_slots.set();
   map_memory();
 }
@@ -61,7 +62,7 @@ void VolatileRegion::map_memory() {
     Fail("Failed to map volatile pool region: " + strerror(errno));
   }
 
-  if (_page_type == PageType::Numa) {
+  if (_numa_memory_node != NO_NUMA_MEMORY_NODE) {
     to_numa(_mapped_memory);
   }
 }

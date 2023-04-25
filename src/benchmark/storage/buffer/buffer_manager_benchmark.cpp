@@ -15,15 +15,15 @@ using namespace hyrise::expression_functional;  // NOLINT
 
 namespace hyrise {
 
-static void BM_allocate_with_buffer_manager(benchmark::State& state) {
+static void BM_allocate_with_buffer_manager(benchmark::State& state, const BufferManagerMode mode) {
   const auto config = BufferManager::Config{
-      .dram_buffer_pool_size = 1UL << 29,  // 512 mb
+      .dram_buffer_pool_size = 5000000,    // 512 mb
       .numa_buffer_pool_size = 1UL << 34,  // 16 GB
       .migration_policy = EagerMigrationPolicy{},
       .numa_memory_node = NO_NUMA_MEMORY_NODE,
       .ssd_path = "./test.bin",
       .enable_eviction_worker = false,
-      .mode = BufferManagerMode::DramSSD,
+      .mode = mode,
   };
   Hyrise::get().buffer_manager = BufferManager{config};
 
@@ -31,9 +31,8 @@ static void BM_allocate_with_buffer_manager(benchmark::State& state) {
   const auto sampler = std::make_shared<MetricsSampler>(
       benchmark_name, std::filesystem::path("/tmp") / (benchmark_name + ".json"), &Hyrise::get().buffer_manager);
 
-  const auto database_size = 1UL << 30;  // 1 GB
   const auto chunk_size = ChunkOffset{2'000};
-  const auto row_count = size_t{database_size / sizeof(int)};
+  const auto row_count = size_t{500000};
 
   // Setup synthetic data and scan
   const auto table_generator = std::make_shared<SyntheticTableGenerator>();
@@ -57,6 +56,9 @@ static void BM_allocate_with_buffer_manager(benchmark::State& state) {
   }
 }
 
-BENCHMARK(BM_allocate_with_buffer_manager)->Range(8, 8 << 9)->Iterations(10);
+// BENCHMARK_CAPTURE(BM_allocate_with_buffer_manager, DramSSD, BufferManagerMode::DramSSD)->Iterations(10);
+// BENCHMARK_CAPTURE(BM_allocate_with_buffer_manager, NumaSSD, BufferManagerMode::NumaSSD)->Iterations(10);
+// BENCHMARK_CAPTURE(BM_allocate_with_buffer_manager, NumaSSD, BufferManagerMode::DramNumaSSD)->Iterations(10);
+BENCHMARK_CAPTURE(BM_allocate_with_buffer_manager, NumaSSD, BufferManagerMode::DramNumaEmulationSSD)->Iterations(10);
 
 }  // namespace hyrise

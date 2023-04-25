@@ -236,15 +236,15 @@ class BufferManager : public Noncopyable {
 
     std::shared_ptr<BufferManager::Metrics> _metrics;
 
-    const PageType _page_type;
+    PageType _page_type;
 
-    const bool enabled;
+    bool enabled;
 
-    const std::function<void(std::shared_ptr<Frame>)> _evict_frame;
+    std::function<void(std::shared_ptr<Frame>)> _evict_frame;
   };
 
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
-  std::shared_ptr<Frame> new_frame(const PageSizeType size_type);
+  std::shared_ptr<SharedFrame> new_frame(const PageSizeType size_type);
 
   // Evict a frame to a lower level buffer pool (NUMA) or to SSD
   void evict_frame(std::shared_ptr<Frame> frame);

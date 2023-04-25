@@ -51,10 +51,16 @@ BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t p
 BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager::BufferPools&& other) {
   _used_bytes = other._used_bytes.load();
   _total_bytes = other._total_bytes;
+  _page_type = other._page_type;
+  _page_type = other._page_type;
+  // _evict_frame = other._evict_frame;
+  enabled = other.enabled;
+  _metrics = other._metrics;
   // Assert(_total_bytes == other._total_bytes, "Cannot move buffer pools with different sizes");
-  Assert(_page_type == other._page_type, "Cannot move buffer pools with different page types");
+  // Assert(_page_type == other._page_type, "Cannot move buffer pools with different page types");
   _buffer_pools = std::move(other._buffer_pools);
   _eviction_worker = std::move(other._eviction_worker);
+  _eviction_queue = std::move(other._eviction_queue);
 
   return *this;
 }
@@ -320,17 +326,19 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
     }
 
     // 4. Lets not bypass dram and init a new DRAM frame
-    if (shared_frame->dram_frame) {
-      auto numa_frame = shared_frame->numa_frame;
-      auto size_type = numa_frame->size_type;
-      DebugAssert(!shared_frame->dram_frame, "DRAM frame is not null");
-      shared_frame->dram_frame = std::make_shared<Frame>(size_type, PageType::Dram);
+    if (!shared_frame->dram_frame) {
+      auto size_type = shared_frame->numa_frame->size_type;
+      auto page_id = shared_frame->numa_frame->page_id;
+      const auto frame = std::make_shared<Frame>(size_type, PageType::Dram);
+      _dram_buffer_pools.allocate_frame(frame);
+      frame->init(page_id);
+      _dram_buffer_pools.add_to_eviction_queue(frame);
+      SharedFrame::link(shared_frame, frame);
     }
     make_resident(shared_frame->dram_frame);
 
     return shared_frame->dram_frame;
-  } else {
-    Fail("TODO");
+  } else if (shared_frame->dram_frame || shared_frame->numa_frame) {
     // 5. The page is neither resident DRAM nor on NUMA, we need to load it from SSD
     // Use DRAM is enabled and if we want to bypass, or if NUMA is disabled
     const auto use_dram =
@@ -338,8 +346,32 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
     // TODO: Require lock of tier
     // TODO: Only read from SSD if data exists there
     if (use_dram) {
+      if (!shared_frame->dram_frame) {
+        auto size_type = shared_frame->numa_frame->size_type;
+        auto page_id = shared_frame->numa_frame->page_id;
+        const auto frame = std::make_shared<Frame>(size_type, PageType::Dram);
+        _dram_buffer_pools.allocate_frame(frame);
+        frame->init(page_id);
+        _dram_buffer_pools.add_to_eviction_queue(frame);
+        SharedFrame::link(shared_frame, frame);
+      }
+      make_resident(shared_frame->dram_frame);
+      return shared_frame->dram_frame;
     } else {
+      if (!shared_frame->numa_frame) {
+        auto size_type = shared_frame->dram_frame->size_type;
+        auto page_id = shared_frame->dram_frame->page_id;
+        const auto frame = std::make_shared<Frame>(size_type, PageType::Numa);
+        _numa_buffer_pools.allocate_frame(frame);
+        frame->init(page_id);
+        _numa_buffer_pools.add_to_eviction_queue(frame);
+        SharedFrame::link(shared_frame, frame);
+      }
+      make_resident(shared_frame->numa_frame);
+      return shared_frame->numa_frame;
     }
+  } else {
+    Fail("Shared frame without any frames");
   }
 }
 
@@ -350,7 +382,8 @@ void BufferManager::evict_frame(std::shared_ptr<Frame> frame) {
 
   if (frame->dirty) {
     // Evict to SSD if it's a NUMA frame or if it's a DRAM frame and we can bypass NUMA
-    auto evict_to_ssd = frame->page_type == PageType::Numa ||
+    auto shared_frame = frame->shared_frame.lock();
+    auto evict_to_ssd = frame->page_type == PageType::Numa || !shared_frame ||
                         (frame->page_type == PageType::Dram && !_numa_buffer_pools.enabled) ||
                         (frame->page_type == PageType::Dram && _numa_buffer_pools.enabled &&
                          _migration_policy.bypass_numa_during_write());
@@ -363,11 +396,11 @@ void BufferManager::evict_frame(std::shared_ptr<Frame> frame) {
       // 2. Evict to NUMA
       auto allocated_numa_frame = std::make_shared<Frame>(frame->size_type, PageType::Numa);
       allocated_numa_frame->init(frame->page_id);
-      _numa_buffer_pools.allocate_frame(frame);
+      _numa_buffer_pools.allocate_frame(allocated_numa_frame);
       const auto num_bytes = bytes_for_size_type(frame->size_type);
       std::memcpy(allocated_numa_frame->data, frame->data, num_bytes);
       _metrics->total_bytes_copied_from_dram_to_numa += num_bytes;
-      SharedFrame::link(frame->shared_frame.lock(), allocated_numa_frame);
+      SharedFrame::link(shared_frame, allocated_numa_frame);
     }
     frame->dirty = false;
   }
@@ -402,7 +435,7 @@ void BufferManager::write_page_to_ssd(std::shared_ptr<Frame> frame) {
   }
 }
 
-std::shared_ptr<Frame> BufferManager::new_frame(const PageSizeType size_type) {
+std::shared_ptr<SharedFrame> BufferManager::new_frame(const PageSizeType size_type) {
   const auto page_id = PageID{_num_pages++};
 
   // TODO: We could just defer this to the first time the page is evicted
@@ -413,16 +446,20 @@ std::shared_ptr<Frame> BufferManager::new_frame(const PageSizeType size_type) {
 
   if (use_dram) {
     auto allocated_dram_frame = std::make_shared<Frame>(size_type, PageType::Dram);
+    auto shared_frame = std::make_shared<SharedFrame>(allocated_dram_frame);
+    allocated_dram_frame->shared_frame = shared_frame;
     _dram_buffer_pools.allocate_frame(allocated_dram_frame);
     allocated_dram_frame->init(page_id);
     _dram_buffer_pools.add_to_eviction_queue(allocated_dram_frame);  // TODO: remove, rely on pin
-    return allocated_dram_frame;
+    return shared_frame;
   } else {
     auto allocated_numa_frame = std::make_shared<Frame>(size_type, PageType::Numa);
+    auto shared_frame = std::make_shared<SharedFrame>(allocated_numa_frame);
+    allocated_numa_frame->shared_frame = shared_frame;
     _numa_buffer_pools.allocate_frame(allocated_numa_frame);
     allocated_numa_frame->init(page_id);
     _numa_buffer_pools.add_to_eviction_queue(allocated_numa_frame);  // TODO: remove, rely on pin
-    return allocated_numa_frame;
+    return shared_frame;
   }
 }
 
@@ -491,14 +528,13 @@ std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> BufferManager::unswizzle(const
 BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   const auto page_size_type = find_fitting_page_size_type(bytes);
 
-  const auto frame = new_frame(page_size_type);
-  const auto shared_frame = std::make_shared<SharedFrame>(frame);
+  const auto shared_frame = new_frame(page_size_type);
 
-  if (frame->page_type == PageType::Dram) {
+  if (shared_frame->dram_frame) {
     _metrics->current_bytes_used_dram += bytes;
     _metrics->total_unused_bytes_dram += bytes_for_size_type(page_size_type) - bytes;
     _metrics->total_allocated_bytes_dram += bytes;
-  } else if (frame->page_type == PageType::Numa) {
+  } else if (shared_frame->numa_frame) {
     _metrics->current_bytes_used_numa += bytes;
     _metrics->total_unused_bytes_numa += bytes_for_size_type(page_size_type) - bytes;
     _metrics->total_allocated_bytes_numa += bytes;
@@ -565,7 +601,7 @@ BufferManager& BufferManager::operator=(BufferManager&& other) {
     _num_pages = other._num_pages.load();
     _dram_buffer_pools = std::move(other._dram_buffer_pools);
     _numa_buffer_pools = std::move(other._numa_buffer_pools);
-    _ssd_region = std::move(other._ssd_region);
+    _ssd_region = other._ssd_region;
     _migration_policy = std::move(other._migration_policy);
     _metrics = other._metrics;
   }

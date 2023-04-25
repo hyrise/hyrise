@@ -120,7 +120,7 @@ constexpr PageType page_type_for_dram_buffer_pools(const BufferManagerMode mode)
 constexpr PageType page_type_for_numa_buffer_pools(const BufferManagerMode mode) {
   switch (mode) {
     case BufferManagerMode::DramNumaEmulationSSD:
-      return PageType::Dram;
+      return PageType::Numa;
     case BufferManagerMode::DramNumaSSD:
       return PageType::Numa;
     case BufferManagerMode::DramSSD:
