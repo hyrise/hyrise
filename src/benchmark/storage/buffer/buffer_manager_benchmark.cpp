@@ -27,7 +27,9 @@ static void BM_allocate_with_buffer_manager(benchmark::State& state, const Buffe
   };
   Hyrise::get().buffer_manager = BufferManager{config};
 
-  const auto benchmark_name = state.name();
+  auto benchmark_name = state.name();
+  std::replace(benchmark_name.begin(), benchmark_name.end(), '/', '-');
+
   const auto sampler = std::make_shared<MetricsSampler>(
       benchmark_name, std::filesystem::path("/tmp") / (benchmark_name + ".json"), &Hyrise::get().buffer_manager);
 

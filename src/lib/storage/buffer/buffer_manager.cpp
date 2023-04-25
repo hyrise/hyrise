@@ -604,6 +604,7 @@ BufferManager& BufferManager::operator=(BufferManager&& other) {
     _ssd_region = other._ssd_region;
     _migration_policy = std::move(other._migration_policy);
     _metrics = other._metrics;
+    _config = other._config;
   }
   return *this;
 }

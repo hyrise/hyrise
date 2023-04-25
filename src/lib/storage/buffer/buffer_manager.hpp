@@ -255,7 +255,7 @@ class BufferManager : public Noncopyable {
   // Write out a page to disk
   void write_page_to_ssd(const std::shared_ptr<Frame> frame);
 
-  const Config _config;
+  Config _config;  // TODO: Const;
 
   // Total number of pages currently in the buffer pool
   std::atomic_uint64_t _num_pages;
