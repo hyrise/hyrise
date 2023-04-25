@@ -254,13 +254,16 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
 }
 
 size_t StoredTableNode::_on_shallow_hash() const {
-  size_t hash{0};
+  auto hash = size_t {0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
   }
   for (const auto& pruned_column_id : _pruned_column_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
+  }
+  for (const auto& predicate : prunable_subquery_predicates()) {
+    boost::hash_combine(hash, predicate->hash());
   }
   return hash;
 }
@@ -277,8 +280,25 @@ std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMappin
 
 bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
-  return table_name == stored_table_node.table_name && _pruned_chunk_ids == stored_table_node._pruned_chunk_ids &&
-         _pruned_column_ids == stored_table_node._pruned_column_ids;
+  if (table_name != stored_table_node.table_name || _pruned_chunk_ids != stored_table_node._pruned_chunk_ids ||
+         _pruned_column_ids != stored_table_node._pruned_column_ids) {
+    return false;
+  }
+
+  const auto& prunable_subquery_predicates = this->prunable_subquery_predicates();
+  const auto& rhs_prunable_subquery_predicates = stored_table_node.prunable_subquery_predicates();
+  const auto subquery_predicate_count = prunable_subquery_predicates.size();
+  if (subquery_predicate_count != rhs_prunable_subquery_predicates.size()) {
+    return false;
+  }
+
+  for (auto predicate_idx = size_t{0}; predicate_idx < subquery_predicate_count; ++predicate_idx) {
+    if (*prunable_subquery_predicates[predicate_idx] != *rhs_prunable_subquery_predicates[predicate_idx]) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace hyrise
