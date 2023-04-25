@@ -37,7 +37,7 @@ constexpr PageSizeType find_fitting_page_size_type(const std::size_t value) {
 constexpr size_t NUM_PAGE_SIZE_TYPES = magic_enum::enum_count<PageSizeType>();
 constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(NUM_PAGE_SIZE_TYPES - 1);
 
-constexpr auto NO_NUMA_MEMORY_NODE = -1;
+constexpr int8_t NO_NUMA_MEMORY_NODE = -1;
 
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
 constexpr size_t PAGE_ALIGNMENT = 512;

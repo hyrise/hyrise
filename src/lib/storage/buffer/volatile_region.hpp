@@ -20,7 +20,7 @@ namespace hyrise {
 class VolatileRegion : public Noncopyable {
  public:
   VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t num_bytes,
-                 const size_t memory_numa_node = NO_NUMA_MEMORY_NODE);
+                 const int8_t memory_numa_node = NO_NUMA_MEMORY_NODE);
   ~VolatileRegion();
 
   std::shared_ptr<Frame> unswizzle(const void* ptr);

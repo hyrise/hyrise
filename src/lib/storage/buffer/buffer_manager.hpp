@@ -94,7 +94,7 @@ class BufferManager : public Noncopyable {
 
     MigrationPolicy migration_policy = EagerMigrationPolicy{};
 
-    uint8_t numa_memory_node = NO_NUMA_MEMORY_NODE;
+    int8_t numa_memory_node = NO_NUMA_MEMORY_NODE;
 
     std::filesystem::path ssd_path = "~/.hyrise";
 
@@ -221,7 +221,7 @@ class BufferManager : public Noncopyable {
     BufferPools& operator=(BufferPools&& other);
 
     // The maximum number of bytes that can be allocated
-    const size_t _total_bytes;
+    size_t _total_bytes;  // TODO: condz
 
     // The number of bytes that are currently used
     std::atomic_uint64_t _used_bytes;

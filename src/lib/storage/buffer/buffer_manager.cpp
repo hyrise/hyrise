@@ -50,7 +50,8 @@ BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t p
 
 BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager::BufferPools&& other) {
   _used_bytes = other._used_bytes.load();
-  Assert(_total_bytes == other._total_bytes, "Cannot move buffer pools with different sizes");
+  _total_bytes = other._total_bytes;
+  // Assert(_total_bytes == other._total_bytes, "Cannot move buffer pools with different sizes");
   Assert(_page_type == other._page_type, "Cannot move buffer pools with different page types");
   _buffer_pools = std::move(other._buffer_pools);
   _eviction_worker = std::move(other._eviction_worker);

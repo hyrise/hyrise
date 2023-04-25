@@ -10,7 +10,7 @@
 namespace hyrise {
 
 VolatileRegion::VolatileRegion(const PageSizeType size_type, const PageType page_type, const size_t total_bytes,
-                               const size_t numa_memory_node)
+                               const int8_t numa_memory_node)
     : _frames(total_bytes / bytes_for_size_type(size_type)),
       _free_slots(_frames.size()),
       _size_type(size_type),
