@@ -39,11 +39,19 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   _validate_input();
 
   auto chunk_id_mapping = std::vector<std::optional<ChunkID>>{};
-  if (!_chunk_id_mapping) {
-    chunk_id_mapping = std::vector<std::optional<ChunkID>>(_in_table->chunk_count());
-    std::iota(chunk_id_mapping.begin(), chunk_id_mapping.end(), ChunkID{0});
+
+  // If the input operator is of the type GetTable, pruning must be considered.
+  const auto& input_get_table = dynamic_pointer_cast<const GetTable>(left_input());
+  if (input_get_table) {
+    // If columns have been pruned, calculate the ColumnID that was originally indexed.
+    const auto& pruned_column_ids = input_get_table->pruned_column_ids();
+    _indexed_column_id = column_id_before_pruning(_indexed_column_id, pruned_column_ids);
+
+    // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
+    const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
+    chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
   } else {
-    chunk_id_mapping = *_chunk_id_mapping;
+    chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count(), std::vector<ChunkID>{});
   }
 
   _out_table = std::make_shared<Table>(_in_table->column_definitions(), TableType::References);

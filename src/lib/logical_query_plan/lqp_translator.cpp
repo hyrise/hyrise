@@ -70,7 +70,6 @@
 #include "stored_table_node.hpp"
 #include "union_node.hpp"
 #include "update_node.hpp"
-#include "utils/column_pruning_utils.hpp"
 
 using namespace std::string_literals;  // NOLINT
 
@@ -207,7 +206,6 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     value_variant = value_expression->value;
   }
 
-  const std::vector<ColumnID> column_ids = {column_id};
   const std::vector<AllTypeVariant> right_values = {value_variant};
 
   const auto stored_table_node = std::dynamic_pointer_cast<StoredTableNode>(node->left_input());
@@ -246,17 +244,10 @@ std::shared_ptr<AbstractOperator> LQPTranslator::_translate_predicate_node_to_in
     ++pruned_table_chunk_id;
   }
 
-  // If columns have been pruned, calculate the ColumnID that was originally indexed.
-  const auto& pruned_column_ids = stored_table_node->pruned_column_ids();
-  const auto index_column_id = column_id_before_pruning(column_id, pruned_column_ids);
-
-  // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
-  const auto chunk_id_mapping = chunk_ids_after_pruning(chunk_count, pruned_chunk_ids);
-
   // All chunks that have an index on column_ids are handled by an IndexScan. All other chunks are handled by
   // TableScan(s).
-  auto index_scan = std::make_shared<IndexScan>(input_operator, index_column_id, predicate->predicate_condition,
-                                                value_variant, chunk_id_mapping);
+  auto index_scan = std::make_shared<IndexScan>(input_operator, column_id, predicate->predicate_condition,
+                                                value_variant);
 
   const auto table_scan = _translate_predicate_node_to_table_scan(node, input_operator);
 
