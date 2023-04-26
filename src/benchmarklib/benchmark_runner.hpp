@@ -37,7 +37,7 @@ class SQLiteWrapper;
 class BenchmarkRunner : public Noncopyable {
  public:
   // Defines the interval in which the system utilization is collected
-  static constexpr auto SYSTEM_UTILIZATION_TRACKING_INTERVAL = std::chrono::seconds{1};
+  static constexpr auto METRICS_SAMPLING_INTERVAL = std::chrono::seconds{1};
 
   BenchmarkRunner(const BenchmarkConfig& config, std::unique_ptr<AbstractBenchmarkItemRunner> benchmark_item_runner,
                   std::unique_ptr<AbstractTableGenerator> table_generator, const nlohmann::json& context);

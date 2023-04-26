@@ -102,7 +102,7 @@ void BenchmarkRunner::run() {
         .create_pipeline()
         .get_result_table();
 
-    metrics_thread = std::make_unique<PausableLoopThread>(SYSTEM_UTILIZATION_TRACKING_INTERVAL, [this](size_t) {
+    metrics_thread = std::make_unique<PausableLoopThread>(METRICS_SAMPLING_INTERVAL, [this](size_t) {
       // Start tracking the system utilization
       const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
 
