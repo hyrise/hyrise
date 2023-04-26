@@ -38,8 +38,6 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   auto chunk_id_mapping = std::vector<std::optional<ChunkID>>{};
 
-  auto pruned_chunk_ids_set = std::unordered_set<ChunkID>{};
-
   // If the input operator is of the type GetTable, pruning must be considered.
   const auto& input_get_table = dynamic_pointer_cast<const GetTable>(left_input());
   if (input_get_table) {
@@ -50,8 +48,6 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
     const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
     chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
-
-    pruned_chunk_ids_set = std::unordered_set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
   } else {
     chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count(), std::vector<ChunkID>{});
   }
@@ -69,8 +65,8 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
       // If the matches Chunk is included, its mapped ChunkID is added to the output. The ChunkOffset stays the same.
       if (binary_search(included_chunk_ids.begin(), included_chunk_ids.end(),
-                        (*current_iter).chunk_id) && !pruned_chunk_ids_set.contains((*current_iter).chunk_id)) {
-        matches_out->emplace_back(RowID{(*current_iter).chunk_id, (*current_iter).chunk_offset});
+                        chunk_id_mapping[(*current_iter).chunk_id])) {
+        matches_out->emplace_back(RowID{*chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
       }
     }
   };
