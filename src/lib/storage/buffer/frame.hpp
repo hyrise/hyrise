@@ -15,13 +15,11 @@ class Frame {
 
   const PageSizeType size_type;
   const PageType page_type;
+  const PageID page_id;
 
-  explicit Frame(const PageSizeType size_type, const PageType page_type) : size_type(size_type), page_type(page_type) {}
-
-  explicit Frame(const PageSizeType size_type, const PageType page_type, std::byte* data)
-      : size_type(size_type), page_type(page_type), data(data) {}
-
-  PageID page_id = INVALID_PAGE_ID;
+  explicit Frame(const PageID page_id, const PageSizeType size_type, const PageType page_type,
+                 std::byte* data = nullptr)
+      : page_id(page_id), size_type(size_type), page_type(page_type), data(data) {}
 
   // State variables
   std::atomic_uint32_t pin_count{0};
@@ -44,7 +42,6 @@ class Frame {
   // TODO: Store actual used size to reduce copy overhead
 
   // Various helper functions
-  void init(const PageID page_id);
   bool can_evict() const;
   void set_evicted();
   void try_set_dirty(const bool new_dirty);

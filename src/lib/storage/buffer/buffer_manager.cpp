@@ -65,7 +65,7 @@ BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager:
   return *this;
 }
 
-// TODO: Track purges
+// TODO: Track purges, verifiy proper eviction
 void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   const auto required_size_type = frame->size_type;
@@ -171,7 +171,7 @@ void BufferManager::BufferPools::purge_eviction_queue() {
     return;
   }
 
-  while (true) {
+  for (auto i = size_t{0}; i < MAX_EVICTION_QUEUE_PURGES; i++) {
     // Check if the queue is empty
     if (!eviction_queue->try_pop(item)) {
       break;
@@ -325,9 +325,8 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
     if (!shared_frame->dram_frame) {
       auto size_type = shared_frame->numa_frame->size_type;
       auto page_id = shared_frame->numa_frame->page_id;
-      const auto frame = std::make_shared<Frame>(size_type, PageType::Dram);
+      const auto frame = std::make_shared<Frame>(page_id, size_type, PageType::Dram);
       _dram_buffer_pools.allocate_frame(frame);
-      frame->init(page_id);
       _dram_buffer_pools.add_to_eviction_queue(frame);
       SharedFrame::link(shared_frame, frame);
     }
@@ -345,9 +344,8 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
       if (!shared_frame->dram_frame) {
         auto size_type = shared_frame->numa_frame->size_type;
         auto page_id = shared_frame->numa_frame->page_id;
-        const auto frame = std::make_shared<Frame>(size_type, PageType::Dram);
+        const auto frame = std::make_shared<Frame>(page_id, size_type, PageType::Dram);
         _dram_buffer_pools.allocate_frame(frame);
-        frame->init(page_id);
         _dram_buffer_pools.add_to_eviction_queue(frame);
         SharedFrame::link(shared_frame, frame);
       }
@@ -357,9 +355,8 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
       if (!shared_frame->numa_frame) {
         auto size_type = shared_frame->dram_frame->size_type;
         auto page_id = shared_frame->dram_frame->page_id;
-        const auto frame = std::make_shared<Frame>(size_type, PageType::Numa);
+        const auto frame = std::make_shared<Frame>(page_id, size_type, PageType::Numa);
         _numa_buffer_pools.allocate_frame(frame);
-        frame->init(page_id);
         _numa_buffer_pools.add_to_eviction_queue(frame);
         SharedFrame::link(shared_frame, frame);
       }
@@ -391,8 +388,7 @@ void BufferManager::evict_frame(std::shared_ptr<Frame>& frame) {
     } else {
       // TODO: Evict to NUMA if not dirty?, check if numa frame exists
       // 2. Evict to NUMA
-      auto allocated_numa_frame = std::make_shared<Frame>(frame->size_type, PageType::Numa);
-      allocated_numa_frame->init(frame->page_id);
+      auto allocated_numa_frame = std::make_shared<Frame>(frame->page_id, frame->size_type, PageType::Numa);
       _numa_buffer_pools.allocate_frame(allocated_numa_frame);
       const auto num_bytes = bytes_for_size_type(frame->size_type);
       std::memcpy(allocated_numa_frame->data, frame->data, num_bytes);
@@ -444,19 +440,17 @@ std::shared_ptr<SharedFrame> BufferManager::new_frame(const PageSizeType size_ty
       !_numa_buffer_pools.enabled || (_dram_buffer_pools.enabled && !_migration_policy.bypass_dram_during_write());
 
   if (use_dram) {
-    auto allocated_dram_frame = std::make_shared<Frame>(size_type, PageType::Dram);
+    auto allocated_dram_frame = std::make_shared<Frame>(page_id, size_type, PageType::Dram);
     auto shared_frame = std::make_shared<SharedFrame>(allocated_dram_frame);
     allocated_dram_frame->shared_frame = shared_frame;
     _dram_buffer_pools.allocate_frame(allocated_dram_frame);
-    allocated_dram_frame->init(page_id);
     _dram_buffer_pools.add_to_eviction_queue(allocated_dram_frame);  // TODO: remove, rely on pin
     return shared_frame;
   } else {
-    auto allocated_numa_frame = std::make_shared<Frame>(size_type, PageType::Numa);
+    auto allocated_numa_frame = std::make_shared<Frame>(page_id, size_type, PageType::Numa);
     auto shared_frame = std::make_shared<SharedFrame>(allocated_numa_frame);
     allocated_numa_frame->shared_frame = shared_frame;
     _numa_buffer_pools.allocate_frame(allocated_numa_frame);
-    allocated_numa_frame->init(page_id);
     _numa_buffer_pools.add_to_eviction_queue(allocated_numa_frame);  // TODO: remove, rely on pin
     return shared_frame;
   }

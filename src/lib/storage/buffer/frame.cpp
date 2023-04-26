@@ -2,13 +2,6 @@
 
 namespace hyrise {
 
-void Frame::init(const PageID page_id) {
-  this->page_id = page_id;
-  pin_count.store(0);
-  eviction_timestamp.store(0);
-  state.store(State::Resident);
-}
-
 bool Frame::can_evict() const {
   return is_resident() && !is_pinned();
 }
@@ -48,7 +41,6 @@ bool Frame::try_second_chance_evictable() {
 }
 
 void Frame::clear() {
-  page_id = INVALID_PAGE_ID;
   state.store(State::Evicted);
   dirty.store(false);
   pin_count.store(0);

@@ -20,27 +20,34 @@ TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
   EXPECT_EQ(region->get_device_type(), SSDRegion::DeviceType::REGULAR_FILE);
 
   struct alignas(512) Page {
+    // Just use the biggest possible size to avoid different allocations
     std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
   };
 
-  std::vector<std::tuple<PageSizeType, Page>> write_pages = {
-      std::make_tuple(PageSizeType::KiB8, Page{}),
-      std::make_tuple(PageSizeType::KiB32, Page{}),
-      std::make_tuple(PageSizeType::KiB16, Page{}),
+  auto page_data = std::vector<Page>{
+      Page{},
+      Page{},
+      Page{},
   };
 
-  std::get<1>(write_pages[0]).data[0] = std::byte{0x01};
-  std::get<1>(write_pages[1]).data[0] = std::byte{0x02};
-  std::get<1>(write_pages[2]).data[0] = std::byte{0x03};
+  auto write_frames = std::vector<Frame>{
+      Frame{PageID{0}, PageSizeType::KiB8, PageType::Dram, page_data[0].data.data()},
+      Frame{PageID{1}, PageSizeType::KiB32, PageType::Dram, page_data[1].data.data()},
+      Frame{PageID{2}, PageSizeType::KiB16, PageType::Dram, page_data[2].data.data()},
+  };
 
-  region->write_page(PageID{1}, std::get<0>(write_pages[1]), std::get<1>(write_pages[1]).data.data());
-  region->write_page(PageID{0}, std::get<0>(write_pages[0]), std::get<1>(write_pages[0]).data.data());
-  region->write_page(PageID{2}, std::get<0>(write_pages[2]), std::get<1>(write_pages[2]).data.data());
+  write_frames[0].data[0] = std::byte{0x01};
+  write_frames[1].data[0] = std::byte{0x02};
+  write_frames[2].data[0] = std::byte{0x03};
 
-  std::vector<std::tuple<PageSizeType, Page>> read_pages = {
-      std::make_tuple(PageSizeType::KiB8, Page{}),
-      std::make_tuple(PageSizeType::KiB32, Page{}),
-      std::make_tuple(PageSizeType::KiB16, Page{}),
+  region->write_page(write_frames[0]);
+  region->write_page(write_frames[3]);
+  region->write_page(write_frames[1]);
+
+  auto read_frames = std::vector<Frame>{
+      Frame{PageID{1}, PageSizeType::KiB32, PageType::Dram, page_data[1].data.data()},
+      Frame{PageID{2}, PageSizeType::KiB16, PageType::Dram, page_data[2].data.data()},
+      Frame{PageID{0}, PageSizeType::KiB8, PageType::Dram, page_data[0].data.data()},
   };
   region->read_page(PageID{2}, std::get<0>(read_pages[2]), std::get<1>(read_pages[2]).data.data());
   region->read_page(PageID{0}, std::get<0>(read_pages[0]), std::get<1>(read_pages[0]).data.data());

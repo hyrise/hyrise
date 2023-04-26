@@ -25,12 +25,10 @@ class BufferPtrTest : public BaseTest {
 
   const std::string db_file = test_data_path + "buffer_manager.data";
 
-  int get_pin_count(BufferManager& buffer_manager, const PageID page_id) {
-    return buffer_manager.get_pin_count(page_id);
-  }
-
-  bool is_page_dirty(BufferManager& buffer_manager, const PageID page_id) {
-    return buffer_manager.is_dirty(page_id);
+  std::shared_ptr<SharedFrame> create_frame(const PageID page_id, PageSizeType size_type) {
+    auto shared_frame = std::make_shared<SharedFrame>();
+    auto frame = std::make_shared<Frame>(page_id, PageSizeType::KiB8, PageType::Dram);
+    SharedFrame::link(shared_frame, frame);
   }
 };
 

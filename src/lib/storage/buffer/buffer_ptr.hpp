@@ -189,7 +189,7 @@ class BufferPtr {
   }
 
   friend bool operator<(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1.get() < ptr2.get();
+    return ptr1._shared_frame == ptr2._shared_frame && ptr1._ptr_or_offset < ptr2._ptr_or_offset;
   }
 
   friend bool operator<(pointer& ptr1, const BufferPtr& ptr2) noexcept {
@@ -220,6 +220,14 @@ class BufferPtr {
 
   std::shared_ptr<Frame> get_frame(const AccessIntent access_intent) const {
     return BufferManager::get_global_buffer_manager().load_frame(_shared_frame, access_intent);
+  }
+
+  PtrOrOffset get_offset() const {
+    return _ptr_or_offset;
+  }
+
+  std::shared_ptr<SharedFrame> get_shared_frame() const {
+    return _shared_frame;
   }
 
  private:
@@ -254,12 +262,12 @@ class BufferPtr {
 
 template <class T1, class T2>
 inline bool operator==(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1._shared_frame == ptr2._shared_frame && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
+  return ptr1.get_shared_frame() == ptr2.get_shared_frame() && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
 }
 
 template <class T1, class T2>
 inline bool operator!=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1._shared_frame != ptr2._shared_frame || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
+  return ptr1.get_shared_frame() != ptr2.get_shared_frame() || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
 }
 
 template <class T>
@@ -268,20 +276,23 @@ inline BufferPtr<T> operator+(std::ptrdiff_t diff, const BufferPtr<T>& right) {
 }
 
 template <class T, class T2>
-inline std::ptrdiff_t operator-(const BufferPtr<T>& pt, const BufferPtr<T2>& ptr2) {
-  return pt.get() - ptr2.get();
+inline std::ptrdiff_t operator-(const BufferPtr<T>& ptr1, const BufferPtr<T2>& ptr2) {
+  return ptr1.get_offset() - ptr2.get_offset();
 }
 
 template <class T1, class T2>
 inline bool operator<=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1.get() <= ptr2.get();
+  return ptr1.get_shared_frame() == ptr2.get_shared_frame() && ptr1.get_offset() <= ptr2.get_offset();
 }
 
 template <class T>
 inline void swap(BufferPtr<T>& ptr1, BufferPtr<T>& ptr2) {
-  auto temp = ptr1.get();
-  ptr1 = ptr2;
-  ptr2 = temp;
+  auto ptr1_frame = ptr1._shared_frame;
+  auto ptr1_offset = ptr1._ptr_or_offset;
+  ptr1._shared_frame = ptr2._shared_frame;
+  ptr1._ptr_or_offset = ptr2._ptr_or_offset;
+  ptr2._shared_frame = ptr1_frame;
+  ptr2._ptr_or_offset = ptr1_offset;
 }
 
 }  // namespace hyrise
@@ -290,7 +301,8 @@ namespace std {
 template <class T>
 struct hash<hyrise::BufferPtr<T>> {
   size_t operator()(const hyrise::BufferPtr<T>& ptr) const noexcept {
-    return std::hash<typename hyrise::BufferPtr<T>::Addressing>(ptr._addressing);
+    // TODO
+    return std::hash<typename hyrise::BufferPtr<T>>(ptr._addressing);
   }
 };
 }  // namespace std

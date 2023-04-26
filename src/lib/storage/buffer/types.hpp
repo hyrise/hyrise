@@ -21,22 +21,26 @@ constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
 
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256 };  //, KiB512 };
 
+// Get the number of bytes for a given PageSizeType
 constexpr size_t bytes_for_size_type(const PageSizeType size) {
   return 1 << (13 + static_cast<size_t>(size));
 }
 
-constexpr PageSizeType find_fitting_page_size_type(const std::size_t value) {
+// Find the smallest PageSizeType that can hold the given bytes
+constexpr PageSizeType find_fitting_page_size_type(const std::size_t bytes) {
   for (auto page_size_type : magic_enum::enum_values<PageSizeType>()) {
-    if (value <= bytes_for_size_type(page_size_type)) {
+    if (bytes <= bytes_for_size_type(page_size_type)) {
       return page_size_type;
     }
   }
-  Fail("Cannot fit value of " + std::to_string(value) + " bytes to a PageSizeType");
+  Fail("Cannot fit value of " + std::to_string(bytes) + " bytes to a PageSizeType");
 }
 
 constexpr size_t NUM_PAGE_SIZE_TYPES = magic_enum::enum_count<PageSizeType>();
+
 constexpr PageSizeType MAX_PAGE_SIZE_TYPE = magic_enum::enum_value<PageSizeType>(NUM_PAGE_SIZE_TYPES - 1);
 
+// Signifies an invalid NUMA node (>= 0 is a valid node)
 constexpr int8_t NO_NUMA_MEMORY_NODE = -1;
 
 // Pages need to be aligned to 512 in order to be used with O_DIRECT
@@ -73,15 +77,17 @@ class Frame;
 
 // Item for the Eviction Queue
 struct EvictionItem {
+  // The frame to be evicted. Using a weak_ptr, because the frame could be removed from the buffer manager in the meantime.
   std::weak_ptr<Frame> frame;
 
-  // Insert timestamp for frame into the queue. Is compared with eviction_timestamp of frame.
+  // Insertion timestamp for frame into the queue. Is compared with eviction_timestamp of frame.
   uint64_t timestamp;
 
+  // Check if the given frame can be evicted based on the timestamp comparison
   bool can_evict(std::shared_ptr<Frame>& frame) const;
 };
 
-// using PageTable = boost::unordered_flat_map<PageID, std::shared_ptr<SharedFrame>>;
+constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;
 
 using EvictionQueue = tbb::concurrent_queue<EvictionItem>;
 
