@@ -611,6 +611,8 @@ set(
     utils/meta_table_manager.hpp
     utils/meta_tables/abstract_meta_table.cpp
     utils/meta_tables/abstract_meta_table.hpp
+    utils/meta_tables/meta_buffer_manager_metrics_table.cpp
+    utils/meta_tables/meta_buffer_manager_metrics_table.hpp
     utils/meta_tables/meta_chunk_sort_orders_table.cpp
     utils/meta_tables/meta_chunk_sort_orders_table.hpp
     utils/meta_tables/meta_chunks_table.cpp
