@@ -79,11 +79,13 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
         });
 
         auto allocator = PolymorphicAllocator<ColumnDataType>{};
-        auto dictionary_pin_guard = AllocatorPinGuard{allocator};
+        auto dictionary_allocator_pin_guard = AllocatorPinGuard{allocator};
 
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
 
-        std::sort(dictionary.begin().get_ptr().get(), dictionary.end().get_ptr().get());
+        auto dictionary_pin_guard = FramePinGuard{};
+        std::sort(dictionary.begin().get_ptr().pin(dictionary_pin_guard, true),
+                  dictionary.end().get_ptr().pin(dictionary_pin_guard, true));
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

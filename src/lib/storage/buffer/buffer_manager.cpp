@@ -270,6 +270,7 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
   if (frame->page_type == PageType::Numa) {
     _metrics->total_misses_numa++;
     _numa_buffer_pools.allocate_frame(frame);
+    _numa_buffer_pools.add_to_eviction_queue(frame);
     read_page_from_ssd(frame);
     frame->set_resident();
     return;
@@ -278,6 +279,7 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
   if (frame->page_type == PageType::Dram && !_numa_buffer_pools.enabled) {
     _metrics->total_misses_dram++;
     _dram_buffer_pools.allocate_frame(frame);
+    _dram_buffer_pools.add_to_eviction_queue(frame);
     read_page_from_ssd(frame);
     frame->set_resident();
     return;
@@ -293,6 +295,8 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
   auto numa_frame = shared_frame->numa_frame;
   if (!numa_frame || !numa_frame->is_resident()) {
     _metrics->total_misses_numa++;
+    _dram_buffer_pools.allocate_frame(frame);
+    _dram_buffer_pools.add_to_eviction_queue(frame);
     read_page_from_ssd(frame);
     frame->set_resident();
     return;
@@ -304,6 +308,8 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
   std::lock_guard<std::mutex> numa_frame_lock(numa_frame->latch);
 
   const auto num_bytes = bytes_for_size_type(frame->size_type);
+  _dram_buffer_pools.allocate_frame(frame);
+  _dram_buffer_pools.add_to_eviction_queue(frame);
   std::memcpy(frame->data, numa_frame->data, num_bytes);
   _metrics->total_bytes_copied_from_numa_to_dram += num_bytes;
 
@@ -312,6 +318,7 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
 
 // rename to evictBlocks(...)
 std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFrame>& shared_frame) {
+  // Return the same block if its pinned
   if (_dram_buffer_pools.enabled && shared_frame->dram_frame && shared_frame->dram_frame->is_resident()) {
     // 1. Found the frame in DRAM
     make_resident(shared_frame->dram_frame);
@@ -400,6 +407,8 @@ void BufferManager::evict_frame(std::shared_ptr<Frame> frame) {
       const auto num_bytes = bytes_for_size_type(frame->size_type);
       std::memcpy(allocated_numa_frame->data, frame->data, num_bytes);
       _metrics->total_bytes_copied_from_dram_to_numa += num_bytes;
+      _numa_buffer_pools.add_to_eviction_queue(allocated_numa_frame);
+
       SharedFrame::link(shared_frame, allocated_numa_frame);
     }
     frame->dirty = false;

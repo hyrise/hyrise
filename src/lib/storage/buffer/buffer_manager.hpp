@@ -50,7 +50,6 @@ class BufferManager : public Noncopyable {
     // Tracks the number of bytes copied between the different regions, TODO: Maybe add a count
     std::size_t total_bytes_copied_from_ssd_to_dram = 0;
     std::size_t total_bytes_copied_from_ssd_to_numa = 0;
-
     std::size_t total_bytes_copied_from_numa_to_dram = 0;
     std::size_t total_bytes_copied_from_dram_to_numa = 0;
     std::size_t total_bytes_copied_from_dram_to_ssd = 0;
@@ -89,8 +88,8 @@ class BufferManager : public Noncopyable {
   };
 
   struct Config {
-    uint64_t dram_buffer_pool_size = 1UL << 30;  // 1 GB
-    uint64_t numa_buffer_pool_size = 1UL << 34;  // 16 GB
+    std::size_t dram_buffer_pool_size = 1UL << 30;  // 1 GB
+    std::size_t numa_buffer_pool_size = 1UL << 34;  // 16 GB
 
     MigrationPolicy migration_policy = EagerMigrationPolicy{};
 

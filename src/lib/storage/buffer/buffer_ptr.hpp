@@ -32,6 +32,10 @@ class FramePinGuard : public Noncopyable {
     }
   }
 
+  std::shared_ptr<Frame> get_frame() {
+    return _frame;
+  }
+
   ~FramePinGuard() {
     BufferManager::get_global_buffer_manager().unpin(_frame, _dirty);
   }
@@ -204,9 +208,12 @@ class BufferPtr {
   }
 
   pointer pin(FramePinGuard& guard, const bool dirty = false) {
-    auto _frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame);
-    guard.pin(_frame, dirty);
-    return get();
+    auto frame = guard.get_frame();
+    if (!frame) {
+      frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame);
+    }
+    guard.pin(frame, dirty);
+    return reinterpret_cast<pointer>(frame->data + _ptr_or_offset);
   }
 
   std::shared_ptr<Frame> get_frame() const {
