@@ -29,9 +29,10 @@ const std::string& MetaBufferManagerMetricsTable::name() const {
 }
 
 std::shared_ptr<Table> MetaBufferManagerMetricsTable::_on_generate() const {
+  const auto metrics = Hyrise::get().buffer_manager.metrics();
   auto output_table = std::make_shared<Table>(_column_definitions, TableType::Data, std::nullopt, UseMvcc::Yes);
 
-  output_table->append({static_cast<int64_t>(total_bytes_copied_from_ssd_to_dram)});
+  output_table->append({static_cast<int64_t>(metrics.total_bytes_copied_from_ssd_to_dram)});
 
   return output_table;
 }
