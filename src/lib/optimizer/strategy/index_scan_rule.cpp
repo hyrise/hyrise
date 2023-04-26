@@ -73,7 +73,7 @@ bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_
 
   const auto& operator_predicate = (*operator_predicates)[0];
 
-  // // Currently, we do not support two-column predicates
+  // Currently, we do not support two-column predicates
   if (is_column_id(operator_predicate.value)) {
     return false;
   }
@@ -82,8 +82,8 @@ bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_
     return false;
   }
 
-  if (!(operator_predicate.predicate_condition == PredicateCondition::Equals ||
-        operator_predicate.predicate_condition == PredicateCondition::NotEquals)) {
+  if (operator_predicate.predicate_condition != PredicateCondition::Equals &&
+        operator_predicate.predicate_condition != PredicateCondition::NotEquals) {
     return false;
   }
 

@@ -120,6 +120,13 @@ TEST_F(LQPTranslatorTest, StoredTableNode) {
   EXPECT_EQ(get_table_op->table_name(), "table_int_float");
 }
 
+TEST_F(LQPTranslatorTest, StoredTableNodeThrowsWhenNotLeaf) {
+  const auto int_float_node_copy = int_float_node;
+  int_float_node_copy->set_left_input(int_float_node);
+
+  EXPECT_THROW(LQPTranslator{}.translate_node(int_float_node), std::logic_error);
+}
+
 TEST_F(LQPTranslatorTest, ArithmeticExpression) {
   /**
    * Build LQP and translate to PQP
