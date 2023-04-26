@@ -20,13 +20,11 @@
 namespace hyrise {
 
 IndexScan::IndexScan(const std::shared_ptr<const AbstractOperator>& input_operator, const ColumnID indexed_column_id,
-                     const PredicateCondition predicate_condition, const AllTypeVariant scan_value,
-                     const std::optional<std::vector<std::optional<ChunkID>>> chunk_id_mapping)
+                     const PredicateCondition predicate_condition, const AllTypeVariant scan_value)
     : AbstractReadOnlyOperator{OperatorType::IndexScan, input_operator},
       _indexed_column_id{indexed_column_id},
       _predicate_condition{predicate_condition},
-      _scan_value{scan_value},
-      _chunk_id_mapping{chunk_id_mapping} {}
+      _scan_value{scan_value} {}
 
 const std::string& IndexScan::name() const {
   static const auto name = std::string{"IndexScan"};
@@ -117,8 +115,7 @@ std::shared_ptr<AbstractOperator> IndexScan::_on_deep_copy(
     const std::shared_ptr<AbstractOperator>& copied_left_input,
     const std::shared_ptr<AbstractOperator>& /*copied_right_input*/,
     std::unordered_map<const AbstractOperator*, std::shared_ptr<AbstractOperator>>& /*copied_ops*/) const {
-  return std::make_shared<IndexScan>(copied_left_input, _indexed_column_id, _predicate_condition, _scan_value,
-                                     _chunk_id_mapping);
+  return std::make_shared<IndexScan>(copied_left_input, _indexed_column_id, _predicate_condition, _scan_value);
 }
 
 void IndexScan::_on_set_parameters(const std::unordered_map<ParameterID, AllTypeVariant>& parameters) {}
