@@ -35,11 +35,11 @@ class BufferManager : public Noncopyable {
     std::size_t total_unused_bytes_numa = 0;
     std::size_t total_unused_bytes_dram = 0;
 
-    double internal_fragmentation_rate_dram() {
+    double internal_fragmentation_rate_dram() const {
       return (double)total_unused_bytes_dram / (double)total_allocated_bytes_dram;
     }
 
-    double internal_fragmentation_rate_numa() {
+    double internal_fragmentation_rate_numa() const {
       return (double)total_unused_bytes_numa / (double)total_allocated_bytes_numa;
     }
 
@@ -78,7 +78,7 @@ class BufferManager : public Noncopyable {
     std::size_t num_numa_evictions;
 
     // TODO: Ratio is defined in Spitfire paper. Lower values signfies lower duplication.
-    std::size_t dram_numa_inclusivity_ratio = 0;
+    // std::size_t dram_numa_inclusivity_ratio = 0;
 
     // Number of madvice calls, TODO: track in more places
     std::size_t num_madvice_free_calls_numa = 0;
