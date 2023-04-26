@@ -83,6 +83,8 @@ void BenchmarkRunner::run() {
   _benchmark_wall_clock_start = std::chrono::system_clock::now();
 
   auto track_system_utilization = std::atomic_bool{_config.metrics};
+
+  // TODO: Pausible loop thread
   auto system_utilization_tracker = std::thread{[&] {
     if (!track_system_utilization) {
       return;
@@ -95,14 +97,26 @@ void BenchmarkRunner::run() {
         .create_pipeline()
         .get_result_table();
 
+    SQLPipelineBuilder{
+        "CREATE TABLE benchmark_buffer_manager_metrics_log AS SELECT CAST(0 as LONG) AS \"timestamp\", * FROM "
+        "meta_buffer_manager_metrics"}
+        .create_pipeline()
+        .get_result_table();
+
     while (track_system_utilization) {
       const auto timestamp = std::chrono::nanoseconds{std::chrono::steady_clock::now() - _benchmark_start}.count();
 
-      auto sql_builder = std::stringstream{};
-      sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
-                  << "as LONG), * FROM meta_system_utilization";
+      auto system_utilization_sql_builder = std::stringstream{};
+      system_utilization_sql_builder << "INSERT INTO benchmark_system_utilization_log SELECT CAST(" << timestamp
+                                     << "as LONG), * FROM meta_system_utilization";
 
-      SQLPipelineBuilder{sql_builder.str()}.create_pipeline().get_result_table();
+      SQLPipelineBuilder{system_utilization_sql_builder.str()}.create_pipeline().get_result_table();
+
+      auto buffer_manager_metrics_sql_builder = std::stringstream{};
+      buffer_manager_metrics_sql_builder << "INSERT INTO benchmark_buffer_manager_metrics_log SELECT CAST(" << timestamp
+                                         << "as LONG), * FROM meta_buffer_manager_metrics";
+
+      SQLPipelineBuilder{buffer_manager_metrics_sql_builder.str()}.create_pipeline().get_result_table();
 
       std::this_thread::sleep_for(SYSTEM_UTILIZATION_TRACKING_INTERVAL);
     }
@@ -460,6 +474,10 @@ void BenchmarkRunner::write_report_to_file() const {
   // Add information that was temporarily stored in the `benchmark_...` tables during the benchmark execution
   if (Hyrise::get().storage_manager.has_table("benchmark_system_utilization_log")) {
     report["system_utilization"] = _sql_to_json("SELECT * FROM benchmark_system_utilization_log");
+  }
+
+  if (Hyrise::get().storage_manager.has_table("buffer_manager_metrics_log")) {
+    report["buffer_manager_metrics"] = _sql_to_json("SELECT * FROM buffer_manager_metrics_log");
   }
 
   if (Hyrise::get().storage_manager.has_table("benchmark_segments_log")) {
