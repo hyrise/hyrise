@@ -83,7 +83,7 @@ bool IndexScanRule::_is_index_scan_applicable(const TableIndexStatistics& index_
   }
 
   if (operator_predicate.predicate_condition != PredicateCondition::Equals &&
-        operator_predicate.predicate_condition != PredicateCondition::NotEquals) {
+      operator_predicate.predicate_condition != PredicateCondition::NotEquals) {
     return false;
   }
 

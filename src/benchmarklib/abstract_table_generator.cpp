@@ -375,7 +375,7 @@ void AbstractTableGenerator::_create_table_indexes(
     std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) {
   Timer timer;
   std::cout << "- Creating table indexes" << std::endl;
-  
+
   const auto& indexes_by_table = _indexes_by_table();
   if (indexes_by_table.empty()) {
     std::cout << "-  No indexes defined by benchmark" << std::endl;
