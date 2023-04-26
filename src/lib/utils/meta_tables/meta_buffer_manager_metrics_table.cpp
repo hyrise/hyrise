@@ -3,16 +3,6 @@
 
 namespace hyrise {
 
-//     std::size_t total_bytes_copied_from_ssd_to_dram = 0;
-//     std::size_t total_bytes_copied_from_ssd_to_numa = 0;
-
-//     std::size_t total_bytes_copied_from_numa_to_dram = 0;
-//     std::size_t total_bytes_copied_from_dram_to_numa = 0;
-//     std::size_t total_bytes_copied_from_dram_to_ssd = 0;
-//     std::size_t total_bytes_copied_from_numa_to_ssd = 0;
-//     std::size_t total_bytes_copied_to_ssd = 0;
-//     std::size_t total_bytes_copied_from_ssd = 0;
-
 MetaBufferManagerMetricsTable::MetaBufferManagerMetricsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"total_bytes_copied_from_ssd_to_dram", DataType::Int, false},
                                                {"total_bytes_copied_from_ssd_to_numa", DataType::Int, false},

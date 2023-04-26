@@ -14,19 +14,16 @@ namespace hyrise {
 class FramePinGuard : public Noncopyable {
  public:
   template <typename T>
-  FramePinGuard(T& object, const bool dirty = false) : _dirty(false) {
+  FramePinGuard(T& object, const AccessIntent access_intent = AccessIntent::Read) : _access_intent(access_intent) {
     object.begin().get_ptr().pin(*this);
   }
 
-  FramePinGuard() = default;
+  FramePinGuard(const AccessIntent access_intent = AccessIntent::Read) : _access_intent(access_intent) {}
 
-  void pin(std::shared_ptr<Frame> frame, const bool dirty = false) {
+  void pin(std::shared_ptr<Frame> frame) {
     if (!_frame) {
-      _dirty = false;
       _frame = frame;
       BufferManager::get_global_buffer_manager().pin(_frame);
-    } else if (_frame == frame) {
-      // Do nothing
     } else {
       Fail("Cannot pin two different frames");
     }
@@ -36,13 +33,18 @@ class FramePinGuard : public Noncopyable {
     return _frame;
   }
 
+  AccessIntent get_access_intent() {
+    return _access_intent;
+  }
+
   ~FramePinGuard() {
-    BufferManager::get_global_buffer_manager().unpin(_frame, _dirty);
+    const auto dirty = _access_intent == AccessIntent::Write;
+    BufferManager::get_global_buffer_manager().unpin(_frame, dirty);
   }
 
  private:
   std::shared_ptr<Frame> _frame;
-  bool _dirty = false;
+  const AccessIntent _access_intent;
 };
 
 template <typename PointedType>
@@ -154,8 +156,8 @@ class BufferPtr {
     return _shared_frame || _ptr_or_offset;
   }
 
-  pointer get() const {
-    return static_cast<pointer>(this->get_pointer());
+  pointer get(const AccessIntent access_intent = AccessIntent::Read) const {
+    return static_cast<pointer>(this->get_pointer(access_intent));
   }
 
   static BufferPtr pointer_to(reference r) {
@@ -198,26 +200,26 @@ class BufferPtr {
     return ptr1.get() < ptr2;
   }
 
-  void* get_pointer() const {
+  void* get_pointer(const AccessIntent access_intent) const {
     if (_shared_frame) {
-      const auto frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame);
+      const auto frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame, access_intent);
       return frame->data + _ptr_or_offset;
     } else {
       return (void*)_ptr_or_offset;
     }
   }
 
-  pointer pin(FramePinGuard& guard, const bool dirty = false) {
+  pointer pin(FramePinGuard& guard) const {
     auto frame = guard.get_frame();
     if (!frame) {
-      frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame);
+      frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame, guard.get_access_intent());
+      guard.pin(frame);
     }
-    guard.pin(frame, dirty);
     return reinterpret_cast<pointer>(frame->data + _ptr_or_offset);
   }
 
-  std::shared_ptr<Frame> get_frame() const {
-    return BufferManager::get_global_buffer_manager().load_frame(_shared_frame);
+  std::shared_ptr<Frame> get_frame(const AccessIntent access_intent) const {
+    return BufferManager::get_global_buffer_manager().load_frame(_shared_frame, access_intent);
   }
 
  private:

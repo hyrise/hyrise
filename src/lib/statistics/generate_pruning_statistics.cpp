@@ -25,7 +25,7 @@ using namespace hyrise;  // NOLINT
 template <typename T>
 void create_pruning_statistics_for_segment(AttributeStatistics<T>& segment_statistics,
                                            const pmr_vector<T>& dictionary) {
-  auto pin_guard = FramePinGuard{dictionary, false};
+  auto pin_guard = FramePinGuard{dictionary, AccessIntent::Read};
 
   std::shared_ptr<AbstractStatisticsObject> pruning_statistics;
   if constexpr (std::is_arithmetic_v<T>) {
@@ -83,9 +83,9 @@ void generate_chunk_pruning_statistics(const std::shared_ptr<Chunk>& chunk) {
 
         pmr_vector<ColumnDataType> dictionary{values.cbegin(), values.cend(), allocator};
 
-        auto dictionary_pin_guard = FramePinGuard{};
-        std::sort(dictionary.begin().get_ptr().pin(dictionary_pin_guard, true),
-                  dictionary.end().get_ptr().pin(dictionary_pin_guard, true));
+        auto dictionary_pin_guard = FramePinGuard{AccessIntent::Write};
+        std::sort(dictionary.begin().get_ptr().pin(dictionary_pin_guard),
+                  dictionary.end().get_ptr().pin(dictionary_pin_guard));
         create_pruning_statistics_for_segment(*segment_statistics, dictionary);
       }
 

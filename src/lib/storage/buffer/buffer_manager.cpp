@@ -28,7 +28,7 @@ BufferManager::Config BufferManager::Config::from_env() {
 //----------------------------------------------------
 
 BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t pool_size,
-                                        const std::function<void(std::shared_ptr<Frame>)> evict_frame,
+                                        const std::function<void(std::shared_ptr<Frame>&)> evict_frame,
                                         const bool enable_eviction_worker,
                                         const std::shared_ptr<BufferManager::Metrics> metrics)
     : _used_bytes(0),
@@ -65,7 +65,7 @@ BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager:
   return *this;
 }
 
-// TODO: try to use second chance algorithm
+// TODO: Track purges
 void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
   DebugAssert(frame->page_type == _page_type, "Frame has wrong page type");
   const auto required_size_type = frame->size_type;
@@ -105,7 +105,8 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
       continue;
     }
 
-    // Call the callback to evict the frame. This is handled by the BufferManager
+    // Call the callback to evict the frame. This is handled by the BufferManager instead of the BufferPool,
+    // because we need access other members for eviction.
     _evict_frame(current_frame);
 
     const auto current_frame_size_type = current_frame->size_type;
@@ -134,7 +135,7 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
   // since we overshot the _used_bytes in the beginning.
   _used_bytes -= freed_bytes;
 
-  // If we did not find a frame of the correct size, we allocate a new one.
+  // If we did not find a page of the correct size, we allocate a new one.
   // We freed enough space in the previous steps.
   if (!frame->data) {
     _buffer_pools[static_cast<size_t>(required_size_type)]->allocate(frame);
@@ -163,8 +164,8 @@ void BufferManager::BufferPools::deallocate_frame(std::shared_ptr<Frame> frame) 
 void BufferManager::BufferPools::purge_eviction_queue() {
   auto item = EvictionItem{};
 
-  // Copy pointer to eviction queue to ensure access safety when task is running, but the buffer manager
-  //is already destroyed
+  // Copy pointer to eviction queue to ensure access safety when task is running, while the buffer manager
+  // was already destroyed
   auto eviction_queue = _eviction_queue;
   if (!eviction_queue) {
     return;
@@ -176,34 +177,21 @@ void BufferManager::BufferPools::purge_eviction_queue() {
       break;
     }
 
+    // If frame is gone or the timestamp is outdated, we can purge the item
     auto frame = item.frame.lock();
-    if (!frame || !frame->can_evict()) {
-      continue;
-    }
-
-    // Remove old items with an outdated timestamp
-    Fail("TODO: Check this again");
-    if (!item.can_evict(frame) && frame->try_second_chance_evictable()) {
+    if (!frame || !item.can_evict(frame)) {
       if (_page_type == PageType::Dram) {
-        _metrics->num_dram_eviction_queue_item_purges++;
+        _metrics->num_dram_eviction_queue_items_purged++;
       } else if (_page_type == PageType::Numa) {
-        _metrics->num_numa_eviction_queue_item_purges++;
+        _metrics->num_numa_eviction_queue_items_purged++;
       } else {
         Fail("Invalid page type");
       }
       continue;
     } else {
-      // Requeue the item
+      // If not, just requeue the item
       eviction_queue->push(item);
     }
-  }
-
-  if (_page_type == PageType::Dram) {
-    _metrics->num_dram_eviction_queue_purges++;
-  } else if (_page_type == PageType::Numa) {
-    _metrics->num_numa_eviction_queue_purges++;
-  } else {
-    Fail("Invalid page type");
   }
 }
 
@@ -317,7 +305,8 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
 }
 
 // rename to evictBlocks(...)
-std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFrame>& shared_frame) {
+std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFrame>& shared_frame,
+                                                  const AccessIntent access_intent) {
   // Return the same block if its pinned
   if (_dram_buffer_pools.enabled && shared_frame->dram_frame && shared_frame->dram_frame->is_resident()) {
     // 1. Found the frame in DRAM
@@ -383,9 +372,10 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
 }
 
 // TODO: Pass this to constructor of BufferPool
-void BufferManager::evict_frame(std::shared_ptr<Frame> frame) {
+void BufferManager::evict_frame(std::shared_ptr<Frame>& frame) {
   DebugAssert(frame != nullptr, "Frame is null");
   DebugAssert(frame->is_resident(), "Frame is not resident");
+  DebugAssert(!frame->is_pinned(), "Frame is still pinned");
 
   if (frame->dirty) {
     // Evict to SSD if it's a NUMA frame or if it's a DRAM frame and we can bypass NUMA

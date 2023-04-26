@@ -76,14 +76,16 @@ class BufferPoolAllocator {
   [[nodiscard]] pointer allocate(std::size_t n) {
     auto ptr = static_cast<pointer>(_buffer_manager->allocate(sizeof(value_type) * n, alignof(T)));
     if (auto observer = _observer.lock()) {
-      observer->on_allocate(ptr.get_frame());
+      // TODO: Pass shared frame
+      observer->on_allocate(ptr.get_frame(AccessIntent::Write));
     }
     return ptr;
   }
 
   void deallocate(pointer const ptr, std::size_t n) {
     if (auto observer = _observer.lock()) {
-      observer->on_deallocate(ptr.get_frame());
+      // TODO: Shared frame
+      observer->on_deallocate(ptr.get_frame(AccessIntent::Write));
     }
     _buffer_manager->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }

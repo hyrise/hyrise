@@ -63,10 +63,11 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
 
     // Dictionary is pinned through the allocator.
     auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
-    auto dictionary_pin_guard = FramePinGuard{};
+    auto dictionary_pin_guard = FramePinGuard{AccessIntent::Write};
 
-    std::sort(dictionary->begin().get_ptr().pin(dictionary_pin_guard, true),
-              dictionary->end().get_ptr().pin(dictionary_pin_guard, true));
+    // TODO:Pin is actually not needed here
+    std::sort(dictionary->begin().get_ptr().pin(dictionary_pin_guard),
+              dictionary->end().get_ptr().pin(dictionary_pin_guard));
 
     // TODO: Improve speed of this
     dictionary->erase(std::unique(dictionary->begin(), dictionary->end()), dictionary->cend());
@@ -100,8 +101,8 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
       // Encode a segment with a FixedStringVector as dictionary. pmr_string is the only supported type
       auto dictionary_pin_guard = FramePinGuard{};
       auto fixed_string_dictionary = std::make_shared<FixedStringVector>(
-          dictionary->cbegin().get_ptr().pin(dictionary_pin_guard, false),
-          dictionary->cend().get_ptr().pin(dictionary_pin_guard, false), max_string_length, allocator);
+          dictionary->cbegin().get_ptr().pin(dictionary_pin_guard),
+          dictionary->cend().get_ptr().pin(dictionary_pin_guard), max_string_length, allocator);
       return std::make_shared<FixedStringDictionarySegment<T>>(fixed_string_dictionary, compressed_attribute_vector);
     } else {
       // Encode a segment with a pmr_vector<T> as dictionary

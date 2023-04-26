@@ -70,11 +70,9 @@ class BufferManager : public Noncopyable {
     std::size_t current_pins_numa = 0;
 
     // Tracks the number of evictions
-    std::size_t num_dram_eviction_queue_purges = 0;
-    std::size_t num_dram_eviction_queue_item_purges = 0;
+    std::size_t num_dram_eviction_queue_items_purged = 0;
     std::size_t num_dram_eviction_queue_adds = 0;
-    std::size_t num_numa_eviction_queue_purges = 0;
-    std::size_t num_numa_eviction_queue_item_purges = 0;
+    std::size_t num_numa_eviction_queue_items_purged = 0;
     std::size_t num_numa_eviction_queue_adds = 0;
     std::size_t num_dram_evictions;
     std::size_t num_numa_evictions;
@@ -129,7 +127,7 @@ class BufferManager : public Noncopyable {
   */
   void make_resident(std::shared_ptr<Frame> frame);
 
-  std::shared_ptr<Frame>& load_frame(const std::shared_ptr<SharedFrame>& frame);
+  std::shared_ptr<Frame>& load_frame(const std::shared_ptr<SharedFrame>& frame, const AccessIntent access_intent);
 
   /**
    * @brief Get the frame and offset for a given pointer.
@@ -214,13 +212,13 @@ class BufferManager : public Noncopyable {
     void clear();
 
     BufferPools(const PageType page_type, const size_t pool_size,
-                const std::function<void(std::shared_ptr<Frame>)> evict_frame, const bool enable_eviction_worker,
+                const std::function<void(std::shared_ptr<Frame>&)> evict_frame, const bool enable_eviction_worker,
                 const std::shared_ptr<BufferManager::Metrics> metrics);
 
     BufferPools& operator=(BufferPools&& other);
 
     // The maximum number of bytes that can be allocated
-    size_t _total_bytes;  // TODO: condz
+    size_t _total_bytes;  // TODO: const
 
     // The number of bytes that are currently used
     std::atomic_uint64_t _used_bytes;
@@ -239,14 +237,14 @@ class BufferManager : public Noncopyable {
 
     bool enabled;
 
-    std::function<void(std::shared_ptr<Frame>)> _evict_frame;
+    std::function<void(std::shared_ptr<Frame>&)> _evict_frame;
   };
 
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
   std::shared_ptr<SharedFrame> new_frame(const PageSizeType size_type);
 
   // Evict a frame to a lower level buffer pool (NUMA) or to SSD
-  void evict_frame(std::shared_ptr<Frame> frame);
+  void evict_frame(std::shared_ptr<Frame>& frame);
 
   // Read a page from disk into the buffer pool
   void read_page_from_ssd(const std::shared_ptr<Frame> frame);

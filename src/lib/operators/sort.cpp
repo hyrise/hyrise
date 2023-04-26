@@ -65,8 +65,8 @@ std::shared_ptr<Table> write_materialized_output_table(const std::shared_ptr<con
         accessor_by_chunk_id[input_chunk_id] = create_segment_accessor<ColumnDataType>(abstract_segment);
       }
 
-      auto pos_list_pin_guard = FramePinGuard{};
-      auto pos_list_ptr = pos_list.begin().get_ptr().pin(pos_list_pin_guard, true);
+      auto pos_list_pin_guard = FramePinGuard{AccessIntent::Write};
+      auto pos_list_ptr = pos_list.begin().get_ptr().pin(pos_list_pin_guard);
 
       for (auto row_index = size_t{0}; row_index < row_count; ++row_index) {
         const auto [chunk_id, chunk_offset] = pos_list_ptr[row_index];
