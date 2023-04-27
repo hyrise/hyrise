@@ -23,6 +23,21 @@ bool contains_any_column_id(const ColumnIDs& search_columns, const std::vector<C
   });
 }
 
+std::vector<std::shared_ptr<const AbstractLQPNode>> find_subquery_lqps(
+    const std::shared_ptr<const AbstractLQPNode>& predicate_node) {
+  auto subquery_lqps = std::vector<std::shared_ptr<const AbstractLQPNode>>{};
+
+  const auto& expressions = predicate_node->node_expressions;
+  Assert(expressions.size() == 1, "Expected single Predicate per Node.");
+  for (const auto& expression : expressions[0]->arguments) {
+    if (expression->type == ExpressionType::LQPSubquery) {
+      subquery_lqps.emplace_back(static_cast<const LQPSubqueryExpression&>(*expression).lqp);
+    }
+  }
+
+  return subquery_lqps;
+}
+
 }  // namespace
 
 namespace hyrise {
@@ -254,7 +269,7 @@ std::vector<ChunkIndexStatistics> StoredTableNode::chunk_indexes_statistics() co
 }
 
 size_t StoredTableNode::_on_shallow_hash() const {
-  auto hash = size_t {0};
+  auto hash = size_t{0};
   boost::hash_combine(hash, table_name);
   for (const auto& pruned_chunk_id : _pruned_chunk_ids) {
     boost::hash_combine(hash, static_cast<size_t>(pruned_chunk_id));
@@ -263,13 +278,15 @@ size_t StoredTableNode::_on_shallow_hash() const {
     boost::hash_combine(hash, static_cast<size_t>(pruned_column_id));
   }
   for (const auto& predicate : prunable_subquery_predicates()) {
-    boost::hash_combine(hash, predicate->hash());
+    for (const auto& lqp : find_subquery_lqps(predicate)) {
+      boost::hash_combine(hash, lqp->hash());
+    }
   }
   return hash;
 }
 
 std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMapping& /*node_mapping*/) const {
-  // We cannot copy _prunable_subquery_predicated here since deep_copy() recurses into the input nodes and the
+  // We cannot copy _prunable_subquery_predicates here since deep_copy() recurses into the input nodes and the
   // StoredTableNodes are the first ones to be copied. Instead, AbstractLQPNode::deep_copy() sets the copied
   // PredicateNodes after the whole LQP has been copied.
   const auto copy = make(table_name);
@@ -281,7 +298,7 @@ std::shared_ptr<AbstractLQPNode> StoredTableNode::_on_shallow_copy(LQPNodeMappin
 bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNodeMapping& /*node_mapping*/) const {
   const auto& stored_table_node = static_cast<const StoredTableNode&>(rhs);
   if (table_name != stored_table_node.table_name || _pruned_chunk_ids != stored_table_node._pruned_chunk_ids ||
-         _pruned_column_ids != stored_table_node._pruned_column_ids) {
+      _pruned_column_ids != stored_table_node._pruned_column_ids) {
     return false;
   }
 
@@ -293,8 +310,17 @@ bool StoredTableNode::_on_shallow_equals(const AbstractLQPNode& rhs, const LQPNo
   }
 
   for (auto predicate_idx = size_t{0}; predicate_idx < subquery_predicate_count; ++predicate_idx) {
-    if (*prunable_subquery_predicates[predicate_idx] != *rhs_prunable_subquery_predicates[predicate_idx]) {
+    const auto& subquery_lqps = find_subquery_lqps(prunable_subquery_predicates[predicate_idx]);
+    const auto& rhs_subquery_lqps = find_subquery_lqps(rhs_prunable_subquery_predicates[predicate_idx]);
+    const auto subquery_lqp_count = subquery_lqps.size();
+    if (subquery_lqp_count != rhs_subquery_lqps.size()) {
       return false;
+    }
+
+    for (auto lqp_idx = size_t{0}; lqp_idx < subquery_lqp_count; ++lqp_idx) {
+      if (*subquery_lqps[lqp_idx] != *subquery_lqps[lqp_idx]) {
+        return false;
+      }
     }
   }
 

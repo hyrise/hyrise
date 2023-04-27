@@ -89,7 +89,8 @@ class FdCandidate : public AbstractDependencyCandidate {
   std::string description() const final;
 
   const std::string table_name;
-  const std::unordered_set<ColumnID> column_ids;
+  // Ordered to prefer integral over floating-point over string columns (columns with same types are ordered by ID).
+  const std::vector<ColumnID> column_ids;
 
  protected:
   size_t _on_hash() const final;

@@ -70,7 +70,8 @@ bool AbstractDependencyValidationRule::_dependency_already_known(const AbstractD
 
       for (const auto& key_constraint : key_constraints) {
         if (key_constraint.columns().size() == 1 &&
-            fd_candidate.column_ids.contains(*key_constraint.columns().cbegin())) {
+            std::find(fd_candidate.column_ids.cbegin(), fd_candidate.column_ids.cend(),
+                      *key_constraint.columns().cbegin()) != fd_candidate.column_ids.cend()) {
           return true;
         }
       }

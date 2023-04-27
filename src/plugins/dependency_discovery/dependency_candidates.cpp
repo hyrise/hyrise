@@ -6,6 +6,59 @@
 #include "magic_enum.hpp"
 
 #include "hyrise.hpp"
+#include "resolve_type.hpp"
+
+namespace {
+
+using namespace hyrise;  // NOLINT(build/namespaces)
+
+// Need this additional method to sort the ColumnIDs in the initializer list. We cannot initialize the const member otherwise.
+std::vector<ColumnID> sort_fd_candidate_columns(const std::string& table_name,
+                                                const std::unordered_set<ColumnID>& column_ids) {
+  // Prioritize columns with integral data type. They can use more validation shortcuts and grouping with int32_t is
+  // also faster in AggregateHash.
+  const auto& table = Hyrise::get().storage_manager.get_table(table_name);
+  auto columns = std::vector<ColumnID>{column_ids.cbegin(), column_ids.cend()};
+
+  // Return true if lhs is integral and rhs is not. Else, return lhs < rhs.
+  const auto compare_column_ids_by_type = [&](const auto lhs, const auto rhs) {
+    auto is_smaller = false;
+    resolve_data_type(table->column_data_type(lhs), [&](auto lhs_type) {
+      using LhsDataType = typename decltype(lhs_type)::type;
+      resolve_data_type(table->column_data_type(rhs), [&](auto rhs_type) {
+        using RhsDataType = typename decltype(rhs_type)::type;
+
+        if constexpr (std::is_integral_v<LhsDataType> && !std::is_integral_v<RhsDataType>) {
+          is_smaller = true;
+          return;
+        }
+
+        if constexpr (!std::is_integral_v<LhsDataType> && std::is_integral_v<RhsDataType>) {
+          return;
+        }
+
+        if constexpr (std::is_arithmetic_v<LhsDataType> && !std::is_arithmetic_v<RhsDataType>) {
+          is_smaller = true;
+          return;
+        }
+
+        if constexpr (!std::is_arithmetic_v<LhsDataType> && std::is_arithmetic_v<RhsDataType>) {
+          return;
+        }
+
+        // Both have the same type, just compare the ColumnIDs then.
+        is_smaller = lhs < rhs;
+      });
+    });
+
+    return is_smaller;
+  };
+
+  std::sort(columns.begin(), columns.end(), compare_column_ids_by_type);
+  return columns;
+}
+
+}  // namespace
 
 namespace hyrise {
 
@@ -135,7 +188,7 @@ bool IndCandidate::_on_equals(const AbstractDependencyCandidate& rhs) const {
 FdCandidate::FdCandidate(const std::string& init_table_name, const std::unordered_set<ColumnID>& init_column_ids)
     : AbstractDependencyCandidate{DependencyType::Functional},
       table_name{init_table_name},
-      column_ids{init_column_ids} {
+      column_ids{sort_fd_candidate_columns(init_table_name, init_column_ids)} {
   Assert(column_ids.size() > 1, "Expected multiple columns.");
 }
 
@@ -170,12 +223,13 @@ bool FdCandidate::_on_equals(const AbstractDependencyCandidate& rhs) const {
     return false;
   }
 
-  if (column_ids.size() != fd_candidate.column_ids.size()) {
+  const auto column_id_count = column_ids.size();
+  if (column_id_count != fd_candidate.column_ids.size()) {
     return false;
   }
 
-  for (const auto column_id : column_ids) {
-    if (!fd_candidate.column_ids.contains(column_id)) {
+  for (auto column_id = ColumnID{0}; column_id < column_id_count; ++column_id) {
+    if (column_ids[column_id] != fd_candidate.column_ids[column_id]) {
       return false;
     }
   }
