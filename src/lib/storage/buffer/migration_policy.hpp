@@ -52,7 +52,7 @@ class LazyMigrationPolicy : public MigrationPolicy {
   LazyMigrationPolicy() : MigrationPolicy(0.01, 0.01, 0.2, 1) {}
 };
 
-// EagerMigrationPolicy is good for small-working sets that fit in-memory as we are trying to fit as much into DRAM as possible
+// EagerMigrationPolicy is good for small-working sets that fit in memory as we are trying to work as much with DRAM as possible
 class EagerMigrationPolicy : public MigrationPolicy {
  public:
   EagerMigrationPolicy() : MigrationPolicy(1, 1, 1, 1) {}

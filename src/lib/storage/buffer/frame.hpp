@@ -39,7 +39,7 @@ class Frame {
 
   std::weak_ptr<SharedFrame> shared_frame;
 
-  // TODO: Store actual used size to reduce copy overhead
+  // TODO: Store actual used size to reduce copy overhead?
 
   // Various helper functions
   bool can_evict() const;

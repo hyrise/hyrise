@@ -17,8 +17,6 @@
 STRONG_TYPEDEF(uint32_t, PageID);
 
 namespace hyrise {
-constexpr PageID INVALID_PAGE_ID{std::numeric_limits<PageID::base_type>::max()};
-
 enum class PageSizeType { KiB8, KiB16, KiB32, KiB64, KiB128, KiB256, KiB512 };
 
 // Get the number of bytes for a given PageSizeType
@@ -49,7 +47,8 @@ constexpr size_t PAGE_ALIGNMENT = 512;
 // Default page size in Linux, TODO: check with OS X
 constexpr size_t PAGE_SIZE = 4096;
 
-static_assert(bytes_for_size_type(magic_enum::enum_value<PageSizeType>(0)) >= PAGE_SIZE);
+static_assert(bytes_for_size_type(magic_enum::enum_value<PageSizeType>(0)) >= PAGE_SIZE,
+              "Smallest page size does not fit into an OS page");
 
 // How often old items should be evicted from the eviction queue
 constexpr static std::chrono::milliseconds IDLE_EVICTION_QUEUE_PURGE = std::chrono::milliseconds(1000);
