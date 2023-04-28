@@ -23,7 +23,7 @@ static void BM_allocate_with_buffer_manager(benchmark::State& state, const Buffe
       .migration_policy = policy,
       .numa_memory_node = NO_NUMA_MEMORY_NODE,
       .ssd_path = "./test.bin",
-      .enable_eviction_worker = false,
+      .enable_eviction_purge_worker = false,
       .mode = mode,
   };
   Hyrise::get().buffer_manager = BufferManager{config};

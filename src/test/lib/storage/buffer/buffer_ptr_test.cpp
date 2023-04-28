@@ -19,7 +19,7 @@ class BufferPtrTest : public BaseTest {
     auto config = BufferManager::Config{};
     config.dram_buffer_pool_size = buffer_pool_size;
     config.ssd_path = db_file;
-    config.enable_eviction_worker = false;
+    config.enable_eviction_purge_worker = false;
     return BufferManager(config);
   }
 
@@ -29,6 +29,7 @@ class BufferPtrTest : public BaseTest {
     auto shared_frame = std::make_shared<SharedFrame>();
     auto frame = std::make_shared<Frame>(page_id, PageSizeType::KiB8, PageType::Dram);
     SharedFrame::link(shared_frame, frame);
+    return shared_frame;
   }
 };
 
@@ -39,7 +40,8 @@ TEST_F(BufferPtrTest, TestSize) {
 
 TEST_F(BufferPtrTest, TestTypesAndConversions) {
   // Test type conversion
-  EXPECT_EQ(PtrInt(PtrFloat(PageID{2}, 8, PageSizeType::KiB128)), PtrInt(PageID{2}, 8, PageSizeType::KiB128));
+  auto type_frame = create_frame(PageID{4}, PageSizeType::KiB8);
+  EXPECT_EQ(PtrInt(PtrFloat(type_frame, 8)), PtrInt(type_frame, 8));
 
   // Test nullptr
   auto nullPtr = PtrInt(nullptr);
@@ -51,40 +53,43 @@ TEST_F(BufferPtrTest, TestTypesAndConversions) {
   auto outsidePtr = PtrInt((int*)0x1);
   EXPECT_TRUE(outsidePtr);
   EXPECT_FALSE(!outsidePtr);
-  EXPECT_EQ(outsidePtr.get_page_id(), INVALID_PAGE_ID);
-  EXPECT_ANY_THROW(outsidePtr.get_offset());
+  EXPECT_EQ(outsidePtr.get_shared_frame(), nullptr);
+  EXPECT_EQ(outsidePtr.get_offset(), 0x1);
   EXPECT_EQ(outsidePtr.operator->(), (int*)0x1);
 
   // Test Address in Buffer Manager
-  auto allocatedPtr = PtrInt(PageID{6}, 30, PageSizeType::KiB8);
-  EXPECT_EQ(allocatedPtr.get_page_id(), 6);
+  auto alloc_frame = create_frame(PageID{4}, PageSizeType::KiB8);
+  auto allocatedPtr = PtrInt(alloc_frame, 30);
+  EXPECT_EQ(allocatedPtr.get_shared_frame(), alloc_frame);
   EXPECT_EQ(allocatedPtr.get_offset(), 30);
   EXPECT_NE(allocatedPtr.operator->(), nullptr);
 
   // TODO: Test for some more properties
 }
 
+// TODO: Test pin and load frame
+
 TEST_F(BufferPtrTest, TestArithmetic) {
-  auto preIncrementPtr = PtrInt(PageID{0}, 4, PageSizeType::KiB8);
+  auto preIncrementPtr = PtrInt(0x04);
   EXPECT_EQ((++preIncrementPtr).get_offset(), 8);
   EXPECT_EQ(preIncrementPtr.get_offset(), 8);
 
-  auto postIncrementPtr = PtrInt(PageID{0}, 4, PageSizeType::KiB8);
+  auto postIncrementPtr = PtrInt(0x04);
   EXPECT_EQ((postIncrementPtr++).get_offset(), 4);
   EXPECT_EQ(postIncrementPtr.get_offset(), 8);
 
-  auto preDecrementPtr = PtrInt(PageID{0}, 8, PageSizeType::KiB8);
+  auto preDecrementPtr = PtrInt(0x08);
   EXPECT_EQ((++preDecrementPtr).get_offset(), 4);
   EXPECT_EQ(preDecrementPtr.get_offset(), 4);
 
-  EXPECT_EQ(PtrInt(PageID{0}, 8, PageSizeType::KiB8) - 1, PtrInt(PageID{0}, 4, PageSizeType::KiB8));
-  EXPECT_EQ(PtrInt(PageID{0}, 8, PageSizeType::KiB8) + 4, PtrInt(PageID{0}, 24, PageSizeType::KiB8));
+  EXPECT_EQ(PtrInt(8) - 1, PtrInt(4));
+  EXPECT_EQ(PtrInt8) + 4, PtrInt(24));
 
-  auto incrementAssignPtr = PtrInt(PageID{0}, 8, PageSizeType::KiB8);
+  auto incrementAssignPtr = PtrInt(08);
   incrementAssignPtr += 3;
   EXPECT_EQ((incrementAssignPtr).get_offset(), 20);
 
-  auto decrementAssignPtr = PtrInt(PageID{0}, 20, PageSizeType::KiB8);
+  auto decrementAssignPtr = PtrInt(20);
   decrementAssignPtr -= 2;
   EXPECT_EQ((decrementAssignPtr).get_offset(), 12);
 }

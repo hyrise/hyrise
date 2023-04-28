@@ -14,12 +14,11 @@ namespace hyrise {
  * AllocatorPinGuard including resizes of a data strcutures. The RAII-pattern ensure that all pages are unpinned when the AllocatorPinGuard is destroyed. 
  * The AllocatorPinGuard is not thread-safe!
 */
-template <typename Allocator>
 class AllocatorPinGuard : public Noncopyable {
   struct Observer : Noncopyable, BufferPoolAllocatorObserver {
     void on_allocate(std::shared_ptr<Frame> frame) override {
       Hyrise::get().buffer_manager.pin(frame);
-      _pins.push_back(frame);
+      _pins.push_back(frame);  // TODO: Only insert if not yet existing
     }
 
     void on_deallocate(std::shared_ptr<Frame> frame) override {
@@ -37,6 +36,7 @@ class AllocatorPinGuard : public Noncopyable {
   };
 
  public:
+  template <class Allocator>
   AllocatorPinGuard(Allocator& allocator) : _observer(std::make_shared<Observer>()) {
     if constexpr (std::is_same_v<Allocator, BufferPoolAllocator<typename Allocator::value_type>>) {
       allocator.register_observer(_observer);

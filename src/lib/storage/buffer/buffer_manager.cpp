@@ -29,37 +29,37 @@ BufferManager::Config BufferManager::Config::from_env() {
 
 BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t pool_size,
                                         const std::function<void(std::shared_ptr<Frame>&)> evict_frame,
-                                        const bool enable_eviction_worker,
+                                        const bool enable_eviction_purge_worker,
                                         const std::shared_ptr<BufferManager::Metrics> metrics)
     : _used_bytes(0),
       enabled(_page_type != PageType::Invalid),
       _evict_frame(evict_frame),
-      _total_bytes(pool_size),
+      _max_bytes(pool_size),
       _page_type(page_type),
 
       _metrics(metrics) {
   if (enabled) {
     _eviction_queue = std::make_shared<EvictionQueue>();
     _buffer_pools = create_volatile_regions_for_size_types(page_type, pool_size);
-    if (enable_eviction_worker) {
-      _eviction_worker = std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE,
-                                                              [&](size_t) { this->purge_eviction_queue(); });
+    if (enable_eviction_purge_worker) {
+      _eviction_purge_worker = std::make_unique<PausableLoopThread>(IDLE_EVICTION_QUEUE_PURGE,
+                                                                    [&](size_t) { this->purge_eviction_queue(); });
     }
   }
 }
 
 BufferManager::BufferPools& BufferManager::BufferPools::operator=(BufferManager::BufferPools&& other) {
   _used_bytes = other._used_bytes.load();
-  _total_bytes = other._total_bytes;
+  _max_bytes = other._max_bytes;
   _page_type = other._page_type;
   _page_type = other._page_type;
   // _evict_frame = other._evict_frame;
   enabled = other.enabled;
   _metrics = other._metrics;
-  // Assert(_total_bytes == other._total_bytes, "Cannot move buffer pools with different sizes");
+  // Assert(_max_bytes == other._max_bytes, "Cannot move buffer pools with different sizes");
   // Assert(_page_type == other._page_type, "Cannot move buffer pools with different page types");
   _buffer_pools = std::move(other._buffer_pools);
-  _eviction_worker = std::move(other._eviction_worker);
+  _eviction_purge_worker = std::move(other._eviction_purge_worker);
   _eviction_queue = std::move(other._eviction_queue);
 
   return *this;
@@ -78,7 +78,7 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
 
   // Find potential victim frame if we don't have enough space left
   auto item = EvictionItem{};
-  while ((current_bytes + bytes_required - freed_bytes) > _total_bytes) {
+  while ((current_bytes + bytes_required - freed_bytes) > _max_bytes) {
     if (!_eviction_queue->try_pop(item)) {
       Fail(
           "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
@@ -227,10 +227,10 @@ BufferManager::BufferManager(const Config config)
       _metrics(std::make_shared<Metrics>()),
       _dram_buffer_pools(page_type_for_dram_buffer_pools(config.mode), config.dram_buffer_pool_size,
                          std::bind(&BufferManager::evict_frame, this, std::placeholders::_1),
-                         config.enable_eviction_worker, _metrics),
+                         config.enable_eviction_purge_worker, _metrics),
       _numa_buffer_pools(page_type_for_numa_buffer_pools(config.mode), config.numa_buffer_pool_size,
                          std::bind(&BufferManager::evict_frame, this, std::placeholders::_1),
-                         config.enable_eviction_worker, _metrics) {
+                         config.enable_eviction_purge_worker, _metrics) {
   Assert(_dram_buffer_pools.enabled || _numa_buffer_pools.enabled, "No Buffer Pool is enabled");
 }
 
@@ -519,6 +519,8 @@ std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> BufferManager::unswizzle(const
 };
 
 BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
+  Assert(align <= PAGE_ALIGNMENT, "Alignment must be smaller than page size");
+  
   const auto page_size_type = find_fitting_page_size_type(bytes);
 
   const auto shared_frame = new_frame(page_size_type);
@@ -540,6 +542,7 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
 }
 
 void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {
+  
   _metrics->num_deallocs++;
   auto shared_frame = ptr._shared_frame;
 

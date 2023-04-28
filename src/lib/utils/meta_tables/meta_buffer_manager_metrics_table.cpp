@@ -3,6 +3,7 @@
 
 namespace hyrise {
 
+// TODO: Extract more metrics
 MetaBufferManagerMetricsTable::MetaBufferManagerMetricsTable()
     : AbstractMetaTable(TableColumnDefinitions{{"current_bytes_used_dram", DataType::Int, false},
                                                {"current_bytes_used_numa", DataType::Int, false},

@@ -4,6 +4,7 @@
 #include <tuple>
 #include "noncopyable.hpp"
 #include "storage/buffer/frame.hpp"
+#include "storage/buffer/memory_resource.hpp"
 #include "storage/buffer/migration_policy.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/types.hpp"
@@ -21,7 +22,7 @@ class BufferPtr;
 /**
  * TODO
 */
-class BufferManager : public Noncopyable {
+class BufferManager : public MemoryResource, public Noncopyable {
  public:
   /**
    * Metrics are storing count that happen during allocations and access of the buffer manager.
@@ -33,7 +34,7 @@ class BufferManager : public Noncopyable {
     std::size_t total_allocated_bytes_dram = 0;
     std::size_t total_allocated_bytes_numa = 0;
     std::size_t total_unused_bytes_numa = 0;
-    std::size_t total_unused_bytes_dram = 0;
+    std::size_t total_unused_bytes_dram = 0;  // TODO: this becomes invalid with the monotonic buffer resource
 
     double internal_fragmentation_rate_dram() const {
       return (double)total_unused_bytes_dram / (double)total_allocated_bytes_dram;
@@ -95,7 +96,7 @@ class BufferManager : public Noncopyable {
 
     std::filesystem::path ssd_path = "~/.hyrise";
 
-    bool enable_eviction_worker = false;
+    bool enable_eviction_purge_worker = false;
 
     BufferManagerMode mode = BufferManagerMode::DramSSD;
 
@@ -212,13 +213,13 @@ class BufferManager : public Noncopyable {
     void clear();
 
     BufferPools(const PageType page_type, const size_t pool_size,
-                const std::function<void(std::shared_ptr<Frame>&)> evict_frame, const bool enable_eviction_worker,
+                const std::function<void(std::shared_ptr<Frame>&)> evict_frame, const bool enable_eviction_purge_worker,
                 const std::shared_ptr<BufferManager::Metrics> metrics);
 
     BufferPools& operator=(BufferPools&& other);
 
     // The maximum number of bytes that can be allocated
-    size_t _total_bytes;  // TODO: const
+    size_t _max_bytes;  // TODO: const
 
     // The number of bytes that are currently used
     std::atomic_uint64_t _used_bytes;
@@ -229,14 +230,19 @@ class BufferManager : public Noncopyable {
     // Eviction Queue for pages that are not pinned
     std::shared_ptr<EvictionQueue> _eviction_queue;
 
-    std::unique_ptr<PausableLoopThread> _eviction_worker;
+    // Async background worker that purges the eviction queue
+    std::unique_ptr<PausableLoopThread> _eviction_purge_worker;
 
+    // Metrics passed down from buffer manager
     std::shared_ptr<BufferManager::Metrics> _metrics;
 
+    // Current types of pages in the buffer pools
     PageType _page_type;
 
+    // Enable or disable the buffer bool
     bool enabled;
 
+    // Calls the parent buffer manager to evict a page using the migriation policy
     std::function<void(std::shared_ptr<Frame>&)> _evict_frame;
   };
 

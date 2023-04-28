@@ -77,7 +77,7 @@ void MetricsSampler::export_metrics() {
   context["bytes_dram_buffer_pools"] = _buffer_manager->get_config().dram_buffer_pool_size;
   context["bytes_numa_buffer_pools"] = _buffer_manager->get_config().numa_buffer_pool_size;
   context["mode"] = magic_enum::enum_name(_buffer_manager->get_config().mode);
-  context["eviction_worker_enabled"] = _buffer_manager->get_config().enable_eviction_worker;
+  context["eviction_worker_enabled"] = _buffer_manager->get_config().enable_eviction_purge_worker;
   context["ssd_path"] = _buffer_manager->get_config().ssd_path;
 
   auto migration_policy = nlohmann::json::object();

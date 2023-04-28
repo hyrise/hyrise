@@ -14,7 +14,7 @@ class BufferPoolAllocatorTest : public BaseTest {
     auto config = BufferManager::Config{};
     config.dram_buffer_pool_size = buffer_pool_size;
     config.ssd_path = db_file;
-    config.enable_eviction_worker = false;
+    config.enable_eviction_purge_worker = false;
     config.mode = BufferManagerMode::DramSSD;
     return BufferManager(config);
   }
