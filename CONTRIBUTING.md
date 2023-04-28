@@ -49,7 +49,7 @@
 * Miscellaneous
   * Prefer `if (object)` over `if (object != nullptr)` or `if (object.has_value())`.
   * Don't write `this->` if you don't have to.
-  * Be explicit with types: Use [u]int(8|16|32|64)_t instead of `int, long, uint` etc.
+  * Be explicit with types: Use `[u]int(8|16|32|64)_t` instead of `int, long, uint` etc.
   * Use [auto-to-stick](https://www.fluentcpp.com/2018/09/28/auto-stick-changing-style/): `auto x = 17;` or
     `auto y = std::vector<size_t>{};`.
   * Namespaces: Do not create nested namespaces, do not import namespaces.
