@@ -445,6 +445,8 @@ set(
     storage/buffer/buffer_ptr.hpp
     storage/buffer/buffer_manager.cpp
     storage/buffer/buffer_manager.hpp
+    storage/buffer/memory_resource.cpp
+    storage/buffer/memory_resource.hpp
     storage/buffer/buffer_pool_allocator.hpp
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp

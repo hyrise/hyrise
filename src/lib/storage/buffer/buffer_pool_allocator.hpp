@@ -5,6 +5,8 @@
 #include <boost/move/utility.hpp>
 #include "storage/buffer/buffer_manager.hpp"
 #include "storage/buffer/buffer_ptr.hpp"
+#include "storage/buffer/memory_resource.hpp"
+
 #include "utils/assert.hpp"
 
 namespace hyrise {
@@ -32,49 +34,43 @@ class BufferPoolAllocator {
   using void_pointer = BufferPtr<void>;
   using difference_type = typename pointer::difference_type;
 
-  // static_assert(std::is_trivially_default_constructible_v<pointer>,
+  BufferPoolAllocator() : _memory_resource(&BufferManager::get_global_buffer_manager()) {}
 
-  BufferPoolAllocator() : _buffer_manager(&BufferManager::get_global_buffer_manager()) {}
+  BufferPoolAllocator(MemoryResource* memory_resource) : _memory_resource(memory_resource) {}
 
-  BufferPoolAllocator(BufferManager* buffer_manager) : _buffer_manager(buffer_manager) {}
-
-  BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _buffer_manager(nullptr) {
+  BufferPoolAllocator(boost::container::pmr::memory_resource* resource) : _memory_resource(nullptr) {
     Fail("The current BufferPoolAllocator cannot take a boost memory_resource");
   }
 
-  // BufferPoolAllocator(const BufferPoolAllocator& other) noexcept {
-  //   _buffer_manager = other.buffer_manager();
-  //   _observer = other.current_observer();
-  // }
-
-  template <class U>
-  BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
-    _buffer_manager = other.buffer_manager();
+  BufferPoolAllocator(const BufferPoolAllocator& other) noexcept {
+    _memory_resource = other.memory_resource();
     _observer = other.current_observer();
   }
 
-  // BufferPoolAllocator& operator=(const BufferPoolAllocator& other) noexcept {
-  //   _buffer_manager = other.buffer_manager();
-  //   return *this;
-  // }
+  template <class U>
+  BufferPoolAllocator(const BufferPoolAllocator<U>& other) noexcept {
+    _memory_resource = other.memory_resource();
+    _observer = other.current_observer();
+  }
 
-  // template <class U>
-  // struct rebind {
-  //   typedef BufferPoolAllocator<U> other;
-  // };
+  BufferPoolAllocator& operator=(const BufferPoolAllocator& other) noexcept {
+    _memory_resource = other.memory_resource();
+    _observer = other.current_observer();
+    return *this;
+  }
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
-    return _buffer_manager == other.buffer_manager() && _observer.lock() == other.current_observer().lock();
+    return _memory_resource == other.memory_resource() && _observer.lock() == other.current_observer().lock();
   }
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _buffer_manager != other.buffer_manager() || _observer.lock() != other.current_observer().lock();
+    return _memory_resource != other.buffer_manager() || _observer.lock() != other.current_observer().lock();
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
-    auto ptr = static_cast<pointer>(_buffer_manager->allocate(sizeof(value_type) * n, alignof(T)));
+    auto ptr = static_cast<pointer>(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)));
     if (auto observer = _observer.lock()) {
       // TODO: Pass shared frame
       observer->on_allocate(ptr.get_frame(AccessIntent::Write));
@@ -87,15 +83,15 @@ class BufferPoolAllocator {
       // TODO: Shared frame
       observer->on_deallocate(ptr.get_frame(AccessIntent::Write));
     }
-    _buffer_manager->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
+    _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }
 
-  BufferManager* buffer_manager() const noexcept {
-    return _buffer_manager;
+  MemoryResource* memory_resource() const noexcept {
+    return _memory_resource;
   }
 
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
-    return BufferPoolAllocator(_buffer_manager);
+    return BufferPoolAllocator(_memory_resource);
   }
 
   // template <typename U, class... Args>
@@ -126,17 +122,7 @@ class BufferPoolAllocator {
 
  private:
   std::weak_ptr<BufferPoolAllocatorObserver> _observer;
-  BufferManager* _buffer_manager;
+  MemoryResource* _memory_resource;
 };
-
-// template <class T1, class T2>
-// bool operator==(const BufferPoolAllocator<T1>& a, const BufferPoolAllocator<T2>& b) noexcept {
-//   return true;
-// }
-
-// template <class T1, class T2>
-// bool operator!=(const BufferPoolAllocator<T1>& a, const BufferPoolAllocator<T2>& b) noexcept {
-//   return false;
-// }
 
 }  // namespace hyrise
