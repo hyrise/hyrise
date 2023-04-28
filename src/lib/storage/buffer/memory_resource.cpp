@@ -14,7 +14,7 @@ MonotonicBufferResource::MonotonicBufferResource()
 
 std::size_t MonotonicBufferResource::remaining_storage(std::size_t alignment,
                                                        std::size_t& wasted_due_to_alignment) const noexcept {
-  // TODO: This might not work perfectly, but at least good enough with the buffer manager as upstream
+  // This might not work perfectly, but at least good enough with the buffer manager as upstream since its alignment is pretty high (=512)
   const std::size_t up_alignment_minus1 = alignment - 1u;
   const std::size_t up_alignment_mask = ~up_alignment_minus1;
   const std::size_t up_addr = std::size_t(_current_buffer_pos);
@@ -35,6 +35,10 @@ BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t
     Fail("Alignment must not be greater than alignof(std::max_align_t)");
   }
 
+  if (fills_page(bytes)) {
+    return _memory_resource->allocate(bytes, alignment);
+  }
+
   std::size_t aligner = 0u;
   if (this->remaining_storage(alignment, aligner) < bytes) {
     aligner = 0u;
@@ -53,12 +57,17 @@ void MonotonicBufferResource::increase_next_buffer_at_least_to(std::size_t minim
 }
 
 void MonotonicBufferResource::increase_next_buffer() {
+  // TODO: Incoproate page sizes a bit better here, we jump weirdly and the allocation is also weird with the page sizes
   _next_buffer_size = (std::size_t(-1) / 2 < _next_buffer_size) ? std::size_t(-1) : _next_buffer_size * 2;
+}
+
+bool MonotonicBufferResource::fills_page(std::size_t bytes) const noexcept {
+  return (double)bytes / (double)bytes_for_size_type(find_fitting_page_size_type(bytes)) >= NEW_PAGE_FILL_RATIO;
 }
 
 void MonotonicBufferResource::deallocate([[maybe_unused]] BufferPtr<void> ptr, [[maybe_unused]] std::size_t bytes,
                                          [[maybe_unused]] std::size_t alignment) {
-  // Do nothing
+  // TODO: Do nothing really?, what if we need to propagate the deallocation to the underlying memory resource?
 }
 
 BufferPtr<void> NewDeleteMemoryResource::allocate(std::size_t bytes, std::size_t alignment) {

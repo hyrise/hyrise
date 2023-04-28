@@ -57,6 +57,8 @@ TEST_F(MonotonicBufferResourceTest, TestAllocate) {
   {}
 }
 
+// TODO: Test 80% fill ratio
+
 TEST_F(MonotonicBufferResourceTest, TestDeallocate) {}
 
 }  // namespace hyrise
