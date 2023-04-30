@@ -20,7 +20,7 @@ static void BM_vector_sort_raw_pointers(benchmark::State& state) {
   for (auto _ : state) {
     state.PauseTiming();
     std::reverse(array.begin().get_ptr().operator->(), array.end().get_ptr().operator->());
-    array.get_allocator().buffer_manager()->metrics() = BufferManager::Metrics{};
+    // array.get_allocator().buffer_manager()->metrics() = BufferManager::Metrics{};
     state.ResumeTiming();
 
     std::sort(array.begin().get_ptr().operator->(), array.end().get_ptr().operator->());
@@ -34,7 +34,7 @@ static void BM_vector_sort_raw_pointers(benchmark::State& state) {
   state.SetLabel("std::sort with pmr_vector (Buffer Pool) and raw pointers");
 
   // TODO: Separe per iteration, not total
-  add_buffer_manager_counters(state, *array.get_allocator().buffer_manager());
+  // add_buffer_manager_counters(state, *array.get_allocator().buffer_manager());
 }
 
 template <typename VectorType>
