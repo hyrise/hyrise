@@ -81,14 +81,12 @@ class BufferPtr {
   }
 
   BufferPtr(const BufferPtr& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
-    DebugAssert(!_shared_frame || _ptr_or_offset <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
-                "BufferPtr overflow BufferPtr(const BufferPtr& other)");
+    assert_not_overflow();
   }
 
   template <typename U>
   BufferPtr(const BufferPtr<U>& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
-    DebugAssert(!_shared_frame || _ptr_or_offset <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
-                "BufferPtr overflow BufferPtr(const BufferPtr<U>& other)");
+    assert_not_overflow();
   }
 
   template <typename T>
@@ -98,8 +96,7 @@ class BufferPtr {
 
   explicit BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
       : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {
-    DebugAssert(!_shared_frame || _ptr_or_offset <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
-                "BufferPtr overflow BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset");
+    assert_not_overflow();
   }
 
   pointer operator->() const {
@@ -178,12 +175,16 @@ class BufferPtr {
     return BufferPtr(&r);
   }
 
-  friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
+  inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
     return ptr1._shared_frame == ptr2._shared_frame && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
   }
 
-  friend bool operator==(pointer ptr1, const BufferPtr& ptr2) noexcept {
+  inline friend bool operator==(pointer ptr1, const BufferPtr& ptr2) noexcept {
     return ptr1 == ptr2.get();
+  }
+
+  inline friend bool operator!=(const BufferPtr& pt1, const BufferPtr& pt2) noexcept {
+    return pt1.get() != pt2.get();
   }
 
   BufferPtr& operator++(void) noexcept {
@@ -203,7 +204,7 @@ class BufferPtr {
   }
 
   friend bool operator<(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1._shared_frame == ptr2._shared_frame && ptr1._ptr_or_offset < ptr2._ptr_or_offset;
+    return ptr1.get() < ptr2.get();
   }
 
   friend bool operator<(pointer& ptr1, const BufferPtr& ptr2) noexcept {
@@ -214,7 +215,7 @@ class BufferPtr {
     return ptr1.get() < ptr2;
   }
 
-  void* get_pointer(const AccessIntent access_intent) const {
+  void* get_pointer(const AccessIntent access_intent = AccessIntent::Read) const {
     if (_shared_frame) {
       const auto frame = BufferManager::get_global_buffer_manager().load_frame(_shared_frame, access_intent);
       return frame->data + _ptr_or_offset;
@@ -255,14 +256,22 @@ class BufferPtr {
   friend bool operator==(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2);
 
   void inc_offset(difference_type bytes) noexcept {
-    DebugAssert(!_shared_frame || _ptr_or_offset + bytes <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
-                "BufferPtr overflow inc_offset");
     _ptr_or_offset += bytes;
+    assert_not_overflow();
   }
 
   void dec_offset(difference_type bytes) noexcept {
-    DebugAssert(!_shared_frame || _ptr_or_offset - bytes > 0, "BufferPtr overflow dec_offset");
     _ptr_or_offset -= bytes;
+    assert_not_overflow();
+  }
+
+  void assert_not_overflow() {
+    if constexpr (!std::is_same_v<value_type, void>) {
+      DebugAssert(!_shared_frame || _ptr_or_offset <= (bytes_for_size_type(_shared_frame->dram_frame->size_type) +
+                                                       sizeof(PointedType)),
+                  "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
+                      std::to_string(bytes_for_size_type(_shared_frame->dram_frame->size_type) + sizeof(PointedType)));
+    }
   }
 
   template <typename T>
@@ -271,7 +280,7 @@ class BufferPtr {
       const auto [frame, offset] =
           BufferManager::get_global_buffer_manager().unswizzle(reinterpret_cast<const void*>(ptr));
       if (frame) {
-        DebugAssert(offset <= bytes_for_size_type(frame->size_type), "BufferPtr overflow unswizzle");
+        assert_not_overflow();
         _shared_frame = std::make_shared<SharedFrame>(frame);
         _ptr_or_offset = offset;
         return;
@@ -289,12 +298,12 @@ class BufferPtr {
 
 template <class T1, class T2>
 inline bool operator==(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1.get_shared_frame() == ptr2.get_shared_frame() && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
+  return ptr1.get() == ptr2.get();
 }
 
 template <class T1, class T2>
 inline bool operator!=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1.get_shared_frame() != ptr2.get_shared_frame() || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
+  return ptr1.get() != ptr2.get();
 }
 
 template <class T>
@@ -309,7 +318,7 @@ inline std::ptrdiff_t operator-(const BufferPtr<T>& ptr1, const BufferPtr<T2>& p
 
 template <class T1, class T2>
 inline bool operator<=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
-  return ptr1.get_shared_frame() == ptr2.get_shared_frame() && ptr1.get_offset() <= ptr2.get_offset();
+  return ptr1.get() <= ptr2.get();
 }
 
 template <class T>
