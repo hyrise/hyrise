@@ -23,7 +23,7 @@ class VolatileRegion : public Noncopyable {
                  const int8_t memory_numa_node = NO_NUMA_MEMORY_NODE);
   ~VolatileRegion();
 
-  std::shared_ptr<Frame> unswizzle(const void* ptr);
+  std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> unswizzle(const void* ptr);
 
   void allocate(std::shared_ptr<Frame> frame);
   void move(std::shared_ptr<Frame> from, std::shared_ptr<Frame> to);

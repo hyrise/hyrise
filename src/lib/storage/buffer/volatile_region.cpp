@@ -129,14 +129,15 @@ void VolatileRegion::deallocate(std::shared_ptr<Frame> frame) {
   _free_slots.set(frame_id);
 }
 
-std::shared_ptr<Frame> VolatileRegion::unswizzle(const void* ptr) {
+std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> VolatileRegion::unswizzle(const void* ptr) {
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
-    return nullptr;
+    return std::make_pair(nullptr, 0);
   }
   // Find the offset in the mapped region of the ptr and find the matching frame
-  const auto offset = reinterpret_cast<const std::byte*>(ptr) - _mapped_memory;
-  const auto frame_id = offset / bytes_for_size_type(_size_type);
-  return _frames[frame_id].lock();
+  const auto buffer = reinterpret_cast<const std::byte*>(ptr) - _mapped_memory;
+  const auto frame_id = buffer / bytes_for_size_type(_size_type);
+  const auto offset = buffer % bytes_for_size_type(_size_type);
+  return std::make_pair(_frames[frame_id].lock(), offset);
 }
 
 size_t VolatileRegion::capacity() const {

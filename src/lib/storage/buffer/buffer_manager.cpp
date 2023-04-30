@@ -502,15 +502,17 @@ void BufferManager::pin(std::shared_ptr<Frame> frame) {
 std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> BufferManager::unswizzle(const void* ptr) {
   if (_dram_buffer_pools.enabled) {
     for (auto& buffer_pool : _dram_buffer_pools._buffer_pools) {
-      if (const auto frame = buffer_pool->unswizzle(ptr)) {
-        return std::make_pair(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+      const auto unswizzled = buffer_pool->unswizzle(ptr);
+      if (unswizzled.first) {
+        return unswizzled;
       }
     }
   }
   if (_numa_buffer_pools.enabled) {
     for (auto& buffer_pool : _numa_buffer_pools._buffer_pools) {
-      if (const auto frame = buffer_pool->unswizzle(ptr)) {
-        return std::make_pair(frame, reinterpret_cast<const std::byte*>(ptr) - frame->data);
+      const auto unswizzled = buffer_pool->unswizzle(ptr);
+      if (unswizzled.first) {
+        return unswizzled;
       }
     }
   }
@@ -520,7 +522,7 @@ std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> BufferManager::unswizzle(const
 
 BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
   Assert(align <= PAGE_ALIGNMENT, "Alignment must be smaller than page size");
-  
+
   const auto page_size_type = find_fitting_page_size_type(bytes);
 
   const auto shared_frame = new_frame(page_size_type);
@@ -542,7 +544,6 @@ BufferPtr<void> BufferManager::allocate(std::size_t bytes, std::size_t align) {
 }
 
 void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align) {
-  
   _metrics->num_deallocs++;
   auto shared_frame = ptr._shared_frame;
 

@@ -80,10 +80,16 @@ class BufferPtr {
     unswizzle(ptr);
   }
 
-  BufferPtr(const BufferPtr& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {}
+  BufferPtr(const BufferPtr& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
+    DebugAssert(!_shared_frame || _ptr_or_offset < bytes_for_size_type(_shared_frame->dram_frame->size_type),
+                "BufferPtr overflow BufferPtr(const BufferPtr& other)");
+  }
 
   template <typename U>
-  BufferPtr(const BufferPtr<U>& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {}
+  BufferPtr(const BufferPtr<U>& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
+    DebugAssert(!_shared_frame || _ptr_or_offset < bytes_for_size_type(_shared_frame->dram_frame->size_type),
+                "BufferPtr overflow BufferPtr(const BufferPtr<U>& other)");
+  }
 
   template <typename T>
   BufferPtr(T* ptr) {
@@ -91,7 +97,10 @@ class BufferPtr {
   }
 
   explicit BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
-      : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {}
+      : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {
+    DebugAssert(!_shared_frame || _ptr_or_offset < bytes_for_size_type(_shared_frame->dram_frame->size_type),
+                "BufferPtr overflow BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset");
+  }
 
   pointer operator->() const {
     return get();
@@ -103,33 +112,37 @@ class BufferPtr {
     return r;
   }
 
-  reference operator[](std::ptrdiff_t idx) const {
-    return get()[idx];
+  reference operator[](std::ptrdiff_t idx) {
+    return get(AccessIntent::Write)[idx];
+  }
+
+  const reference operator[](std::ptrdiff_t idx) const {
+    return get(AccessIntent::Read)[idx];
   }
 
   bool operator!() const {
     return !_shared_frame && !_ptr_or_offset;
   }
 
-  BufferPtr operator+(std::ptrdiff_t offset) const {
-    auto new_ptr_or_offset = _ptr_or_offset;
-    new_ptr_or_offset += offset * difference_type(sizeof(PointedType));
-    return BufferPtr(_shared_frame, new_ptr_or_offset);
+  BufferPtr operator+(difference_type offset) const noexcept {
+    auto new_ptr = BufferPtr(_shared_frame, _ptr_or_offset);
+    new_ptr.inc_offset(offset * difference_type(sizeof(PointedType)));
+    return new_ptr;
   }
 
-  BufferPtr operator-(std::ptrdiff_t offset) const {
-    auto new_ptr_or_offset = _ptr_or_offset;
-    new_ptr_or_offset -= offset * difference_type(sizeof(PointedType));
-    return BufferPtr(_shared_frame, new_ptr_or_offset);
+  BufferPtr operator-(difference_type offset) const noexcept {
+    auto new_ptr = BufferPtr(_shared_frame, _ptr_or_offset);
+    new_ptr.dec_offset(offset * difference_type(sizeof(PointedType)));
+    return new_ptr;
   }
 
   BufferPtr& operator+=(difference_type offset) noexcept {
-    _ptr_or_offset += offset * difference_type(sizeof(PointedType));
+    inc_offset(offset * difference_type(sizeof(PointedType)));
     return *this;
   }
 
   BufferPtr& operator-=(difference_type offset) noexcept {
-    _ptr_or_offset -= offset * difference_type(sizeof(PointedType));
+    dec_offset(offset * difference_type(sizeof(PointedType)));
     return *this;
   }
 
@@ -173,18 +186,18 @@ class BufferPtr {
   }
 
   BufferPtr& operator++(void) noexcept {
-    _ptr_or_offset += difference_type(sizeof(PointedType));
+    inc_offset(difference_type(sizeof(PointedType)));
     return *this;
   }
 
   BufferPtr operator++(int) noexcept {
-    const auto temp = BufferPtr(*this);
-    ++*this;
+    const auto temp = BufferPtr(_shared_frame, _ptr_or_offset);
+    inc_offset(difference_type(sizeof(PointedType)));
     return temp;
   }
 
   BufferPtr& operator--(void) noexcept {
-    _ptr_or_offset -= difference_type(sizeof(PointedType));
+    dec_offset(difference_type(sizeof(PointedType)));
     return *this;
   }
 
@@ -240,16 +253,29 @@ class BufferPtr {
   template <class T1, class T2>
   friend bool operator==(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2);
 
+  void inc_offset(difference_type bytes) noexcept {
+    DebugAssert(!_shared_frame || _ptr_or_offset + bytes <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
+                "BufferPtr overflow inc_offset");
+    _ptr_or_offset += bytes;
+  }
+
+  void dec_offset(difference_type bytes) noexcept {
+    DebugAssert(!_shared_frame || _ptr_or_offset - bytes > 0, "BufferPtr overflow dec_offset");
+    _ptr_or_offset -= bytes;
+  }
+
   template <typename T>
   void unswizzle(T* ptr) {
     if (ptr) {
       const auto [frame, offset] =
           BufferManager::get_global_buffer_manager().unswizzle(reinterpret_cast<const void*>(ptr));
       if (frame) {
+        DebugAssert(offset <= bytes_for_size_type(frame->size_type), "BufferPtr overflow unswizzle");
         _shared_frame = std::make_shared<SharedFrame>(frame);
         _ptr_or_offset = offset;
         return;
       } else {
+        _shared_frame = nullptr;
         _ptr_or_offset = reinterpret_cast<PtrOrOffset>(ptr);
         return;
       }
