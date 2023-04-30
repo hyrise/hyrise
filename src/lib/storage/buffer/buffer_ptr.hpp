@@ -81,13 +81,13 @@ class BufferPtr {
   }
 
   BufferPtr(const BufferPtr& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
-    DebugAssert(!_shared_frame || _ptr_or_offset < bytes_for_size_type(_shared_frame->dram_frame->size_type),
+    DebugAssert(!_shared_frame || _ptr_or_offset <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
                 "BufferPtr overflow BufferPtr(const BufferPtr& other)");
   }
 
   template <typename U>
   BufferPtr(const BufferPtr<U>& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
-    DebugAssert(!_shared_frame || _ptr_or_offset < bytes_for_size_type(_shared_frame->dram_frame->size_type),
+    DebugAssert(!_shared_frame || _ptr_or_offset <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
                 "BufferPtr overflow BufferPtr(const BufferPtr<U>& other)");
   }
 
@@ -98,7 +98,7 @@ class BufferPtr {
 
   explicit BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
       : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {
-    DebugAssert(!_shared_frame || _ptr_or_offset < bytes_for_size_type(_shared_frame->dram_frame->size_type),
+    DebugAssert(!_shared_frame || _ptr_or_offset <= bytes_for_size_type(_shared_frame->dram_frame->size_type),
                 "BufferPtr overflow BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset");
   }
 
@@ -117,6 +117,7 @@ class BufferPtr {
   }
 
   const reference operator[](std::ptrdiff_t idx) const {
+    // TODO:mark dirty?
     return get(AccessIntent::Read)[idx];
   }
 
