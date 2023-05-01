@@ -38,8 +38,10 @@ class FramePinGuard : public Noncopyable {
   }
 
   ~FramePinGuard() {
-    const auto dirty = _access_intent == AccessIntent::Write;
-    BufferManager::get_global_buffer_manager().unpin(_frame, dirty);
+    if (_frame) {
+      const auto dirty = _access_intent == AccessIntent::Write;
+      BufferManager::get_global_buffer_manager().unpin(_frame, dirty);
+    }
   }
 
  private:
@@ -183,8 +185,8 @@ class BufferPtr {
     return ptr1 == ptr2.get();
   }
 
-  inline friend bool operator!=(const BufferPtr& pt1, const BufferPtr& pt2) noexcept {
-    return pt1.get() != pt2.get();
+  inline friend bool operator!=(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
+    return ptr1._shared_frame != ptr2._shared_frame || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
   }
 
   BufferPtr& operator++(void) noexcept {
@@ -267,6 +269,7 @@ class BufferPtr {
 
   void assert_not_overflow() {
     if constexpr (!std::is_same_v<value_type, void>) {
+      DebugAssert(!_shared_frame || _shared_frame->dram_frame, "Dram frame not found");
       DebugAssert(!_shared_frame || _ptr_or_offset <= (bytes_for_size_type(_shared_frame->dram_frame->size_type) +
                                                        sizeof(PointedType)),
                   "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
@@ -281,7 +284,8 @@ class BufferPtr {
           BufferManager::get_global_buffer_manager().unswizzle(reinterpret_cast<const void*>(ptr));
       if (frame) {
         assert_not_overflow();
-        _shared_frame = std::make_shared<SharedFrame>(frame);
+        _shared_frame = frame->shared_frame.lock();
+        Assert(_shared_frame, "Shared frame is null");
         _ptr_or_offset = offset;
         return;
       } else {

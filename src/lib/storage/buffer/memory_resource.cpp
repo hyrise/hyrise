@@ -49,6 +49,8 @@ BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t
     aligner = 0u;
     this->increase_next_buffer_at_least_to(bytes);
     _current_frame = _memory_resource->allocate(_next_buffer_size, alignment).get_shared_frame();
+    DebugAssert(_current_frame, "MemoryResource did not return a valid frame");
+    DebugAssert(_current_frame->dram_frame || _current_frame->numa_frame, "MemoryResource did not return rame");
     Assert(_current_frame, "MemoryResource did not return a valid frame");
     _current_buffer_size = _next_buffer_size;
     _current_buffer_pos = 0u;

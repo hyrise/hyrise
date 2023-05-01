@@ -65,7 +65,6 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
     auto dictionary = std::make_shared<pmr_vector<T>>(dense_values.cbegin(), dense_values.cend(), allocator);
     auto dictionary_pin_guard = FramePinGuard{AccessIntent::Write};
 
-    // TODO:Pin is actually not needed here
     std::sort(dictionary->begin().get_ptr().pin(dictionary_pin_guard),
               dictionary->end().get_ptr().pin(dictionary_pin_guard));
 
@@ -113,8 +112,11 @@ class DictionaryEncoder : public SegmentEncoder<DictionaryEncoder<Encoding>> {
  private:
   template <typename U, typename T>
   static ValueID _get_value_id(const U& dictionary, const T& value) {
+    auto pin_guard = FramePinGuard{AccessIntent::Read};  // TODO: can be moved somewhere else
     return ValueID{static_cast<ValueID::base_type>(
-        std::distance(dictionary->cbegin(), std::lower_bound(dictionary->cbegin(), dictionary->cend(), value)))};
+        std::distance(dictionary->cbegin().get_ptr().pin(pin_guard),
+                      std::lower_bound(dictionary->cbegin().get_ptr().pin(pin_guard),
+                                       dictionary->cend().get_ptr().pin(pin_guard), value)))};
   }
 };
 

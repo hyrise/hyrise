@@ -26,8 +26,8 @@ class BufferPtrTest : public BaseTest {
   const std::string db_file = test_data_path + "buffer_manager.data";
 
   std::shared_ptr<SharedFrame> create_frame(const PageID page_id, PageSizeType size_type) {
-    auto shared_frame = std::make_shared<SharedFrame>();
     auto frame = std::make_shared<Frame>(page_id, PageSizeType::KiB8, PageType::Dram);
+    auto shared_frame = std::make_shared<SharedFrame>(frame);
     SharedFrame::link(shared_frame, frame);
     return shared_frame;
   }
