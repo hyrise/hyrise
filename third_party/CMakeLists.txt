@@ -314,3 +314,25 @@ externalproject_add_step(
   DEPENDS "${JCCH_DBGEN_FILES}"
   COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen && make distclean >/dev/null 2>/dev/null) || true"
 )
+
+include(ExternalProject)
+externalproject_add(
+    ssbDbgen
+
+    SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen
+    BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/ssb-dbgen
+    CONFIGURE_COMMAND bash -c "cp -r ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen/* ."
+    BUILD_COMMAND bash -c "output=$(make 2>&1) || (printf \"$output\\n\" && false)"
+    INSTALL_COMMAND false  # install should never be called, this is a safe guard that fails if it is
+    STEP_TARGETS build
+)
+
+file(GLOB_RECURSE SSB_DBGEN_FILES ${CMAKE_CURRENT_SOURCE_DIR}/ssb-dbgen/*)
+externalproject_add_step(
+  ssbDbgen
+  check_for_changes
+  # Make sure that we rebuild ssb-dbgen when a file changes
+  DEPENDERS configure
+  DEPENDS "${SSB_DBGEN_FILES}"
+  COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/ssb-dbgen && make distclean >/dev/null 2>/dev/null) || true"
+)
