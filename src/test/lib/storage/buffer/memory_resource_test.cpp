@@ -5,6 +5,20 @@
 #include "storage/buffer/memory_resource.hpp"
 #include "types.hpp"
 
+// Used for testing the NewDeleteMemoryResource
+std::size_t allocation_count = 0;
+
+void* operator new[](std::size_t size, std::align_val_t align) {
+  ++allocation_count;
+  auto ptr = std::aligned_alloc(std::size_t(align), size);
+  return ptr;
+}
+
+void operator delete[](void* p, std::align_val_t align) noexcept {
+  --allocation_count;
+  return std::free(p);
+}
+
 namespace hyrise {
 
 class LogResource : public MemoryResource {
@@ -196,6 +210,21 @@ TEST_F(MonotonicBufferResourceTest, TestDestructor) {
     }
   }
   EXPECT_EQ(log_resource.allocations.size(), 10);
+}
+
+class NewDeleteMemoryResourceTest : public BaseTest {};
+
+TEST_F(NewDeleteMemoryResourceTest, TestAllocateAndDeallocate) {
+  auto memory_resource = NewDeleteMemoryResource{};
+  EXPECT_EQ(allocation_count, 0);
+
+  auto ptr = memory_resource.allocate(64, 8);
+  EXPECT_EQ(allocation_count, 1);
+  EXPECT_EQ(ptr.get_shared_frame(), nullptr) << "Ptr should not buffer managed";
+  EXPECT_EQ(reinterpret_cast<std::uintptr_t>(ptr.get()) % 4, 0) << "Ptr should be 4 byte aligned";
+
+  memory_resource.deallocate(ptr, 64, 8);
+  EXPECT_EQ(allocation_count, 0);
 }
 
 }  // namespace hyrise

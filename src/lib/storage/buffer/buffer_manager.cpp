@@ -566,10 +566,6 @@ void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size
   }
 }
 
-BufferManager& BufferManager::get_global_buffer_manager() {
-  return Hyrise::get().buffer_manager;
-}
-
 BufferManager::Metrics BufferManager::metrics() {
   return *_metrics;
 }

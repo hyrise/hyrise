@@ -117,7 +117,7 @@ class TableBuilder {
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const ChunkOffset estimated_rows = ChunkOffset{0})
       : _monotonic_memory_resource(new MonotonicBufferResource()),  // TODO: This leaks
-        _alloc(_monotonic_memory_resource),
+        _alloc(get_monotonic_memory_resource()),
         _alloc_pin_guard(_alloc),
         _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
         _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
@@ -211,7 +211,6 @@ class TableBuilder {
   std::shared_ptr<Table> _table;
   ChunkOffset _estimated_rows_per_chunk;
 
-  MonotonicBufferResource* _monotonic_memory_resource;
   PolymorphicAllocator<size_t> _alloc;
   AllocatorPinGuard _alloc_pin_guard;
 
