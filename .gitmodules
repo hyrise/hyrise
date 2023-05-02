@@ -53,12 +53,12 @@
 [submodule "third_party/sql-parser"]
 	path = third_party/sql-parser
 	url = https://github.com/hyrise/sql-parser.git
-[submodule "third_party/ssb-dbgen"]
-	path = third_party/ssb-dbgen
-	url = https://github.com/electrum/ssb-dbgen.git
 [submodule "third_party/tpcds-kit"]
 	path = third_party/tpcds-kit
 	url = https://github.com/hyrise-mp/tpcds-kit.git
 [submodule "third_party/zstd"]
 	path = third_party/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "ssb-dbgen"]
+	path = third_party/ssb-dbgen
+	url = https://github.com/hyrise/ssb-dbgen.git
