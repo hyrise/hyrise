@@ -68,7 +68,15 @@ TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
 TEST_F(SSDRegionTest, TestWriteFailsWithUnalignedData) {
   auto region = std::make_unique<SSDRegion>(db_file);
   std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
-  EXPECT_ANY_THROW(region->write_page(PageID{1}, PageSizeType::KiB8, data.data()));
+  auto frame = std::make_shared<Frame>(PageID{0}, PageSizeType::KiB8, PageType::Dram, data.data());
+  EXPECT_ANY_THROW(region->write_page(frame));
+}
+
+TEST_F(SSDRegionTest, TestReadFailsWithUnalignedData) {
+  auto region = std::make_unique<SSDRegion>(db_file);
+  std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
+  auto frame = std::make_shared<Frame>(PageID{0}, PageSizeType::KiB8, PageType::Dram, data.data());
+  EXPECT_ANY_THROW(region->read_page(frame));
 }
 
 // TODO: TEst on block device, GTEST_SKIP if no block

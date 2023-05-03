@@ -3,24 +3,13 @@
 #include <boost/container/pmr/memory_resource.hpp>
 #include <boost/container/small_vector.hpp>
 #include <boost/move/utility.hpp>
-#include "storage/buffer/buffer_manager.hpp"
+#include "storage/buffer/buffer_pool_allocator_observer.hpp"
 #include "storage/buffer/buffer_ptr.hpp"
 #include "storage/buffer/memory_resource.hpp"
 
 #include "utils/assert.hpp"
 
 namespace hyrise {
-
-/**
- * The BufferPoolAllocatorObserver is used to track the allocation and deallocation of pages. A shared_ptr to the object can be registered at a 
- * BufferPoolAllocator using the register_observer method. Check AllocatorPinGuard for an example.
-*/
-class BufferPoolAllocatorObserver {
- public:
-  virtual void on_allocate(std::shared_ptr<Frame> frame) = 0;
-  virtual void on_deallocate(std::shared_ptr<Frame> frame) = 0;
-  virtual ~BufferPoolAllocatorObserver() = default;
-};
 
 /**
  * The BufferPoolAllocator is a custom, polymorphic allocator that uses the BufferManager to allocate and deallocate pages.
@@ -34,7 +23,7 @@ class BufferPoolAllocator {
   using void_pointer = BufferPtr<void>;
   using difference_type = typename pointer::difference_type;
 
-  BufferPoolAllocator() : _memory_resource(&BufferManager::get_global_buffer_manager()) {}
+  BufferPoolAllocator() : _memory_resource(get_buffer_manager_memory_resource()) {}
 
   BufferPoolAllocator(MemoryResource* memory_resource) : _memory_resource(memory_resource) {}
 
@@ -72,16 +61,16 @@ class BufferPoolAllocator {
   [[nodiscard]] pointer allocate(std::size_t n) {
     auto ptr = static_cast<pointer>(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)));
     if (auto observer = _observer.lock()) {
-      // TODO: Pass shared frame
-      observer->on_allocate(ptr.get_frame(AccessIntent::Write));
+      const auto frame = ptr.get_shared_frame();
+      observer->on_allocate(frame);
     }
     return ptr;
   }
 
   void deallocate(pointer const ptr, std::size_t n) {
     if (auto observer = _observer.lock()) {
-      // TODO: Shared frame
-      observer->on_deallocate(ptr.get_frame(AccessIntent::Write));
+      auto frame = ptr.get_shared_frame();
+      observer->on_deallocate(frame);
     }
     _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
   }

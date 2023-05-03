@@ -1,4 +1,5 @@
 #include "storage/buffer/memory_resource.hpp"
+#include <boost/thread.hpp>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_manager.hpp"
 
@@ -50,8 +51,6 @@ BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t
     this->increase_next_buffer_at_least_to(bytes);
     _current_frame = _memory_resource->allocate(_next_buffer_size, alignment).get_shared_frame();
     DebugAssert(_current_frame, "MemoryResource did not return a valid frame");
-    DebugAssert(_current_frame->dram_frame || _current_frame->numa_frame, "MemoryResource did not return rame");
-    Assert(_current_frame, "MemoryResource did not return a valid frame");
     _current_buffer_size = _next_buffer_size;
     _current_buffer_pos = 0u;
     this->increase_next_buffer();
@@ -87,11 +86,26 @@ void MonotonicBufferResource::deallocate([[maybe_unused]] BufferPtr<void> ptr, [
 }
 
 BufferPtr<void> NewDeleteMemoryResource::allocate(std::size_t bytes, std::size_t alignment) {
-  return BufferPtr<void>(new std::byte[bytes]);
+  const auto ptr = operator new[](bytes, std::align_val_t(alignment));
+  return BufferPtr<void>(ptr);
 }
 
 void NewDeleteMemoryResource::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment) {
-  delete[] (reinterpret_cast<std::byte*>(ptr.get_offset()));
+  const auto raw_ptr = reinterpret_cast<void*>(ptr.get_offset());
+  operator delete[](raw_ptr, std::align_val_t(alignment));
 }
 
+BufferManager* get_buffer_manager_memory_resource() {
+  return &Hyrise::get().buffer_manager;
+}
+
+NewDeleteMemoryResource* get_new_delete_memory_resource() {
+  static NewDeleteMemoryResource memory_resource;
+  return &memory_resource;
+}
+
+MonotonicBufferResource* get_monotonic_buffer_resource() {
+  static boost::thread_specific_ptr<MonotonicBufferResource> memory_resource;
+  return memory_resource.get();
+}
 }  // namespace hyrise

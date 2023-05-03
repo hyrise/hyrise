@@ -126,7 +126,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * @brief Loads a page from disk into the buffer manager. If the page is already in the buffer manager, it might be migrated. 
    * The returned pointer does not necessarily equal the pointer passed in.
   */
-  void make_resident(std::shared_ptr<Frame> frame);
+  void make_resident(const std::shared_ptr<Frame>& frame);
 
   std::shared_ptr<Frame>& load_frame(const std::shared_ptr<SharedFrame>& frame, const AccessIntent access_intent);
 
@@ -147,13 +147,6 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * Deallocates a pointer and frees the pages.
   */
   void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t align = alignof(std::max_align_t));
-
-  /**
-   * @brief Helper function to get the BufferManager singleton. This avoids issues with circular dependencies as the implementation in the .cpp file.
-   * 
-   * @return BufferManager& 
-   */
-  static BufferManager& get_global_buffer_manager();  // TODO: Inline?
 
   /**
    * @brief Returns a snapshot of metrics holding information about allocations, page table hits etc. of the current buffer manager instance.
@@ -213,8 +206,8 @@ class BufferManager : public MemoryResource, public Noncopyable {
     void clear();
 
     BufferPools(const PageType page_type, const size_t pool_size,
-                const std::function<void(std::shared_ptr<Frame>&)> evict_frame, const bool enable_eviction_purge_worker,
-                const std::shared_ptr<BufferManager::Metrics> metrics);
+                const std::function<void(const std::shared_ptr<Frame>&)> evict_frame,
+                const bool enable_eviction_purge_worker, const std::shared_ptr<BufferManager::Metrics> metrics);
 
     BufferPools& operator=(BufferPools&& other);
 
@@ -243,20 +236,20 @@ class BufferManager : public MemoryResource, public Noncopyable {
     bool enabled;
 
     // Calls the parent buffer manager to evict a page using the migriation policy
-    std::function<void(std::shared_ptr<Frame>&)> _evict_frame;
+    std::function<void(const std::shared_ptr<Frame>&)> _evict_frame;
   };
 
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
   std::shared_ptr<SharedFrame> new_frame(const PageSizeType size_type);
 
   // Evict a frame to a lower level buffer pool (NUMA) or to SSD
-  void evict_frame(std::shared_ptr<Frame>& frame);
+  void evict_frame(const std::shared_ptr<Frame>& frame);
 
   // Read a page from disk into the buffer pool
-  void read_page_from_ssd(const std::shared_ptr<Frame> frame);
+  void read_page_from_ssd(const std::shared_ptr<Frame>& frame);
 
   // Write out a page to disk
-  void write_page_to_ssd(const std::shared_ptr<Frame> frame);
+  void write_page_to_ssd(const std::shared_ptr<Frame>& frame);
 
   Config _config;  // TODO: Const;
 

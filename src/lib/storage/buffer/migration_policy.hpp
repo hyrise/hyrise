@@ -11,7 +11,7 @@ namespace hyrise {
 struct MigrationPolicy {
  public:
   explicit MigrationPolicy(const double dram_read_ratio, const double dram_write_ratio, const double numa_read_ratio,
-                           const double numa_write_ratio);
+                           const double numa_write_ratio, const std::optional<uint32_t> seed = std::nullopt);
 
   // Returns true if the migration should bypass DRAM during reads
   bool bypass_dram_during_read() const;
@@ -44,6 +44,8 @@ struct MigrationPolicy {
   double _numa_write_ratio;
 
   double random() const;
+
+  std::optional<uint32_t> _seed;
 };
 
 // LazyMigrationPolicy is good for large-working sets that do not fit in-memory

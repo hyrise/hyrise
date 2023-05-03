@@ -10,12 +10,15 @@ namespace hyrise {
 
 class BufferManagerTest : public BaseTest {
  public:
-  BufferManager create_buffer_manager(const size_t buffer_pool_size) {
+  BufferManager create_buffer_manager(const size_t buffer_pool_size,
+                                      const BufferManagerMode mode = BufferManagerMode::DramSSD) {
+    const auto seed = 2198738917;
     auto config = BufferManager::Config{};
     config.dram_buffer_pool_size = buffer_pool_size;
     config.ssd_path = db_file;
     config.enable_eviction_purge_worker = false;
-    config.mode = BufferManagerMode::DramSSD;
+    config.mode = mode;
+    config.migration_policy = MigrationPolicy(0.1, 0.1, 0.1, 0.1, seed);
     return BufferManager(config);
   }
 
@@ -30,52 +33,64 @@ class BufferManagerTest : public BaseTest {
   const std::string db_file = test_data_path + "buffer_manager.data";
 };
 
-TEST_F(BufferManagerTest, TestPinAndUnpinPage) {
+TEST_F(BufferManagerTest, TestPinAndUnpinPageLowMemory) {
   // We create a really small buffer manager with a single frame to test pin and unpin
   auto buffer_manager = create_buffer_manager(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), 0);
   const auto ptr = buffer_manager.allocate(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
+
   const auto frame = ptr.get_shared_frame()->dram_frame;
+  EXPECT_TRUE(frame->is_resident());
 
   // Pin the page. The next allocation should fail, since there is only a single buffer frame
   // and it has a pinned page
   buffer_manager.pin(frame);
   EXPECT_ANY_THROW(buffer_manager.allocate(512));
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
 
   // Unpin the page. And try again. No the allocation works.
   buffer_manager.unpin(frame, false);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
   EXPECT_NO_THROW(buffer_manager.allocate(512));
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), bytes_for_size_type(PageSizeType::KiB8));
 }
 
-TEST_F(BufferManagerTest, TestFlushDirtyPage) {
-  auto buffer_manager = create_buffer_manager(bytes_for_size_type(PageSizeType::KiB256));
+TEST_F(BufferManagerTest, TestPinMultipleTimes) {
+  // TODO
+}
+
+TEST_F(BufferManagerTest, TestWriteDirtyPageToSSD) {
+  auto buffer_manager = create_buffer_manager(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
   auto ssd_region = get_ssd_region(buffer_manager);
 
-  const auto ptr = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256));
+  const auto ptr = buffer_manager.allocate(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
   const auto frame = ptr.get_shared_frame()->dram_frame;
 
   // Write some data to the page
   buffer_manager.pin(frame);
-  auto char_page = reinterpret_cast<uint8_t*>(frame->data);
-  char_page[0] = 1;
-  char_page[1] = 2;
+  std::memset(frame->data, bytes_for_size_type(MAX_PAGE_SIZE_TYPE), 0x05);
 
   // Unpin the page and mark it as dirty. There should be nothing on the SSD yet.
   buffer_manager.unpin(frame, true);
-  alignas(512) std::array<uint8_t, bytes_for_size_type(PageSizeType::KiB256)> read_buffer1;
-  auto read_frame = std::make_shared<Frame>(frame->page_id, frame->size_type, frame->page_type, read_buffer1.data());
-  ssd_region->read_page(frame);
+  alignas(512) std::array<uint8_t, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> read_buffer1;
+  auto read_frame = std::make_shared<Frame>(frame->page_id, frame->size_type, frame->page_type,
+                                            reinterpret_cast<std::byte*>(read_buffer1.data()));
+  ssd_region->read_page(read_frame);
 
-  EXPECT_NE(memcmp(read_buffer1.data(), frame->data, bytes_for_size_type(PageSizeType::KiB256)), 0)
+  EXPECT_FALSE(std::memcmp(read_frame->data, frame->data, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) == 0)
       << "The page should not have been written to SSD";
 
-  // TODO: Fix
-
   // Allocate a new page, which should replace the old one and write it to SSD.
-  // EXPECT_NO_THROW(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256)));
-  // alignas(512) std::array<uint8_t, bytes_for_size_type(PageSizeType::KiB256)> read_buffer2;
-  // ssd_region->read_page(page_id, PageSizeType::KiB256, reinterpret_cast<std::byte*>(read_buffer2.data()));
-  // EXPECT_EQ(memcmp(page, read_buffer2.data(), bytes_for_size_type(PageSizeType::KiB256)), 0)
-  //     << "The page should have been written to SSD";
+  const auto ptr2 = buffer_manager.allocate(bytes_for_size_type(MAX_PAGE_SIZE_TYPE));
+  alignas(512) std::array<uint8_t, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> read_buffer2;
+  auto read_frame2 = std::make_shared<Frame>(frame->page_id, frame->size_type, frame->page_type,
+                                             reinterpret_cast<std::byte*>(read_buffer2.data()));
+  ssd_region->read_page(read_frame2);
+  EXPECT_EQ(frame->data, nullptr);
+  // TODO: We need to compare against some ground truth (setting all bytes to 0x5)
+  EXPECT_TRUE(std::memcmp(read_frame2->data, frame->data, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) != 0)
+      << "The page should not have been written to SSD";
 }
 
 TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
@@ -103,26 +118,41 @@ TEST_F(BufferManagerTest, TestMultipleAllocateAndDeallocate) {
 TEST_F(BufferManagerTest, TestAllocateDifferentPageSizes) {
   auto buffer_manager = create_buffer_manager(5 * bytes_for_size_type(PageSizeType::KiB256));
 
+  auto current_bytes = size_t{0};
   auto ptr8 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB8));
   EXPECT_EQ(ptr8.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB8);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB8);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   auto ptr16 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB16));
   EXPECT_EQ(ptr16.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB16);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB16);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   auto ptr32 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB32));
   EXPECT_EQ(ptr32.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB32);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB32);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   auto ptr64 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB64));
   EXPECT_EQ(ptr64.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB64);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB64);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   auto ptr128 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB128));
   EXPECT_EQ(ptr128.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB128);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB128);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   auto ptr256 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB256));
   EXPECT_EQ(ptr256.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB256);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB256);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   auto ptr512 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB512));
   EXPECT_EQ(ptr512.get_shared_frame()->dram_frame->size_type, PageSizeType::KiB512);
+  current_bytes += bytes_for_size_type(PageSizeType::KiB512);
+  EXPECT_EQ(buffer_manager.dram_bytes_used(), current_bytes);
 
   EXPECT_ANY_THROW(buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB512) + 5));
 }
@@ -182,11 +212,17 @@ TEST_F(BufferManagerTest, TestUnswizzle) {
   auto ptr2 = buffer_manager.allocate(bytes_for_size_type(PageSizeType::KiB64));
   auto [frame2, offset2] = buffer_manager.unswizzle(static_cast<char*>(ptr2.get_pointer()) + 30);
   EXPECT_EQ(offset2, 30);
-  EXPECT_EQ(frame2->page_id, PageID{0});
+  EXPECT_EQ(frame2->page_id, PageID{1});
   EXPECT_EQ(frame2->size_type, PageSizeType::KiB32);
   EXPECT_EQ(frame2->page_type, PageType::Dram);
 }
 
-// TODO: TEsts different modes (DRAM, NVM, Hybrid)
+TEST_F(BufferManagerTest, TestMakeResident) {}
+
+TEST_F(BufferManagerTest, TestAllocateAndDeallocateWithDramNumaEmulationSSDMode) {}
+
+TEST_F(BufferManagerTest, TestLoadFrameWithDramSSDMode) {}
+
+TEST_F(BufferManagerTest, TestLoadFrameWithDramNumaEmulationSSDMode) {}
 
 }  // namespace hyrise

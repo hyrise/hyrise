@@ -448,6 +448,7 @@ set(
     storage/buffer/memory_resource.cpp
     storage/buffer/memory_resource.hpp
     storage/buffer/buffer_pool_allocator.hpp
+    storage/buffer/buffer_pool_allocator_observer.hpp
     storage/buffer/frame.cpp
     storage/buffer/frame.hpp
     storage/buffer/pin_guard.hpp

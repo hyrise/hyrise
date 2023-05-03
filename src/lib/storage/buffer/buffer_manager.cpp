@@ -28,7 +28,7 @@ BufferManager::Config BufferManager::Config::from_env() {
 //----------------------------------------------------
 
 BufferManager::BufferPools::BufferPools(const PageType page_type, const size_t pool_size,
-                                        const std::function<void(std::shared_ptr<Frame>&)> evict_frame,
+                                        const std::function<void(const std::shared_ptr<Frame>&)> evict_frame,
                                         const bool enable_eviction_purge_worker,
                                         const std::shared_ptr<BufferManager::Metrics> metrics)
     : _used_bytes(0),
@@ -78,8 +78,10 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
 
   // Find potential victim frame if we don't have enough space left
   auto item = EvictionItem{};
-  while ((current_bytes + bytes_required - freed_bytes) > _max_bytes) {
+  // TODO: Really need to convert to int64?
+  while (((int64_t)current_bytes + (int64_t)bytes_required - (int64_t)freed_bytes) > (int64_t)_max_bytes) {
     if (!_eviction_queue->try_pop(item)) {
+      _used_bytes -= bytes_required;
       Fail(
           "Cannot pop item from queue. All frames seems to be pinned. Please increase the memory size of this buffer "
           "pool.");
@@ -127,7 +129,6 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
       } else {
         Fail("Invalid page type");
       }
-      current_bytes -= freed_bytes;
     }
   }
 
@@ -140,6 +141,7 @@ void BufferManager::BufferPools::allocate_frame(std::shared_ptr<Frame> frame) {
   if (!frame->data) {
     _buffer_pools[static_cast<size_t>(required_size_type)]->allocate(frame);
   }
+  frame->set_resident();
 }
 
 void BufferManager::BufferPools::deallocate_frame(std::shared_ptr<Frame> frame) {
@@ -240,7 +242,7 @@ BufferManager::Config BufferManager::get_config() const {
 
 BufferManager::BufferManager() : BufferManager(Config::from_env()) {}
 
-void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
+void BufferManager::make_resident(const std::shared_ptr<Frame>& frame) {
   if (frame->is_resident()) {
     if (frame->page_type == PageType::Dram) {
       _metrics->total_hits_dram++;
@@ -260,7 +262,6 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
     _numa_buffer_pools.allocate_frame(frame);
     _numa_buffer_pools.add_to_eviction_queue(frame);
     read_page_from_ssd(frame);
-    frame->set_resident();
     return;
   }
 
@@ -269,7 +270,6 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
     _dram_buffer_pools.allocate_frame(frame);
     _dram_buffer_pools.add_to_eviction_queue(frame);
     read_page_from_ssd(frame);
-    frame->set_resident();
     return;
   }
 
@@ -286,7 +286,6 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
     _dram_buffer_pools.allocate_frame(frame);
     _dram_buffer_pools.add_to_eviction_queue(frame);
     read_page_from_ssd(frame);
-    frame->set_resident();
     return;
   }
   _metrics->total_hits_numa++;
@@ -300,8 +299,6 @@ void BufferManager::make_resident(std::shared_ptr<Frame> frame) {
   _dram_buffer_pools.add_to_eviction_queue(frame);
   std::memcpy(frame->data, numa_frame->data, num_bytes);
   _metrics->total_bytes_copied_from_numa_to_dram += num_bytes;
-
-  frame->set_resident();
 }
 
 // rename to evictBlocks(...)
@@ -369,7 +366,7 @@ std::shared_ptr<Frame>& BufferManager::load_frame(const std::shared_ptr<SharedFr
 }
 
 // TODO: Pass this to constructor of BufferPool
-void BufferManager::evict_frame(std::shared_ptr<Frame>& frame) {
+void BufferManager::evict_frame(const std::shared_ptr<Frame>& frame) {
   DebugAssert(frame != nullptr, "Frame is null");
   DebugAssert(frame->is_resident(), "Frame is not resident");
   DebugAssert(!frame->is_pinned(), "Frame is still pinned");
@@ -403,7 +400,7 @@ void BufferManager::evict_frame(std::shared_ptr<Frame>& frame) {
   frame->set_evicted();
 }
 
-void BufferManager::read_page_from_ssd(std::shared_ptr<Frame> frame) {
+void BufferManager::read_page_from_ssd(const std::shared_ptr<Frame>& frame) {
   _ssd_region->read_page(frame);
   const auto num_bytes = bytes_for_size_type(frame->size_type);
   _metrics->total_bytes_copied_from_ssd += num_bytes;
@@ -417,7 +414,7 @@ void BufferManager::read_page_from_ssd(std::shared_ptr<Frame> frame) {
   }
 }
 
-void BufferManager::write_page_to_ssd(std::shared_ptr<Frame> frame) {
+void BufferManager::write_page_to_ssd(const std::shared_ptr<Frame>& frame) {
   _ssd_region->write_page(frame);
   const auto num_bytes = bytes_for_size_type(frame->size_type);
   _metrics->total_bytes_copied_to_ssd += num_bytes;

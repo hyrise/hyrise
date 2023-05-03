@@ -116,8 +116,7 @@ class TableBuilder {
   template <typename Names>
   TableBuilder(const ChunkOffset chunk_size, const boost::hana::tuple<DataTypes...>& types, const Names& names,
                const ChunkOffset estimated_rows = ChunkOffset{0})
-      : _monotonic_memory_resource(new MonotonicBufferResource()),  // TODO: This leaks
-        _alloc(get_monotonic_memory_resource()),
+      : _alloc(get_monotonic_buffer_resource()),
         _alloc_pin_guard(_alloc),
         _value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),
         _null_value_vectors(hana::replicate<hana::tuple_tag>(_alloc, hana::length(types))),

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <boost/thread.hpp>
 #include <forward_list>
 #include "storage/buffer/types.hpp"
 
@@ -36,6 +37,8 @@ class MemoryResource {
  * 
  * - If the bytes to be allocated fill up more than 80% of a potential page size type, a new page is allocated regardless of the current page. 
  * The existing current page is not touched and kept for the next allocation.
+ * 
+ * - Each thread gets its own instance of a MonotonicBufferResource through Tread-Local Storage with MonotonicBufferResource *get_monotonic_memory_resource()
 */
 class MonotonicBufferResource : public MemoryResource {
  public:
@@ -50,6 +53,7 @@ class MonotonicBufferResource : public MemoryResource {
   MonotonicBufferResource(MemoryResource* memory_resource, const PageSizeType initial_size = INITIAL_PAGE_SIZE_TYPE);
 
   BufferPtr<void> allocate(std::size_t bytes, std::size_t alignment);
+
   void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment);
 
   /**
@@ -83,11 +87,22 @@ class MonotonicBufferResource : public MemoryResource {
 
 /**
  * NewDeleteMemoryResource uses classical new-delete calls, but returns a BufferPtr. Inspired by std::pmr::new_delete_resource. 
+ * It is used to bypass the buffer manager.
 */
 class NewDeleteMemoryResource : public MemoryResource {
  public:
   BufferPtr<void> allocate(std::size_t bytes, std::size_t alignment);
   void deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size_t alignment);
 };
+
+// Factory functions for memory resource
+
+BufferManager* get_buffer_manager_memory_resource();
+
+// Return the global Memory Resource that uses classical new and delete and thereby bypassed the buffer manager
+NewDeleteMemoryResource* get_new_delete_memory_resource();
+
+// TODO: This does not work if a data structure allocated again on a different thread since the pointer might be used for another thread
+MonotonicBufferResource* get_monotonic_buffer_resource();
 
 }  // namespace hyrise
