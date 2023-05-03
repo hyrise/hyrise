@@ -55,7 +55,7 @@ class BufferPoolAllocator {
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _memory_resource != other.buffer_manager() || _observer.lock() != other.current_observer().lock();
+    return _memory_resource != other.memory_resource() || _observer.lock() != other.current_observer().lock();
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
@@ -82,21 +82,6 @@ class BufferPoolAllocator {
   BufferPoolAllocator select_on_container_copy_construction() const noexcept {
     return BufferPoolAllocator(_memory_resource);
   }
-
-  // template <typename U, class... Args>
-  // void construct(const U* ptr, BOOST_FWD_REF(Args)... args) {
-  //   ::new ((void*)ptr) U(boost::forward<Args>(args)...);
-  // }
-
-  // template <typename U, class Args>
-  // void construct(const BufferPtr<U>& ptr, BOOST_FWD_REF(Args) args) {
-  //   ::new (static_cast<void*>(ptr.operator->())) U(boost::forward<Args>(args));
-  // }
-
-  // template <class U>
-  // void destroy(const BufferPtr<U>& ptr) {
-  //   ptr->~U();
-  // }
 
   void register_observer(std::shared_ptr<BufferPoolAllocatorObserver> observer) {
     if (!_observer.expired()) {

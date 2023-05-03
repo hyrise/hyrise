@@ -23,7 +23,7 @@ class BufferPoolAllocatorTest : public BaseTest {
   const std::string db_file = test_data_path + "buffer_manager.data";
 };
 
-TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateVector) {
+TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateIntVector) {
   // BufferPoolResource uses the global Hyrise Buffer Manager
   auto allocator = BufferPoolAllocator<size_t>();
 
@@ -54,28 +54,19 @@ TEST_F(BufferPoolAllocatorTest, TestPolymorphism) {
   EXPECT_EQ(ptr.get_offset(), 0);
 }
 
-// TEST_F(BufferPoolAllocatorTest, TestConstructRawPointer) {
-//   struct Dummy {
-//     int _value1;
-//     float _value2;
+TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateStringVector) {
+  auto monotonic_memory_resource = MonotonicBufferResource();
+  auto allocator = BufferPoolAllocator<size_t>(&monotonic_memory_resource);
 
-//     Dummy(int value1, float value2) : _value1(value1), _value2(value2) {}
+  auto vector = pmr_vector<pmr_string>(1000, allocator);
+  vector[0] = "Hello";
+  vector[1] = "World";
+  vector[2] = "Hallo World with a really long string so that we reach the limit of SSO";
 
-//     ~Dummy() {
-//       _value1 = 2;
-//       _value2 = 2.0;
-//     }
-//   };
-
-//   auto allocator = BufferPoolAllocator<size_t>();
-
-//   auto dummy = Dummy(0, 0);
-
-//   // Test that the constructor is called
-//   allocator.construct(&dummy, 5, 1.0);
-//   EXPECT_EQ(dummy._value1, 1);
-//   EXPECT_EQ(dummy._value2, 1.0);
-// }
+  EXPECT_EQ(vector[0], "Hello");
+  EXPECT_EQ(vector[1], "World");
+  EXPECT_EQ(vector[2], "Hallo World with a really long string so that we reach the limit of SSO";
+}
 
 TEST_F(BufferPoolAllocatorTest, TestObserver) {
   struct TestObserver : public BufferPoolAllocatorObserver {
