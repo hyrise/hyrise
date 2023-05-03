@@ -22,7 +22,7 @@
         },
 
         {
-            "name": "p_brand",
+            "name": "p_brand1",
             "nullable": false,
             "type": "string"
         },

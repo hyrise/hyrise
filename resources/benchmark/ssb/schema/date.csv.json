@@ -84,7 +84,7 @@
             "name": "d_weekdayfl",
             "nullable": false,
             "type": "int"
-        },
+        }
     ],
     "config": {
         "delimiter": "\n",

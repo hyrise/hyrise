@@ -122,3 +122,17 @@ target_link_libraries(
     hyrise
     hyriseBenchmarkLib
 )
+
+# Configure hyriseBenchmarkStarSchema
+add_executable(
+    hyriseBenchmarkStarSchema
+
+    star_schema_benchmark.cpp
+)
+
+target_link_libraries(
+    hyriseBenchmarkStarSchema
+
+    hyrise
+    hyriseBenchmarkLib
+)
