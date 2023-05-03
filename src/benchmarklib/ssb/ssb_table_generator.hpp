@@ -18,6 +18,8 @@ class SSBTableGenerator : virtual public FileBasedTableGenerator {
   std::unordered_map<std::string, BenchmarkTableInfo> generate() override;
 
  protected:
+  void _add_constraints(std::unordered_map<std::string, BenchmarkTableInfo>& table_info_by_name) const final;
+
   const std::string _dbgen_path;
   const float _scale_factor;
 };

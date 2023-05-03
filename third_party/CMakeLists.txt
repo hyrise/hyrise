@@ -315,7 +315,6 @@ externalproject_add_step(
   COMMAND bash -c "(cd ${CMAKE_CURRENT_BINARY_DIR}/jcch-dbgen && make distclean >/dev/null 2>/dev/null) || true"
 )
 
-include(ExternalProject)
 externalproject_add(
     ssbDbgen
 

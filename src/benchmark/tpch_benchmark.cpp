@@ -175,14 +175,15 @@ int main(int argc, char* argv[]) {
     jcch_data_path_str << "jcch_data/sf-" << std::noshowpoint << scale_factor;
     std::filesystem::create_directories(jcch_data_path_str.str());
     // Success of create_directories is guaranteed by the call to fs::canonical, which fails on invalid paths:
-    auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
+    const auto jcch_data_path = std::filesystem::canonical(jcch_data_path_str.str());
+    const auto jcch_tables_path = jcch_data_path.string() + "/tables";
 
     std::cout << "- Using JCC-H dbgen from " << jcch_dbgen_path << std::endl;
     std::cout << "- Storing JCC-H tables and query parameters in " << jcch_data_path << std::endl;
     std::cout << "- JCC-H query parameters are " << (jcch_skewed ? "skewed" : "not skewed") << std::endl;
 
     // Create the table generator and item runner
-    table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_data_path, scale_factor,
+    table_generator = std::make_unique<JCCHTableGenerator>(jcch_dbgen_path, jcch_tables_path, scale_factor,
                                                            clustering_configuration, config);
     item_runner = std::make_unique<JCCHBenchmarkItemRunner>(jcch_skewed, jcch_dbgen_path, jcch_data_path, config,
                                                             use_prepared_statements, scale_factor,
