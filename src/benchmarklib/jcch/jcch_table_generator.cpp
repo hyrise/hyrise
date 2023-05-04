@@ -1,6 +1,6 @@
 #include "jcch_table_generator.hpp"
 
-#include "generate_tables_with_dbgen.hpp"
+#include "external_dbgen_utils.hpp"
 
 namespace hyrise {
 
@@ -24,11 +24,13 @@ std::unordered_map<std::string, BenchmarkTableInfo> JCCHTableGenerator::generate
     table_names.emplace_back(table_name);
   }
 
-  generate_csv_tables_with_dbgen(_dbgen_path, table_names, "resources/benchmark/jcch", _path, _scale_factor, "-k");
+  generate_csv_tables_with_external_dbgen(_dbgen_path, table_names, "resources/benchmark/jcch", _path, _scale_factor,
+                                          "-k");
 
   // Having generated the .csv files, call the FileBasedTableGenerator just as if those files were user-provided
   const auto& generated_tables = FileBasedTableGenerator::generate();
 
+  // FileBasedTableGenerator automatically stores a binary file. Remove the CSV data to save some space.
   remove_csv_tables(_path);
 
   return generated_tables;

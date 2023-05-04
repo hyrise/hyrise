@@ -1,6 +1,6 @@
 #include "ssb_table_generator.hpp"
 
-#include "generate_tables_with_dbgen.hpp"
+#include "external_dbgen_utils.hpp"
 #include "storage/table.hpp"
 
 namespace hyrise {
@@ -19,12 +19,13 @@ SSBTableGenerator::SSBTableGenerator(const std::string& dbgen_path, const std::s
       _scale_factor(scale_factor) {}
 
 std::unordered_map<std::string, BenchmarkTableInfo> SSBTableGenerator::generate() {
-  generate_csv_tables_with_dbgen(_dbgen_path, ssb_table_names, "resources/benchmark/ssb/schema", _path, _scale_factor,
-                                 "-T a");
+  generate_csv_tables_with_external_dbgen(_dbgen_path, ssb_table_names, "resources/benchmark/ssb/schema", _path,
+                                          _scale_factor, "-T a");
 
   // Having generated the .csv files, call the FileBasedTableGenerator just as if those files were user-provided.
   const auto& generated_tables = FileBasedTableGenerator::generate();
 
+  // FileBasedTableGenerator automatically stores a binary file. Remove the CSV data to save some space.
   remove_csv_tables(_path);
 
   return generated_tables;
