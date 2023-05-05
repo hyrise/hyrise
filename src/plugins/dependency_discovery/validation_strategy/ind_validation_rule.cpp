@@ -33,12 +33,9 @@ std::unordered_set<T> collect_values(const std::shared_ptr<const Table>& table, 
       distinct_values.insert(dictionary->cbegin(), dictionary->cend());
     } else {
       // Fallback: Iterate the whole segment and decode its values.
-      segment_with_iterators<T>(*segment, [&](auto it, const auto end) {
-        while (it != end) {
-          if (!it->is_null()) {
-            distinct_values.insert(it->value());
-          }
-          ++it;
+      segment_iterate<T>(*segment, [&](const auto& position) {
+        if (!position.is_null()) {
+          distinct_values.insert(position.value());
         }
       });
     }
