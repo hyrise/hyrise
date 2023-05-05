@@ -112,6 +112,10 @@ typename ValidationUtils<T>::ColumnStatistics ValidationUtils<T>::collect_column
     const auto& min_max_pair = std::make_shared<std::pair<T, T>>(min, max);
     min_max_ordered[min].emplace_back(min_max_pair);
     min_max_ordered[max].emplace_back(min_max_pair);
+
+    if constexpr (std::is_integral_v<T>) {
+      column_statistics.segments_continuous &= max - min == static_cast<int64_t>(chunk->size() - 1);
+    }
   }
 
   column_statistics.min = min_max_ordered.cbegin()->first;
