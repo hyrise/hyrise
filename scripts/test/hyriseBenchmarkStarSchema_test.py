@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-import json
-import os
-import sys
-
 from hyriseBenchmarkCore import close_benchmark, check_exit_status, initialize, run_benchmark
 
 
