@@ -175,6 +175,8 @@ set(
     lib/storage/buffer/buffer_ptr_test.cpp
     lib/storage/buffer/memory_resource_test.cpp
     lib/storage/buffer/buffer_manager_test.cpp
+    lib/storage/buffer/frame_test.cpp
+    lib/storage/buffer/migration_policy_test.cpp
     lib/storage/buffer/buffer_pool_allocator_test.cpp
     lib/storage/buffer/pin_guard_test.cpp
     lib/storage/buffer/ssd_region_test.cpp

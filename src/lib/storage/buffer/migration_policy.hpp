@@ -7,6 +7,8 @@ namespace hyrise {
  * The idea is taken from Spitfire: https://github.com/zxjcarrot/spitfire/blob/bab7c28bdf1d671e61931c251be2591401ece365/include/buf/buf_mgr.h#L504
  * 
  * Use the respective bypass function to determine whether a page should be migrated or not.
+ * 
+ * TODO: Incorporate the page size into the migration policy
 */
 struct MigrationPolicy {
  public:
@@ -51,13 +53,13 @@ struct MigrationPolicy {
 // LazyMigrationPolicy is good for large-working sets that do not fit in-memory
 class LazyMigrationPolicy : public MigrationPolicy {
  public:
-  LazyMigrationPolicy() : MigrationPolicy(0.01, 0.01, 0.2, 1) {}
+  LazyMigrationPolicy(const std::optional<uint32_t> seed = std::nullopt) : MigrationPolicy(0.01, 0.01, 0.2, 1, seed) {}
 };
 
 // EagerMigrationPolicy is good for small-working sets that fit in memory as we are trying to work as much with DRAM as possible
 class EagerMigrationPolicy : public MigrationPolicy {
  public:
-  EagerMigrationPolicy() : MigrationPolicy(1, 1, 1, 1) {}
+  EagerMigrationPolicy(const std::optional<uint32_t> seed = std::nullopt) : MigrationPolicy(1, 1, 1, 1, seed) {}
 };
 
 }  // namespace hyrise
