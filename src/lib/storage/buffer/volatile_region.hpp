@@ -23,12 +23,12 @@ class VolatileRegion : public Noncopyable {
                  const int8_t memory_numa_node = NO_NUMA_MEMORY_NODE);
   ~VolatileRegion();
 
-  std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> unswizzle(const void* ptr);
+  std::pair<FramePtr, std::ptrdiff_t> unswizzle(const void* ptr);
 
-  void allocate(std::shared_ptr<Frame> frame);
-  void move(std::shared_ptr<Frame> from, std::shared_ptr<Frame> to);
-  void deallocate(std::shared_ptr<Frame> frame);
-  void free(std::shared_ptr<Frame> frame);
+  void allocate(FramePtr frame);
+  void move(FramePtr from, FramePtr to);
+  void deallocate(FramePtr frame);
+  void free(FramePtr frame);
 
   // Total number of bytes in the region
   size_t capacity() const;
@@ -49,7 +49,7 @@ class VolatileRegion : public Noncopyable {
 
   std::byte* _mapped_memory;
 
-  std::vector<std::weak_ptr<Frame>> _frames;
+  std::vector<FramePtr> _frames;
   boost::dynamic_bitset<> _free_slots;
 
   std::mutex _mutex;

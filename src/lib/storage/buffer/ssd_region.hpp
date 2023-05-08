@@ -23,8 +23,8 @@ class SSDRegion : public Noncopyable {
   SSDRegion(const std::filesystem::path& file_name, const uint64_t initial_num_bytes = 1UL << 25);
   ~SSDRegion();
 
-  void write_page(std::shared_ptr<Frame> frame);
-  void read_page(std::shared_ptr<Frame> frame);
+  void write_page(FramePtr frame);
+  void read_page(FramePtr frame);
 
   void allocate(const PageID page_id, const PageSizeType size_type);
   std::optional<PageSizeType> get_size_type(const PageID page_id);

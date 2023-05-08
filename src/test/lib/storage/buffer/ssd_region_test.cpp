@@ -30,10 +30,10 @@ TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
       Page{},
   };
 
-  auto write_frames = std::vector<std::shared_ptr<Frame>>{
-      std::make_shared<Frame>(PageID{0}, PageSizeType::KiB8, PageType::Dram, page_data[0].data.data()),
-      std::make_shared<Frame>(PageID{1}, PageSizeType::KiB32, PageType::Dram, page_data[1].data.data()),
-      std::make_shared<Frame>(PageID{2}, PageSizeType::KiB16, PageType::Dram, page_data[2].data.data()),
+  auto write_frames = std::vector<FramePtr>{
+      make_frame(PageID{0}, PageSizeType::KiB8, PageType::Dram, page_data[0].data.data()),
+      make_frame(PageID{1}, PageSizeType::KiB32, PageType::Dram, page_data[1].data.data()),
+      make_frame(PageID{2}, PageSizeType::KiB16, PageType::Dram, page_data[2].data.data()),
   };
 
   write_frames[0]->data[0] = std::byte{0x01};
@@ -50,10 +50,10 @@ TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
       Page{},
   };
 
-  auto read_frames = std::vector<std::shared_ptr<Frame>>{
-      std::make_shared<Frame>(PageID{1}, PageSizeType::KiB32, PageType::Dram, read_data[1].data.data()),
-      std::make_shared<Frame>(PageID{2}, PageSizeType::KiB16, PageType::Dram, read_data[2].data.data()),
-      std::make_shared<Frame>(PageID{0}, PageSizeType::KiB8, PageType::Dram, read_data[0].data.data()),
+  auto read_frames = std::vector<FramePtr>{
+      make_frame(PageID{1}, PageSizeType::KiB32, PageType::Dram, read_data[1].data.data()),
+      make_frame(PageID{2}, PageSizeType::KiB16, PageType::Dram, read_data[2].data.data()),
+      make_frame(PageID{0}, PageSizeType::KiB8, PageType::Dram, read_data[0].data.data()),
   };
   region->read_page(read_frames[0]);
   region->read_page(read_frames[1]);
@@ -68,14 +68,14 @@ TEST_F(SSDRegionTest, TestWriteAndReadPagesOnRegularFile) {
 TEST_F(SSDRegionTest, TestWriteFailsWithUnalignedData) {
   auto region = std::make_unique<SSDRegion>(db_file);
   std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
-  auto frame = std::make_shared<Frame>(PageID{0}, PageSizeType::KiB8, PageType::Dram, data.data());
+  auto frame = make_frame(PageID{0}, PageSizeType::KiB8, PageType::Dram, data.data());
   EXPECT_ANY_THROW(region->write_page(frame));
 }
 
 TEST_F(SSDRegionTest, TestReadFailsWithUnalignedData) {
   auto region = std::make_unique<SSDRegion>(db_file);
   std::array<std::byte, bytes_for_size_type(MAX_PAGE_SIZE_TYPE)> data;
-  auto frame = std::make_shared<Frame>(PageID{0}, PageSizeType::KiB8, PageType::Dram, data.data());
+  auto frame = make_frame(PageID{0}, PageSizeType::KiB8, PageType::Dram, data.data());
   EXPECT_ANY_THROW(region->read_page(frame));
 }
 

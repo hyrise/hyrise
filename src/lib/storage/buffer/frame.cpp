@@ -16,6 +16,8 @@ void Frame::try_set_dirty(const bool new_dirty) {
 }
 
 bool Frame::is_resident() const {
+  DebugAssert(state.load() != State::Resident || data != nullptr,
+              "Frame::is_resident() called on frame with data == nullptr");
   return state.load() == State::Resident;
 }
 
@@ -40,6 +42,26 @@ bool Frame::try_second_chance_evictable() {
   return !was_referenced;
 }
 
+void Frame::copy_data_to(const FramePtr& target_frame) const {
+  const auto num_bytes = bytes_for_size_type(size_type);
+  DebugAssert(target_frame->size_type == size_type, "Frame::copy_data_to() called with different size types");
+  std::memcpy(target_frame->data, data, num_bytes);
+}
+
+template <PageType clone_page_type>
+FramePtr Frame::clone_and_attach_sibling() {
+  DebugAssert(page_type != clone_page_type, "Frame::clone_and_attach_sibling() called with same page type");
+  DebugAssert(sibling_frame == nullptr,
+              "Frame::clone_and_attach_sibling() called on frame with sibling_frame != nullptr");
+  auto new_frame = make_frame(page_id, size_type, clone_page_type);
+  sibling_frame = new_frame;
+  new_frame->sibling_frame = this;
+  return new_frame;
+}
+
+template FramePtr Frame::clone_and_attach_sibling<PageType::Dram>();
+template FramePtr Frame::clone_and_attach_sibling<PageType::Numa>();
+
 void Frame::clear() {
   state.store(State::Evicted);
   dirty.store(false);
@@ -48,4 +70,60 @@ void Frame::clear() {
   referenced = true;
   eviction_timestamp.store(0);
 }
+
+void Frame::pin() {
+  pin_count.fetch_add(1, std::memory_order_relaxed);
+}
+
+bool Frame::unpin() {
+  auto old_pin_count = pin_count.fetch_sub(1, std::memory_order_relaxed);
+  DebugAssert(old_pin_count > 0, "Frame::unpin() called on frame with pin_count == 0");
+  return old_pin_count == 1;
+}
+
+void Frame::wait_until_unpinned() const {
+  constexpr auto max_retries = 10000;
+  auto retries = size_t{0};
+  while (is_pinned()) {
+    ++retries;
+    std::this_thread::yield();
+    if (retries > max_retries) {
+      Fail("Frame::wait_until_unpinned() timed out");
+    }
+  }
+}
+
+Frame::~Frame() {
+  DebugAssert(!is_pinned(), "Frame was deleted while still pinned");
+}
+
+inline void intrusive_ptr_add_ref(Frame* frame) {
+  frame->_ref_count.fetch_add(1, std::memory_order_relaxed);
+}
+
+// TODO: What happens if we add more reference again?
+
+inline void intrusive_ptr_release(Frame* frame) {
+  // The only reference is left between this frame and its sibling frame
+  // We just remove the sibling frame pointer. This decreases the ref count in the sibling frame.
+  // Doing so, the sibling becomes the new sole owner if this frame and we avoid any circular dependencies.
+  const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_release);
+  if (prev_ref_count == 1) {
+    // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
+    boost::atomic_thread_fence(boost::memory_order_acquire);
+    delete frame;
+  }
+
+  if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
+    // TODO: Thread safety?
+    auto sibling_frame = frame->sibling_frame;
+    frame->sibling_frame.reset();
+    sibling_frame->sibling_frame.reset();
+  }
+}
+
+std::size_t Frame::_internal_ref_count() const {
+  return _ref_count.load();
+}
+
 }  // namespace hyrise

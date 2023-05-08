@@ -25,17 +25,14 @@ class BufferPtrTest : public BaseTest {
 
   const std::string db_file = test_data_path + "buffer_manager.data";
 
-  std::shared_ptr<SharedFrame> create_frame(const PageID page_id, PageSizeType size_type) {
-    auto frame = std::make_shared<Frame>(page_id, PageSizeType::KiB8, PageType::Dram);
-    auto shared_frame = std::make_shared<SharedFrame>(frame);
-    SharedFrame::link(shared_frame, frame);
-    return shared_frame;
+  FramePtr create_frame(const PageID page_id, PageSizeType size_type) {
+    return make_frame(page_id, PageSizeType::KiB8, PageType::Dram);
   }
 };
 
 TEST_F(BufferPtrTest, TestSize) {
-  static_assert(sizeof(PtrInt) == 24);
-  static_assert(sizeof(PtrFloat) == 24);
+  static_assert(sizeof(PtrInt) == 16);
+  static_assert(sizeof(PtrFloat) == 16);
 }
 
 TEST_F(BufferPtrTest, TestTypesAndConversions) {
@@ -53,14 +50,14 @@ TEST_F(BufferPtrTest, TestTypesAndConversions) {
   auto outsidePtr = PtrInt((int*)0x1);
   EXPECT_TRUE(outsidePtr);
   EXPECT_FALSE(!outsidePtr);
-  EXPECT_EQ(outsidePtr.get_shared_frame(), nullptr);
+  EXPECT_EQ(outsidePtr.get_frame(), nullptr);
   EXPECT_EQ(outsidePtr.get_offset(), 0x1);
   EXPECT_EQ(outsidePtr.operator->(), (int*)0x1);
 
   // Test Address in Buffer Manager
   auto alloc_frame = create_frame(PageID{4}, PageSizeType::KiB8);
   auto allocatedPtr = PtrInt(alloc_frame, 30);
-  EXPECT_EQ(allocatedPtr.get_shared_frame(), alloc_frame);
+  EXPECT_EQ(allocatedPtr.get_frame(), alloc_frame);
   EXPECT_EQ(allocatedPtr.get_offset(), 30);
   EXPECT_NE(allocatedPtr.operator->(), nullptr);
 

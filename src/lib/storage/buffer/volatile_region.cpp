@@ -67,7 +67,7 @@ void VolatileRegion::map_memory() {
   }
 }
 
-void VolatileRegion::free(std::shared_ptr<Frame> frame) {
+void VolatileRegion::free(FramePtr frame) {
   deallocate(frame);
   // https://bugs.chromium.org/p/chromium/issues/detail?id=823915
 #ifdef __APPLE__
@@ -90,7 +90,7 @@ void VolatileRegion::to_numa(std::byte* address) {
 #endif
 }
 
-void VolatileRegion::allocate(std::shared_ptr<Frame> frame) {
+void VolatileRegion::allocate(FramePtr frame) {
   std::lock_guard<std::mutex> lock(_mutex);
   DebugAssert(_free_slots.any(), "No free slots available in region.");
 
@@ -103,7 +103,7 @@ void VolatileRegion::allocate(std::shared_ptr<Frame> frame) {
   _frames[frame_id] = frame;
 }
 
-void VolatileRegion::move(std::shared_ptr<Frame> from, std::shared_ptr<Frame> to) {
+void VolatileRegion::move(FramePtr from, FramePtr to) {
   DebugAssert(from->data >= _mapped_memory && from->data < _mapped_memory + _total_bytes,
               "Frame does not belong to this region.");
 
@@ -115,7 +115,7 @@ void VolatileRegion::move(std::shared_ptr<Frame> from, std::shared_ptr<Frame> to
   _frames[frame_id] = to;
 }
 
-void VolatileRegion::deallocate(std::shared_ptr<Frame> frame) {
+void VolatileRegion::deallocate(FramePtr frame) {
   DebugAssert(frame->page_type == _page_type, "Frame does not belong to this region.");
   DebugAssert(frame->size_type == _size_type, "Frame does not belong to this region.");
   DebugAssert(frame->data >= _mapped_memory && frame->data < _mapped_memory + _total_bytes,
@@ -129,7 +129,7 @@ void VolatileRegion::deallocate(std::shared_ptr<Frame> frame) {
   _free_slots.set(frame_id);
 }
 
-std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> VolatileRegion::unswizzle(const void* ptr) {
+std::pair<FramePtr, std::ptrdiff_t> VolatileRegion::unswizzle(const void* ptr) {
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return std::make_pair(nullptr, 0);
   }
@@ -137,7 +137,7 @@ std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> VolatileRegion::unswizzle(cons
   const auto buffer = reinterpret_cast<const std::byte*>(ptr) - _mapped_memory;
   const auto frame_id = buffer / bytes_for_size_type(_size_type);
   const auto offset = buffer % bytes_for_size_type(_size_type);
-  return std::make_pair(_frames[frame_id].lock(), offset);
+  return std::make_pair(_frames[frame_id], offset);
 }
 
 size_t VolatileRegion::capacity() const {

@@ -12,6 +12,7 @@ namespace hyrise {
 template <typename T>
 class BufferPoolAllocator;
 
+// TODO: what about strings?
 class FramePinGuard : public Noncopyable {
  public:
   template <typename T>
@@ -21,7 +22,7 @@ class FramePinGuard : public Noncopyable {
 
   FramePinGuard(const AccessIntent access_intent = AccessIntent::Read) : _access_intent(access_intent) {}
 
-  void pin(std::shared_ptr<Frame> frame) {
+  void pin(FramePtr frame) {
     if (!_frame) {
       _frame = frame;
       get_buffer_manager_memory_resource()->pin(_frame);
@@ -30,7 +31,7 @@ class FramePinGuard : public Noncopyable {
     }
   }
 
-  std::shared_ptr<Frame> get_frame() {
+  FramePtr get_frame() {
     return _frame;
   }
 
@@ -46,7 +47,7 @@ class FramePinGuard : public Noncopyable {
   }
 
  private:
-  std::shared_ptr<Frame> _frame;
+  FramePtr _frame;
   const AccessIntent _access_intent;
 };
 
@@ -57,27 +58,27 @@ class FramePinGuard : public Noncopyable {
 */
 class AllocatorPinGuard : public Noncopyable {
   struct Observer : Noncopyable, BufferPoolAllocatorObserver {
-    void on_allocate(const std::shared_ptr<SharedFrame>& frame) override {
-      get_buffer_manager_memory_resource()->pin(frame->dram_frame);  // TODO: which frame?!
+    void on_allocate(const FramePtr& frame) override {
+      get_buffer_manager_memory_resource()->pin(frame);
       _pins.push_back(frame);
     }
 
-    void on_deallocate(const std::shared_ptr<SharedFrame>& frame) override {
-      get_buffer_manager_memory_resource()->unpin(frame->dram_frame, false);  // TODO: which frame?!
+    void on_deallocate(const FramePtr& frame) override {
       auto it = std::find(_pins.begin(), _pins.end(), frame);
       if (it != _pins.end()) {
+        get_buffer_manager_memory_resource()->unpin(frame, false);
         _pins.erase(it);
       }
     }
 
     ~Observer() {
       for (const auto& frame : _pins) {
-        get_buffer_manager_memory_resource()->unpin(frame->dram_frame, true);
+        get_buffer_manager_memory_resource()->unpin(frame, true);
       }
     }
 
     // TODO: Maybe change to other container, and make it concurrent
-    boost::container::small_vector<std::shared_ptr<SharedFrame>, 5> _pins;
+    boost::container::small_vector<FramePtr, 5> _pins;
   };
 
  public:

@@ -43,7 +43,7 @@ class MemoryResource {
 class MonotonicBufferResource : public MemoryResource {
  public:
   // Largest page size to be allocated for small allocations is 256 KiB
-  static constexpr PageSizeType MAX_PAGE_SIZE_TYPE = PageSizeType::KiB256;
+  static constexpr PageSizeType MAX_PAGE_SIZE_TYPE = PageSizeType::KiB512;
 
   // First page size to be allocated for small allocations is 8 KiB
   static constexpr PageSizeType INITIAL_PAGE_SIZE_TYPE = PageSizeType::KiB8;
@@ -78,11 +78,14 @@ class MonotonicBufferResource : public MemoryResource {
   static constexpr float NEW_PAGE_FILL_RATIO = 0.8f;
 
   MemoryResource* _memory_resource;
-  std::shared_ptr<SharedFrame> _current_frame;
+  FramePtr _current_frame;
 
   std::size_t _current_buffer_pos;
   std::size_t _current_buffer_size;
   std::size_t _next_buffer_size;
+
+  // TODO: Make it lock free
+  std::mutex _mutex;
 };
 
 /**

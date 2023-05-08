@@ -13,9 +13,6 @@
 
 namespace hyrise {
 
-template <typename PointedType>
-class BufferPtr;
-
 // TODO: Calculate hotness of a values as the inverse of the size so that smaller pages are likely to be evicted
 // TODO: Do not create persistent page directly, but only when it is needed
 
@@ -112,7 +109,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * 
    * @param page_id 
    */
-  void pin(std::shared_ptr<Frame> frame);
+  void pin(FramePtr frame);
 
   /**
    * @brief Unpinning a page marks a page available for replacement. This acts as a soft-release without flushing
@@ -120,23 +117,20 @@ class BufferManager : public MemoryResource, public Noncopyable {
    * 
    * @param page_id 
    */
-  void unpin(std::shared_ptr<Frame> frame, const bool dirty = false);
+  void unpin(FramePtr frame, const bool dirty = false);
 
   /**
-   * @brief Loads a page from disk into the buffer manager. If the page is already in the buffer manager, it might be migrated. 
-   * The returned pointer does not necessarily equal the pointer passed in.
+   * @brief Load a frame or its sibling depending on the migration policy. The returned frame is not necessarily the same as the passed frame.
   */
-  void make_resident(const std::shared_ptr<Frame>& frame);
-
-  std::shared_ptr<Frame>& load_frame(const std::shared_ptr<SharedFrame>& frame, const AccessIntent access_intent);
+  FramePtr make_resident(FramePtr frame, const AccessIntent access_intent);
 
   /**
    * @brief Get the frame and offset for a given pointer.
    * 
    * @param ptr 
-   * @return std::pair<std::weak_ptr<Frame>, std::ptrdiff_t> Pointer to the frame and the offset in the frame
+   * @return std::pair<FramePtr, std::ptrdiff_t> Pointer to the frame and the offset in the frame
    */
-  std::pair<std::shared_ptr<Frame>, std::ptrdiff_t> unswizzle(const void* ptr);
+  std::pair<FramePtr, std::ptrdiff_t> unswizzle(const void* ptr);
 
   /**
    * Allocates pages to fullfil allocation request of the given bytes and alignment 
@@ -194,20 +188,20 @@ class BufferManager : public MemoryResource, public Noncopyable {
   */
   // TODO: Introduce page type as template parameter
   struct BufferPools {
-    void allocate_frame(std::shared_ptr<Frame> frame);
-    void deallocate_frame(std::shared_ptr<Frame> frame);
+    void allocate_frame(FramePtr frame);
+    void deallocate_frame(FramePtr frame);
 
     // Purge the eviction queue
     void purge_eviction_queue();
 
     // Add a page to the eviction queue
-    void add_to_eviction_queue(std::shared_ptr<Frame> frame);
+    void add_to_eviction_queue(FramePtr frame);
 
     void clear();
 
     BufferPools(const PageType page_type, const size_t pool_size,
-                const std::function<void(const std::shared_ptr<Frame>&)> evict_frame,
-                const bool enable_eviction_purge_worker, const std::shared_ptr<BufferManager::Metrics> metrics);
+                const std::function<void(const FramePtr&)> evict_frame, const bool enable_eviction_purge_worker,
+                const std::shared_ptr<BufferManager::Metrics> metrics);
 
     BufferPools& operator=(BufferPools&& other);
 
@@ -236,20 +230,20 @@ class BufferManager : public MemoryResource, public Noncopyable {
     bool enabled;
 
     // Calls the parent buffer manager to evict a page using the migriation policy
-    std::function<void(const std::shared_ptr<Frame>&)> _evict_frame;
+    std::function<void(const FramePtr&)> _evict_frame;
   };
 
   // Allocate a new page in the buffer pool by allocating a frame. May evict a page from the buffer pool.
-  std::shared_ptr<SharedFrame> new_frame(const PageSizeType size_type);
+  FramePtr new_frame(const PageSizeType size_type);
 
   // Evict a frame to a lower level buffer pool (NUMA) or to SSD
-  void evict_frame(const std::shared_ptr<Frame>& frame);
+  void evict_frame(const FramePtr& frame);
 
   // Read a page from disk into the buffer pool
-  void read_page_from_ssd(const std::shared_ptr<Frame>& frame);
+  void read_page_from_ssd(const FramePtr& frame);
 
   // Write out a page to disk
-  void write_page_to_ssd(const std::shared_ptr<Frame>& frame);
+  void write_page_to_ssd(const FramePtr& frame);
 
   Config _config;  // TODO: Const;
 

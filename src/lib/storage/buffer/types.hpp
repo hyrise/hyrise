@@ -2,6 +2,7 @@
 
 #include <tbb/concurrent_queue.h>
 #include <bit>
+#include <boost/intrusive_ptr.hpp>
 #include <limits>
 #include <magic_enum.hpp>
 #include "boost/integer/static_log2.hpp"
@@ -79,16 +80,19 @@ struct add_reference<const void> {
 
 class Frame;
 
+// A FramePtr embeds the reference couting in the frame itself. This reduces storage space in vectors and it allows us to deal with desired circular dependencies.
+using FramePtr = boost::intrusive_ptr<Frame>;
+
 // Item for the Eviction Queue
 struct EvictionItem {
-  // The frame to be evicted. Using a weak_ptr, because the frame could be removed from the buffer manager in the meantime.
-  std::weak_ptr<Frame> frame;
+  // The frame to be evicted.
+  FramePtr frame;
 
   // Insertion timestamp for frame into the queue. Is compared with eviction_timestamp of frame.
   uint64_t timestamp;
 
   // Check if the given frame can be evicted based on the timestamp comparison
-  bool can_evict(std::shared_ptr<Frame>& frame) const;
+  bool can_evict() const;
 };
 
 constexpr size_t MAX_EVICTION_QUEUE_PURGES = 1024;

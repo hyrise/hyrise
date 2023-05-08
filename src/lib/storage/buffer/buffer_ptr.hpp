@@ -46,12 +46,12 @@ class BufferPtr {
     unswizzle(ptr);
   }
 
-  BufferPtr(const BufferPtr& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
+  BufferPtr(const BufferPtr& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
     assert_not_overflow();
   }
 
   template <typename U>
-  BufferPtr(const BufferPtr<U>& other) : _shared_frame(other._shared_frame), _ptr_or_offset(other._ptr_or_offset) {
+  BufferPtr(const BufferPtr<U>& other) : _frame(other._frame), _ptr_or_offset(other._ptr_or_offset) {
     assert_not_overflow();
   }
 
@@ -60,8 +60,8 @@ class BufferPtr {
     unswizzle(ptr);
   }
 
-  explicit BufferPtr(const std::shared_ptr<SharedFrame> frame, const PtrOrOffset ptr_or_offset)
-      : _shared_frame(frame), _ptr_or_offset(ptr_or_offset) {
+  explicit BufferPtr(const FramePtr frame, const PtrOrOffset ptr_or_offset)
+      : _frame(frame), _ptr_or_offset(ptr_or_offset) {
     assert_not_overflow();
   }
 
@@ -85,17 +85,17 @@ class BufferPtr {
   }
 
   bool operator!() const {
-    return !_shared_frame && !_ptr_or_offset;
+    return !_frame && !_ptr_or_offset;
   }
 
   BufferPtr operator+(difference_type offset) const noexcept {
-    auto new_ptr = BufferPtr(_shared_frame, _ptr_or_offset);
+    auto new_ptr = BufferPtr(_frame, _ptr_or_offset);
     new_ptr.inc_offset(offset * difference_type(sizeof(PointedType)));
     return new_ptr;
   }
 
   BufferPtr operator-(difference_type offset) const noexcept {
-    auto new_ptr = BufferPtr(_shared_frame, _ptr_or_offset);
+    auto new_ptr = BufferPtr(_frame, _ptr_or_offset);
     new_ptr.dec_offset(offset * difference_type(sizeof(PointedType)));
     return new_ptr;
   }
@@ -111,7 +111,7 @@ class BufferPtr {
   }
 
   BufferPtr& operator=(const BufferPtr& ptr) {
-    _shared_frame = ptr._shared_frame;
+    _frame = ptr._frame;
     _ptr_or_offset = ptr._ptr_or_offset;
     return *this;
   }
@@ -123,14 +123,14 @@ class BufferPtr {
 
   template <typename T2>
   BufferPtr& operator=(const BufferPtr<T2>& ptr) {
-    _shared_frame = ptr._shared_frame;
+    _frame = ptr._frame;
     _ptr_or_offset = ptr._ptr_or_offset;
     return *this;
   }
 
   explicit operator bool() const noexcept {
     // TODO: Load frame
-    return _shared_frame || _ptr_or_offset;
+    return _frame || _ptr_or_offset;
   }
 
   pointer get(const AccessIntent access_intent = AccessIntent::Read) const {
@@ -142,7 +142,7 @@ class BufferPtr {
   }
 
   inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1._shared_frame == ptr2._shared_frame && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
+    return ptr1._frame == ptr2._frame && ptr1._ptr_or_offset == ptr2._ptr_or_offset;
   }
 
   inline friend bool operator==(pointer ptr1, const BufferPtr& ptr2) noexcept {
@@ -150,7 +150,7 @@ class BufferPtr {
   }
 
   inline friend bool operator!=(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
-    return ptr1._shared_frame != ptr2._shared_frame || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
+    return ptr1._frame != ptr2._frame || ptr1._ptr_or_offset != ptr2._ptr_or_offset;
   }
 
   BufferPtr& operator++(void) noexcept {
@@ -159,7 +159,7 @@ class BufferPtr {
   }
 
   BufferPtr operator++(int) noexcept {
-    const auto temp = BufferPtr(_shared_frame, _ptr_or_offset);
+    const auto temp = BufferPtr(_frame, _ptr_or_offset);
     inc_offset(difference_type(sizeof(PointedType)));
     return temp;
   }
@@ -182,37 +182,37 @@ class BufferPtr {
   }
 
   void* get_pointer(const AccessIntent access_intent = AccessIntent::Read) const {
-    if (_shared_frame) {
-      const auto frame = get_buffer_manager_memory_resource()->load_frame(_shared_frame, access_intent);
+    if (_frame) {
+      const auto frame = make_resident(access_intent);
       return frame->data + _ptr_or_offset;
     } else {
       return (void*)_ptr_or_offset;
     }
   }
 
-  pointer pin(FramePinGuard& guard) const {
+  pointer pin(FramePinGuard& guard) {
     auto frame = guard.get_frame();
     if (!frame) {
-      frame = get_buffer_manager_memory_resource()->load_frame(_shared_frame, guard.get_access_intent());
+      frame = make_resident(guard.get_access_intent());
       guard.pin(frame);
     }
     return reinterpret_cast<pointer>(frame->data + _ptr_or_offset);
   }
 
-  std::shared_ptr<Frame> get_frame(const AccessIntent access_intent) const {
-    return get_buffer_manager_memory_resource()->load_frame(_shared_frame, access_intent);
+  FramePtr make_resident(const AccessIntent access_intent) const {
+    return get_buffer_manager_memory_resource()->make_resident(_frame, access_intent);
   }
 
   PtrOrOffset get_offset() const {
     return _ptr_or_offset;
   }
 
-  std::shared_ptr<SharedFrame> get_shared_frame() const {
-    return _shared_frame;
+  FramePtr get_frame() const {
+    return _frame;
   }
 
  private:
-  std::shared_ptr<SharedFrame> _shared_frame;
+  FramePtr _frame;
   PtrOrOffset _ptr_or_offset = 0;
 
   template <class T1, class T2>
@@ -233,11 +233,9 @@ class BufferPtr {
 
   void assert_not_overflow() {
     if constexpr (!std::is_same_v<value_type, void>) {
-      DebugAssert(!_shared_frame || _shared_frame->dram_frame, "Dram frame not found");
-      DebugAssert(!_shared_frame || _ptr_or_offset <= (bytes_for_size_type(_shared_frame->dram_frame->size_type) +
-                                                       sizeof(PointedType)),
+      DebugAssert(!_frame || _ptr_or_offset <= (bytes_for_size_type(_frame->size_type) + sizeof(PointedType)),
                   "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
-                      std::to_string(bytes_for_size_type(_shared_frame->dram_frame->size_type) + sizeof(PointedType)));
+                      std::to_string(bytes_for_size_type(_frame->size_type) + sizeof(PointedType)));
     }
   }
 
@@ -247,17 +245,16 @@ class BufferPtr {
       const auto [frame, offset] = get_buffer_manager_memory_resource()->unswizzle(reinterpret_cast<const void*>(ptr));
       if (frame) {
         assert_not_overflow();
-        _shared_frame = frame->shared_frame.lock();
-        Assert(_shared_frame, "Shared frame is null");
+        _frame = frame;
         _ptr_or_offset = offset;
         return;
       } else {
-        _shared_frame = nullptr;
+        _frame = nullptr;
         _ptr_or_offset = reinterpret_cast<PtrOrOffset>(ptr);
         return;
       }
     } else {
-      _shared_frame = nullptr;
+      _frame = nullptr;
       _ptr_or_offset = 0;
     }
   }
@@ -290,22 +287,12 @@ inline bool operator<=(const BufferPtr<T1>& ptr1, const BufferPtr<T2>& ptr2) {
 
 template <class T>
 inline void swap(BufferPtr<T>& ptr1, BufferPtr<T>& ptr2) {
-  auto ptr1_frame = ptr1._shared_frame;
+  auto ptr1_frame = ptr1._frame;
   auto ptr1_offset = ptr1._ptr_or_offset;
-  ptr1._shared_frame = ptr2._shared_frame;
+  ptr1._frame = ptr2._frame;
   ptr1._ptr_or_offset = ptr2._ptr_or_offset;
-  ptr2._shared_frame = ptr1_frame;
+  ptr2._frame = ptr1_frame;
   ptr2._ptr_or_offset = ptr1_offset;
 }
 
 }  // namespace hyrise
-
-namespace std {
-template <class T>
-struct hash<hyrise::BufferPtr<T>> {
-  size_t operator()(const hyrise::BufferPtr<T>& ptr) const noexcept {
-    // TODO
-    return std::hash<typename hyrise::BufferPtr<T>>(ptr._addressing);
-  }
-};
-}  // namespace std

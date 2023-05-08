@@ -34,7 +34,7 @@ TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateIntVector) {
   data->operator[](3) = 4;
   data->operator[](4) = 5;
 
-  auto frame = data->begin().get_ptr().get_shared_frame()->dram_frame;
+  auto frame = data->begin().get_ptr().get_frame();
   auto raw_data = reinterpret_cast<int*>(frame->data);
   EXPECT_EQ(raw_data[0], 1);
   EXPECT_EQ(raw_data[1], 2);
@@ -65,21 +65,21 @@ TEST_F(BufferPoolAllocatorTest, TestAllocateAndDeallocateStringVector) {
 
   EXPECT_EQ(vector[0], "Hello");
   EXPECT_EQ(vector[1], "World");
-  EXPECT_EQ(vector[2], "Hallo World with a really long string so that we reach the limit of SSO";
+  EXPECT_EQ(vector[2], "Hallo World with a really long string so that we reach the limit of SSO");
 }
 
 TEST_F(BufferPoolAllocatorTest, TestObserver) {
   struct TestObserver : public BufferPoolAllocatorObserver {
-    void on_allocate(const std::shared_ptr<SharedFrame>& frame) {
+    void on_allocate(const FramePtr& frame) {
       allocated_frames.push_back(frame);
     }
 
-    void on_deallocate(const std::shared_ptr<SharedFrame>& frame) {
+    void on_deallocate(const FramePtr& frame) {
       allocated_frames.erase(std::remove(allocated_frames.begin(), allocated_frames.end(), frame),
                              allocated_frames.end());
     }
 
-    std::vector<std::shared_ptr<SharedFrame>> allocated_frames;
+    std::vector<FramePtr> allocated_frames;
   };
 
   auto observer = std::make_shared<TestObserver>();
@@ -90,17 +90,18 @@ TEST_F(BufferPoolAllocatorTest, TestObserver) {
 
   auto ptr = allocator.allocate(1);
   ASSERT_EQ(observer->allocated_frames.size(), 1);
-  EXPECT_EQ(observer->allocated_frames[0], ptr.get_shared_frame());
-  EXPECT_EQ(ptr.get_shared_frame().use_count(), 3) << "The Observer should hold a reference to the frame";
+  EXPECT_EQ(observer->allocated_frames[0], ptr.get_frame());
+  // The ref count is always one higher than expected due to to temporary creation of the frame
+  EXPECT_EQ(ptr.get_frame()->_internal_ref_count(), 5) << "The Observer should hold a reference to the frame";
 
   allocator.deallocate(ptr, 1);
   ASSERT_EQ(observer->allocated_frames.size(), 0);
-  EXPECT_EQ(ptr.get_shared_frame().use_count(), 2);
+  EXPECT_EQ(ptr.get_frame()->_internal_ref_count(), 4);
   observer = nullptr;
-  EXPECT_EQ(ptr.get_shared_frame().use_count(), 2) << "The Observer should hold a reference to the frame";
+  EXPECT_EQ(ptr.get_frame()->_internal_ref_count(), 4) << "The Observer should hold a reference to the frame";
 
   auto ptr2 = allocator.allocate(1);
-  EXPECT_EQ(ptr2.get_shared_frame().use_count(), 2);
+  EXPECT_EQ(ptr2.get_frame()->_internal_ref_count(), 4);
 }
 
 TEST_F(BufferPoolAllocatorTest, TestConstructorWithMemoryResource) {
@@ -110,17 +111,18 @@ TEST_F(BufferPoolAllocatorTest, TestConstructorWithMemoryResource) {
 
     BufferPtr<void> allocate(const std::size_t bytes, const std::size_t alignment) override {
       auto allocated_dram_frame =
-          std::make_shared<Frame>(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
-      auto shared_frame = std::make_shared<SharedFrame>(allocated_dram_frame);
-      allocations.emplace_back(shared_frame, bytes, alignment);
-      return BufferPtr<void>(shared_frame, 0);
+          make_frame(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
+      auto ptr = BufferPtr<void>(allocated_dram_frame, 0);
+      allocations.emplace_back(ptr, bytes, alignment);
+      return ptr;
     }
 
     void deallocate(BufferPtr<void> p, const std::size_t bytes, const std::size_t alignment) override {
-      Fail("This should never be called");
+      allocations.erase(std::remove_if(allocations.begin(), allocations.end(),
+                                       [&](const auto& ptr) { return std::get<0>(ptr) == p; }));
     }
 
-    std::vector<std::tuple<std::shared_ptr<SharedFrame>, std::size_t, std::size_t>> allocations;
+    std::vector<std::tuple<BufferPtr<void>, std::size_t, std::size_t>> allocations;
   };
 
   auto test_resource = LogResource{};
@@ -129,13 +131,13 @@ TEST_F(BufferPoolAllocatorTest, TestConstructorWithMemoryResource) {
   EXPECT_EQ(test_resource.allocations.size(), 0);
   auto ptr = allocator.allocate(16);
   EXPECT_EQ(test_resource.allocations.size(), 1);
-  EXPECT_EQ(std::get<0>(test_resource.allocations[0]), ptr.get_shared_frame());
+  EXPECT_EQ(std::get<0>(test_resource.allocations[0]).get_offset(), 0);
+  EXPECT_EQ(std::get<0>(test_resource.allocations[0]).get_frame(), ptr.get_frame());
   EXPECT_EQ(std::get<1>(test_resource.allocations[0]), 128);
   EXPECT_EQ(std::get<2>(test_resource.allocations[0]), 8);
 
-  // TODO: Test deallocation
+  allocator.deallocate(ptr, 16);
+  EXPECT_EQ(test_resource.allocations.size(), 0);
 }
-
-// TODO Test with nested DS like string
 
 }  // namespace hyrise

@@ -50,18 +50,18 @@ class BufferPoolAllocator {
 
   template <class U>
   bool operator==(const BufferPoolAllocator<U>& other) const noexcept {
-    return _memory_resource == other.memory_resource() && _observer.lock() == other.current_observer().lock();
+    return _memory_resource == other.memory_resource() && _observer.lock() == other.current_observer();
   }
 
   template <class U>
   bool operator!=(const BufferPoolAllocator<U>& other) const noexcept {
-    return _memory_resource != other.memory_resource() || _observer.lock() != other.current_observer().lock();
+    return _memory_resource != other.memory_resource() || _observer.lock() != other.current_observer();
   }
 
   [[nodiscard]] pointer allocate(std::size_t n) {
     auto ptr = static_cast<pointer>(_memory_resource->allocate(sizeof(value_type) * n, alignof(T)));
     if (auto observer = _observer.lock()) {
-      const auto frame = ptr.get_shared_frame();
+      const auto frame = ptr.get_frame();
       observer->on_allocate(frame);
     }
     return ptr;
@@ -69,7 +69,7 @@ class BufferPoolAllocator {
 
   void deallocate(pointer const ptr, std::size_t n) {
     if (auto observer = _observer.lock()) {
-      auto frame = ptr.get_shared_frame();
+      auto frame = ptr.get_frame();
       observer->on_deallocate(frame);
     }
     _memory_resource->deallocate(static_cast<void_pointer>(ptr), sizeof(value_type) * n, alignof(T));
@@ -90,8 +90,8 @@ class BufferPoolAllocator {
     _observer = observer;
   }
 
-  std::weak_ptr<BufferPoolAllocatorObserver> current_observer() const {
-    return _observer;
+  std::shared_ptr<BufferPoolAllocatorObserver> current_observer() const {
+    return _observer.lock();
   }
 
  private:

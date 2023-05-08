@@ -64,7 +64,7 @@ int SSDRegion::open_file_descriptor(const std::filesystem::path& file_name) {
   return fd;
 }
 
-void SSDRegion::write_page(std::shared_ptr<Frame> frame) {
+void SSDRegion::write_page(FramePtr frame) {
   const auto num_bytes = bytes_for_size_type(frame->size_type);
   off_t page_pos;
   {
@@ -93,7 +93,7 @@ void SSDRegion::write_page(std::shared_ptr<Frame> frame) {
   // TODO Needs flush
 }
 
-void SSDRegion::read_page(std::shared_ptr<Frame> frame) {
+void SSDRegion::read_page(FramePtr frame) {
   size_t num_bytes;
   size_t page_pos;
   {

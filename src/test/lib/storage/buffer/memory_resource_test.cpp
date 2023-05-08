@@ -27,17 +27,16 @@ class LogResource : public MemoryResource {
 
   BufferPtr<void> allocate(const std::size_t bytes, const std::size_t alignment) override {
     auto allocated_dram_frame =
-        std::make_shared<Frame>(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
-    auto shared_frame = std::make_shared<SharedFrame>(allocated_dram_frame);
-    allocations.emplace_back(shared_frame, bytes, alignment);
-    return BufferPtr<void>(shared_frame, 0);
+        make_frame(PageID{allocations.size()}, find_fitting_page_size_type(bytes), PageType::Dram);
+    allocations.emplace_back(allocated_dram_frame, bytes, alignment);
+    return BufferPtr<void>(allocated_dram_frame, 0);
   }
 
   void deallocate(BufferPtr<void> p, const std::size_t bytes, const std::size_t alignment) override {
     Fail("This should never be called");
   }
 
-  std::vector<std::tuple<std::shared_ptr<SharedFrame>, std::size_t, std::size_t>> allocations;
+  std::vector<std::tuple<FramePtr, std::size_t, std::size_t>> allocations;
 };
 
 class MonotonicBufferResourceTest : public BaseTest {};
@@ -220,7 +219,7 @@ TEST_F(NewDeleteMemoryResourceTest, TestAllocateAndDeallocate) {
 
   auto ptr = memory_resource.allocate(64, 8);
   EXPECT_EQ(allocation_count, 1);
-  EXPECT_EQ(ptr.get_shared_frame(), nullptr) << "Ptr should not buffer managed";
+  EXPECT_EQ(ptr.get_frame(), nullptr) << "Ptr should not buffer managed";
   EXPECT_EQ(reinterpret_cast<std::uintptr_t>(ptr.get()) % 4, 0) << "Ptr should be 4 byte aligned";
 
   memory_resource.deallocate(ptr, 64, 8);

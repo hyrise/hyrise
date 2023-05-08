@@ -37,6 +37,8 @@ BufferPtr<void> MonotonicBufferResource::allocate_from_current(std::size_t align
 }
 
 BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t alignment) {
+  std::lock_guard<std::mutex> lock(_mutex);
+
   if (alignment > alignof(std::max_align_t)) {
     Fail("Alignment must not be greater than alignof(std::max_align_t)");
   }
@@ -49,7 +51,7 @@ BufferPtr<void> MonotonicBufferResource::allocate(std::size_t bytes, std::size_t
   if (this->remaining_storage(alignment, aligner) < bytes) {
     aligner = 0u;
     this->increase_next_buffer_at_least_to(bytes);
-    _current_frame = _memory_resource->allocate(_next_buffer_size, alignment).get_shared_frame();
+    _current_frame = _memory_resource->allocate(_next_buffer_size, alignment).get_frame();
     DebugAssert(_current_frame, "MemoryResource did not return a valid frame");
     _current_buffer_size = _next_buffer_size;
     _current_buffer_pos = 0u;
@@ -68,11 +70,11 @@ void MonotonicBufferResource::increase_next_buffer_at_least_to(std::size_t minim
 }
 
 void MonotonicBufferResource::increase_next_buffer() {
-  const auto next_size = bytes_for_size_type(find_fitting_page_size_type(_next_buffer_size * 2));
-  if (next_size > bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) {
+  // TODO: Refactor, the formula breaks in some cases
+  if (_next_buffer_size >= bytes_for_size_type(MAX_PAGE_SIZE_TYPE)) {
     _next_buffer_size = bytes_for_size_type(MAX_PAGE_SIZE_TYPE);
   } else {
-    _next_buffer_size = next_size;
+    _next_buffer_size = bytes_for_size_type(find_fitting_page_size_type(_next_buffer_size * 2));
   }
 }
 
@@ -106,6 +108,9 @@ NewDeleteMemoryResource* get_new_delete_memory_resource() {
 
 MonotonicBufferResource* get_monotonic_buffer_resource() {
   static boost::thread_specific_ptr<MonotonicBufferResource> memory_resource;
+  if (!memory_resource.get()) {
+    memory_resource.reset(new MonotonicBufferResource());
+  }
   return memory_resource.get();
 }
 }  // namespace hyrise

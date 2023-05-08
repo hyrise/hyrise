@@ -9,8 +9,8 @@ namespace hyrise {
 */
 class BufferPoolAllocatorObserver {
  public:
-  virtual void on_allocate(const std::shared_ptr<SharedFrame>& frame) = 0;
-  virtual void on_deallocate(const std::shared_ptr<SharedFrame>& frame) = 0;
+  virtual void on_allocate(const FramePtr& frame) = 0;
+  virtual void on_deallocate(const FramePtr& frame) = 0;
   virtual ~BufferPoolAllocatorObserver() = default;
 };
 }  // namespace hyrise

@@ -2,7 +2,7 @@
 
 namespace hyrise {
 
-bool EvictionItem::can_evict(std::shared_ptr<Frame>& frame) const {
+bool EvictionItem::can_evict() const {
   if (frame->eviction_timestamp != timestamp) {
     return false;
   }

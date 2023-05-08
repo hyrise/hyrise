@@ -7,8 +7,6 @@
 
 namespace hyrise {
 
-class SharedFrame;
-
 class Frame {
  public:
   enum class State { Evicted, Resident };
@@ -21,6 +19,7 @@ class Frame {
                  std::byte* data = nullptr)
       : page_id(page_id), size_type(size_type), page_type(page_type), data(data) {}
 
+  ~Frame();
   // State variables
   std::atomic_uint32_t pin_count{0};
   std::atomic<State> state;
@@ -37,48 +36,64 @@ class Frame {
 
   std::mutex latch;
 
-  std::weak_ptr<SharedFrame> shared_frame;
-
-  // TODO: Store actual used size to reduce copy overhead?
+  FramePtr sibling_frame;
 
   // Various helper functions
   bool can_evict() const;
+
+  // Set the frame to evicted
   void set_evicted();
+
+  // Try setting the dirty flag. It won't be reset if it is already set.
   void try_set_dirty(const bool new_dirty);
+
+  // Check if the frame is resident
   bool is_resident() const;
+
   void set_resident();
+
   bool is_pinned() const;
+
   void clear();
-  /**
-   Check if the frame is second change evicable (reference bit is false). If the reference bit is true, it is set to false
-  */
+
+  // Pin the frame
+  void pin();
+
+  // Unpin the frame and return true if the frame is now unpinned. Otherwise return false.
+  bool unpin();
+
+  // Wait until the frame is unpinned. This yield the current threads and throws an exception after a fixed timout
+  void wait_until_unpinned() const;
+
+  // Check if the frame is evictable and if it is, set the reference bit to false and return true. Otherwise return
   bool try_second_chance_evictable();
+
+  // Set the reference bit to true
   void set_referenced();
+
+  // Returns the internal reference count. This function should only be used for testing and debugging purposes.
+  std::size_t _internal_ref_count() const;
+
+  // TODO: atomically?
+  template <PageType clone_page_type>
+  FramePtr clone_and_attach_sibling();
+
+  void copy_data_to(const FramePtr& target_frame) const;
+
+ private:
+  // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
+  friend void intrusive_ptr_add_ref(Frame* frame);
+
+  // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
+  friend void intrusive_ptr_release(Frame* frame);
+
+  // Current reference count of the frame
+  std::atomic_uint32_t _ref_count;
 };
 
-class SharedFrame {
- public:
-  std::shared_ptr<Frame> dram_frame;
-  std::shared_ptr<Frame> numa_frame;
-
-  SharedFrame(std::shared_ptr<Frame> frame)
-      : dram_frame(frame->page_type == PageType::Dram ? frame : nullptr),
-        numa_frame(frame->page_type == PageType::Numa ? frame : nullptr) {
-    DebugAssert(frame->page_type != PageType::Invalid, "Invalid page type");
-  }
-
-  static void link(const std::shared_ptr<SharedFrame>& shared_frame, const std::shared_ptr<Frame>& frame) {
-    if (frame->page_type == PageType::Dram) {
-      shared_frame->dram_frame = frame;
-    } else if (frame->page_type == PageType::Numa) {
-      shared_frame->numa_frame = frame;
-    } else {
-      Fail("Invalid page type");
-    }
-    frame->shared_frame = shared_frame;
-  }
-
-  // TODO: Destructor ensure evict
-};
+template <typename... Args>
+FramePtr make_frame(Args&&... args) {
+  return FramePtr(new Frame(std::forward<Args>(args)...));
+}
 
 }  // namespace hyrise
