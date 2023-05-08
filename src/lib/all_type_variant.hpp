@@ -133,6 +133,16 @@ inline DataType data_type_from_all_type_variant(const AllTypeVariant& all_type_v
   return static_cast<DataType>(all_type_variant.which());
 }
 
+// Stream print operator for AllTypeVariant
+inline std::ostream& operator<<(std::ostream& os, const AllTypeVariant& variant) {
+  if (variant.which() == 0) {
+    os << "NULL";
+  } else {
+    boost::apply_visitor([&os](const auto& value) { os << value; }, variant);
+  }
+  return os;
+}
+
 }  // namespace hyrise
 
 namespace std {
