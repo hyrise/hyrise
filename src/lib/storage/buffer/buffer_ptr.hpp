@@ -71,6 +71,9 @@ class BufferPtr {
 
   reference operator*() const {
     pointer p = this->get();
+    if (!p) {
+      Fail("Dereferencing null pointer");
+    }
     reference r = *p;
     return r;
   }
@@ -135,10 +138,6 @@ class BufferPtr {
 
   pointer get(const AccessIntent access_intent = AccessIntent::Read) const {
     return static_cast<pointer>(this->get_pointer(access_intent));
-  }
-
-  static BufferPtr pointer_to(reference r) {
-    return BufferPtr(&r);
   }
 
   inline friend bool operator==(const BufferPtr& ptr1, const BufferPtr& ptr2) noexcept {
@@ -211,6 +210,10 @@ class BufferPtr {
     return _frame;
   }
 
+  static BufferPtr pointer_to(reference ref) {
+    return BufferPtr(&ref);
+  }
+
  private:
   FramePtr _frame;
   PtrOrOffset _ptr_or_offset = 0;
@@ -233,7 +236,10 @@ class BufferPtr {
 
   void assert_not_overflow() {
     if constexpr (!std::is_same_v<value_type, void>) {
-      DebugAssert(!_frame || _ptr_or_offset <= (bytes_for_size_type(_frame->size_type) + sizeof(PointedType)),
+      if (_frame == nullptr) {
+        return;
+      }
+      DebugAssert(_ptr_or_offset <= (bytes_for_size_type(_frame->size_type) + sizeof(PointedType)),
                   "BufferPtr overflow detected! " + std::to_string(static_cast<size_t>(_ptr_or_offset)) + " >" +
                       std::to_string(bytes_for_size_type(_frame->size_type) + sizeof(PointedType)));
     }

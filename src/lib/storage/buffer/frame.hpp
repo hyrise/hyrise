@@ -71,6 +71,8 @@ class Frame {
   // Set the reference bit to true
   void set_referenced();
 
+  bool is_referenced() const;
+
   // Returns the internal reference count. This function should only be used for testing and debugging purposes.
   std::size_t _internal_ref_count() const;
 
@@ -82,10 +84,26 @@ class Frame {
 
  private:
   // Friend function used by the FramePtr intrusive_ptr to increase the ref_count. This functions should not be called directly.
-  friend void intrusive_ptr_add_ref(Frame* frame);
+  friend void intrusive_ptr_add_ref(Frame* frame) {
+    frame->_ref_count.fetch_add(1, std::memory_order_acq_rel);
+  }
 
   // Friend function used by the FramePtr intrusive_ptr to decrease the ref_count. This functions also avoids circular dependencies between the sibling frame.This functions should not be called directly.
-  friend void intrusive_ptr_release(Frame* frame);
+  friend void intrusive_ptr_release(Frame* frame) {
+    const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_acq_rel);
+    if (prev_ref_count == 1) {
+      // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
+      // boost::atomic_thread_fence(boost::memory_order_acquire);
+      delete frame;
+    }
+
+    if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
+      // TODO: Thread safety?
+      auto sibling_frame = frame->sibling_frame;
+      frame->sibling_frame.reset();
+      sibling_frame->sibling_frame.reset();
+    }
+  }
 
   // Current reference count of the frame
   std::atomic_uint32_t _ref_count;
@@ -95,5 +113,8 @@ template <typename... Args>
 FramePtr make_frame(Args&&... args) {
   return FramePtr(new Frame(std::forward<Args>(args)...));
 }
+
+// void intrusive_ptr_add_ref(Frame* frame);
+// void intrusive_ptr_release(Frame* frame);
 
 }  // namespace hyrise

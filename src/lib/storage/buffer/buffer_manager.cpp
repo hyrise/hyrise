@@ -553,8 +553,8 @@ void BufferManager::deallocate(BufferPtr<void> ptr, std::size_t bytes, std::size
   // }
 }
 
-BufferManager::Metrics BufferManager::metrics() {
-  return *_metrics;
+std::shared_ptr<BufferManager::Metrics> BufferManager::metrics() {
+  return _metrics;
 }
 
 void BufferManager::reset_metrics() {

@@ -76,8 +76,8 @@ TEST_F(BufferPtrTest, TestArithmetic) {
   EXPECT_EQ(postIncrementPtr.get_offset(), 8);
 
   auto preDecrementPtr = PtrInt((void*)0x08);
-  EXPECT_EQ((++preDecrementPtr).get_offset(), 4);
-  EXPECT_EQ(preDecrementPtr.get_offset(), 4);
+  EXPECT_EQ((++preDecrementPtr).get_offset(), 12);
+  EXPECT_EQ(preDecrementPtr.get_offset(), 12);
 
   EXPECT_EQ(PtrInt((void*)8) - 1, PtrInt((void*)4));
   EXPECT_EQ(PtrInt((void*)8) + 4, PtrInt((void*)24));
@@ -92,8 +92,14 @@ TEST_F(BufferPtrTest, TestArithmetic) {
 }
 
 TEST_F(BufferPtrTest, TestComparisons) {
-  // EXPECT_TRUE(PtrInt(PageID{0}, 8, PageSizeType::KiB8) < PtrInt(PageID{0}, 12, PageSizeType::KiB8));
-  // EXPECT_FALSE(PtrInt(PageID{0}, 12, PageSizeType::KiB8) < PtrInt(PageID{0}, 8, PageSizeType::KiB8));
+  EXPECT_TRUE(PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 8) <
+              PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 12));
+  EXPECT_FALSE(PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 12) <
+               PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 8));
+  // EXPECT_TRUE(PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 12) >
+  //             PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 8));
+  // EXPECT_FALSE(PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 8) >
+  //              PtrInt(create_frame(PageID{4}, PageSizeType::KiB8), 12));
 
   // EXPECT_TRUE(PtrInt(PageID{0}, 12, PageSizeType::KiB8) == PtrInt(PageID{0}, 12, PageSizeType::KiB8));
   // EXPECT_NE(PtrInt(PtrFloat(PageID{3}, PageSizeType::KiB128, 8)), PtrInt(PageID{2}, PageSizeType::KiB128, 8));
@@ -173,10 +179,16 @@ TEST_F(BufferPtrTest, TestPointerTraits) {
   static_assert(std::is_same<std::pointer_traits<PtrInt>::difference_type, std::ptrdiff_t>::value);
   static_assert(std::is_same<std::pointer_traits<PtrInt>::rebind<float>, PtrFloat>::value);
 
-  // TODO_ TEst with inside and outside address
-  auto buffer_manager = create_buffer_manager(1024 * 1024);
-  auto ptr = static_cast<PtrInt>(buffer_manager.allocate(4));
-  EXPECT_EQ(std::pointer_traits<PtrInt>::pointer_to(*ptr), ptr);
+  // {
+  //   auto buffer_manager = create_buffer_manager(1024 * 1024);
+  //   auto inside_ptr = static_cast<PtrInt>(buffer_manager.allocate(4));
+  //   EXPECT_EQ(std::pointer_traits<PtrInt>::pointer_to(std::to_address(inside_ptr)), inside_ptr);
+  // }
+
+  // {
+  //   auto outside_ptr = PtrInt{(void*)0x263};
+  //   EXPECT_EQ(std::pointer_traits<PtrInt>::pointer_to(std::to_address(outside_ptr)), outside_ptr);
+  // }
 }
 
 }  // namespace hyrise

@@ -227,6 +227,8 @@ TEST_F(BufferManagerTest, TestMakeResidentDramSDDMode) {
   EXPECT_TRUE(frame->is_resident());
   EXPECT_EQ(frame->page_type, PageType::Dram);
   EXPECT_FALSE(frame->is_pinned());
+  EXPECT_TRUE(frame1->is_referenced());
+
   EXPECT_NE(frame->data, nullptr);
 
   evict_frame(buffer_manager, frame);
@@ -237,6 +239,8 @@ TEST_F(BufferManagerTest, TestMakeResidentDramSDDMode) {
   EXPECT_EQ(frame2->page_type, PageType::Dram);
   EXPECT_FALSE(frame->is_pinned());
   EXPECT_TRUE(frame2->is_resident());
+  EXPECT_TRUE(frame2->is_referenced());
+
   EXPECT_NE(frame2->data, nullptr);
 }
 
@@ -269,6 +273,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithAllBypassM
     EXPECT_EQ(frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   //If the frame is a DRAM frame and has a resident NUMA frame assigned, it should return the DRAM frame
@@ -283,6 +288,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithAllBypassM
     EXPECT_EQ(dram_frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // If the frame is a NUMA frame and has a resident DRAM frame assigned, it should return the DRAM frame
@@ -298,6 +304,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithAllBypassM
     EXPECT_EQ(dram_frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // If the frame is a NUMA frame and has no resident DRAM frame assigned, it should return NUMA frame, since we do not want to bypass it
@@ -310,6 +317,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithAllBypassM
     EXPECT_EQ(resident_frame, numa_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // Pass a DRAM frame with a Numa frame attached, but both frames are not resident
@@ -323,6 +331,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithAllBypassM
     EXPECT_EQ(resident_frame, dram_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // Pass a NUMA frame with a DRAM frame attached, but both frames are not resident
@@ -336,6 +345,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithAllBypassM
     EXPECT_EQ(resident_frame, dram_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 }
 
@@ -368,6 +378,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassMi
     EXPECT_EQ(frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   //If the frame is a DRAM frame and has a resident NUMA frame assigned, it should return the DRAM frame
@@ -382,6 +393,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassMi
     EXPECT_EQ(dram_frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // If the frame is a NUMA frame and has a resident DRAM frame assigned, it should return the DRAM frame
@@ -397,6 +409,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassMi
     EXPECT_EQ(dram_frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // If the frame is a NUMA frame and has no resident DRAM frame assigned, it should return DRAM frame
@@ -411,6 +424,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassMi
 
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // Pass a DRAM frame with a Numa frame attached, but both frames are not resident
@@ -424,6 +438,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassMi
     EXPECT_EQ(resident_frame, dram_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // Pass a NUMA frame with a DRAM frame attached, but both frames are not resident
@@ -437,6 +452,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassMi
     EXPECT_EQ(resident_frame, dram_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 }
 
@@ -470,6 +486,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassNu
     EXPECT_EQ(resident_frame->page_type, PageType::Numa);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 
   // If the frame is a DRAM frame and resident, it should return the DRAM frame returned
@@ -483,6 +500,7 @@ TEST_F(BufferManagerTest, TestMakeResidentDramNumaEmulationSSDModeWithNoBypassNu
     EXPECT_EQ(numa_frame, resident_frame);
     EXPECT_TRUE(resident_frame->is_resident());
     EXPECT_FALSE(resident_frame->is_pinned());
+    EXPECT_TRUE(resident_frame->is_referenced());
   }
 }
 

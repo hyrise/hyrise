@@ -93,34 +93,38 @@ void Frame::wait_until_unpinned() const {
   }
 }
 
+bool Frame::is_referenced() const {
+  return referenced.load();
+}
+
 Frame::~Frame() {
   DebugAssert(!is_pinned(), "Frame was deleted while still pinned");
 }
 
-inline void intrusive_ptr_add_ref(Frame* frame) {
-  frame->_ref_count.fetch_add(1, std::memory_order_relaxed);
-}
+// inline void intrusive_ptr_add_ref(Frame* frame) {
+//   frame->_ref_count.fetch_add(1, std::memory_order_acq_rel);
+// }
 
-// TODO: What happens if we add more reference again?
+// // TODO: What happens if we add more reference again?
 
-inline void intrusive_ptr_release(Frame* frame) {
-  // The only reference is left between this frame and its sibling frame
-  // We just remove the sibling frame pointer. This decreases the ref count in the sibling frame.
-  // Doing so, the sibling becomes the new sole owner if this frame and we avoid any circular dependencies.
-  const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_release);
-  if (prev_ref_count == 1) {
-    // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
-    boost::atomic_thread_fence(boost::memory_order_acquire);
-    delete frame;
-  }
+// inline void intrusive_ptr_release(Frame* frame) {
+//   // The only reference is left between this frame and its sibling frame
+//   // We just remove the sibling frame pointer. This decreases the ref count in the sibling frame.
+//   // Doing so, the sibling becomes the new sole owner if this frame and we avoid any circular dependencies.
+//   const auto prev_ref_count = frame->_ref_count.fetch_sub(1, std::memory_order_acq_rel);
+//   if (prev_ref_count == 1) {
+//     // Source: https://www.boost.org/doc/libs/1_61_0/doc/html/atomic/usage_examples.html
+//     boost::atomic_thread_fence(boost::memory_order_acquire);
+//     delete frame;
+//   }
 
-  if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
-    // TODO: Thread safety?
-    auto sibling_frame = frame->sibling_frame;
-    frame->sibling_frame.reset();
-    sibling_frame->sibling_frame.reset();
-  }
-}
+//   if (prev_ref_count == 2 && frame->sibling_frame && frame->sibling_frame->sibling_frame == frame) {
+//     // TODO: Thread safety?
+//     auto sibling_frame = frame->sibling_frame;
+//     frame->sibling_frame.reset();
+//     sibling_frame->sibling_frame.reset();
+//   }
+// }
 
 std::size_t Frame::_internal_ref_count() const {
   return _ref_count.load();

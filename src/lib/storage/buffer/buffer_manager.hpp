@@ -26,12 +26,13 @@ class BufferManager : public MemoryResource, public Noncopyable {
   */
   struct Metrics {
     // The current amount of bytes being allocated
-    std::size_t current_bytes_used_dram = 0;  // TODO: Add Different one to signify max usage in pool vs allo/delloc
-    std::size_t current_bytes_used_numa = 0;
-    std::size_t total_allocated_bytes_dram = 0;
-    std::size_t total_allocated_bytes_numa = 0;
-    std::size_t total_unused_bytes_numa = 0;
-    std::size_t total_unused_bytes_dram = 0;  // TODO: this becomes invalid with the monotonic buffer resource
+    std::atomic_uint64_t current_bytes_used_dram =
+        0;  // TODO: Add Different one to signify max usage in pool vs allo/delloc
+    std::atomic_uint64_t current_bytes_used_numa = 0;
+    std::atomic_uint64_t total_allocated_bytes_dram = 0;
+    std::atomic_uint64_t total_allocated_bytes_numa = 0;
+    std::atomic_uint64_t total_unused_bytes_numa = 0;
+    std::atomic_uint64_t total_unused_bytes_dram = 0;  // TODO: this becomes invalid with the monotonic buffer resource
 
     double internal_fragmentation_rate_dram() const {
       return (double)total_unused_bytes_dram / (double)total_allocated_bytes_dram;
@@ -42,45 +43,45 @@ class BufferManager : public MemoryResource, public Noncopyable {
     }
 
     // The number of allocation
-    std::size_t num_allocs = 0;
-    std::size_t num_deallocs = 0;
+    std::atomic_uint64_t num_allocs = 0;
+    std::atomic_uint64_t num_deallocs = 0;
 
     // Tracks the number of bytes copied between the different regions, TODO: Maybe add a count
-    std::size_t total_bytes_copied_from_ssd_to_dram = 0;
-    std::size_t total_bytes_copied_from_ssd_to_numa = 0;
-    std::size_t total_bytes_copied_from_numa_to_dram = 0;
-    std::size_t total_bytes_copied_from_dram_to_numa = 0;
-    std::size_t total_bytes_copied_from_dram_to_ssd = 0;
-    std::size_t total_bytes_copied_from_numa_to_ssd = 0;
-    std::size_t total_bytes_copied_to_ssd = 0;
-    std::size_t total_bytes_copied_from_ssd = 0;
+    std::atomic_uint64_t total_bytes_copied_from_ssd_to_dram = 0;
+    std::atomic_uint64_t total_bytes_copied_from_ssd_to_numa = 0;
+    std::atomic_uint64_t total_bytes_copied_from_numa_to_dram = 0;
+    std::atomic_uint64_t total_bytes_copied_from_dram_to_numa = 0;
+    std::atomic_uint64_t total_bytes_copied_from_dram_to_ssd = 0;
+    std::atomic_uint64_t total_bytes_copied_from_numa_to_ssd = 0;
+    std::atomic_uint64_t total_bytes_copied_to_ssd = 0;
+    std::atomic_uint64_t total_bytes_copied_from_ssd = 0;
 
     // Track hits and misses on DRAM or Numa
-    std::size_t total_hits_dram = 0;
-    std::size_t total_hits_numa = 0;
-    std::size_t total_misses_dram = 0;
-    std::size_t total_misses_numa = 0;
+    std::atomic_uint64_t total_hits_dram = 0;
+    std::atomic_uint64_t total_hits_numa = 0;
+    std::atomic_uint64_t total_misses_dram = 0;
+    std::atomic_uint64_t total_misses_numa = 0;
 
     // Tracks pinning
-    std::size_t total_pins_dram = 0;
-    std::size_t current_pins_dram = 0;
-    std::size_t total_pins_numa = 0;
-    std::size_t current_pins_numa = 0;
+    std::atomic_uint64_t total_pins_dram = 0;
+    std::atomic_uint64_t current_pins_dram = 0;
+    std::atomic_uint64_t total_pins_numa = 0;
+    std::atomic_uint64_t current_pins_numa = 0;
 
     // Tracks the number of evictions
-    std::size_t num_dram_eviction_queue_items_purged = 0;
-    std::size_t num_dram_eviction_queue_adds = 0;
-    std::size_t num_numa_eviction_queue_items_purged = 0;
-    std::size_t num_numa_eviction_queue_adds = 0;
-    std::size_t num_dram_evictions;
-    std::size_t num_numa_evictions;
+    std::atomic_uint64_t num_dram_eviction_queue_items_purged = 0;
+    std::atomic_uint64_t num_dram_eviction_queue_adds = 0;
+    std::atomic_uint64_t num_numa_eviction_queue_items_purged = 0;
+    std::atomic_uint64_t num_numa_eviction_queue_adds = 0;
+    std::atomic_uint64_t num_dram_evictions;
+    std::atomic_uint64_t num_numa_evictions;
 
     // TODO: Ratio is defined in Spitfire paper. Lower values signfies lower duplication.
     // std::size_t dram_numa_inclusivity_ratio = 0;
 
     // Number of madvice calls, TODO: track in more places
-    std::size_t num_madvice_free_calls_numa = 0;
-    std::size_t num_madvice_free_calls_dram = 0;
+    std::atomic_uint64_t num_madvice_free_calls_numa = 0;
+    std::atomic_uint64_t num_madvice_free_calls_dram = 0;
   };
 
   struct Config {
@@ -145,7 +146,7 @@ class BufferManager : public MemoryResource, public Noncopyable {
   /**
    * @brief Returns a snapshot of metrics holding information about allocations, page table hits etc. of the current buffer manager instance.
   */
-  Metrics metrics();
+  std::shared_ptr<Metrics> metrics();
 
   /**
    * @brief Reset the metrics of the buffer manager e.g. when starting a benchmark run.
