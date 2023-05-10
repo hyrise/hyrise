@@ -1,10 +1,11 @@
 #include "buffer_manager.hpp"
 #include <algorithm>
 #include <chrono>
+#include <fstream>
+#include <nlohmann/json.hpp>
 #include <utility>
 #include "hyrise.hpp"
 #include "storage/buffer/buffer_ptr.hpp"
-#include "storage/buffer/env.hpp"
 #include "storage/buffer/ssd_region.hpp"
 #include "storage/buffer/volatile_region.hpp"
 #include "utils/assert.hpp"
@@ -12,15 +13,53 @@
 namespace hyrise {
 
 //----------------------------------------------------
-// Helper Functions
+// Config
+//----------------------------------------------------
 
 BufferManager::Config BufferManager::Config::from_env() {
-  auto config = BufferManager::Config{};
-  config.dram_buffer_pool_size = get_dram_capacity_from_env();
-  config.ssd_path = get_ssd_region_file_from_env();
-  config.migration_policy = get_migration_policy_from_env();
-  config.numa_memory_node = get_numa_node_from_env();
-  return config;
+  if (const auto json_path = std::getenv("HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH")) {
+    std::ifstream json_file(json_path);
+    if (!json_file.is_open()) {
+      Fail("Failed to open HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH file");
+    }
+
+    nlohmann::json json;
+    try {
+      json_file >> json;
+    } catch (const std::exception& e) {
+      Fail("Failed to parse HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH file: " + std::string(e.what()));
+    }
+
+    auto config = BufferManager::Config{};
+    config.dram_buffer_pool_size = json.value("dram_buffer_pool_size", config.dram_buffer_pool_size);
+    config.numa_buffer_pool_size = json.value("numa_buffer_pool_size", config.numa_buffer_pool_size);
+
+    if (std::filesystem::is_block_file(json.value("ssd_path", config.ssd_path))) {
+      config.ssd_path = json.value("ssd_path", config.ssd_path);
+    } else if (std::filesystem::is_directory(json.value("ssd_path", config.ssd_path))) {
+      const auto path = std::filesystem::path(json.value("ssd_path", config.ssd_path));
+      const auto now = std::chrono::system_clock::now();
+      const auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count();
+      const auto db_file = std::filesystem::path{"hyrise-buffer-pool-" + std::to_string(timestamp) + ".bin"};
+      config.ssd_path = path / db_file;
+    } else {
+      config.ssd_path = json.value("ssd_path", config.ssd_path);
+    }
+    auto migration_policy_json = json.value("migration_policy", nlohmann::json{});
+    config.migration_policy = MigrationPolicy{
+        migration_policy_json.value("dram_read_ratio", config.migration_policy.get_dram_read_ratio()),
+        migration_policy_json.value("dram_write_ratio", config.migration_policy.get_dram_write_ratio()),
+        migration_policy_json.value("numa_read_ratio", config.migration_policy.get_numa_read_ratio()),
+        migration_policy_json.value("numa_write_ratio", config.migration_policy.get_numa_write_ratio())};
+    config.enable_eviction_purge_worker =
+        json.value("enable_eviction_purge_worker", config.enable_eviction_purge_worker);
+    config.numa_memory_node = json.value("numa_memory_node", config.numa_memory_node);
+    config.mode = magic_enum::enum_cast<BufferManagerMode>(json.value("mode", magic_enum::enum_name(config.mode)))
+                      .value_or(config.mode);
+    return config;
+  } else {
+    Fail("HYRISE_BUFFER_MANAGER_CONFIG_JSON_PATH not found in environment");
+  }
 }
 
 //----------------------------------------------------
@@ -89,15 +128,16 @@ void BufferManager::BufferPools::allocate_frame(FramePtr frame) {
 
     auto current_frame = item.frame;
 
-    // Lock the frame to prevent it from being evicted while we are evicting it
-    // Check if the frame can be evicted based on the timestamp, the state and the pin count
+    // Lock the frame to prevent it from being modified while we are working on it
     std::lock_guard<std::mutex> lock(current_frame->latch);
     DebugAssert(current_frame->page_type == _page_type, "Frame has wrong page type");
+
+    // Check if the frame can be evicted based on the timestamp, the state and the pin count
     if (!item.can_evict()) {
       continue;
     }
 
-    // Check if the frame is second chance evictable. If not, just requeue it and remove the reference bit.
+    // Check if the frame is second chance evictable. If not, just requeue it and remove the reference bit to give it another chance.
     if (!current_frame->try_second_chance_evictable()) {
       _eviction_queue->push(item);
       continue;
@@ -348,7 +388,6 @@ void BufferManager::evict_frame(const FramePtr& frame) {
 
   // Case 2: Numa buffer pools are disabled anyways, we can just write to SSD
   if (!_numa_buffer_pools.enabled) {
-    // TODO std::lock_guard<std::mutex> lock(frame->latch);
     DebugAssert(frame->page_type == PageType::Dram, "Invalid page type");
     write_page_to_ssd(frame);
     frame->dirty = false;
@@ -577,6 +616,7 @@ std::size_t BufferManager::dram_bytes_used() const {
 }
 
 BufferManager& BufferManager::operator=(BufferManager&& other) {
+  // TODO: Think about swap
   if (&other != this) {
     _num_pages = other._num_pages.load();
     _dram_buffer_pools = std::move(other._dram_buffer_pools);

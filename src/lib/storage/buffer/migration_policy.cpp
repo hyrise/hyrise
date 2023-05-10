@@ -33,7 +33,7 @@ bool MigrationPolicy::bypass_numa_during_write() const {
 }
 
 double MigrationPolicy::random() const {
-  // std::random_device might not be the best way to initialize the generator, but it's just good enough for us
+  // std::random_device might not be the best way to initialize the seed for the generator, but it's just good enough for us
   static thread_local std::mt19937 generator{_seed ? *_seed : std::random_device{}()};
   std::uniform_int_distribution<int> distribution(0, 100000);
   return (distribution(generator) + 0.0) / 100000;
