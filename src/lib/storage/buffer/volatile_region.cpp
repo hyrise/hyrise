@@ -104,6 +104,8 @@ void VolatileRegion::allocate(FramePtr frame) {
 }
 
 void VolatileRegion::move(FramePtr from, FramePtr to) {
+  std::lock_guard<std::mutex> lock(_mutex);
+
   DebugAssert(from->data >= _mapped_memory && from->data < _mapped_memory + _total_bytes,
               "Frame does not belong to this region.");
 
@@ -116,6 +118,7 @@ void VolatileRegion::move(FramePtr from, FramePtr to) {
 }
 
 void VolatileRegion::deallocate(FramePtr frame) {
+  std::lock_guard<std::mutex> lock(_mutex);
   DebugAssert(frame->page_type == _page_type, "Frame does not belong to this region.");
   DebugAssert(frame->size_type == _size_type, "Frame does not belong to this region.");
   DebugAssert(frame->data >= _mapped_memory && frame->data < _mapped_memory + _total_bytes,
@@ -123,13 +126,14 @@ void VolatileRegion::deallocate(FramePtr frame) {
 
   // Assert(frame.use_count() == 1, "Cannot deallocate frame with active references.");
 
-  std::lock_guard<std::mutex> lock(_mutex);
   const auto offset = reinterpret_cast<const std::byte*>(frame->data) - _mapped_memory;
   const auto frame_id = offset / bytes_for_size_type(_size_type);
   _free_slots.set(frame_id);
 }
 
 std::pair<FramePtr, std::ptrdiff_t> VolatileRegion::unswizzle(const void* ptr) {
+  std::lock_guard<std::mutex> lock(_mutex);
+
   if (ptr < _mapped_memory || ptr >= _mapped_memory + _total_bytes) {
     return std::make_pair(nullptr, 0);
   }
