@@ -36,6 +36,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
   _validate_input();
 
+  auto chunk_id_mapping = std::vector<std::optional<ChunkID>>{};
   auto pruned_chunk_ids_set = std::unordered_set<ChunkID>{};
 
   // If the input operator is of the type GetTable, pruning must be considered.
@@ -47,8 +48,10 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
 
     // If chunks have been pruned, calculate a mapping that maps the pruned ChunkIDs to the original ones.
     const auto& pruned_chunk_ids = input_get_table->pruned_chunk_ids();
+    chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count() + pruned_chunk_ids.size(), pruned_chunk_ids);
     pruned_chunk_ids_set = std::unordered_set<ChunkID>{pruned_chunk_ids.begin(), pruned_chunk_ids.end()};
   } else {
+    chunk_id_mapping = chunk_ids_after_pruning(_in_table->chunk_count(), std::vector<ChunkID>{});
     Fail("I hope this do not happen.");
   }
 
@@ -66,7 +69,7 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
   const auto append_matches = [&](const auto& begin, const auto& end) {
     for (auto current_iter = begin; current_iter != end; ++current_iter) {
       if (included_chunk_ids_set.contains((*current_iter).chunk_id)) {
-        matches_out->emplace_back(RowID{(*current_iter).chunk_id, (*current_iter).chunk_offset});
+        matches_out->emplace_back(RowID{*chunk_id_mapping[(*current_iter).chunk_id], (*current_iter).chunk_offset});
       }
     }
   };
@@ -100,25 +103,11 @@ std::shared_ptr<const Table> IndexScan::_on_execute() {
     matches_out->guarantee_single_chunk();
   }
 
-  // Since we want to use the original (non-pruned) ChunkIDs received from the Index, the output needs to point to the
-  // original (non-pruned) Table stored by the StorageManager.
-  const auto& input_stored_table = Hyrise::get().storage_manager.get_table(input_get_table->table_name());
-  const auto& pruned_column_ids = input_get_table->pruned_column_ids();
-  auto pruned_column_ids_iter = pruned_column_ids.cbegin();
-  auto pruned_table_column_id = ColumnID{0};
-
-  const auto in_table_column_count = input_stored_table->column_count();
+  const auto in_table_column_count = _in_table->column_count();
   auto segments = Segments{};
   segments.reserve(in_table_column_count);
   for (auto column_id = ColumnID{0}; column_id < in_table_column_count; ++column_id) {
-    // Check if Column has been pruned
-    if (pruned_column_ids_iter != pruned_column_ids.cend() && column_id == *pruned_column_ids_iter) {
-      ++pruned_column_ids_iter;
-      continue;
-    }
-
-    segments.emplace_back(std::make_shared<ReferenceSegment>(input_stored_table, pruned_table_column_id, matches_out));
-    ++pruned_table_column_id;
+    segments.emplace_back(std::make_shared<ReferenceSegment>(_in_table, column_id, matches_out));
   }
 
   _out_table->append_chunk(segments, nullptr);
