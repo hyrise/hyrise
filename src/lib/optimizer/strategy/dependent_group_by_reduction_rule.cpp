@@ -91,8 +91,12 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
     };
     auto group_by_columns = fetch_group_by_columns();
 
-    // Early exit (i): If this is an AggregateNode for SELECT DISTINCT (i.e., it has no aggregates) and the requested
-    // columns are already distinct, remove the whole node.
+    // Early exit (i): To guarantee distinct results for SELECT DISTINCT clauses, the SQLTranslator adds an
+    // AggregateNode with the selected attributes as group by columns. If the AggregateNode's input is already unique
+    // for these columns, remove the entire node.
+    // Example: SELECT DISTINCT n_nationkey FROM nation is reflected as [ Aggregate GROUP BY n_nationkey ]. The
+    // AggregateNode does not have more node expressions than the single GROUP BY column and the input (StoredTableNode
+    // in this case) has a UCC for { n_nationkey }.
     if (group_by_columns.size() == node->node_expressions.size() &&
         node->left_input()->has_matching_ucc(group_by_columns)) {
       const auto& output_expressions = aggregate_node.output_expressions();
@@ -102,7 +106,9 @@ void DependentGroupByReductionRule::_apply_to_plan_without_subqueries(
         return LQPVisitation::VisitInputs;
       }
 
-      // Else, replace it with a ProjectionNode.
+      // Else, replace it with a ProjectionNode. For instance, SELECT DISTINCT n_name, n_regionkey FROM nation (the
+      // column order is different than in the original table) turns from [ Aggregate GROUP BY n_name, n_regionkey ] to
+      // [ Projection n_name, n_regionkey ].
       const auto projection_node = ProjectionNode::make(output_expressions);
       lqp_replace_node(node, projection_node);
       return LQPVisitation::VisitInputs;

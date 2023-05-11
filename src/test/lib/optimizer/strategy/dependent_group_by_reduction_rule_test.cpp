@@ -328,7 +328,7 @@ TEST_F(DependentGroupByReductionRuleTest, MultiKeyReduction) {
 TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimple) {
   // To guarantee distinct results for SELECT DISTINCT clauses, the SQLTranslator adds an AggregateNode with the
   // selected attributes as group by columns. If the AggregateNode's input is already unique for these columns,
-  // remove the whole node.
+  // remove the entire node.
 
   // Basic case: Column is unique due to a constraint (e.g., it is a primary key).
   // Example query: SELECT DISTINCT column0 FROM table_a;
@@ -347,7 +347,7 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateSimp
   }
 
   // More advanced case: Column is unique due to another operation (e.g., we grouped by it before).
-  // Example query: SELECT DISTINCT column1, MIN(column2) FROM table_a GROUP BY column0;
+  // Example query: SELECT DISTINCT column1, MIN(column2) FROM table_a GROUP BY column1;
   {
     // clang-format off
     const auto lqp =
@@ -402,8 +402,8 @@ TEST_F(DependentGroupByReductionRuleTest, RemoveSuperfluousDistinctAggregateProj
 }
 
 TEST_F(DependentGroupByReductionRuleTest, DoNotRemoveRequiredDistinctAggregate) {
-  // Do not remove the AggregateNode when the grouped column is not unique (only a combination of two column0 and
-  // column1 is).
+  // Do not remove the AggregateNode when the grouped column is not unique (only a combination of the two columns
+  // column0 and column1 is unique).
   {
     // clang-format off
     const auto lqp =

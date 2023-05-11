@@ -33,7 +33,7 @@ namespace hyrise {
  * "TPC-H Analyzed: Hidden Messages and Lessons Learned from an Influential Benchmark" (Boncz et al.).
  * However, not all queries listed in the paper can be optimized yet, since Hyrise lacks foreign key support.
  *
- * Besides, this rule removes Aggregates that are inserted for SELECT DISTINCT clauses if the required columns are
+ * Besides, this rule removes AggregateNodes that are inserted for SELECT DISTINCT clauses if the required columns are
  * already distinct.
  */
 class DependentGroupByReductionRule : public AbstractRule {
