@@ -105,6 +105,73 @@ TEST_F(StoredTableNodeTest, HashingAndEqualityCheck) {
   EXPECT_EQ(different_node_c->hash(), different_node_c2->hash());
 }
 
+TEST_F(StoredTableNodeTest, HashingAndEqualitWithPrunableSubqueryPredicates) {
+  const auto different_node_a = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
+  const auto different_node_b = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
+  const auto different_node_c = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
+  const auto different_node_d = std::static_pointer_cast<StoredTableNode>(_stored_table_node->deep_copy());
+
+  const auto stored_table_node_b = StoredTableNode::make("t_b");
+  const auto x = stored_table_node_b->get_column("a");
+
+  // clang-format off
+  const auto subquery_a =
+  ProjectionNode::make(expression_vector(min_(x)),
+    AggregateNode::make(expression_vector(), expression_vector(min_(x)),
+      stored_table_node_b));
+
+  const auto lqp_a =
+  PredicateNode::make(equals_(_a, lqp_subquery_(subquery_a)),
+    different_node_a);
+
+  // Different predicate column than lqp_a.
+  const auto lqp_b =
+  PredicateNode::make(equals_(_b, lqp_subquery_(subquery_a)),
+    different_node_b);
+
+  // Different predicate condition than lqp_a.
+  const auto lqp_c =
+  PredicateNode::make(less_than_(_a, lqp_subquery_(subquery_a)),
+    different_node_c);
+
+  // Different subquery than lqp_a.
+  const auto subquery_d =
+  ProjectionNode::make(expression_vector(max_(x)),
+    AggregateNode::make(expression_vector(), expression_vector(max_(x)),
+      stored_table_node_b));
+
+  const auto lqp_d =
+  PredicateNode::make(equals_(_b, lqp_subquery_(subquery_d)),
+    different_node_d);
+  // clang-format on
+
+  different_node_a->set_prunable_subquery_predicates({lqp_a});
+  different_node_b->set_prunable_subquery_predicates({lqp_b});
+  different_node_c->set_prunable_subquery_predicates({lqp_c});
+  different_node_d->set_prunable_subquery_predicates({lqp_d});
+
+  EXPECT_NE(*_stored_table_node, *different_node_a);
+  EXPECT_NE(*_stored_table_node, *different_node_b);
+  EXPECT_NE(*_stored_table_node, *different_node_c);
+  EXPECT_NE(*_stored_table_node, *different_node_d);
+  EXPECT_NE(*different_node_a, *different_node_b);
+  EXPECT_NE(*different_node_a, *different_node_c);
+  EXPECT_NE(*different_node_a, *different_node_d);
+  EXPECT_NE(*different_node_b, *different_node_c);
+  EXPECT_NE(*different_node_b, *different_node_d);
+  EXPECT_NE(*different_node_c, *different_node_d);
+
+  EXPECT_NE(_stored_table_node->hash(), different_node_a->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_b->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_c->hash());
+  EXPECT_NE(_stored_table_node->hash(), different_node_d->hash());
+
+  // We force hash collisions for nodes with the same number of prunable subquery predicates.
+  EXPECT_EQ(different_node_a->hash(), different_node_b->hash());
+  EXPECT_EQ(different_node_a->hash(), different_node_c->hash());
+  EXPECT_EQ(different_node_a->hash(), different_node_d->hash());
+}
+
 TEST_F(StoredTableNodeTest, Copy) {
   EXPECT_EQ(*_stored_table_node->deep_copy(), *_stored_table_node);
 
